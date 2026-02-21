@@ -194,7 +194,7 @@ export function lowerVictory(
         path: checkpointPath,
         severity: 'error',
         message: 'victory checkpoint entries must be objects.',
-        suggestion: 'Provide checkpoint id/faction/timing/when fields.',
+        suggestion: 'Provide checkpoint id/seat/timing/when fields.',
       });
       continue;
     }
@@ -219,13 +219,13 @@ export function lowerVictory(
       seenCheckpointIds.add(checkpoint.id);
     }
 
-    if (typeof checkpoint.faction !== 'string' || checkpoint.faction.trim() === '') {
+    if (typeof checkpoint.seat !== 'string' || checkpoint.seat.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_FACTION_INVALID',
-        path: `${checkpointPath}.faction`,
+        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_SEAT_INVALID',
+        path: `${checkpointPath}.seat`,
         severity: 'error',
-        message: 'victory checkpoint faction must be a non-empty string.',
-        suggestion: 'Set checkpoint.faction to a declared faction id.',
+        message: 'victory checkpoint seat must be a non-empty string.',
+        suggestion: 'Set checkpoint.seat to a declared seat id.',
       });
     }
 
@@ -257,7 +257,7 @@ export function lowerVictory(
         path: 'doc.terminal.margins',
         severity: 'error',
         message: 'victory.margins must be an array when declared.',
-        suggestion: 'Set margins to an array of faction/value definitions.',
+        suggestion: 'Set margins to an array of seat/value definitions.',
       });
     } else {
       for (const [index, margin] of rawVictory.margins.entries()) {
@@ -268,18 +268,18 @@ export function lowerVictory(
             path: marginPath,
             severity: 'error',
             message: 'victory margin entries must be objects.',
-            suggestion: 'Provide margin.faction and margin.value.',
+            suggestion: 'Provide margin.seat and margin.value.',
           });
           continue;
         }
 
-        if (typeof margin.faction !== 'string' || margin.faction.trim() === '') {
+        if (typeof margin.seat !== 'string' || margin.seat.trim() === '') {
           diagnostics.push({
-            code: 'CNL_COMPILER_VICTORY_MARGIN_FACTION_INVALID',
-            path: `${marginPath}.faction`,
+            code: 'CNL_COMPILER_VICTORY_MARGIN_SEAT_INVALID',
+            path: `${marginPath}.seat`,
             severity: 'error',
-            message: 'victory margin faction must be a non-empty string.',
-            suggestion: 'Set margin.faction to a declared faction id.',
+            message: 'victory margin seat must be a non-empty string.',
+            suggestion: 'Set margin.seat to a declared seat id.',
           });
         }
 
@@ -327,8 +327,8 @@ export function lowerVictory(
         code: 'CNL_COMPILER_VICTORY_RANKING_TIEBREAK_ORDER_INVALID',
         path: 'doc.terminal.ranking.tieBreakOrder',
         severity: 'error',
-        message: 'victory.ranking.tieBreakOrder must be an array of non-empty faction ids when declared.',
-        suggestion: 'Set ranking.tieBreakOrder to faction ids ordered from highest to lowest tie-break priority.',
+        message: 'victory.ranking.tieBreakOrder must be an array of non-empty seat ids when declared.',
+        suggestion: 'Set ranking.tieBreakOrder to seat ids ordered from highest to lowest tie-break priority.',
       });
     }
   }

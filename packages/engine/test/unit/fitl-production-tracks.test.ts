@@ -7,8 +7,8 @@ import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type NumericTrackDef = {
   readonly id: string;
-  readonly scope: 'global' | 'faction';
-  readonly faction?: string;
+  readonly scope: 'global' | 'seat';
+  readonly seat?: string;
   readonly min: number;
   readonly max: number;
   readonly initial: number;
@@ -37,14 +37,14 @@ describe('FITL production numeric tracks', () => {
     const byId = new Map(tracks.map((track) => [track.id, track]));
     assert.equal(byId.size, 8, 'Track IDs must be unique');
 
-    const factionTracks = tracks.filter((track) => track.scope === 'faction');
+    const factionTracks = tracks.filter((track) => track.scope === 'seat');
     const globalTracks = tracks.filter((track) => track.scope === 'global');
     assert.equal(factionTracks.length, 3);
     assert.equal(globalTracks.length, 5);
 
     assert.deepEqual(
       factionTracks
-        .map((track): readonly [string, string | undefined] => [track.id, track.faction])
+        .map((track): readonly [string, string | undefined] => [track.id, track.seat])
         .sort((left, right) => left[0].localeCompare(right[0])),
       [
         ['arvnResources', 'arvn'],
@@ -74,7 +74,7 @@ describe('FITL production numeric tracks', () => {
     assert.equal(byId.get('terrorSabotageMarkersPlaced')?.max, 15);
 
     assert.equal(
-      factionTracks.every((track) => typeof track.faction === 'string' && track.faction.length > 0),
+      factionTracks.every((track) => typeof track.seat === 'string' && track.seat.length > 0),
       true,
       'Faction-scoped tracks must declare a faction',
     );

@@ -5,21 +5,21 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-32', order: 32, title: 'Long Range Guns', factionOrder: ['NVA', 'US', 'ARVN', 'VC'] },
-  { id: 'card-33', order: 33, title: 'MiGs', factionOrder: ['NVA', 'US', 'ARVN', 'VC'] },
-  { id: 'card-35', order: 35, title: 'Thanh Hoa', factionOrder: ['NVA', 'US', 'ARVN', 'VC'] },
-  { id: 'card-36', order: 36, title: 'Hamburger Hill', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
-  { id: 'card-37', order: 37, title: 'Khe Sanh', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
-  { id: 'card-40', order: 40, title: 'PoWs', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
-  { id: 'card-41', order: 41, title: 'Bombing Pause', factionOrder: ['NVA', 'ARVN', 'US', 'VC'] },
-  { id: 'card-42', order: 42, title: 'Chou En Lai', factionOrder: ['NVA', 'ARVN', 'US', 'VC'] },
-  { id: 'card-45', order: 45, title: 'PT-76', factionOrder: ['NVA', 'ARVN', 'US', 'VC'] },
-  { id: 'card-49', order: 49, title: 'Russian Arms', factionOrder: ['NVA', 'ARVN', 'VC', 'US'] },
-  { id: 'card-52', order: 52, title: 'RAND', factionOrder: ['NVA', 'VC', 'US', 'ARVN'] },
-  { id: 'card-54', order: 54, title: 'Son Tay', factionOrder: ['NVA', 'VC', 'US', 'ARVN'] },
-  { id: 'card-57', order: 57, title: 'International Unrest', factionOrder: ['NVA', 'VC', 'ARVN', 'US'] },
-  { id: 'card-58', order: 58, title: 'Pathet Lao', factionOrder: ['NVA', 'VC', 'ARVN', 'US'] },
-  { id: 'card-60', order: 60, title: 'War Photographer', factionOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+  { id: 'card-32', order: 32, title: 'Long Range Guns', seatOrder: ['NVA', 'US', 'ARVN', 'VC'] },
+  { id: 'card-33', order: 33, title: 'MiGs', seatOrder: ['NVA', 'US', 'ARVN', 'VC'] },
+  { id: 'card-35', order: 35, title: 'Thanh Hoa', seatOrder: ['NVA', 'US', 'ARVN', 'VC'] },
+  { id: 'card-36', order: 36, title: 'Hamburger Hill', seatOrder: ['NVA', 'US', 'VC', 'ARVN'] },
+  { id: 'card-37', order: 37, title: 'Khe Sanh', seatOrder: ['NVA', 'US', 'VC', 'ARVN'] },
+  { id: 'card-40', order: 40, title: 'PoWs', seatOrder: ['NVA', 'US', 'VC', 'ARVN'] },
+  { id: 'card-41', order: 41, title: 'Bombing Pause', seatOrder: ['NVA', 'ARVN', 'US', 'VC'] },
+  { id: 'card-42', order: 42, title: 'Chou En Lai', seatOrder: ['NVA', 'ARVN', 'US', 'VC'] },
+  { id: 'card-45', order: 45, title: 'PT-76', seatOrder: ['NVA', 'ARVN', 'US', 'VC'] },
+  { id: 'card-49', order: 49, title: 'Russian Arms', seatOrder: ['NVA', 'ARVN', 'VC', 'US'] },
+  { id: 'card-52', order: 52, title: 'RAND', seatOrder: ['NVA', 'VC', 'US', 'ARVN'] },
+  { id: 'card-54', order: 54, title: 'Son Tay', seatOrder: ['NVA', 'VC', 'US', 'ARVN'] },
+  { id: 'card-57', order: 57, title: 'International Unrest', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+  { id: 'card-58', order: 58, title: 'Pathet Lao', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+  { id: 'card-60', order: 60, title: 'War Photographer', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
 ] as const;
 
 describe('FITL 1968 NVA-first event-card production spec', () => {
@@ -36,7 +36,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, 'dual');
       assert.equal(card?.metadata?.period, '1968');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.metadata?.flavorText, 'string', `${expected.id} must include flavorText`);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
       assert.equal(typeof card?.shaded?.text, 'string', `${expected.id} must include shaded text`);
@@ -92,7 +92,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.notEqual(card, undefined);
     assert.equal(card?.title, 'RAND');
     assert.equal(card?.metadata?.period, '1968');
-    assert.deepEqual(card?.metadata?.factionOrder, ['NVA', 'VC', 'US', 'ARVN']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
     assert.equal(typeof card?.unshaded?.text, 'string');
     assert.equal(typeof card?.shaded?.text, 'string');
     const unshadedChoose = (

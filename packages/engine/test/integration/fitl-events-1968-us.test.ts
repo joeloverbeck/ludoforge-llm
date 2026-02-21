@@ -5,18 +5,18 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-2', order: 2, title: 'Kissinger', factionOrder: ['US', 'NVA', 'ARVN', 'VC'] },
-  { id: 'card-3', order: 3, title: 'Peace Talks', factionOrder: ['US', 'NVA', 'ARVN', 'VC'] },
-  { id: 'card-4', order: 4, title: 'Top Gun', factionOrder: ['US', 'NVA', 'ARVN', 'VC'] },
-  { id: 'card-9', order: 9, title: 'Psychedelic Cookie', factionOrder: ['US', 'NVA', 'VC', 'ARVN'] },
-  { id: 'card-11', order: 11, title: 'Abrams', factionOrder: ['US', 'ARVN', 'NVA', 'VC'] },
-  { id: 'card-12', order: 12, title: 'Capt Buck Adams', factionOrder: ['US', 'ARVN', 'NVA', 'VC'] },
-  { id: 'card-13', order: 13, title: 'Cobras', factionOrder: ['US', 'ARVN', 'NVA', 'VC'] },
-  { id: 'card-16', order: 16, title: 'Blowtorch Komer', factionOrder: ['US', 'ARVN', 'VC', 'NVA'] },
-  { id: 'card-19', order: 19, title: 'CORDS', factionOrder: ['US', 'ARVN', 'VC', 'NVA'] },
-  { id: 'card-20', order: 20, title: 'Laser Guided Bombs', factionOrder: ['US', 'ARVN', 'VC', 'NVA'] },
-  { id: 'card-21', order: 21, title: 'Americal', factionOrder: ['US', 'VC', 'NVA', 'ARVN'] },
-  { id: 'card-30', order: 30, title: 'USS New Jersey', factionOrder: ['US', 'VC', 'ARVN', 'NVA'] },
+  { id: 'card-2', order: 2, title: 'Kissinger', seatOrder: ['US', 'NVA', 'ARVN', 'VC'] },
+  { id: 'card-3', order: 3, title: 'Peace Talks', seatOrder: ['US', 'NVA', 'ARVN', 'VC'] },
+  { id: 'card-4', order: 4, title: 'Top Gun', seatOrder: ['US', 'NVA', 'ARVN', 'VC'] },
+  { id: 'card-9', order: 9, title: 'Psychedelic Cookie', seatOrder: ['US', 'NVA', 'VC', 'ARVN'] },
+  { id: 'card-11', order: 11, title: 'Abrams', seatOrder: ['US', 'ARVN', 'NVA', 'VC'] },
+  { id: 'card-12', order: 12, title: 'Capt Buck Adams', seatOrder: ['US', 'ARVN', 'NVA', 'VC'] },
+  { id: 'card-13', order: 13, title: 'Cobras', seatOrder: ['US', 'ARVN', 'NVA', 'VC'] },
+  { id: 'card-16', order: 16, title: 'Blowtorch Komer', seatOrder: ['US', 'ARVN', 'VC', 'NVA'] },
+  { id: 'card-19', order: 19, title: 'CORDS', seatOrder: ['US', 'ARVN', 'VC', 'NVA'] },
+  { id: 'card-20', order: 20, title: 'Laser Guided Bombs', seatOrder: ['US', 'ARVN', 'VC', 'NVA'] },
+  { id: 'card-21', order: 21, title: 'Americal', seatOrder: ['US', 'VC', 'NVA', 'ARVN'] },
+  { id: 'card-30', order: 30, title: 'USS New Jersey', seatOrder: ['US', 'VC', 'ARVN', 'NVA'] },
 ] as const;
 
 describe('FITL 1968 US-first event-card production spec', () => {
@@ -33,7 +33,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, 'dual');
       assert.equal(card?.metadata?.period, '1968');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.metadata?.flavorText, 'string', `${expected.id} must include flavorText`);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
       assert.equal(typeof card?.shaded?.text, 'string', `${expected.id} must include shaded text`);
@@ -137,7 +137,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.equal(card?.title, 'Phoenix Program');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1968');
-    assert.deepEqual(card?.metadata?.factionOrder, ['US', 'VC', 'ARVN', 'NVA']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['US', 'VC', 'ARVN', 'NVA']);
     assert.deepEqual(card?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }]);
     assert.deepEqual(card?.shaded?.effects, [
       { addVar: { scope: 'global', var: 'aid', delta: -2 } },

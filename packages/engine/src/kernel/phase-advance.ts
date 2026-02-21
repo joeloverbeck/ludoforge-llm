@@ -56,7 +56,7 @@ const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'acti
       turnOrderState: {
         type: 'simultaneous',
         submitted: Object.fromEntries(
-          Array.from({ length: state.playerCount }, (_unused, index) => [String(index), false]),
+          Array.from({ length: state.playerCount }, (_unused, index) => [index, false]),
         ),
         pending: {},
       },

@@ -47,14 +47,14 @@ describe('fitl production piece type catalog', () => {
     const byId = new Map(pieceTypes.map((pieceType) => [pieceType.id, pieceType]));
     assert.equal(byId.size, 12, 'Expected piece type ids to be unique');
 
-    const factionCounts = new Map<string, number>();
+    const seatCounts = new Map<string, number>();
     for (const pieceType of pieceTypes) {
-      factionCounts.set(pieceType.faction, (factionCounts.get(pieceType.faction) ?? 0) + 1);
+      seatCounts.set(pieceType.seat, (seatCounts.get(pieceType.seat) ?? 0) + 1);
     }
-    assert.equal(factionCounts.get('us'), 3);
-    assert.equal(factionCounts.get('arvn'), 4);
-    assert.equal(factionCounts.get('nva'), 3);
-    assert.equal(factionCounts.get('vc'), 2);
+    assert.equal(seatCounts.get('us'), 3);
+    assert.equal(seatCounts.get('arvn'), 4);
+    assert.equal(seatCounts.get('nva'), 3);
+    assert.equal(seatCounts.get('vc'), 2);
 
     const activityIds = ['us-irregulars', 'arvn-rangers', 'nva-guerrillas', 'vc-guerrillas'];
     const tunnelIds = ['nva-bases', 'vc-bases'];
@@ -112,7 +112,7 @@ describe('fitl production piece type catalog', () => {
     for (const pieceType of pieceTypes) {
       const entry = inventoryByPieceTypeId.get(pieceType.id);
       assert.ok(entry, `Expected inventory entry for ${pieceType.id}`);
-      assert.equal(entry.faction, pieceType.faction);
+      assert.equal(entry.seat, pieceType.seat);
       assert.equal(entry.total > 0, true, `${pieceType.id} inventory total must be positive`);
     }
   });

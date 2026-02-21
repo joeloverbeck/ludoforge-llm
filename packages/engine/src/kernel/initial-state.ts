@@ -41,7 +41,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
     globalVars: Object.fromEntries(validatedDef.globalVars.map((variable) => [variable.name, variable.init])),
     perPlayerVars: Object.fromEntries(
       Array.from({ length: resolvedPlayerCount }, (_, player) => [
-        String(player),
+        player,
         Object.fromEntries(validatedDef.perPlayerVars.map((variable) => [variable.name, variable.init])),
       ]),
     ),
@@ -118,20 +118,20 @@ const resolveInitialTurnOrderState = (def: GameDef, playerCount: number): GameSt
   if (strategy.type === 'simultaneous') {
     return {
       type: 'simultaneous',
-      submitted: Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [String(index), false])),
+      submitted: Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [index, false])),
       pending: {},
     };
   }
   return {
     type: 'cardDriven',
     runtime: {
-      factionOrder: [],
+      seatOrder: [],
       eligibility: {},
       currentCard: {
         firstEligible: null,
         secondEligible: null,
-        actedFactions: [],
-        passedFactions: [],
+        actedSeats: [],
+        passedSeats: [],
         nonPassCount: 0,
         firstActionClass: null,
       },

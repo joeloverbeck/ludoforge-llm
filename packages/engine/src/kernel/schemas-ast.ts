@@ -706,8 +706,8 @@ effectAstSchemaInternal = z.union([
       grantFreeOperation: z
         .object({
           id: StringSchema.optional(),
-          faction: StringSchema,
-          executeAsFaction: StringSchema.optional(),
+          seat: StringSchema,
+          executeAsSeat: StringSchema.optional(),
           operationClass: z.union([
             z.literal('pass'),
             z.literal('event'),

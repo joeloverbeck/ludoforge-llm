@@ -34,7 +34,7 @@ export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefVali
   return {
     zoneIds: new Set(gameDef.zones.map((zone) => String(zone.id))),
     tokenTypeIds: new Set(gameDef.tokenTypes.map((tokenType) => tokenType.id)),
-    factionIds: new Set((gameDef.factions ?? []).map((faction) => faction.id)),
+    factionIds: new Set((gameDef.seats ?? []).map((seat) => seat.id)),
     variableNames: new Set([...gameDef.globalVars, ...gameDef.perPlayerVars].map((variable) => variable.name)),
     edgeCategories,
   };

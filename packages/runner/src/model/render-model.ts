@@ -90,8 +90,8 @@ export interface RenderGlobalMarker {
 export interface RenderTrack {
   readonly id: string;
   readonly displayName: string;
-  readonly scope: 'global' | 'faction';
-  readonly faction: string | null;
+  readonly scope: 'global' | 'seat';
+  readonly seat: string | null;
   readonly min: number;
   readonly max: number;
   readonly currentValue: number;

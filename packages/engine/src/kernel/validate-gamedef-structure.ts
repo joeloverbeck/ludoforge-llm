@@ -371,18 +371,18 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'token type id',
     'tokenTypes',
   );
-  const declaredFactionIds = new Set((def.factions ?? []).map((faction) => faction.id));
-  if (declaredFactionIds.size > 0) {
+  const declaredSeatIds = new Set((def.seats ?? []).map((seatDef) => seatDef.id));
+  if (declaredSeatIds.size > 0) {
     def.tokenTypes.forEach((tokenType, tokenTypeIndex) => {
-      if (tokenType.faction === undefined || declaredFactionIds.has(tokenType.faction)) {
+      if (tokenType.seat === undefined || declaredSeatIds.has(tokenType.seat)) {
         return;
       }
       diagnostics.push({
-        code: 'TOKEN_TYPE_FACTION_UNDECLARED',
-        path: `tokenTypes[${tokenTypeIndex}].faction`,
+        code: 'TOKEN_TYPE_SEAT_UNDECLARED',
+        path: `tokenTypes[${tokenTypeIndex}].seat`,
         severity: 'error',
-        message: `Token type "${tokenType.id}" references unknown faction "${tokenType.faction}".`,
-        suggestion: 'Use one of the ids declared in factions[].id.',
+        message: `Token type "${tokenType.id}" references unknown seat "${tokenType.seat}".`,
+        suggestion: 'Use one of the ids declared in seats[].id.',
       });
     });
   }
@@ -827,7 +827,7 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
 
   const tokenTypeById = new Map(def.tokenTypes.map((tokenType) => [tokenType.id, tokenType] as const));
   (def.stackingConstraints ?? []).forEach((constraint, index) => {
-    if ((constraint.pieceFilter.factions?.length ?? 0) === 0) {
+    if ((constraint.pieceFilter.seats?.length ?? 0) === 0) {
       return;
     }
 
@@ -836,20 +836,20 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
       scopedPieceTypeIds !== undefined && scopedPieceTypeIds.length > 0
         ? [...new Set(scopedPieceTypeIds)]
         : def.tokenTypes.map((tokenType) => tokenType.id);
-    const missingFactionTokenTypeIds = requiredTokenTypeIds
+    const missingSeatTokenTypeIds = requiredTokenTypeIds
       .filter((tokenTypeId) => {
         const tokenType = tokenTypeById.get(tokenTypeId);
-        return tokenType !== undefined && typeof tokenType.faction !== 'string';
+        return tokenType !== undefined && typeof tokenType.seat !== 'string';
       })
       .sort((left, right) => left.localeCompare(right));
 
-    if (missingFactionTokenTypeIds.length > 0) {
+    if (missingSeatTokenTypeIds.length > 0) {
       diagnostics.push({
-        code: 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING',
-        path: `stackingConstraints[${index}].pieceFilter.factions`,
+        code: 'STACKING_CONSTRAINT_TOKEN_TYPE_SEAT_MISSING',
+        path: `stackingConstraints[${index}].pieceFilter.seats`,
         severity: 'error',
-        message: `Stacking constraint "${constraint.id}" uses pieceFilter.factions but tokenTypes are missing canonical faction metadata: ${missingFactionTokenTypeIds.join(', ')}.`,
-        suggestion: 'Define tokenTypes[].faction for each constrained token type.',
+        message: `Stacking constraint "${constraint.id}" uses pieceFilter.seats but tokenTypes are missing canonical seat metadata: ${missingSeatTokenTypeIds.join(', ')}.`,
+        suggestion: 'Define tokenTypes[].seat for each constrained token type.',
       });
     }
   });
@@ -1149,7 +1149,7 @@ const zoneMatchesFilter = (zone: ZoneDef, filter: StackingConstraint['spaceFilte
 const placementMatchesPieceFilter = (
   placement: ScenarioPiecePlacement,
   filter: StackingConstraint['pieceFilter'],
-  pieceTypeFactionById: ReadonlyMap<string, string> | undefined,
+  pieceTypeSeatById: ReadonlyMap<string, string> | undefined,
 ): boolean => {
   if (
     filter.pieceTypeIds !== undefined &&
@@ -1158,9 +1158,9 @@ const placementMatchesPieceFilter = (
   ) {
     return false;
   }
-  if (filter.factions !== undefined && filter.factions.length > 0) {
-    const canonicalFaction = pieceTypeFactionById?.get(placement.pieceTypeId);
-    if (typeof canonicalFaction !== 'string' || !filter.factions.includes(canonicalFaction)) {
+  if (filter.seats !== undefined && filter.seats.length > 0) {
+    const canonicalSeat = pieceTypeSeatById?.get(placement.pieceTypeId);
+    if (typeof canonicalSeat !== 'string' || !filter.seats.includes(canonicalSeat)) {
       return false;
     }
   }
@@ -1171,14 +1171,14 @@ export const validateInitialPlacementsAgainstStackingConstraints = (
   constraints: readonly StackingConstraint[],
   placements: readonly ScenarioPiecePlacement[],
   zones: readonly ZoneDef[],
-  pieceTypeFactionById?: ReadonlyMap<string, string>,
+  pieceTypeSeatById?: ReadonlyMap<string, string>,
 ): Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
   const zoneMap = new Map(zones.map((zone) => [String(zone.id), zone]));
-  const reportedMissingFactionKeys = new Set<string>();
+  const reportedMissingSeatKeys = new Set<string>();
 
   for (const constraint of constraints) {
-    if ((constraint.pieceFilter.factions?.length ?? 0) > 0) {
+    if ((constraint.pieceFilter.seats?.length ?? 0) > 0) {
       const scopedPieceTypeIds = constraint.pieceFilter.pieceTypeIds;
       const relevantPlacements =
         scopedPieceTypeIds === undefined || scopedPieceTypeIds.length === 0
@@ -1186,20 +1186,20 @@ export const validateInitialPlacementsAgainstStackingConstraints = (
           : placements.filter((placement) => scopedPieceTypeIds.includes(placement.pieceTypeId));
       const requiredPieceTypeIds = [...new Set(relevantPlacements.map((placement) => placement.pieceTypeId))];
       for (const pieceTypeId of requiredPieceTypeIds) {
-        if (pieceTypeFactionById?.has(pieceTypeId) === true) {
+        if (pieceTypeSeatById?.has(pieceTypeId) === true) {
           continue;
         }
         const reportKey = `${constraint.id}::${pieceTypeId}`;
-        if (reportedMissingFactionKeys.has(reportKey)) {
+        if (reportedMissingSeatKeys.has(reportKey)) {
           continue;
         }
-        reportedMissingFactionKeys.add(reportKey);
+        reportedMissingSeatKeys.add(reportKey);
         diagnostics.push({
-          code: 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING',
+          code: 'STACKING_CONSTRAINT_TOKEN_TYPE_SEAT_MISSING',
           path: `stackingConstraints[${constraint.id}]`,
           severity: 'error',
-          message: `Stacking constraint "${constraint.id}" uses pieceFilter.factions but pieceType "${pieceTypeId}" has no canonical faction mapping.`,
-          suggestion: 'Provide a pieceTypeId -> faction mapping for compile-time stacking validation.',
+          message: `Stacking constraint "${constraint.id}" uses pieceFilter.seats but pieceType "${pieceTypeId}" has no canonical seat mapping.`,
+          suggestion: 'Provide a pieceTypeId -> seat mapping for compile-time stacking validation.',
         });
       }
     }
@@ -1215,7 +1215,7 @@ export const validateInitialPlacementsAgainstStackingConstraints = (
       if (!matchingZoneSet.has(placement.spaceId)) {
         continue;
       }
-      if (!placementMatchesPieceFilter(placement, constraint.pieceFilter, pieceTypeFactionById)) {
+      if (!placementMatchesPieceFilter(placement, constraint.pieceFilter, pieceTypeSeatById)) {
         continue;
       }
       const current = countByZone.get(placement.spaceId) ?? 0;

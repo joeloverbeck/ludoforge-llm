@@ -196,8 +196,8 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
     ],
     tracks: [
       { id: 'round', scope: 'global', min: 0, max: 20, initial: 0 },
-      { id: 'support', scope: 'faction', faction: 'us', min: 0, max: 100, initial: 0 },
-      { id: 'momentum', scope: 'faction', faction: 'arvn', min: 3, max: 9, initial: 3 },
+      { id: 'support', scope: 'seat', seat: 'us', min: 0, max: 100, initial: 0 },
+      { id: 'momentum', scope: 'seat', seat: 'arvn', min: 3, max: 9, initial: 3 },
     ],
     eventDecks: [
       {
@@ -220,7 +220,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
             leader: 'discard:none',
           },
           eligibility: {
-            factions: ['us', 'nva'],
+            seats: ['us', 'nva'],
             overrideWindows: [],
           },
           optionMatrix: [],
@@ -278,7 +278,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
     turnOrderState: {
       type: 'cardDriven',
       runtime: {
-        factionOrder: ['us', 'nva'],
+        seatOrder: ['us', 'nva'],
         eligibility: {
           us: true,
           nva: true,
@@ -286,8 +286,8 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
         currentCard: {
           firstEligible: 'us',
           secondEligible: 'nva',
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
@@ -384,7 +384,7 @@ describe('deriveRenderModel state metadata', () => {
         id: 'round',
         displayName: 'Round',
         scope: 'global',
-        faction: null,
+        seat: null,
         min: 0,
         max: 20,
         currentValue: 3,
@@ -392,8 +392,8 @@ describe('deriveRenderModel state metadata', () => {
       {
         id: 'support',
         displayName: 'Support',
-        scope: 'faction',
-        faction: 'us',
+        scope: 'seat',
+        seat: 'us',
         min: 0,
         max: 100,
         currentValue: 7,
@@ -401,8 +401,8 @@ describe('deriveRenderModel state metadata', () => {
       {
         id: 'momentum',
         displayName: 'Momentum',
-        scope: 'faction',
-        faction: 'arvn',
+        scope: 'seat',
+        seat: 'arvn',
         min: 3,
         max: 9,
         currentValue: 3,
@@ -1013,8 +1013,8 @@ describe('deriveRenderModel state metadata', () => {
       victory: {
         timing: 'duringCoup',
         checkpointId: 'checkpoint-a',
-        winnerFaction: 'us',
-        ranking: [{ faction: 'us', margin: 2, rank: 1, tieBreakKey: 'score' }],
+        winnerSeat: 'us',
+        ranking: [{ seat: 'us', margin: 2, rank: 1, tieBreakKey: 'score' }],
       },
     };
     const scoreTerminal: TerminalResult = {

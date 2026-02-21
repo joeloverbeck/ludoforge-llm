@@ -15,15 +15,15 @@ const isTurnFlowActionClass = (
   value === 'limitedOperation' ||
   value === 'operationPlusSpecialActivity';
 
-const resolveGrantFaction = (
+const resolveGrantSeat = (
   token: string,
-  activeFaction: string,
-  factionOrder: readonly string[],
+  activeSeat: string,
+  seatOrder: readonly string[],
 ): string | null => {
   if (token === 'self') {
-    return activeFaction;
+    return activeSeat;
   }
-  return factionOrder.includes(token) ? token : null;
+  return seatOrder.includes(token) ? token : null;
 };
 
 const makeUniqueGrantId = (
@@ -84,27 +84,27 @@ export const applyGrantFreeOperation = (
   }
 
   const runtime = ctx.state.turnOrderState.runtime;
-  const activeFaction = String(ctx.activePlayer);
-  const faction = resolveGrantFaction(grant.faction, activeFaction, runtime.factionOrder);
-  if (faction === null) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.faction is unknown: ${grant.faction}`, {
+  const activeSeat = String(ctx.activePlayer);
+  const seat = resolveGrantSeat(grant.seat, activeSeat, runtime.seatOrder);
+  if (seat === null) {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.seat is unknown: ${grant.seat}`, {
       effectType: 'grantFreeOperation',
-      faction: grant.faction,
-      availableFactions: runtime.factionOrder,
+      seat: grant.seat,
+      availableSeats: runtime.seatOrder,
     });
   }
 
-  let executeAsFaction: string | undefined;
-  if (grant.executeAsFaction !== undefined) {
-    const resolvedExecuteAs = resolveGrantFaction(grant.executeAsFaction, activeFaction, runtime.factionOrder);
+  let executeAsSeat: string | undefined;
+  if (grant.executeAsSeat !== undefined) {
+    const resolvedExecuteAs = resolveGrantSeat(grant.executeAsSeat, activeSeat, runtime.seatOrder);
     if (resolvedExecuteAs === null) {
-      throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.executeAsFaction is unknown: ${grant.executeAsFaction}`, {
+      throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.executeAsSeat is unknown: ${grant.executeAsSeat}`, {
         effectType: 'grantFreeOperation',
-        executeAsFaction: grant.executeAsFaction,
-        availableFactions: runtime.factionOrder,
+        executeAsSeat: grant.executeAsSeat,
+        availableSeats: runtime.seatOrder,
       });
     }
-    executeAsFaction = resolvedExecuteAs;
+    executeAsSeat = resolvedExecuteAs;
   }
 
   const uses = grant.uses ?? 1;
@@ -116,7 +116,7 @@ export const applyGrantFreeOperation = (
   }
 
   const existing = runtime.pendingFreeOperationGrants ?? [];
-  const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeFaction}:${existing.length}`;
+  const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeSeat}:${existing.length}`;
   const grantId = makeUniqueGrantId(existing, grant.id ?? fallbackBaseId);
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${grantId}:${grant.sequence.chain}`;
   const sequenceIndex = grant.sequence?.step;
@@ -129,8 +129,8 @@ export const applyGrantFreeOperation = (
 
   const appended: TurnFlowPendingFreeOperationGrant = {
     grantId,
-    faction,
-    ...(executeAsFaction === undefined ? {} : { executeAsFaction }),
+    seat,
+    ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),

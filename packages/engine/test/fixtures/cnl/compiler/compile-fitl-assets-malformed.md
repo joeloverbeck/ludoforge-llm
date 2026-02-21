@@ -23,7 +23,7 @@ dataAssets:
   - id: fitl-pieces-foundation
     kind: pieceCatalog
     payload:
-      factions:
+      seats:
         - id: us
       pieceTypes: []
       inventory: []

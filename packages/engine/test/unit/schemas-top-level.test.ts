@@ -60,11 +60,11 @@ const fullGameDef = {
       turnFlow: {
         cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
         eligibility: {
-          factions: ['us', 'arvn', 'nva', 'vc'],
+          seats: ['us', 'arvn', 'nva', 'vc'],
           overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
         },
         optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-        passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
+        passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: 3 }],
         durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
       },
       coupPlan: {
@@ -109,9 +109,9 @@ phase: ['main'],
   terminal: {
     conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
     checkpoints: [
-      { id: 'us-threshold', faction: 'us', timing: 'duringCoup', when: { op: '>', left: 51, right: 50 } },
+      { id: 'us-threshold', seat: 'us', timing: 'duringCoup', when: { op: '>', left: 51, right: 50 } },
     ],
-    margins: [{ faction: 'us', value: { op: '-', left: 55, right: 50 } }],
+    margins: [{ seat: 'us', value: { op: '-', left: 55, right: 50 } }],
     ranking: { order: 'desc' },
     scoring: { method: 'highest', value: 1 },
   },
@@ -243,7 +243,7 @@ describe('top-level runtime schemas', () => {
       id: 'fitl-piece-catalog',
       kind: 'pieceCatalog',
       payload: {
-        factions: [{ id: 'vc' }],
+        seats: [{ id: 'vc' }],
         pieceTypes: [],
         inventory: [],
       },
@@ -345,16 +345,16 @@ describe('top-level runtime schemas', () => {
 
   it('parses valid piece-catalog payload contracts', () => {
     const result = PieceCatalogPayloadSchema.safeParse({
-      factions: [{ id: 'vc' }],
+      seats: [{ id: 'vc' }],
       pieceTypes: [
         {
           id: 'vc-guerrilla',
-          faction: 'vc',
+          seat: 'vc',
           statusDimensions: ['activity'],
           transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
         },
       ],
-      inventory: [{ pieceTypeId: 'vc-guerrilla', faction: 'vc', total: 30 }],
+      inventory: [{ pieceTypeId: 'vc-guerrilla', seat: 'vc', total: 30 }],
     });
 
     assert.equal(result.success, true);
@@ -367,7 +367,7 @@ describe('top-level runtime schemas', () => {
     });
 
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'factions'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'seats'));
   });
 
   it('parses a minimal valid GameDef with zero issues', () => {
@@ -643,30 +643,30 @@ describe('top-level runtime schemas', () => {
       {
         kind: 'turnFlowEligibility',
         step: 'cardEnd',
-        faction: '0',
+        seat: '0',
         before: {
           firstEligible: '0',
           secondEligible: '1',
-          actedFactions: ['0'],
-          passedFactions: [],
+          actedSeats: ['0'],
+          passedSeats: [],
           nonPassCount: 1,
           firstActionClass: 'event',
         },
         after: {
           firstEligible: '1',
           secondEligible: '0',
-          actedFactions: ['0', '1'],
-          passedFactions: [],
+          actedSeats: ['0', '1'],
+          passedSeats: [],
           nonPassCount: 2,
           firstActionClass: 'event',
         },
       },
       {
         kind: 'simultaneousSubmission',
-        player: '0',
+        player: 0,
         move: { actionId: 'commit', params: { value: 1 } },
-        submittedBefore: { '0': false, '1': false },
-        submittedAfter: { '0': true, '1': false },
+        submittedBefore: { 0: false, 1: false },
+        submittedAfter: { 0: true, 1: false },
       },
       {
         kind: 'simultaneousCommit',
@@ -761,7 +761,7 @@ describe('StackingConstraintSchema', () => {
       id: 'nv-restriction',
       description: 'Only NVA/VC in North Vietnam',
       spaceFilter: { attributeEquals: { country: 'northVietnam' } },
-      pieceFilter: { factions: ['US', 'ARVN'] },
+      pieceFilter: { seats: ['US', 'ARVN'] },
       rule: 'prohibit',
     });
 

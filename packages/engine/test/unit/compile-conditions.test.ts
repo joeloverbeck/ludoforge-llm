@@ -1055,3 +1055,96 @@ describe('compile-conditions lowering', () => {
     assert.ok(result.diagnostics.length > 0);
   });
 });
+
+describe('compile-conditions type mismatch warnings', () => {
+  const typedContext: ConditionLoweringContext = {
+    ownershipByBase: { deck: 'none', hand: 'player', board: 'none' },
+    typeInference: {
+      globalVarTypes: { score: 'int', gameOver: 'boolean' },
+      perPlayerVarTypes: { chips: 'int' },
+      tokenPropTypes: {},
+      tableFieldTypes: {},
+    },
+  };
+
+  it('emits warning when comparing number ref to string literal', () => {
+    const result = lowerConditionNode(
+      { op: '==', left: { ref: 'gvar', var: 'score' }, right: 'hello' },
+      typedContext,
+      'doc.actions.0.pre',
+    );
+
+    assert.ok(result.value !== null);
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_CONDITION_TYPE_MISMATCH',
+    );
+    assert.equal(warnings.length, 1);
+    const w0 = warnings[0]!;
+    assert.equal(w0.severity, 'warning');
+    assert.ok(w0.message.includes('number'));
+    assert.ok(w0.message.includes('string'));
+  });
+
+  it('emits warning for != with incompatible types', () => {
+    const result = lowerConditionNode(
+      { op: '!=', left: { ref: 'gvar', var: 'gameOver' }, right: 42 },
+      typedContext,
+      'doc.actions.0.pre',
+    );
+
+    assert.ok(result.value !== null);
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_CONDITION_TYPE_MISMATCH',
+    );
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0]!.message.includes('true'));
+  });
+
+  it('does not emit warning for compatible types', () => {
+    const result = lowerConditionNode(
+      { op: '==', left: { ref: 'gvar', var: 'score' }, right: 10 },
+      typedContext,
+      'doc.actions.0.pre',
+    );
+
+    assertNoDiagnostics(result);
+    assert.ok(result.value !== null);
+  });
+
+  it('does not emit warning when typeInference is absent', () => {
+    const result = lowerConditionNode(
+      { op: '==', left: { ref: 'gvar', var: 'score' }, right: 'hello' },
+      context,
+      'doc.actions.0.pre',
+    );
+
+    assertNoDiagnostics(result);
+    assert.ok(result.value !== null);
+  });
+
+  it('does not emit warning for non-equality operators', () => {
+    const result = lowerConditionNode(
+      { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 'hello' },
+      typedContext,
+      'doc.actions.0.pre',
+    );
+
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_CONDITION_TYPE_MISMATCH',
+    );
+    assert.equal(warnings.length, 0);
+  });
+
+  it('does not emit warning when one side is unknown', () => {
+    const result = lowerConditionNode(
+      { op: '==', left: { ref: 'binding', name: '$x' }, right: 42 },
+      typedContext,
+      'doc.actions.0.pre',
+    );
+
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === 'CNL_COMPILER_CONDITION_TYPE_MISMATCH',
+    );
+    assert.equal(warnings.length, 0);
+  });
+});

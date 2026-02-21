@@ -64,7 +64,7 @@ function isLookaheadCardCoup(def: GameDef, state: GameState): boolean {
   return state.zones[lookaheadZone]?.[0]?.props.isCoup === true;
 }
 
-function compareFactionByInterruptPrecedence(
+function compareSeatByInterruptPrecedence(
   left: string,
   right: string,
   precedence: readonly string[],
@@ -79,7 +79,7 @@ function compareFactionByInterruptPrecedence(
   return left.localeCompare(right);
 }
 
-function resolveInterruptWinnerFaction(
+function resolveInterruptWinnerSeat(
   state: GameState,
   precedence: readonly string[],
 ): string | null {
@@ -88,12 +88,12 @@ function resolveInterruptWinnerFaction(
     return null;
   }
   const contenders = [currentCard.firstEligible, currentCard.secondEligible].filter(
-    (faction): faction is string => faction !== null,
+    (seat): seat is string => seat !== null,
   );
   if (contenders.length === 0) {
     return null;
   }
-  const sorted = [...contenders].sort((left, right) => compareFactionByInterruptPrecedence(left, right, precedence));
+  const sorted = [...contenders].sort((left, right) => compareSeatByInterruptPrecedence(left, right, precedence));
   return sorted[0] ?? null;
 }
 
@@ -190,10 +190,10 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
   const monsoonActive = turnFlow.monsoon !== undefined && isLookaheadCardCoup(def, state);
   const pivotalActionIds = new Set(turnFlow.pivotal?.actionIds ?? []);
   const inPreActionWindow = (cardDrivenRuntime(state)?.currentCard.nonPassCount ?? 0) === 0;
-  const activeFaction = String(state.activePlayer);
+  const activeSeat = String(state.activePlayer);
   const precedence = turnFlow.pivotal?.interrupt?.precedence ?? [];
-  const interruptWinnerFaction =
-    precedence.length > 0 && inPreActionWindow ? resolveInterruptWinnerFaction(state, precedence) : null;
+  const interruptWinnerSeat =
+    precedence.length > 0 && inPreActionWindow ? resolveInterruptWinnerSeat(state, precedence) : null;
   const filtered = moves.filter((move) => {
     const actionId = String(move.actionId);
     const isPivotal = pivotalActionIds.has(actionId);
@@ -202,7 +202,7 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
         return false;
       }
 
-      if (interruptWinnerFaction !== null && activeFaction !== interruptWinnerFaction) {
+      if (interruptWinnerSeat !== null && activeSeat !== interruptWinnerSeat) {
         return false;
       }
 
@@ -272,7 +272,7 @@ export function applyPendingFreeOperationVariants(
   }
 
   const pendingGrants = runtime.pendingFreeOperationGrants ?? [];
-  if (!pendingGrants.some((grant) => grant.faction === String(state.activePlayer))) {
+  if (!pendingGrants.some((grant) => grant.seat === String(state.activePlayer))) {
     return moves;
   }
 
@@ -280,7 +280,7 @@ export function applyPendingFreeOperationVariants(
   const seen = new Set(moves.map((move) => `${String(move.actionId)}|${JSON.stringify(move.params)}|${move.freeOperation === true}`));
   const turnFlowDefaults = cardDrivenConfig(def)?.turnFlow.freeOperationActionIds ?? [];
   const pendingActionIds = pendingGrants
-    .filter((grant) => grant.faction === String(state.activePlayer))
+    .filter((grant) => grant.seat === String(state.activePlayer))
     .flatMap((grant) => grant.actionIds ?? turnFlowDefaults);
   const extraBaseMoves: Move[] = pendingActionIds.map((actionId) => ({ actionId: asActionId(actionId), params: {} }));
 

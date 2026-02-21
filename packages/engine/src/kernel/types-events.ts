@@ -31,8 +31,8 @@ export interface EventFreeOperationGrantDef {
     readonly step: number;
   };
   readonly id?: string;
-  readonly faction: string;
-  readonly executeAsFaction?: string;
+  readonly seat: string;
+  readonly executeAsSeat?: string;
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: ConditionAST;
@@ -43,14 +43,14 @@ export interface EventEligibilityOverrideTargetActive {
   readonly kind: 'active';
 }
 
-export interface EventEligibilityOverrideTargetFaction {
-  readonly kind: 'faction';
-  readonly faction: string;
+export interface EventEligibilityOverrideTargetSeat {
+  readonly kind: 'seat';
+  readonly seat: string;
 }
 
 export type EventEligibilityOverrideTarget =
   | EventEligibilityOverrideTargetActive
-  | EventEligibilityOverrideTargetFaction;
+  | EventEligibilityOverrideTargetSeat;
 
 export interface EventEligibilityOverrideDef {
   readonly target: EventEligibilityOverrideTarget;
@@ -118,7 +118,7 @@ export interface ActiveLastingEffect {
 export interface ScenarioPiecePlacement {
   readonly spaceId: string;
   readonly pieceTypeId: string;
-  readonly faction: string;
+  readonly seat: string;
   readonly count: number;
   readonly status?: Readonly<Record<string, string>>;
 }
@@ -141,9 +141,9 @@ export interface ScenarioPayload {
   readonly initialPlacements?: readonly ScenarioPiecePlacement[];
   readonly initialTrackValues?: readonly { readonly trackId: string; readonly value: number }[];
   readonly initialMarkers?: readonly { readonly spaceId: string; readonly markerId: string; readonly state: string }[];
-  readonly outOfPlay?: readonly { readonly pieceTypeId: string; readonly faction: string; readonly count: number }[];
-  readonly factionPools?: readonly {
-    readonly faction: string;
+  readonly outOfPlay?: readonly { readonly pieceTypeId: string; readonly seat: string; readonly count: number }[];
+  readonly seatPools?: readonly {
+    readonly seat: string;
     readonly availableZoneId: string;
     readonly outOfPlayZoneId?: string;
   }[];
@@ -151,6 +151,6 @@ export interface ScenarioPayload {
   readonly startingLeader?: string;
   readonly leaderStack?: readonly string[];
   readonly startingCapabilities?: readonly { readonly capabilityId: string; readonly side: 'unshaded' | 'shaded' }[];
-  readonly startingEligibility?: readonly { readonly faction: string; readonly eligible: boolean }[];
+  readonly startingEligibility?: readonly { readonly seat: string; readonly eligible: boolean }[];
   readonly usPolicy?: 'jfk' | 'lbj' | 'nixon';
 }

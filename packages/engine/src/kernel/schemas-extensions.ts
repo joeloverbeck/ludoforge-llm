@@ -70,8 +70,8 @@ export const EventCardFreeOperationGrantSchema = z
       })
       .strict(),
     id: StringSchema.min(1).optional(),
-    faction: StringSchema.min(1),
-    executeAsFaction: StringSchema.min(1).optional(),
+    seat: StringSchema.min(1),
+    executeAsSeat: StringSchema.min(1).optional(),
     operationClass: z.union([
       z.literal('pass'),
       z.literal('event'),
@@ -93,8 +93,8 @@ export const EventCardEligibilityOverrideTargetSchema = z.union([
     .strict(),
   z
     .object({
-      kind: z.literal('faction'),
-      faction: StringSchema.min(1),
+      kind: z.literal('seat'),
+      seat: StringSchema.min(1),
     })
     .strict(),
 ]);
@@ -244,7 +244,7 @@ export const TurnFlowEligibilityOverrideWindowSchema = z
 
 export const TurnFlowEligibilitySchema = z
   .object({
-    factions: z.array(StringSchema.min(1)),
+    seats: z.array(StringSchema.min(1)),
     overrideWindows: z.array(TurnFlowEligibilityOverrideWindowSchema),
   })
   .strict();
@@ -258,7 +258,7 @@ export const TurnFlowOptionMatrixRowSchema = z
 
 export const TurnFlowPassRewardSchema = z
   .object({
-    factionClass: StringSchema.min(1),
+    seatClass: StringSchema.min(1),
     resource: StringSchema.min(1),
     amount: NumberSchema,
   })
@@ -420,7 +420,7 @@ export const VictoryTimingSchema = z.union([z.literal('duringCoup'), z.literal('
 export const VictoryCheckpointSchema = z
   .object({
     id: StringSchema.min(1),
-    faction: StringSchema.min(1),
+    seat: StringSchema.min(1),
     timing: VictoryTimingSchema,
     when: ConditionASTSchema,
   })
@@ -428,7 +428,7 @@ export const VictoryCheckpointSchema = z
 
 export const VictoryMarginSchema = z
   .object({
-    faction: StringSchema.min(1),
+    seat: StringSchema.min(1),
     value: ValueExprSchema,
   })
   .strict();
@@ -452,8 +452,8 @@ export const TurnFlowRuntimeCardStateSchema = z
   .object({
     firstEligible: StringSchema.min(1).nullable(),
     secondEligible: StringSchema.min(1).nullable(),
-    actedFactions: z.array(StringSchema.min(1)),
-    passedFactions: z.array(StringSchema.min(1)),
+    actedSeats: z.array(StringSchema.min(1)),
+    passedSeats: z.array(StringSchema.min(1)),
     nonPassCount: NumberSchema,
     firstActionClass: z
       .union([z.literal('event'), z.literal('operation'), z.literal('operationPlusSpecialActivity')])
@@ -463,14 +463,14 @@ export const TurnFlowRuntimeCardStateSchema = z
 
 export const TurnFlowRuntimeStateSchema = z
   .object({
-    factionOrder: z.array(StringSchema.min(1)),
+    seatOrder: z.array(StringSchema.min(1)),
     eligibility: z.record(StringSchema, BooleanSchema),
     currentCard: TurnFlowRuntimeCardStateSchema,
     pendingEligibilityOverrides: z
       .array(
         z
           .object({
-            faction: StringSchema.min(1),
+            seat: StringSchema.min(1),
             eligible: BooleanSchema,
             windowId: StringSchema.min(1),
             duration: TurnFlowDurationSchema,
@@ -483,8 +483,8 @@ export const TurnFlowRuntimeStateSchema = z
         z
           .object({
             grantId: StringSchema.min(1),
-            faction: StringSchema.min(1),
-            executeAsFaction: StringSchema.min(1).optional(),
+            seat: StringSchema.min(1),
+            executeAsSeat: StringSchema.min(1).optional(),
             operationClass: TurnFlowActionClassSchema,
             actionIds: z.array(StringSchema.min(1)).min(1).optional(),
             zoneFilter: ConditionASTSchema.optional(),
@@ -571,7 +571,7 @@ export const TurnFlowEligibilityTraceEntrySchema = z
   .object({
     kind: z.literal('turnFlowEligibility'),
     step: z.union([z.literal('candidateScan'), z.literal('passChain'), z.literal('cardEnd'), z.literal('overrideCreate')]),
-    faction: StringSchema.min(1).nullable(),
+    seat: StringSchema.min(1).nullable(),
     before: TurnFlowRuntimeCardStateSchema,
     after: TurnFlowRuntimeCardStateSchema,
     eligibilityBefore: z.record(StringSchema, BooleanSchema).optional(),
@@ -590,7 +590,7 @@ export const TurnFlowEligibilityTraceEntrySchema = z
       .array(
         z
           .object({
-            faction: StringSchema.min(1),
+            seat: StringSchema.min(1),
             eligible: BooleanSchema,
             windowId: StringSchema.min(1),
             duration: TurnFlowDurationSchema,
@@ -623,7 +623,7 @@ export const OperationFreeTraceEntrySchema = z
 export const SimultaneousSubmissionTraceEntrySchema = z
   .object({
     kind: z.literal('simultaneousSubmission'),
-    player: StringSchema.min(1),
+    player: NumberSchema,
     move: z
       .object({
         actionId: StringSchema.min(1),
@@ -647,7 +647,7 @@ export const SimultaneousCommitTraceEntrySchema = z
 
 export const VictoryTerminalRankingEntrySchema = z
   .object({
-    faction: StringSchema.min(1),
+    seat: StringSchema.min(1),
     margin: NumberSchema,
     rank: IntegerSchema,
     tieBreakKey: StringSchema.min(1),
@@ -658,7 +658,7 @@ export const VictoryTerminalMetadataSchema = z
   .object({
     timing: VictoryTimingSchema,
     checkpointId: StringSchema.min(1),
-    winnerFaction: StringSchema.min(1),
+    winnerSeat: StringSchema.min(1),
     ranking: z.array(VictoryTerminalRankingEntrySchema).optional(),
   })
   .strict();

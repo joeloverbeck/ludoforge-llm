@@ -5,21 +5,21 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-64', order: 64, title: 'Honolulu Conference', sideMode: 'single', factionOrder: ['ARVN', 'US', 'NVA', 'VC'] },
-  { id: 'card-67', order: 67, title: 'Amphib Landing', sideMode: 'dual', factionOrder: ['ARVN', 'US', 'VC', 'NVA'] },
-  { id: 'card-69', order: 69, title: 'MACV', sideMode: 'single', factionOrder: ['ARVN', 'US', 'VC', 'NVA'] },
-  { id: 'card-70', order: 70, title: 'ROKs', sideMode: 'dual', factionOrder: ['ARVN', 'US', 'VC', 'NVA'] },
-  { id: 'card-72', order: 72, title: 'Body Count', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'US', 'VC'] },
-  { id: 'card-73', order: 73, title: 'Great Society', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'US', 'VC'] },
-  { id: 'card-76', order: 76, title: 'Annam', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'VC', 'US'] },
-  { id: 'card-78', order: 78, title: 'General Landsdale', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'VC', 'US'] },
-  { id: 'card-81', order: 81, title: 'CIDG', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'US', 'NVA'] },
-  { id: 'card-83', order: 83, title: 'Election', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'US', 'NVA'] },
-  { id: 'card-85', order: 85, title: 'USAID', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'US', 'NVA'] },
-  { id: 'card-86', order: 86, title: 'Mandate of Heaven', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'NVA', 'US'] },
-  { id: 'card-87', order: 87, title: 'Nguyen Chanh Thi', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'NVA', 'US'] },
-  { id: 'card-89', order: 89, title: 'Tam Chau', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'NVA', 'US'] },
-  { id: 'card-90', order: 90, title: 'Walt Rostow', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'NVA', 'US'] },
+  { id: 'card-64', order: 64, title: 'Honolulu Conference', sideMode: 'single', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
+  { id: 'card-67', order: 67, title: 'Amphib Landing', sideMode: 'dual', seatOrder: ['ARVN', 'US', 'VC', 'NVA'] },
+  { id: 'card-69', order: 69, title: 'MACV', sideMode: 'single', seatOrder: ['ARVN', 'US', 'VC', 'NVA'] },
+  { id: 'card-70', order: 70, title: 'ROKs', sideMode: 'dual', seatOrder: ['ARVN', 'US', 'VC', 'NVA'] },
+  { id: 'card-72', order: 72, title: 'Body Count', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'US', 'VC'] },
+  { id: 'card-73', order: 73, title: 'Great Society', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'US', 'VC'] },
+  { id: 'card-76', order: 76, title: 'Annam', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
+  { id: 'card-78', order: 78, title: 'General Landsdale', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
+  { id: 'card-81', order: 81, title: 'CIDG', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },
+  { id: 'card-83', order: 83, title: 'Election', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },
+  { id: 'card-85', order: 85, title: 'USAID', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },
+  { id: 'card-86', order: 86, title: 'Mandate of Heaven', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'NVA', 'US'] },
+  { id: 'card-87', order: 87, title: 'Nguyen Chanh Thi', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'NVA', 'US'] },
+  { id: 'card-89', order: 89, title: 'Tam Chau', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'NVA', 'US'] },
+  { id: 'card-90', order: 90, title: 'Walt Rostow', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'NVA', 'US'] },
 ] as const;
 
 describe('FITL 1965 ARVN-first event-card production spec', () => {
@@ -36,7 +36,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, expected.sideMode);
       assert.equal(card?.metadata?.period, '1965');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
 
       if (expected.sideMode === 'dual') {
@@ -61,7 +61,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'shaded' } }]);
   });
 
-  it('encodes card 70 (ROKs) free grants with executeAsFaction override for as-if-US operations', () => {
+  it('encodes card 70 (ROKs) free grants with executeAsSeat override for as-if-US operations', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -72,15 +72,15 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
 
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        faction: '1',
-        executeAsFaction: '0',
+        seat: '1',
+        executeAsSeat: '0',
         sequence: { chain: 'roks-arvn-as-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
-        faction: '1',
-        executeAsFaction: '0',
+        seat: '1',
+        executeAsSeat: '0',
         sequence: { chain: 'roks-arvn-as-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],

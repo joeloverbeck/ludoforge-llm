@@ -93,8 +93,8 @@ describe('texas hold\'em spec structure', () => {
 
     const payload = scenario.payload as {
       readonly pieceCatalogAssetId: string;
-      readonly factionPools?: readonly {
-        readonly faction: string;
+      readonly seatPools?: readonly {
+        readonly seat: string;
         readonly availableZoneId: string;
         readonly outOfPlayZoneId?: string;
       }[];
@@ -102,7 +102,7 @@ describe('texas hold\'em spec structure', () => {
     };
 
     assert.equal(payload.pieceCatalogAssetId, 'standard-52-deck');
-    assert.deepEqual(payload.factionPools, [{ faction: 'neutral', availableZoneId: 'deck:none', outOfPlayZoneId: 'muck:none' }]);
+    assert.deepEqual(payload.seatPools, [{ seat: 'neutral', availableZoneId: 'deck:none', outOfPlayZoneId: 'muck:none' }]);
     assert.equal(payload.settings?.startingChips, 1000);
     assert.equal(Array.isArray((scenario as { readonly tableContracts?: unknown }).tableContracts), true);
 

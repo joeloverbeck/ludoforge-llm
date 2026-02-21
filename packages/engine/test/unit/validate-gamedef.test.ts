@@ -2051,7 +2051,7 @@ describe('validateGameDef reference checks', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2084,7 +2084,7 @@ describe('validateGameDef reference checks', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2115,7 +2115,7 @@ describe('validateGameDef reference checks', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2145,12 +2145,12 @@ describe('validateGameDef reference checks', () => {
         checkpoints: [
           {
             id: 'us-threshold',
-            faction: 'us',
+            seat: 'us',
             timing: 'duringCoup',
             when: { op: '>=', left: { ref: 'gvar', var: 'unknown' }, right: 50 },
           },
         ],
-        margins: [{ faction: 'us', value: { ref: 'pvar', player: 'active', var: 'missingPvar' } }],
+        margins: [{ seat: 'us', value: { ref: 'pvar', player: 'active', var: 'missingPvar' } }],
         ranking: { order: 'desc' },
       },
     } as unknown as GameDef;
@@ -2507,30 +2507,30 @@ describe('validateGameDef constraints and warnings', () => {
           id: 'nv-restriction',
           description: 'Only NVA/VC in North Vietnam',
           spaceFilter: { country: ['northVietnam'] },
-          pieceFilter: { factions: ['US', 'ARVN'] },
+          pieceFilter: { seats: ['US', 'ARVN'] },
           rule: 'prohibit' as const,
         },
       ],
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
-    assert.ok(diagnostics.some((diag) => diag.code === 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING'));
+    assert.ok(diagnostics.some((diag) => diag.code === 'STACKING_CONSTRAINT_TOKEN_TYPE_SEAT_MISSING'));
   });
 
   it('reports error when token type faction references undeclared faction id', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      factions: [{ id: 'us' }],
-      tokenTypes: [{ id: 'troops', faction: 'arvn', props: { faction: 'string' } }],
+      seats: [{ id: 'us' }],
+      tokenTypes: [{ id: 'troops', seat: 'arvn', props: { faction: 'string' } }],
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
         (diag) =>
-          diag.code === 'TOKEN_TYPE_FACTION_UNDECLARED'
-          && diag.path === 'tokenTypes[0].faction'
+          diag.code === 'TOKEN_TYPE_SEAT_UNDECLARED'
+          && diag.path === 'tokenTypes[0].seat'
           && diag.severity === 'error',
       ),
     );
@@ -2566,7 +2566,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
     id: 'nv-restriction',
     description: 'Only NVA/VC in North Vietnam',
     spaceFilter: { attributeEquals: { country: 'north-vietnam' } },
-    pieceFilter: { factions: ['US', 'ARVN'] },
+    pieceFilter: { seats: ['US', 'ARVN'] },
     rule: 'prohibit',
   };
   const pieceTypeFactionById = new Map<string, string>([
@@ -2578,9 +2578,9 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('reports error when 3 bases placed in province (maxCount 2)', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'NVA', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'US', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'ARVN', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'NVA', count: 1 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2599,7 +2599,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('reports error when base placed on LoC (prohibit)', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'route-1', pieceTypeId: 'base', faction: 'NVA', count: 1 },
+      { spaceId: 'route-1', pieceTypeId: 'base', seat: 'NVA', count: 1 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2616,7 +2616,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('reports error when US piece placed in North Vietnam (prohibit by faction+country)', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'hanoi', pieceTypeId: 'troops', faction: 'US', count: 2 },
+      { spaceId: 'hanoi', pieceTypeId: 'troops', seat: 'US', count: 2 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2635,11 +2635,11 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('produces no diagnostics for valid placements within all constraints', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
-      { spaceId: 'quang-tri', pieceTypeId: 'troops', faction: 'US', count: 5 },
-      { spaceId: 'hue', pieceTypeId: 'base', faction: 'NVA', count: 2 },
-      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'NVA', count: 3 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'US', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'ARVN', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'troops', seat: 'US', count: 5 },
+      { spaceId: 'hue', pieceTypeId: 'base', seat: 'NVA', count: 2 },
+      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', seat: 'NVA', count: 3 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2654,7 +2654,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('produces no diagnostics when no stacking constraints defined (backward-compatible)', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 5 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'US', count: 5 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2668,9 +2668,9 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('reports multiple violations across different constraints', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 3 },
-      { spaceId: 'route-1', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
-      { spaceId: 'hanoi', pieceTypeId: 'troops', faction: 'ARVN', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'US', count: 3 },
+      { spaceId: 'route-1', pieceTypeId: 'base', seat: 'ARVN', count: 1 },
+      { spaceId: 'hanoi', pieceTypeId: 'troops', seat: 'ARVN', count: 1 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2686,7 +2686,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('does not flag non-matching piece types against constraint', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'troops', faction: 'US', count: 10 },
+      { spaceId: 'quang-tri', pieceTypeId: 'troops', seat: 'US', count: 10 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2700,8 +2700,8 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 
   it('does not flag NVA/VC pieces in North Vietnam against restriction', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'NVA', count: 5 },
-      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'VC', count: 3 },
+      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', seat: 'NVA', count: 5 },
+      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', seat: 'VC', count: 3 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2719,11 +2719,11 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       id: 'nv-restriction-canonical',
       description: 'Only nva/vc in North Vietnam (canonical ids)',
       spaceFilter: { attributeEquals: { country: 'north-vietnam' } },
-      pieceFilter: { factions: ['us', 'arvn'] },
+      pieceFilter: { seats: ['us', 'arvn'] },
       rule: 'prohibit',
     };
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'hanoi', pieceTypeId: 'us-troops', faction: 'US', count: 1 },
+      { spaceId: 'hanoi', pieceTypeId: 'us-troops', seat: 'US', count: 1 },
     ];
     const pieceTypeFactionById = new Map<string, string>([['us-troops', 'us']]);
 
@@ -2758,7 +2758,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       } as ZoneDef,
     ];
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'US', count: 1 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
@@ -2789,7 +2789,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       } as ZoneDef,
     ];
     const placements: readonly ScenarioPiecePlacement[] = [
-      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', seat: 'US', count: 1 },
     ];
 
     const diagnostics = validateInitialPlacementsAgainstStackingConstraints(

@@ -20,6 +20,7 @@ import {
 import { bindingShadowWarningsForScope } from './binding-diagnostics.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
+import { areTypesCompatible, inferValueExprType, type TypeInferenceContext } from './type-inference.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
@@ -28,6 +29,7 @@ export interface ConditionLoweringContext {
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
+  readonly typeInference?: TypeInferenceContext;
 }
 
 export interface ConditionLoweringResult<TValue> {
@@ -113,6 +115,19 @@ export function lowerConditionNode(
       const diagnostics = [...left.diagnostics, ...right.diagnostics];
       if (left.value === null || right.value === null) {
         return { value: null, diagnostics };
+      }
+      if (context.typeInference !== undefined && (source.op === '==' || source.op === '!=')) {
+        const leftType = inferValueExprType(left.value, context.typeInference);
+        const rightType = inferValueExprType(right.value, context.typeInference);
+        if (!areTypesCompatible(leftType, rightType)) {
+          diagnostics.push({
+            code: 'CNL_COMPILER_CONDITION_TYPE_MISMATCH',
+            path,
+            severity: 'warning',
+            message: `Comparison operands have incompatible types: left is ${leftType}, right is ${rightType}. Strict equality will always evaluate to ${source.op === '==' ? 'false' : 'true'}.`,
+            suggestion: 'Ensure both sides of the comparison have the same type.',
+          });
+        }
       }
       return {
         value: { op: source.op, left: left.value, right: right.value },

@@ -222,16 +222,16 @@ describe('compiler structured section results', () => {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            factions: [{ id: 'us' }],
+            seats: [{ id: 'us' }],
             pieceTypes: [
               {
                 id: 'us-troops',
-                faction: 'us',
+                seat: 'us',
                 statusDimensions: [],
                 transitions: [],
               },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 5 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 5 }],
           },
         },
       ],
@@ -241,7 +241,7 @@ describe('compiler structured section results', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.notEqual(result.gameDef, null);
-    assert.deepEqual(result.gameDef?.factions, [{ id: 'us' }]);
+    assert.deepEqual(result.gameDef?.seats, [{ id: 'us' }]);
   });
 
   it('fails compile when selected piece catalog omits required factions catalog', () => {
@@ -256,12 +256,12 @@ describe('compiler structured section results', () => {
             pieceTypes: [
               {
                 id: 'us-troops',
-                faction: 'us',
+                seat: 'us',
                 statusDimensions: [],
                 transitions: [],
               },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 5 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 5 }],
           },
         },
       ],
@@ -275,7 +275,7 @@ describe('compiler structured section results', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID'
-          && diagnostic.path.endsWith('.payload.factions'),
+          && diagnostic.path.endsWith('.payload.seats'),
       ),
       true,
     );

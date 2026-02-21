@@ -17,7 +17,7 @@ turnOrder:
         lookahead: lookahead:none
         leader: leader:none
       eligibility:
-        factions: ['0', '1', '2', '3']
+        seats: ['0', '1', '2', '3']
         overrideWindows:
           - id: remain-eligible
             duration: nextTurn

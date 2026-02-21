@@ -47,7 +47,7 @@ describe('fitl production piece inventory', () => {
     assert.equal(inventoryByPieceTypeId.size, 12, 'Expected exactly one inventory entry per piece type');
 
     let totalPieces = 0;
-    const totalsByFaction = new Map<string, number>([
+    const totalsBySeat = new Map<string, number>([
       ['us', 0],
       ['arvn', 0],
       ['nva', 0],
@@ -58,15 +58,15 @@ describe('fitl production piece inventory', () => {
       assert.equal(entry.total > 0, true, `Inventory total must be > 0 for ${entry.pieceTypeId}`);
       const pieceType = pieceTypeById.get(entry.pieceTypeId);
       assert.ok(pieceType, `Unknown pieceTypeId in inventory: ${entry.pieceTypeId}`);
-      assert.equal(entry.faction, pieceType.faction, `Faction mismatch for ${entry.pieceTypeId}`);
+      assert.equal(entry.seat, pieceType.seat, `Seat mismatch for ${entry.pieceTypeId}`);
       totalPieces += entry.total;
-      totalsByFaction.set(entry.faction, (totalsByFaction.get(entry.faction) ?? 0) + entry.total);
+      totalsBySeat.set(entry.seat, (totalsBySeat.get(entry.seat) ?? 0) + entry.total);
     }
 
     assert.equal(totalPieces, 229);
-    assert.equal(totalsByFaction.get('us'), 52);
-    assert.equal(totalsByFaction.get('arvn'), 69);
-    assert.equal(totalsByFaction.get('nva'), 69);
-    assert.equal(totalsByFaction.get('vc'), 39);
+    assert.equal(totalsBySeat.get('us'), 52);
+    assert.equal(totalsBySeat.get('arvn'), 69);
+    assert.equal(totalsBySeat.get('nva'), 69);
+    assert.equal(totalsBySeat.get('vc'), 39);
   });
 });

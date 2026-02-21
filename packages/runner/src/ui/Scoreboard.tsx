@@ -31,7 +31,7 @@ function groupFactionTracks(tracks: readonly RenderTrack[]): Map<string, readonl
   const grouped = new Map<string, RenderTrack[]>();
 
   for (const track of tracks) {
-    const key = track.faction ?? 'Unscoped';
+    const key = track.seat ?? 'Unscoped';
     const existing = grouped.get(key);
     if (existing === undefined) {
       grouped.set(key, [track]);
@@ -47,8 +47,8 @@ function groupFactionTracks(tracks: readonly RenderTrack[]): Map<string, readonl
 function buildFillStyle(track: RenderTrack, fallbackIndex: number): CSSProperties {
   return {
     width: `${calculateTrackFillPercent(track)}%`,
-    backgroundColor: track.scope === 'faction'
-      ? buildFactionColorValue(track.faction, fallbackIndex)
+    backgroundColor: track.scope === 'seat'
+      ? buildFactionColorValue(track.seat, fallbackIndex)
       : 'var(--accent)',
   };
 }
@@ -61,7 +61,7 @@ export function Scoreboard({ store }: ScoreboardProps): ReactElement | null {
   }
 
   const globalTracks = tracks.filter((track) => track.scope === 'global');
-  const factionTracks = tracks.filter((track) => track.scope === 'faction');
+  const factionTracks = tracks.filter((track) => track.scope === 'seat');
   const factionGroups = Array.from(groupFactionTracks(factionTracks).entries());
 
   return (

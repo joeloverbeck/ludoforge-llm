@@ -559,28 +559,28 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
       path: 'doc.turnOrder.config.turnFlow.eligibility',
       severity: 'error',
       message: 'turnFlow.eligibility must be an object.',
-      suggestion: 'Provide eligibility.factions and eligibility.overrideWindows.',
+      suggestion: 'Provide eligibility.seats and eligibility.overrideWindows.',
     });
   } else {
     validateUnknownKeys(eligibility, TURN_FLOW_ELIGIBILITY_KEYS, 'doc.turnOrder.config.turnFlow.eligibility', diagnostics, 'eligibility');
 
-    if (!Array.isArray(eligibility.factions)) {
+    if (!Array.isArray(eligibility.seats)) {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_FACTIONS_INVALID',
-        path: 'doc.turnOrder.config.turnFlow.eligibility.factions',
+        code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_SEATS_INVALID',
+        path: 'doc.turnOrder.config.turnFlow.eligibility.seats',
         severity: 'error',
-        message: 'turnFlow.eligibility.factions must be an array of non-empty strings.',
-        suggestion: 'Set eligibility.factions to faction identifiers in deterministic order.',
+        message: 'turnFlow.eligibility.seats must be an array of non-empty strings.',
+        suggestion: 'Set eligibility.seats to seat identifiers in deterministic order.',
       });
     } else {
-      for (const [index, faction] of eligibility.factions.entries()) {
-        if (typeof faction !== 'string' || faction.trim() === '') {
+      for (const [index, seat] of eligibility.seats.entries()) {
+        if (typeof seat !== 'string' || seat.trim() === '') {
           diagnostics.push({
-            code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_FACTIONS_INVALID',
-            path: `doc.turnOrder.config.turnFlow.eligibility.factions.${index}`,
+            code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_SEATS_INVALID',
+            path: `doc.turnOrder.config.turnFlow.eligibility.seats.${index}`,
             severity: 'error',
-            message: 'Each eligibility faction must be a non-empty string.',
-            suggestion: 'Replace invalid faction value with a non-empty identifier.',
+            message: 'Each eligibility seat must be a non-empty string.',
+            suggestion: 'Replace invalid seat value with a non-empty identifier.',
           });
         }
       }
@@ -675,7 +675,7 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
       path: 'doc.turnOrder.config.turnFlow.passRewards',
       severity: 'error',
       message: 'turnFlow.passRewards must be an array.',
-      suggestion: 'Set passRewards to entries of { factionClass, resource, amount }.',
+      suggestion: 'Set passRewards to entries of { seatClass, resource, amount }.',
     });
   } else {
     for (const [index, reward] of turnFlow.passRewards.entries()) {
@@ -686,12 +686,12 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
           path: basePath,
           severity: 'error',
           message: 'Each pass reward must be an object.',
-          suggestion: 'Set pass reward entries to { factionClass, resource, amount }.',
+          suggestion: 'Set pass reward entries to { seatClass, resource, amount }.',
         });
         continue;
       }
       validateUnknownKeys(reward, TURN_FLOW_PASS_REWARD_KEYS, basePath, diagnostics, 'pass reward');
-      validateIdentifierField(reward, 'factionClass', `${basePath}.factionClass`, diagnostics, 'pass reward factionClass');
+      validateIdentifierField(reward, 'seatClass', `${basePath}.seatClass`, diagnostics, 'pass reward seatClass');
       validateIdentifierField(reward, 'resource', `${basePath}.resource`, diagnostics, 'pass reward resource');
       if (!isFiniteNumber(reward.amount)) {
         diagnostics.push({

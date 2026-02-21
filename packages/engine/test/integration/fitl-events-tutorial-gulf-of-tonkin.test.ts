@@ -44,13 +44,13 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(card?.title, 'Gulf of Tonkin');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    assert.deepEqual(card?.metadata?.factionOrder, ['US', 'NVA', 'ARVN', 'VC']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['US', 'NVA', 'ARVN', 'VC']);
 
     assert.equal(typeof card?.unshaded?.text, 'string');
     assert.equal(typeof card?.shaded?.text, 'string');
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'gulf-of-tonkin-us-airstrike', step: 0 },
         operationClass: 'operation',
         actionIds: ['airStrike'],

@@ -287,7 +287,7 @@
       "ordering": "set"
     }
   ],
-  "factions": [
+  "seats": [
     {
       "id": "neutral"
     }
@@ -298,7 +298,7 @@
       "id": "standard-52-deck",
       "kind": "pieceCatalog",
       "payload": {
-        "factions": [
+        "seats": [
           {
             "id": "neutral"
           }
@@ -306,7 +306,7 @@
         "pieceTypes": [
           {
             "id": "card-2S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -318,7 +318,7 @@
           },
           {
             "id": "card-3S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -330,7 +330,7 @@
           },
           {
             "id": "card-4S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -342,7 +342,7 @@
           },
           {
             "id": "card-5S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -354,7 +354,7 @@
           },
           {
             "id": "card-6S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -366,7 +366,7 @@
           },
           {
             "id": "card-7S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -378,7 +378,7 @@
           },
           {
             "id": "card-8S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -390,7 +390,7 @@
           },
           {
             "id": "card-9S",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -402,7 +402,7 @@
           },
           {
             "id": "card-TS",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -414,7 +414,7 @@
           },
           {
             "id": "card-JS",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -426,7 +426,7 @@
           },
           {
             "id": "card-QS",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -438,7 +438,7 @@
           },
           {
             "id": "card-KS",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -450,7 +450,7 @@
           },
           {
             "id": "card-AS",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -462,7 +462,7 @@
           },
           {
             "id": "card-2H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -474,7 +474,7 @@
           },
           {
             "id": "card-3H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -486,7 +486,7 @@
           },
           {
             "id": "card-4H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -498,7 +498,7 @@
           },
           {
             "id": "card-5H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -510,7 +510,7 @@
           },
           {
             "id": "card-6H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -522,7 +522,7 @@
           },
           {
             "id": "card-7H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -534,7 +534,7 @@
           },
           {
             "id": "card-8H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -546,7 +546,7 @@
           },
           {
             "id": "card-9H",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -558,7 +558,7 @@
           },
           {
             "id": "card-TH",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -570,7 +570,7 @@
           },
           {
             "id": "card-JH",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -582,7 +582,7 @@
           },
           {
             "id": "card-QH",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -594,7 +594,7 @@
           },
           {
             "id": "card-KH",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -606,7 +606,7 @@
           },
           {
             "id": "card-AH",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -618,7 +618,7 @@
           },
           {
             "id": "card-2D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -630,7 +630,7 @@
           },
           {
             "id": "card-3D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -642,7 +642,7 @@
           },
           {
             "id": "card-4D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -654,7 +654,7 @@
           },
           {
             "id": "card-5D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -666,7 +666,7 @@
           },
           {
             "id": "card-6D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -678,7 +678,7 @@
           },
           {
             "id": "card-7D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -690,7 +690,7 @@
           },
           {
             "id": "card-8D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -702,7 +702,7 @@
           },
           {
             "id": "card-9D",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -714,7 +714,7 @@
           },
           {
             "id": "card-TD",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -726,7 +726,7 @@
           },
           {
             "id": "card-JD",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -738,7 +738,7 @@
           },
           {
             "id": "card-QD",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -750,7 +750,7 @@
           },
           {
             "id": "card-KD",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -762,7 +762,7 @@
           },
           {
             "id": "card-AD",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -774,7 +774,7 @@
           },
           {
             "id": "card-2C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -786,7 +786,7 @@
           },
           {
             "id": "card-3C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -798,7 +798,7 @@
           },
           {
             "id": "card-4C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -810,7 +810,7 @@
           },
           {
             "id": "card-5C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -822,7 +822,7 @@
           },
           {
             "id": "card-6C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -834,7 +834,7 @@
           },
           {
             "id": "card-7C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -846,7 +846,7 @@
           },
           {
             "id": "card-8C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -858,7 +858,7 @@
           },
           {
             "id": "card-9C",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -870,7 +870,7 @@
           },
           {
             "id": "card-TC",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -882,7 +882,7 @@
           },
           {
             "id": "card-JC",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -894,7 +894,7 @@
           },
           {
             "id": "card-QC",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -906,7 +906,7 @@
           },
           {
             "id": "card-KC",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -918,7 +918,7 @@
           },
           {
             "id": "card-AC",
-            "faction": "neutral",
+            "seat": "neutral",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -932,262 +932,262 @@
         "inventory": [
           {
             "pieceTypeId": "card-2S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-3S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-4S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-5S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-6S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-7S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-8S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-9S",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-TS",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-JS",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-QS",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-KS",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-AS",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-2H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-3H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-4H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-5H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-6H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-7H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-8H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-9H",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-TH",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-JH",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-QH",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-KH",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-AH",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-2D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-3D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-4D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-5D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-6D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-7D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-8D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-9D",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-TD",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-JD",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-QD",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-KD",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-AD",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-2C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-3C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-4C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-5C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-6C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-7C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-8C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-9C",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-TC",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-JC",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-QC",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-KC",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           },
           {
             "pieceTypeId": "card-AC",
-            "faction": "neutral",
+            "seat": "neutral",
             "total": 1
           }
         ]
@@ -1198,9 +1198,9 @@
       "kind": "scenario",
       "payload": {
         "pieceCatalogAssetId": "standard-52-deck",
-        "factionPools": [
+        "seatPools": [
           {
-            "faction": "neutral",
+            "seat": "neutral",
             "availableZoneId": "deck:none",
             "outOfPlayZoneId": "muck:none"
           }
@@ -1287,32 +1287,16 @@
   ],
   "tableContracts": [
     {
-      "id": "standard-52-deck::factions",
-      "assetId": "standard-52-deck",
-      "tablePath": "factions",
-      "fields": [
-        {
-          "field": "id",
-          "type": "string"
-        }
-      ],
-      "uniqueBy": [
-        [
-          "id"
-        ]
-      ]
-    },
-    {
       "id": "standard-52-deck::inventory",
       "assetId": "standard-52-deck",
       "tablePath": "inventory",
       "fields": [
         {
-          "field": "faction",
+          "field": "pieceTypeId",
           "type": "string"
         },
         {
-          "field": "pieceTypeId",
+          "field": "seat",
           "type": "string"
         },
         {
@@ -1327,20 +1311,36 @@
       ]
     },
     {
-      "id": "tournament-standard::factionPools",
+      "id": "standard-52-deck::seats",
+      "assetId": "standard-52-deck",
+      "tablePath": "seats",
+      "fields": [
+        {
+          "field": "id",
+          "type": "string"
+        }
+      ],
+      "uniqueBy": [
+        [
+          "id"
+        ]
+      ]
+    },
+    {
+      "id": "tournament-standard::seatPools",
       "assetId": "tournament-standard",
-      "tablePath": "factionPools",
+      "tablePath": "seatPools",
       "fields": [
         {
           "field": "availableZoneId",
           "type": "string"
         },
         {
-          "field": "faction",
+          "field": "outOfPlayZoneId",
           "type": "string"
         },
         {
-          "field": "outOfPlayZoneId",
+          "field": "seat",
           "type": "string"
         }
       ],
@@ -1349,10 +1349,10 @@
           "availableZoneId"
         ],
         [
-          "faction"
+          "outOfPlayZoneId"
         ],
         [
-          "outOfPlayZoneId"
+          "seat"
         ]
       ]
     },
@@ -1416,7 +1416,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-3S",
@@ -1426,7 +1426,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-4S",
@@ -1436,7 +1436,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-5S",
@@ -1446,7 +1446,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-6S",
@@ -1456,7 +1456,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-7S",
@@ -1466,7 +1466,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-8S",
@@ -1476,7 +1476,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-9S",
@@ -1486,7 +1486,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-TS",
@@ -1496,7 +1496,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-JS",
@@ -1506,7 +1506,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-QS",
@@ -1516,7 +1516,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-KS",
@@ -1526,7 +1526,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-AS",
@@ -1536,7 +1536,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-2H",
@@ -1546,7 +1546,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-3H",
@@ -1556,7 +1556,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-4H",
@@ -1566,7 +1566,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-5H",
@@ -1576,7 +1576,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-6H",
@@ -1586,7 +1586,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-7H",
@@ -1596,7 +1596,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-8H",
@@ -1606,7 +1606,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-9H",
@@ -1616,7 +1616,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-TH",
@@ -1626,7 +1626,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-JH",
@@ -1636,7 +1636,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-QH",
@@ -1646,7 +1646,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-KH",
@@ -1656,7 +1656,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-AH",
@@ -1666,7 +1666,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-2D",
@@ -1676,7 +1676,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-3D",
@@ -1686,7 +1686,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-4D",
@@ -1696,7 +1696,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-5D",
@@ -1706,7 +1706,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-6D",
@@ -1716,7 +1716,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-7D",
@@ -1726,7 +1726,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-8D",
@@ -1736,7 +1736,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-9D",
@@ -1746,7 +1746,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-TD",
@@ -1756,7 +1756,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-JD",
@@ -1766,7 +1766,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-QD",
@@ -1776,7 +1776,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-KD",
@@ -1786,7 +1786,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-AD",
@@ -1796,7 +1796,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-2C",
@@ -1806,7 +1806,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-3C",
@@ -1816,7 +1816,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-4C",
@@ -1826,7 +1826,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-5C",
@@ -1836,7 +1836,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-6C",
@@ -1846,7 +1846,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-7C",
@@ -1856,7 +1856,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-8C",
@@ -1866,7 +1866,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-9C",
@@ -1876,7 +1876,7 @@
         "rankName": "int",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-TC",
@@ -1886,7 +1886,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-JC",
@@ -1896,7 +1896,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-QC",
@@ -1906,7 +1906,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-KC",
@@ -1916,7 +1916,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     },
     {
       "id": "card-AC",
@@ -1926,7 +1926,7 @@
         "rankName": "string",
         "suitName": "string"
       },
-      "faction": "neutral"
+      "seat": "neutral"
     }
   ],
   "setup": [
@@ -9145,18 +9145,34 @@
                         "right": false
                       },
                       {
-                        "op": "!=",
-                        "left": {
-                          "ref": "pvar",
-                          "player": {
-                            "chosen": "$__macro_betting_round_completion_actions_0__effects_4__player"
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "!=",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_0__effects_4__player"
+                              },
+                              "var": "streetBet"
+                            },
+                            "right": {
+                              "ref": "gvar",
+                              "var": "currentBet"
+                            }
                           },
-                          "var": "streetBet"
-                        },
-                        "right": {
-                          "ref": "gvar",
-                          "var": "currentBet"
-                        }
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_0__effects_4__player"
+                              },
+                              "var": "actedSinceLastFullRaise"
+                            },
+                            "right": false
+                          }
+                        ]
                       }
                     ]
                   },
@@ -9759,18 +9775,34 @@
                         "right": false
                       },
                       {
-                        "op": "!=",
-                        "left": {
-                          "ref": "pvar",
-                          "player": {
-                            "chosen": "$__macro_betting_round_completion_actions_1__effects_2__player"
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "!=",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_1__effects_2__player"
+                              },
+                              "var": "streetBet"
+                            },
+                            "right": {
+                              "ref": "gvar",
+                              "var": "currentBet"
+                            }
                           },
-                          "var": "streetBet"
-                        },
-                        "right": {
-                          "ref": "gvar",
-                          "var": "currentBet"
-                        }
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_1__effects_2__player"
+                              },
+                              "var": "actedSinceLastFullRaise"
+                            },
+                            "right": false
+                          }
+                        ]
                       }
                     ]
                   },
@@ -10444,18 +10476,34 @@
                         "right": false
                       },
                       {
-                        "op": "!=",
-                        "left": {
-                          "ref": "pvar",
-                          "player": {
-                            "chosen": "$__macro_betting_round_completion_actions_2__effects_6__player"
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "!=",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_2__effects_6__player"
+                              },
+                              "var": "streetBet"
+                            },
+                            "right": {
+                              "ref": "gvar",
+                              "var": "currentBet"
+                            }
                           },
-                          "var": "streetBet"
-                        },
-                        "right": {
-                          "ref": "gvar",
-                          "var": "currentBet"
-                        }
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_2__effects_6__player"
+                              },
+                              "var": "actedSinceLastFullRaise"
+                            },
+                            "right": false
+                          }
+                        ]
                       }
                     ]
                   },
@@ -11323,18 +11371,34 @@
                         "right": false
                       },
                       {
-                        "op": "!=",
-                        "left": {
-                          "ref": "pvar",
-                          "player": {
-                            "chosen": "$__macro_betting_round_completion_actions_3__effects_5__player"
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "!=",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_3__effects_5__player"
+                              },
+                              "var": "streetBet"
+                            },
+                            "right": {
+                              "ref": "gvar",
+                              "var": "currentBet"
+                            }
                           },
-                          "var": "streetBet"
-                        },
-                        "right": {
-                          "ref": "gvar",
-                          "var": "currentBet"
-                        }
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_3__effects_5__player"
+                              },
+                              "var": "actedSinceLastFullRaise"
+                            },
+                            "right": false
+                          }
+                        ]
                       }
                     ]
                   },
@@ -12154,18 +12218,34 @@
                         "right": false
                       },
                       {
-                        "op": "!=",
-                        "left": {
-                          "ref": "pvar",
-                          "player": {
-                            "chosen": "$__macro_betting_round_completion_actions_4__effects_3__player"
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "!=",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_4__effects_3__player"
+                              },
+                              "var": "streetBet"
+                            },
+                            "right": {
+                              "ref": "gvar",
+                              "var": "currentBet"
+                            }
                           },
-                          "var": "streetBet"
-                        },
-                        "right": {
-                          "ref": "gvar",
-                          "var": "currentBet"
-                        }
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "pvar",
+                              "player": {
+                                "chosen": "$__macro_betting_round_completion_actions_4__effects_3__player"
+                              },
+                              "var": "actedSinceLastFullRaise"
+                            },
+                            "right": false
+                          }
+                        ]
                       }
                     ]
                   },

@@ -14,7 +14,7 @@ const OPPONENT_VAR_WEIGHT = 2_500;
 const SCORING_WEIGHT = 100;
 
 const playerVarValue = (state: GameState, playerId: PlayerId, varName: string): number =>
-  typeof state.perPlayerVars[String(playerId)]?.[varName] === 'number' ? (state.perPlayerVars[String(playerId)]?.[varName] as number) : 0;
+  typeof state.perPlayerVars[playerId]?.[varName] === 'number' ? (state.perPlayerVars[playerId]?.[varName] as number) : 0;
 
 const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): number => {
   if (!def.terminal.scoring) {

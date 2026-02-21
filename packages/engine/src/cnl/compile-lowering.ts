@@ -21,6 +21,7 @@ import type {
 import { lowerConditionNode, lowerNumericValueNode, lowerQueryNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizeActionExecutorSelector, normalizePlayerSelector } from './compile-selectors.js';
+import type { TypeInferenceContext } from './type-inference.js';
 import {
   evaluateActionSelectorContracts,
   getActionSelectorContract,
@@ -171,7 +172,7 @@ export function lowerTokenTypes(tokenTypes: GameSpecDoc['tokenTypes'], diagnosti
     lowered.push({
       id: tokenType.id,
       props,
-      ...(tokenType.faction === undefined ? {} : { faction: tokenType.faction }),
+      ...(tokenType.seat === undefined ? {} : { seat: tokenType.seat }),
     });
   }
   return lowered;
@@ -183,6 +184,7 @@ export function lowerTurnStructure(
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): TurnStructure {
   if ('activePlayerOrder' in turnStructure) {
     diagnostics.push({
@@ -206,10 +208,10 @@ export function lowerTurnStructure(
       }
 
       const onEnter = Array.isArray(phase.onEnter)
-        ? lowerEffectsWithDiagnostics(phase.onEnter, ownershipByBase, diagnostics, `${path}.onEnter`, [], tokenTraitVocabulary, namedSets)
+        ? lowerEffectsWithDiagnostics(phase.onEnter, ownershipByBase, diagnostics, `${path}.onEnter`, [], tokenTraitVocabulary, namedSets, typeInference)
         : undefined;
       const onExit = Array.isArray(phase.onExit)
-        ? lowerEffectsWithDiagnostics(phase.onExit, ownershipByBase, diagnostics, `${path}.onExit`, [], tokenTraitVocabulary, namedSets)
+        ? lowerEffectsWithDiagnostics(phase.onExit, ownershipByBase, diagnostics, `${path}.onExit`, [], tokenTraitVocabulary, namedSets, typeInference)
         : undefined;
 
       return {
@@ -398,6 +400,7 @@ export function lowerActions(
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): readonly ActionDef[] {
   const lowered: ActionDef[] = [];
   for (const [index, action] of actions.entries()) {
@@ -423,7 +426,7 @@ export function lowerActions(
     diagnostics.push(...executor.diagnostics);
     const capabilities = lowerActionCapabilities(action.capabilities, diagnostics, `${path}.capabilities`);
 
-    const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`, tokenTraitVocabulary, namedSets);
+    const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`, tokenTraitVocabulary, namedSets, typeInference);
     const bindingScope = params.bindingScope;
     const selectorContractViolations = evaluateActionSelectorContracts({
       selectors: {
@@ -452,9 +455,9 @@ export function lowerActions(
             : `Declare a matching action param (for example name: "$owner") or use a non-binding ${violation.role} selector.`,
       })),
     );
-    const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary, namedSets);
-    const cost = lowerEffectsWithDiagnostics(action.cost, ownershipByBase, diagnostics, `${path}.cost`, bindingScope, tokenTraitVocabulary, namedSets);
-    const effects = lowerEffectsWithDiagnostics(action.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope, tokenTraitVocabulary, namedSets);
+    const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary, namedSets, typeInference);
+    const cost = lowerEffectsWithDiagnostics(action.cost, ownershipByBase, diagnostics, `${path}.cost`, bindingScope, tokenTraitVocabulary, namedSets, typeInference);
+    const effects = lowerEffectsWithDiagnostics(action.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope, tokenTraitVocabulary, namedSets, typeInference);
     const limits = lowerActionLimits(action.limits, diagnostics, `${path}.limits`);
 
     if (actor.value === null || executor.value === null || (action.pre !== null && pre === null)) {
@@ -567,6 +570,7 @@ function lowerActionParams(
   path: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): {
   readonly value: readonly ParamDef[];
   readonly bindingScope: readonly string[];
@@ -591,6 +595,7 @@ function lowerActionParams(
         ownershipByBase,
         ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
         ...(namedSets === undefined ? {} : { namedSets }),
+        ...(typeInference === undefined ? {} : { typeInference }),
       },
       `${paramPath}.domain`,
     );
@@ -646,6 +651,7 @@ export function lowerTriggers(
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): readonly TriggerDef[] {
   const lowered: TriggerDef[] = [];
   for (const [index, trigger] of triggers.entries()) {
@@ -665,6 +671,7 @@ export function lowerTriggers(
       `${path}.match`,
       tokenTraitVocabulary,
       namedSets,
+      typeInference,
     );
     const when = lowerOptionalCondition(
       trigger.when,
@@ -674,6 +681,7 @@ export function lowerTriggers(
       `${path}.when`,
       tokenTraitVocabulary,
       namedSets,
+      typeInference,
     );
     const effects = lowerEffectsWithDiagnostics(
       trigger.effects,
@@ -683,6 +691,7 @@ export function lowerTriggers(
       bindingScope,
       tokenTraitVocabulary,
       namedSets,
+      typeInference,
     );
 
     if (event === null || match === null || when === null) {
@@ -804,6 +813,7 @@ export function lowerEndConditions(
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): readonly EndCondition[] {
   const lowered: EndCondition[] = [];
   for (const [index, endCondition] of endConditions.entries()) {
@@ -819,6 +829,7 @@ export function lowerEndConditions(
         ownershipByBase,
         ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
         ...(namedSets === undefined ? {} : { namedSets }),
+        ...(typeInference === undefined ? {} : { typeInference }),
       },
       `${path}.when`,
     );
@@ -911,6 +922,7 @@ export function lowerOptionalCondition(
   path: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): ConditionAST | null | undefined {
   if (source === null) {
     return null;
@@ -925,6 +937,7 @@ export function lowerOptionalCondition(
       bindingScope,
       ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
       ...(namedSets === undefined ? {} : { namedSets }),
+      ...(typeInference === undefined ? {} : { typeInference }),
     },
     path,
   );
@@ -940,6 +953,7 @@ export function lowerEffectsWithDiagnostics(
   bindingScope: readonly string[] = [],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): readonly EffectAST[] {
   if (!Array.isArray(source)) {
     diagnostics.push(missingCapabilityDiagnostic(path, 'effects array', source, ['array']));
@@ -953,6 +967,7 @@ export function lowerEffectsWithDiagnostics(
       bindingScope,
       ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
       ...(namedSets === undefined ? {} : { namedSets }),
+      ...(typeInference === undefined ? {} : { typeInference }),
     },
     path,
   );

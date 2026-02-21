@@ -5,18 +5,18 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-95', order: 95, title: 'Westmoreland', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'US', 'NVA', 'ARVN'] },
-  { id: 'card-98', order: 98, title: 'Long Tan', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'US', 'ARVN', 'NVA'] },
-  { id: 'card-99', order: 99, title: 'Masher/White Wing', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'US', 'ARVN', 'NVA'] },
-  { id: 'card-100', order: 100, title: 'Rach Ba Rai', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'US', 'ARVN', 'NVA'] },
-  { id: 'card-102', order: 102, title: 'Cu Chi', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'NVA', 'US', 'ARVN'] },
-  { id: 'card-104', order: 104, title: 'Main Force Bns', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'NVA', 'US', 'ARVN'] },
-  { id: 'card-105', order: 105, title: 'Rural Pressure', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'NVA', 'US', 'ARVN'] },
-  { id: 'card-106', order: 106, title: 'Binh Duong', sideMode: 'single', period: '1965', factionOrder: ['VC', 'NVA', 'ARVN', 'US'] },
-  { id: 'card-108', order: 108, title: 'Draft Dodgers', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'NVA', 'ARVN', 'US'] },
-  { id: 'card-109', order: 109, title: 'Nguyen Huu Tho', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'NVA', 'ARVN', 'US'] },
-  { id: 'card-114', order: 114, title: 'Tri Quang', sideMode: 'dual', period: '1965', factionOrder: ['VC', 'ARVN', 'US', 'NVA'] },
-  { id: 'card-116', order: 116, title: 'Cadres', sideMode: 'dual', period: '1964', factionOrder: ['VC', 'ARVN', 'NVA', 'US'] },
+  { id: 'card-95', order: 95, title: 'Westmoreland', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'US', 'NVA', 'ARVN'] },
+  { id: 'card-98', order: 98, title: 'Long Tan', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'US', 'ARVN', 'NVA'] },
+  { id: 'card-99', order: 99, title: 'Masher/White Wing', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'US', 'ARVN', 'NVA'] },
+  { id: 'card-100', order: 100, title: 'Rach Ba Rai', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'US', 'ARVN', 'NVA'] },
+  { id: 'card-102', order: 102, title: 'Cu Chi', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'NVA', 'US', 'ARVN'] },
+  { id: 'card-104', order: 104, title: 'Main Force Bns', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'NVA', 'US', 'ARVN'] },
+  { id: 'card-105', order: 105, title: 'Rural Pressure', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'NVA', 'US', 'ARVN'] },
+  { id: 'card-106', order: 106, title: 'Binh Duong', sideMode: 'single', period: '1965', seatOrder: ['VC', 'NVA', 'ARVN', 'US'] },
+  { id: 'card-108', order: 108, title: 'Draft Dodgers', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'NVA', 'ARVN', 'US'] },
+  { id: 'card-109', order: 109, title: 'Nguyen Huu Tho', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'NVA', 'ARVN', 'US'] },
+  { id: 'card-114', order: 114, title: 'Tri Quang', sideMode: 'dual', period: '1965', seatOrder: ['VC', 'ARVN', 'US', 'NVA'] },
+  { id: 'card-116', order: 116, title: 'Cadres', sideMode: 'dual', period: '1964', seatOrder: ['VC', 'ARVN', 'NVA', 'US'] },
 ] as const;
 
 describe('FITL VC-first event-card production spec batch', () => {
@@ -33,7 +33,7 @@ describe('FITL VC-first event-card production spec batch', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, expected.sideMode);
       assert.equal(card?.metadata?.period, expected.period);
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
 
       if (expected.sideMode === 'dual') {
@@ -75,19 +75,19 @@ describe('FITL VC-first event-card production spec batch', () => {
     assert.notEqual(westmoreland, undefined);
     assert.deepEqual(westmoreland?.unshaded?.freeOperationGrants, [
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'westmoreland-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['airLift'],
       },
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'westmoreland-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
       },
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'westmoreland-us', step: 2 },
         operationClass: 'operation',
         actionIds: ['airStrike'],
@@ -98,27 +98,27 @@ describe('FITL VC-first event-card production spec batch', () => {
     assert.notEqual(masher, undefined);
     assert.deepEqual(masher?.unshaded?.freeOperationGrants, [
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'masher-white-wing-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'masher-white-wing-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],
       },
       {
-        faction: '1',
-        executeAsFaction: '0',
+        seat: '1',
+        executeAsSeat: '0',
         sequence: { chain: 'masher-white-wing-arvn-as-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
-        faction: '1',
-        executeAsFaction: '0',
+        seat: '1',
+        executeAsSeat: '0',
         sequence: { chain: 'masher-white-wing-arvn-as-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],

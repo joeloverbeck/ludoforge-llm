@@ -140,7 +140,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       path: 'doc.turnOrder.config.turnFlow.eligibility',
       severity: 'error',
       message: 'turnFlow.eligibility is required and must be an object.',
-      suggestion: 'Define eligibility.factions and eligibility.overrideWindows.',
+      suggestion: 'Define eligibility.seats and eligibility.overrideWindows.',
     });
   }
 
@@ -160,7 +160,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       path: 'doc.turnOrder.config.turnFlow.passRewards',
       severity: 'error',
       message: 'turnFlow.passRewards is required and must be an array.',
-      suggestion: 'Define pass reward entries keyed by faction class.',
+      suggestion: 'Define pass reward entries keyed by seat class.',
     });
   }
 
@@ -180,7 +180,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     typeof cardLifecycle.lookahead !== 'string' ||
     typeof cardLifecycle.leader !== 'string' ||
     !isRecord(eligibility) ||
-    !Array.isArray(eligibility.factions) ||
+    !Array.isArray(eligibility.seats) ||
     !Array.isArray(eligibility.overrideWindows) ||
     !Array.isArray(rawTurnFlow.optionMatrix) ||
     !Array.isArray(rawTurnFlow.passRewards) ||
@@ -205,19 +205,19 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     }
   }
 
-  const factionOrder = eligibility.factions.filter((faction): faction is string => typeof faction === 'string');
-  const seenFactions = new Set<string>();
-  for (const [index, faction] of factionOrder.entries()) {
-    if (!seenFactions.has(faction)) {
-      seenFactions.add(faction);
+  const seatOrder = eligibility.seats.filter((seat): seat is string => typeof seat === 'string');
+  const seenSeats = new Set<string>();
+  for (const [index, seat] of seatOrder.entries()) {
+    if (!seenSeats.has(seat)) {
+      seenSeats.add(seat);
       continue;
     }
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_FACTION',
-      path: `doc.turnOrder.config.turnFlow.eligibility.factions.${index}`,
+      code: 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_SEAT',
+      path: `doc.turnOrder.config.turnFlow.eligibility.seats.${index}`,
       severity: 'error',
-      message: `Duplicate faction id "${faction}" creates unresolved deterministic ordering.`,
-      suggestion: 'Declare each faction id exactly once in eligibility.factions.',
+      message: `Duplicate seat id "${seat}" creates unresolved deterministic ordering.`,
+      suggestion: 'Declare each seat id exactly once in eligibility.seats.',
     });
   }
 
@@ -265,24 +265,24 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         path: 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence',
         severity: 'error',
         message: 'Multiple pivotal actions require explicit interrupt precedence for deterministic ordering.',
-        suggestion: 'Declare pivotal.interrupt.precedence with a stable faction-id order.',
+        suggestion: 'Declare pivotal.interrupt.precedence with a stable seat-id order.',
       });
     }
 
     const seenPrecedence = new Set<string>();
-    for (const [index, faction] of precedence.entries()) {
-      if (!factionOrder.includes(faction)) {
+    for (const [index, seat] of precedence.entries()) {
+      if (!seatOrder.includes(seat)) {
         diagnostics.push({
-          code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_FACTION',
+          code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_SEAT',
           path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${index}`,
           severity: 'error',
-          message: `Interrupt precedence faction "${faction}" is not declared in eligibility.factions.`,
-          suggestion: 'Use faction ids declared in turnFlow.eligibility.factions.',
+          message: `Interrupt precedence seat "${seat}" is not declared in eligibility.seats.`,
+          suggestion: 'Use seat ids declared in turnFlow.eligibility.seats.',
         });
       }
 
-      if (!seenPrecedence.has(faction)) {
-        seenPrecedence.add(faction);
+      if (!seenPrecedence.has(seat)) {
+        seenPrecedence.add(seat);
         continue;
       }
 
@@ -290,8 +290,8 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE',
         path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${index}`,
         severity: 'error',
-        message: `Duplicate interrupt precedence faction "${faction}" creates unresolved ordering.`,
-        suggestion: 'List each faction at most once in pivotal.interrupt.precedence.',
+        message: `Duplicate interrupt precedence seat "${seat}" creates unresolved ordering.`,
+        suggestion: 'List each seat at most once in pivotal.interrupt.precedence.',
       });
     }
 

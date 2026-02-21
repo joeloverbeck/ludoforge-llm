@@ -32,11 +32,11 @@ dataAssets:
   - id: fitl-piece-catalog-foundation-coup
     kind: pieceCatalog
     payload:
-      factions:
+      seats:
         - id: vc
       pieceTypes:
         - id: vc-guerrilla
-          faction: vc
+          seat: vc
           statusDimensions: [activity]
           transitions:
             - dimension: activity
@@ -44,7 +44,7 @@ dataAssets:
               to: active
       inventory:
         - pieceTypeId: vc-guerrilla
-          faction: vc
+          seat: vc
           total: 30
   - id: fitl-scenario-foundation-coup
     kind: scenario
@@ -84,7 +84,7 @@ turnOrder:
         lookahead: quang-tri:none
         leader: hue:none
       eligibility:
-        factions: [us, nva]
+        seats: [us, nva]
         overrideWindows: []
       optionMatrix: []
       passRewards: []
@@ -100,7 +100,7 @@ turnOrder:
 terminal:
   checkpoints:
     - id: us-threshold
-      faction: us
+      seat: us
       timing: duringCoup
       when:
         op: ">"
@@ -109,7 +109,7 @@ terminal:
           var: usSupport
         right: 50
     - id: final-coup
-      faction: us
+      seat: us
       timing: finalCoup
       when:
         op: "=="
@@ -118,11 +118,11 @@ terminal:
           var: isFinalCoup
         right: 1
   margins:
-    - faction: us
+    - seat: us
       value:
         ref: gvar
         var: usMargin
-    - faction: nva
+    - seat: nva
       value:
         ref: gvar
         var: nvaMargin

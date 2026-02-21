@@ -264,7 +264,7 @@ describe('initialState', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: [], overrideWindows: [] },
+            eligibility: { seats: [], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -311,7 +311,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['1', '0'], overrideWindows: [] },
+            eligibility: { seats: ['1', '0'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -325,7 +325,7 @@ phase: [asPhaseId('main')],
 
     const state = initialState(def, 1, 2).state;
     assert.equal(state.activePlayer, asPlayerId(1));
-    assert.deepEqual(requireCardDrivenRuntime(state).factionOrder, ['1', '0']);
+    assert.deepEqual(requireCardDrivenRuntime(state).seatOrder, ['1', '0']);
     assert.deepEqual(requireCardDrivenRuntime(state).eligibility, { '1': true, '0': true });
     assert.equal(requireCardDrivenRuntime(state).currentCard.firstEligible, '1');
     assert.equal(requireCardDrivenRuntime(state).currentCard.secondEligible, '0');

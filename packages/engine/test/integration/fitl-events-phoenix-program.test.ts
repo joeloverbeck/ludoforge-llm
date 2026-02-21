@@ -17,7 +17,7 @@ describe('FITL Phoenix Program event-card production spec', () => {
     assert.equal(phoenix?.sideMode, 'dual');
     assert.deepEqual(phoenix?.tags, []);
     assert.equal(phoenix?.metadata?.period, '1968');
-    assert.deepEqual(phoenix?.metadata?.factionOrder, ['US', 'VC', 'ARVN', 'NVA']);
+    assert.deepEqual(phoenix?.metadata?.seatOrder, ['US', 'VC', 'ARVN', 'NVA']);
     assert.equal(typeof phoenix?.metadata?.flavorText, 'string');
     assert.equal(typeof phoenix?.unshaded?.text, 'string');
     assert.equal(typeof phoenix?.shaded?.text, 'string');

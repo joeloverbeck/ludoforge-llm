@@ -24,8 +24,8 @@ describe('Scoreboard', () => {
       createElement(Scoreboard, {
         store: createStore(makeRenderModel({
           tracks: [
-            { id: 'pot', displayName: 'Pot', scope: 'global', faction: null, min: 0, max: 100, currentValue: 10 },
-            { id: 'aid', displayName: 'Aid', scope: 'global', faction: null, min: 0, max: 20, currentValue: 5 },
+            { id: 'pot', displayName: 'Pot', scope: 'global', seat: null, min: 0, max: 100, currentValue: 10 },
+            { id: 'aid', displayName: 'Aid', scope: 'global', seat: null, min: 0, max: 20, currentValue: 5 },
           ],
         })),
       }),
@@ -38,7 +38,7 @@ describe('Scoreboard', () => {
   it('progress bar width matches normalized ratio', () => {
     render(createElement(Scoreboard, {
       store: createStore(makeRenderModel({
-        tracks: [{ id: 'pot', displayName: 'Pot', scope: 'global', faction: null, min: 0, max: 200, currentValue: 100 }],
+        tracks: [{ id: 'pot', displayName: 'Pot', scope: 'global', seat: null, min: 0, max: 200, currentValue: 100 }],
       })),
     }));
 
@@ -51,8 +51,8 @@ describe('Scoreboard', () => {
       createElement(Scoreboard, {
         store: createStore(makeRenderModel({
           tracks: [
-            { id: 'us-ops', displayName: 'US Ops', scope: 'faction', faction: 'us', min: 0, max: 6, currentValue: 2 },
-            { id: 'ussr-ops', displayName: 'USSR Ops', scope: 'faction', faction: 'ussr', min: 0, max: 6, currentValue: 3 },
+            { id: 'us-ops', displayName: 'US Ops', scope: 'seat', seat: 'us', min: 0, max: 6, currentValue: 2 },
+            { id: 'ussr-ops', displayName: 'USSR Ops', scope: 'seat', seat: 'ussr', min: 0, max: 6, currentValue: 3 },
           ],
         })),
       }),
@@ -66,7 +66,7 @@ describe('Scoreboard', () => {
     const html = renderToStaticMarkup(
       createElement(Scoreboard, {
         store: createStore(makeRenderModel({
-          tracks: [{ id: 'pot', displayName: 'Pot', scope: 'global', faction: null, min: 0, max: 100, currentValue: 70 }],
+          tracks: [{ id: 'pot', displayName: 'Pot', scope: 'global', seat: null, min: 0, max: 100, currentValue: 70 }],
         })),
       }),
     );
@@ -87,7 +87,7 @@ describe('Scoreboard', () => {
   it('collapse toggle hides and shows scoreboard content', () => {
     render(createElement(Scoreboard, {
       store: createStore(makeRenderModel({
-        tracks: [{ id: 'pot', displayName: 'Pot', scope: 'global', faction: null, min: 0, max: 100, currentValue: 50 }],
+        tracks: [{ id: 'pot', displayName: 'Pot', scope: 'global', seat: null, min: 0, max: 100, currentValue: 50 }],
       })),
     }));
 
@@ -103,7 +103,7 @@ describe('Scoreboard', () => {
       id: 'degenerate',
       displayName: 'Degenerate',
       scope: 'global',
-      faction: null,
+      seat: null,
       min: 5,
       max: 5,
       currentValue: 5,
@@ -113,7 +113,7 @@ describe('Scoreboard', () => {
       id: 'degenerate-filled',
       displayName: 'Degenerate Filled',
       scope: 'global',
-      faction: null,
+      seat: null,
       min: 5,
       max: 5,
       currentValue: 6,

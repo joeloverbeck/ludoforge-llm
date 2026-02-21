@@ -5,15 +5,15 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-61', order: 61, title: 'Armored Cavalry', sideMode: 'dual', factionOrder: ['ARVN', 'US', 'NVA', 'VC'] },
-  { id: 'card-62', order: 62, title: 'Cambodian Civil War', sideMode: 'dual', factionOrder: ['ARVN', 'US', 'NVA', 'VC'] },
-  { id: 'card-65', order: 65, title: 'International Forces', sideMode: 'dual', factionOrder: ['ARVN', 'US', 'NVA', 'VC'] },
-  { id: 'card-71', order: 71, title: 'An Loc', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'US', 'VC'] },
-  { id: 'card-74', order: 74, title: 'Lam Son 719', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'US', 'VC'] },
-  { id: 'card-77', order: 77, title: 'Detente', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'VC', 'US'] },
-  { id: 'card-80', order: 80, title: 'Light at the End of the Tunnel', sideMode: 'single', factionOrder: ['ARVN', 'NVA', 'VC', 'US'] },
-  { id: 'card-84', order: 84, title: 'To Quoc', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'US', 'NVA'] },
-  { id: 'card-88', order: 88, title: 'Phan Quang Dan', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'NVA', 'US'] },
+  { id: 'card-61', order: 61, title: 'Armored Cavalry', sideMode: 'dual', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
+  { id: 'card-62', order: 62, title: 'Cambodian Civil War', sideMode: 'dual', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
+  { id: 'card-65', order: 65, title: 'International Forces', sideMode: 'dual', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
+  { id: 'card-71', order: 71, title: 'An Loc', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'US', 'VC'] },
+  { id: 'card-74', order: 74, title: 'Lam Son 719', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'US', 'VC'] },
+  { id: 'card-77', order: 77, title: 'Detente', sideMode: 'dual', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
+  { id: 'card-80', order: 80, title: 'Light at the End of the Tunnel', sideMode: 'single', seatOrder: ['ARVN', 'NVA', 'VC', 'US'] },
+  { id: 'card-84', order: 84, title: 'To Quoc', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'US', 'NVA'] },
+  { id: 'card-88', order: 88, title: 'Phan Quang Dan', sideMode: 'dual', seatOrder: ['ARVN', 'VC', 'NVA', 'US'] },
 ] as const;
 
 describe('FITL 1968 ARVN-first event-card production spec', () => {
@@ -30,7 +30,7 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, expected.sideMode);
       assert.equal(card?.metadata?.period, '1968');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.metadata?.flavorText, 'string', `${expected.id} must include flavorText`);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
 

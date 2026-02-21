@@ -47,7 +47,7 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            factions: ['0', '1', '2', '3'],
+            seats: ['0', '1', '2', '3'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
           optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
@@ -220,7 +220,7 @@ const createEventTraceDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            factions: ['0', '1', '2', '3'],
+            seats: ['0', '1', '2', '3'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
           optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],

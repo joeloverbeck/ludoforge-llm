@@ -32,11 +32,11 @@ dataAssets:
   - id: fitl-piece-catalog-foundation
     kind: pieceCatalog
     payload:
-      factions:
+      seats:
         - id: vc
       pieceTypes:
         - id: vc-guerrilla
-          faction: vc
+          seat: vc
           statusDimensions: [activity]
           transitions:
             - dimension: activity
@@ -44,7 +44,7 @@ dataAssets:
               to: active
       inventory:
         - pieceTypeId: vc-guerrilla
-          faction: vc
+          seat: vc
           total: 30
   - id: fitl-scenario-foundation
     kind: scenario
@@ -71,7 +71,7 @@ turnFlow:
     lookahead: quang-tri:none
     leader: hue:none
   eligibility:
-    factions: ["0", "1", "2", "3"]
+    seats: ["0", "1", "2", "3"]
     overrideWindows:
       - id: remain-eligible
         duration: nextTurn
@@ -85,10 +85,10 @@ turnFlow:
     - first: operationPlusSpecialActivity
       second: [limitedOperation, event]
   passRewards:
-    - factionClass: "0"
+    - seatClass: "0"
       resource: insurgentPassReward
       amount: 1
-    - factionClass: "1"
+    - seatClass: "1"
       resource: coinPassReward
       amount: 3
   durationWindows: [turn, nextTurn, round, cycle]

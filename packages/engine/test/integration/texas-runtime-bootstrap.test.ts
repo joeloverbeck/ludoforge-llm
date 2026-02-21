@@ -30,7 +30,7 @@ const totalCardsAcrossZones = (zones: Readonly<Record<string, readonly unknown[]
 const totalChipsInPlay = (state: GameState): number => {
   const pot = Number(state.globalVars.pot ?? 0);
   const stacks = Array.from({ length: state.playerCount }, (_unused, index) => {
-    const raw = state.perPlayerVars[String(index)]?.chipStack;
+    const raw = state.perPlayerVars[index]?.chipStack;
     return Number(raw ?? 0);
   });
   return stacks.reduce((sum, value) => sum + value, 0) + pot;
@@ -39,7 +39,7 @@ const totalChipsInPlay = (state: GameState): number => {
 const playersInHandFromFlags = (state: GameState): number => {
   let count = 0;
   for (let player = 0; player < state.playerCount; player += 1) {
-    const vars = state.perPlayerVars[String(player)];
+    const vars = state.perPlayerVars[player];
     if (vars?.eliminated === false && vars.handActive === true) {
       count += 1;
     }
@@ -89,8 +89,8 @@ describe('texas runtime bootstrap and position flow', () => {
     assert.equal(state.globalVars.activePlayers, 2);
     assert.equal(state.globalVars.actingPosition, dealerSeat);
     assert.equal(Number(state.activePlayer), dealerSeat);
-    assert.equal(state.perPlayerVars[String(dealerSeat)]?.streetBet, state.globalVars.smallBlind);
-    assert.equal(state.perPlayerVars[String(bbSeat)]?.streetBet, state.globalVars.bigBlind);
+    assert.equal(state.perPlayerVars[Number(dealerSeat)]?.streetBet, state.globalVars.smallBlind);
+    assert.equal(state.perPlayerVars[bbSeat]?.streetBet, state.globalVars.bigBlind);
   });
 
   it('ends a heads-up hand on fold without traversing flop/turn/river side effects', () => {
@@ -167,7 +167,7 @@ describe('texas runtime bootstrap and position flow', () => {
             id: 'texas-nonnegative-stacks',
             check: ({ state, playerCount }) => {
               for (let player = 0; player < playerCount; player += 1) {
-                const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
+                const stack = Number(state.perPlayerVars[player]?.chipStack ?? 0);
                 assert.equal(stack >= 0, true, `player ${player} chipStack must remain non-negative`);
               }
             },

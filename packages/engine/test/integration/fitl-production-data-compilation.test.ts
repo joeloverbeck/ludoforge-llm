@@ -273,17 +273,17 @@ describe('FITL production data integration compilation', () => {
     const pieceCatalogPayload = pieceCatalogAsset.payload as {
       readonly pieceTypes?: readonly PieceTypeLike[];
       readonly inventory?: readonly InventoryEntryLike[];
-      readonly factions?: readonly FactionLike[];
+      readonly seats?: readonly FactionLike[];
     };
     assert.ok(Array.isArray(pieceCatalogPayload.pieceTypes), 'Expected pieceTypes array');
     assert.ok(Array.isArray(pieceCatalogPayload.inventory), 'Expected inventory array');
-    assert.ok(Array.isArray(pieceCatalogPayload.factions), 'Expected factions array');
+    assert.ok(Array.isArray(pieceCatalogPayload.seats), 'Expected factions array');
 
     assert.equal(pieceCatalogPayload.pieceTypes.length, 12);
     const inventoryTotal = pieceCatalogPayload.inventory.reduce((sum, entry) => sum + entry.total, 0);
     assert.equal(inventoryTotal, 229);
     assert.deepEqual(
-      (compiled.gameDef?.factions ?? []).map((faction) => ({ id: faction.id })),
+      (compiled.gameDef?.seats ?? []).map((faction) => ({ id: faction.id })),
       [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }, { id: 'vc' }],
       'Compiled GameDef factions must be lowered from selected piece catalog asset',
     );

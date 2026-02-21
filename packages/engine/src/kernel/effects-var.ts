@@ -155,8 +155,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 
   const playerId = resolvedPlayers[0]!;
   const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'setVar');
-  const playerKey = String(playerId);
-  const playerVars = ctx.state.perPlayerVars[playerKey];
+  const playerVars = ctx.state.perPlayerVars[playerId];
   if (playerVars === undefined) {
     throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
       effectType: 'setVar',
@@ -198,7 +197,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       ...ctx.state,
       perPlayerVars: {
         ...ctx.state.perPlayerVars,
-        [playerKey]: {
+        [playerId]: {
           ...playerVars,
           [variableName]: nextValue,
         },
@@ -288,8 +287,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
       actualType: variableDef.type,
     });
   }
-  const playerKey = String(playerId);
-  const playerVars = ctx.state.perPlayerVars[playerKey];
+  const playerVars = ctx.state.perPlayerVars[playerId];
   if (playerVars === undefined) {
     throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
       effectType: 'addVar',
@@ -328,7 +326,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
       ...ctx.state,
       perPlayerVars: {
         ...ctx.state.perPlayerVars,
-        [playerKey]: {
+        [playerId]: {
           ...playerVars,
           [variableName]: nextValue,
         },

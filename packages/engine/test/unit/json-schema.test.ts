@@ -134,7 +134,7 @@ const gameDefWithModernEventDeck: GameDef = {
             text: 'Test payload',
             freeOperationGrants: [
               {
-                faction: '0',
+                seat: '0',
                 sequence: { chain: 'play-card-grant', step: 0 },
                 operationClass: 'operation',
                 actionIds: ['playCard'],
@@ -178,24 +178,24 @@ const validRuntimeTrace: GameTrace = {
         {
           kind: 'turnFlowEligibility',
           step: 'overrideCreate',
-          faction: '0',
+          seat: '0',
           before: {
             firstEligible: '0',
             secondEligible: '1',
-            actedFactions: ['0'],
-            passedFactions: [],
+            actedSeats: ['0'],
+            passedSeats: [],
             nonPassCount: 1,
             firstActionClass: 'event',
           },
           after: {
             firstEligible: '0',
             secondEligible: '1',
-            actedFactions: ['0'],
-            passedFactions: [],
+            actedSeats: ['0'],
+            passedSeats: [],
             nonPassCount: 1,
             firstActionClass: 'event',
           },
-          overrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' }],
+          overrides: [{ seat: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' }],
         },
         {
           kind: 'operationPartial',
@@ -211,7 +211,7 @@ const validRuntimeTrace: GameTrace = {
         },
         {
           kind: 'simultaneousSubmission',
-          player: '0',
+          player: asPlayerId(0),
           move: { actionId: asActionId('playCard'), params: { amount: 1 } },
           submittedBefore: { '0': false, '1': false },
           submittedAfter: { '0': true, '1': false },
@@ -241,17 +241,17 @@ const validRuntimeTrace: GameTrace = {
     turnOrderState: {
       type: 'cardDriven',
       runtime: {
-        factionOrder: ['0', '1'],
+        seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
           firstEligible: '0',
           secondEligible: '1',
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
-        pendingEligibilityOverrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' }],
+        pendingEligibilityOverrides: [{ seat: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' }],
         consecutiveCoupRounds: 0,
       },
     },

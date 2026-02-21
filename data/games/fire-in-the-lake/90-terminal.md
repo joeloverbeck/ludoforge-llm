@@ -4,7 +4,7 @@
 terminal:
   checkpoints:
     - id: us-victory
-      faction: '0'
+      seat: '0'
       timing: duringCoup
       when:
         op: and
@@ -45,7 +45,7 @@ terminal:
                       - { prop: type, op: in, value: [troops, base] }
             right: 50
     - id: arvn-victory
-      faction: '1'
+      seat: '1'
       timing: duringCoup
       when:
         op: and
@@ -114,7 +114,7 @@ terminal:
                 var: patronage
             right: 50
     - id: nva-victory
-      faction: '2'
+      seat: '2'
       timing: duringCoup
       when:
         op: and
@@ -188,7 +188,7 @@ terminal:
                       - { prop: type, op: eq, value: base }
             right: 25
     - id: vc-victory
-      faction: '3'
+      seat: '3'
       timing: duringCoup
       when:
         op: and
@@ -229,7 +229,7 @@ terminal:
                       - { prop: type, op: eq, value: base }
             right: 25
     - id: final-coup-ranking
-      faction: '2'
+      seat: '2'
       timing: finalCoup
       when:
         op: and
@@ -247,7 +247,7 @@ terminal:
           - { op: '==', left: { ref: zoneCount, zone: deck:none }, right: 0 }
           - { op: '==', left: { ref: zoneCount, zone: lookahead:none }, right: 0 }
   margins:
-    - faction: '0'
+    - seat: '0'
       value:
         op: '+'
         left:
@@ -271,7 +271,7 @@ terminal:
               zone: available-US:none
               filter:
                 - { prop: type, op: in, value: [troops, base] }
-    - faction: '1'
+    - seat: '1'
       value:
         op: '+'
         left:
@@ -323,7 +323,7 @@ terminal:
         right:
           ref: gvar
           var: patronage
-    - faction: '2'
+    - seat: '2'
       value:
         op: '+'
         left:
@@ -380,7 +380,7 @@ terminal:
               filter:
                 - { prop: faction, op: eq, value: NVA }
                 - { prop: type, op: eq, value: base }
-    - faction: '3'
+    - seat: '3'
       value:
         op: '+'
         left:

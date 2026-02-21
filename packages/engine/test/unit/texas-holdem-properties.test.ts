@@ -39,15 +39,15 @@ const totalCardsAcrossZones = (state: GameState): number =>
   Object.values(state.zones).reduce((sum, zone) => sum + zone.length, 0);
 
 const totalChipsInPlay = (state: GameState): number => {
-  const stacks = Array.from({ length: state.playerCount }, (_unused, player) => Number(state.perPlayerVars[String(player)]?.chipStack ?? 0));
+  const stacks = Array.from({ length: state.playerCount }, (_unused, player) => Number(state.perPlayerVars[player]?.chipStack ?? 0));
   return stacks.reduce((sum, value) => sum + value, 0) + Number(state.globalVars.pot ?? 0);
 };
 
 const totalNonEliminatedChipsInPlay = (state: GameState): number => {
   const stacks = Array.from({ length: state.playerCount }, (_unused, player) => ({
     player,
-    stack: Number(state.perPlayerVars[String(player)]?.chipStack ?? 0),
-    eliminated: state.perPlayerVars[String(player)]?.eliminated === true,
+    stack: Number(state.perPlayerVars[player]?.chipStack ?? 0),
+    eliminated: state.perPlayerVars[player]?.eliminated === true,
   }));
 
   return stacks
@@ -131,7 +131,7 @@ describe('texas hold\'em property invariants', () => {
 
       for (const { state } of snapshots) {
         for (let player = 0; player < state.playerCount; player += 1) {
-          const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
+          const stack = Number(state.perPlayerVars[player]?.chipStack ?? 0);
           assert.equal(stack >= 0, true, `seed=${seed} player=${player} has negative stack`);
         }
       }

@@ -21,8 +21,8 @@ export type KernelRuntimeErrorCode =
   | 'TERMINAL_SCORING_CONFIG_MISSING'
   | 'TERMINAL_SCORING_NON_NUMERIC'
   | 'TERMINAL_MARGIN_NON_NUMERIC'
-  | 'TERMINAL_CHECKPOINT_FACTION_UNMAPPED'
-  | 'TERMINAL_WINNER_FACTION_UNMAPPED'
+  | 'TERMINAL_CHECKPOINT_SEAT_UNMAPPED'
+  | 'TERMINAL_WINNER_SEAT_UNMAPPED'
   | 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR'
   | 'DERIVED_VALUE_CONTRACT_MISSING'
   | 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID';
@@ -89,14 +89,14 @@ export interface KernelRuntimeErrorContextByCode {
   readonly TERMINAL_SCORING_CONFIG_MISSING: Readonly<Record<string, never>>;
   readonly TERMINAL_SCORING_NON_NUMERIC: Readonly<Record<string, never>>;
   readonly TERMINAL_MARGIN_NON_NUMERIC: Readonly<{
-    readonly faction: string;
+    readonly seat: string;
   }>;
-  readonly TERMINAL_CHECKPOINT_FACTION_UNMAPPED: Readonly<{
-    readonly faction: string;
+  readonly TERMINAL_CHECKPOINT_SEAT_UNMAPPED: Readonly<{
+    readonly seat: string;
     readonly checkpointId: string;
   }>;
-  readonly TERMINAL_WINNER_FACTION_UNMAPPED: Readonly<{
-    readonly winnerFaction: string;
+  readonly TERMINAL_WINNER_SEAT_UNMAPPED: Readonly<{
+    readonly winnerSeat: string;
     readonly checkpointId: string;
   }>;
   readonly DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR: Readonly<{

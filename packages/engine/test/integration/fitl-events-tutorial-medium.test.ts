@@ -16,7 +16,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.title, 'Trucks');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    assert.deepEqual(card?.metadata?.factionOrder, ['NVA', 'VC', 'US', 'ARVN']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
 
     const unshadedTrail = card?.unshaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');
     assert.deepEqual(unshadedTrail, { addVar: { scope: 'global', var: 'trail', delta: -1 } });
@@ -40,7 +40,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.title, 'Brinks Hotel');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    assert.deepEqual(card?.metadata?.factionOrder, ['VC', 'US', 'ARVN', 'NVA']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['VC', 'US', 'ARVN', 'NVA']);
 
     const unshadedBranches = card?.unshaded?.branches ?? [];
     assert.deepEqual(
@@ -74,11 +74,11 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.title, 'Sihanouk');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    assert.deepEqual(card?.metadata?.factionOrder, ['ARVN', 'NVA', 'US', 'VC']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['ARVN', 'NVA', 'US', 'VC']);
 
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        faction: '1',
+        seat: '1',
         sequence: { chain: 'sihanouk-unshaded-arvn', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
@@ -90,8 +90,8 @@ describe('FITL tutorial medium event-card production spec', () => {
       },
     ]);
     assert.deepEqual(card?.shaded?.freeOperationGrants, [
-      { faction: '3', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
-      { faction: '2', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
+      { seat: '3', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
+      { seat: '2', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
     ]);
   });
 
@@ -106,7 +106,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.title, '301st Supply Bn');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    assert.deepEqual(card?.metadata?.factionOrder, ['NVA', 'VC', 'US', 'ARVN']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
 
     const unshadedRemoval = card?.unshaded?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedRemoval, undefined);

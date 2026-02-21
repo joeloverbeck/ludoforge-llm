@@ -325,7 +325,7 @@
         "additionalProperties": false
       }
     },
-    "factions": {
+    "seats": {
       "type": "array",
       "items": {
         "type": "object",
@@ -358,11 +358,11 @@
               },
               {
                 "type": "string",
-                "const": "faction"
+                "const": "seat"
               }
             ]
           },
-          "faction": {
+          "seat": {
             "type": "string",
             "minLength": 1
           },
@@ -426,7 +426,7 @@
           "id": {
             "type": "string"
           },
-          "faction": {
+          "seat": {
             "type": "string"
           },
           "props": {
@@ -627,7 +627,7 @@
                     "eligibility": {
                       "type": "object",
                       "properties": {
-                        "factions": {
+                        "seats": {
                           "type": "array",
                           "items": {
                             "type": "string",
@@ -673,7 +673,7 @@
                         }
                       },
                       "required": [
-                        "factions",
+                        "seats",
                         "overrideWindows"
                       ],
                       "additionalProperties": false
@@ -739,7 +739,7 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "factionClass": {
+                          "seatClass": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -752,7 +752,7 @@
                           }
                         },
                         "required": [
-                          "factionClass",
+                          "seatClass",
                           "resource",
                           "amount"
                         ],
@@ -1996,7 +1996,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "faction": {
+              "seat": {
                 "type": "string",
                 "minLength": 1
               },
@@ -2018,7 +2018,7 @@
             },
             "required": [
               "id",
-              "faction",
+              "seat",
               "timing",
               "when"
             ],
@@ -2030,7 +2030,7 @@
           "items": {
             "type": "object",
             "properties": {
-              "faction": {
+              "seat": {
                 "type": "string",
                 "minLength": 1
               },
@@ -2039,7 +2039,7 @@
               }
             },
             "required": [
-              "faction",
+              "seat",
               "value"
             ],
             "additionalProperties": false
@@ -2228,11 +2228,11 @@
                             "type": "string",
                             "minLength": 1
                           },
-                          "faction": {
+                          "seat": {
                             "type": "string",
                             "minLength": 1
                           },
-                          "executeAsFaction": {
+                          "executeAsSeat": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -2283,7 +2283,7 @@
                         },
                         "required": [
                           "sequence",
-                          "faction",
+                          "seat",
                           "operationClass"
                         ],
                         "additionalProperties": false
@@ -2315,16 +2315,16 @@
                                 "properties": {
                                   "kind": {
                                     "type": "string",
-                                    "const": "faction"
+                                    "const": "seat"
                                   },
-                                  "faction": {
+                                  "seat": {
                                     "type": "string",
                                     "minLength": 1
                                   }
                                 },
                                 "required": [
                                   "kind",
-                                  "faction"
+                                  "seat"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2397,11 +2397,11 @@
                                   "type": "string",
                                   "minLength": 1
                                 },
-                                "faction": {
+                                "seat": {
                                   "type": "string",
                                   "minLength": 1
                                 },
-                                "executeAsFaction": {
+                                "executeAsSeat": {
                                   "type": "string",
                                   "minLength": 1
                                 },
@@ -2452,7 +2452,7 @@
                               },
                               "required": [
                                 "sequence",
-                                "faction",
+                                "seat",
                                 "operationClass"
                               ],
                               "additionalProperties": false
@@ -2484,16 +2484,16 @@
                                       "properties": {
                                         "kind": {
                                           "type": "string",
-                                          "const": "faction"
+                                          "const": "seat"
                                         },
-                                        "faction": {
+                                        "seat": {
                                           "type": "string",
                                           "minLength": 1
                                         }
                                       },
                                       "required": [
                                         "kind",
-                                        "faction"
+                                        "seat"
                                       ],
                                       "additionalProperties": false
                                     }
@@ -2787,11 +2787,11 @@
                             "type": "string",
                             "minLength": 1
                           },
-                          "faction": {
+                          "seat": {
                             "type": "string",
                             "minLength": 1
                           },
-                          "executeAsFaction": {
+                          "executeAsSeat": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -2842,7 +2842,7 @@
                         },
                         "required": [
                           "sequence",
-                          "faction",
+                          "seat",
                           "operationClass"
                         ],
                         "additionalProperties": false
@@ -2874,16 +2874,16 @@
                                 "properties": {
                                   "kind": {
                                     "type": "string",
-                                    "const": "faction"
+                                    "const": "seat"
                                   },
-                                  "faction": {
+                                  "seat": {
                                     "type": "string",
                                     "minLength": 1
                                   }
                                 },
                                 "required": [
                                   "kind",
-                                  "faction"
+                                  "seat"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2956,11 +2956,11 @@
                                   "type": "string",
                                   "minLength": 1
                                 },
-                                "faction": {
+                                "seat": {
                                   "type": "string",
                                   "minLength": 1
                                 },
-                                "executeAsFaction": {
+                                "executeAsSeat": {
                                   "type": "string",
                                   "minLength": 1
                                 },
@@ -3011,7 +3011,7 @@
                               },
                               "required": [
                                 "sequence",
-                                "faction",
+                                "seat",
                                 "operationClass"
                               ],
                               "additionalProperties": false
@@ -3043,16 +3043,16 @@
                                       "properties": {
                                         "kind": {
                                           "type": "string",
-                                          "const": "faction"
+                                          "const": "seat"
                                         },
-                                        "faction": {
+                                        "seat": {
                                           "type": "string",
                                           "minLength": 1
                                         }
                                       },
                                       "required": [
                                         "kind",
-                                        "faction"
+                                        "seat"
                                       ],
                                       "additionalProperties": false
                                     }
@@ -3397,7 +3397,7 @@
                   "minLength": 1
                 }
               },
-              "factions": {
+              "seats": {
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -5504,10 +5504,10 @@
                 "id": {
                   "type": "string"
                 },
-                "faction": {
+                "seat": {
                   "type": "string"
                 },
-                "executeAsFaction": {
+                "executeAsSeat": {
                   "type": "string"
                 },
                 "operationClass": {
@@ -5568,7 +5568,7 @@
                 }
               },
               "required": [
-                "faction",
+                "seat",
                 "operationClass"
               ],
               "additionalProperties": false

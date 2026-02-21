@@ -5,11 +5,11 @@ dataAssets:
   - id: standard-52-deck
     kind: pieceCatalog
     payload:
-      factions:
+      seats:
         - id: neutral
       pieceTypes:
         - id: card-2S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -18,7 +18,7 @@ dataAssets:
             rankName: 2
             suitName: Spades
         - id: card-3S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -27,7 +27,7 @@ dataAssets:
             rankName: 3
             suitName: Spades
         - id: card-4S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -36,7 +36,7 @@ dataAssets:
             rankName: 4
             suitName: Spades
         - id: card-5S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -45,7 +45,7 @@ dataAssets:
             rankName: 5
             suitName: Spades
         - id: card-6S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -54,7 +54,7 @@ dataAssets:
             rankName: 6
             suitName: Spades
         - id: card-7S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -63,7 +63,7 @@ dataAssets:
             rankName: 7
             suitName: Spades
         - id: card-8S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -72,7 +72,7 @@ dataAssets:
             rankName: 8
             suitName: Spades
         - id: card-9S
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -81,7 +81,7 @@ dataAssets:
             rankName: 9
             suitName: Spades
         - id: card-TS
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -90,7 +90,7 @@ dataAssets:
             rankName: Ten
             suitName: Spades
         - id: card-JS
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -99,7 +99,7 @@ dataAssets:
             rankName: Jack
             suitName: Spades
         - id: card-QS
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -108,7 +108,7 @@ dataAssets:
             rankName: Queen
             suitName: Spades
         - id: card-KS
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -117,7 +117,7 @@ dataAssets:
             rankName: King
             suitName: Spades
         - id: card-AS
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -126,7 +126,7 @@ dataAssets:
             rankName: Ace
             suitName: Spades
         - id: card-2H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -135,7 +135,7 @@ dataAssets:
             rankName: 2
             suitName: Hearts
         - id: card-3H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -144,7 +144,7 @@ dataAssets:
             rankName: 3
             suitName: Hearts
         - id: card-4H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -153,7 +153,7 @@ dataAssets:
             rankName: 4
             suitName: Hearts
         - id: card-5H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -162,7 +162,7 @@ dataAssets:
             rankName: 5
             suitName: Hearts
         - id: card-6H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -171,7 +171,7 @@ dataAssets:
             rankName: 6
             suitName: Hearts
         - id: card-7H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -180,7 +180,7 @@ dataAssets:
             rankName: 7
             suitName: Hearts
         - id: card-8H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -189,7 +189,7 @@ dataAssets:
             rankName: 8
             suitName: Hearts
         - id: card-9H
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -198,7 +198,7 @@ dataAssets:
             rankName: 9
             suitName: Hearts
         - id: card-TH
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -207,7 +207,7 @@ dataAssets:
             rankName: Ten
             suitName: Hearts
         - id: card-JH
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -216,7 +216,7 @@ dataAssets:
             rankName: Jack
             suitName: Hearts
         - id: card-QH
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -225,7 +225,7 @@ dataAssets:
             rankName: Queen
             suitName: Hearts
         - id: card-KH
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -234,7 +234,7 @@ dataAssets:
             rankName: King
             suitName: Hearts
         - id: card-AH
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -243,7 +243,7 @@ dataAssets:
             rankName: Ace
             suitName: Hearts
         - id: card-2D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -252,7 +252,7 @@ dataAssets:
             rankName: 2
             suitName: Diamonds
         - id: card-3D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -261,7 +261,7 @@ dataAssets:
             rankName: 3
             suitName: Diamonds
         - id: card-4D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -270,7 +270,7 @@ dataAssets:
             rankName: 4
             suitName: Diamonds
         - id: card-5D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -279,7 +279,7 @@ dataAssets:
             rankName: 5
             suitName: Diamonds
         - id: card-6D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -288,7 +288,7 @@ dataAssets:
             rankName: 6
             suitName: Diamonds
         - id: card-7D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -297,7 +297,7 @@ dataAssets:
             rankName: 7
             suitName: Diamonds
         - id: card-8D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -306,7 +306,7 @@ dataAssets:
             rankName: 8
             suitName: Diamonds
         - id: card-9D
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -315,7 +315,7 @@ dataAssets:
             rankName: 9
             suitName: Diamonds
         - id: card-TD
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -324,7 +324,7 @@ dataAssets:
             rankName: Ten
             suitName: Diamonds
         - id: card-JD
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -333,7 +333,7 @@ dataAssets:
             rankName: Jack
             suitName: Diamonds
         - id: card-QD
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -342,7 +342,7 @@ dataAssets:
             rankName: Queen
             suitName: Diamonds
         - id: card-KD
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -351,7 +351,7 @@ dataAssets:
             rankName: King
             suitName: Diamonds
         - id: card-AD
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -360,7 +360,7 @@ dataAssets:
             rankName: Ace
             suitName: Diamonds
         - id: card-2C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -369,7 +369,7 @@ dataAssets:
             rankName: 2
             suitName: Clubs
         - id: card-3C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -378,7 +378,7 @@ dataAssets:
             rankName: 3
             suitName: Clubs
         - id: card-4C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -387,7 +387,7 @@ dataAssets:
             rankName: 4
             suitName: Clubs
         - id: card-5C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -396,7 +396,7 @@ dataAssets:
             rankName: 5
             suitName: Clubs
         - id: card-6C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -405,7 +405,7 @@ dataAssets:
             rankName: 6
             suitName: Clubs
         - id: card-7C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -414,7 +414,7 @@ dataAssets:
             rankName: 7
             suitName: Clubs
         - id: card-8C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -423,7 +423,7 @@ dataAssets:
             rankName: 8
             suitName: Clubs
         - id: card-9C
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -432,7 +432,7 @@ dataAssets:
             rankName: 9
             suitName: Clubs
         - id: card-TC
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -441,7 +441,7 @@ dataAssets:
             rankName: Ten
             suitName: Clubs
         - id: card-JC
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -450,7 +450,7 @@ dataAssets:
             rankName: Jack
             suitName: Clubs
         - id: card-QC
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -459,7 +459,7 @@ dataAssets:
             rankName: Queen
             suitName: Clubs
         - id: card-KC
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -468,7 +468,7 @@ dataAssets:
             rankName: King
             suitName: Clubs
         - id: card-AC
-          faction: neutral
+          seat: neutral
           statusDimensions: []
           transitions: []
           runtimeProps:
@@ -478,160 +478,160 @@ dataAssets:
             suitName: Clubs
       inventory:
         - pieceTypeId: card-2S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-3S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-4S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-5S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-6S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-7S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-8S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-9S
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-TS
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-JS
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-QS
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-KS
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-AS
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-2H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-3H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-4H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-5H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-6H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-7H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-8H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-9H
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-TH
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-JH
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-QH
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-KH
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-AH
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-2D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-3D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-4D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-5D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-6D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-7D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-8D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-9D
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-TD
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-JD
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-QD
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-KD
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-AD
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-2C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-3C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-4C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-5C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-6C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-7C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-8C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-9C
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-TC
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-JC
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-QC
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-KC
-          faction: neutral
+          seat: neutral
           total: 1
         - pieceTypeId: card-AC
-          faction: neutral
+          seat: neutral
           total: 1
   - id: tournament-standard
     kind: scenario
@@ -652,8 +652,8 @@ dataAssets:
             min: 1
     payload:
       pieceCatalogAssetId: standard-52-deck
-      factionPools:
-        - faction: neutral
+      seatPools:
+        - seat: neutral
           availableZoneId: deck:none
           outOfPlayZoneId: muck:none
       scenarioName: Standard NLHE Tournament

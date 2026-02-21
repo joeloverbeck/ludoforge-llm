@@ -35,7 +35,7 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
 
   if (ref.ref === 'pvar') {
     const playerId = resolveSinglePlayerSel(ref.player, ctx);
-    const playerVars = ctx.state.perPlayerVars[String(playerId)];
+    const playerVars = ctx.state.perPlayerVars[playerId];
     if (playerVars === undefined) {
       throw missingVarError(`Per-player vars missing for player ${playerId}`, {
         reference: ref,

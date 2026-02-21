@@ -18,7 +18,7 @@ export const createEligibilityOverride = ({
         windowId,
       }
     : {
-        target: { kind: 'faction', faction: String(target) },
+        target: { kind: 'seat', seat: String(target) },
         eligible,
         windowId,
       }

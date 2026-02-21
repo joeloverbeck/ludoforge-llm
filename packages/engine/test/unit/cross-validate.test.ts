@@ -39,9 +39,9 @@ function createRichCompilableDoc(): GameSpecDoc {
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { factions: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
+          eligibility: { seats: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
-          passRewards: [{ factionClass: 'coin', resource: 'resources', amount: 2 }],
+          passRewards: [{ seatClass: 'coin', resource: 'resources', amount: 2 }],
           durationWindows: ['turn' as const],
         },
         coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },
@@ -92,8 +92,8 @@ phase: ['main'],
     ],
     terminal: {
       conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
-      checkpoints: [{ id: 'cp-1', faction: 'us', timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } }],
-      margins: [{ faction: 'arvn', value: 1 }],
+      checkpoints: [{ id: 'cp-1', seat: 'us', timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } }],
+      margins: [{ seat: 'arvn', value: 1 }],
       ranking: { order: 'desc' as const },
     },
   };
@@ -173,20 +173,20 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.message, 'Action "act" uses malformed actor binding "owner".');
   });
 
-  it('victory checkpoint referencing nonexistent faction emits CNL_XREF_VICTORY_FACTION_MISSING', () => {
+  it('victory checkpoint referencing nonexistent faction emits CNL_XREF_VICTORY_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const checkpoint = requireValue(sections.terminal?.checkpoints?.[0]);
     const diagnostics = crossValidateSpec({
       ...sections,
       terminal: {
         ...sections.terminal!,
-        checkpoints: [{ ...checkpoint, faction: 'uss' }],
+        checkpoints: [{ ...checkpoint, seat: 'uss' }],
       },
     });
 
-    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_VICTORY_FACTION_MISSING');
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_VICTORY_SEAT_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.terminal.checkpoints.0.faction');
+    assert.equal(diagnostic?.path, 'doc.terminal.checkpoints.0.seat');
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
@@ -440,7 +440,7 @@ describe('crossValidateSpec', () => {
     );
   });
 
-  it('eventDeck freeOperationGrants with unknown faction emits CNL_XREF_EVENT_DECK_GRANT_FACTION_MISSING', () => {
+  it('eventDeck freeOperationGrants with unknown faction emits CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
@@ -454,7 +454,7 @@ describe('crossValidateSpec', () => {
               ...card,
               unshaded: {
                 ...(card.unshaded ?? {}),
-                freeOperationGrants: [{ faction: 'uss', sequence: { chain: 'unknown-faction', step: 0 }, operationClass: 'operation' }],
+                freeOperationGrants: [{ seat: 'uss', sequence: { chain: 'unknown-faction', step: 0 }, operationClass: 'operation' }],
               },
             },
           ],
@@ -462,9 +462,9 @@ describe('crossValidateSpec', () => {
       ],
     });
 
-    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_FACTION_MISSING');
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.faction');
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.seat');
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
@@ -487,7 +487,7 @@ describe('crossValidateSpec', () => {
                     id: 'branch-a',
                     freeOperationGrants: [
                       {
-                        faction: 'us',
+                        seat: 'us',
                         sequence: { chain: 'unknown-action', step: 0 },
                         operationClass: 'operation',
                         actionIds: ['acx'],
@@ -511,7 +511,7 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
-  it('eventDeck freeOperationGrants with unknown executeAsFaction emits CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_FACTION_MISSING', () => {
+  it('eventDeck freeOperationGrants with unknown executeAsSeat emits CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
@@ -527,8 +527,8 @@ describe('crossValidateSpec', () => {
                 ...(card.unshaded ?? {}),
                 freeOperationGrants: [
                   {
-                    faction: 'us',
-                    executeAsFaction: 'uuss',
+                    seat: 'us',
+                    executeAsSeat: 'uuss',
                     sequence: { chain: 'unknown-execute-as', step: 0 },
                     operationClass: 'operation',
                   },
@@ -540,9 +540,9 @@ describe('crossValidateSpec', () => {
       ],
     });
 
-    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_FACTION_MISSING');
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.executeAsFaction');
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.executeAsSeat');
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
@@ -562,7 +562,7 @@ describe('crossValidateSpec', () => {
                 ...(card.unshaded ?? {}),
                 freeOperationGrants: [
                   {
-                    faction: 'us',
+                    seat: 'us',
                     sequence: { chain: 'valid-grant', step: 0 },
                     operationClass: 'operation',
                     actionIds: ['act'],
@@ -576,12 +576,12 @@ describe('crossValidateSpec', () => {
     });
 
     const grantDiagnostics = diagnostics.filter((entry) =>
-      entry.code === 'CNL_XREF_EVENT_DECK_GRANT_FACTION_MISSING' ||
+      entry.code === 'CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING' ||
       entry.code === 'CNL_XREF_EVENT_DECK_GRANT_ACTION_MISSING');
     assert.deepEqual(grantDiagnostics, []);
   });
 
-  it('eventDeck eligibilityOverrides with unknown faction emits CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING', () => {
+  it('eventDeck eligibilityOverrides with unknown faction emits CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
@@ -595,7 +595,7 @@ describe('crossValidateSpec', () => {
               ...card,
               unshaded: {
                 ...(card.unshaded ?? {}),
-                eligibilityOverrides: [{ target: { kind: 'faction', faction: 'uss' }, eligible: true, windowId: 'window-a' }],
+                eligibilityOverrides: [{ target: { kind: 'seat', seat: 'uss' }, eligible: true, windowId: 'window-a' }],
               },
             },
           ],
@@ -603,9 +603,9 @@ describe('crossValidateSpec', () => {
       ],
     });
 
-    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING');
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.eligibilityOverrides.0.target.faction');
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.eligibilityOverrides.0.target.seat');
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
@@ -730,7 +730,7 @@ describe('crossValidateSpec', () => {
                 ...(card.unshaded ?? {}),
                 eligibilityOverrides: [
                   { target: { kind: 'active' }, eligible: true, windowId: 'window-a' },
-                  { target: { kind: 'faction', faction: 'us' }, eligible: false, windowId: 'window-a' },
+                  { target: { kind: 'seat', seat: 'us' }, eligible: false, windowId: 'window-a' },
                 ],
               },
             },
@@ -740,7 +740,7 @@ describe('crossValidateSpec', () => {
     });
 
     const overrideDiagnostics = diagnostics.filter((entry) =>
-      entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING' ||
+      entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING' ||
       entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING');
     assert.deepEqual(overrideDiagnostics, []);
   });

@@ -120,7 +120,7 @@ describe('validate-visual-config-refs', () => {
         },
       ],
       tokenTypes: [{ id: 'tokenA' }],
-      factions: [{ id: 'factionA' }],
+      seats: [{ id: 'factionA' }],
       globalVars: [{ name: 'globalA' }],
       perPlayerVars: [{ name: 'playerA' }],
     } as unknown as GameDef);

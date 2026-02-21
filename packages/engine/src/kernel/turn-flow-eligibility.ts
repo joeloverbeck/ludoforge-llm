@@ -59,24 +59,24 @@ const normalizeFirstActionClass = (
   return null;
 };
 
-const normalizeFactionOrder = (factions: readonly string[]): readonly string[] => {
+const normalizeSeatOrder = (seats: readonly string[]): readonly string[] => {
   const seen = new Set<string>();
   const ordered: string[] = [];
-  for (const faction of factions) {
-    if (seen.has(faction)) {
+  for (const seat of seats) {
+    if (seen.has(seat)) {
       continue;
     }
-    seen.add(faction);
-    ordered.push(faction);
+    seen.add(seat);
+    ordered.push(seat);
   }
   return ordered;
 };
 
-const parseFactionPlayer = (faction: string, playerCount: number): number | null => {
-  if (!/^\d+$/.test(faction)) {
+const parseSeatPlayer = (seat: string, playerCount: number): number | null => {
+  if (!/^\d+$/.test(seat)) {
     return null;
   }
-  const parsed = Number(faction);
+  const parsed = Number(seat);
   if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed >= playerCount) {
     return null;
   }
@@ -98,21 +98,21 @@ const readNumericResource = (vars: Readonly<Record<string, number | boolean>>, n
   return value;
 };
 
-const resolveActiveFaction = (state: GameState): string | null => {
+const resolveActiveSeat = (state: GameState): string | null => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return null;
   }
-  const faction = String(state.activePlayer);
-  return runtime.factionOrder.includes(faction) ? faction : null;
+  const seat = String(state.activePlayer);
+  return runtime.seatOrder.includes(seat) ? seat : null;
 };
 
 const computeCandidates = (
-  factionOrder: readonly string[],
+  seatOrder: readonly string[],
   eligibility: Readonly<Record<string, boolean>>,
-  actedFactions: ReadonlySet<string>,
+  actedSeats: ReadonlySet<string>,
 ): { readonly first: string | null; readonly second: string | null } => {
-  const candidates = factionOrder.filter((faction) => eligibility[faction] === true && !actedFactions.has(faction));
+  const candidates = seatOrder.filter((seat) => eligibility[seat] === true && !actedSeats.has(seat));
   return {
     first: candidates[0] ?? null,
     second: candidates[1] ?? null,
@@ -122,8 +122,8 @@ const computeCandidates = (
 const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
   firstEligible: card.firstEligible,
   secondEligible: card.secondEligible,
-  actedFactions: card.actedFactions,
-  passedFactions: card.passedFactions,
+  actedSeats: card.actedSeats,
+  passedSeats: card.passedSeats,
   nonPassCount: card.nonPassCount,
   firstActionClass: card.firstActionClass,
 });
@@ -133,44 +133,44 @@ const indexOverrideWindows = (
 ): Readonly<Record<string, TurnFlowDuration>> =>
   Object.fromEntries((cardDrivenConfig(def)?.turnFlow.eligibility.overrideWindows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
 
-const resolveFactionId = (
-  faction: string,
-  factionOrder: readonly string[],
+const resolveSeatId = (
+  seat: string,
+  seatOrder: readonly string[],
 ): string | null => {
-  return factionOrder.includes(faction) ? faction : null;
+  return seatOrder.includes(seat) ? seat : null;
 };
 
-const resolveGrantFaction = (
+const resolveGrantSeat = (
   token: string,
-  activeFaction: string,
-  factionOrder: readonly string[],
+  activeSeat: string,
+  seatOrder: readonly string[],
 ): string | null => {
   if (token === 'self') {
-    return activeFaction;
+    return activeSeat;
   }
-  return resolveFactionId(token, factionOrder);
+  return resolveSeatId(token, seatOrder);
 };
 
 const extractPendingEligibilityOverrides = (
   def: GameDef,
   state: GameState,
   move: Move,
-  activeFaction: string,
-  factionOrder: readonly string[],
+  activeSeat: string,
+  seatOrder: readonly string[],
 ): readonly TurnFlowPendingEligibilityOverride[] => {
   const windowById = indexOverrideWindows(def);
   const overrides: TurnFlowPendingEligibilityOverride[] = [];
   for (const declaration of resolveEventEligibilityOverrides(def, state, move)) {
-    const faction =
+    const seat =
       declaration.target.kind === 'active'
-        ? activeFaction
-        : resolveFactionId(declaration.target.faction, factionOrder);
+        ? activeSeat
+        : resolveSeatId(declaration.target.seat, seatOrder);
     const duration = windowById[declaration.windowId];
-    if (faction === null || duration !== 'nextTurn') {
+    if (seat === null || duration !== 'nextTurn') {
       continue;
     }
     overrides.push({
-      faction,
+      seat,
       eligible: declaration.eligible,
       windowId: declaration.windowId,
       duration,
@@ -186,8 +186,8 @@ const toPendingFreeOperationGrant = (
   sequenceBatchId: string,
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
-  faction: grant.faction,
-  ...(grant.executeAsFaction === undefined ? {} : { executeAsFaction: grant.executeAsFaction }),
+  seat: grant.seat,
+  ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
   operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
@@ -231,24 +231,24 @@ const extractPendingFreeOperationGrants = (
   def: GameDef,
   state: GameState,
   move: Move,
-  activeFaction: string,
-  factionOrder: readonly string[],
+  activeSeat: string,
+  seatOrder: readonly string[],
   existingPendingFreeOperationGrants: readonly TurnFlowPendingFreeOperationGrant[],
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   for (const [grantIndex, grant] of resolveEventFreeOperationGrants(def, state, move).entries()) {
-    const faction = resolveGrantFaction(grant.faction, activeFaction, factionOrder);
-    if (faction === null) {
+    const seat = resolveGrantSeat(grant.seat, activeSeat, seatOrder);
+    if (seat === null) {
       continue;
     }
-    let executeAsFaction: string | undefined;
-    if (grant.executeAsFaction !== undefined) {
-      const resolvedExecuteAs = resolveGrantFaction(grant.executeAsFaction, activeFaction, factionOrder);
+    let executeAsSeat: string | undefined;
+    if (grant.executeAsSeat !== undefined) {
+      const resolvedExecuteAs = resolveGrantSeat(grant.executeAsSeat, activeSeat, seatOrder);
       if (resolvedExecuteAs === null) {
         continue;
       }
-      executeAsFaction = resolvedExecuteAs;
+      executeAsSeat = resolvedExecuteAs;
     }
     const baseId = pendingFreeOperationGrantBaseId(state, move, grant, grantIndex);
     const grantId = makeUniquePendingFreeOperationGrantId(
@@ -258,8 +258,8 @@ const extractPendingFreeOperationGrants = (
     const sequenceBatchId = `${emittedBatchBaseId}:${grant.sequence.chain}`;
     extracted.push({
       ...toPendingFreeOperationGrant(grant, grantId, sequenceBatchId),
-      faction,
-      ...(executeAsFaction === undefined ? {} : { executeAsFaction }),
+      seat,
+      ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     });
   }
   return extracted;
@@ -422,15 +422,15 @@ const withPendingFreeOperationGrants = (
 };
 
 const computePostCardEligibility = (
-  factionOrder: readonly string[],
+  seatOrder: readonly string[],
   currentCard: TurnFlowRuntimeCardState,
   overrides: readonly TurnFlowPendingEligibilityOverride[],
 ): Readonly<Record<string, boolean>> => {
-  const passed = new Set(currentCard.passedFactions);
-  const executed = new Set(currentCard.actedFactions.filter((faction) => !passed.has(faction)));
-  const eligibility = Object.fromEntries(factionOrder.map((faction) => [faction, !executed.has(faction)]));
+  const passed = new Set(currentCard.passedSeats);
+  const executed = new Set(currentCard.actedSeats.filter((seat) => !passed.has(seat)));
+  const eligibility = Object.fromEntries(seatOrder.map((seat) => [seat, !executed.has(seat)]));
   for (const override of overrides) {
-    eligibility[override.faction] = override.eligible;
+    eligibility[override.seat] = override.eligible;
   }
   return eligibility;
 };
@@ -440,7 +440,7 @@ const withActiveFromFirstEligible = (state: GameState, firstEligible: string | n
     return state;
   }
 
-  const playerId = parseFactionPlayer(firstEligible, state.playerCount);
+  const playerId = parseSeatPlayer(firstEligible, state.playerCount);
   if (playerId === null) {
     return state;
   }
@@ -457,23 +457,23 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
     return state;
   }
 
-  const factions = flow.eligibility.factions;
-  const factionOrder = normalizeFactionOrder(factions);
-  const eligibility = Object.fromEntries(factionOrder.map((faction) => [faction, true])) as Readonly<Record<string, boolean>>;
-  const candidates = computeCandidates(factionOrder, eligibility, new Set());
+  const seats = flow.eligibility.seats;
+  const seatOrder = normalizeSeatOrder(seats);
+  const eligibility = Object.fromEntries(seatOrder.map((seat) => [seat, true])) as Readonly<Record<string, boolean>>;
+  const candidates = computeCandidates(seatOrder, eligibility, new Set());
   const nextState: GameState = {
     ...state,
     turnOrderState: {
       type: 'cardDriven',
       runtime: {
-        factionOrder,
+        seatOrder,
         eligibility,
         pendingEligibilityOverrides: [],
         currentCard: {
           firstEligible: candidates.first,
           secondEligible: candidates.second,
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
@@ -485,9 +485,9 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
   return withActiveFromFirstEligible(nextState, candidates.first);
 };
 
-export const isActiveFactionEligibleForTurnFlow = (state: GameState): boolean => {
+export const isActiveSeatEligibleForTurnFlow = (state: GameState): boolean => {
   if (state.turnOrderState.type === 'simultaneous') {
-    return state.turnOrderState.submitted[String(state.activePlayer)] !== true;
+    return state.turnOrderState.submitted[state.activePlayer] !== true;
   }
 
   const runtime = cardDrivenRuntime(state);
@@ -495,14 +495,14 @@ export const isActiveFactionEligibleForTurnFlow = (state: GameState): boolean =>
     return true;
   }
 
-  const activeFaction = resolveActiveFaction(state);
-  if (activeFaction === null) {
+  const activeSeat = resolveActiveSeat(state);
+  if (activeSeat === null) {
     return true;
   }
 
   return (
-    activeFaction === runtime.currentCard.firstEligible ||
-    activeFaction === runtime.currentCard.secondEligible
+    activeSeat === runtime.currentCard.firstEligible ||
+    activeSeat === runtime.currentCard.secondEligible
   );
 };
 
@@ -512,9 +512,9 @@ const activePendingFreeOperationGrants = (
   if (state.turnOrderState.type !== 'cardDriven') {
     return [];
   }
-  const activeFaction = String(state.activePlayer);
+  const activeSeat = String(state.activePlayer);
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
-  return pending.filter((grant) => grant.faction === activeFaction);
+  return pending.filter((grant) => grant.seat === activeSeat);
 };
 
 const applicableActivePendingFreeOperationGrants = (
@@ -531,10 +531,10 @@ const applicableActivePendingFreeOperationGrants = (
 };
 
 const parsePlayerId = (
-  faction: string,
+  seat: string,
   playerCount: number,
 ): ReturnType<typeof asPlayerId> | null => {
-  const parsed = parseFactionPlayer(faction, playerCount);
+  const parsed = parseSeatPlayer(seat, playerCount);
   return parsed === null ? null : asPlayerId(parsed);
 };
 
@@ -550,9 +550,9 @@ export const resolveFreeOperationExecutionPlayer = (
   if (applicable.length === 0) {
     return state.activePlayer;
   }
-  const prioritized = applicable.find((grant) => grant.executeAsFaction !== undefined) ?? applicable[0]!;
-  const executionFaction = prioritized.executeAsFaction ?? prioritized.faction;
-  return parsePlayerId(executionFaction, state.playerCount) ?? state.activePlayer;
+  const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0]!;
+  const executionSeat = prioritized.executeAsSeat ?? prioritized.seat;
+  return parsePlayerId(executionSeat, state.playerCount) ?? state.activePlayer;
 };
 
 export const isFreeOperationApplicableForMove = (
@@ -611,24 +611,24 @@ export const applyTurnFlowEligibilityAfterMove = (
     return { state, traceEntries: [] };
   }
 
-  const activeFaction = resolveActiveFaction(state);
-  if (activeFaction === null) {
+  const activeSeat = resolveActiveSeat(state);
+  if (activeSeat === null) {
     return { state, traceEntries: [] };
   }
 
   const before = runtime.currentCard;
-  const acted = new Set(before.actedFactions);
-  acted.add(activeFaction);
-  const passed = new Set(before.passedFactions);
+  const acted = new Set(before.actedSeats);
+  acted.add(activeSeat);
+  const passed = new Set(before.passedSeats);
   let nonPassCount = before.nonPassCount;
   const rewards: Array<{ resource: string; amount: number }> = [];
   let step: 'candidateScan' | 'passChain' = 'candidateScan';
 
   if (isPassAction(move)) {
     step = 'passChain';
-    passed.add(activeFaction);
+    passed.add(activeSeat);
     for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
-      if (reward.factionClass !== activeFaction) {
+      if (reward.seatClass !== activeSeat) {
         continue;
       }
       if (state.globalVars[reward.resource] === undefined) {
@@ -642,13 +642,13 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const moveClass = resolveTurnFlowActionClass(move);
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
-  const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeFaction, runtime.factionOrder);
+  const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeSeat, runtime.seatOrder);
   const newFreeOpGrants = extractPendingFreeOperationGrants(
     def,
     state,
     move,
-    activeFaction,
-    runtime.factionOrder,
+    activeSeat,
+    runtime.seatOrder,
     existingPendingFreeOperationGrants,
   );
   const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...newOverrides];
@@ -660,12 +660,12 @@ export const applyTurnFlowEligibilityAfterMove = (
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
 
-  const activeCardCandidates = computeCandidates(runtime.factionOrder, runtime.eligibility, acted);
+  const activeCardCandidates = computeCandidates(runtime.seatOrder, runtime.eligibility, acted);
   const currentCard: TurnFlowRuntimeCardState = {
     firstEligible: activeCardCandidates.first,
     secondEligible: activeCardCandidates.second,
-    actedFactions: [...acted],
-    passedFactions: [...passed],
+    actedSeats: [...acted],
+    passedSeats: [...passed],
     nonPassCount,
     firstActionClass,
   };
@@ -688,7 +688,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     {
       kind: 'turnFlowEligibility',
       step,
-      faction: activeFaction,
+      seat: activeSeat,
       before: cardSnapshot(before),
       after: cardSnapshot(currentCard),
       ...(rewards.length === 0 ? {} : { rewards }),
@@ -698,7 +698,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     traceEntries.push({
       kind: 'turnFlowEligibility',
       step: 'overrideCreate',
-      faction: activeFaction,
+      seat: activeSeat,
       before: cardSnapshot(currentCard),
       after: cardSnapshot(currentCard),
       overrides: newOverrides,
@@ -717,21 +717,21 @@ export const applyTurnFlowEligibilityAfterMove = (
   let nextPendingOverrides = pendingOverrides;
   let nextPendingFreeOperationGrants = pendingFreeOperationGrants;
   if (endedReason !== undefined) {
-    nextEligibility = computePostCardEligibility(runtime.factionOrder, currentCard, pendingOverrides);
+    nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
     nextPendingOverrides = [];
-    const resetCandidates = computeCandidates(runtime.factionOrder, nextEligibility, new Set());
+    const resetCandidates = computeCandidates(runtime.seatOrder, nextEligibility, new Set());
     nextTurn = {
       firstEligible: resetCandidates.first,
       secondEligible: resetCandidates.second,
-      actedFactions: [],
-      passedFactions: [],
+      actedSeats: [],
+      passedSeats: [],
       nonPassCount: 0,
       firstActionClass: null,
     };
     traceEntries.push({
       kind: 'turnFlowEligibility',
       step: 'cardEnd',
-      faction: activeFaction,
+      seat: activeSeat,
       before: cardSnapshot(currentCard),
       after: cardSnapshot(nextTurn),
       eligibilityBefore: runtime.eligibility,
@@ -770,10 +770,10 @@ export const consumeTurnFlowFreeOperationGrant = (
     return state;
   }
   const runtime = state.turnOrderState.runtime;
-  const activeFaction = String(state.activePlayer);
+  const activeSeat = String(state.activePlayer);
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = pending.findIndex(
-    (grant) => grant.faction === activeFaction && doesGrantAuthorizeMove(def, state, pending, grant, move),
+    (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
   );
   if (consumedIndex < 0) {
     return state;

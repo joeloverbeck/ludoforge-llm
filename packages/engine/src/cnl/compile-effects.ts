@@ -25,6 +25,7 @@ import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 import { isTrustedMacroOriginCarrier } from './macro-origin-trust.js';
 import { collectReservedCompilerMetadataKeyOccurrencesOnRecord } from './reserved-compiler-metadata.js';
+import type { TypeInferenceContext } from './type-inference.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
@@ -33,6 +34,7 @@ export interface EffectLoweringContext {
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
+  readonly typeInference?: TypeInferenceContext;
 }
 
 export interface EffectLoweringResult<TValue> {
@@ -1398,9 +1400,9 @@ function lowerGrantFreeOperationEffect(
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  if (typeof source.faction !== 'string') {
+  if (typeof source.seat !== 'string') {
     return missingCapability(path, 'grantFreeOperation effect', source, [
-      '{ grantFreeOperation: { faction, operationClass, actionIds?, executeAsFaction?, zoneFilter?, uses?, id?, sequence? } }',
+      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, uses?, id?, sequence? } }',
     ]);
   }
   if (
@@ -1426,14 +1428,14 @@ function lowerGrantFreeOperationEffect(
   } else if (typeof source.id === 'string') {
     effectId = source.id;
   }
-  let executeAsFaction: string | undefined;
-  if (source.executeAsFaction !== undefined && typeof source.executeAsFaction !== 'string') {
+  let executeAsSeat: string | undefined;
+  if (source.executeAsSeat !== undefined && typeof source.executeAsSeat !== 'string') {
     diagnostics.push(
-      ...missingCapability(`${path}.executeAsFaction`, 'grantFreeOperation executeAsFaction', source.executeAsFaction, ['string'])
+      ...missingCapability(`${path}.executeAsSeat`, 'grantFreeOperation executeAsSeat', source.executeAsSeat, ['string'])
         .diagnostics,
     );
-  } else if (typeof source.executeAsFaction === 'string') {
-    executeAsFaction = source.executeAsFaction;
+  } else if (typeof source.executeAsSeat === 'string') {
+    executeAsSeat = source.executeAsSeat;
   }
   let actionIds: string[] | undefined;
   if (source.actionIds !== undefined && (!Array.isArray(source.actionIds) || source.actionIds.some((entry) => typeof entry !== 'string'))) {
@@ -1486,10 +1488,10 @@ function lowerGrantFreeOperationEffect(
   return {
     value: {
       grantFreeOperation: {
-        faction: source.faction,
+        seat: source.seat,
         operationClass: source.operationClass,
         ...(effectId === undefined ? {} : { id: effectId }),
-        ...(executeAsFaction === undefined ? {} : { executeAsFaction }),
+        ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
         ...(actionIds === undefined ? {} : { actionIds }),
         ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
         ...(uses === undefined ? {} : { uses }),
@@ -1832,6 +1834,7 @@ function makeConditionContext(context: EffectLoweringContext, scope: BindingScop
     bindingScope: scope.visibleBindings(),
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
+    ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
   };
 }
 

@@ -258,8 +258,8 @@ describe('AST and selector schemas', () => {
       {
         grantFreeOperation: {
           id: 'grant-vc-op',
-          faction: '3',
-          executeAsFaction: 'self',
+          seat: '3',
+          executeAsSeat: 'self',
           operationClass: 'limitedOperation',
           actionIds: ['operation'],
           zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },

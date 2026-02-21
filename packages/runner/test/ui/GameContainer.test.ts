@@ -387,7 +387,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'playing',
           error: null,
           gameDef: {
-            factions: [
+            seats: [
               { id: 'us' },
               { id: 'nva force' },
             ],

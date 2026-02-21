@@ -16,7 +16,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.equal(card?.title, 'Burning Bonze');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    assert.deepEqual(card?.metadata?.factionOrder, ['VC', 'NVA', 'ARVN', 'US']);
+    assert.deepEqual(card?.metadata?.seatOrder, ['VC', 'NVA', 'ARVN', 'US']);
 
     const unshadedIf = card?.unshaded?.effects?.find((effect) => 'if' in effect);
     assert.notEqual(unshadedIf, undefined);

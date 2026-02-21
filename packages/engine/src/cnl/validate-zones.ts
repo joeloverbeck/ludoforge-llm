@@ -29,7 +29,7 @@ interface MarkerLatticeDef {
 
 interface PieceTypeInfo {
   readonly id: string;
-  readonly faction: string;
+  readonly seat: string;
   readonly statusDimensions: readonly string[];
 }
 
@@ -42,12 +42,12 @@ const VALIDATOR_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvari
     outOfPlayMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario outOfPlay.`,
     suggestion: 'Use a piece type id declared in the referenced piece catalog asset.',
   },
-  factionMismatch: {
-    initialPlacementsCode: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_FACTION_MISMATCH',
-    outOfPlayCode: 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH',
-    message: (actualFaction, pieceTypeId, expectedFaction) =>
-      `Faction "${actualFaction}" does not match piece type "${pieceTypeId}" (expected "${expectedFaction}").`,
-    suggestion: (expectedFaction) => `Set faction to "${expectedFaction}" or use a different piece type.`,
+  seatMismatch: {
+    initialPlacementsCode: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_SEAT_MISMATCH',
+    outOfPlayCode: 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH',
+    message: (actualSeat, pieceTypeId, expectedSeat) =>
+      `Seat "${actualSeat}" does not match piece type "${pieceTypeId}" (expected "${expectedSeat}").`,
+    suggestion: (expectedSeat) => `Set seat to "${expectedSeat}" or use a different piece type.`,
   },
   conservationViolation: {
     code: 'CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED',
@@ -182,11 +182,11 @@ function extractPieceTypeIndex(
     return result;
   }
   for (const pt of pieceCatalogPayload.pieceTypes) {
-    if (isRecord(pt) && typeof pt.id === 'string' && typeof pt.faction === 'string') {
+    if (isRecord(pt) && typeof pt.id === 'string' && typeof pt.seat === 'string') {
       const statusDimensions = Array.isArray(pt.statusDimensions)
         ? pt.statusDimensions.filter((s: unknown): s is string => typeof s === 'string')
         : [];
-      result.set(pt.id, { id: pt.id, faction: pt.faction, statusDimensions });
+      result.set(pt.id, { id: pt.id, seat: pt.seat, statusDimensions });
     }
   }
   return result;
@@ -331,12 +331,12 @@ function emitScenarioProjectionInvariantDiagnostics(
   inventoryIndex: ReadonlyMap<string, number>,
   diagnostics: Diagnostic[],
 ): void {
-  const pieceTypeFactionById = new Map<string, string>();
+  const pieceTypeSeatById = new Map<string, string>();
   for (const [pieceTypeId, pieceType] of pieceTypeIndex.entries()) {
-    pieceTypeFactionById.set(pieceTypeId, pieceType.faction);
+    pieceTypeSeatById.set(pieceTypeId, pieceType.seat);
   }
   const entries = collectScenarioProjectionEntries(payload, basePath);
-  const issues = evaluateScenarioProjectionInvariants(entries, pieceTypeFactionById, inventoryIndex);
+  const issues = evaluateScenarioProjectionInvariants(entries, pieceTypeSeatById, inventoryIndex);
   diagnostics.push(
     ...mapScenarioProjectionInvariantIssuesToDiagnostics(issues, VALIDATOR_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT, {
       conservationPath: basePath,

@@ -64,7 +64,7 @@ describe('FITL production terminal victory', () => {
       victory: {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
-        winnerFaction: '0',
+        winnerSeat: '0',
       },
     });
   });
@@ -93,12 +93,12 @@ describe('FITL production terminal victory', () => {
       victory: {
         timing: 'finalCoup',
         checkpointId: 'final-coup-ranking',
-        winnerFaction: '2',
+        winnerSeat: '2',
         ranking: [
-          { faction: '2', margin: 0, rank: 1, tieBreakKey: '2' },
-          { faction: '3', margin: 0, rank: 2, tieBreakKey: '3' },
-          { faction: '1', margin: 0, rank: 3, tieBreakKey: '1' },
-          { faction: '0', margin: 0, rank: 4, tieBreakKey: '0' },
+          { seat: '2', margin: 0, rank: 1, tieBreakKey: '2' },
+          { seat: '3', margin: 0, rank: 2, tieBreakKey: '3' },
+          { seat: '1', margin: 0, rank: 3, tieBreakKey: '1' },
+          { seat: '0', margin: 0, rank: 4, tieBreakKey: '0' },
         ],
       },
     });

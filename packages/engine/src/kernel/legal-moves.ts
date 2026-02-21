@@ -12,7 +12,7 @@ import { shouldDeferMissingBinding } from './missing-binding-policy.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
-import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
+import { isActiveSeatEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
@@ -279,7 +279,7 @@ export const enumerateLegalMoves = (
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
 
-  if (!isActiveFactionEligibleForTurnFlow(state)) {
+  if (!isActiveSeatEligibleForTurnFlow(state)) {
     return { moves: [], warnings };
   }
 

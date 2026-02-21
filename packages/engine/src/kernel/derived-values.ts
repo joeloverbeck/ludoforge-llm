@@ -96,12 +96,12 @@ function derivedMetricMatchesZone(metric: DerivedMetricDef, zone: ZoneDef): bool
 
 // ─── Configuration Types ─────────────────────────────────────────────────────
 
-/** Faction grouping for control computation. Game-agnostic: callers provide faction IDs. */
-export interface FactionConfig {
-  readonly coinFactions: readonly string[];
-  readonly insurgentFactions: readonly string[];
-  readonly soloFaction: string;
-  readonly factionProp: string;
+/** Seat grouping for control computation. Game-agnostic: callers provide seat IDs. */
+export interface SeatGroupConfig {
+  readonly coinSeats: readonly string[];
+  readonly insurgentSeats: readonly string[];
+  readonly soloSeat: string;
+  readonly seatProp: string;
 }
 
 /** Marker weight config for population-weighted aggregates. */
@@ -110,7 +110,7 @@ export interface MarkerWeightConfig {
   readonly passiveState: string;
 }
 
-/** Victory formula — discriminated union for game-agnostic per-faction formulas. */
+/** Victory formula — discriminated union for game-agnostic per-seat formulas. */
 export type VictoryFormula =
   | {
       readonly type: 'markerTotalPlusZoneCount';
@@ -120,13 +120,13 @@ export type VictoryFormula =
   | {
       readonly type: 'markerTotalPlusMapBases';
       readonly markerConfig: MarkerWeightConfig;
-      readonly baseFaction: string;
+      readonly baseSeat: string;
       readonly basePieceTypes: readonly string[];
     }
   | {
       readonly type: 'controlledPopulationPlusMapBases';
       readonly controlFn: 'coin' | 'solo';
-      readonly baseFaction: string;
+      readonly baseSeat: string;
       readonly basePieceTypes: readonly string[];
     }
   | {
@@ -142,20 +142,20 @@ function getZoneTokens(state: GameState, spaceId: string): readonly Token[] {
 }
 
 /**
- * Count tokens in a zone whose `factionProp` value is in `factions`.
+ * Count tokens in a zone whose `seatProp` value is in `seats`.
  * Returns 0 for empty or missing zones.
  */
-export function countFactionTokens(
+export function countSeatTokens(
   state: GameState,
   spaceId: string,
-  factions: readonly string[],
-  factionProp: string,
+  seats: readonly string[],
+  seatProp: string,
 ): number {
   const tokens = getZoneTokens(state, spaceId);
   let count = 0;
   for (const token of tokens) {
-    const value = token.props[factionProp];
-    if (typeof value === 'string' && factions.includes(value)) {
+    const value = token.props[seatProp];
+    if (typeof value === 'string' && seats.includes(value)) {
       count++;
     }
   }
@@ -170,14 +170,14 @@ export function countFactionTokens(
 export function isCoinControlled(
   state: GameState,
   spaceId: string,
-  factionConfig: FactionConfig,
+  seatGroupConfig: SeatGroupConfig,
 ): boolean {
-  const coinCount = countFactionTokens(state, spaceId, factionConfig.coinFactions, factionConfig.factionProp);
-  const insurgentCount = countFactionTokens(
+  const coinCount = countSeatTokens(state, spaceId, seatGroupConfig.coinSeats, seatGroupConfig.seatProp);
+  const insurgentCount = countSeatTokens(
     state,
     spaceId,
-    factionConfig.insurgentFactions,
-    factionConfig.factionProp,
+    seatGroupConfig.insurgentSeats,
+    seatGroupConfig.seatProp,
   );
   return coinCount > insurgentCount;
 }
@@ -185,13 +185,13 @@ export function isCoinControlled(
 /**
  * Solo faction controls a space when its token count strictly exceeds all other tokens combined.
  */
-export function isSoloFactionControlled(
+export function isSoloSeatControlled(
   state: GameState,
   spaceId: string,
-  factionConfig: FactionConfig,
+  seatGroupConfig: SeatGroupConfig,
 ): boolean {
   const tokens = getZoneTokens(state, spaceId);
-  const soloCount = countFactionTokens(state, spaceId, [factionConfig.soloFaction], factionConfig.factionProp);
+  const soloCount = countSeatTokens(state, spaceId, [seatGroupConfig.soloSeat], seatGroupConfig.seatProp);
   const othersCount = tokens.length - soloCount;
   return soloCount > othersCount;
 }
@@ -271,14 +271,14 @@ export function computeTotalEcon(
   gameDef: DerivedMetricsContext,
   state: GameState,
   spaces: readonly ZoneDef[],
-  factionConfig: FactionConfig,
+  seatGroupConfig: SeatGroupConfig,
   terrorTokenType: string,
   locSpaceType: string = 'loc',
 ): number {
   let total = 0;
   for (const space of spaces) {
     if (space.category !== locSpaceType) continue;
-    if (!isCoinControlled(state, space.id, factionConfig)) continue;
+    if (!isCoinControlled(state, space.id, seatGroupConfig)) continue;
     if (isSabotaged(state, space.id, terrorTokenType)) continue;
     total += requireNumericZoneAttribute(gameDef, space, 'econ', 'computeTotalEcon', 'totalEcon');
   }
@@ -294,12 +294,12 @@ export function sumControlledPopulation(
   gameDef: DerivedMetricsContext,
   state: GameState,
   spaces: readonly ZoneDef[],
-  controlFn: (state: GameState, spaceId: string, factionConfig: FactionConfig) => boolean,
-  factionConfig: FactionConfig,
+  controlFn: (state: GameState, spaceId: string, seatGroupConfig: SeatGroupConfig) => boolean,
+  seatGroupConfig: SeatGroupConfig,
 ): number {
   let total = 0;
   for (const space of spaces) {
-    if (controlFn(state, space.id, factionConfig)) {
+    if (controlFn(state, space.id, seatGroupConfig)) {
       total += requireNumericZoneAttribute(gameDef, space, 'population', 'sumControlledPopulation', 'controlledPopulation');
     }
   }
@@ -307,35 +307,35 @@ export function sumControlledPopulation(
 }
 
 /**
- * Count tokens in a single zone, optionally filtered by faction.
+ * Count tokens in a single zone, optionally filtered by seat.
  */
 export function countTokensInZone(
   state: GameState,
   zoneId: string,
-  factions?: readonly string[],
-  factionProp?: string,
+  seats?: readonly string[],
+  seatProp?: string,
 ): number {
-  if (factions !== undefined && factionProp !== undefined) {
-    return countFactionTokens(state, zoneId, factions, factionProp);
+  if (seats !== undefined && seatProp !== undefined) {
+    return countSeatTokens(state, zoneId, seats, seatProp);
   }
   return getZoneTokens(state, zoneId).length;
 }
 
 /**
- * Count bases (or any piece types) belonging to a faction across all map spaces.
+ * Count bases (or any piece types) belonging to a seat across all map spaces.
  */
 export function countBasesOnMap(
   state: GameState,
   spaces: readonly ZoneDef[],
-  faction: string,
+  seat: string,
   basePieceTypes: readonly string[],
-  factionProp: string,
+  seatProp: string,
 ): number {
   let total = 0;
   for (const space of spaces) {
     const tokens = getZoneTokens(state, space.id);
     for (const token of tokens) {
-      if (basePieceTypes.includes(token.type) && token.props[factionProp] === faction) {
+      if (basePieceTypes.includes(token.type) && token.props[seatProp] === seat) {
         total++;
       }
     }
@@ -353,7 +353,7 @@ export function computeVictoryMarker(
   state: GameState,
   spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
-  factionConfig: FactionConfig,
+  seatGroupConfig: SeatGroupConfig,
   formula: VictoryFormula,
 ): number {
   switch (formula.type) {
@@ -367,27 +367,27 @@ export function computeVictoryMarker(
       const bases = countBasesOnMap(
         state,
         spaces,
-        formula.baseFaction,
+        formula.baseSeat,
         formula.basePieceTypes,
-        factionConfig.factionProp,
+        seatGroupConfig.seatProp,
       );
       return markerTotal + bases;
     }
     case 'controlledPopulationPlusMapBases': {
-      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloFactionControlled;
-      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, factionConfig);
+      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
       const bases = countBasesOnMap(
         state,
         spaces,
-        formula.baseFaction,
+        formula.baseSeat,
         formula.basePieceTypes,
-        factionConfig.factionProp,
+        seatGroupConfig.seatProp,
       );
       return pop + bases;
     }
     case 'controlledPopulationPlusGlobalVar': {
-      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloFactionControlled;
-      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, factionConfig);
+      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
       const varValue = state.globalVars[formula.varName];
       if (typeof varValue !== 'number') {
         throw kernelRuntimeError(

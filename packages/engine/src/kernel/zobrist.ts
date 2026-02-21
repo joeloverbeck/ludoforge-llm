@@ -198,7 +198,7 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
     .map((value) => Number(value))
     .sort(compareNumbers);
   for (const playerId of sortedPerPlayerIds) {
-    const playerVars = state.perPlayerVars[String(playerId)] ?? {};
+    const playerVars = state.perPlayerVars[playerId] ?? {};
     const sortedPerPlayerVarNames = Object.keys(playerVars).sort(compareStrings);
     for (const varName of sortedPerPlayerVarNames) {
       hash ^= zobristKey(table, {

@@ -30,7 +30,7 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            factions: ['0', '1', '2', '3'],
+            seats: ['0', '1', '2', '3'],
             overrideWindows: [],
           },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
@@ -97,7 +97,7 @@ phase: [asPhaseId('main')],
               text: 'Grant free op to VC.',
               freeOperationGrants: [
                 {
-                  faction: '3',
+                  seat: '3',
                   sequence: { chain: 'vc-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -116,7 +116,7 @@ phase: [asPhaseId('main')],
                   id: 'branch-grant-nva',
                   freeOperationGrants: [
                     {
-                      faction: '2',
+                      seat: '2',
                       sequence: { chain: 'nva-op', step: 0 },
                       operationClass: 'operation',
                       actionIds: ['operation'],
@@ -133,8 +133,8 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'Grant VC two free operations.',
               freeOperationGrants: [
-                { faction: '3', sequence: { chain: 'vc-op-1', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
-                { faction: '3', sequence: { chain: 'vc-op-2', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: '3', sequence: { chain: 'vc-op-1', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: '3', sequence: { chain: 'vc-op-2', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -147,7 +147,7 @@ phase: [asPhaseId('main')],
               freeOperationGrants: [
                 {
                   id: 'vc-reusable-op',
-                  faction: '3',
+                  seat: '3',
                   sequence: { chain: 'vc-reusable-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -164,7 +164,7 @@ phase: [asPhaseId('main')],
               text: 'Grant VC a limited free operation.',
               freeOperationGrants: [
                 {
-                  faction: '3',
+                  seat: '3',
                   sequence: { chain: 'vc-limited', step: 0 },
                   operationClass: 'limitedOperation',
                   actionIds: ['operation'],
@@ -179,8 +179,8 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'VC gets limited operation first, then regular operation.',
               freeOperationGrants: [
-                { faction: '3', sequence: { chain: 'vc-ordered', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
-                { faction: '3', sequence: { chain: 'vc-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: '3', sequence: { chain: 'vc-ordered', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
+                { seat: '3', sequence: { chain: 'vc-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -191,8 +191,8 @@ phase: [asPhaseId('main')],
             unshaded: {
               text: 'VC gets a free operation before NVA gets one.',
               freeOperationGrants: [
-                { faction: '3', sequence: { chain: 'vc-nva-ordered', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
-                { faction: '2', sequence: { chain: 'vc-nva-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: '3', sequence: { chain: 'vc-nva-ordered', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { seat: '2', sequence: { chain: 'vc-nva-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -202,7 +202,7 @@ phase: [asPhaseId('main')],
             sideMode: 'single',
             unshaded: {
               text: 'Grant VC free operation via effect execution.',
-              effects: [{ grantFreeOperation: { faction: '3', operationClass: 'operation', actionIds: ['operation'] } }],
+              effects: [{ grantFreeOperation: { seat: '3', operationClass: 'operation', actionIds: ['operation'] } }],
             },
           },
         ],
@@ -243,7 +243,7 @@ const createZoneFilteredDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            factions: ['0', '1', '2'],
+            seats: ['0', '1', '2'],
             overrideWindows: [],
           },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
@@ -322,7 +322,7 @@ phase: [asPhaseId('main')],
               text: 'NVA free operation in Cambodia only.',
               freeOperationGrants: [
                 {
-                  faction: '2',
+                  seat: '2',
                   sequence: { chain: 'nva-cambodia', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -340,7 +340,7 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
-const createExecuteAsFactionDef = (): GameDef =>
+const createExecuteAsSeatDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-execute-as-faction-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
@@ -356,7 +356,7 @@ const createExecuteAsFactionDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            factions: ['0', '1'],
+            seats: ['0', '1'],
             overrideWindows: [],
           },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
@@ -435,8 +435,8 @@ phase: [asPhaseId('main')],
               text: 'Faction 1 executes Operation as if faction 0.',
               freeOperationGrants: [
                 {
-                  faction: '1',
-                  executeAsFaction: '0',
+                  seat: '1',
+                  executeAsSeat: '0',
                   sequence: { chain: 'execute-as-faction', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -462,7 +462,7 @@ describe('event free-operation grants integration', () => {
 
     const runtime = requireCardDrivenRuntime(second);
     assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
-    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '3');
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.seat, '3');
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.operationClass, 'operation');
     assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.remainingUses, 1);
@@ -490,7 +490,7 @@ describe('event free-operation grants integration', () => {
 
     const runtime = requireCardDrivenRuntime(second);
     assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
-    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '2');
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.seat, '2');
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.operationClass, 'operation');
     assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.remainingUses, 1);
@@ -512,7 +512,7 @@ describe('event free-operation grants integration', () => {
 
     const runtime = requireCardDrivenRuntime(third);
     assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
-    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '3');
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.seat, '3');
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.operationClass, 'operation');
     assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
   });
@@ -685,8 +685,8 @@ describe('event free-operation grants integration', () => {
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);
   });
 
-  it('applies free-operation grants with executeAsFaction using the overridden action profile', () => {
-    const def = createExecuteAsFactionDef();
+  it('applies free-operation grants with executeAsSeat using the overridden action profile', () => {
+    const def = createExecuteAsSeatDef();
     const start = initialState(def, 33, 2).state;
 
     const first = applyMove(def, start, {

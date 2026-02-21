@@ -6,6 +6,7 @@ import type {
   AnimationSequencingPolicy,
   VisualAnimationDescriptorKind,
 } from '../../src/animation/animation-types';
+import type { EphemeralContainerFactory } from '../../src/animation/ephemeral-container-factory';
 import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { createPresetRegistry, type AnimationPresetDefinition } from '../../src/animation/preset-registry';
 import { buildTimeline, type TimelineSpriteRefs } from '../../src/animation/timeline-builder';
@@ -57,6 +58,30 @@ function createSpriteRefs(overrides: Partial<TimelineSpriteRefs> = {}): Timeline
   return {
     ...base,
     ...overrides,
+  };
+}
+
+function createMockEphemeralFactory(): EphemeralContainerFactory & {
+  readonly createdIds: string[];
+  readonly destroyAllCalls: number[];
+} {
+  const createdIds: string[] = [];
+  const destroyAllCalls: number[] = [];
+  let callCount = 0;
+  return {
+    createdIds,
+    destroyAllCalls,
+    create(tokenId: string): Container {
+      createdIds.push(tokenId);
+      const container = new Container();
+      container.label = `ephemeral:${tokenId}`;
+      container.alpha = 0;
+      return container;
+    },
+    destroyAll(): void {
+      callCount += 1;
+      destroyAllCalls.push(callCount);
+    },
   };
 }
 
@@ -149,7 +174,7 @@ describe('buildTimeline', () => {
     expect(calls).toEqual(['pulse', 'move', 'move']);
   });
 
-  it('throws on missing sprite references during normal play', () => {
+  it('skips missing token descriptors gracefully without throwing', () => {
     const runtime = createRuntimeFixture();
 
     const moveTween = vi.fn();
@@ -189,13 +214,12 @@ describe('buildTimeline', () => {
       },
     ];
 
-    expect(() => buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap)).toThrow(
-      /Missing sprite reference for animation descriptor "cardDeal": token container not found \(tokenId=missing-token\)/,
-    );
-    expect(moveTween).not.toHaveBeenCalled();
+    // Should NOT throw — missing token is skipped, valid ones animate
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+    expect(moveTween).toHaveBeenCalledTimes(2);
   });
 
-  it('skips orphaned zoneHighlight when its source descriptor was skipped during setup trace', () => {
+  it('skips orphaned zoneHighlight when its source descriptor was skipped', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const defs: readonly AnimationPresetDefinition[] = [
@@ -233,9 +257,7 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
-      spriteValidation: 'permissive',
-    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     // The zone-pulse tween should NOT fire — zoneHighlight is orphaned
     expect(zoneTween).not.toHaveBeenCalled();
@@ -374,7 +396,7 @@ describe('buildTimeline', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('Animation tween generation failed');
   });
 
-  it('throws for cardFlip descriptors when token container is missing during normal play', () => {
+  it('skips cardFlip descriptors when token container is missing', () => {
     const runtime = createRuntimeFixture();
     const flipTween = vi.fn();
     const defs: readonly AnimationPresetDefinition[] = [
@@ -398,13 +420,12 @@ describe('buildTimeline', () => {
       },
     ];
 
-    expect(() => buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap)).toThrow(
-      /Missing sprite reference for animation descriptor "cardFlip": token container not found \(tokenId=missing-token\)/,
-    );
+    // Should NOT throw — missing token is gracefully skipped
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
     expect(flipTween).not.toHaveBeenCalled();
   });
 
-  it('throws for zoneHighlight descriptors when zone container is missing during normal play', () => {
+  it('skips zoneHighlight descriptors when zone container is missing', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const defs: readonly AnimationPresetDefinition[] = [
@@ -426,13 +447,12 @@ describe('buildTimeline', () => {
       },
     ];
 
-    expect(() => buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap)).toThrow(
-      /Missing sprite reference for animation descriptor "zoneHighlight": zone container not found \(zoneId=missing-zone\)/,
-    );
+    // Should NOT throw — missing zone is gracefully skipped
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
     expect(zoneTween).not.toHaveBeenCalled();
   });
 
-  it('skips all consecutive zone highlights after a skipped source during setup trace', () => {
+  it('skips all consecutive zone highlights after a skipped source', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const moveTween = vi.fn();
@@ -477,16 +497,14 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
-      spriteValidation: 'permissive',
-    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     // Both zone highlights should be suppressed — not just the first one
     expect(zoneTween).not.toHaveBeenCalled();
     expect(moveTween).not.toHaveBeenCalled();
   });
 
-  it('resets skip flag on next non-zoneHighlight descriptor after skipped source during setup trace', () => {
+  it('resets skip flag on next non-zoneHighlight descriptor after skipped source', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const moveTween = vi.fn();
@@ -540,9 +558,7 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
-      spriteValidation: 'permissive',
-    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     // The valid moveToken and its zone highlight should fire
     expect(moveTween).toHaveBeenCalledTimes(1);
@@ -595,7 +611,6 @@ describe('buildTimeline setup behavior', () => {
     });
 
     buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap, {
-      spriteValidation: 'permissive',
       initializeTokenVisibility: true,
     });
 
@@ -682,7 +697,6 @@ describe('buildTimeline setup behavior', () => {
     });
 
     buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap, {
-      spriteValidation: 'permissive',
       initializeTokenVisibility: true,
     });
 
@@ -690,7 +704,7 @@ describe('buildTimeline setup behavior', () => {
     expect(alphaValues).toEqual([1]);
   });
 
-  it('does not warn for missing sprite references during setup trace', () => {
+  it('does not warn for missing sprite references', () => {
     const runtime = createRuntimeFixture();
 
     const moveTween = vi.fn();
@@ -717,14 +731,428 @@ describe('buildTimeline setup behavior', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
       // noop
     });
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
-      spriteValidation: 'permissive',
-    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
-    // During setup-style permissive validation, missing containers are expected — no warning
+    // Missing containers are silently skipped — no warning
     expect(warn).not.toHaveBeenCalled();
     // Descriptor should still be filtered out (no tween created)
     expect(moveTween).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildTimeline ephemeral containers', () => {
+  it('provisions ephemeral card-back container for missing moveToken and animates it', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: moveTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    expect(factory.createdIds).toEqual(['tok:missing']);
+    expect(moveTween).toHaveBeenCalledTimes(1);
+  });
+
+  it('provisions ephemeral containers for multiple missing tokens in a single timeline', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken', 'cardDeal', 'cardBurn'],
+        createTween: moveTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing-a',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:missing-b',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardBurn',
+        tokenId: 'tok:missing-c',
+        from: 'zone:b',
+        to: 'zone:a',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    expect(factory.createdIds).toEqual(['tok:missing-a', 'tok:missing-b', 'tok:missing-c']);
+    expect(moveTween).toHaveBeenCalledTimes(3);
+  });
+
+  it('calls factory.destroyAll after timeline completes', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    // The cleanup function should have been added to the timeline
+    expect(runtime.timeline.add).toHaveBeenCalled();
+    const lastCall = runtime.timeline.add.mock.calls[runtime.timeline.add.mock.calls.length - 1];
+    const cleanupFn = lastCall?.[0];
+    expect(typeof cleanupFn).toBe('function');
+
+    // Invoke the cleanup callback
+    (cleanupFn as () => void)();
+    expect(factory.destroyAllCalls.length).toBe(1);
+  });
+
+  it('creates face-down face controller for ephemeral tokens', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+
+    const capturedFaceControllers: ReadonlyMap<string, { setFaceUp(faceUp: boolean): void }>[] = [];
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: (_descriptor, context) => {
+          if (context.spriteRefs.tokenFaceControllers) {
+            capturedFaceControllers.push(context.spriteRefs.tokenFaceControllers);
+          }
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    expect(capturedFaceControllers.length).toBe(1);
+    const faceController = capturedFaceControllers[0]!.get('tok:missing');
+    expect(faceController).toBeDefined();
+    // Should not throw — setFaceUp is a no-op for ephemeral tokens
+    expect(() => faceController!.setFaceUp(true)).not.toThrow();
+  });
+
+  it('skips moveToken when both factory is absent and token is missing (graceful fallback)', () => {
+    const runtime = createRuntimeFixture();
+
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: moveTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    // No factory, no throw — just skip
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+    expect(moveTween).not.toHaveBeenCalled();
+  });
+
+  it('handles mixed persistent and ephemeral token containers', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+
+    const tweenedTokenIds: string[] = [];
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: (descriptor) => {
+          if (descriptor.kind === 'moveToken') {
+            tweenedTokenIds.push(descriptor.tokenId);
+          }
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1', // exists in persistent
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:ephemeral', // needs ephemeral
+        from: 'zone:b',
+        to: 'zone:a',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    // Only the missing token should get an ephemeral container
+    expect(factory.createdIds).toEqual(['tok:ephemeral']);
+    // Both should animate
+    expect(tweenedTokenIds).toEqual(['tok:1', 'tok:ephemeral']);
+  });
+});
+
+describe('buildTimeline zone highlight scheduling', () => {
+  function createZoneHighlightSequencingFixture(): {
+    readonly gsap: GsapLike;
+    readonly mainTimeline: GsapTimelineLike & { add: ReturnType<typeof vi.fn> };
+    readonly createdTimelines: Array<GsapTimelineLike & { add: ReturnType<typeof vi.fn> }>;
+  } {
+    const createdTimelines: Array<GsapTimelineLike & { add: ReturnType<typeof vi.fn> }> = [];
+    let isFirstCall = true;
+
+    const makeTimeline = (): GsapTimelineLike & { add: ReturnType<typeof vi.fn> } => ({
+      add: vi.fn().mockReturnThis(),
+    });
+
+    const mainTimeline = makeTimeline();
+
+    return {
+      gsap: {
+        registerPlugin: vi.fn(),
+        defaults: vi.fn(),
+        timeline: vi.fn(() => {
+          if (isFirstCall) {
+            isFirstCall = false;
+            return mainTimeline;
+          }
+          const tl = makeTimeline();
+          createdTimelines.push(tl);
+          return tl;
+        }),
+      },
+      mainTimeline,
+      createdTimelines,
+    };
+  }
+
+  it('schedules zone highlights at position 0 in parallel with main descriptors', () => {
+    const { gsap, mainTimeline, createdTimelines } = createZoneHighlightSequencingFixture();
+
+    const cardDealTween = vi.fn();
+    const zoneTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'deal-preset',
+        defaultDurationSeconds: 0.3,
+        compatibleKinds: ['cardDeal'],
+        createTween: cardDealTween,
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'cardDeal',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:2',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), gsap);
+
+    // Both card deals should animate
+    expect(cardDealTween).toHaveBeenCalledTimes(2);
+    // Zone highlight should animate
+    expect(zoneTween).toHaveBeenCalledTimes(1);
+
+    // The zone highlight sub-timeline should be added to main at position 0
+    const addCalls = mainTimeline.add.mock.calls;
+    const zeroPositionCall = addCalls.find(
+      (call: unknown[]) => call[1] === 0,
+    );
+    expect(zeroPositionCall).toBeDefined();
+  });
+
+  it('zone highlights do not break stagger groups when interleaved in input stream', () => {
+    const { gsap, mainTimeline, createdTimelines } = createZoneHighlightSequencingFixture();
+
+    const cardDealTween = vi.fn();
+    const zoneTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'deal-preset',
+        defaultDurationSeconds: 0.3,
+        compatibleKinds: ['cardDeal'],
+        createTween: (_descriptor, context) => {
+          context.timeline.add('deal-marker');
+          cardDealTween();
+        },
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    // Two card deals with zone highlights interleaved — should form ONE stagger group
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'cardDeal',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:b',
+        sourceKind: 'cardDeal',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:2',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const policies = new Map<VisualAnimationDescriptorKind, AnimationSequencingPolicy>([
+      ['cardDeal', { mode: 'stagger', staggerOffsetSeconds: 0.15 }],
+    ]);
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), gsap, {
+      sequencingPolicies: policies,
+    });
+
+    // Both card deals should animate as one stagger group (2 sub-timelines)
+    expect(cardDealTween).toHaveBeenCalledTimes(2);
+
+    // The stagger add calls: first at default position, second at stagger offset
+    const addCalls = mainTimeline.add.mock.calls;
+
+    // Find stagger-related calls (sub-timelines, not the zone highlight at position 0)
+    const staggerCalls = addCalls.filter(
+      (call: unknown[]) => call[1] !== 0 || call[1] === undefined,
+    );
+    // First card deal sub-timeline should be added without position (undefined)
+    expect(staggerCalls.some((call: unknown[]) => call[1] === undefined)).toBe(true);
+    // Second card deal sub-timeline should be added at stagger offset
+    expect(staggerCalls.some((call: unknown[]) => call[1] === '<+=0.15')).toBe(true);
   });
 });
 

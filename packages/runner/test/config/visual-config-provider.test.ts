@@ -716,6 +716,37 @@ describe('VisualConfigProvider', () => {
     });
   });
 
+  it('getDefaultCardDimensions returns null when config is null', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getDefaultCardDimensions()).toBeNull();
+  });
+
+  it('getDefaultCardDimensions returns null when no card templates configured', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+    expect(provider.getDefaultCardDimensions()).toBeNull();
+  });
+
+  it('getDefaultCardDimensions returns null when templates object is empty', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      cards: { templates: {} },
+    });
+    expect(provider.getDefaultCardDimensions()).toBeNull();
+  });
+
+  it('getDefaultCardDimensions returns first template dimensions', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      cards: {
+        templates: {
+          'poker-card': { width: 48, height: 68 },
+          'special-card': { width: 60, height: 90 },
+        },
+      },
+    });
+    expect(provider.getDefaultCardDimensions()).toEqual({ width: 48, height: 68 });
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

@@ -20,6 +20,7 @@ import { createAnimationLogger, type AnimationLogger } from './animation-logger.
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
+import { createEphemeralContainerFactory, type EphemeralContainerFactoryOptions } from './ephemeral-container-factory.js';
 import { buildTimeline } from './timeline-builder.js';
 import { traceToDescriptors } from './trace-to-descriptors.js';
 import { decorateWithZoneHighlights } from './derive-zone-highlights.js';
@@ -58,6 +59,7 @@ export interface AnimationControllerOptions {
   readonly tokenFaceControllers?: () => ReadonlyMap<string, { setFaceUp(faceUp: boolean): void }>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
+  readonly ephemeralParent?: () => Container;
 }
 
 interface AnimationControllerDeps {
@@ -83,6 +85,7 @@ export function createAnimationController(
   const zoneHighlightPolicy = options.visualConfigProvider.getZoneHighlightPolicy();
   const sequencingPolicies = buildSequencingPolicies(options.visualConfigProvider);
   const timingOverrides = buildTimingOverrides(options.visualConfigProvider);
+  const cardDimensions = options.visualConfigProvider.getDefaultCardDimensions();
 
   let detailLevel: AnimationDetailLevel = 'full';
   let reducedMotion = false;
@@ -144,6 +147,17 @@ export function createAnimationController(
     }
 
     try {
+      const ephemeralContainerFactory = options.ephemeralParent !== undefined
+        ? createEphemeralContainerFactory(
+            options.ephemeralParent(),
+            cardDimensions !== null
+              ? { cardWidth: cardDimensions.width, cardHeight: cardDimensions.height }
+              : undefined,
+          )
+        : undefined;
+
+      const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined;
+
       const timeline = deps.buildTimeline(
         descriptors,
         deps.presetRegistry,
@@ -156,7 +170,7 @@ export function createAnimationController(
           zonePositions: options.zonePositions(),
         },
         deps.gsap,
-        sequencingPolicies.size === 0 && timingOverrides.size === 0 && !isSetup
+        !needsOptions
           ? undefined
           : {
               ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
@@ -167,6 +181,7 @@ export function createAnimationController(
                     initializeTokenVisibility: true,
                   }
                 : {}),
+              ...(ephemeralContainerFactory === undefined ? {} : { ephemeralContainerFactory }),
             },
       );
 

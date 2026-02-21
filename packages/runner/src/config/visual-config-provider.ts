@@ -172,6 +172,18 @@ export class VisualConfigProvider {
     return null;
   }
 
+  getDefaultCardDimensions(): { readonly width: number; readonly height: number } | null {
+    const templates = this.config?.cards?.templates;
+    if (templates === undefined) {
+      return null;
+    }
+    const firstTemplate = Object.values(templates)[0];
+    if (firstTemplate === undefined) {
+      return null;
+    }
+    return { width: firstTemplate.width, height: firstTemplate.height };
+  }
+
   getCardTemplate(templateId: string): CardTemplate | null {
     return this.config?.cards?.templates?.[templateId] ?? null;
   }

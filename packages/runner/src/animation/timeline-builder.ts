@@ -6,6 +6,7 @@ import type {
   AnimationSequencingPolicy,
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
+import type { EphemeralContainerFactory } from './ephemeral-container-factory.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
 
@@ -21,8 +22,8 @@ export interface TimelineSpriteRefs {
 export interface BuildTimelineOptions {
   readonly sequencingPolicies?: ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy>;
   readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
-  readonly spriteValidation?: 'strict' | 'permissive';
   readonly initializeTokenVisibility?: boolean;
+  readonly ephemeralContainerFactory?: EphemeralContainerFactory;
 }
 
 export function buildTimeline(
@@ -35,15 +36,21 @@ export function buildTimeline(
   const timeline = gsap.timeline();
   const policies = options?.sequencingPolicies;
   const durationByKind = options?.durationSecondsByKind;
-  const spriteValidation = options?.spriteValidation ?? 'strict';
+  const factory = options?.ephemeralContainerFactory;
 
-  const visual = filterVisualDescriptors(descriptors, spriteRefs, spriteValidation);
+  const effectiveRefs = factory !== undefined
+    ? provisionEphemeralContainers(descriptors, spriteRefs, factory)
+    : spriteRefs;
+
+  const visual = filterVisualDescriptors(descriptors, effectiveRefs);
+
+  const { mainDescriptors, zoneHighlights } = partitionZoneHighlights(visual);
 
   if (options?.initializeTokenVisibility) {
-    prepareTokensForAnimation(visual, spriteRefs);
+    prepareTokensForAnimation(mainDescriptors, effectiveRefs);
   }
 
-  const groups = groupConsecutiveSameKind(visual);
+  const groups = groupConsecutiveSameKind(mainDescriptors);
 
   for (const group of groups) {
     const firstDescriptor = group[0];
@@ -57,7 +64,7 @@ export function buildTimeline(
 
     if (mode === 'sequential' || group.length <= 1) {
       for (const descriptor of group) {
-        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs }, durationOverrideSeconds);
+        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs: effectiveRefs }, durationOverrideSeconds);
       }
       continue;
     }
@@ -72,7 +79,7 @@ export function buildTimeline(
       processDescriptor(
         descriptor,
         presetRegistry,
-        { gsap, timeline: subTimeline, spriteRefs },
+        { gsap, timeline: subTimeline, spriteRefs: effectiveRefs },
         durationOverrideSeconds,
       );
 
@@ -87,13 +94,24 @@ export function buildTimeline(
     }
   }
 
+  if (zoneHighlights.length > 0) {
+    const highlightTimeline = gsap.timeline();
+    for (const descriptor of zoneHighlights) {
+      processDescriptor(descriptor, presetRegistry, { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs }, durationByKind?.get('zoneHighlight'));
+    }
+    timeline.add(highlightTimeline, 0);
+  }
+
+  if (factory !== undefined) {
+    timeline.add(() => factory.destroyAll());
+  }
+
   return timeline;
 }
 
 function filterVisualDescriptors(
   descriptors: readonly AnimationDescriptor[],
   spriteRefs: TimelineSpriteRefs,
-  spriteValidation: 'strict' | 'permissive',
 ): readonly VisualAnimationDescriptor[] {
   const result: VisualAnimationDescriptor[] = [];
   let lastSourceSkipped = false;
@@ -107,15 +125,79 @@ function filterVisualDescriptors(
     lastSourceSkipped = false;
     const missingReason = getMissingSpriteReason(descriptor, spriteRefs);
     if (missingReason !== null) {
-      if (spriteValidation === 'strict') {
-        throw new Error(`Missing sprite reference for animation descriptor "${descriptor.kind}": ${missingReason}`);
-      }
       lastSourceSkipped = true;
       continue;
     }
     result.push(descriptor);
   }
   return result;
+}
+
+function provisionEphemeralContainers(
+  descriptors: readonly AnimationDescriptor[],
+  spriteRefs: TimelineSpriteRefs,
+  factory: EphemeralContainerFactory,
+): TimelineSpriteRefs {
+  const ephemeralTokens = new Map<string, Container>();
+  const ephemeralFaceControllers = new Map<string, { setFaceUp(faceUp: boolean): void }>();
+
+  for (const descriptor of descriptors) {
+    if (descriptor.kind === 'skipped') {
+      continue;
+    }
+    if (
+      (descriptor.kind === 'moveToken' ||
+        descriptor.kind === 'cardDeal' ||
+        descriptor.kind === 'cardBurn') &&
+      !spriteRefs.tokenContainers.has(descriptor.tokenId) &&
+      !ephemeralTokens.has(descriptor.tokenId)
+    ) {
+      const container = factory.create(descriptor.tokenId);
+      ephemeralTokens.set(descriptor.tokenId, container);
+      ephemeralFaceControllers.set(descriptor.tokenId, {
+        setFaceUp() {
+          // Ephemeral containers always show face-down; ignore flip requests.
+        },
+      });
+    }
+  }
+
+  if (ephemeralTokens.size === 0) {
+    return spriteRefs;
+  }
+
+  const mergedTokenContainers = new Map(spriteRefs.tokenContainers);
+  for (const [id, container] of ephemeralTokens) {
+    mergedTokenContainers.set(id, container);
+  }
+
+  const mergedFaceControllers = new Map(spriteRefs.tokenFaceControllers ?? []);
+  for (const [id, controller] of ephemeralFaceControllers) {
+    mergedFaceControllers.set(id, controller);
+  }
+
+  return {
+    ...spriteRefs,
+    tokenContainers: mergedTokenContainers,
+    tokenFaceControllers: mergedFaceControllers,
+  };
+}
+
+function partitionZoneHighlights(
+  descriptors: readonly VisualAnimationDescriptor[],
+): { readonly mainDescriptors: readonly VisualAnimationDescriptor[]; readonly zoneHighlights: readonly VisualAnimationDescriptor[] } {
+  const mainDescriptors: VisualAnimationDescriptor[] = [];
+  const zoneHighlights: VisualAnimationDescriptor[] = [];
+
+  for (const descriptor of descriptors) {
+    if (descriptor.kind === 'zoneHighlight') {
+      zoneHighlights.push(descriptor);
+    } else {
+      mainDescriptors.push(descriptor);
+    }
+  }
+
+  return { mainDescriptors, zoneHighlights };
 }
 
 function groupConsecutiveSameKind(

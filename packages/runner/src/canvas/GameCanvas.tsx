@@ -289,6 +289,7 @@ export async function createGameCanvasRuntime(
       tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),
+      ephemeralParent: () => gameCanvas.layers.effectsGroup,
     });
     animationController.start();
 

@@ -1,4 +1,5 @@
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
+import { Container as PixiContainer, Graphics } from 'pixi.js';
 import { describe, expect, it, vi } from 'vitest';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -1436,6 +1437,228 @@ describe('createAnimationController', () => {
     // The scheduled callback should be a no-op after destroy
     scheduledCallback!();
     expect(traceToDescriptorsMock).not.toHaveBeenCalled();
+  });
+
+  it('passes ephemeral container factory to buildTimeline when ephemeralParent is provided', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const tokenContainers = new Map([['tok:1', {}]]);
+    const zoneContainers = new Map([['zone:a', {}], ['zone:b', {}]]);
+    const zonePositions = {
+      positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+      bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+    };
+    const presetRegistry = createPresetRegistry();
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    const ephemeralParent = {};
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => tokenContainers as never,
+        zoneContainers: () => zoneContainers as never,
+        zonePositions: () => zonePositions,
+        ephemeralParent: () => ephemeralParent as never,
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry,
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          {
+            kind: 'moveToken',
+            tokenId: 'tok:1',
+            from: 'zone:a',
+            to: 'zone:b',
+            preset: 'arc-tween',
+            isTriggered: false,
+          } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const options = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
+    expect(options).toBeDefined();
+    expect(options?.ephemeralContainerFactory).toBeDefined();
+
+    controller.destroy();
+  });
+
+  it('omits ephemeral container factory when ephemeralParent is absent', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const tokenContainers = new Map([['tok:1', {}]]);
+    const zoneContainers = new Map([['zone:a', {}], ['zone:b', {}]]);
+    const zonePositions = {
+      positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+      bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+    };
+    const presetRegistry = createPresetRegistry();
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => tokenContainers as never,
+        zoneContainers: () => zoneContainers as never,
+        zonePositions: () => zonePositions,
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry,
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          {
+            kind: 'moveToken',
+            tokenId: 'tok:1',
+            from: 'zone:a',
+            to: 'zone:b',
+            preset: 'arc-tween',
+            isTriggered: false,
+          } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(buildTimelineMock).toHaveBeenCalledWith(
+      expect.any(Array),
+      presetRegistry,
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    );
+
+    controller.destroy();
+  });
+
+  it('passes card dimensions from visual config to ephemeral factory', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const tokenContainers = new Map([['tok:1', {}]]);
+    const zoneContainers = new Map([['zone:a', {}], ['zone:b', {}]]);
+    const zonePositions = {
+      positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+      bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+    };
+    const presetRegistry = createPresetRegistry();
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    // Create a visual config with card templates defining 48×68 dimensions
+    const visualConfigWithCards = new VisualConfigProvider({
+      version: 1,
+      cards: {
+        templates: {
+          'poker-card': { width: 48, height: 68 },
+        },
+      },
+    });
+
+    const ephemeralParent = new PixiContainer();
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: visualConfigWithCards,
+        tokenContainers: () => tokenContainers as never,
+        zoneContainers: () => zoneContainers as never,
+        zonePositions: () => zonePositions,
+        ephemeralParent: () => ephemeralParent,
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry,
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          {
+            kind: 'moveToken',
+            tokenId: 'tok:1',
+            from: 'zone:a',
+            to: 'zone:b',
+            preset: 'arc-tween',
+            isTriggered: false,
+          } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    // Verify buildTimeline was called with an ephemeralContainerFactory in its options
+    const options = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
+    expect(options).toBeDefined();
+    expect(options?.ephemeralContainerFactory).toBeDefined();
+
+    // Create a container via the factory and verify it uses the configured dimensions
+    const ephemeral = options!.ephemeralContainerFactory!.create('tok:test');
+    const gfx = ephemeral.children.find((c: unknown) => c instanceof Graphics);
+    expect(gfx).toBeDefined();
+    const bounds = gfx!.getLocalBounds();
+    // 48×68 + stroke (~1.5) — should be ~49.5×69.5
+    expect(bounds.width).toBeGreaterThan(47);
+    expect(bounds.width).toBeLessThan(51);
+    expect(bounds.height).toBeGreaterThan(67);
+    expect(bounds.height).toBeLessThan(71);
+
+    controller.destroy();
   });
 
   it('forceFlush delegates to queue and allows future processing', () => {

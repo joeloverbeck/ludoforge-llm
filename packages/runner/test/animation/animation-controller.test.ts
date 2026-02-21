@@ -1314,11 +1314,14 @@ describe('createAnimationController', () => {
     }).mock.calls[0]![1] as { readonly suppressCreateToken?: boolean };
     expect(mappingOptions.suppressCreateToken).toBe(true);
 
-    // Should have passed isSetupTrace: true to buildTimeline
+    // Should have passed setup-specific timeline policies
     const buildOptions = (buildTimelineMock as unknown as {
       readonly mock: { readonly calls: readonly (readonly unknown[])[] };
-    }).mock.calls[0]?.[4] as { readonly isSetupTrace?: boolean } | undefined;
-    expect(buildOptions?.isSetupTrace).toBe(true);
+    }).mock.calls[0]?.[4] as
+      | { readonly spriteValidation?: 'strict' | 'permissive'; readonly initializeTokenVisibility?: boolean }
+      | undefined;
+    expect(buildOptions?.spriteValidation).toBe('permissive');
+    expect(buildOptions?.initializeTokenVisibility).toBe(true);
 
     controller.destroy();
   });

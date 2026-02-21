@@ -149,7 +149,7 @@ describe('buildTimeline', () => {
     expect(calls).toEqual(['pulse', 'move', 'move']);
   });
 
-  it('silently skips descriptors with missing sprite references', () => {
+  it('throws on missing sprite references during normal play', () => {
     const runtime = createRuntimeFixture();
 
     const moveTween = vi.fn();
@@ -189,16 +189,13 @@ describe('buildTimeline', () => {
       },
     ];
 
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
-      // noop
-    });
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
-
-    expect(moveTween).toHaveBeenCalledTimes(2);
-    expect(warn).not.toHaveBeenCalled();
+    expect(() => buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap)).toThrow(
+      /Missing sprite reference for animation descriptor "cardDeal": token container not found \(tokenId=missing-token\)/,
+    );
+    expect(moveTween).not.toHaveBeenCalled();
   });
 
-  it('skips orphaned zoneHighlight when its source descriptor was skipped', () => {
+  it('skips orphaned zoneHighlight when its source descriptor was skipped during setup trace', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const defs: readonly AnimationPresetDefinition[] = [
@@ -236,7 +233,9 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      spriteValidation: 'permissive',
+    });
 
     // The zone-pulse tween should NOT fire — zoneHighlight is orphaned
     expect(zoneTween).not.toHaveBeenCalled();
@@ -375,7 +374,7 @@ describe('buildTimeline', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('Animation tween generation failed');
   });
 
-  it('applies missing token guard to cardFlip descriptors', () => {
+  it('throws for cardFlip descriptors when token container is missing during normal play', () => {
     const runtime = createRuntimeFixture();
     const flipTween = vi.fn();
     const defs: readonly AnimationPresetDefinition[] = [
@@ -399,12 +398,13 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
-
+    expect(() => buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap)).toThrow(
+      /Missing sprite reference for animation descriptor "cardFlip": token container not found \(tokenId=missing-token\)/,
+    );
     expect(flipTween).not.toHaveBeenCalled();
   });
 
-  it('applies missing zone guard to zoneHighlight descriptors', () => {
+  it('throws for zoneHighlight descriptors when zone container is missing during normal play', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const defs: readonly AnimationPresetDefinition[] = [
@@ -426,12 +426,13 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
-
+    expect(() => buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap)).toThrow(
+      /Missing sprite reference for animation descriptor "zoneHighlight": zone container not found \(zoneId=missing-zone\)/,
+    );
     expect(zoneTween).not.toHaveBeenCalled();
   });
 
-  it('skips all consecutive zone highlights after a skipped source (both-endpoint move)', () => {
+  it('skips all consecutive zone highlights after a skipped source during setup trace', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const moveTween = vi.fn();
@@ -476,14 +477,16 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      spriteValidation: 'permissive',
+    });
 
     // Both zone highlights should be suppressed — not just the first one
     expect(zoneTween).not.toHaveBeenCalled();
     expect(moveTween).not.toHaveBeenCalled();
   });
 
-  it('resets skip flag on next non-zoneHighlight descriptor after skipped source', () => {
+  it('resets skip flag on next non-zoneHighlight descriptor after skipped source during setup trace', () => {
     const runtime = createRuntimeFixture();
     const zoneTween = vi.fn();
     const moveTween = vi.fn();
@@ -537,7 +540,9 @@ describe('buildTimeline', () => {
       },
     ];
 
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      spriteValidation: 'permissive',
+    });
 
     // The valid moveToken and its zone highlight should fire
     expect(moveTween).toHaveBeenCalledTimes(1);
@@ -545,8 +550,8 @@ describe('buildTimeline', () => {
   });
 });
 
-describe('buildTimeline setup trace', () => {
-  it('sets alpha=0 on token containers for move/deal/burn descriptors when isSetupTrace is true', () => {
+describe('buildTimeline setup behavior', () => {
+  it('sets alpha=0 on token containers for move/deal/burn descriptors when initializeTokenVisibility is true', () => {
     const runtime = createRuntimeFixture();
     const tok1 = new Container();
     const tok2 = new Container();
@@ -590,7 +595,8 @@ describe('buildTimeline setup trace', () => {
     });
 
     buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap, {
-      isSetupTrace: true,
+      spriteValidation: 'permissive',
+      initializeTokenVisibility: true,
     });
 
     // Both tokens should have alpha set to 0 before tween execution
@@ -598,7 +604,7 @@ describe('buildTimeline setup trace', () => {
     expect(moveTween).toHaveBeenCalledTimes(2);
   });
 
-  it('does not set alpha=0 when isSetupTrace is false or absent', () => {
+  it('does not set alpha=0 when initializeTokenVisibility is absent', () => {
     const runtime = createRuntimeFixture();
     const tok1 = new Container();
     tok1.alpha = 1;
@@ -676,7 +682,8 @@ describe('buildTimeline setup trace', () => {
     });
 
     buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap, {
-      isSetupTrace: true,
+      spriteValidation: 'permissive',
+      initializeTokenVisibility: true,
     });
 
     // Alpha should still be 1 — setTokenProp is not affected by prepareTokensForAnimation
@@ -711,10 +718,10 @@ describe('buildTimeline setup trace', () => {
       // noop
     });
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
-      isSetupTrace: true,
+      spriteValidation: 'permissive',
     });
 
-    // During setup trace, missing containers are expected — no warning
+    // During setup-style permissive validation, missing containers are expected — no warning
     expect(warn).not.toHaveBeenCalled();
     // Descriptor should still be filtered out (no tween created)
     expect(moveTween).not.toHaveBeenCalled();

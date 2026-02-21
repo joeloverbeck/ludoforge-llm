@@ -161,7 +161,12 @@ export function createAnimationController(
           : {
               ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
               ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
-              ...(isSetup ? { isSetupTrace: true } : {}),
+              ...(isSetup
+                ? {
+                    spriteValidation: 'permissive' as const,
+                    initializeTokenVisibility: true,
+                  }
+                : {}),
             },
       );
 

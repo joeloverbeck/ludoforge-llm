@@ -21,7 +21,8 @@ export interface TimelineSpriteRefs {
 export interface BuildTimelineOptions {
   readonly sequencingPolicies?: ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy>;
   readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
-  readonly isSetupTrace?: boolean;
+  readonly spriteValidation?: 'strict' | 'permissive';
+  readonly initializeTokenVisibility?: boolean;
 }
 
 export function buildTimeline(
@@ -34,10 +35,11 @@ export function buildTimeline(
   const timeline = gsap.timeline();
   const policies = options?.sequencingPolicies;
   const durationByKind = options?.durationSecondsByKind;
+  const spriteValidation = options?.spriteValidation ?? 'strict';
 
-  const visual = filterVisualDescriptors(descriptors, spriteRefs);
+  const visual = filterVisualDescriptors(descriptors, spriteRefs, spriteValidation);
 
-  if (options?.isSetupTrace) {
+  if (options?.initializeTokenVisibility) {
     prepareTokensForAnimation(visual, spriteRefs);
   }
 
@@ -91,6 +93,7 @@ export function buildTimeline(
 function filterVisualDescriptors(
   descriptors: readonly AnimationDescriptor[],
   spriteRefs: TimelineSpriteRefs,
+  spriteValidation: 'strict' | 'permissive',
 ): readonly VisualAnimationDescriptor[] {
   const result: VisualAnimationDescriptor[] = [];
   let lastSourceSkipped = false;
@@ -104,6 +107,9 @@ function filterVisualDescriptors(
     lastSourceSkipped = false;
     const missingReason = getMissingSpriteReason(descriptor, spriteRefs);
     if (missingReason !== null) {
+      if (spriteValidation === 'strict') {
+        throw new Error(`Missing sprite reference for animation descriptor "${descriptor.kind}": ${missingReason}`);
+      }
       lastSourceSkipped = true;
       continue;
     }

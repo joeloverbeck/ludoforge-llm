@@ -134,7 +134,7 @@ const applyLoggedMoveWithTrace = (
 describe('texas hold\'em real-play action-by-action replay e2e', () => {
   it('real #1: reproduces PokerStars #27738502010 preflop all-in ladder with refund and 3-layer pot award', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 27738502010, 9));
+    const base = advanceToDecisionPoint(def, initialState(def, 27738502010, 9).state);
     const tokenIndex = buildTokenIndex(base);
 
     const handsByPlayer = {
@@ -267,7 +267,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
 
   it('real #2: reproduces PokerStars #129750342299 with uncalled refund and odd-chip side-pot split', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 129750342299, 8));
+    const base = advanceToDecisionPoint(def, initialState(def, 129750342299, 8).state);
     const tokenIndex = buildTokenIndex(base);
 
     const handsByPlayer = {
@@ -403,7 +403,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
 
   it('real #3: reproduces complex report hand with short all-in raise, odd chip main-pot split, and flop refund', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 6201, 9));
+    const base = advanceToDecisionPoint(def, initialState(def, 6201, 9).state);
     const tokenIndex = buildTokenIndex(base);
 
     const handsByPlayer = {

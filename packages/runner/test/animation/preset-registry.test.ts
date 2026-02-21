@@ -406,10 +406,11 @@ describe('preset-registry', () => {
     expect(midYClose).toBe(-20);
   });
 
-  it('counter-tick emits visible tweens for varChange/resourceTransfer', () => {
+  it('counter-tick targets zone containers (not token containers) for varChange/resourceTransfer', () => {
     const registry = createPresetRegistry();
-    const tokenA = { alpha: 1, scale: { x: 1, y: 1 } };
-    const tokenB = { alpha: 1, scale: { x: 1, y: 1 } };
+    const tokenA = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'token' };
+    const zoneA = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'zoneA' };
+    const zoneB = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'zoneB' };
     const timeline = { add: vi.fn() };
     const gsap = {
       registerPlugin: vi.fn(),
@@ -433,19 +434,25 @@ describe('preset-registry', () => {
         timeline,
         durationSeconds: registry.require('counter-tick').defaultDurationSeconds,
         spriteRefs: {
-          tokenContainers: new Map([
-            ['tok:1', tokenA],
-            ['tok:2', tokenB],
+          tokenContainers: new Map([['tok:1', tokenA]]),
+          zoneContainers: new Map([
+            ['zone:a', zoneA],
+            ['zone:b', zoneB],
           ]),
-          zoneContainers: new Map(),
           zonePositions: { positions: new Map() },
         },
       },
     );
 
     expect(gsap.to).toHaveBeenCalled();
-    expect(gsap.to).toHaveBeenCalledWith(tokenA, expect.objectContaining({ alpha: 0.8, scale: 1.04 }));
-    expect(gsap.to).toHaveBeenCalledWith(tokenA, expect.objectContaining({ alpha: 1, scale: 1 }));
+    // Verify zone containers ARE targeted
+    const targetedObjects = (gsap.to as ReturnType<typeof vi.fn>).mock.calls.map(
+      (call: unknown[]) => call[0],
+    );
+    expect(targetedObjects).toContain(zoneA);
+    expect(targetedObjects).toContain(zoneB);
+    // Token containers should NOT be targeted by counter-tick (reference check)
+    expect(targetedObjects).not.toContain(tokenA);
   });
 
   it('banner-overlay emits zone alpha tweens for phaseTransition', () => {

@@ -101,7 +101,7 @@ const serializeLogs = (entries: readonly TriggerLogEntry[]): readonly string[] =
 
 const replayWithPolicy = (seed: number, steps: number): { readonly hashes: readonly bigint[]; readonly logs: readonly string[][] } => {
   const def = createDeterminismDef();
-  let state: GameState = initialState(def, seed, 2);
+  let state: GameState = initialState(def, seed, 2).state;
   let policyRng = createRng(BigInt(seed));
   const hashes: bigint[] = [state.stateHash];
   const logs: string[][] = [];
@@ -127,7 +127,7 @@ const replayWithPolicy = (seed: number, steps: number): { readonly hashes: reado
 describe('game loop integration', () => {
   it('progresses across turns and stops auto-advancing once terminal', () => {
     const def = createProgressionDef();
-    let state = initialState(def, 21, 2);
+    let state = initialState(def, 21, 2).state;
 
     const first = applyMove(def, state, legalMoves(def, state)[0]!);
     assert.equal(first.state.globalVars.score, 1);

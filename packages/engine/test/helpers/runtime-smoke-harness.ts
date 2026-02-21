@@ -161,7 +161,7 @@ const applyInvariants = (
 };
 
 const executePath = (config: RuntimeSmokeGateConfig): RuntimeSmokeGateResult => {
-  const bootstrapState = config.bootstrapState ?? ((def, seed, playerCount) => initialState(def, seed, playerCount));
+  const bootstrapState = config.bootstrapState ?? ((def, seed, playerCount) => initialState(def, seed, playerCount).state);
   const invariants = config.invariants ?? [];
 
   let state = bootstrapState(config.def, config.seed, config.playerCount);

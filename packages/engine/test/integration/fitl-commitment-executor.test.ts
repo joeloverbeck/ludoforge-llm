@@ -37,7 +37,7 @@ describe('FITL commitment executor semantics', () => {
 
   it('resolves commitment even when the active faction is not US', () => {
     const def = compileDef();
-    const baseState = clearAllZones(initialState(def, 7303, 2));
+    const baseState = clearAllZones(initialState(def, 7303, 2).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(1),

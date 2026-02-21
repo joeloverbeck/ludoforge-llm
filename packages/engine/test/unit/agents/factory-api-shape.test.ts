@@ -86,7 +86,7 @@ phase: [asPhaseId('main')],
         },
       ],
     };
-    const state = initialState(def, 1, 2);
+    const state = initialState(def, 1, 2).state;
     const moves = legalMoves(def, state);
     const agent = createAgent('greedy');
     const result = agent.chooseMove({

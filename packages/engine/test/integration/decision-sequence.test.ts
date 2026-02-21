@@ -259,7 +259,7 @@ describe('decision sequence integration', () => {
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const state = initialState(def, 123, 2);
+    const state = initialState(def, 123, 2).state;
     const template = findTemplateMove(legalMoves(def, state), actionId);
     assert.ok(template !== undefined, 'template remains legal when at least one downstream branch is satisfiable');
 
@@ -276,7 +276,7 @@ describe('decision sequence integration', () => {
 
   it('legalMoves returns template move for profiled action and full move for simple action', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
     const moves = legalMoves(def, state);
 
     const template = findTemplateMove(moves, ACTION_DEPLOY);
@@ -289,7 +289,7 @@ describe('decision sequence integration', () => {
 
   it('RandomAgent plays a multi-choice operation from template to completion, state is correct', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const reserveBefore = state.zones[String(ZONE_RESERVE)]!;
     assert.equal(reserveBefore.length, 3, 'reserve should have 3 tokens initially');
@@ -325,7 +325,7 @@ describe('decision sequence integration', () => {
 
   it('GreedyAgent plays a multi-choice operation from template to completion, state is correct', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const { state: after, move } = runGreedyAgentTurn(def, state, 200);
 
@@ -353,7 +353,7 @@ describe('decision sequence integration', () => {
     const agentSeed = 999;
 
     const run = (): { readonly hash: bigint; readonly move: Move } => {
-      const state = initialState(def, seed, 2);
+      const state = initialState(def, seed, 2).state;
       const { state: after, move } = runRandomAgentTurn(def, state, agentSeed);
       return { hash: after.stateHash, move };
     };
@@ -368,7 +368,7 @@ describe('decision sequence integration', () => {
 
   it('free operation via template move skips per-space cost (resources unchanged)', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     // Complete a template move manually, then apply with freeOperation: true
     const moves = legalMoves(def, state);
@@ -398,7 +398,7 @@ describe('decision sequence integration', () => {
 
   it('non-free operation via template move deducts per-space cost correctly', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const moves = legalMoves(def, state);
     const template = findTemplateMove(moves, ACTION_DEPLOY);
@@ -418,7 +418,7 @@ describe('decision sequence integration', () => {
 
   it('simple actions (no profile) still work end-to-end alongside template moves', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const moves = legalMoves(def, state);
     const simple = findSimpleMove(moves, ACTION_SIMPLE);
@@ -437,7 +437,7 @@ describe('decision sequence integration', () => {
 
   it('__actionClass binding is available in decision sequence context (FITLOPEFULEFF-001)', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const moves = legalMoves(def, state);
     const template = findTemplateMove(moves, ACTION_DEPLOY);
@@ -460,7 +460,7 @@ describe('decision sequence integration', () => {
 
   it('legalChoices returns decision points incrementally for profiled action', () => {
     const def = createDecisionSequenceDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const moves = legalMoves(def, state);
     const template = findTemplateMove(moves, ACTION_DEPLOY);

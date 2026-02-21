@@ -128,8 +128,6 @@ function rebuildCards(cards: Container, metrics: HiddenStackMetrics): void {
 
   for (let index = 0; index < metrics.layerCount; index += 1) {
     const card = new Graphics();
-    const x = (index - (metrics.layerCount - 1) / 2) * metrics.offsetX;
-    const y = (index - (metrics.layerCount - 1) / 2) * metrics.offsetY;
 
     card.roundRect(
       -metrics.cardWidth / 2,
@@ -149,10 +147,15 @@ function rebuildCards(cards: Container, metrics: HiddenStackMetrics): void {
       .roundRect(-metrics.cardWidth / 2 + 4, -2, metrics.cardWidth - 8, 4, 2)
       .fill({ color: CARD_BACK_PALETTE.stripeColor, alpha: 0.12 });
 
-    card.position.set(x, y);
-    card.rotation = (index - (metrics.layerCount - 1) / 2) * 0.04;
-    card.addChild(stripe);
-    cards.addChild(card);
+    // Wrap card + stripe in a Container to avoid PixiJS v8 Graphics.addChild deprecation.
+    const wrapper = new Container();
+    const x = (index - (metrics.layerCount - 1) / 2) * metrics.offsetX;
+    const y = (index - (metrics.layerCount - 1) / 2) * metrics.offsetY;
+    wrapper.position.set(x, y);
+    wrapper.rotation = (index - (metrics.layerCount - 1) / 2) * 0.04;
+    wrapper.addChild(card);
+    wrapper.addChild(stripe);
+    cards.addChild(wrapper);
   }
 }
 

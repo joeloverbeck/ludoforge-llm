@@ -182,7 +182,7 @@ phase: [asPhaseId('main')],
 describe('FITL coup redeploy/commitment/reset integration', () => {
   it('executes non-final redeploy, commitment, and reset effects with deterministic checkpoints', () => {
     const def = createRedeployCommitResetDef({ isFinalCoup: false, trail: 4 });
-    const start = initialState(def, 73, 2);
+    const start = initialState(def, 73, 2).state;
     const phaseLog: TriggerLogEntry[] = [];
 
     const afterRedeploy = advancePhase(def, start, phaseLog);
@@ -232,7 +232,7 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
 
   it('skips commitment/reset effects on final coup when fixture policy marks final round', () => {
     const def = createRedeployCommitResetDef({ isFinalCoup: true, trail: 0 });
-    const start = initialState(def, 79, 2);
+    const start = initialState(def, 79, 2).state;
 
     const afterRedeploy = advancePhase(def, start);
     const afterCommitment = advancePhase(def, afterRedeploy);
@@ -255,7 +255,7 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     const def = createRedeployCommitResetDef({ isFinalCoup: false, trail: 0 });
 
     const runOnce = () => {
-      const start = initialState(def, 83, 2);
+      const start = initialState(def, 83, 2).state;
       const redeploy = advancePhase(def, start);
       const commitment = advancePhase(def, redeploy);
       const reset = advancePhase(def, commitment);

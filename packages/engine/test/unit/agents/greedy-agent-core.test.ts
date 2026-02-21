@@ -59,7 +59,7 @@ const createDef = (actions: readonly ActionDef[], endConditions: readonly EndCon
 });
 
 const choose = (def: GameDef, seed = 5n) => {
-  const state = initialState(def, Number(seed), 2);
+  const state = initialState(def, Number(seed), 2).state;
   const moves = legalMoves(def, state);
   const agent = new GreedyAgent();
   return agent.chooseMove({
@@ -119,7 +119,7 @@ describe('GreedyAgent core', () => {
 
   it('throws descriptive error when legalMoves is empty', () => {
     const def = createDef([]);
-    const state = initialState(def, 1, 2);
+    const state = initialState(def, 1, 2).state;
     const agent = new GreedyAgent();
 
     assert.throws(
@@ -176,7 +176,7 @@ describe('GreedyAgent core', () => {
       createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
       createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
     ]);
-    const state = initialState(def, 6, 2);
+    const state = initialState(def, 6, 2).state;
     const moves = legalMoves(def, state);
     const agent = new GreedyAgent();
     const first = agent.chooseMove({
@@ -202,7 +202,7 @@ describe('GreedyAgent core', () => {
       createAction('a', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
       createAction('b', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
     ]);
-    const state = initialState(def, 14, 2);
+    const state = initialState(def, 14, 2).state;
     const moves = legalMoves(def, state);
     const rng = createRng(123n);
     const [expectedIndex, expectedRng] = nextInt(rng, 0, moves.length - 1);
@@ -224,7 +224,7 @@ describe('GreedyAgent core', () => {
       createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
       createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
     ]);
-    const state = initialState(def, 6, 2);
+    const state = initialState(def, 6, 2).state;
     const moves = legalMoves(def, state);
     const rng = createRng(77n);
     const agent = new GreedyAgent();

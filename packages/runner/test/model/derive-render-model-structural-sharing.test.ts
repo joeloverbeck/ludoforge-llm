@@ -103,7 +103,7 @@ function token(id: string, props: Token['props'] = {}): Token {
 describe('deriveRenderModel structural sharing', () => {
   it('reuses unchanged zone and token references across unrelated context changes', () => {
     const def = compileFixture();
-    const base = initialState(def, 123, 2);
+    const base = initialState(def, 123, 2).state;
     const state: GameState = {
       ...base,
       zones: {
@@ -137,7 +137,7 @@ describe('deriveRenderModel structural sharing', () => {
 
   it('replaces only changed token entities and preserves unchanged ones', () => {
     const def = compileFixture();
-    const base = initialState(def, 123, 2);
+    const base = initialState(def, 123, 2).state;
     const stateA: GameState = {
       ...base,
       zones: {

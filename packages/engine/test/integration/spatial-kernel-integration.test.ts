@@ -136,7 +136,7 @@ describe('spatial kernel integration', () => {
 
   it('moveTokenAdjacent emits tokenEntered and trigger dispatch applies downstream effects', () => {
     const def = makeRuntimeDef();
-    const state = initialState(def, 11, 2);
+    const state = initialState(def, 11, 2).state;
     const move = legalMoves(def, state)[0];
 
     assert.ok(move !== undefined);

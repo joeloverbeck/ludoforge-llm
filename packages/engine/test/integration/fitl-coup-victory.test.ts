@@ -27,7 +27,7 @@ const compileFixture = (): { readonly markdown: string; readonly def: GameDef } 
 describe('FITL coup victory integration', () => {
   it('compiles from embedded YAML dataAssets and resolves during-coup threshold wins', () => {
     const { markdown, def } = compileFixture();
-    const start = initialState(def, 101, 2);
+    const start = initialState(def, 101, 2).state;
     const applied = applyMove(def, start, { actionId: asActionId('boostSupport'), params: {} });
     const terminal = terminalResult(def, applied.state);
 
@@ -52,7 +52,7 @@ describe('FITL coup victory integration', () => {
 
   it('computes final-coup winner from fixture-defined margins and deterministic ranking metadata', () => {
     const { def } = compileFixture();
-    const start = initialState(def, 202, 2);
+    const start = initialState(def, 202, 2).state;
     const applied = applyMove(def, start, { actionId: asActionId('markFinalCoup'), params: {} });
     const terminal = terminalResult(def, applied.state);
 

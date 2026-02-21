@@ -118,7 +118,7 @@ describe('kernel bigint serialization codecs', () => {
     assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
-    const expectedState = initialState(compiled.gameDef!, 17, 2);
+    const expectedState = initialState(compiled.gameDef!, 17, 2).state;
     const fitlInitialState = deserializeGameState(serializeGameState(expectedState));
 
     assert.deepEqual(fitlInitialState, expectedState);

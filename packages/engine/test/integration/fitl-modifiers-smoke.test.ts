@@ -66,7 +66,7 @@ describe('FITL cross-system modifier smoke', () => {
   it('keeps Air Strike illegal under rolling thunder even with cap_arcLight unshaded active', () => {
     const { def } = compileDef();
 
-    const base = withGlobalMarker(withActivePlayer(initialState(def, 11001, 2), 0), 'cap_arcLight', 'unshaded');
+    const base = withGlobalMarker(withActivePlayer(initialState(def, 11001, 2).state, 0), 'cap_arcLight', 'unshaded');
 
     assert.doesNotThrow(() =>
       applyMoveWithResolvedDecisionIds(def, base, {
@@ -91,7 +91,7 @@ describe('FITL cross-system modifier smoke', () => {
     const { def } = compileDef();
     const space = 'saigon:none';
 
-    const start = withActivePlayer(initialState(def, 11002, 2), 0);
+    const start = withActivePlayer(initialState(def, 11002, 2).state, 0);
     const configured: GameState = {
       ...withGlobalMarker(withGlobalMarker(start, 'cap_topGun', 'unshaded'), 'cap_lgbs', 'shaded'),
       globalVars: {
@@ -128,7 +128,7 @@ describe('FITL cross-system modifier smoke', () => {
     const space = 'qui-nhon:none';
     const arvnAvailable = 'available-ARVN:none';
 
-    const base = withActivePlayer(clearAllZones(initialState(def, 11003, 2)), 1);
+    const base = withActivePlayer(clearAllZones(initialState(def, 11003, 2).state), 1);
     const setup: GameState = {
       ...base,
       globalVars: {
@@ -180,7 +180,7 @@ describe('FITL cross-system modifier smoke', () => {
     assert.ok(capCordsUnshadedChecks.length >= 1, 'Expected cap_cords unshaded branch in ARVN Train');
 
     const runPacify = (leader: LeaderState, seed: number): number => {
-      const base = withActivePlayer(clearAllZones(initialState(def, seed, 2)), 1);
+      const base = withActivePlayer(clearAllZones(initialState(def, seed, 2).state), 1);
       const setup: GameState = {
         ...base,
         globalVars: {
@@ -231,7 +231,7 @@ describe('FITL cross-system modifier smoke', () => {
   it('keeps Air Lift prohibited when multiple Air Lift blockers are active together', () => {
     const { def } = compileDef();
 
-    const base = withActivePlayer(initialState(def, 11006, 2), 0);
+    const base = withActivePlayer(initialState(def, 11006, 2).state, 0);
     const blocked = withMomentum(base, { mom_medevacShaded: true, mom_typhoonKate: true });
 
     assert.throws(

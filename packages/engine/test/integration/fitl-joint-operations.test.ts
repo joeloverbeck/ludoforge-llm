@@ -35,7 +35,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
 
   it('allows US operation when ARVN resources minus cost exceed Total Econ (20 - 5 = 15 > 10)', () => {
     const gameDef = compiled.gameDef!;
-    const state = initialState(gameDef, 42, 2);
+    const state = initialState(gameDef, 42, 2).state;
 
     // ARVN resources = 20 (init), totalEcon = 10, cost = 5
     // 20 - 5 = 15 >= 10 → allowed
@@ -47,7 +47,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
 
   it('blocks US operation at boundary (ARVN resources - cost == Total Econ: 15 - 5 = 10)', () => {
     const gameDef = compiled.gameDef!;
-    const state = withArvnResources(initialState(gameDef, 42, 2), 15);
+    const state = withArvnResources(initialState(gameDef, 42, 2).state, 15);
 
     // ARVN resources = 15, totalEcon = 10, cost = 5
     // 15 - 5 = 10 == 10 → blocked (strict exceed required)
@@ -75,7 +75,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
 
   it('blocks US operation when ARVN resources minus cost would go below Total Econ (14 - 5 = 9 < 10)', () => {
     const gameDef = compiled.gameDef!;
-    const state = withArvnResources(initialState(gameDef, 42, 2), 14);
+    const state = withArvnResources(initialState(gameDef, 42, 2).state, 14);
 
     // ARVN resources = 14, totalEcon = 10, cost = 5
     // 14 - 5 = 9 < 10 → blocked (forbid mode)
@@ -104,7 +104,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
   it('allows non-US (ARVN) faction operation without joint operation constraint', () => {
     const gameDef = compiled.gameDef!;
     // Set ARVN as active player (player 1) so the "active" player selector resolves to ARVN
-    const base = initialState(gameDef, 42, 2);
+    const base = initialState(gameDef, 42, 2).state;
     const state: GameState = {
       ...base,
       activePlayer: 1 as GameState['activePlayer'],
@@ -120,7 +120,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
   it('allows free US operation regardless of cost constraint (freeOperation bypasses cost validation)', () => {
     const gameDef = compiled.gameDef!;
     // Set ARVN resources to 14 — would normally be blocked (14 - 5 = 9 < 10)
-    const state = withPendingFreeOperationGrant(withArvnResources(initialState(gameDef, 42, 2), 14), { actionIds: ['usOp'] });
+    const state = withPendingFreeOperationGrant(withArvnResources(initialState(gameDef, 42, 2).state, 14), { actionIds: ['usOp'] });
 
     const move: Move = { actionId: asActionId('usOp'), params: {}, freeOperation: true };
     const result = applyMove(gameDef, state, move);

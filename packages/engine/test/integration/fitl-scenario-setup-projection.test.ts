@@ -15,7 +15,7 @@ describe('FITL scenario setup projection', () => {
     const def = compiled.gameDef;
     assert.notEqual(def, null);
 
-    const state = initialState(def!, 404, 2);
+    const state = initialState(def!, 404, 2).state;
 
     assert.equal((state.zones['saigon:none'] ?? []).length > 0, true, 'Expected scenario pieces in Saigon');
     assert.equal((state.zones['out-of-play-US:none'] ?? []).length, 12, 'Expected US out-of-play scenario pieces');

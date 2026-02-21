@@ -106,7 +106,7 @@ describe('runtime smoke harness integration', () => {
       minAppliedMoves: 6,
       policy: firstLegalPolicy(),
       invariants: [invariant],
-      bootstrapState: (targetDef, seed, players) => initialState(targetDef, seed, players),
+      bootstrapState: (targetDef, seed, players) => initialState(targetDef, seed, players).state,
     });
 
     const seededRandom = runRuntimeSmokeGate({

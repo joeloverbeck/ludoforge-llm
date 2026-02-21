@@ -65,7 +65,7 @@ describe('game-loop API shape', () => {
     assert.equal(typeof resetPhaseUsage, 'function');
     assert.equal(typeof terminalResult, 'function');
 
-    const initial = initialState(gameDefStub, 1);
+    const initial = initialState(gameDefStub, 1).state;
     assert.equal(initial.playerCount, 2);
     assert.equal(initial.activePlayer, asPlayerId(0));
     assert.equal(initial.currentPhase, asPhaseId('main'));

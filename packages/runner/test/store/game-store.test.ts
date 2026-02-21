@@ -7,6 +7,7 @@ import {
   initialState,
   type EffectTraceEntry,
   type GameDef,
+  type GameState,
   type Move,
   type TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
@@ -522,7 +523,7 @@ describe('createGameStore', () => {
 
   it('confirmMove stores effect trace and trigger firings from applyMove', async () => {
     const def = compileStoreFixture(5);
-    const baseState = initialState(def, 16, 2);
+    const baseState = initialState(def, 16, 2).state;
     const move = { actionId: asActionId('tick'), params: {} };
     const effectTrace: readonly EffectTraceEntry[] = [
       {
@@ -548,7 +549,7 @@ describe('createGameStore', () => {
       },
     ];
     const bridge = createBridgeStub({
-      init: () => baseState,
+      init: () => ({ state: baseState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [move], warnings: [] }),
       legalChoices: () => ({ kind: 'complete', complete: true }),
       applyMove: () => ({
@@ -590,11 +591,11 @@ describe('createGameStore', () => {
   it('resolveAiTurn advances through non-human turn to the next human turn', async () => {
     const def = compileStoreFixture(8);
     const aiMove: Move = { actionId: asActionId('tick'), params: {} };
-    const aiState = {
-      ...initialState(def, 27, 2),
+    const aiState: GameState = {
+      ...initialState(def, 27, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const humanState = {
+    const humanState: GameState = {
       ...aiState,
       activePlayer: asPlayerId(0),
       globalVars: {
@@ -613,7 +614,7 @@ describe('createGameStore', () => {
       warnings: [],
     }));
     const bridge = createBridgeStub({
-      init: () => aiState,
+      init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves,
       terminalResult: () => null,
       applyMove,
@@ -664,8 +665,8 @@ describe('createGameStore', () => {
 
   it('resolveAiTurn uses seat policy to select AI move', async () => {
     const def = compileStoreFixture(8);
-    const aiState = {
-      ...initialState(def, 31, 2),
+    const aiState: GameState = {
+      ...initialState(def, 31, 2).state,
       activePlayer: asPlayerId(1),
     };
     const moveA: Move = { actionId: asActionId('tick'), params: { pick: 'a' } };
@@ -680,7 +681,7 @@ describe('createGameStore', () => {
       warnings: [],
     }));
     const bridge = createBridgeStub({
-      init: () => aiState,
+      init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [moveA, moveB], warnings: [] }),
       terminalResult: () => null,
       applyMove,
@@ -701,15 +702,15 @@ describe('createGameStore', () => {
 
   it('resolveAiTurn preserves state when AI turn has no legal moves', async () => {
     const def = compileStoreFixture(8);
-    const aiState = {
-      ...initialState(def, 29, 2),
+    const aiState: GameState = {
+      ...initialState(def, 29, 2).state,
       activePlayer: asPlayerId(1),
     };
     const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
       throw new Error('applyMove should not be called when there are no legal moves');
     });
     const bridge = createBridgeStub({
-      init: () => aiState,
+      init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [], warnings: [] }),
       terminalResult: () => null,
       applyMove,
@@ -727,11 +728,11 @@ describe('createGameStore', () => {
 
   it('resolveAiStep applies only one AI move', async () => {
     const def = compileStoreFixture(8);
-    const aiState = {
-      ...initialState(def, 37, 2),
+    const aiState: GameState = {
+      ...initialState(def, 37, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const stillAiState = {
+    const stillAiState: GameState = {
       ...aiState,
       globalVars: {
         ...aiState.globalVars,
@@ -747,7 +748,7 @@ describe('createGameStore', () => {
       warnings: [],
     }));
     const bridge = createBridgeStub({
-      init: () => aiState,
+      init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
       terminalResult: () => null,
       applyMove,
@@ -764,11 +765,11 @@ describe('createGameStore', () => {
 
   it('resolveAiStep reports committed AI moves via onMoveApplied callback', async () => {
     const def = compileStoreFixture(8);
-    const aiState = {
-      ...initialState(def, 37, 2),
+    const aiState: GameState = {
+      ...initialState(def, 37, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const stillAiState = {
+    const stillAiState: GameState = {
       ...aiState,
       globalVars: {
         ...aiState.globalVars,
@@ -784,7 +785,7 @@ describe('createGameStore', () => {
       warnings: [],
     }));
     const bridge = createBridgeStub({
-      init: () => aiState,
+      init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
       terminalResult: () => null,
       applyMove,
@@ -811,18 +812,18 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(8);
     const humanMove: Move = { actionId: asActionId('tick'), params: {} };
     const aiMove: Move = { actionId: asActionId('tick'), params: { ai: 1 } };
-    const initial = initialState(def, 44, 2);
-    const afterHumanOne = {
+    const initial = initialState(def, 44, 2).state;
+    const afterHumanOne: GameState = {
       ...initial,
       activePlayer: asPlayerId(1),
       globalVars: { ...initial.globalVars, round: 1 },
     };
-    const afterAi = {
+    const afterAi: GameState = {
       ...afterHumanOne,
       activePlayer: asPlayerId(0),
       globalVars: { ...afterHumanOne.globalVars, round: 2 },
     };
-    const afterHumanTwo = {
+    const afterHumanTwo: GameState = {
       ...afterAi,
       activePlayer: asPlayerId(1),
       globalVars: { ...afterAi.globalVars, round: 3 },
@@ -831,7 +832,7 @@ describe('createGameStore', () => {
     const bridge = createBridgeStub({
       init: () => {
         currentState = initial;
-        return currentState;
+        return { state: currentState, setupTrace: [] };
       },
       enumerateLegalMoves: () => {
         if (currentState.activePlayer === asPlayerId(1)) {

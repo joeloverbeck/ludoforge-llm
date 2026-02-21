@@ -58,7 +58,7 @@ const fixedScript: readonly Move[] = [
 describe('game-loop golden outputs', () => {
   it('seed 42 initial legal move order is canonical', () => {
     const def = createGoldenDef();
-    const state = initialState(def, 42, 2);
+    const state = initialState(def, 42, 2).state;
 
     const moves = legalMoves(def, state);
     const canonical = moves.map((move) => ({ actionId: move.actionId, params: move.params }));
@@ -72,7 +72,7 @@ describe('game-loop golden outputs', () => {
 
   it('seed 42 plus fixed move script yields expected final hash', () => {
     const def = createGoldenDef();
-    let state = initialState(def, 42, 2);
+    let state = initialState(def, 42, 2).state;
 
     for (const move of fixedScript) {
       state = applyMove(def, state, move).state;

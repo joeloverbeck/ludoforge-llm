@@ -155,7 +155,7 @@ describe('FITL turn-flow golden trace', () => {
     const def = createDef();
     const seed = 71;
 
-    const start = initialState(def, seed, 4);
+    const start = initialState(def, seed, 4).state;
     const initialLegal = legalMoves(def, start);
     assert.equal(
       initialLegal.some((move) => move.actionId === asActionId('operationPlusSpecialActivity')),

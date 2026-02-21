@@ -140,7 +140,7 @@ describe('createGameStore async serialization', () => {
     expect(state.playerID).toEqual(asPlayerId(1));
     expect(state.loading).toBe(false);
     expect(state.gameLifecycle).toBe('playing');
-    expect(state.gameState).toEqual(initialState(def, 202));
+    expect(state.gameState).toEqual(initialState(def, 202).state);
   });
 
   it('stale selectAction result after cancelMove does not restore choice state', async () => {
@@ -191,9 +191,17 @@ describe('createGameStore async serialization', () => {
 
     const state = store.getState();
     expect(state.playerID).toEqual(asPlayerId(1));
-    expect(state.gameState).toEqual(initialState(def, 99));
+    expect(state.gameState).toEqual(initialState(def, 99).state);
     expect(state.gameState?.globalVars.round).toBe(0);
-    expect(state.effectTrace).toEqual([]);
+    expect(state.effectTrace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'lifecycleEvent', eventType: 'turnStart' }),
+        expect.objectContaining({ kind: 'lifecycleEvent', eventType: 'phaseEnter' }),
+      ]),
+    );
+    expect(
+      state.effectTrace.every((e) => e.kind === 'lifecycleEvent'),
+    ).toBe(true);
     expect(state.triggerFirings).toEqual([]);
   });
 

@@ -185,7 +185,7 @@ phase: [asPhaseId('main')],
 describe('FITL coup support phase integration', () => {
   it('executes deterministic US/ARVN Pacification and VC Agitation budgets with per-space caps', () => {
     const def = createSupportFixtureDef();
-    const start = initialState(def, 41, 2);
+    const start = initialState(def, 41, 2).state;
     const triggerLog: TriggerLogEntry[] = [];
 
     const next = advancePhase(def, start, triggerLog);
@@ -234,7 +234,7 @@ describe('FITL coup support phase integration', () => {
     const def = createSupportFixtureDef();
 
     const runOnce = () => {
-      const start = initialState(def, 41, 2);
+      const start = initialState(def, 41, 2).state;
       const triggerLog: TriggerLogEntry[] = [];
       const end = advancePhase(def, start, triggerLog);
       return { end, triggerLog };

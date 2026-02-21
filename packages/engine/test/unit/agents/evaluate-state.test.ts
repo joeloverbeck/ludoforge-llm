@@ -34,7 +34,7 @@ const createBaseDef = (): GameDef => ({
 describe('evaluateState', () => {
   it('returns expected integer score for nonterminal state with normalized per-player vars', () => {
     const def = createBaseDef();
-    const baseState = initialState(def, 1, 2);
+    const baseState = initialState(def, 1, 2).state;
     const state: GameState = {
       ...baseState,
       perPlayerVars: {
@@ -61,7 +61,7 @@ describe('evaluateState', () => {
         ],
       },
     };
-    const baseState = initialState(def, 2, 2);
+    const baseState = initialState(def, 2, 2).state;
     const state: GameState = {
       ...baseState,
       globalVars: { ...baseState.globalVars, ended: 1 },
@@ -91,7 +91,7 @@ describe('evaluateState', () => {
       triggers: baseDef.triggers,
       terminal: { conditions: baseDef.terminal.conditions },
     };
-    const baseState = initialState(def, 3, 2);
+    const baseState = initialState(def, 3, 2).state;
     const state: GameState = {
       ...baseState,
       perPlayerVars: {

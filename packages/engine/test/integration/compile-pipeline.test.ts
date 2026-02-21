@@ -344,7 +344,7 @@ actor: 'active',
     assert.equal(serializedActions.includes('"tableId":"blindSchedule.levels"'), false);
 
     const def = compiled.gameDef!;
-    const start = initialState(def, 101, 2);
+    const start = initialState(def, 101, 2).state;
     const next = applyMove(def, start, { actionId: asActionId('syncBlind'), params: {} }).state;
     assert.equal(next.globalVars.currentSmallBlind, 20);
   });
@@ -1338,7 +1338,7 @@ actor: 'active',
     assert.equal(serializedActions.includes('scenario-late-war::blindSchedule.levels'), true);
     assert.equal(serializedActions.includes('scenario-foundation::blindSchedule.levels'), false);
 
-    const start = initialState(compiled.gameDef!, 101, 2);
+    const start = initialState(compiled.gameDef!, 101, 2).state;
     const next = applyMove(compiled.gameDef!, start, { actionId: asActionId('syncBlind'), params: {} }).state;
     assert.equal(next.globalVars.currentSmallBlind, 40);
   });

@@ -114,7 +114,7 @@ phase: [asPhaseId('main')],
 describe('FITL eligibility window integration', () => {
   it('applies declared nextTurn overrides at card end', () => {
     const def = createDef();
-    const start = initialState(def, 41, 4);
+    const start = initialState(def, 41, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -129,7 +129,7 @@ describe('FITL eligibility window integration', () => {
 
   it('emits and consumes one-shot free-operation move variants from freeOpGranted directives', () => {
     const def = createDef();
-    const start = initialState(def, 43, 4);
+    const start = initialState(def, 43, 4).state;
 
     const firstMove: Move = {
       actionId: asActionId('event'),

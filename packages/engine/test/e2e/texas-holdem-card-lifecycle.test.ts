@@ -196,7 +196,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
     const agents = createRandomAgents(playerCount);
     const trace = runGame(def, seed, agents, 300, playerCount);
 
-    let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount));
+    let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount).state);
 
     for (const entry of trace.moves) {
       const phase = current.currentPhase;
@@ -229,7 +229,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
     const agents = createRandomAgents(playerCount);
     const trace = runGame(def, seed, agents, 200, playerCount);
 
-    let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount));
+    let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount).state);
 
     const expectedCommunity: Record<string, number> = {
       preflop: 0,

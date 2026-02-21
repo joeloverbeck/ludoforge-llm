@@ -98,7 +98,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const cityZoneIds = def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id);
     assert.ok(cityZoneIds.length > 0, 'Expected at least one city zone');
 
-    const baseState = clearAllZones(initialState(def, 1301, 2));
+    const baseState = clearAllZones(initialState(def, 1301, 2).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),

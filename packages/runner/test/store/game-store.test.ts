@@ -1206,6 +1206,20 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
+  it('setPlaybackError sets error with INTERNAL_ERROR code', () => {
+    const bridge = createBridgeStub({});
+    const store = createStoreWithDefaultVisuals(bridge);
+
+    store.getState().setPlaybackError('AI turn stalled');
+    const error = store.getState().error;
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe('INTERNAL_ERROR');
+    expect(error!.message).toBe('AI turn stalled');
+
+    store.getState().clearError();
+    expect(store.getState().error).toBeNull();
+  });
+
   it('reportBootstrapFailure clears stale session state and preserves structured error payload', async () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({

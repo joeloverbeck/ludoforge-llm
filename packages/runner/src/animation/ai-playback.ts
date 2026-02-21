@@ -32,11 +32,20 @@ export interface AiPlaybackControllerOptions {
   readonly store: StoreApi<GameStore>;
   readonly animation: AiPlaybackAnimationPort;
   readonly baseStepDelayMs?: number;
+  readonly drainTimeoutMs?: number;
+  readonly maxNoOpRetries?: number;
+  readonly maxDriveMoves?: number;
+  readonly onError?: (message: string) => void;
 }
 
 export function createAiPlaybackController(options: AiPlaybackControllerOptions): AiPlaybackController {
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const baseStepDelayMs = options.baseStepDelayMs ?? 500;
+  const drainTimeoutMs = options.drainTimeoutMs ?? 10_000;
+  const maxNoOpRetries = options.maxNoOpRetries ?? 10;
+  const maxDriveMoves = options.maxDriveMoves ?? 512;
+
+  const NO_OP_RETRY_DELAY_MS = 100;
 
   let destroyed = false;
   let started = false;
@@ -72,21 +81,32 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
   };
 
   const waitForAnimationDrain = (): Promise<void> => {
-    if (destroyed) {
-      return Promise.resolve();
-    }
-    if (!selectorStore.getState().animationPlaying) {
+    if (destroyed || !selectorStore.getState().animationPlaying) {
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
-      const unsubscribe = selectorStore.subscribe((state) => state.animationPlaying, (playing, previousPlaying) => {
-        if (playing || !previousPlaying) {
-          return;
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          unsubscribe();
+          options.animation.skipAll();
+          resolve();
         }
-        unsubscribe();
-        resolve();
-      });
+      }, drainTimeoutMs);
+      const unsubscribe = selectorStore.subscribe(
+        (state) => state.animationPlaying,
+        (playing, previousPlaying) => {
+          if (settled || playing || !previousPlaying) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        },
+      );
     });
   };
 
@@ -106,6 +126,9 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
 
     running = true;
     try {
+      let noOpCount = 0;
+      let moveCount = 0;
+
       while (!destroyed) {
         const state = selectorStore.getState();
         if (!isAiTurn(state) || state.loading) {
@@ -132,14 +155,42 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
           return;
         }
 
-        if (outcome !== 'advanced') {
+        if (outcome === 'advanced') {
+          noOpCount = 0;
+          moveCount += 1;
+
+          if (moveCount >= maxDriveMoves) {
+            options.onError?.(`AI playback exceeded move limit (${maxDriveMoves}).`);
+            pendingSkip = false;
+            return;
+          }
+
+          if (!shouldSkip) {
+            await waitForAnimationDrain();
+          }
+          continue;
+        }
+
+        if (outcome === 'no-legal-moves') {
+          options.onError?.('AI player has no legal moves. This may indicate a game specification issue.');
           pendingSkip = false;
           return;
         }
 
-        if (!shouldSkip) {
-          await waitForAnimationDrain();
+        if (outcome === 'no-op') {
+          noOpCount += 1;
+          if (noOpCount >= maxNoOpRetries) {
+            options.onError?.('AI turn stalled after repeated no-op results.');
+            pendingSkip = false;
+            return;
+          }
+          await waitFor(NO_OP_RETRY_DELAY_MS);
+          continue;
         }
+
+        // 'human-turn', 'terminal', or any other outcome — exit normally
+        pendingSkip = false;
+        return;
       }
     } finally {
       running = false;

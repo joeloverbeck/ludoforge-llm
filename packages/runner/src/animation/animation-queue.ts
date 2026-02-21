@@ -110,8 +110,6 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
     active = next;
     setStoreFlag(true);
     logEvent('playStart');
-    applySpeed(next);
-    applyPauseState(next);
     next.eventCallback?.('onComplete', () => {
       if (active !== next) {
         return;
@@ -121,6 +119,8 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
       logEvent('playComplete');
       startNext();
     });
+    applySpeed(next);
+    applyPauseState(next);
   };
 
   return {

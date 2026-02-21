@@ -93,6 +93,7 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     setAnimationPlaybackSpeed: vi.fn(),
     setAnimationPaused: vi.fn(),
     requestAnimationSkipCurrent: vi.fn(),
+    setPlaybackError: vi.fn(),
     clearError: vi.fn(),
   }));
 }

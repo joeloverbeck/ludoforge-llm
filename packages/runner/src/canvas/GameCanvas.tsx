@@ -331,6 +331,9 @@ export async function createGameCanvasRuntime(
           animationController?.skipAll();
         },
       },
+      onError: (message) => {
+        selectorStore.getState().setPlaybackError(message);
+      },
     });
     aiPlaybackController.start();
   } catch (error) {

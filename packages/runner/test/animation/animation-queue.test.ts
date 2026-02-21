@@ -273,6 +273,37 @@ describe('createAnimationQueue', () => {
     expect(onAllComplete).toHaveBeenCalledTimes(1);
   });
 
+  it('handles timeline that completes synchronously during play', () => {
+    const setAnimationPlaying = vi.fn();
+    const queue = createAnimationQueue({ setAnimationPlaying });
+
+    // Create a timeline whose play() fires onComplete synchronously
+    let onCompleteCallback: (() => void) | null = null;
+    const timeline: AnimationQueueTimeline = {
+      eventCallback: vi.fn((_event, callback) => {
+        onCompleteCallback = callback;
+        return timeline;
+      }),
+      progress: vi.fn(() => timeline),
+      pause: vi.fn(() => timeline),
+      resume: vi.fn(() => timeline),
+      play: vi.fn(() => {
+        // Simulate zero-duration: fire onComplete synchronously during play()
+        onCompleteCallback?.();
+        return timeline;
+      }),
+      timeScale: vi.fn(() => timeline),
+      kill: vi.fn(() => timeline),
+    };
+
+    queue.enqueue(timeline);
+
+    expect(queue.isPlaying).toBe(false);
+    expect(queue.queueLength).toBe(0);
+    expect(setAnimationPlaying).toHaveBeenCalledWith(true);
+    expect(setAnimationPlaying).toHaveBeenCalledWith(false);
+  });
+
   it('rejects invalid speed and queue limit values', () => {
     expect(() => createAnimationQueue({ setAnimationPlaying: vi.fn(), maxQueuedTimelines: 0 })).toThrowError(
       'Animation queue maxQueuedTimelines must be an integer >= 1.',

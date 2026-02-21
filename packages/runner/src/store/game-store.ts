@@ -93,6 +93,7 @@ interface GameStoreActions {
   setAnimationPlaybackSpeed(speed: AnimationPlaybackSpeed): void;
   setAnimationPaused(paused: boolean): void;
   requestAnimationSkipCurrent(): void;
+  setPlaybackError(message: string): void;
   clearError(): void;
 }
 
@@ -963,6 +964,10 @@ export function createGameStore(
 
         requestAnimationSkipCurrent() {
           set((state) => ({ animationSkipRequestToken: state.animationSkipRequestToken + 1 }));
+        },
+
+        setPlaybackError(message) {
+          set({ error: { code: 'INTERNAL_ERROR', message, details: undefined } });
         },
 
         clearError() {

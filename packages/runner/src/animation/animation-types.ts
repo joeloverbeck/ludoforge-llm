@@ -171,6 +171,7 @@ export const ANIMATION_DESCRIPTOR_KINDS = [
 ] as const;
 
 export type AnimationDescriptorKind = (typeof ANIMATION_DESCRIPTOR_KINDS)[number];
+export type VisualAnimationDescriptorKind = Exclude<AnimationDescriptorKind, 'skipped'>;
 
 export type AnimationSequencingMode = 'sequential' | 'parallel' | 'stagger';
 

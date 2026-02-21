@@ -1,7 +1,11 @@
 import type { Container } from 'pixi.js';
 
 import type { ZonePositionMap } from '../spatial/position-types.js';
-import type { AnimationDescriptor, AnimationSequencingPolicy } from './animation-types.js';
+import type {
+  AnimationDescriptor,
+  AnimationSequencingPolicy,
+  VisualAnimationDescriptorKind,
+} from './animation-types.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import type { PresetRegistry } from './preset-registry.js';
 
@@ -14,7 +18,7 @@ export interface TimelineSpriteRefs {
 }
 
 export interface BuildTimelineOptions {
-  readonly sequencingPolicies?: ReadonlyMap<string, AnimationSequencingPolicy>;
+  readonly sequencingPolicies?: ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy>;
 }
 
 export function buildTimeline(

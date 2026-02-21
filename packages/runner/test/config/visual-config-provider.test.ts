@@ -643,6 +643,31 @@ describe('VisualConfigProvider', () => {
     });
   });
 
+  it('getSequencingPolicy returns null when no sequencing policy exists', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+    expect(provider.getSequencingPolicy('cardDeal')).toBeNull();
+  });
+
+  it('getSequencingPolicy maps config sequencing fields to runtime policy shape', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      animations: {
+        sequencing: {
+          cardDeal: { mode: 'parallel' },
+          moveToken: { mode: 'stagger', staggerOffset: 0.2 },
+        },
+      },
+    });
+
+    expect(provider.getSequencingPolicy('cardDeal')).toEqual({
+      mode: 'parallel',
+    });
+    expect(provider.getSequencingPolicy('moveToken')).toEqual({
+      mode: 'stagger',
+      staggerOffsetSeconds: 0.2,
+    });
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

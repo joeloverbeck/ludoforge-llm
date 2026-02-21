@@ -146,6 +146,33 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects unknown animation sequencing keys', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        sequencing: {
+          sweep: { mode: 'parallel' },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts known animation sequencing keys', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        sequencing: {
+          cardDeal: { mode: 'stagger', staggerOffset: 0.15 },
+          moveToken: { mode: 'parallel' },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('rejects invalid zone shape', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

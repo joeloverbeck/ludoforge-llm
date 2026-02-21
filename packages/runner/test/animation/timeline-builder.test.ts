@@ -1,7 +1,11 @@
 import { Container } from 'pixi.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { AnimationDescriptor, AnimationSequencingPolicy } from '../../src/animation/animation-types';
+import type {
+  AnimationDescriptor,
+  AnimationSequencingPolicy,
+  VisualAnimationDescriptorKind,
+} from '../../src/animation/animation-types';
 import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { createPresetRegistry, type AnimationPresetDefinition } from '../../src/animation/preset-registry';
 import { buildTimeline, type TimelineSpriteRefs } from '../../src/animation/timeline-builder';
@@ -366,7 +370,7 @@ describe('buildTimeline sequencing', () => {
   it('applies parallel sequencing: all same-kind descriptors start at same time', () => {
     const { gsap, mainTimeline, createdTimelines } = createSequencingFixture();
     const descriptors = makeCardDealDescriptors(3);
-    const policies = new Map<string, AnimationSequencingPolicy>([
+    const policies = new Map<VisualAnimationDescriptorKind, AnimationSequencingPolicy>([
       ['cardDeal', { mode: 'parallel' }],
     ]);
 
@@ -390,7 +394,7 @@ describe('buildTimeline sequencing', () => {
   it('applies stagger sequencing: each descriptor starts offset after previous', () => {
     const { gsap, mainTimeline, createdTimelines } = createSequencingFixture();
     const descriptors = makeCardDealDescriptors(3);
-    const policies = new Map<string, AnimationSequencingPolicy>([
+    const policies = new Map<VisualAnimationDescriptorKind, AnimationSequencingPolicy>([
       ['cardDeal', { mode: 'stagger', staggerOffsetSeconds: 0.15 }],
     ]);
 
@@ -470,7 +474,7 @@ describe('buildTimeline sequencing', () => {
       },
     ];
 
-    const policies = new Map<string, AnimationSequencingPolicy>([
+    const policies = new Map<VisualAnimationDescriptorKind, AnimationSequencingPolicy>([
       ['cardDeal', { mode: 'parallel' }],
     ]);
 

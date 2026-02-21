@@ -13,8 +13,9 @@ import type {
   AnimationPresetOverrideKey,
   AnimationSequencingPolicy,
   CardAnimationMappingContext,
+  VisualAnimationDescriptorKind,
 } from './animation-types.js';
-import { ANIMATION_DESCRIPTOR_KINDS, ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
+import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -297,10 +298,10 @@ function resolveCardTokenTypeIds(
 
 function buildSequencingPolicies(
   visualConfigProvider: VisualConfigProvider,
-): ReadonlyMap<string, AnimationSequencingPolicy> {
-  const policies = new Map<string, AnimationSequencingPolicy>();
+): ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy> {
+  const policies = new Map<VisualAnimationDescriptorKind, AnimationSequencingPolicy>();
 
-  for (const kind of ANIMATION_DESCRIPTOR_KINDS) {
+  for (const kind of ANIMATION_PRESET_OVERRIDE_KEYS) {
     const policy = visualConfigProvider.getSequencingPolicy(kind);
     if (policy !== null) {
       policies.set(kind, policy);

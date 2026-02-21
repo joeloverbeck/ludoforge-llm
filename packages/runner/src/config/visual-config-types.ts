@@ -168,9 +168,16 @@ const AnimationSequencingPolicySchema = z.object({
   staggerOffset: z.number().positive().optional(),
 });
 
+const AnimationSequencingSchema = z.object(
+  Object.fromEntries(ANIMATION_PRESET_OVERRIDE_KEYS.map((key) => [key, AnimationSequencingPolicySchema.optional()])) as Record<
+    (typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number],
+    z.ZodOptional<typeof AnimationSequencingPolicySchema>
+  >,
+).strict();
+
 const AnimationsConfigSchema = z.object({
   actions: AnimationActionsSchema.optional(),
-  sequencing: z.record(z.string(), AnimationSequencingPolicySchema).optional(),
+  sequencing: AnimationSequencingSchema.optional(),
 });
 
 const CardFieldLayoutSchema = z.object({

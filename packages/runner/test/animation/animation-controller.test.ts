@@ -6,6 +6,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { createAnimationController } from '../../src/animation/animation-controller';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../../src/animation/animation-types';
 import { createPresetRegistry } from '../../src/animation/preset-registry';
+import type { BuildTimelineOptions } from '../../src/animation/timeline-builder';
 import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import type { GameStore } from '../../src/store/game-store';
@@ -156,6 +157,18 @@ function animationOverridesProvider(actions: Partial<Record<(typeof ANIMATION_PR
     version: 1,
     animations: {
       actions,
+    },
+  });
+}
+
+function sequencingProvider() {
+  return new VisualConfigProvider({
+    version: 1,
+    animations: {
+      sequencing: {
+        cardDeal: { mode: 'parallel' },
+        moveToken: { mode: 'stagger', staggerOffset: 0.2 },
+      },
     },
   });
 }
@@ -916,6 +929,52 @@ describe('createAnimationController', () => {
     store.setState({ effectTrace: [traceEntry()] });
     expect(buildTimelineMock).toHaveBeenCalledTimes(2);
     expect(queue.enqueue).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('passes configured sequencing policies to buildTimeline options', () => {
+    const store = createControllerStore();
+    const buildTimelineMock = vi.fn(() => ({ add: vi.fn(), progress: vi.fn(), kill: vi.fn() }));
+    const queue = {
+      enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+      isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(), forceFlush: vi.fn(),
+    };
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: sequencingProvider(),
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(buildTimelineMock).toHaveBeenCalledTimes(1);
+    const options = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
+    expect(options).toBeDefined();
+    expect(options?.sequencingPolicies?.get('cardDeal')).toEqual({ mode: 'parallel' });
+    expect(options?.sequencingPolicies?.get('moveToken')).toEqual({ mode: 'stagger', staggerOffsetSeconds: 0.2 });
+    expect(options?.sequencingPolicies?.has('phaseTransition')).toBe(false);
 
     controller.destroy();
   });

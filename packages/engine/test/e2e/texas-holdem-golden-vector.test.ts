@@ -116,7 +116,7 @@ const totalCardCount = (state: GameState): number => {
 const totalChips = (state: GameState, playerCount: number): number => {
   let sum = 0;
   for (let p = 0; p < playerCount; p += 1) {
-    sum += Number(state.perPlayerVars[String(p)]?.chipStack ?? 0);
+    sum += Number(state.perPlayerVars[p]?.chipStack ?? 0);
   }
   return sum;
 };
@@ -163,7 +163,7 @@ const engineerPreflopState = (setup: HandSetup): GameState => {
   // SB is added to both streetBet and totalBet.
   // BB is added to both streetBet and totalBet.
   const computePlayerVars = (p: number): Readonly<Record<string, number | boolean>> => {
-    const isEliminated = Number(base.perPlayerVars[String(p)]?.eliminated ?? 0) === 1 ||
+    const isEliminated = Number(base.perPlayerVars[p]?.eliminated ?? 0) === 1 ||
       (stacks[p] !== undefined && stacks[p] === 0 && !(String(p) in hands));
 
     let streetBet = 0;
@@ -191,7 +191,7 @@ const engineerPreflopState = (setup: HandSetup): GameState => {
     }
 
     return {
-      ...base.perPlayerVars[String(p)]!,
+      ...base.perPlayerVars[p]!,
       chipStack,
       eliminated: isEliminated,
       handActive: !isEliminated,
@@ -255,9 +255,9 @@ const engineerPreflopState = (setup: HandSetup): GameState => {
     },
     perPlayerVars: {
       ...base.perPlayerVars,
-      '0': pv0,
-      '1': pv1,
-      '2': pv2,
+      0: pv0,
+      1: pv1,
+      2: pv2,
     },
     zones,
   };
@@ -290,29 +290,29 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(state.currentPhase, 'preflop');
     assert.equal(Number(state.activePlayer), 0);
     assert.equal(Number(state.globalVars.pot), 15);
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 500);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 495);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 490);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 500);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 495);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 490);
 
     // Alice raises to 25
     state = applyLoggedMove(def, state, { actionId: 'raise' as Move['actionId'], params: { raiseAmount: 25 } });
     assert.equal(Number(state.activePlayer), 1);
     assert.equal(Number(state.globalVars.pot), 40);
     assert.equal(Number(state.globalVars.currentBet), 25);
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 475);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 475);
 
     // Bob folds
     state = applyLoggedMove(def, state, { actionId: 'fold' as Move['actionId'], params: {} });
     assert.equal(Number(state.activePlayer), 2);
-    assert.equal(state.perPlayerVars['1']!.handActive, false);
+    assert.equal(state.perPlayerVars[1]!.handActive, false);
 
     // Carol folds → only Alice left → showdown → pot awarded
     state = applyLoggedMove(def, state, { actionId: 'fold' as Move['actionId'], params: {} });
     assert.equal(state.currentPhase, 'showdown');
     assert.equal(Number(state.globalVars.pot), 0);
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 515);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 495);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 490);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 515);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 495);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 490);
 
     // Advance to hand-cleanup
     const cleanup = advancePhase(def, state);
@@ -397,9 +397,9 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     state = applyLoggedMove(def, state, { actionId: 'fold' as Move['actionId'], params: {} });
     assert.equal(state.currentPhase, 'showdown');
     assert.equal(Number(state.globalVars.pot), 0);
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 550);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 470);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 480);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 550);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 470);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 480);
 
     const cleanup = advancePhase(def, state);
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
@@ -502,9 +502,9 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.globalVars.pot), 0);
 
     // Carol wins with flush: QH,TH + JH,9H,2H on board
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 520);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 90);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 890);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 520);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 90);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 890);
 
     const cleanup = advancePhase(def, state);
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
@@ -531,7 +531,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // Dealer=Alice(0), SB=Bob(1), BB=Carol(2). First to act = Alice(0).
     assert.equal(Number(state.activePlayer), 0);
     assert.equal(Number(state.globalVars.pot), 30);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 80);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 80);
 
     // Alice raises to 40
     state = applyLoggedMove(def, state, { actionId: 'raise' as Move['actionId'], params: { raiseAmount: 40 } });
@@ -540,8 +540,8 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
 
     // Bob all-in (80 remaining → total bet 90)
     state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
-    assert.equal(state.perPlayerVars['1']!.allIn, true);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 0);
+    assert.equal(state.perPlayerVars[1]!.allIn, true);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 0);
     assert.equal(Number(state.activePlayer), 2);
 
     // Carol calls 90 (70 more)
@@ -583,9 +583,9 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // Carol: [JC,JS] → pair of Jacks
     // Main pot = 90×3 = 270 → Bob wins
     // Side pot = (220-90)×2 = 260 → Carol wins (higher showdownScore vs Alice)
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 300);
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 270);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 930);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 300);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 270);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 930);
 
     const cleanup = advancePhase(def, state);
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
@@ -668,16 +668,16 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // Engine result: Alice=27+1=28, Carol=27. (Note: report says Alice=27, Carol=28.)
     // Per conflict resolution: if engine disagrees, engine behavior prevails in assertion,
     // but we flag the difference.
-    const aliceStack = Number(state.perPlayerVars['0']!.chipStack);
-    const carolStack = Number(state.perPlayerVars['2']!.chipStack);
+    const aliceStack = Number(state.perPlayerVars[0]!.chipStack);
+    const carolStack = Number(state.perPlayerVars[2]!.chipStack);
     // Assert the split is correct (27+28=55 total award)
-    assert.equal(aliceStack + carolStack + Number(state.perPlayerVars['1']!.chipStack), 1500);
+    assert.equal(aliceStack + carolStack + Number(state.perPlayerVars[1]!.chipStack), 1500);
 
     // The engine gives odd chip to player 0 (Alice) since it iterates in index order.
     // This differs from the report's "first seat left of button" rule (which gives to Carol).
     // Assert engine behavior:
     assert.equal(aliceStack, 303); // 275 (after antes+BB) + 28 (27 base + 1 odd)
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 265);
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 265);
     assert.equal(carolStack, 932); // 905 (after antes+SB+call) + 27
 
     const cleanup = advancePhase(def, state);
@@ -734,7 +734,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
 
     // Bob all-in for 200 (his remaining chips after antes+blind+call)
     state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
-    assert.equal(state.perPlayerVars['1']!.allIn, true);
+    assert.equal(state.perPlayerVars[1]!.allIn, true);
     assert.equal(Number(state.activePlayer), 2);
 
     // Carol calls 200
@@ -763,7 +763,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // Carol: [QS,QH] → trip Queens (QS,QH,QD)
     // Bob: [AD,JD] → A-high
     // Carol wins pot=595
-    assert.equal(Number(state.perPlayerVars['1']!.chipStack), 0); // Bob busted
+    assert.equal(Number(state.perPlayerVars[1]!.chipStack), 0); // Bob busted
     // Alice folded, so her stack is her start minus forced bets and the call
     // Alice started 303, paid ante(5)+SB(10)+call-to-60(50) = 65 → 238. Wait.
     // Let me recalculate: Alice stack = 303 - 5(ante) - 10(SB) = 288 at preflop start.
@@ -778,15 +778,15 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // Bob stack = 0.
     // Carol stack = 932 - 265 + 595 = 1262.
     // Check: 238 + 0 + 1262 = 1500. ✓
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 238);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 1262);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 238);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 1262);
 
     const cleanup = advancePhase(def, state);
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 6 cleanup');
 
     // Bob should be eliminated after cleanup
-    assert.equal(cleanup.perPlayerVars['1']!.eliminated, true);
+    assert.equal(cleanup.perPlayerVars[1]!.eliminated, true);
     assert.equal(Number(cleanup.globalVars.activePlayers), 2);
   });
 
@@ -815,7 +815,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
       ...state,
       perPlayerVars: {
         ...state.perPlayerVars,
-        '1': { ...state.perPlayerVars['1']!, eliminated: true, handActive: false, chipStack: 0 },
+        1: { ...state.perPlayerVars[1]!, eliminated: true, handActive: false, chipStack: 0 },
       },
     };
 
@@ -882,8 +882,8 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // After hand 7: Alice paid 10+40+60 = 110 → 128. Carol paid 20+30+60+200 = 310.
     // Carol = 1262 - 310 + 420 = 1372. Alice = 128.
     // Check: 128 + 0 + 1372 = 1500. ✓
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 128);
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 1372);
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 128);
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 1372);
 
     const cleanup = advancePhase(def, state);
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
@@ -914,7 +914,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
       ...state,
       perPlayerVars: {
         ...state.perPlayerVars,
-        '1': { ...state.perPlayerVars['1']!, eliminated: true, handActive: false, chipStack: 0 },
+        1: { ...state.perPlayerVars[1]!, eliminated: true, handActive: false, chipStack: 0 },
       },
     };
 
@@ -967,15 +967,15 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     // Carol: [AS,AH] pair of Aces
     // Alice: [KD,QD] K-Q high
     // Carol wins. Pot = 128×2 = 256. Uncalled 72 returned to Carol.
-    assert.equal(Number(state.perPlayerVars['0']!.chipStack), 0); // Alice busted
-    assert.equal(Number(state.perPlayerVars['2']!.chipStack), 1500); // Carol wins all
+    assert.equal(Number(state.perPlayerVars[0]!.chipStack), 0); // Alice busted
+    assert.equal(Number(state.perPlayerVars[2]!.chipStack), 1500); // Carol wins all
 
     const cleanup = advancePhase(def, state);
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 8 cleanup');
 
     // Alice eliminated, Carol is tournament winner
-    assert.equal(cleanup.perPlayerVars['0']!.eliminated, true);
+    assert.equal(cleanup.perPlayerVars[0]!.eliminated, true);
     assert.equal(Number(cleanup.globalVars.activePlayers), 1);
   });
 });

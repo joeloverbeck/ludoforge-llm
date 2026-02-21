@@ -375,7 +375,7 @@ phase: [asPhaseId('main')],
       actionUsage: {},
       turnOrderState: {
         type: 'simultaneous',
-        submitted: { '0': false, '1': false },
+        submitted: { 0: false, 1: false },
         pending: {},
       },
     };
@@ -386,18 +386,18 @@ phase: [asPhaseId('main')],
     assert.equal(first.state.activePlayer, asPlayerId(1));
     assert.deepEqual(first.state.turnOrderState, {
       type: 'simultaneous',
-      submitted: { '0': true, '1': false },
+      submitted: { 0: true, 1: false },
       pending: {
-        '0': { actionId: 'play', params: { boost: 2 } },
+        0: { actionId: 'play', params: { boost: 2 } },
       },
     });
     assert.deepEqual(first.triggerFirings, [
       {
         kind: 'simultaneousSubmission',
-        player: '0',
+        player: 0,
         move: { actionId: 'play', params: { boost: 2 } },
-        submittedBefore: { '0': false, '1': false },
-        submittedAfter: { '0': true, '1': false },
+        submittedBefore: { 0: false, 1: false },
+        submittedAfter: { 0: true, 1: false },
       },
     ]);
   });

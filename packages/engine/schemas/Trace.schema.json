@@ -849,8 +849,7 @@
                       "const": "simultaneousSubmission"
                     },
                     "player": {
-                      "type": "string",
-                      "minLength": 1
+                      "type": "number"
                     },
                     "move": {
                       "type": "object",

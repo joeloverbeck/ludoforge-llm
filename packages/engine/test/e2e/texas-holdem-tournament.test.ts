@@ -63,13 +63,13 @@ const createAgents = (count: number, kind: 'random' | 'greedy' | 'mixed'): reado
 
 const totalChipsInPlay = (state: GameState): number => {
   const pot = Number(state.globalVars.pot ?? 0);
-  const stacks = Array.from({ length: state.playerCount }, (_unused, index) => Number(state.perPlayerVars[String(index)]?.chipStack ?? 0));
+  const stacks = Array.from({ length: state.playerCount }, (_unused, index) => Number(state.perPlayerVars[index]?.chipStack ?? 0));
   return stacks.reduce((sum, value) => sum + value, 0) + pot;
 };
 
 const nonEliminatedPlayers = (state: GameState): readonly number[] =>
   Array.from({ length: state.playerCount }, (_unused, player) => player)
-    .filter((player) => state.perPlayerVars[String(player)]?.eliminated === false);
+    .filter((player) => state.perPlayerVars[player]?.eliminated === false);
 
 const readBlindSchedule = (def: ValidatedGameDef): readonly BlindScheduleRow[] => {
   const scenario = (def.runtimeDataAssets ?? []).find((asset) => asset.id === 'tournament-standard' && asset.kind === 'scenario');
@@ -150,7 +150,7 @@ describe('texas hold\'em tournament e2e', () => {
         assert.notEqual(trace.result, null);
         assert.deepEqual(alive.length, 1);
         const winner = alive[0]!;
-        assert.equal(Number(trace.finalState.perPlayerVars[String(winner)]?.chipStack ?? 0), totalInitialChips);
+        assert.equal(Number(trace.finalState.perPlayerVars[winner]?.chipStack ?? 0), totalInitialChips);
         return;
       }
 
@@ -270,9 +270,9 @@ describe('texas hold\'em tournament e2e', () => {
       },
       perPlayerVars: {
         ...base.perPlayerVars,
-        '0': { ...base.perPlayerVars['0']!, chipStack: 0, eliminated: false, handActive: false },
-        '1': { ...base.perPlayerVars['1']!, chipStack: 0, eliminated: false, handActive: false },
-        '2': { ...base.perPlayerVars['2']!, chipStack: 300, eliminated: false, handActive: true },
+        0: { ...base.perPlayerVars[0]!, chipStack: 0, eliminated: false, handActive: false },
+        1: { ...base.perPlayerVars[1]!, chipStack: 0, eliminated: false, handActive: false },
+        2: { ...base.perPlayerVars[2]!, chipStack: 300, eliminated: false, handActive: true },
       },
     };
 
@@ -280,7 +280,7 @@ describe('texas hold\'em tournament e2e', () => {
     const eliminatedPlayers = [0, 1];
     assert.equal(Number(afterCleanup.globalVars.activePlayers), 1);
     for (const player of eliminatedPlayers) {
-      assert.equal(afterCleanup.perPlayerVars[String(player)]?.eliminated, true);
+      assert.equal(afterCleanup.perPlayerVars[player]?.eliminated, true);
       assert.equal(afterCleanup.zones[`hand:${player}`]?.length ?? 0, 0);
       const shadowState = { ...afterCleanup, activePlayer: asPlayerId(player) };
       assert.equal(legalMoves(def, shadowState).length, 0);
@@ -299,8 +299,8 @@ describe('texas hold\'em tournament e2e', () => {
       },
       perPlayerVars: {
         ...base.perPlayerVars,
-        '2': {
-          ...base.perPlayerVars['2']!,
+        2: {
+          ...base.perPlayerVars[2]!,
           eliminated: true,
           chipStack: 0,
           handActive: false,
@@ -321,8 +321,8 @@ describe('texas hold\'em tournament e2e', () => {
     assert.equal(Number(headsUpState.globalVars.activePlayers), 2);
     assert.equal(Number(headsUpState.activePlayer), dealerSeat);
     assert.equal(Number(headsUpState.globalVars.actingPosition), dealerSeat);
-    assert.equal(Number(headsUpState.perPlayerVars[String(dealerSeat)]?.streetBet ?? -1), Number(headsUpState.globalVars.smallBlind));
-    assert.equal(Number(headsUpState.perPlayerVars[String(bbSeat)]?.streetBet ?? -1), Number(headsUpState.globalVars.bigBlind));
+    assert.equal(Number(headsUpState.perPlayerVars[dealerSeat]?.streetBet ?? -1), Number(headsUpState.globalVars.smallBlind));
+    assert.equal(Number(headsUpState.perPlayerVars[bbSeat!]?.streetBet ?? -1), Number(headsUpState.globalVars.bigBlind));
   });
 
   it('completes a 4-player greedy-agent tournament without runtime errors', () => {
@@ -353,20 +353,20 @@ describe('texas hold\'em tournament e2e', () => {
       },
       perPlayerVars: {
         ...base.perPlayerVars,
-        '0': {
-          ...base.perPlayerVars['0']!,
+        0: {
+          ...base.perPlayerVars[0]!,
           chipStack: 0,
           eliminated: false,
           handActive: false,
         },
-        '1': {
-          ...base.perPlayerVars['1']!,
+        1: {
+          ...base.perPlayerVars[1]!,
           chipStack: 0,
           eliminated: false,
           handActive: false,
         },
-        '2': {
-          ...base.perPlayerVars['2']!,
+        2: {
+          ...base.perPlayerVars[2]!,
           chipStack: 300,
           eliminated: false,
           handActive: true,
@@ -377,9 +377,9 @@ describe('texas hold\'em tournament e2e', () => {
     const afterCleanup = advancePhase(def, engineered);
 
     assert.equal(Number(afterCleanup.globalVars.activePlayers), 1);
-    assert.equal(afterCleanup.perPlayerVars['0']?.eliminated, true);
-    assert.equal(afterCleanup.perPlayerVars['1']?.eliminated, true);
-    assert.equal(afterCleanup.perPlayerVars['2']?.eliminated, false);
+    assert.equal(afterCleanup.perPlayerVars[0]?.eliminated, true);
+    assert.equal(afterCleanup.perPlayerVars[1]?.eliminated, true);
+    assert.equal(afterCleanup.perPlayerVars[2]?.eliminated, false);
   });
 
   it('changes blinds exactly on hand boundaries at schedule thresholds', () => {
@@ -446,9 +446,9 @@ describe('texas hold\'em tournament e2e', () => {
       },
       perPlayerVars: {
         ...base.perPlayerVars,
-        '0': { ...base.perPlayerVars['0']!, eliminated: false, chipStack: 300 },
-        '1': { ...base.perPlayerVars['1']!, eliminated: true, chipStack: 0 },
-        '2': { ...base.perPlayerVars['2']!, eliminated: true, chipStack: 0 },
+        0: { ...base.perPlayerVars[0]!, eliminated: false, chipStack: 300 },
+        1: { ...base.perPlayerVars[1]!, eliminated: true, chipStack: 0 },
+        2: { ...base.perPlayerVars[2]!, eliminated: true, chipStack: 0 },
       },
     };
 

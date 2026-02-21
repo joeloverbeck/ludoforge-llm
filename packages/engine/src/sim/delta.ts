@@ -42,8 +42,8 @@ export const computeDeltas = (preState: GameState, postState: GameState): readon
 
   const perPlayerIds = sortedUnionKeys(preState.perPlayerVars, postState.perPlayerVars);
   for (const playerId of perPlayerIds) {
-    const preVars = preState.perPlayerVars[playerId] ?? {};
-    const postVars = postState.perPlayerVars[playerId] ?? {};
+    const preVars = preState.perPlayerVars[Number(playerId)] ?? {};
+    const postVars = postState.perPlayerVars[Number(playerId)] ?? {};
     for (const name of sortedUnionKeys(preVars, postVars)) {
       const before = preVars[name];
       const after = postVars[name];

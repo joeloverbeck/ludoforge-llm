@@ -88,8 +88,7 @@ const resolveGlobalIntVarDef = (ctx: EffectContext, varName: string) => {
 };
 
 const readPerPlayerIntValue = (ctx: EffectContext, playerId: PlayerId, varName: string): number => {
-  const playerKey = String(playerId);
-  const playerVars = ctx.state.perPlayerVars[playerKey];
+  const playerVars = ctx.state.perPlayerVars[playerId];
   if (playerVars === undefined) {
     throw effectRuntimeError('resourceRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
       effectType: 'transferVar',
@@ -201,11 +200,10 @@ const writePerPlayerVar = (
   varName: string,
   value: number,
 ): EffectContext['state']['perPlayerVars'] => {
-  const playerKey = String(player);
   return {
     ...perPlayerVars,
-    [playerKey]: {
-      ...perPlayerVars[playerKey],
+    [player]: {
+      ...perPlayerVars[player],
       [varName]: value,
     },
   };

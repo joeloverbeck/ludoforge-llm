@@ -623,7 +623,7 @@ export const OperationFreeTraceEntrySchema = z
 export const SimultaneousSubmissionTraceEntrySchema = z
   .object({
     kind: z.literal('simultaneousSubmission'),
-    player: StringSchema.min(1),
+    player: NumberSchema,
     move: z
       .object({
         actionId: StringSchema.min(1),

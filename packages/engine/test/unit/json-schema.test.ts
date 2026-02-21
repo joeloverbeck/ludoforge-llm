@@ -211,7 +211,7 @@ const validRuntimeTrace: GameTrace = {
         },
         {
           kind: 'simultaneousSubmission',
-          player: '0',
+          player: asPlayerId(0),
           move: { actionId: asActionId('playCard'), params: { amount: 1 } },
           submittedBefore: { '0': false, '1': false },
           submittedAfter: { '0': true, '1': false },

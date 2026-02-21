@@ -150,10 +150,10 @@ export interface SimultaneousMoveSubmission {
 
 export interface SimultaneousSubmissionTraceEntry {
   readonly kind: 'simultaneousSubmission';
-  readonly player: string;
+  readonly player: number;
   readonly move: SimultaneousMoveSubmission;
-  readonly submittedBefore: Readonly<Record<string, boolean>>;
-  readonly submittedAfter: Readonly<Record<string, boolean>>;
+  readonly submittedBefore: Readonly<Record<number, boolean>>;
+  readonly submittedAfter: Readonly<Record<number, boolean>>;
 }
 
 export interface SimultaneousCommitTraceEntry {
@@ -178,8 +178,8 @@ export type TurnOrderRuntimeState =
   | { readonly type: 'cardDriven'; readonly runtime: TurnFlowRuntimeState }
   | {
       readonly type: 'simultaneous';
-      readonly submitted: Readonly<Record<string, boolean>>;
-      readonly pending: Readonly<Record<string, SimultaneousMoveSubmission>>;
+      readonly submitted: Readonly<Record<number, boolean>>;
+      readonly pending: Readonly<Record<number, SimultaneousMoveSubmission>>;
     };
 
 export type TurnFlowLifecycleStep =

@@ -663,10 +663,10 @@ describe('top-level runtime schemas', () => {
       },
       {
         kind: 'simultaneousSubmission',
-        player: '0',
+        player: 0,
         move: { actionId: 'commit', params: { value: 1 } },
-        submittedBefore: { '0': false, '1': false },
-        submittedAfter: { '0': true, '1': false },
+        submittedBefore: { 0: false, 1: false },
+        submittedAfter: { 0: true, 1: false },
       },
       {
         kind: 'simultaneousCommit',

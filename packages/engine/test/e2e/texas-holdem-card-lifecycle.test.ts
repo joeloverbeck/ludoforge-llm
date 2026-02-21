@@ -38,12 +38,12 @@ const totalTokenCount = (state: GameState): number =>
 
 /** Check whether a player is folded (handActive=false and not eliminated). */
 const isPlayerFolded = (state: GameState, player: number): boolean =>
-  state.perPlayerVars[String(player)]?.handActive === false
-  && state.perPlayerVars[String(player)]?.eliminated !== true;
+  state.perPlayerVars[player]?.handActive === false
+  && state.perPlayerVars[player]?.eliminated !== true;
 
 /** Check whether a player is eliminated. */
 const isPlayerEliminated = (state: GameState, player: number): boolean =>
-  state.perPlayerVars[String(player)]?.eliminated === true;
+  state.perPlayerVars[player]?.eliminated === true;
 
 describe('texas hold\'em card lifecycle e2e', () => {
   /**

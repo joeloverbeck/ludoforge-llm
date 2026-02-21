@@ -758,8 +758,8 @@ const applyMoveCore = (
   };
 };
 
-const createSimultaneousSubmittedMap = (playerCount: number): Readonly<Record<string, boolean>> =>
-  Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [String(index), false]));
+const createSimultaneousSubmittedMap = (playerCount: number): Readonly<Record<number, boolean>> =>
+  Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [index, false]));
 
 const toSimultaneousSubmission = (move: Move) => ({
   actionId: String(move.actionId),
@@ -778,10 +778,10 @@ const toMoveFromSubmission = (
 });
 
 const simultaneousSubmissionTrace = (
-  player: string,
+  player: number,
   move: ReturnType<typeof toSimultaneousSubmission>,
-  submittedBefore: Readonly<Record<string, boolean>>,
-  submittedAfter: Readonly<Record<string, boolean>>,
+  submittedBefore: Readonly<Record<number, boolean>>,
+  submittedAfter: Readonly<Record<number, boolean>>,
 ): TriggerLogEntry => ({
   kind: 'simultaneousSubmission',
   player,
@@ -792,12 +792,12 @@ const simultaneousSubmissionTrace = (
 
 const nextUnsubmittedPlayer = (
   currentPlayer: number,
-  submitted: Readonly<Record<string, boolean>>,
+  submitted: Readonly<Record<number, boolean>>,
   playerCount: number,
 ): number | null => {
   for (let offset = 1; offset <= playerCount; offset += 1) {
     const candidate = (currentPlayer + offset) % playerCount;
-    if (submitted[String(candidate)] !== true) {
+    if (submitted[candidate] !== true) {
       return candidate;
     }
   }
@@ -821,16 +821,15 @@ const applySimultaneousSubmission = (
   validateMove(def, state, move);
 
   const currentPlayer = Number(state.activePlayer);
-  const playerKey = String(currentPlayer);
   const submittedBefore = state.turnOrderState.submitted;
   const submittedMove = toSimultaneousSubmission(move);
   const submitted = {
     ...submittedBefore,
-    [playerKey]: true,
+    [currentPlayer]: true,
   };
   const pending = {
     ...state.turnOrderState.pending,
-    [playerKey]: submittedMove,
+    [currentPlayer]: submittedMove,
   };
   const table = createZobristTable(def);
   const hasRemainingPlayers = Object.values(submitted).some((value) => value === false);
@@ -852,7 +851,7 @@ const applySimultaneousSubmission = (
         ...waitingState,
         stateHash: computeFullHash(table, waitingState),
       },
-      triggerFirings: [simultaneousSubmissionTrace(playerKey, submittedMove, submittedBefore, submitted)],
+      triggerFirings: [simultaneousSubmissionTrace(currentPlayer, submittedMove, submittedBefore, submitted)],
       warnings: [],
     };
   }
@@ -867,7 +866,7 @@ const applySimultaneousSubmission = (
     },
   };
   const triggerFirings: TriggerLogEntry[] = [
-    simultaneousSubmissionTrace(playerKey, submittedMove, submittedBefore, submitted),
+    simultaneousSubmissionTrace(currentPlayer, submittedMove, submittedBefore, submitted),
     {
       kind: 'simultaneousCommit',
       playersInOrder: orderedPlayers.map(String),
@@ -877,7 +876,7 @@ const applySimultaneousSubmission = (
   const commitRuntime = createMoveExecutionRuntime(options);
 
   for (const player of orderedPlayers) {
-    const submission = pending[String(player)];
+    const submission = pending[player];
     if (submission === undefined) {
       continue;
     }

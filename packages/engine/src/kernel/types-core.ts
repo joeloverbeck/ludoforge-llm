@@ -496,7 +496,7 @@ export interface RevealGrant {
 
 export interface GameState {
   readonly globalVars: Readonly<Record<string, VariableValue>>;
-  readonly perPlayerVars: Readonly<Record<string, Readonly<Record<string, VariableValue>>>>;
+  readonly perPlayerVars: Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
   readonly playerCount: number;
   readonly zones: Readonly<Record<string, readonly Token[]>>;
   readonly nextTokenOrdinal: number;

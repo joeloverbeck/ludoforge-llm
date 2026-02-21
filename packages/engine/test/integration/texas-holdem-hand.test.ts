@@ -22,13 +22,13 @@ const totalCardsAcrossZones = (state: GameState): number =>
   Object.values(state.zones).reduce((sum, entries) => sum + entries.length, 0);
 
 const totalChipsInPlay = (state: GameState): number => {
-  const stacks = Array.from({ length: state.playerCount }, (_unused, index) => Number(state.perPlayerVars[String(index)]?.chipStack ?? 0));
+  const stacks = Array.from({ length: state.playerCount }, (_unused, index) => Number(state.perPlayerVars[index]?.chipStack ?? 0));
   return stacks.reduce((sum, value) => sum + value, 0) + Number(state.globalVars.pot ?? 0);
 };
 
 const assertNoNegativeStacks = (state: GameState): void => {
   for (let player = 0; player < state.playerCount; player += 1) {
-    const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
+    const stack = Number(state.perPlayerVars[player]?.chipStack ?? 0);
     assert.equal(stack >= 0, true, `player ${player} chipStack must remain non-negative`);
   }
 };
@@ -36,7 +36,7 @@ const assertNoNegativeStacks = (state: GameState): void => {
 const activeInHandFromFlags = (state: GameState): number => {
   let count = 0;
   for (let player = 0; player < state.playerCount; player += 1) {
-    const vars = state.perPlayerVars[String(player)];
+    const vars = state.perPlayerVars[player];
     if (vars?.eliminated === false && vars.handActive === true) {
       count += 1;
     }
@@ -94,11 +94,12 @@ const mutateStacks = (
   state: GameState,
   stacks: Readonly<Record<string, number>>,
 ): GameState => {
-  const nextPerPlayer: Record<string, GameState['perPlayerVars'][string]> = { ...state.perPlayerVars };
+  const nextPerPlayer: Record<number, GameState['perPlayerVars'][number]> = { ...state.perPlayerVars };
   for (const [playerId, chipStack] of Object.entries(stacks)) {
-    const current = nextPerPlayer[playerId];
+    const numericId = Number(playerId);
+    const current = nextPerPlayer[numericId];
     assert.ok(current, `missing player vars for player ${playerId}`);
-    nextPerPlayer[playerId] = {
+    nextPerPlayer[numericId] = {
       ...current,
       chipStack,
     };
@@ -167,8 +168,8 @@ describe('texas hand mechanics integration', () => {
     const bbSeat = dealerSeat === 0 ? 1 : 0;
 
     assert.equal(Number(state.activePlayer), dealerSeat, 'button should act first preflop in heads-up');
-    assert.equal(state.perPlayerVars[String(dealerSeat)]?.streetBet, state.globalVars.smallBlind);
-    assert.equal(state.perPlayerVars[String(bbSeat)]?.streetBet, state.globalVars.bigBlind);
+    assert.equal(state.perPlayerVars[dealerSeat]?.streetBet, state.globalVars.smallBlind);
+    assert.equal(state.perPlayerVars[bbSeat]?.streetBet, state.globalVars.bigBlind);
 
     state = advancePhase(def, state);
 
@@ -196,7 +197,7 @@ describe('texas hand mechanics integration', () => {
     const def = compileTexasDef();
     let state = advanceToDecisionPoint(def, initialState(def, 53, 2));
 
-    const actor = String(state.activePlayer);
+    const actor = Number(state.activePlayer);
     const actorStreetBet = Number(state.perPlayerVars[actor]?.streetBet ?? 0);
     const actorStack = Number(state.perPlayerVars[actor]?.chipStack ?? 0);
     const currentBet = Number(state.globalVars.currentBet ?? 0);
@@ -244,7 +245,7 @@ describe('texas hand mechanics integration', () => {
 
     const raised = applyMove(def, state, { actionId: 'raise' as Move['actionId'], params: { raiseAmount: 250 } }).state;
     assert.equal(Number(raised.globalVars.currentBet), 250);
-    assert.equal(Number(raised.perPlayerVars[String(state.activePlayer)]?.streetBet ?? -1), 250);
+    assert.equal(Number(raised.perPlayerVars[Number(state.activePlayer)]?.streetBet ?? -1), 250);
     assert.equal(Number(raised.globalVars.pot), 270);
   });
 
@@ -331,9 +332,9 @@ describe('texas hand mechanics integration', () => {
       assertNoNegativeStacks(state);
       assertNoPlayersInHandCounter(state, `forced-all-in seed=${seed}`);
 
-      const stack0 = Number(state.perPlayerVars['0']?.chipStack ?? 0);
-      const stack1 = Number(state.perPlayerVars['1']?.chipStack ?? 0);
-      const stack2 = Number(state.perPlayerVars['2']?.chipStack ?? 0);
+      const stack0 = Number(state.perPlayerVars[0]?.chipStack ?? 0);
+      const stack1 = Number(state.perPlayerVars[1]?.chipStack ?? 0);
+      const stack2 = Number(state.perPlayerVars[2]?.chipStack ?? 0);
 
       assert.equal(stack0 <= 90, true, 'shortest stack can only win main pot');
       assert.equal(stack1 <= 210, true, 'middle stack cannot win deepest side layer');
@@ -349,14 +350,14 @@ describe('texas hand mechanics integration', () => {
       const second = runForcedThreeWayAllIn(def, seed).state;
 
       const firstStacks = [
-        Number(first.perPlayerVars['0']?.chipStack ?? 0),
-        Number(first.perPlayerVars['1']?.chipStack ?? 0),
-        Number(first.perPlayerVars['2']?.chipStack ?? 0),
+        Number(first.perPlayerVars[0]?.chipStack ?? 0),
+        Number(first.perPlayerVars[1]?.chipStack ?? 0),
+        Number(first.perPlayerVars[2]?.chipStack ?? 0),
       ];
       const secondStacks = [
-        Number(second.perPlayerVars['0']?.chipStack ?? 0),
-        Number(second.perPlayerVars['1']?.chipStack ?? 0),
-        Number(second.perPlayerVars['2']?.chipStack ?? 0),
+        Number(second.perPlayerVars[0]?.chipStack ?? 0),
+        Number(second.perPlayerVars[1]?.chipStack ?? 0),
+        Number(second.perPlayerVars[2]?.chipStack ?? 0),
       ];
 
       assert.deepEqual(firstStacks, secondStacks, `seed=${seed} stack allocation should be deterministic`);

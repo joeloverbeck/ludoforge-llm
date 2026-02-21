@@ -108,7 +108,7 @@ const assertNumericBounds = (def: GameDef, state: GameState): void => {
     }
 
     for (let player = 0; player < state.playerCount; player += 1) {
-      const playerVars = state.perPlayerVars[String(player)] as Readonly<Record<string, unknown>> | undefined;
+      const playerVars = state.perPlayerVars[player] as Readonly<Record<string, unknown>> | undefined;
       const rawValue = playerVars?.[variable.name];
       const value: number = Number(rawValue);
       assert.equal(Number.isFinite(value), true, `player ${player} var ${variable.name} must be finite`);

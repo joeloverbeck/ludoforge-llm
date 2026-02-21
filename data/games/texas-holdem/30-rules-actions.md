@@ -231,6 +231,11 @@ turnStructure:
 
     - id: hand-cleanup
       onEnter:
+        - forEach:
+            bind: $player
+            over: { query: players }
+            effects:
+              - conceal: { zone: { zoneExpr: { concat: ['hand:', { ref: binding, name: $player }] } } }
         - moveAll: { from: community:none, to: muck:none }
         - moveAll: { from: burn:none, to: muck:none }
         - forEach:

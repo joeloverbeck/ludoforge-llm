@@ -107,6 +107,13 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     bindingTemplateReferencerPaths: [['to', 'chosen']],
     zoneSelectorReferencerPaths: [['zone']],
   },
+  conceal: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingNameReferencerPaths: NO_REFERENCER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['zone']],
+  },
   shuffle: {
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,

@@ -476,6 +476,7 @@ effectAstSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
+  z.object({ conceal: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
   z.object({ shuffle: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
   z
     .object({

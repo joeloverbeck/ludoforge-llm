@@ -6075,6 +6075,43 @@
         {
           "type": "object",
           "properties": {
+            "conceal": {
+              "type": "object",
+              "properties": {
+                "zone": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "zoneExpr": {
+                          "$ref": "#/definitions/__schema2"
+                        }
+                      },
+                      "required": [
+                        "zoneExpr"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "zone"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "conceal"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "shuffle": {
               "type": "object",
               "properties": {

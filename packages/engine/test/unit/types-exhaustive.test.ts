@@ -70,6 +70,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('moveTokenAdjacent' in effect) return 'moveTokenAdjacent';
   if ('draw' in effect) return 'draw';
   if ('reveal' in effect) return 'reveal';
+  if ('conceal' in effect) return 'conceal';
   if ('shuffle' in effect) return 'shuffle';
   if ('createToken' in effect) return 'createToken';
   if ('destroyToken' in effect) return 'destroyToken';
@@ -148,12 +149,12 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
-    const effectVariants: UnionSize<EffectAST> = 33;
+    const effectVariants: UnionSize<EffectAST> = 34;
     const queryVariants: UnionSize<OptionsQuery> = 16;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
-    assert.equal(effectVariants, 33);
+    assert.equal(effectVariants, 34);
     assert.equal(queryVariants, 16);
   });
 

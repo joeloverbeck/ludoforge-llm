@@ -21,6 +21,7 @@ export function decorateWithZoneHighlights(
 
   const allowedKinds = new Set(options.policy.includeKinds);
   const decorated: AnimationDescriptor[] = [];
+  const globallyEmitted = new Set<string>();
 
   for (const descriptor of descriptors) {
     decorated.push(descriptor);
@@ -33,12 +34,11 @@ export function decorateWithZoneHighlights(
     }
 
     const zoneIds = resolveHighlightedZones(descriptor, options.policy.moveEndpoints);
-    const emitted = new Set<string>();
     for (const zoneId of zoneIds) {
-      if (emitted.has(zoneId)) {
+      if (globallyEmitted.has(zoneId)) {
         continue;
       }
-      emitted.add(zoneId);
+      globallyEmitted.add(zoneId);
       decorated.push({
         kind: 'zoneHighlight',
         zoneId,

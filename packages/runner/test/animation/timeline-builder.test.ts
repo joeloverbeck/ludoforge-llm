@@ -149,7 +149,7 @@ describe('buildTimeline', () => {
     expect(calls).toEqual(['pulse', 'move', 'move']);
   });
 
-  it('warns and skips descriptors with missing sprite references', () => {
+  it('silently skips descriptors with missing sprite references', () => {
     const runtime = createRuntimeFixture();
 
     const moveTween = vi.fn();
@@ -195,8 +195,7 @@ describe('buildTimeline', () => {
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     expect(moveTween).toHaveBeenCalledTimes(2);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('skips orphaned zoneHighlight when its source descriptor was skipped', () => {
@@ -237,16 +236,10 @@ describe('buildTimeline', () => {
       },
     ];
 
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
-      // noop
-    });
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     // The zone-pulse tween should NOT fire — zoneHighlight is orphaned
     expect(zoneTween).not.toHaveBeenCalled();
-    // Only 1 warning for the createToken skip, zoneHighlight silently dropped
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
 
   it('keeps zoneHighlight when its source descriptor was NOT skipped', () => {
@@ -406,14 +399,9 @@ describe('buildTimeline', () => {
       },
     ];
 
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
-      // noop
-    });
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     expect(flipTween).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
 
   it('applies missing zone guard to zoneHighlight descriptors', () => {
@@ -438,14 +426,122 @@ describe('buildTimeline', () => {
       },
     ];
 
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
-      // noop
-    });
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
     expect(zoneTween).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('zone container not found');
+  });
+
+  it('skips all consecutive zone highlights after a skipped source (both-endpoint move)', () => {
+    const runtime = createRuntimeFixture();
+    const zoneTween = vi.fn();
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: moveTween,
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    // Missing token causes source skip; TWO zone highlights follow (from both endpoints)
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'missing-token',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:b',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    // Both zone highlights should be suppressed — not just the first one
+    expect(zoneTween).not.toHaveBeenCalled();
+    expect(moveTween).not.toHaveBeenCalled();
+  });
+
+  it('resets skip flag on next non-zoneHighlight descriptor after skipped source', () => {
+    const runtime = createRuntimeFixture();
+    const zoneTween = vi.fn();
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: moveTween,
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    // First moveToken is missing (skipped), its zone highlights are suppressed,
+    // but the subsequent valid moveToken and its zone highlight should pass through
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'missing-token',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:b',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    // The valid moveToken and its zone highlight should fire
+    expect(moveTween).toHaveBeenCalledTimes(1);
+    expect(zoneTween).toHaveBeenCalledTimes(1);
   });
 });
 

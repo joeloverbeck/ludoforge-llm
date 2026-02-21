@@ -8682,6 +8682,31 @@
         "id": "hand-cleanup",
         "onEnter": [
           {
+            "forEach": {
+              "bind": "$player",
+              "over": {
+                "query": "players"
+              },
+              "effects": [
+                {
+                  "conceal": {
+                    "zone": {
+                      "zoneExpr": {
+                        "concat": [
+                          "hand:",
+                          {
+                            "ref": "binding",
+                            "name": "$player"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
             "moveAll": {
               "from": "community:none",
               "to": "muck:none"
@@ -8721,7 +8746,7 @@
           },
           {
             "forEach": {
-              "bind": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_3__player",
+              "bind": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_4__player",
               "macroOrigin": {
                 "macroId": "eliminate-busted-players",
                 "stem": "player"
@@ -8740,7 +8765,7 @@
                           "left": {
                             "ref": "pvar",
                             "player": {
-                              "chosen": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_3__player"
+                              "chosen": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_4__player"
                             },
                             "var": "eliminated"
                           },
@@ -8751,7 +8776,7 @@
                           "left": {
                             "ref": "pvar",
                             "player": {
-                              "chosen": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_3__player"
+                              "chosen": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_4__player"
                             },
                             "var": "chipStack"
                           },
@@ -8764,7 +8789,7 @@
                         "setVar": {
                           "scope": "pvar",
                           "player": {
-                            "chosen": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_3__player"
+                            "chosen": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_4__player"
                           },
                           "var": "eliminated",
                           "value": true
@@ -8792,7 +8817,7 @@
           },
           {
             "let": {
-              "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__nextBlindLevel",
+              "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__nextBlindLevel",
               "value": {
                 "op": "+",
                 "left": {
@@ -8804,7 +8829,7 @@
               "in": [
                 {
                   "let": {
-                    "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__maxBlindLevel",
+                    "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__maxBlindLevel",
                     "value": {
                       "aggregate": {
                         "op": "max",
@@ -8812,10 +8837,10 @@
                           "query": "assetRows",
                           "tableId": "tournament-standard::settings.blindSchedule"
                         },
-                        "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__row",
+                        "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__row",
                         "valueExpr": {
                           "ref": "assetField",
-                          "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__row",
+                          "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__row",
                           "tableId": "tournament-standard::settings.blindSchedule",
                           "field": "level"
                         }
@@ -8828,17 +8853,17 @@
                             "op": "<=",
                             "left": {
                               "ref": "binding",
-                              "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__nextBlindLevel"
+                              "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__nextBlindLevel"
                             },
                             "right": {
                               "ref": "binding",
-                              "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__maxBlindLevel"
+                              "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__maxBlindLevel"
                             }
                           },
                           "then": [
                             {
                               "let": {
-                                "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__handsRequiredForNextLevel",
+                                "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__handsRequiredForNextLevel",
                                 "value": {
                                   "aggregate": {
                                     "op": "sum",
@@ -8846,25 +8871,25 @@
                                       "query": "assetRows",
                                       "tableId": "tournament-standard::settings.blindSchedule"
                                     },
-                                    "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__row",
+                                    "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__row",
                                     "valueExpr": {
                                       "if": {
                                         "when": {
                                           "op": "<",
                                           "left": {
                                             "ref": "assetField",
-                                            "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__row",
+                                            "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__row",
                                             "tableId": "tournament-standard::settings.blindSchedule",
                                             "field": "level"
                                           },
                                           "right": {
                                             "ref": "binding",
-                                            "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__nextBlindLevel"
+                                            "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__nextBlindLevel"
                                           }
                                         },
                                         "then": {
                                           "ref": "assetField",
-                                          "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__row",
+                                          "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__row",
                                           "tableId": "tournament-standard::settings.blindSchedule",
                                           "field": "handsUntilNext"
                                         },
@@ -8884,13 +8909,13 @@
                                         },
                                         "right": {
                                           "ref": "binding",
-                                          "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__handsRequiredForNextLevel"
+                                          "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__handsRequiredForNextLevel"
                                         }
                                       },
                                       "then": [
                                         {
                                           "forEach": {
-                                            "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__blindRow",
+                                            "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__blindRow",
                                             "macroOrigin": {
                                               "macroId": "escalate-blinds",
                                               "stem": "blindRow"
@@ -8904,7 +8929,7 @@
                                                   "op": "eq",
                                                   "value": {
                                                     "ref": "binding",
-                                                    "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__nextBlindLevel"
+                                                    "name": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__nextBlindLevel"
                                                   }
                                                 }
                                               ],
@@ -8917,7 +8942,7 @@
                                                   "var": "blindLevel",
                                                   "value": {
                                                     "ref": "assetField",
-                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__blindRow",
+                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__blindRow",
                                                     "tableId": "tournament-standard::settings.blindSchedule",
                                                     "field": "level"
                                                   }
@@ -8929,7 +8954,7 @@
                                                   "var": "smallBlind",
                                                   "value": {
                                                     "ref": "assetField",
-                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__blindRow",
+                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__blindRow",
                                                     "tableId": "tournament-standard::settings.blindSchedule",
                                                     "field": "sb"
                                                   }
@@ -8941,7 +8966,7 @@
                                                   "var": "bigBlind",
                                                   "value": {
                                                     "ref": "assetField",
-                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__blindRow",
+                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__blindRow",
                                                     "tableId": "tournament-standard::settings.blindSchedule",
                                                     "field": "bb"
                                                   }
@@ -8953,7 +8978,7 @@
                                                   "var": "ante",
                                                   "value": {
                                                     "ref": "assetField",
-                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__blindRow",
+                                                    "row": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_6__blindRow",
                                                     "tableId": "tournament-standard::settings.blindSchedule",
                                                     "field": "ante"
                                                   }

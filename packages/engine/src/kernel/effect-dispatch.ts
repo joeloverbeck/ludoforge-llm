@@ -24,7 +24,7 @@ import {
 } from './effects-turn-flow.js';
 import { applyAddVar, applySetActivePlayer, applySetVar } from './effects-var.js';
 import { applyTransferVar } from './effects-resource.js';
-import { applyReveal } from './effects-reveal.js';
+import { applyConceal, applyReveal } from './effects-reveal.js';
 import {
   applyCreateToken,
   applyDestroyToken,
@@ -58,6 +58,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('moveTokenAdjacent' in effect) return 'moveTokenAdjacent';
   if ('draw' in effect) return 'draw';
   if ('reveal' in effect) return 'reveal';
+  if ('conceal' in effect) return 'conceal';
   if ('shuffle' in effect) return 'shuffle';
   if ('createToken' in effect) return 'createToken';
   if ('destroyToken' in effect) return 'destroyToken';
@@ -133,6 +134,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('reveal' in effect) {
     return applyReveal(effect, ctx);
+  }
+
+  if ('conceal' in effect) {
+    return applyConceal(effect, ctx);
   }
 
   if ('shuffle' in effect) {

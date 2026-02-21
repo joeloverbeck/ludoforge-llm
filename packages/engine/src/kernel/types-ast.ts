@@ -265,6 +265,7 @@ export type EffectAST =
         readonly filter?: readonly TokenFilterPredicate[];
       };
     }
+  | { readonly conceal: { readonly zone: ZoneRef } }
   | { readonly shuffle: { readonly zone: ZoneRef } }
   | {
       readonly createToken: {

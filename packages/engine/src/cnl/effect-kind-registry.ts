@@ -8,6 +8,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'moveTokenAdjacent',
   'draw',
   'reveal',
+  'conceal',
   'shuffle',
   'createToken',
   'destroyToken',

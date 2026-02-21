@@ -1243,6 +1243,11 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('conceal' in effect) {
+    validateZoneRef(diagnostics, effect.conceal.zone, `${path}.conceal.zone`, context);
+    return;
+  }
+
   if ('shuffle' in effect) {
     validateZoneRef(diagnostics, effect.shuffle.zone, `${path}.shuffle.zone`, context);
     return;

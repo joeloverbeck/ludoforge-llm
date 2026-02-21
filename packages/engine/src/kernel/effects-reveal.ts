@@ -3,12 +3,43 @@ import { resolveZoneRef } from './resolve-zone-ref.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { effectRuntimeError } from './effect-error.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, RevealGrant } from './types.js';
+import type { EffectAST, GameState, RevealGrant } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
   ...ctx.bindings,
 });
+
+export const applyConceal = (
+  effect: Extract<EffectAST, { readonly conceal: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const zoneId = String(resolveZoneRef(effect.conceal.zone, evalCtx));
+
+  if (ctx.state.zones[zoneId] === undefined) {
+    throw effectRuntimeError('revealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
+      effectType: 'conceal',
+      field: 'zone',
+      zoneId,
+      availableZoneIds: Object.keys(ctx.state.zones).sort(),
+    });
+  }
+
+  const existingReveals = ctx.state.reveals ?? {};
+  if (existingReveals[zoneId] === undefined || existingReveals[zoneId].length === 0) {
+    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
+  }
+
+  const { [zoneId]: _removed, ...remainingReveals } = existingReveals;
+
+  if (Object.keys(remainingReveals).length === 0) {
+    const { reveals: _, ...stateWithoutReveals } = ctx.state;
+    return { state: stateWithoutReveals as GameState, rng: ctx.rng, emittedEvents: [] };
+  }
+
+  return { state: { ...ctx.state, reveals: remainingReveals }, rng: ctx.rng, emittedEvents: [] };
+};
 
 const normalizeObservers = (players: readonly PlayerId[]): readonly PlayerId[] => (
   [...new Set(players)].sort((left, right) => left - right)

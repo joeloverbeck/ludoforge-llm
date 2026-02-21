@@ -119,6 +119,9 @@ function lowerEffectNode(
   if (isRecord(source.reveal)) {
     return lowerRevealEffect(source.reveal, context, scope, `${path}.reveal`);
   }
+  if (isRecord(source.conceal)) {
+    return lowerConcealEffect(source.conceal, context, scope, `${path}.conceal`);
+  }
   if (isRecord(source.shuffle)) {
     return lowerShuffleEffect(source.shuffle, context, scope, `${path}.shuffle`);
   }
@@ -603,6 +606,22 @@ function lowerRevealEffect(
       },
     },
     diagnostics,
+  };
+}
+
+function lowerConcealEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  const zone = lowerZoneSelector(source.zone, context, scope, `${path}.zone`);
+  if (zone.value === null) {
+    return { value: null, diagnostics: zone.diagnostics };
+  }
+  return {
+    value: { conceal: { zone: zone.value } },
+    diagnostics: zone.diagnostics,
   };
 }
 

@@ -140,3 +140,95 @@ describe('effects reveal', () => {
     );
   });
 });
+
+describe('effects conceal', () => {
+  it('clears all grants for the target zone', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: 'all' }],
+        },
+      },
+    });
+
+    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const result = applyEffect(effect, ctx);
+
+    assert.equal(result.state.reveals, undefined);
+  });
+
+  it('is a no-op when zone has no existing grants', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const result = applyEffect(effect, ctx);
+
+    assert.equal(result.state.reveals, undefined);
+  });
+
+  it('does not affect other zones', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: 'all' }],
+          'hand:1': [{ observers: [asPlayerId(0)] }],
+        },
+      },
+    });
+
+    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const result = applyEffect(effect, ctx);
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:1': [{ observers: [asPlayerId(0)] }],
+    });
+  });
+
+  it('is idempotent', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: 'all' }],
+        },
+      },
+    });
+
+    const effects: readonly EffectAST[] = [
+      { conceal: { zone: 'hand:0' } },
+      { conceal: { zone: 'hand:0' } },
+    ];
+    const result = applyEffects(effects, ctx);
+
+    assert.equal(result.state.reveals, undefined);
+  });
+
+  it('throws runtime error on unknown zone', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'hand:1': [],
+          'board:none': [],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ conceal: { zone: 'hand:0' } }, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Zone state not found'),
+    );
+  });
+
+  it('works in sequence with reveal', () => {
+    const effects: readonly EffectAST[] = [
+      { reveal: { zone: 'hand:0', to: 'all' } },
+      { conceal: { zone: 'hand:0' } },
+    ];
+
+    const result = applyEffects(effects, makeCtx());
+
+    assert.equal(result.state.reveals, undefined);
+  });
+});

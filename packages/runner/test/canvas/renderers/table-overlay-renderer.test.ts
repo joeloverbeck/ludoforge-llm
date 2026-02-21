@@ -236,12 +236,10 @@ describe('createTableOverlayRenderer', () => {
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
     renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
-    const firstLabel = parent.children[0] as InstanceType<typeof MockText>;
 
     renderer.update(makeRenderModel({ globalVars: [asVar('pot', 55)] }), positions);
     const secondLabel = parent.children[0] as InstanceType<typeof MockText>;
 
-    expect(firstLabel.destroyed).toBe(true);
     expect(parent.children).toHaveLength(1);
     expect(secondLabel.text).toBe('Pot: 55');
   });

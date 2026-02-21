@@ -7,7 +7,6 @@ import type { Position } from '../geometry';
 import type { RenderModel, RenderVariable } from '../../model/render-model.js';
 import type { TableOverlayRenderer } from './renderer-types.js';
 import { parseHexColor } from './shape-utils.js';
-import { safeDestroyChildren } from './safe-destroy.js';
 
 const DEFAULT_TEXT_COLOR = '#f8fafc';
 const DEFAULT_TEXT_FONT_SIZE = 12;
@@ -247,5 +246,5 @@ function createMarker(item: TableOverlayItemConfig, point: Point): Container {
 }
 
 function clearContainer(container: Container): void {
-  safeDestroyChildren(container, { children: true });
+  container.removeChildren();
 }

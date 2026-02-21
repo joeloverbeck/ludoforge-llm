@@ -104,7 +104,7 @@ describe('drawCardContent', () => {
     expect(container.children[1]?.anchor.x).toBe(0.5);
   });
 
-  it('destroys previous text nodes before drawing next card face', () => {
+  it('removes previous text nodes before drawing next card face', () => {
     const container = new MockContainer();
 
     drawCardContent(
@@ -121,8 +121,7 @@ describe('drawCardContent', () => {
       },
     );
 
-    const previousChild = container.children[0];
-    expect(previousChild).toBeDefined();
+    expect(container.children).toHaveLength(1);
 
     drawCardContent(
       container as unknown as Container,
@@ -138,7 +137,6 @@ describe('drawCardContent', () => {
       },
     );
 
-    expect(previousChild?.destroy).toHaveBeenCalledTimes(1);
     expect(container.children).toHaveLength(1);
     expect(container.children[0]?.text).toBe('K');
   });

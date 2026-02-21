@@ -10,8 +10,9 @@ import {
 } from './hidden-info-grants.js';
 import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
+import { omitOptionalStateKey } from './state-shape.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, GameState, RevealGrant } from './types.js';
+import type { EffectAST, RevealGrant } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
@@ -68,21 +69,18 @@ export const applyConceal = (
     provenance: resolveTraceProvenance(ctx),
   });
 
-  const remainingReveals = { ...existingReveals } as Record<string, readonly RevealGrant[]>;
+  const nextReveals = { ...existingReveals };
   if (remainingZoneGrants.length === 0) {
-    delete remainingReveals[zoneId];
+    delete nextReveals[zoneId];
   } else {
-    remainingReveals[zoneId] = remainingZoneGrants;
+    nextReveals[zoneId] = remainingZoneGrants;
   }
 
-  if (Object.keys(remainingReveals).length === 0) {
-    const stateWithoutReveals = Object.fromEntries(
-      Object.entries(ctx.state).filter(([key]) => key !== 'reveals'),
-    ) as GameState;
-    return { state: stateWithoutReveals as GameState, rng: ctx.rng, emittedEvents: [] };
+  if (Object.keys(nextReveals).length === 0) {
+    return { state: omitOptionalStateKey(ctx.state, 'reveals'), rng: ctx.rng, emittedEvents: [] };
   }
 
-  return { state: { ...ctx.state, reveals: remainingReveals }, rng: ctx.rng, emittedEvents: [] };
+  return { state: { ...ctx.state, reveals: nextReveals }, rng: ctx.rng, emittedEvents: [] };
 };
 
 export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknown }>, ctx: EffectContext): EffectResult => {

@@ -4,6 +4,7 @@ import { evalCondition } from './eval-condition.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import { omitOptionalStateKey } from './state-shape.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type {
   ActiveLastingEffect,
@@ -82,9 +83,7 @@ const withActiveLastingEffects = (
   activeLastingEffects: readonly ActiveLastingEffect[],
 ): GameState => {
   if (activeLastingEffects.length === 0) {
-    const rest = { ...state } as GameState & { activeLastingEffects?: readonly ActiveLastingEffect[] };
-    delete rest.activeLastingEffects;
-    return rest;
+    return omitOptionalStateKey(state, 'activeLastingEffects');
   }
   return { ...state, activeLastingEffects };
 };

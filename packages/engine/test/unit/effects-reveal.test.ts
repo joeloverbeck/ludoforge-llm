@@ -241,11 +241,31 @@ describe('effects conceal', () => {
     assert.equal(result.state.reveals, undefined);
   });
 
+  it('removes reveals without mutating the input state object', () => {
+    const state: GameState = {
+      ...makeState(),
+      reveals: {
+        'hand:0': [{ observers: 'all' }],
+      },
+    };
+    const ctx = makeCtx({ state });
+
+    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const result = applyEffect(effect, ctx);
+
+    assert.notEqual(result.state, state);
+    assert.equal(result.state.reveals, undefined);
+    assert.deepEqual(state.reveals, {
+      'hand:0': [{ observers: 'all' }],
+    });
+  });
+
   it('is a no-op when zone has no existing grants', () => {
     const ctx = makeCtx();
     const effect: EffectAST = { conceal: { zone: 'hand:0' } };
     const result = applyEffect(effect, ctx);
 
+    assert.equal(result.state, ctx.state);
     assert.equal(result.state.reveals, undefined);
   });
 

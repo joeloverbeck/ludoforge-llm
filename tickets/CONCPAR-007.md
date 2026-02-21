@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — tests (cross-layer parity)
-**Deps**: CONCPAR-001
+**Deps**: Archived predecessor complete (`archive/tickets/CONCPAR-001.md`)
 
 ## Problem
 
@@ -12,7 +12,7 @@ Reveal and conceal are a paired hidden-information contract, but parity is curre
 
 ## Assumption Reassessment (2026-02-21)
 
-1. Reveal and conceal now differ intentionally only by selector direction (`to` vs `from`) and current runtime semantics (selective execution deferred to CONCPAR-003).
+1. Reveal and conceal now differ intentionally only by selector direction (`to` vs `from`) and runtime trace payload direction (`observers` vs `from`), with selective conceal already implemented in `archive/tickets/CONCPAR-003.md`.
 2. Current tests validate many individual behaviors but do not provide one focused parity guardrail for the shared contract surface.
 3. This parity-guardrail work is not covered by CONCPAR-002/003/004 implementation scopes.
 
@@ -34,7 +34,7 @@ Create unit tests that assert reveal/conceal parity across layers:
 
 ### 2. Keep parity scope explicit
 
-Document in test names/comments that runtime selective conceal behavior parity is intentionally excluded until CONCPAR-003 lands.
+Document in test names/comments that parity targets cross-layer contracts; runtime conceal selection semantics are already covered in `archive/tickets/CONCPAR-003.md` and should not be duplicated here.
 
 ## Files to Touch
 
@@ -43,7 +43,7 @@ Document in test names/comments that runtime selective conceal behavior parity i
 
 ## Out of Scope
 
-- Implementing selective conceal runtime removal — CONCPAR-003
+- Re-implementing selective conceal runtime removal — already completed in `archive/tickets/CONCPAR-003.md`
 - Compiler lowering implementation — CONCPAR-002
 - Trace entry model changes — CONCPAR-004
 

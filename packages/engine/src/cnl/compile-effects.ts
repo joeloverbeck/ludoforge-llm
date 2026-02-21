@@ -25,6 +25,7 @@ import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 import { isTrustedMacroOriginCarrier } from './macro-origin-trust.js';
 import { collectReservedCompilerMetadataKeyOccurrencesOnRecord } from './reserved-compiler-metadata.js';
+import type { TypeInferenceContext } from './type-inference.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
@@ -33,6 +34,7 @@ export interface EffectLoweringContext {
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
+  readonly typeInference?: TypeInferenceContext;
 }
 
 export interface EffectLoweringResult<TValue> {
@@ -1832,6 +1834,7 @@ function makeConditionContext(context: EffectLoweringContext, scope: BindingScop
     bindingScope: scope.visibleBindings(),
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
+    ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
   };
 }
 

@@ -15,6 +15,7 @@ import {
   missingCapabilityDiagnostic,
   normalizeIdentifier,
 } from './compile-lowering.js';
+import type { TypeInferenceContext } from './type-inference.js';
 
 /** Bindings injected at runtime by the kernel into every action pipeline. */
 const ACTION_PIPELINE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '__freeOperation'];
@@ -26,6 +27,7 @@ export function lowerActionPipelines(
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  typeInference?: TypeInferenceContext,
 ): readonly ActionPipelineDef[] | undefined {
   if (rawPipelines === null) {
     return undefined;
@@ -167,6 +169,7 @@ export function lowerActionPipelines(
         `${basePath}.applicability`,
         tokenTraitVocabulary,
         namedSets,
+        typeInference,
       );
       if (loweredApplicability !== undefined && loweredApplicability !== null) {
         applicability = loweredApplicability;
@@ -183,6 +186,7 @@ export function lowerActionPipelines(
         `${basePath}.legality`,
         tokenTraitVocabulary,
         namedSets,
+        typeInference,
       );
       if (loweredLegality !== undefined) {
         legality = loweredLegality;
@@ -199,6 +203,7 @@ export function lowerActionPipelines(
         `${basePath}.costValidation`,
         tokenTraitVocabulary,
         namedSets,
+        typeInference,
       );
       if (loweredValidate !== undefined) {
         costValidation = loweredValidate;
@@ -270,6 +275,7 @@ export function lowerActionPipelines(
       runtimeBindings,
       tokenTraitVocabulary,
       namedSets,
+      typeInference,
     );
 
     const rawTargeting = rawPipeline.targeting;
@@ -283,6 +289,7 @@ export function lowerActionPipelines(
         `${basePath}.targeting.filter`,
         tokenTraitVocabulary,
         namedSets,
+        typeInference,
       );
       if (loweredFilter !== undefined && loweredFilter !== null) {
         targetingFilter = loweredFilter;
@@ -308,6 +315,7 @@ export function lowerActionPipelines(
         accumulatedBindings,
         tokenTraitVocabulary,
         namedSets,
+        typeInference,
       );
       const stageBindings: string[] = [];
       for (const eff of loweredEffects) {

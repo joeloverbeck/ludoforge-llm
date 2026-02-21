@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { GameDef, NumericTrackDef } from '../kernel/types.js';
+import type { GameDef, NumericTrackDef, RuntimeTableContract, TokenTypeDef, VariableDef } from '../kernel/types.js';
+import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId } from '../kernel/branded.js';
 import { ACTION_CAPABILITY_CARD_EVENT, isCardEventAction } from '../kernel/action-capabilities.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
@@ -284,6 +285,13 @@ function compileExpandedDoc(
     sections.tokenTypes = tokenTypes.failed ? null : tokenTypes.value;
   }
 
+  const typeInference = buildTypeInferenceContext(
+    globalVars.value,
+    perPlayerVars.value,
+    tokenTypes.value,
+    derivedFromAssets.tableContracts,
+  );
+
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(
       resolvedTableRefDoc.setup ?? [],
@@ -293,6 +301,7 @@ function compileExpandedDoc(
       [],
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
       namedSets,
+      typeInference,
     ),
   );
   const mergedSetup = [...derivedFromAssets.scenarioSetupEffects, ...setup.value];
@@ -310,6 +319,7 @@ function compileExpandedDoc(
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
+        typeInference,
       ),
     );
     turnStructure = turnStructureSection.value;
@@ -330,6 +340,7 @@ function compileExpandedDoc(
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
+        typeInference,
       ),
     );
     sections.actionPipelines =
@@ -355,6 +366,7 @@ function compileExpandedDoc(
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
+        typeInference,
       ),
     );
     actions = actionsSection.value;
@@ -368,6 +380,7 @@ function compileExpandedDoc(
       diagnostics,
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
       namedSets,
+      typeInference,
     ),
   );
   sections.triggers = triggers.failed ? null : triggers.value;
@@ -384,6 +397,7 @@ function compileExpandedDoc(
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
+        typeInference,
       ),
     );
     const victorySection = compileSection(diagnostics, () => lowerVictory(rawTerminal, diagnostics));
@@ -713,4 +727,33 @@ function chooseSyntheticActionId(existingActionIds: ReadonlySet<string>, baseId:
     candidate = `${baseId}_${suffix}`;
   }
   return candidate;
+}
+
+function buildTypeInferenceContext(
+  globalVars: readonly VariableDef[],
+  perPlayerVars: readonly VariableDef[],
+  tokenTypeDefs: readonly TokenTypeDef[],
+  tableContracts: readonly RuntimeTableContract[],
+): TypeInferenceContext {
+  const globalVarTypes: Record<string, 'int' | 'boolean'> = {};
+  for (const v of globalVars) {
+    globalVarTypes[v.name] = v.type;
+  }
+  const perPlayerVarTypes: Record<string, 'int' | 'boolean'> = {};
+  for (const v of perPlayerVars) {
+    perPlayerVarTypes[v.name] = v.type;
+  }
+  const tokenPropTypes: Record<string, Record<string, 'int' | 'string' | 'boolean'>> = {};
+  for (const tt of tokenTypeDefs) {
+    tokenPropTypes[tt.id] = { ...tt.props };
+  }
+  const tableFieldTypes: Record<string, Record<string, 'string' | 'int' | 'boolean'>> = {};
+  for (const tc of tableContracts) {
+    const fields: Record<string, 'string' | 'int' | 'boolean'> = {};
+    for (const f of tc.fields) {
+      fields[f.field] = f.type;
+    }
+    tableFieldTypes[tc.id] = fields;
+  }
+  return { globalVarTypes, perPlayerVarTypes, tokenPropTypes, tableFieldTypes };
 }

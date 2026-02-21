@@ -13,6 +13,8 @@ export function resetDestroyFallbackCount(): void {
 interface DestroyableDisplayObject {
   destroy(options?: unknown): void;
   removeFromParent(): void;
+  renderable?: boolean;
+  visible?: boolean;
 }
 
 /**
@@ -34,6 +36,12 @@ export function safeDestroyDisplayObject(
     destroyFallbackCount += 1;
     console.warn('Display object destroy() failed; falling back to removeFromParent().', error);
     displayObject.removeFromParent();
+    if ('renderable' in displayObject) {
+      displayObject.renderable = false;
+    }
+    if ('visible' in displayObject) {
+      displayObject.visible = false;
+    }
   }
 }
 

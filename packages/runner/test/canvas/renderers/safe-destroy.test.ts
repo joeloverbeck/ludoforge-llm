@@ -143,6 +143,28 @@ describe('safeDestroyDisplayObject', () => {
 
     expect(destroySpy).toHaveBeenCalledWith({ children: true });
   });
+
+  it('sets renderable and visible to false when destroy() throws', () => {
+    const container = new MockContainer() as unknown as Container;
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    safeDestroyDisplayObject(container);
+
+    expect((container as unknown as { renderable: boolean }).renderable).toBe(false);
+    expect((container as unknown as { visible: boolean }).visible).toBe(false);
+  });
+
+  it('does not set renderable/visible when destroy() succeeds', () => {
+    const container = new MockContainer() as unknown as Container;
+
+    safeDestroyDisplayObject(container);
+
+    expect((container as unknown as { renderable: boolean }).renderable).toBe(true);
+    expect((container as unknown as { visible: boolean }).visible).toBe(true);
+  });
 });
 
 describe('destroy fallback counter', () => {

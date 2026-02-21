@@ -6,7 +6,7 @@ import type { TableOverlayItemConfig } from '../../config/visual-config-types.js
 import type { Position } from '../geometry';
 import type { RenderModel, RenderVariable } from '../../model/render-model.js';
 import type { TableOverlayRenderer } from './renderer-types.js';
-import { safeDestroyChildren } from './safe-destroy.js';
+import { safeDestroyDisplayObject } from './safe-destroy.js';
 import { parseHexColor } from './shape-utils.js';
 
 const DEFAULT_TEXT_COLOR = '#f8fafc';
@@ -19,17 +19,158 @@ interface Point {
   y: number;
 }
 
+interface MarkerSlot {
+  readonly container: Container;
+  readonly badge: Graphics;
+  readonly label: Text;
+}
+
 export function createTableOverlayRenderer(
   parentContainer: Container,
   visualConfigProvider: VisualConfigProvider,
 ): TableOverlayRenderer {
   let lastSignature: string | null = null;
 
+  const textSlots: Text[] = [];
+  const markerSlots: MarkerSlot[] = [];
+  let activeTextCount = 0;
+  let activeMarkerCount = 0;
+
+  function acquireTextSlot(index: number): Text {
+    if (index < textSlots.length) {
+      const slot = textSlots[index]!;
+      slot.visible = true;
+      slot.renderable = true;
+      if (slot.parent !== parentContainer) {
+        parentContainer.addChild(slot);
+      }
+      return slot;
+    }
+    const slot = new Text({
+      text: '',
+      style: {
+        fill: DEFAULT_TEXT_COLOR,
+        fontSize: DEFAULT_TEXT_FONT_SIZE,
+        fontFamily: 'monospace',
+      },
+    });
+    slot.eventMode = 'none';
+    slot.interactiveChildren = false;
+    textSlots.push(slot);
+    parentContainer.addChild(slot);
+    return slot;
+  }
+
+  function acquireMarkerSlot(index: number): MarkerSlot {
+    if (index < markerSlots.length) {
+      const slot = markerSlots[index]!;
+      slot.container.visible = true;
+      slot.container.renderable = true;
+      if (slot.container.parent !== parentContainer) {
+        parentContainer.addChild(slot.container);
+      }
+      return slot;
+    }
+    const container = new Container();
+    container.eventMode = 'none';
+    container.interactiveChildren = false;
+
+    const badge = new Graphics();
+    const label = new Text({
+      text: DEFAULT_MARKER_LABEL,
+      style: {
+        fill: '#111827',
+        fontSize: 11,
+        fontFamily: 'monospace',
+      },
+    });
+    label.anchor.set(0.5, 0.5);
+    label.eventMode = 'none';
+    label.interactiveChildren = false;
+
+    container.addChild(badge, label);
+    const slot: MarkerSlot = { container, badge, label };
+    markerSlots.push(slot);
+    parentContainer.addChild(container);
+    return slot;
+  }
+
+  function updateTextSlot(slot: Text, resolved: ResolvedTextItem): void {
+    slot.text = resolved.text;
+    slot.position.set(resolved.point.x, resolved.point.y);
+    const style = slot.style as { fill?: string; fontSize?: number };
+    const nextFill = resolved.item.color ?? DEFAULT_TEXT_COLOR;
+    const nextSize = resolved.item.fontSize ?? DEFAULT_TEXT_FONT_SIZE;
+    if (style.fill !== nextFill) {
+      style.fill = nextFill;
+    }
+    if (style.fontSize !== nextSize) {
+      style.fontSize = nextSize;
+    }
+  }
+
+  function updateMarkerSlot(slot: MarkerSlot, resolved: ResolvedMarkerItem): void {
+    slot.container.position.set(resolved.point.x, resolved.point.y);
+
+    const markerColor =
+      parseHexColor(resolved.item.color ?? '#fbbf24', { allowNamedColors: true }) ?? 0xfbbf24;
+    const markerShape = resolved.item.markerShape ?? DEFAULT_MARKER_SHAPE;
+
+    slot.badge.clear();
+    if (markerShape === 'badge') {
+      slot.badge.roundRect(-12, -9, 24, 18, 8);
+    } else {
+      slot.badge.circle(0, 0, 10);
+    }
+    slot.badge.fill(markerColor);
+
+    slot.label.text = resolved.item.label ?? DEFAULT_MARKER_LABEL;
+    const labelStyle = slot.label.style as { fontSize?: number };
+    const nextSize = resolved.item.fontSize ?? 11;
+    if (labelStyle.fontSize !== nextSize) {
+      labelStyle.fontSize = nextSize;
+    }
+  }
+
+  function hideExcessSlots(textCount: number, markerCount: number): void {
+    for (let i = textCount; i < activeTextCount; i++) {
+      const slot = textSlots[i] as Text | undefined;
+      if (slot !== undefined) {
+        slot.visible = false;
+        slot.renderable = false;
+        slot.removeFromParent();
+      }
+    }
+    for (let i = markerCount; i < activeMarkerCount; i++) {
+      const slot = markerSlots[i] as MarkerSlot | undefined;
+      if (slot !== undefined) {
+        slot.container.visible = false;
+        slot.container.renderable = false;
+        slot.container.removeFromParent();
+      }
+    }
+    activeTextCount = textCount;
+    activeMarkerCount = markerCount;
+  }
+
+  function destroyAllSlots(): void {
+    for (const slot of textSlots) {
+      safeDestroyDisplayObject(slot);
+    }
+    for (const slot of markerSlots) {
+      safeDestroyDisplayObject(slot.container);
+    }
+    textSlots.length = 0;
+    markerSlots.length = 0;
+    activeTextCount = 0;
+    activeMarkerCount = 0;
+  }
+
   return {
     update(renderModel, positions): void {
       if (renderModel === null) {
         if (lastSignature !== null) {
-          clearContainer(parentContainer);
+          hideExcessSlots(0, 0);
           lastSignature = null;
         }
         return;
@@ -38,7 +179,7 @@ export function createTableOverlayRenderer(
       const items = visualConfigProvider.getTableOverlays()?.items ?? [];
       if (items.length === 0) {
         if (lastSignature !== null) {
-          clearContainer(parentContainer);
+          hideExcessSlots(0, 0);
           lastSignature = null;
         }
         return;
@@ -57,20 +198,28 @@ export function createTableOverlayRenderer(
         return;
       }
 
-      clearContainer(parentContainer);
       lastSignature = nextSignature;
+
+      let textIndex = 0;
+      let markerIndex = 0;
 
       for (const resolved of resolvedItems) {
         if (resolved.type === 'text') {
-          parentContainer.addChild(createOverlayText(resolved.text, resolved.item, resolved.point));
+          const slot = acquireTextSlot(textIndex);
+          updateTextSlot(slot, resolved);
+          textIndex += 1;
         } else {
-          parentContainer.addChild(createMarker(resolved.item, resolved.point));
+          const slot = acquireMarkerSlot(markerIndex);
+          updateMarkerSlot(slot, resolved);
+          markerIndex += 1;
         }
       }
+
+      hideExcessSlots(textIndex, markerIndex);
     },
 
     destroy(): void {
-      clearContainer(parentContainer);
+      destroyAllSlots();
       lastSignature = null;
     },
   };
@@ -256,57 +405,4 @@ function resolveOverlayLabel(label: string | undefined, value: number | boolean)
     return valueText;
   }
   return `${label}: ${valueText}`;
-}
-
-function createOverlayText(text: string, item: TableOverlayItemConfig, point: Point): Text {
-  const label = new Text({
-    text,
-    style: {
-      fill: item.color ?? DEFAULT_TEXT_COLOR,
-      fontSize: item.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
-      fontFamily: 'monospace',
-    },
-  });
-
-  label.position.set(point.x, point.y);
-  label.eventMode = 'none';
-  label.interactiveChildren = false;
-  return label;
-}
-
-function createMarker(item: TableOverlayItemConfig, point: Point): Container {
-  const marker = new Container();
-  marker.position.set(point.x, point.y);
-  marker.eventMode = 'none';
-  marker.interactiveChildren = false;
-
-  const markerColor = parseHexColor(item.color ?? '#fbbf24', { allowNamedColors: true }) ?? 0xfbbf24;
-  const markerShape = item.markerShape ?? DEFAULT_MARKER_SHAPE;
-
-  const badge = new Graphics();
-  if (markerShape === 'badge') {
-    badge.roundRect(-12, -9, 24, 18, 8);
-  } else {
-    badge.circle(0, 0, 10);
-  }
-  badge.fill(markerColor);
-
-  const markerLabel = new Text({
-    text: item.label ?? DEFAULT_MARKER_LABEL,
-    style: {
-      fill: '#111827',
-      fontSize: item.fontSize ?? 11,
-      fontFamily: 'monospace',
-    },
-  });
-  markerLabel.anchor.set(0.5, 0.5);
-  markerLabel.eventMode = 'none';
-  markerLabel.interactiveChildren = false;
-
-  marker.addChild(badge, markerLabel);
-  return marker;
-}
-
-function clearContainer(container: Container): void {
-  safeDestroyChildren(container);
 }

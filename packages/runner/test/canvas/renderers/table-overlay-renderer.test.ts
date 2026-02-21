@@ -33,6 +33,10 @@ const {
 
     interactiveChildren = true;
 
+    visible = true;
+
+    renderable = true;
+
     destroyed = false;
 
     addChild(...children: HoistedMockContainer[]): void {
@@ -84,6 +88,12 @@ const {
 
     fill(color: number): this {
       this.fillColor = color;
+      return this;
+    }
+
+    clear(): this {
+      this.shape = null;
+      this.fillColor = null;
       return this;
     }
   }
@@ -346,7 +356,7 @@ describe('createTableOverlayRenderer', () => {
     expect(markerLabel.text).toBe('D');
   });
 
-  it('moves marker when marker variable changes', () => {
+  it('moves marker when marker variable changes and reuses same Container', () => {
     const parent = new MockContainer();
     const provider = new VisualConfigProvider({
       version: 1,
@@ -366,6 +376,7 @@ describe('createTableOverlayRenderer', () => {
     const secondMarker = parent.children[0] as InstanceType<typeof MockContainer>;
     expect(secondMarker.position.x).toBe(100);
     expect(secondMarker.position.y).toBe(100);
+    expect(secondMarker).toBe(firstMarker);
   });
 
   it('renders nothing when tableOverlays config is missing', () => {
@@ -399,7 +410,7 @@ describe('createTableOverlayRenderer', () => {
     expect(parent.children).toHaveLength(0);
   });
 
-  describe('memoization', () => {
+  describe('slot-based reuse', () => {
     it('does not destroy and recreate children when update is called with identical inputs', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
@@ -423,7 +434,7 @@ describe('createTableOverlayRenderer', () => {
       expect(firstChild.destroyed).toBe(false);
     });
 
-    it('rebuilds children when overlay values change', () => {
+    it('reuses Text object in-place when value changes', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -438,76 +449,178 @@ describe('createTableOverlayRenderer', () => {
 
       renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
 
-      expect(firstChild.destroyed).toBe(true);
       expect(parent.children).toHaveLength(1);
-      const secondChild = parent.children[0] as InstanceType<typeof MockText>;
-      expect(secondChild.text).toBe('Pot: 20');
+      expect(parent.children[0]).toBe(firstChild);
+      expect(firstChild.text).toBe('Pot: 20');
+      expect(firstChild.destroyed).toBe(false);
     });
 
-    it('clears children when renderModel becomes null after a non-null update', () => {
+    it('reuses marker Container in-place when variable changes', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
         tableOverlays: {
-          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+          playerSeatAnchorZones: ['seat:0', 'seat:1'],
+          items: [{ kind: 'marker', varName: 'dealerSeat', position: 'playerSeat', label: 'D' }],
         },
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      renderer.update(makeRenderModel({ globalVars: [asVar('dealerSeat', 0)] }), positions);
+      const markerRef = parent.children[0] as InstanceType<typeof MockContainer>;
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('dealerSeat', 1)] }), positions);
+
       expect(parent.children).toHaveLength(1);
-
-      renderer.update(null as unknown as RenderModel, positions);
-      expect(parent.children).toHaveLength(0);
+      expect(parent.children[0]).toBe(markerRef);
+      expect(markerRef.destroyed).toBe(false);
+      expect(markerRef.position.x).toBe(100);
+      expect(markerRef.position.y).toBe(100);
     });
-  });
 
-  describe('safe-destroy behavior', () => {
-    it('update() calls destroy() on removed Text children', () => {
+    it('hides excess text slots when item count decreases', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
         tableOverlays: {
-          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+          playerSeatAnchorZones: ['seat:0', 'seat:1'],
+          items: [
+            {
+              kind: 'perPlayerVar',
+              varName: 'streetBet',
+              label: 'Bet',
+              position: 'playerSeat',
+            },
+          ],
         },
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
-      const firstChild = parent.children[0] as InstanceType<typeof MockText>;
+      // Two active players → two text slots
+      renderer.update(
+        makeRenderModel({
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 10)]],
+            [asPlayerId(1), [asVar('streetBet', 20)]],
+          ]),
+        }),
+        positions,
+      );
+      expect(parent.children).toHaveLength(2);
+      const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
+      const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
-
-      expect(firstChild.destroyed).toBe(true);
+      // One player eliminated → one text slot visible, second hidden
+      renderer.update(
+        makeRenderModel({
+          players: [
+            {
+              id: asPlayerId(0),
+              displayName: 'P0',
+              isHuman: true,
+              isActive: true,
+              isEliminated: false,
+              factionId: null,
+            },
+            {
+              id: asPlayerId(1),
+              displayName: 'P1',
+              isHuman: true,
+              isActive: false,
+              isEliminated: true,
+              factionId: null,
+            },
+          ],
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 10)]],
+            [asPlayerId(1), [asVar('streetBet', 20)]],
+          ]),
+        }),
+        positions,
+      );
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBe(firstSlot);
+      expect(secondSlot.destroyed).toBe(false);
     });
 
-    it('update() does not crash when child.destroy() throws TexturePool error', () => {
+    it('shows previously hidden slots when item count increases again', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
         tableOverlays: {
-          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+          playerSeatAnchorZones: ['seat:0', 'seat:1'],
+          items: [
+            {
+              kind: 'perPlayerVar',
+              varName: 'streetBet',
+              label: 'Bet',
+              position: 'playerSeat',
+            },
+          ],
         },
       });
       const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
-      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
-      const firstChild = parent.children[0] as InstanceType<typeof MockText>;
+      // Two players
+      renderer.update(
+        makeRenderModel({
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 10)]],
+            [asPlayerId(1), [asVar('streetBet', 20)]],
+          ]),
+        }),
+        positions,
+      );
+      const firstSlot = parent.children[0];
+      const secondSlot = parent.children[1];
+      expect(parent.children).toHaveLength(2);
 
-      firstChild.destroy = () => {
-        throw new TypeError("Cannot read properties of undefined (reading 'push')");
-      };
-
-      expect(() => {
-        renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
-      }).not.toThrow();
-
+      // One player eliminated
+      renderer.update(
+        makeRenderModel({
+          players: [
+            {
+              id: asPlayerId(0),
+              displayName: 'P0',
+              isHuman: true,
+              isActive: true,
+              isEliminated: false,
+              factionId: null,
+            },
+            {
+              id: asPlayerId(1),
+              displayName: 'P1',
+              isHuman: true,
+              isActive: false,
+              isEliminated: true,
+              factionId: null,
+            },
+          ],
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 10)]],
+            [asPlayerId(1), [asVar('streetBet', 20)]],
+          ]),
+        }),
+        positions,
+      );
       expect(parent.children).toHaveLength(1);
-      const newChild = parent.children[0] as InstanceType<typeof MockText>;
-      expect(newChild.text).toBe('Pot: 20');
+
+      // Both players active again
+      renderer.update(
+        makeRenderModel({
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 30)]],
+            [asPlayerId(1), [asVar('streetBet', 40)]],
+          ]),
+        }),
+        positions,
+      );
+      expect(parent.children).toHaveLength(2);
+      expect(parent.children[0]).toBe(firstSlot);
+      expect(parent.children[1]).toBe(secondSlot);
     });
 
-    it('destroy() calls destroy() on children', () => {
+    it('does not call destroy() on Text objects during update cycle', () => {
       const parent = new MockContainer();
       const provider = new VisualConfigProvider({
         version: 1,
@@ -519,10 +632,97 @@ describe('createTableOverlayRenderer', () => {
 
       renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
       const child = parent.children[0] as InstanceType<typeof MockText>;
+      const destroySpy = vi.spyOn(child, 'destroy');
 
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+
+      expect(destroySpy).not.toHaveBeenCalled();
+    });
+
+    it('hides children when renderModel becomes null after a non-null update', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      const child = parent.children[0] as InstanceType<typeof MockText>;
+      expect(parent.children).toHaveLength(1);
+
+      renderer.update(null as unknown as RenderModel, positions);
+      expect(parent.children).toHaveLength(0);
+      expect(child.destroyed).toBe(false);
+    });
+
+    it('destroy() destroys all pooled objects including hidden ones', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          playerSeatAnchorZones: ['seat:0', 'seat:1'],
+          items: [
+            {
+              kind: 'perPlayerVar',
+              varName: 'streetBet',
+              label: 'Bet',
+              position: 'playerSeat',
+            },
+          ],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      // Two players active
+      renderer.update(
+        makeRenderModel({
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 10)]],
+            [asPlayerId(1), [asVar('streetBet', 20)]],
+          ]),
+        }),
+        positions,
+      );
+      const firstSlot = parent.children[0] as InstanceType<typeof MockText>;
+      const secondSlot = parent.children[1] as InstanceType<typeof MockText>;
+
+      // Hide second slot
+      renderer.update(
+        makeRenderModel({
+          players: [
+            {
+              id: asPlayerId(0),
+              displayName: 'P0',
+              isHuman: true,
+              isActive: true,
+              isEliminated: false,
+              factionId: null,
+            },
+            {
+              id: asPlayerId(1),
+              displayName: 'P1',
+              isHuman: true,
+              isActive: false,
+              isEliminated: true,
+              factionId: null,
+            },
+          ],
+          playerVars: new Map([
+            [asPlayerId(0), [asVar('streetBet', 10)]],
+            [asPlayerId(1), [asVar('streetBet', 20)]],
+          ]),
+        }),
+        positions,
+      );
+      expect(secondSlot.destroyed).toBe(false);
+
+      // Destroy the renderer — all pooled objects destroyed
       renderer.destroy();
-
-      expect(child.destroyed).toBe(true);
+      expect(firstSlot.destroyed).toBe(true);
+      expect(secondSlot.destroyed).toBe(true);
     });
   });
 });

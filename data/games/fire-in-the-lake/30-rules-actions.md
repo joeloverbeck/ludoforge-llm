@@ -72,7 +72,7 @@ actions:
     pre:
       op: and
       args:
-        - { op: '==', left: { ref: activePlayer }, right: '2' }
+        - { op: '==', left: { ref: activePlayer }, right: 2 }
         - { op: '>=', left: { ref: gvar, var: nvaResources }, right: { ref: binding, name: amount } }
     cost: []
     effects:
@@ -92,7 +92,7 @@ actions:
     pre:
       op: and
       args:
-        - { op: '==', left: { ref: activePlayer }, right: '3' }
+        - { op: '==', left: { ref: activePlayer }, right: 3 }
         - { op: '>=', left: { ref: gvar, var: vcResources }, right: { ref: binding, name: amount } }
     cost: []
     effects:
@@ -109,7 +109,7 @@ actions:
     executor: '0'
     phase: [commitment]
     params: []
-    pre: { op: '==', left: { ref: activePlayer }, right: '0' }
+    pre: { op: '==', left: { ref: activePlayer }, right: 0 }
     cost: []
     effects:
       - let:
@@ -414,7 +414,7 @@ actionPipelines:
   # Sub-action: Pacification or Saigon patronage transfer in 1 selected space
   - id: train-us-profile
     actionId: train
-    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     legality: true
     costValidation: null
     costEffects: []
@@ -670,7 +670,7 @@ actionPipelines:
   # Sub-action: Pacification or replace 3 ARVN cubes with 1 ARVN Base
   - id: train-arvn-profile
     actionId: train
-    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     legality: true
     costValidation: null
     costEffects: []
@@ -922,7 +922,7 @@ actionPipelines:
   #             free Assault in 1 LoC (US only, no ARVN follow-up)
   - id: patrol-us-profile
     actionId: patrol
-    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     legality: true
     costValidation: null
     costEffects: []
@@ -1039,7 +1039,7 @@ actionPipelines:
   #             free Assault in 1 LoC using ARVN Assault damage formula
   - id: patrol-arvn-profile
     actionId: patrol
-    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     legality:
       op: or
       args:
@@ -1160,7 +1160,7 @@ actionPipelines:
   #             activate underground guerrillas via sweep-activation macro (US cubes + irregulars; jungle halving)
   - id: sweep-us-profile
     actionId: sweep
-    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     legality: true
     costValidation: null
     costEffects: []
@@ -1314,7 +1314,7 @@ actionPipelines:
     atomicity: atomic
   - id: sweep-arvn-profile
     actionId: sweep
-    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     legality: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costValidation: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costEffects: []
@@ -1420,7 +1420,7 @@ actionPipelines:
     atomicity: atomic
   - id: assault-us-profile
     actionId: assault
-    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     legality: { op: '!=', left: { ref: gvar, var: mom_generalLansdale }, right: true }
     costValidation: null
     costEffects: []
@@ -1573,7 +1573,7 @@ actionPipelines:
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault
-    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     legality:
       op: or
       args:
@@ -1705,7 +1705,7 @@ actionPipelines:
   # ── Insurgent profiles (rally) and remaining stubs (march, attack, terror) ──
   - id: rally-nva-profile
     actionId: rally
-    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     legality: true
     costValidation: null
     costEffects: []
@@ -1891,7 +1891,7 @@ actionPipelines:
     atomicity: atomic
   - id: rally-vc-profile
     actionId: rally
-    applicability: { op: '==', left: { ref: activePlayer }, right: '3' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     legality: true
     costValidation: null
     costEffects: []
@@ -2066,7 +2066,7 @@ actionPipelines:
     atomicity: atomic
   - id: march-nva-profile
     actionId: march
-    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     legality: true
     costValidation: null
     costEffects: []
@@ -2133,7 +2133,7 @@ actionPipelines:
     atomicity: atomic
   - id: march-vc-profile
     actionId: march
-    applicability: { op: '==', left: { ref: activePlayer }, right: '3' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     legality: true
     costValidation: null
     costEffects: []
@@ -2164,7 +2164,7 @@ actionPipelines:
     atomicity: atomic
   - id: attack-nva-profile
     actionId: attack
-    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     legality: true
     costValidation: null
     costEffects: []
@@ -2255,7 +2255,7 @@ actionPipelines:
     atomicity: atomic
   - id: attack-vc-profile
     actionId: attack
-    applicability: { op: '==', left: { ref: activePlayer }, right: '3' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     legality: true
     costValidation: null
     costEffects: []
@@ -2304,7 +2304,7 @@ actionPipelines:
     atomicity: atomic
   - id: terror-nva-profile
     actionId: terror
-    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     legality: true
     costValidation: null
     costEffects: []
@@ -2331,7 +2331,7 @@ actionPipelines:
     atomicity: atomic
   - id: terror-vc-profile
     actionId: terror
-    applicability: { op: '==', left: { ref: activePlayer }, right: '3' }
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     legality: true
     costValidation: null
     costEffects: []

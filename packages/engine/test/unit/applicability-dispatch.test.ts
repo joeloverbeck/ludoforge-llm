@@ -18,8 +18,8 @@ import {
  * Shared helpers for multi-pipeline dispatch tests.
  *
  * Two action pipelines share actionId 'operate':
- *   - profile-player-0: applicability = { activePlayer == '0' }, sets score += 10
- *   - profile-player-1: applicability = { activePlayer == '1' }, sets score += 20
+ *   - profile-player-0: applicability = { activePlayer == 0 }, sets score += 10
+ *   - profile-player-1: applicability = { activePlayer == 1 }, sets score += 20
  */
 
 const createMultiProfileDef = (): GameDef =>
@@ -40,7 +40,7 @@ const createMultiProfileDef = (): GameDef =>
       {
         id: 'profile-player-0',
         actionId: asActionId('operate'),
-        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 0 },
         legality: null,
         costValidation: null, costEffects: [],
         targeting: {},
@@ -50,7 +50,7 @@ const createMultiProfileDef = (): GameDef =>
       {
         id: 'profile-player-1',
         actionId: asActionId('operate'),
-        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
         legality: null,
         costValidation: null, costEffects: [],
         targeting: {},
@@ -154,7 +154,7 @@ describe('applicability-based action pipeline dispatch', () => {
         {
           id: 'profile-player-0',
           actionId: asActionId('operate'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 0 },
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -164,7 +164,7 @@ describe('applicability-based action pipeline dispatch', () => {
         {
           id: 'profile-player-1',
           actionId: asActionId('operate'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -191,7 +191,7 @@ describe('applicability-based action pipeline dispatch', () => {
         {
           id: 'single-false-applicability',
           actionId: asActionId('operate'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '999' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 999 },
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -250,7 +250,7 @@ describe('applicability-based action pipeline dispatch', () => {
         {
           id: 'profile-player-0',
           actionId: asActionId('operate'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 0 },
           legality: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 50 },
           costValidation: null, costEffects: [],
           targeting: {},
@@ -260,7 +260,7 @@ describe('applicability-based action pipeline dispatch', () => {
         {
           id: 'profile-player-1',
           actionId: asActionId('operate'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},

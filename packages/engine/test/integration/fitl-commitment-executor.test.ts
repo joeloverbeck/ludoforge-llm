@@ -31,7 +31,7 @@ describe('FITL commitment executor semantics', () => {
     assert.deepEqual(resolveCommitment?.pre, {
       op: '==',
       left: { ref: 'activePlayer' },
-      right: '0',
+      right: 0,
     });
   });
 

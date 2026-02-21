@@ -872,10 +872,12 @@ effectMacros:
                     - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
                     - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
                     - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: allIn }, right: false }
-                    -
-                      op: '!='
-                      left: { ref: pvar, player: { chosen: '$player' }, var: streetBet }
-                      right: { ref: gvar, var: currentBet }
+                    - op: or
+                      args:
+                        - op: '!='
+                          left: { ref: pvar, player: { chosen: '$player' }, var: streetBet }
+                          right: { ref: gvar, var: currentBet }
+                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: actedSinceLastFullRaise }, right: false }
                 then:
                   - setVar:
                       scope: global

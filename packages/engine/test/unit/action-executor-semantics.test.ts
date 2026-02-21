@@ -28,7 +28,7 @@ const buildDef = (): GameDef =>
         executor: { id: asPlayerId(1) },
         phase: [asPhaseId('main')],
         params: [],
-        pre: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+        pre: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
         cost: [],
         effects: [{ addVar: { scope: 'perPlayer', player: 'actor', var: 'score', delta: 1 } }],
         limits: [],

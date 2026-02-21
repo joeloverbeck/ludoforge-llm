@@ -138,7 +138,7 @@ describe('legality surface parity', () => {
               {
                 id: 'op-profile',
                 actionId: action.id,
-                applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+                applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
                 legality: null,
                 costValidation: null,
                 costEffects: [],

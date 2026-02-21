@@ -98,7 +98,7 @@ describe('resolveActionPipelineDispatch()', () => {
       actionPipelines: [{
         id: 'attack-nva-profile',
         actionId: asActionId('attack'),
-        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '2' },
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 2 },
         legality: null,
         costValidation: null,
         costEffects: [],
@@ -150,7 +150,7 @@ describe('resolveActionPipelineDispatch()', () => {
         {
           id: 'attack-nva-profile',
           actionId: asActionId('attack'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '2' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 2 },
           legality: null,
           costValidation: null,
           costEffects: [],
@@ -161,7 +161,7 @@ describe('resolveActionPipelineDispatch()', () => {
         {
           id: 'attack-vc-profile',
           actionId: asActionId('attack'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '3' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 3 },
           legality: null,
           costValidation: null,
           costEffects: [],

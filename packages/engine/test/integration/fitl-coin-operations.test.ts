@@ -1440,8 +1440,8 @@ describe('FITL COIN operations integration', () => {
       assert.ok(usProfile, 'train-us-profile must exist');
       assert.ok(arvnProfile, 'train-arvn-profile must exist');
 
-      assert.deepEqual(usProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '0' });
-      assert.deepEqual(arvnProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '1' });
+      assert.deepEqual(usProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 0 });
+      assert.deepEqual(arvnProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 1 });
     });
 
     it('patrol-us-profile has applicability for player 0 (US)', () => {
@@ -1450,7 +1450,7 @@ describe('FITL COIN operations integration', () => {
 
       const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(patrolProfile, 'patrol-us-profile must exist');
-      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '0' });
+      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 0 });
     });
 
     it('patrol-arvn-profile has applicability for player 1 (ARVN)', () => {
@@ -1459,7 +1459,7 @@ describe('FITL COIN operations integration', () => {
 
       const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-arvn-profile');
       assert.ok(patrolProfile, 'patrol-arvn-profile must exist');
-      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '1' });
+      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 1 });
     });
 
     it('sweep/assault profiles have explicit US/ARVN applicability', () => {
@@ -1467,10 +1467,10 @@ describe('FITL COIN operations integration', () => {
       assert.notEqual(compiled.gameDef, null);
 
       const expected = [
-        { id: 'sweep-us-profile', right: '0' },
-        { id: 'sweep-arvn-profile', right: '1' },
-        { id: 'assault-us-profile', right: '0' },
-        { id: 'assault-arvn-profile', right: '1' },
+        { id: 'sweep-us-profile', right: 0 },
+        { id: 'sweep-arvn-profile', right: 1 },
+        { id: 'assault-us-profile', right: 0 },
+        { id: 'assault-arvn-profile', right: 1 },
       ];
       for (const entry of expected) {
         const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === entry.id);

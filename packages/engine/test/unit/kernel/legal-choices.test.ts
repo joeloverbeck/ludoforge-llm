@@ -1511,7 +1511,7 @@ phase: [asPhaseId('main')],
       const profile: ActionPipelineDef = {
         id: 'strictNoFallbackProfile',
         actionId: asActionId('strictNoFallbackOp'),
-        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
         legality: null,
         costValidation: null,
         costEffects: [],

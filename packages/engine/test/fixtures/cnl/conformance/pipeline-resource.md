@@ -52,7 +52,7 @@ actionPipelines:
       op: "=="
       left:
         ref: activePlayer
-      right: "0"
+      right: 0
     legality: null
     costValidation:
       op: ">="

@@ -266,7 +266,7 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
   }
 
   if (ref.ref === 'activePlayer') {
-    return String(ctx.activePlayer);
+    return ctx.activePlayer;
   }
 
   if (ref.ref === 'zoneProp') {

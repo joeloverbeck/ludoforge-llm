@@ -173,7 +173,7 @@ describe('resolveActionApplicabilityPreflight()', () => {
         {
           id: 'op-profile',
           actionId: asActionId('op'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
           legality: null,
           costValidation: null,
           costEffects: [],
@@ -202,7 +202,7 @@ describe('resolveActionApplicabilityPreflight()', () => {
         {
           id: 'op-profile',
           actionId: asActionId('op'),
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 0 },
           legality: null,
           costValidation: null,
           costEffects: [],

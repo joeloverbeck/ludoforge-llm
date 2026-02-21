@@ -641,7 +641,7 @@ phase: [asPhaseId('main')],
     const profile: ActionPipelineDef = {
       id: 'strictProfile',
       actionId: asActionId('strictProfileOp'),
-      applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
       legality: null,
       costValidation: null,
       costEffects: [],

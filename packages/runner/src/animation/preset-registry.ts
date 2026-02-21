@@ -311,9 +311,15 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
   const midY = Math.min(from.y, to.y) - liftHeight;
   const halfDuration = context.durationSeconds / 2;
 
+  const shouldFadeIn = target.alpha === 0;
   target.x = from.x;
   target.y = from.y;
-  appendTween(context, target, { x: midX, y: midY, ease: ARC_TWEEN_EASE }, halfDuration);
+  appendTween(context, target, {
+    x: midX,
+    y: midY,
+    ...(shouldFadeIn ? { alpha: 1 } : {}),
+    ease: ARC_TWEEN_EASE,
+  }, halfDuration);
   appendTween(context, target, { x: to.x, y: to.y, ease: ARC_TWEEN_EASE }, halfDuration);
 }
 
@@ -405,15 +411,7 @@ function createCounterTickTween(descriptor: VisualAnimationDescriptor, context: 
     return;
   }
 
-  const targets = resolveBoardTargets(context);
-  if (targets.length === 0) {
-    appendDelay(context, context.durationSeconds);
-    return;
-  }
-
-  const halfDuration = context.durationSeconds / 2;
-  appendParallelTweens(context, targets, { alpha: 0.8, scale: 1.04 }, halfDuration);
-  appendParallelTweens(context, targets, { alpha: 1, scale: 1 }, halfDuration);
+  appendDelay(context, context.durationSeconds);
 }
 
 function createBannerOverlayTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -473,10 +471,6 @@ function resolvePulseTarget(descriptor: VisualAnimationDescriptor, context: Pres
     return context.spriteRefs.zoneContainers.get(descriptor.zoneId) as TweenTarget | undefined;
   }
   return undefined;
-}
-
-function resolveBoardTargets(context: PresetTweenContext): TweenTarget[] {
-  return [...context.spriteRefs.zoneContainers.values()] as TweenTarget[];
 }
 
 function appendDelay(context: PresetTweenContext, durationSeconds: number): void {

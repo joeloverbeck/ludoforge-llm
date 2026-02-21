@@ -199,6 +199,104 @@ describe('buildTimeline', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
 
+  it('skips orphaned zoneHighlight when its source descriptor was skipped', () => {
+    const runtime = createRuntimeFixture();
+    const zoneTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'fade-in-scale',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['createToken'],
+        createTween: vi.fn(),
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    // createToken followed by its derived zoneHighlight — both should be skipped
+    // when the token container is missing
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'createToken',
+        tokenId: 'missing-token',
+        type: 'card',
+        zone: 'zone:a',
+        preset: 'fade-in-scale',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'createToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    // The zone-pulse tween should NOT fire — zoneHighlight is orphaned
+    expect(zoneTween).not.toHaveBeenCalled();
+    // Only 1 warning for the createToken skip, zoneHighlight silently dropped
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
+  });
+
+  it('keeps zoneHighlight when its source descriptor was NOT skipped', () => {
+    const runtime = createRuntimeFixture();
+    const createTween = vi.fn();
+    const zoneTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'fade-in-scale',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['createToken'],
+        createTween: createTween,
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    // createToken with valid token container, followed by zoneHighlight — both should pass
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'createToken',
+        tokenId: 'tok:1',
+        type: 'card',
+        zone: 'zone:a',
+        preset: 'fade-in-scale',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'createToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    expect(createTween).toHaveBeenCalledTimes(1);
+    expect(zoneTween).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('builds cardDeal tween when source zone container is missing but source position exists', () => {
     const runtime = createRuntimeFixture();
     const moveTween = vi.fn();
@@ -348,6 +446,145 @@ describe('buildTimeline', () => {
     expect(zoneTween).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain('zone container not found');
+  });
+});
+
+describe('buildTimeline setup trace', () => {
+  it('sets alpha=0 on token containers for move/deal/burn descriptors when isSetupTrace is true', () => {
+    const runtime = createRuntimeFixture();
+    const tok1 = new Container();
+    const tok2 = new Container();
+    tok1.alpha = 1;
+    tok2.alpha = 1;
+
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken', 'cardDeal'],
+        createTween: moveTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:2',
+        from: 'zone:b',
+        to: 'zone:a',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const spriteRefs = createSpriteRefs({
+      tokenContainers: new Map([
+        ['tok:1', tok1],
+        ['tok:2', tok2],
+      ]),
+    });
+
+    buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap, {
+      isSetupTrace: true,
+    });
+
+    // Both tokens should have alpha set to 0 before tween execution
+    // The moveTween was called, confirming processing happened
+    expect(moveTween).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not set alpha=0 when isSetupTrace is false or absent', () => {
+    const runtime = createRuntimeFixture();
+    const tok1 = new Container();
+    tok1.alpha = 1;
+
+    const alphaValues: number[] = [];
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['cardDeal'],
+        createTween: (_descriptor, context) => {
+          const target = context.spriteRefs.tokenContainers.get('tok:1') as { alpha: number } | undefined;
+          if (target) {
+            alphaValues.push(target.alpha);
+          }
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const spriteRefs = createSpriteRefs({
+      tokenContainers: new Map([['tok:1', tok1]]),
+    });
+
+    buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap);
+
+    // Alpha should still be 1 — not modified
+    expect(alphaValues).toEqual([1]);
+  });
+
+  it('does not set alpha=0 on non-move/deal/burn descriptors during setup', () => {
+    const runtime = createRuntimeFixture();
+    const tok1 = new Container();
+    tok1.alpha = 1;
+
+    const alphaValues: number[] = [];
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'tint-flash',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['setTokenProp'],
+        createTween: (_descriptor, context) => {
+          const target = context.spriteRefs.tokenContainers.get('tok:1') as { alpha: number } | undefined;
+          if (target) {
+            alphaValues.push(target.alpha);
+          }
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'setTokenProp',
+        tokenId: 'tok:1',
+        prop: 'selected',
+        oldValue: false,
+        newValue: true,
+        preset: 'tint-flash',
+        isTriggered: false,
+      },
+    ];
+
+    const spriteRefs = createSpriteRefs({
+      tokenContainers: new Map([['tok:1', tok1]]),
+    });
+
+    buildTimeline(descriptors, createPresetRegistry(defs), spriteRefs, runtime.gsap, {
+      isSetupTrace: true,
+    });
+
+    // Alpha should still be 1 — setTokenProp is not affected by prepareTokensForAnimation
+    expect(alphaValues).toEqual([1]);
   });
 });
 

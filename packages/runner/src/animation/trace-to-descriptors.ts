@@ -59,6 +59,12 @@ function mapEntry(
         isTriggered: triggered,
       };
     case 'createToken':
+      if (options?.suppressCreateToken) {
+        return {
+          kind: 'skipped',
+          traceKind: 'createToken',
+        };
+      }
       return {
         kind: 'createToken',
         tokenId: entry.tokenId,
@@ -162,7 +168,10 @@ function passesDetailFilter(detailLevel: AnimationDetailLevel, descriptor: Anima
     if (descriptor.kind === 'phaseTransition') {
       return false;
     }
-    if (descriptor.kind === 'varChange' && descriptor.isTriggered) {
+    if (descriptor.kind === 'varChange') {
+      return false;
+    }
+    if (descriptor.kind === 'resourceTransfer') {
       return false;
     }
     return true;

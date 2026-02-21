@@ -450,6 +450,16 @@ describe('traceToDescriptors', () => {
         provenance: traceEntryProvenance('actionEffect'),
       },
       {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'bank' },
+        to: { scope: 'perPlayer', varName: 'coins', player: asPlayerId(1) },
+        requestedAmount: 5,
+        actualAmount: 5,
+        sourceAvailable: 100,
+        destinationHeadroom: 95,
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
         kind: 'lifecycleEvent',
         eventType: 'phaseEnter',
         phase: 'main',
@@ -467,7 +477,6 @@ describe('traceToDescriptors', () => {
     expect(traceToDescriptors(trace, { detailLevel: 'standard' }).map((entry) => entry.kind)).toEqual([
       'moveToken',
       'createToken',
-      'varChange',
       'skipped',
     ]);
 
@@ -510,6 +519,70 @@ describe('traceToDescriptors', () => {
         cardContext: CARD_CONTEXT,
       }).map((descriptor) => descriptor.kind),
     ).toEqual(['cardDeal', 'cardBurn']);
+  });
+
+  it('suppresses createToken descriptors when suppressCreateToken is true', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'createToken',
+        tokenId: 'tok:2',
+        type: 'cube',
+        zone: 'zone:b',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'createToken',
+        tokenId: 'tok:3',
+        type: 'card',
+        zone: 'zone:a',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'destroyToken',
+        tokenId: 'tok:4',
+        type: 'cube',
+        zone: 'zone:b',
+        provenance: traceEntryProvenance('triggerEffect'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace, { suppressCreateToken: true });
+
+    expect(result.map((d) => d.kind)).toEqual([
+      'moveToken',
+      'skipped',
+      'skipped',
+      'destroyToken',
+    ]);
+
+    const skipped = result.filter((d) => d.kind === 'skipped');
+    for (const s of skipped) {
+      if (s.kind === 'skipped') {
+        expect(s.traceKind).toBe('createToken');
+      }
+    }
+  });
+
+  it('does not suppress createToken when suppressCreateToken is false or absent', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'createToken',
+        tokenId: 'tok:1',
+        type: 'cube',
+        zone: 'zone:a',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(traceToDescriptors(trace).map((d) => d.kind)).toEqual(['createToken']);
+    expect(traceToDescriptors(trace, { suppressCreateToken: false }).map((d) => d.kind)).toEqual(['createToken']);
   });
 
   it('is deterministic and does not mutate input', () => {

@@ -362,6 +362,98 @@ describe('preset-registry', () => {
     expect(() => registry.requireCompatible('tint-flash', 'cardFlip')).toThrow(/not compatible/u);
   });
 
+  it('arc-tween includes alpha fade-in when target alpha is 0', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 0, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 300, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    expect(gsap.to).toHaveBeenCalledTimes(2);
+
+    const arcCalls = gsap.to.mock.calls as unknown[][];
+    const firstCallVars = arcCalls[0]![1] as Record<string, unknown>;
+    // First phase should include alpha: 1 for fade-in
+    expect(firstCallVars['alpha']).toBe(1);
+
+    const secondCallVars = arcCalls[1]![1] as Record<string, unknown>;
+    // Second phase should NOT include alpha
+    expect(secondCallVars['alpha']).toBeUndefined();
+  });
+
+  it('arc-tween does not include alpha in tween when target alpha is not 0', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 300, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    const arcCalls = gsap.to.mock.calls as unknown[][];
+    const firstCallVars = arcCalls[0]![1] as Record<string, unknown>;
+    // Should NOT include alpha when target is already visible
+    expect(firstCallVars['alpha']).toBeUndefined();
+  });
+
   it('arc-tween lift height is proportional to distance with minimum of 20px', () => {
     const registry = createPresetRegistry();
     const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
@@ -406,16 +498,17 @@ describe('preset-registry', () => {
     expect(midYClose).toBe(-20);
   });
 
-  it('counter-tick targets zone containers (not token containers) for varChange/resourceTransfer', () => {
+  it('counter-tick adds an inert delay instead of tweening zone containers', () => {
     const registry = createPresetRegistry();
     const tokenA = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'token' };
     const zoneA = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'zoneA' };
     const zoneB = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'zoneB' };
     const timeline = { add: vi.fn() };
+    const subTimeline = { add: vi.fn() };
     const gsap = {
       registerPlugin: vi.fn(),
       defaults: vi.fn(),
-      timeline: vi.fn(() => ({ add: vi.fn() })),
+      timeline: vi.fn(() => subTimeline),
       to: vi.fn(() => ({ id: 'tween' })),
     };
 
@@ -444,15 +537,11 @@ describe('preset-registry', () => {
       },
     );
 
-    expect(gsap.to).toHaveBeenCalled();
-    // Verify zone containers ARE targeted
-    const targetedObjects = (gsap.to as ReturnType<typeof vi.fn>).mock.calls.map(
-      (call: unknown[]) => call[0],
-    );
-    expect(targetedObjects).toContain(zoneA);
-    expect(targetedObjects).toContain(zoneB);
-    // Token containers should NOT be targeted by counter-tick (reference check)
-    expect(targetedObjects).not.toContain(tokenA);
+    // counter-tick should NOT call gsap.to on any targets
+    expect(gsap.to).not.toHaveBeenCalled();
+    // It should add a delay via gsap.timeline() + timeline.add()
+    expect(gsap.timeline).toHaveBeenCalledWith(expect.objectContaining({ paused: true }));
+    expect(timeline.add).toHaveBeenCalledWith(subTimeline);
   });
 
   it('banner-overlay emits zone alpha tweens for phaseTransition', () => {

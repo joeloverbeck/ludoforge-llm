@@ -67,6 +67,7 @@ interface AnimationControllerDeps {
   readonly buildTimeline: typeof buildTimeline;
   readonly onError: (message: string, error: unknown) => void;
   readonly onWarning?: (message: string) => void;
+  readonly scheduleFrame?: (callback: () => void) => void;
 }
 
 export function createAnimationController(
@@ -87,7 +88,7 @@ export function createAnimationController(
   let destroyed = false;
   let unsubscribeEffectTrace: (() => void) | null = null;
 
-  const processTrace = (trace: readonly EffectTraceEntry[]): void => {
+  const processTrace = (trace: readonly EffectTraceEntry[], isSetup = false): void => {
     if (destroyed || trace.length === 0) {
       return;
     }
@@ -102,16 +103,19 @@ export function createAnimationController(
           detailLevel,
           ...(presetOverrides.size === 0 ? {} : { presetOverrides }),
           ...(cardContext === undefined ? {} : { cardContext }),
+          ...(isSetup ? { suppressCreateToken: true } : {}),
         },
         deps.presetRegistry,
       );
-      descriptors = decorateWithZoneHighlights(
-        descriptors,
-        {
-          presetId: zoneHighlightPresetId,
-          policy: zoneHighlightPolicy,
-        },
-      );
+      if (!isSetup) {
+        descriptors = decorateWithZoneHighlights(
+          descriptors,
+          {
+            presetId: zoneHighlightPresetId,
+            policy: zoneHighlightPolicy,
+          },
+        );
+      }
     } catch (error) {
       deps.onError('Descriptor mapping failed.', error);
       return;
@@ -134,11 +138,12 @@ export function createAnimationController(
           zonePositions: options.zonePositions(),
         },
         deps.gsap,
-        sequencingPolicies.size === 0 && timingOverrides.size === 0
+        sequencingPolicies.size === 0 && timingOverrides.size === 0 && !isSetup
           ? undefined
           : {
               ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
               ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
+              ...(isSetup ? { isSetupTrace: true } : {}),
             },
       );
 
@@ -161,12 +166,23 @@ export function createAnimationController(
       }
       started = true;
 
-      unsubscribeEffectTrace = selectorStore.subscribe((state) => state.effectTrace, (trace, previousTrace) => {
-        if (trace === previousTrace) {
-          return;
-        }
-        processTrace(trace);
-      });
+      const currentTrace = selectorStore.getState().effectTrace;
+
+      unsubscribeEffectTrace = selectorStore.subscribe(
+        (state) => state.effectTrace,
+        (trace) => {
+          processTrace(trace);
+        },
+      );
+
+      if (currentTrace.length > 0) {
+        const schedule = deps.scheduleFrame ?? requestAnimationFrame;
+        schedule(() => {
+          if (!destroyed) {
+            processTrace(currentTrace, true);
+          }
+        });
+      }
     },
 
     destroy(): void {

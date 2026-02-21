@@ -21,6 +21,7 @@ export interface TimelineSpriteRefs {
 export interface BuildTimelineOptions {
   readonly sequencingPolicies?: ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy>;
   readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
+  readonly isSetupTrace?: boolean;
 }
 
 export function buildTimeline(
@@ -35,6 +36,11 @@ export function buildTimeline(
   const durationByKind = options?.durationSecondsByKind;
 
   const visual = filterVisualDescriptors(descriptors, spriteRefs);
+
+  if (options?.isSetupTrace) {
+    prepareTokensForAnimation(visual, spriteRefs);
+  }
+
   const groups = groupConsecutiveSameKind(visual);
 
   for (const group of groups) {
@@ -87,13 +93,20 @@ function filterVisualDescriptors(
   spriteRefs: TimelineSpriteRefs,
 ): readonly VisualAnimationDescriptor[] {
   const result: VisualAnimationDescriptor[] = [];
+  let lastSourceSkipped = false;
   for (const descriptor of descriptors) {
     if (descriptor.kind === 'skipped') {
       continue;
     }
+    if (descriptor.kind === 'zoneHighlight' && lastSourceSkipped) {
+      lastSourceSkipped = false;
+      continue;
+    }
+    lastSourceSkipped = false;
     const missingReason = getMissingSpriteReason(descriptor, spriteRefs);
     if (missingReason !== null) {
       console.warn(`Skipping animation descriptor "${descriptor.kind}": ${missingReason}`);
+      lastSourceSkipped = true;
       continue;
     }
     result.push(descriptor);
@@ -131,6 +144,22 @@ function groupConsecutiveSameKind(
   groups.push(current);
 
   return groups;
+}
+
+function prepareTokensForAnimation(
+  descriptors: readonly VisualAnimationDescriptor[],
+  spriteRefs: TimelineSpriteRefs,
+): void {
+  for (const d of descriptors) {
+    if (d.kind === 'cardDeal' || d.kind === 'moveToken' || d.kind === 'cardBurn') {
+      const container = spriteRefs.tokenContainers.get(d.tokenId) as
+        | { alpha?: number }
+        | undefined;
+      if (container) {
+        container.alpha = 0;
+      }
+    }
+  }
 }
 
 function processDescriptor(

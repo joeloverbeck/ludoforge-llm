@@ -1173,6 +1173,268 @@ describe('createAnimationController', () => {
     controller.destroy();
   });
 
+  it('defers pre-existing effectTrace processing to next frame via scheduleFrame', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+
+    const traceToDescriptorsMock = vi.fn(() => [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      } as const,
+    ]);
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    // Capture the callback passed to scheduleFrame
+    let scheduledCallback: (() => void) | null = null;
+    const scheduleFrame = vi.fn((cb: () => void) => { scheduledCallback = cb; });
+
+    // Set effectTrace BEFORE calling start()
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+        scheduleFrame,
+      },
+    );
+
+    // start() should NOT process the trace synchronously
+    controller.start();
+    expect(traceToDescriptorsMock).not.toHaveBeenCalled();
+    expect(scheduleFrame).toHaveBeenCalledTimes(1);
+
+    // Simulate next animation frame — NOW it should process
+    scheduledCallback!();
+    expect(traceToDescriptorsMock).toHaveBeenCalledWith(
+      store.getState().effectTrace,
+      { detailLevel: 'full', suppressCreateToken: true },
+      expect.any(Object),
+    );
+    expect(queue.enqueue).toHaveBeenCalledWith(timeline.timeline);
+
+    controller.destroy();
+  });
+
+  it('processes initial trace with suppressCreateToken and no zone highlights', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+
+    const traceToDescriptorsMock = vi.fn(() => [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      } as const,
+    ]);
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    let scheduledCallback: (() => void) | null = null;
+    const scheduleFrame = vi.fn((cb: () => void) => { scheduledCallback = cb; });
+
+    // Set effectTrace BEFORE calling start()
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+        scheduleFrame,
+      },
+    );
+
+    controller.start();
+    scheduledCallback!();
+
+    // Should have passed suppressCreateToken: true
+    const mappingOptions = (traceToDescriptorsMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]![1] as { readonly suppressCreateToken?: boolean };
+    expect(mappingOptions.suppressCreateToken).toBe(true);
+
+    // Should have passed isSetupTrace: true to buildTimeline
+    const buildOptions = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[4] as { readonly isSetupTrace?: boolean } | undefined;
+    expect(buildOptions?.isSetupTrace).toBe(true);
+
+    controller.destroy();
+  });
+
+  it('does not pass suppressCreateToken for subscription-driven traces', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const mappingOptions = (traceToDescriptorsMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]![1] as { readonly suppressCreateToken?: boolean };
+    expect(mappingOptions.suppressCreateToken).toBeUndefined();
+
+    controller.destroy();
+  });
+
+  it('does not schedule frame when effectTrace is empty at start', () => {
+    const store = createControllerStore();
+    const scheduleFrame = vi.fn();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+        scheduleFrame,
+      },
+    );
+
+    controller.start();
+    expect(scheduleFrame).not.toHaveBeenCalled();
+    expect(traceToDescriptorsMock).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it('cancels scheduled frame on destroy before it fires', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    let scheduledCallback: (() => void) | null = null;
+    const scheduleFrame = vi.fn((cb: () => void) => { scheduledCallback = cb; });
+
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+        scheduleFrame,
+      },
+    );
+
+    controller.start();
+    expect(scheduleFrame).toHaveBeenCalledTimes(1);
+
+    // Destroy before the scheduled frame fires
+    controller.destroy();
+
+    // The scheduled callback should be a no-op after destroy
+    scheduledCallback!();
+    expect(traceToDescriptorsMock).not.toHaveBeenCalled();
+  });
+
   it('forceFlush delegates to queue and allows future processing', () => {
     const store = createControllerStore();
     const timeline = createTimelineFixture();

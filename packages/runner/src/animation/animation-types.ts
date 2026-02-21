@@ -36,6 +36,7 @@ export interface AnimationMappingOptions {
   readonly presetOverrides?: ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId>;
   readonly detailLevel?: AnimationDetailLevel;
   readonly cardContext?: CardAnimationMappingContext;
+  readonly suppressCreateToken?: boolean;
 }
 
 export interface CardAnimationMappingContext {
@@ -148,7 +149,7 @@ export interface ZoneHighlightDescriptor extends BaseAnimationDescriptor {
 
 export interface SkippedDescriptor {
   readonly kind: 'skipped';
-  readonly traceKind: 'forEach' | 'reduce';
+  readonly traceKind: 'forEach' | 'reduce' | 'createToken';
 }
 
 export type AnimationDescriptor =

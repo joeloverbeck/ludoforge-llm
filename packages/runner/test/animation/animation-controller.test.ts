@@ -173,6 +173,18 @@ function sequencingProvider() {
   });
 }
 
+function timingProvider() {
+  return new VisualConfigProvider({
+    version: 1,
+    animations: {
+      timing: {
+        moveToken: { duration: 0.75 },
+        zoneHighlight: { duration: 0.25 },
+      },
+    },
+  });
+}
+
 function cardRenderModel() {
   return {
     tokens: [
@@ -830,7 +842,15 @@ describe('createAnimationController', () => {
       };
     }).mock.calls;
     const descriptors = buildTimelineCalls[0]?.[0] ?? [];
-    expect(descriptors.map((descriptor) => descriptor.kind)).toEqual(['cardDeal', 'cardFlip', 'cardBurn']);
+    expect(descriptors.map((descriptor) => descriptor.kind)).toEqual([
+      'cardDeal',
+      'zoneHighlight',
+      'zoneHighlight',
+      'cardFlip',
+      'cardBurn',
+      'zoneHighlight',
+      'zoneHighlight',
+    ]);
     expect(queue.enqueue).toHaveBeenCalledWith(timeline.timeline);
 
     controller.setSpeed(2);
@@ -910,7 +930,15 @@ describe('createAnimationController', () => {
       };
     }).mock.calls;
     const descriptors = buildTimelineCalls[0]?.[0] ?? [];
-    expect(descriptors.map((descriptor) => descriptor.kind)).toEqual(['cardDeal', 'cardFlip', 'cardBurn']);
+    expect(descriptors.map((descriptor) => descriptor.kind)).toEqual([
+      'cardDeal',
+      'zoneHighlight',
+      'zoneHighlight',
+      'cardFlip',
+      'cardBurn',
+      'zoneHighlight',
+      'zoneHighlight',
+    ]);
     expect(queue.skipAll).toHaveBeenCalledTimes(1);
     expect(queue.enqueue).not.toHaveBeenCalled();
     expect(timeline.progress).toHaveBeenCalledWith(1);
@@ -1047,6 +1075,100 @@ describe('createAnimationController', () => {
     expect(options?.sequencingPolicies?.get('cardDeal')).toEqual({ mode: 'parallel' });
     expect(options?.sequencingPolicies?.get('moveToken')).toEqual({ mode: 'stagger', staggerOffsetSeconds: 0.2 });
     expect(options?.sequencingPolicies?.has('phaseTransition')).toBe(false);
+
+    controller.destroy();
+  });
+
+  it('passes configured timing overrides to buildTimeline options', () => {
+    const store = createControllerStore();
+    const buildTimelineMock = vi.fn(() => ({ add: vi.fn(), progress: vi.fn(), kill: vi.fn() }));
+    const queue = {
+      enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+      isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(), forceFlush: vi.fn(),
+    };
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: timingProvider(),
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(buildTimelineMock).toHaveBeenCalledTimes(1);
+    const options = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
+    expect(options).toBeDefined();
+    expect(options?.durationSecondsByKind?.get('moveToken')).toBe(0.75);
+    expect(options?.durationSecondsByKind?.get('zoneHighlight')).toBe(0.25);
+
+    controller.destroy();
+  });
+
+  it('falls back to zone-pulse when zoneHighlight preset override is incompatible', () => {
+    const store = createControllerStore();
+    const onWarning = vi.fn();
+    const buildTimelineMock = vi.fn(() => ({ add: vi.fn(), progress: vi.fn(), kill: vi.fn() }));
+    const queue = {
+      enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+      isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(), forceFlush: vi.fn(),
+    };
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: animationOverridesProvider({ zoneHighlight: 'arc-tween' }),
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+        onWarning,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(onWarning).toHaveBeenCalledWith(
+      'Ignoring animation preset override "zoneHighlight" -> "arc-tween" because it is not compatible with descriptor kind "zoneHighlight".',
+    );
+
+    const descriptors = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[0] as readonly { readonly kind: string; readonly preset?: string }[] | undefined;
+    const zoneHighlight = descriptors?.find((descriptor) => descriptor.kind === 'zoneHighlight');
+    expect(zoneHighlight?.preset).toBe('zone-pulse');
 
     controller.destroy();
   });

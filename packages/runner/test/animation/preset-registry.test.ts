@@ -31,8 +31,9 @@ describe('preset-registry', () => {
       ['fade-out-scale', 0.3],
       ['tint-flash', 0.4],
       ['card-flip-3d', 0.3],
-      ['counter-roll', 0.3],
-      ['banner-slide', 1.5],
+      ['counter-tick', 0.4],
+      ['banner-overlay', 1.5],
+      ['zone-pulse', 0.5],
       ['pulse', 0.2],
     ]);
   });
@@ -65,9 +66,9 @@ describe('preset-registry', () => {
       'fade-in-scale',
       'fade-out-scale',
       'tint-flash',
-      'counter-roll',
-      'counter-roll',
-      'banner-slide',
+      'counter-tick',
+      'counter-tick',
+      'banner-overlay',
     ]);
 
     expect(() => resolveDefaultPresetIdForTraceKind('forEach')).toThrow(/does not map to a visual/u);
@@ -403,5 +404,122 @@ describe('preset-registry', () => {
     const firstCallClose = closeCalls[0]!;
     const midYClose = (firstCallClose[1] as Record<string, unknown>)['y'] as number;
     expect(midYClose).toBe(-20);
+  });
+
+  it('counter-tick emits visible tweens for varChange/resourceTransfer', () => {
+    const registry = createPresetRegistry();
+    const tokenA = { alpha: 1, scale: { x: 1, y: 1 } };
+    const tokenB = { alpha: 1, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    registry.require('counter-tick').createTween(
+      {
+        kind: 'varChange',
+        scope: 'global',
+        varName: 'pot',
+        oldValue: 1,
+        newValue: 2,
+        preset: 'counter-tick',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('counter-tick').defaultDurationSeconds,
+        spriteRefs: {
+          tokenContainers: new Map([
+            ['tok:1', tokenA],
+            ['tok:2', tokenB],
+          ]),
+          zoneContainers: new Map(),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    expect(gsap.to).toHaveBeenCalled();
+    expect(gsap.to).toHaveBeenCalledWith(tokenA, expect.objectContaining({ alpha: 0.8, scale: 1.04 }));
+    expect(gsap.to).toHaveBeenCalledWith(tokenA, expect.objectContaining({ alpha: 1, scale: 1 }));
+  });
+
+  it('banner-overlay emits zone alpha tweens for phaseTransition', () => {
+    const registry = createPresetRegistry();
+    const zoneA = { alpha: 1 };
+    const zoneB = { alpha: 1 };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    registry.require('banner-overlay').createTween(
+      {
+        kind: 'phaseTransition',
+        eventType: 'phaseEnter',
+        phase: 'main',
+        preset: 'banner-overlay',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('banner-overlay').defaultDurationSeconds,
+        spriteRefs: {
+          tokenContainers: new Map(),
+          zoneContainers: new Map([
+            ['zone:a', zoneA],
+            ['zone:b', zoneB],
+          ]),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    expect(gsap.to).toHaveBeenCalled();
+    expect(gsap.to).toHaveBeenCalledWith(zoneA, expect.objectContaining({ alpha: 0.72 }));
+    expect(gsap.to).toHaveBeenCalledWith(zoneA, expect.objectContaining({ alpha: 1 }));
+  });
+
+  it('zone-pulse emits alpha+tint tween for zoneHighlight', () => {
+    const registry = createPresetRegistry();
+    const zone = { alpha: 1, tint: 0xffffff };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    registry.require('zone-pulse').createTween(
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('zone-pulse').defaultDurationSeconds,
+        spriteRefs: {
+          tokenContainers: new Map(),
+          zoneContainers: new Map([['zone:a', zone]]),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    expect(gsap.to).toHaveBeenCalledWith(zone, expect.objectContaining({ alpha: 0.68, tint: 0xc7f9cc }));
+    expect(gsap.to).toHaveBeenCalledWith(zone, expect.objectContaining({ alpha: 1, tint: 0xffffff }));
   });
 });

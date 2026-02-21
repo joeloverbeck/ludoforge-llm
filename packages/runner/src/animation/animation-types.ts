@@ -6,8 +6,9 @@ export const ANIMATION_PRESET_IDS = [
   'fade-out-scale',
   'tint-flash',
   'card-flip-3d',
-  'counter-roll',
-  'banner-slide',
+  'counter-tick',
+  'banner-overlay',
+  'zone-pulse',
   'pulse',
 ] as const;
 
@@ -27,6 +28,7 @@ export const ANIMATION_PRESET_OVERRIDE_KEYS = [
   'varChange',
   'resourceTransfer',
   'phaseTransition',
+  'zoneHighlight',
 ] as const;
 export type AnimationPresetOverrideKey = (typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number];
 
@@ -138,6 +140,12 @@ export interface PhaseTransitionDescriptor extends BaseAnimationDescriptor {
   readonly phase?: string;
 }
 
+export interface ZoneHighlightDescriptor extends BaseAnimationDescriptor {
+  readonly kind: 'zoneHighlight';
+  readonly zoneId: string;
+  readonly sourceKind: Exclude<VisualAnimationDescriptorKind, 'zoneHighlight'>;
+}
+
 export interface SkippedDescriptor {
   readonly kind: 'skipped';
   readonly traceKind: 'forEach' | 'reduce';
@@ -154,6 +162,7 @@ export type AnimationDescriptor =
   | VarChangeDescriptor
   | ResourceTransferDescriptor
   | PhaseTransitionDescriptor
+  | ZoneHighlightDescriptor
   | SkippedDescriptor;
 
 export const ANIMATION_DESCRIPTOR_KINDS = [
@@ -167,6 +176,7 @@ export const ANIMATION_DESCRIPTOR_KINDS = [
   'varChange',
   'resourceTransfer',
   'phaseTransition',
+  'zoneHighlight',
   'skipped',
 ] as const;
 

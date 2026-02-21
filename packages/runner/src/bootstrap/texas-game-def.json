@@ -2903,6 +2903,12 @@
             }
           },
           {
+            "moveAll": {
+              "from": "muck:none",
+              "to": "deck:none"
+            }
+          },
+          {
             "shuffle": {
               "zone": "deck:none"
             }
@@ -2964,7 +2970,7 @@
               "then": [
                 {
                   "forEach": {
-                    "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat",
+                    "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat",
                     "macroOrigin": {
                       "macroId": "post-forced-bets-and-set-preflop-actor",
                       "stem": "bbSeat"
@@ -2994,7 +3000,7 @@
                     "effects": [
                       {
                         "let": {
-                          "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding",
+                          "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding",
                           "value": {
                             "ref": "gvar",
                             "var": "dealerSeat"
@@ -3013,7 +3019,7 @@
                                 "then": [
                                   {
                                     "forEach": {
-                                      "bind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player",
+                                      "bind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player",
                                       "macroOrigin": {
                                         "macroId": "collect-forced-bets",
                                         "stem": "player"
@@ -3029,7 +3035,7 @@
                                               "left": {
                                                 "ref": "pvar",
                                                 "player": {
-                                                  "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
+                                                  "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
                                                 },
                                                 "var": "eliminated"
                                               },
@@ -3042,7 +3048,7 @@
                                                     "scope": "pvar",
                                                     "var": "chipStack",
                                                     "player": {
-                                                      "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
+                                                      "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
                                                     }
                                                   },
                                                   "to": {
@@ -3053,19 +3059,19 @@
                                                     "ref": "gvar",
                                                     "var": "ante"
                                                   },
-                                                  "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__antePaid"
+                                                  "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__antePaid"
                                                 }
                                               },
                                               {
                                                 "addVar": {
                                                   "scope": "pvar",
                                                   "player": {
-                                                    "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
+                                                    "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
                                                   },
                                                   "var": "totalBet",
                                                   "delta": {
                                                     "ref": "binding",
-                                                    "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__antePaid"
+                                                    "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__antePaid"
                                                   }
                                                 }
                                               },
@@ -3076,7 +3082,7 @@
                                                     "left": {
                                                       "ref": "pvar",
                                                       "player": {
-                                                        "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
+                                                        "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
                                                       },
                                                       "var": "chipStack"
                                                     },
@@ -3087,7 +3093,7 @@
                                                       "setVar": {
                                                         "scope": "pvar",
                                                         "player": {
-                                                          "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
+                                                          "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
                                                         },
                                                         "var": "allIn",
                                                         "value": true
@@ -3111,7 +3117,7 @@
                                   "scope": "pvar",
                                   "var": "chipStack",
                                   "player": {
-                                    "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                    "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                   }
                                 },
                                 "to": {
@@ -3122,19 +3128,19 @@
                                   "ref": "gvar",
                                   "var": "smallBlind"
                                 },
-                                "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__sbPaid"
+                                "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__sbPaid"
                               }
                             },
                             {
                               "addVar": {
                                 "scope": "pvar",
                                 "player": {
-                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                 },
                                 "var": "streetBet",
                                 "delta": {
                                   "ref": "binding",
-                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__sbPaid"
+                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__sbPaid"
                                 }
                               }
                             },
@@ -3142,12 +3148,12 @@
                               "addVar": {
                                 "scope": "pvar",
                                 "player": {
-                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                 },
                                 "var": "totalBet",
                                 "delta": {
                                   "ref": "binding",
-                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__sbPaid"
+                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__sbPaid"
                                 }
                               }
                             },
@@ -3158,7 +3164,7 @@
                                   "left": {
                                     "ref": "pvar",
                                     "player": {
-                                      "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                      "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                     },
                                     "var": "chipStack"
                                   },
@@ -3169,7 +3175,7 @@
                                     "setVar": {
                                       "scope": "pvar",
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                       },
                                       "var": "allIn",
                                       "value": true
@@ -3184,7 +3190,7 @@
                                   "scope": "pvar",
                                   "var": "chipStack",
                                   "player": {
-                                    "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                    "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                   }
                                 },
                                 "to": {
@@ -3195,19 +3201,19 @@
                                   "ref": "gvar",
                                   "var": "bigBlind"
                                 },
-                                "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__bbPaid"
+                                "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__bbPaid"
                               }
                             },
                             {
                               "addVar": {
                                 "scope": "pvar",
                                 "player": {
-                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                 },
                                 "var": "streetBet",
                                 "delta": {
                                   "ref": "binding",
-                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__bbPaid"
+                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__bbPaid"
                                 }
                               }
                             },
@@ -3215,12 +3221,12 @@
                               "addVar": {
                                 "scope": "pvar",
                                 "player": {
-                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                 },
                                 "var": "totalBet",
                                 "delta": {
                                   "ref": "binding",
-                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__bbPaid"
+                                  "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__bbPaid"
                                 }
                               }
                             },
@@ -3231,7 +3237,7 @@
                                   "left": {
                                     "ref": "pvar",
                                     "player": {
-                                      "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                      "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                     },
                                     "var": "chipStack"
                                   },
@@ -3242,7 +3248,7 @@
                                     "setVar": {
                                       "scope": "pvar",
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                       },
                                       "var": "allIn",
                                       "value": true
@@ -3277,7 +3283,7 @@
                                 "var": "preflopBigBlindSeat",
                                 "value": {
                                   "ref": "binding",
-                                  "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                  "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                 }
                               }
                             },
@@ -3294,14 +3300,14 @@
                                 "var": "actingPosition",
                                 "value": {
                                   "ref": "binding",
-                                  "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                  "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                 }
                               }
                             },
                             {
                               "setActivePlayer": {
                                 "player": {
-                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__dealerSeatBinding"
+                                  "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
                                 }
                               }
                             }
@@ -3315,7 +3321,7 @@
               "else": [
                 {
                   "forEach": {
-                    "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat",
+                    "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat",
                     "macroOrigin": {
                       "macroId": "post-forced-bets-and-set-preflop-actor",
                       "stem": "sbSeat"
@@ -3345,7 +3351,7 @@
                     "effects": [
                       {
                         "forEach": {
-                          "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat",
+                          "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat",
                           "macroOrigin": {
                             "macroId": "post-forced-bets-and-set-preflop-actor",
                             "stem": "bbSeat"
@@ -3357,7 +3363,7 @@
                             },
                             "from": {
                               "ref": "binding",
-                              "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat"
+                              "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
                             },
                             "bind": "$seatCandidate",
                             "where": {
@@ -3375,7 +3381,7 @@
                           "effects": [
                             {
                               "forEach": {
-                                "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__utgSeat",
+                                "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__utgSeat",
                                 "macroOrigin": {
                                   "macroId": "post-forced-bets-and-set-preflop-actor",
                                   "stem": "utgSeat"
@@ -3387,7 +3393,7 @@
                                   },
                                   "from": {
                                     "ref": "binding",
-                                    "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                    "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                   },
                                   "bind": "$seatCandidate",
                                   "where": {
@@ -3416,7 +3422,7 @@
                                       "then": [
                                         {
                                           "forEach": {
-                                            "bind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player",
+                                            "bind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player",
                                             "macroOrigin": {
                                               "macroId": "collect-forced-bets",
                                               "stem": "player"
@@ -3432,7 +3438,7 @@
                                                     "left": {
                                                       "ref": "pvar",
                                                       "player": {
-                                                        "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
+                                                        "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
                                                       },
                                                       "var": "eliminated"
                                                     },
@@ -3445,7 +3451,7 @@
                                                           "scope": "pvar",
                                                           "var": "chipStack",
                                                           "player": {
-                                                            "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
+                                                            "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
                                                           }
                                                         },
                                                         "to": {
@@ -3456,19 +3462,19 @@
                                                           "ref": "gvar",
                                                           "var": "ante"
                                                         },
-                                                        "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__antePaid"
+                                                        "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__antePaid"
                                                       }
                                                     },
                                                     {
                                                       "addVar": {
                                                         "scope": "pvar",
                                                         "player": {
-                                                          "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
+                                                          "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
                                                         },
                                                         "var": "totalBet",
                                                         "delta": {
                                                           "ref": "binding",
-                                                          "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__antePaid"
+                                                          "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__antePaid"
                                                         }
                                                       }
                                                     },
@@ -3479,7 +3485,7 @@
                                                           "left": {
                                                             "ref": "pvar",
                                                             "player": {
-                                                              "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
+                                                              "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
                                                             },
                                                             "var": "chipStack"
                                                           },
@@ -3490,7 +3496,7 @@
                                                             "setVar": {
                                                               "scope": "pvar",
                                                               "player": {
-                                                                "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
+                                                                "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
                                                               },
                                                               "var": "allIn",
                                                               "value": true
@@ -3514,7 +3520,7 @@
                                         "scope": "pvar",
                                         "var": "chipStack",
                                         "player": {
-                                          "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat"
+                                          "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
                                         }
                                       },
                                       "to": {
@@ -3525,19 +3531,19 @@
                                         "ref": "gvar",
                                         "var": "smallBlind"
                                       },
-                                      "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__sbPaid"
+                                      "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__sbPaid"
                                     }
                                   },
                                   {
                                     "addVar": {
                                       "scope": "pvar",
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
                                       },
                                       "var": "streetBet",
                                       "delta": {
                                         "ref": "binding",
-                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__sbPaid"
+                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__sbPaid"
                                       }
                                     }
                                   },
@@ -3545,12 +3551,12 @@
                                     "addVar": {
                                       "scope": "pvar",
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
                                       },
                                       "var": "totalBet",
                                       "delta": {
                                         "ref": "binding",
-                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__sbPaid"
+                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__sbPaid"
                                       }
                                     }
                                   },
@@ -3561,7 +3567,7 @@
                                         "left": {
                                           "ref": "pvar",
                                           "player": {
-                                            "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat"
+                                            "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
                                           },
                                           "var": "chipStack"
                                         },
@@ -3572,7 +3578,7 @@
                                           "setVar": {
                                             "scope": "pvar",
                                             "player": {
-                                              "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat"
+                                              "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
                                             },
                                             "var": "allIn",
                                             "value": true
@@ -3587,7 +3593,7 @@
                                         "scope": "pvar",
                                         "var": "chipStack",
                                         "player": {
-                                          "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                          "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                         }
                                       },
                                       "to": {
@@ -3598,19 +3604,19 @@
                                         "ref": "gvar",
                                         "var": "bigBlind"
                                       },
-                                      "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__bbPaid"
+                                      "actualBind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__bbPaid"
                                     }
                                   },
                                   {
                                     "addVar": {
                                       "scope": "pvar",
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                       },
                                       "var": "streetBet",
                                       "delta": {
                                         "ref": "binding",
-                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__bbPaid"
+                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__bbPaid"
                                       }
                                     }
                                   },
@@ -3618,12 +3624,12 @@
                                     "addVar": {
                                       "scope": "pvar",
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                       },
                                       "var": "totalBet",
                                       "delta": {
                                         "ref": "binding",
-                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__bbPaid"
+                                        "name": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__bbPaid"
                                       }
                                     }
                                   },
@@ -3634,7 +3640,7 @@
                                         "left": {
                                           "ref": "pvar",
                                           "player": {
-                                            "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                            "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                           },
                                           "var": "chipStack"
                                         },
@@ -3645,7 +3651,7 @@
                                           "setVar": {
                                             "scope": "pvar",
                                             "player": {
-                                              "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                              "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                             },
                                             "var": "allIn",
                                             "value": true
@@ -3680,7 +3686,7 @@
                                       "var": "preflopBigBlindSeat",
                                       "value": {
                                         "ref": "binding",
-                                        "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat"
+                                        "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
                                       }
                                     }
                                   },
@@ -3697,14 +3703,14 @@
                                       "var": "actingPosition",
                                       "value": {
                                         "ref": "binding",
-                                        "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__utgSeat"
+                                        "name": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__utgSeat"
                                       }
                                     }
                                   },
                                   {
                                     "setActivePlayer": {
                                       "player": {
-                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__utgSeat"
+                                        "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__utgSeat"
                                       }
                                     }
                                   }

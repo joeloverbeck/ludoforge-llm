@@ -173,6 +173,61 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts known animation timing keys', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        timing: {
+          cardDeal: { duration: 0.25 },
+          moveToken: { duration: 0.6 },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects unknown animation timing keys', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        timing: {
+          sweep: { duration: 0.25 },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts zone highlight policy config', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        zoneHighlights: {
+          enabled: true,
+          includeKinds: ['moveToken', 'createToken'],
+          moveEndpoints: 'to',
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid zone highlight source kind', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        zoneHighlights: {
+          includeKinds: ['phaseTransition'],
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects invalid zone shape', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

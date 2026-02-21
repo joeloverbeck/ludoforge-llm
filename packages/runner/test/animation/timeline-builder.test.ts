@@ -317,6 +317,38 @@ describe('buildTimeline', () => {
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
+
+  it('applies missing zone guard to zoneHighlight descriptors', () => {
+    const runtime = createRuntimeFixture();
+    const zoneTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: zoneTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'missing-zone',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    expect(zoneTween).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('zone container not found');
+  });
 });
 
 describe('buildTimeline sequencing', () => {
@@ -527,5 +559,44 @@ describe('buildTimeline sequencing', () => {
     expect(createdTimelines.length).toBe(2);
     expect(addCalls[1]?.[1]).toBeUndefined();
     expect(addCalls[2]?.[1]).toBe('<');
+  });
+
+  it('applies duration override by descriptor kind for triggered pulse and descriptor preset', () => {
+    const runtime = createRuntimeFixture();
+    const durations: number[] = [];
+
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: (_descriptor, context) => durations.push(context.durationSeconds),
+      },
+      {
+        id: 'pulse',
+        defaultDurationSeconds: 0.2,
+        compatibleKinds: ['moveToken'],
+        createTween: (_descriptor, context) => durations.push(context.durationSeconds),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: true,
+      },
+    ];
+
+    const durationSecondsByKind = new Map<VisualAnimationDescriptorKind, number>([['moveToken', 0.75]]);
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      durationSecondsByKind,
+    });
+
+    expect(durations).toEqual([0.75, 0.75]);
   });
 });

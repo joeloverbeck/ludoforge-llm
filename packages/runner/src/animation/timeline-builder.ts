@@ -20,6 +20,7 @@ export interface TimelineSpriteRefs {
 
 export interface BuildTimelineOptions {
   readonly sequencingPolicies?: ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy>;
+  readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
 }
 
 export function buildTimeline(
@@ -31,6 +32,7 @@ export function buildTimeline(
 ): GsapTimelineLike {
   const timeline = gsap.timeline();
   const policies = options?.sequencingPolicies;
+  const durationByKind = options?.durationSecondsByKind;
 
   const visual = filterVisualDescriptors(descriptors, spriteRefs);
   const groups = groupConsecutiveSameKind(visual);
@@ -43,10 +45,11 @@ export function buildTimeline(
 
     const policy = policies?.get(firstDescriptor.kind);
     const mode = policy?.mode ?? 'sequential';
+    const durationOverrideSeconds = durationByKind?.get(firstDescriptor.kind);
 
     if (mode === 'sequential' || group.length <= 1) {
       for (const descriptor of group) {
-        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs });
+        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs }, durationOverrideSeconds);
       }
       continue;
     }
@@ -58,7 +61,12 @@ export function buildTimeline(
       }
 
       const subTimeline = gsap.timeline();
-      processDescriptor(descriptor, presetRegistry, { gsap, timeline: subTimeline, spriteRefs });
+      processDescriptor(
+        descriptor,
+        presetRegistry,
+        { gsap, timeline: subTimeline, spriteRefs },
+        durationOverrideSeconds,
+      );
 
       if (i === 0) {
         timeline.add(subTimeline);
@@ -129,6 +137,7 @@ function processDescriptor(
   descriptor: VisualAnimationDescriptor,
   presetRegistry: PresetRegistry,
   context: Omit<PresetTweenContext, 'durationSeconds'>,
+  durationOverrideSeconds: number | undefined,
 ): void {
   try {
     if (descriptor.isTriggered) {
@@ -136,7 +145,7 @@ function processDescriptor(
       if (pulsePreset !== undefined && pulsePreset.compatibleKinds.includes(descriptor.kind)) {
         pulsePreset.createTween(descriptor, {
           ...context,
-          durationSeconds: pulsePreset.defaultDurationSeconds,
+          durationSeconds: durationOverrideSeconds ?? pulsePreset.defaultDurationSeconds,
         });
       }
     }
@@ -144,7 +153,7 @@ function processDescriptor(
     const preset = presetRegistry.requireCompatible(descriptor.preset, descriptor.kind);
     preset.createTween(descriptor, {
       ...context,
-      durationSeconds: preset.defaultDurationSeconds,
+      durationSeconds: durationOverrideSeconds ?? preset.defaultDurationSeconds,
     });
   } catch (error) {
     console.warn(`Animation tween generation failed for descriptor "${descriptor.kind}".`, error);
@@ -187,6 +196,11 @@ function getMissingSpriteReason(
     case 'varChange':
     case 'resourceTransfer':
     case 'phaseTransition':
+      return null;
+    case 'zoneHighlight':
+      if (!spriteRefs.zoneContainers.has(descriptor.zoneId)) {
+        return `zone container not found (zoneId=${descriptor.zoneId})`;
+      }
       return null;
   }
 }

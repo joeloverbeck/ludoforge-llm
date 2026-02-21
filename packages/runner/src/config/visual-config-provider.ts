@@ -15,6 +15,8 @@ import type {
   VisualAnimationDescriptorKind,
 } from '../animation/animation-types.js';
 import type {
+  ZoneHighlightMoveEndpoints,
+  ZoneHighlightSourceKind,
   AttributeRule,
   CardAnimationConfig,
   CardTemplate,
@@ -60,6 +62,12 @@ export interface EdgeStrokeStyle {
   readonly color: number;
   readonly width: number;
   readonly alpha: number;
+}
+
+export interface ResolvedZoneHighlightPolicy {
+  readonly enabled: boolean;
+  readonly includeKinds: readonly ZoneHighlightSourceKind[];
+  readonly moveEndpoints: ZoneHighlightMoveEndpoints;
 }
 
 export class VisualConfigProvider {
@@ -229,6 +237,20 @@ export class VisualConfigProvider {
     return {
       mode: policy.mode,
       ...(policy.staggerOffset !== undefined ? { staggerOffsetSeconds: policy.staggerOffset } : {}),
+    };
+  }
+
+  getTimingConfig(descriptorKind: VisualAnimationDescriptorKind): number | null {
+    return this.config?.animations?.timing?.[descriptorKind]?.duration ?? null;
+  }
+
+  getZoneHighlightPolicy(): ResolvedZoneHighlightPolicy {
+    const policy = this.config?.animations?.zoneHighlights;
+    const includeKinds = policy?.includeKinds ?? ['moveToken', 'cardDeal', 'cardBurn', 'createToken', 'destroyToken'];
+    return {
+      enabled: policy?.enabled ?? true,
+      includeKinds,
+      moveEndpoints: policy?.moveEndpoints ?? 'both',
     };
   }
 

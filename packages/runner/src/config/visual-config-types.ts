@@ -175,9 +175,31 @@ const AnimationSequencingSchema = z.object(
   >,
 ).strict();
 
+const AnimationTimingEntrySchema = z.object({
+  duration: z.number().positive(),
+});
+
+const AnimationTimingSchema = z.object(
+  Object.fromEntries(ANIMATION_PRESET_OVERRIDE_KEYS.map((key) => [key, AnimationTimingEntrySchema.optional()])) as Record<
+    (typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number],
+    z.ZodOptional<typeof AnimationTimingEntrySchema>
+  >,
+).strict();
+
+const ZoneHighlightSourceKindSchema = z.enum(['moveToken', 'cardDeal', 'cardBurn', 'createToken', 'destroyToken']);
+const ZoneHighlightMoveEndpointsSchema = z.enum(['from', 'to', 'both']);
+
+const ZoneHighlightPolicySchema = z.object({
+  enabled: z.boolean().optional(),
+  includeKinds: z.array(ZoneHighlightSourceKindSchema).optional(),
+  moveEndpoints: ZoneHighlightMoveEndpointsSchema.optional(),
+});
+
 const AnimationsConfigSchema = z.object({
   actions: AnimationActionsSchema.optional(),
   sequencing: AnimationSequencingSchema.optional(),
+  timing: AnimationTimingSchema.optional(),
+  zoneHighlights: ZoneHighlightPolicySchema.optional(),
 });
 
 const CardFieldLayoutSchema = z.object({
@@ -293,6 +315,11 @@ export type TokenTypeSelectors = z.infer<typeof TokenTypeSelectorsSchema>;
 export type TokenTypeDefault = z.infer<typeof TokenTypeDefaultSchema>;
 export type CardAnimationZoneRoles = z.infer<typeof CardAnimationZoneRolesSchema>;
 export type CardAnimationConfig = z.infer<typeof CardAnimationConfigSchema>;
+export type AnimationTimingEntry = z.infer<typeof AnimationTimingEntrySchema>;
+export type AnimationTimingConfig = z.infer<typeof AnimationTimingSchema>;
+export type ZoneHighlightSourceKind = z.infer<typeof ZoneHighlightSourceKindSchema>;
+export type ZoneHighlightMoveEndpoints = z.infer<typeof ZoneHighlightMoveEndpointsSchema>;
+export type ZoneHighlightPolicy = z.infer<typeof ZoneHighlightPolicySchema>;
 export type AnimationsConfig = z.infer<typeof AnimationsConfigSchema>;
 export type CardFieldLayout = z.infer<typeof CardFieldLayoutSchema>;
 export type CardTemplate = z.infer<typeof CardTemplateSchema>;

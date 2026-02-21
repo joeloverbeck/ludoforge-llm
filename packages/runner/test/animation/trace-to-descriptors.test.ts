@@ -150,7 +150,7 @@ describe('traceToDescriptors', () => {
         oldValue: 1,
         newValue: 2,
         player: asPlayerId(1),
-        preset: 'counter-roll',
+        preset: 'counter-tick',
         isTriggered: true,
       },
       {
@@ -163,14 +163,14 @@ describe('traceToDescriptors', () => {
         destinationHeadroom: 8,
         minAmount: 1,
         maxAmount: 3,
-        preset: 'counter-roll',
+        preset: 'counter-tick',
         isTriggered: false,
       },
       {
         kind: 'phaseTransition',
         eventType: 'phaseEnter',
         phase: 'cleanup',
-        preset: 'banner-slide',
+        preset: 'banner-overlay',
         isTriggered: false,
       },
       {

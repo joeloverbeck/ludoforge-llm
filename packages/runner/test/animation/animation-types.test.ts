@@ -17,8 +17,9 @@ describe('animation-types', () => {
       'fade-out-scale',
       'tint-flash',
       'card-flip-3d',
-      'counter-roll',
-      'banner-slide',
+      'counter-tick',
+      'banner-overlay',
+      'zone-pulse',
       'pulse',
     ]);
   });
@@ -35,6 +36,7 @@ describe('animation-types', () => {
       'varChange',
       'resourceTransfer',
       'phaseTransition',
+      'zoneHighlight',
       'skipped',
     ]);
   });
@@ -106,7 +108,7 @@ describe('animation-types', () => {
         oldValue: 1 as VariableValue,
         newValue: 2 as VariableValue,
         player: asPlayerId(0),
-        preset: 'counter-roll',
+        preset: 'counter-tick',
         isTriggered: false,
       },
       {
@@ -119,14 +121,21 @@ describe('animation-types', () => {
         destinationHeadroom: 8,
         minAmount: 1,
         maxAmount: 3,
-        preset: 'counter-roll',
+        preset: 'counter-tick',
         isTriggered: true,
       },
       {
         kind: 'phaseTransition',
         eventType: 'phaseEnter',
         phase: 'main',
-        preset: 'banner-slide',
+        preset: 'banner-overlay',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
         isTriggered: false,
       },
       {
@@ -135,7 +144,7 @@ describe('animation-types', () => {
       },
     ];
 
-    expect(descriptors).toHaveLength(11);
+    expect(descriptors).toHaveLength(12);
     expectTypeOf(descriptors).toMatchTypeOf<readonly AnimationDescriptor[]>();
   });
 
@@ -145,14 +154,14 @@ describe('animation-types', () => {
       detailLevel,
       presetOverrides: new Map([
         ['moveToken', 'arc-tween'],
-        ['varChange', 'custom-counter-roll'],
+        ['varChange', 'custom-counter-tick'],
         ['cardDeal', 'pulse'],
       ]),
     };
 
     expect(options.detailLevel).toBe('standard');
     expect(options.presetOverrides?.get('moveToken')).toBe('arc-tween');
-    expect(options.presetOverrides?.get('varChange')).toBe('custom-counter-roll');
+    expect(options.presetOverrides?.get('varChange')).toBe('custom-counter-tick');
     expect(options.presetOverrides?.get('cardDeal')).toBe('pulse');
   });
 });

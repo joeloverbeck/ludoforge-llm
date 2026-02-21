@@ -63,9 +63,9 @@ const DEFAULT_TRACE_KIND_PRESET_IDS: Readonly<Record<EffectTraceEntry['kind'], A
   createToken: 'fade-in-scale',
   destroyToken: 'fade-out-scale',
   setTokenProp: 'tint-flash',
-  varChange: 'counter-roll',
-  resourceTransfer: 'counter-roll',
-  lifecycleEvent: 'banner-slide',
+  varChange: 'counter-tick',
+  resourceTransfer: 'counter-tick',
+  lifecycleEvent: 'banner-overlay',
   forEach: null,
   reduce: null,
 };
@@ -81,6 +81,7 @@ const VISUAL_DESCRIPTOR_KINDS: readonly PresetCompatibleDescriptorKind[] = [
   'varChange',
   'resourceTransfer',
   'phaseTransition',
+  'zoneHighlight',
 ];
 
 const ARC_TWEEN_EASE = 'power2.inOut';
@@ -111,19 +112,20 @@ const BUILTIN_PRESET_METADATA = {
     compatibleKinds: ['cardFlip'],
     createTween: createCardFlip3dTween,
   },
-  'counter-roll': {
-    defaultDurationSeconds: 0.3,
+  'counter-tick': {
+    defaultDurationSeconds: 0.4,
     compatibleKinds: ['varChange', 'resourceTransfer'],
-    createTween: (_descriptor, context) => {
-      appendDelay(context, context.durationSeconds);
-    },
+    createTween: createCounterTickTween,
   },
-  'banner-slide': {
+  'banner-overlay': {
     defaultDurationSeconds: 1.5,
     compatibleKinds: ['phaseTransition'],
-    createTween: (_descriptor, context) => {
-      appendDelay(context, context.durationSeconds);
-    },
+    createTween: createBannerOverlayTween,
+  },
+  'zone-pulse': {
+    defaultDurationSeconds: 0.5,
+    compatibleKinds: ['zoneHighlight'],
+    createTween: createZonePulseTween,
   },
   pulse: {
     defaultDurationSeconds: 0.2,
@@ -398,6 +400,58 @@ function createTintFlashTween(descriptor: VisualAnimationDescriptor, context: Pr
   appendTween(context, target, { tint: originalTint }, halfDuration);
 }
 
+function createCounterTickTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'varChange' && descriptor.kind !== 'resourceTransfer') {
+    return;
+  }
+
+  const targets = resolveBoardTargets(context);
+  if (targets.length === 0) {
+    appendDelay(context, context.durationSeconds);
+    return;
+  }
+
+  const halfDuration = context.durationSeconds / 2;
+  appendParallelTweens(context, targets, { alpha: 0.8, scale: 1.04 }, halfDuration);
+  appendParallelTweens(context, targets, { alpha: 1, scale: 1 }, halfDuration);
+}
+
+function createBannerOverlayTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'phaseTransition') {
+    return;
+  }
+
+  const targets = [...context.spriteRefs.zoneContainers.values()] as TweenTarget[];
+  if (targets.length === 0) {
+    appendDelay(context, context.durationSeconds);
+    return;
+  }
+
+  const fadeInSeconds = context.durationSeconds * 0.2;
+  const holdSeconds = context.durationSeconds * 0.6;
+  const fadeOutSeconds = context.durationSeconds - fadeInSeconds - holdSeconds;
+  appendParallelTweens(context, targets, { alpha: 0.72 }, fadeInSeconds);
+  appendDelay(context, holdSeconds);
+  appendParallelTweens(context, targets, { alpha: 1 }, fadeOutSeconds);
+}
+
+function createZonePulseTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'zoneHighlight') {
+    return;
+  }
+
+  const target = context.spriteRefs.zoneContainers.get(descriptor.zoneId) as TweenTarget | undefined;
+  if (target === undefined) {
+    appendDelay(context, context.durationSeconds);
+    return;
+  }
+
+  const originalTint = target.tint ?? 0xffffff;
+  const halfDuration = context.durationSeconds / 2;
+  appendTween(context, target, { alpha: 0.68, tint: 0xc7f9cc }, halfDuration);
+  appendTween(context, target, { alpha: 1, tint: originalTint }, halfDuration);
+}
+
 function createPulseTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
   const target = resolvePulseTarget(descriptor, context);
   if (target === undefined) {
@@ -415,7 +469,18 @@ function resolvePulseTarget(descriptor: VisualAnimationDescriptor, context: Pres
   if ('tokenId' in descriptor) {
     return context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
   }
+  if (descriptor.kind === 'zoneHighlight') {
+    return context.spriteRefs.zoneContainers.get(descriptor.zoneId) as TweenTarget | undefined;
+  }
   return undefined;
+}
+
+function resolveBoardTargets(context: PresetTweenContext): TweenTarget[] {
+  const tokenTargets = [...context.spriteRefs.tokenContainers.values()] as TweenTarget[];
+  if (tokenTargets.length > 0) {
+    return tokenTargets;
+  }
+  return [...context.spriteRefs.zoneContainers.values()] as TweenTarget[];
 }
 
 function appendDelay(context: PresetTweenContext, durationSeconds: number): void {
@@ -434,6 +499,34 @@ function appendTween(
   }
 
   applyVars(target, vars);
+  appendDelay(context, durationSeconds);
+}
+
+function appendParallelTweens(
+  context: PresetTweenContext,
+  targets: readonly TweenTarget[],
+  vars: Record<string, unknown>,
+  durationSeconds: number,
+): void {
+  if (targets.length === 0) {
+    appendDelay(context, durationSeconds);
+    return;
+  }
+
+  const to = context.gsap.to;
+  if (typeof to === 'function') {
+    const subTimeline = context.gsap.timeline();
+    targets.forEach((target, index) => {
+      const tween = to(target, { duration: durationSeconds, ...vars });
+      subTimeline.add(tween, index === 0 ? undefined : '<');
+    });
+    context.timeline.add(subTimeline);
+    return;
+  }
+
+  for (const target of targets) {
+    applyVars(target, vars);
+  }
   appendDelay(context, durationSeconds);
 }
 

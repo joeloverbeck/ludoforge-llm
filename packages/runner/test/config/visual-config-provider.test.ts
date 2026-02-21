@@ -668,6 +668,54 @@ describe('VisualConfigProvider', () => {
     });
   });
 
+  it('getTimingConfig returns null when no timing override exists', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+    expect(provider.getTimingConfig('cardDeal')).toBeNull();
+  });
+
+  it('getTimingConfig returns configured duration override when present', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      animations: {
+        timing: {
+          cardDeal: { duration: 0.25 },
+          phaseTransition: { duration: 2.0 },
+        },
+      },
+    });
+
+    expect(provider.getTimingConfig('cardDeal')).toBe(0.25);
+    expect(provider.getTimingConfig('phaseTransition')).toBe(2.0);
+    expect(provider.getTimingConfig('moveToken')).toBeNull();
+  });
+
+  it('getZoneHighlightPolicy returns defaults when unset', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+    expect(provider.getZoneHighlightPolicy()).toEqual({
+      enabled: true,
+      includeKinds: ['moveToken', 'cardDeal', 'cardBurn', 'createToken', 'destroyToken'],
+      moveEndpoints: 'both',
+    });
+  });
+
+  it('getZoneHighlightPolicy returns configured values when present', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      animations: {
+        zoneHighlights: {
+          enabled: false,
+          includeKinds: ['cardDeal', 'createToken'],
+          moveEndpoints: 'to',
+        },
+      },
+    });
+    expect(provider.getZoneHighlightPolicy()).toEqual({
+      enabled: false,
+      includeKinds: ['cardDeal', 'createToken'],
+      moveEndpoints: 'to',
+    });
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

@@ -21,6 +21,7 @@ import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
 import { buildTimeline } from './timeline-builder.js';
 import { traceToDescriptors } from './trace-to-descriptors.js';
+import { decorateWithZoneHighlights } from './derive-zone-highlights.js';
 
 interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
   subscribe: {
@@ -75,7 +76,10 @@ export function createAnimationController(
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const queue = deps.queueFactory(options.store);
   const presetOverrides = buildPresetOverrides(options.visualConfigProvider, deps.presetRegistry, deps.onWarning);
+  const zoneHighlightPresetId = resolveZoneHighlightPresetId(presetOverrides, deps.presetRegistry, deps.onWarning);
+  const zoneHighlightPolicy = options.visualConfigProvider.getZoneHighlightPolicy();
   const sequencingPolicies = buildSequencingPolicies(options.visualConfigProvider);
+  const timingOverrides = buildTimingOverrides(options.visualConfigProvider);
 
   let detailLevel: AnimationDetailLevel = 'full';
   let reducedMotion = false;
@@ -101,6 +105,13 @@ export function createAnimationController(
         },
         deps.presetRegistry,
       );
+      descriptors = decorateWithZoneHighlights(
+        descriptors,
+        {
+          presetId: zoneHighlightPresetId,
+          policy: zoneHighlightPolicy,
+        },
+      );
     } catch (error) {
       deps.onError('Descriptor mapping failed.', error);
       return;
@@ -123,7 +134,12 @@ export function createAnimationController(
           zonePositions: options.zonePositions(),
         },
         deps.gsap,
-        sequencingPolicies.size === 0 ? undefined : { sequencingPolicies },
+        sequencingPolicies.size === 0 && timingOverrides.size === 0
+          ? undefined
+          : {
+              ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
+              ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
+            },
       );
 
       if (reducedMotion) {
@@ -250,6 +266,26 @@ function buildPresetOverrides(
   return overrides;
 }
 
+function resolveZoneHighlightPresetId(
+  presetOverrides: ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId>,
+  presetRegistry: PresetRegistry,
+  onWarning: ((message: string) => void) | undefined,
+): AnimationPresetId {
+  const configured = presetOverrides.get('zoneHighlight');
+  if (configured !== undefined) {
+    try {
+      presetRegistry.requireCompatible(configured, 'zoneHighlight');
+      return configured;
+    } catch {
+      onWarning?.(
+        `Ignoring animation preset override "zoneHighlight" -> "${configured}" because it is not compatible with descriptor kind "zoneHighlight".`,
+      );
+    }
+  }
+  presetRegistry.requireCompatible('zone-pulse', 'zoneHighlight');
+  return 'zone-pulse';
+}
+
 function buildCardContext(
   state: GameStore,
   visualConfigProvider: VisualConfigProvider,
@@ -313,6 +349,21 @@ function buildSequencingPolicies(
   }
 
   return policies;
+}
+
+function buildTimingOverrides(
+  visualConfigProvider: VisualConfigProvider,
+): ReadonlyMap<VisualAnimationDescriptorKind, number> {
+  const durations = new Map<VisualAnimationDescriptorKind, number>();
+
+  for (const kind of ANIMATION_PRESET_OVERRIDE_KEYS) {
+    const durationSeconds = visualConfigProvider.getTimingConfig(kind);
+    if (durationSeconds !== null) {
+      durations.set(kind, durationSeconds);
+    }
+  }
+
+  return durations;
 }
 
 function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): boolean {

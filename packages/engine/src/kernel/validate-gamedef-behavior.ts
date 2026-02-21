@@ -1245,6 +1245,12 @@ export const validateEffectAst = (
 
   if ('conceal' in effect) {
     validateZoneRef(diagnostics, effect.conceal.zone, `${path}.conceal.zone`, context);
+    if (effect.conceal.from !== undefined && effect.conceal.from !== 'all') {
+      validatePlayerSelector(diagnostics, effect.conceal.from, `${path}.conceal.from`, context);
+    }
+    if (effect.conceal.filter !== undefined) {
+      validateTokenFilterPredicates(diagnostics, effect.conceal.filter, `${path}.conceal.filter`, context);
+    }
     return;
   }
 

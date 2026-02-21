@@ -6096,6 +6096,141 @@
                       "additionalProperties": false
                     }
                   ]
+                },
+                "from": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "all"
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "actor"
+                        },
+                        {
+                          "type": "string",
+                          "const": "active"
+                        },
+                        {
+                          "type": "string",
+                          "const": "all"
+                        },
+                        {
+                          "type": "string",
+                          "const": "allOther"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "chosen": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "chosen"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "relative": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "left"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "right"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "relative"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "filter": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "prop": {
+                        "type": "string"
+                      },
+                      "op": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "eq"
+                          },
+                          {
+                            "type": "string",
+                            "const": "neq"
+                          },
+                          {
+                            "type": "string",
+                            "const": "in"
+                          },
+                          {
+                            "type": "string",
+                            "const": "notIn"
+                          }
+                        ]
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/definitions/__schema2"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "prop",
+                      "op",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               },
               "required": [

@@ -265,7 +265,13 @@ export type EffectAST =
         readonly filter?: readonly TokenFilterPredicate[];
       };
     }
-  | { readonly conceal: { readonly zone: ZoneRef } }
+  | {
+      readonly conceal: {
+        readonly zone: ZoneRef;
+        readonly from?: 'all' | PlayerSel;
+        readonly filter?: readonly TokenFilterPredicate[];
+      };
+    }
   | { readonly shuffle: { readonly zone: ZoneRef } }
   | {
       readonly createToken: {

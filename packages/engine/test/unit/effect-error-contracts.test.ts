@@ -150,5 +150,22 @@ describe('effect error context contracts', () => {
         return true;
       },
     );
+
+    assert.throws(
+      () => applyEffect(
+        { conceal: { zone: asZoneId('board:none') } },
+        makeContext({
+          state: {
+            ...baseState,
+            zones: {},
+          },
+        }),
+      ),
+      (error: unknown) => {
+        assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
+        assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED);
+        return true;
+      },
+    );
   });
 });

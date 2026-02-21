@@ -100,6 +100,53 @@ describe('validateGameDef reference checks', () => {
     assert.equal(typeof missingZone.suggestion, 'string');
   });
 
+  it('reports out-of-bounds player selectors for conceal.from', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ conceal: { zone: 'market:none', from: { id: 99 } } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'PLAYER_SELECTOR_ID_OUT_OF_BOUNDS' && diag.path === 'actions[0].effects[0].conceal.from',
+      ),
+    );
+  });
+
+  it('validates conceal.filter value expressions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              conceal: {
+                zone: 'market:none',
+                filter: [{ prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].effects[0].conceal.filter[0].value.var',
+      ),
+    );
+  });
+
   it('reports unknown map-space properties used by zoneProp references', () => {
     const base = createValidGameDef();
     const def = {

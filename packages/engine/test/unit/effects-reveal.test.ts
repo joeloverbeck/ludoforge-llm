@@ -10,6 +10,7 @@ import {
   buildAdjacencyGraph,
   createCollector,
   createRng,
+  EFFECT_RUNTIME_REASONS,
   isEffectErrorCode,
   type EffectAST,
   type EffectContext,
@@ -217,7 +218,11 @@ describe('effects conceal', () => {
 
     assert.throws(
       () => applyEffect({ conceal: { zone: 'hand:0' } }, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Zone state not found'),
+      (error: unknown) => {
+        assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
+        assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED);
+        return String(error).includes('Zone state not found');
+      },
     );
   });
 

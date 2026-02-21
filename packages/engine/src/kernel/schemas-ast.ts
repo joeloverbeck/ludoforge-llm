@@ -476,7 +476,17 @@ effectAstSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
-  z.object({ conceal: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
+  z
+    .object({
+      conceal: z
+        .object({
+          zone: ZoneRefSchema,
+          from: z.union([z.literal('all'), PlayerSelSchema]).optional(),
+          filter: z.array(TokenFilterPredicateSchema).optional(),
+        })
+        .strict(),
+    })
+    .strict(),
   z.object({ shuffle: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
   z
     .object({

@@ -18,7 +18,7 @@ export const applyConceal = (
   const zoneId = String(resolveZoneRef(effect.conceal.zone, evalCtx));
 
   if (ctx.state.zones[zoneId] === undefined) {
-    throw effectRuntimeError('revealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
+    throw effectRuntimeError('concealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
       effectType: 'conceal',
       field: 'zone',
       zoneId,
@@ -31,10 +31,14 @@ export const applyConceal = (
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
-  const { [zoneId]: _removed, ...remainingReveals } = existingReveals;
+  const remainingReveals = Object.fromEntries(
+    Object.entries(existingReveals).filter(([revealedZoneId]) => revealedZoneId !== zoneId),
+  ) as Record<string, readonly RevealGrant[]>;
 
   if (Object.keys(remainingReveals).length === 0) {
-    const { reveals: _, ...stateWithoutReveals } = ctx.state;
+    const stateWithoutReveals = Object.fromEntries(
+      Object.entries(ctx.state).filter(([key]) => key !== 'reveals'),
+    ) as GameState;
     return { state: stateWithoutReveals as GameState, rng: ctx.rng, emittedEvents: [] };
   }
 

@@ -141,6 +141,47 @@ describe('drawCardContent', () => {
     expect(container.children[0]?.text).toBe('K');
   });
 
+  it('destroys old text children when re-rendering card content', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rank: { y: 8, fontSize: 14, align: 'left' },
+          suit: { y: 36, fontSize: 18, align: 'center' },
+        },
+      },
+      {
+        rank: 'A',
+        suit: 'Spades',
+      },
+    );
+
+    const oldChildren = [...container.children];
+    expect(oldChildren).toHaveLength(2);
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rank: { y: 8, fontSize: 14, align: 'left' },
+        },
+      },
+      {
+        rank: 'K',
+      },
+    );
+
+    for (const child of oldChildren) {
+      expect(child.destroy).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('skips missing fields and applies wrap/alignment options', () => {
     const container = new MockContainer();
 

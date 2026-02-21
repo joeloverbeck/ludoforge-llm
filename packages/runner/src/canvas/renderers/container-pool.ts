@@ -1,11 +1,11 @@
 import { Container } from 'pixi.js';
-import { safeDestroyDisplayObject } from './safe-destroy.js';
+import { safeDestroyChildren, safeDestroyDisplayObject } from './safe-destroy.js';
 
 const DEFAULT_EVENT_MODE = 'none' as const;
 
 function resetContainerDefaults(container: Container): void {
   container.removeFromParent();
-  container.removeChildren();
+  safeDestroyChildren(container);
   container.removeAllListeners();
 
   container.position.set(0, 0);

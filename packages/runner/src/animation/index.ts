@@ -1,5 +1,6 @@
 export * from './animation-types.js';
 export * from './animation-controller.js';
+export * from './animation-logger.js';
 export * from './animation-queue.js';
 export * from './ai-playback.js';
 export * from './bootstrap-runtime.js';

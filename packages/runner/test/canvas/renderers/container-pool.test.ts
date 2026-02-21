@@ -84,6 +84,27 @@ describe('ContainerPool', () => {
     secondDestroySpy.mockRestore();
   });
 
+  it('destroys children when a container is released back to the pool', () => {
+    const pool = new ContainerPool();
+    const container = pool.acquire();
+
+    const childA = new Container();
+    const childB = new Container();
+    container.addChild(childA, childB);
+
+    const destroyA = vi.spyOn(childA, 'destroy');
+    const destroyB = vi.spyOn(childB, 'destroy');
+
+    pool.release(container);
+
+    expect(destroyA).toHaveBeenCalledTimes(1);
+    expect(destroyB).toHaveBeenCalledTimes(1);
+    expect(container.children).toHaveLength(0);
+
+    destroyA.mockRestore();
+    destroyB.mockRestore();
+  });
+
   it('handles repeated acquire/release cycles and ignores duplicate release', () => {
     const pool = new ContainerPool();
 

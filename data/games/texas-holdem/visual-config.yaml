@@ -52,10 +52,10 @@ cardAnimation:
 
 animations:
   sequencing:
-    cardDeal: { mode: stagger, staggerOffset: 0.15 }
+    cardDeal: { mode: stagger, staggerOffset: 0.30 }
   timing:
-    cardDeal: { duration: 0.3 }
-    cardFlip: { duration: 0.3 }
+    cardDeal: { duration: 0.6 }
+    cardFlip: { duration: 0.6 }
 
 cards:
   assignments:

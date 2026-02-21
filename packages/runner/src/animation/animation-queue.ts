@@ -22,9 +22,12 @@ export interface AnimationQueue {
   destroy(): void;
 }
 
+import type { AnimationLogger, QueueEventType } from './animation-logger.js';
+
 export interface AnimationQueueOptions {
   readonly setAnimationPlaying: (playing: boolean) => void;
   readonly maxQueuedTimelines?: number;
+  readonly logger?: AnimationLogger;
 }
 
 const DEFAULT_MAX_QUEUED_TIMELINES = 50;
@@ -78,6 +81,14 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
     timeline.play?.();
   };
 
+  const logger = options.logger;
+
+  const logEvent = (event: QueueEventType): void => {
+    if (logger?.enabled) {
+      logger.logQueueEvent({ event, queueLength: queue.length + (active === null ? 0 : 1), isPlaying: active !== null });
+    }
+  };
+
   const notifyAllComplete = (): void => {
     for (const callback of callbacks) {
       callback();
@@ -98,6 +109,7 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
 
     active = next;
     setStoreFlag(true);
+    logEvent('playStart');
     applySpeed(next);
     applyPauseState(next);
     next.eventCallback?.('onComplete', () => {
@@ -106,6 +118,7 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
       }
       clearOnComplete(next);
       active = null;
+      logEvent('playComplete');
       startNext();
     });
   };
@@ -121,10 +134,12 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
         if (dropped !== undefined) {
           clearOnComplete(dropped);
           completeTimeline(dropped);
+          logEvent('drop');
         }
       }
 
       queue.push(timeline);
+      logEvent('enqueue');
       startNext();
     },
 
@@ -137,6 +152,7 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
       clearOnComplete(current);
       active = null;
       completeTimeline(current);
+      logEvent('skip');
       startNext();
     },
 
@@ -160,6 +176,7 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
         completeTimeline(timeline);
       }
 
+      logEvent('skipAll');
       setStoreFlag(false);
       notifyAllComplete();
     },
@@ -226,6 +243,7 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
         }
       }
 
+      logEvent('flush');
       setStoreFlag(false);
       notifyAllComplete();
     },

@@ -529,6 +529,16 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
   const destinationTokens = ctx.state.zones[toZoneId]!;
   const destinationAfter = [...movedTokens, ...destinationTokens];
 
+  for (const movedToken of movedTokens) {
+    emitTrace(ctx.collector, {
+      kind: 'moveToken',
+      tokenId: String(movedToken.id),
+      from: fromZoneId,
+      to: toZoneId,
+      provenance: resolveTraceProvenance(ctx),
+    });
+  }
+
   return {
     state: {
       ...ctx.state,
@@ -594,6 +604,16 @@ export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unkn
 
   const destinationAfter = [...movedTokens, ...destinationTokens];
   enforceStacking(ctx, toZoneId, destinationAfter, 'moveAll');
+
+  for (const movedToken of movedTokens) {
+    emitTrace(ctx.collector, {
+      kind: 'moveToken',
+      tokenId: String(movedToken.id),
+      from: fromZoneId,
+      to: toZoneId,
+      provenance: resolveTraceProvenance(ctx),
+    });
+  }
 
   return {
     state: {

@@ -586,6 +586,43 @@ describe('buildTimeline setup trace', () => {
     // Alpha should still be 1 — setTokenProp is not affected by prepareTokensForAnimation
     expect(alphaValues).toEqual([1]);
   });
+
+  it('does not warn for missing sprite references during setup trace', () => {
+    const runtime = createRuntimeFixture();
+
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: moveTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'missing-token',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      isSetupTrace: true,
+    });
+
+    // During setup trace, missing containers are expected — no warning
+    expect(warn).not.toHaveBeenCalled();
+    // Descriptor should still be filtered out (no tween created)
+    expect(moveTween).not.toHaveBeenCalled();
+  });
 });
 
 describe('buildTimeline sequencing', () => {

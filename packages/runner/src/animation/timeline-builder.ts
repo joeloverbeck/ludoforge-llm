@@ -35,7 +35,7 @@ export function buildTimeline(
   const policies = options?.sequencingPolicies;
   const durationByKind = options?.durationSecondsByKind;
 
-  const visual = filterVisualDescriptors(descriptors, spriteRefs);
+  const visual = filterVisualDescriptors(descriptors, spriteRefs, options?.isSetupTrace);
 
   if (options?.isSetupTrace) {
     prepareTokensForAnimation(visual, spriteRefs);
@@ -91,6 +91,7 @@ export function buildTimeline(
 function filterVisualDescriptors(
   descriptors: readonly AnimationDescriptor[],
   spriteRefs: TimelineSpriteRefs,
+  isSetupTrace?: boolean,
 ): readonly VisualAnimationDescriptor[] {
   const result: VisualAnimationDescriptor[] = [];
   let lastSourceSkipped = false;
@@ -105,7 +106,9 @@ function filterVisualDescriptors(
     lastSourceSkipped = false;
     const missingReason = getMissingSpriteReason(descriptor, spriteRefs);
     if (missingReason !== null) {
-      console.warn(`Skipping animation descriptor "${descriptor.kind}": ${missingReason}`);
+      if (!isSetupTrace) {
+        console.warn(`Skipping animation descriptor "${descriptor.kind}": ${missingReason}`);
+      }
       lastSourceSkipped = true;
       continue;
     }

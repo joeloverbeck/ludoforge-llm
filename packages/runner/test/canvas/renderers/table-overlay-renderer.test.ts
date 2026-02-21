@@ -51,6 +51,16 @@ const {
       return removed;
     }
 
+    removeFromParent(): void {
+      if (this.parent) {
+        const idx = this.parent.children.indexOf(this);
+        if (idx >= 0) {
+          this.parent.children.splice(idx, 1);
+        }
+        this.parent = null;
+      }
+    }
+
     destroy(): void {
       this.destroyed = true;
       this.removeChildren();
@@ -387,5 +397,69 @@ describe('createTableOverlayRenderer', () => {
     );
 
     expect(parent.children).toHaveLength(0);
+  });
+
+  describe('safe-destroy behavior', () => {
+    it('update() calls destroy() on removed Text children', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      const firstChild = parent.children[0] as InstanceType<typeof MockText>;
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+
+      expect(firstChild.destroyed).toBe(true);
+    });
+
+    it('update() does not crash when child.destroy() throws TexturePool error', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      const firstChild = parent.children[0] as InstanceType<typeof MockText>;
+
+      firstChild.destroy = () => {
+        throw new TypeError("Cannot read properties of undefined (reading 'push')");
+      };
+
+      expect(() => {
+        renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+      }).not.toThrow();
+
+      expect(parent.children).toHaveLength(1);
+      const newChild = parent.children[0] as InstanceType<typeof MockText>;
+      expect(newChild.text).toBe('Pot: 20');
+    });
+
+    it('destroy() calls destroy() on children', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      const child = parent.children[0] as InstanceType<typeof MockText>;
+
+      renderer.destroy();
+
+      expect(child.destroyed).toBe(true);
+    });
   });
 });

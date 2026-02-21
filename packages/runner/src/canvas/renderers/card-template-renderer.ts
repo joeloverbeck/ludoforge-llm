@@ -2,12 +2,13 @@ import { Text, type Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import { resolveCardTemplateFields } from '../../config/card-field-resolver.js';
+import { safeDestroyChildren } from './safe-destroy.js';
 export function drawCardContent(
   container: Container,
   template: CardTemplate,
   fields: Readonly<Record<string, number | string | boolean>>,
 ): void {
-  container.removeChildren();
+  safeDestroyChildren(container);
 
   const resolvedFields = resolveCardTemplateFields(template.layout, fields);
   if (resolvedFields.length === 0) return;

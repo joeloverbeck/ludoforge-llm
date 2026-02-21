@@ -249,6 +249,77 @@ describe('effects moveToken and draw', () => {
   });
 });
 
+describe('draw trace emission', () => {
+  const makeTraceCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+    def: makeDef(),
+    adjacencyGraph: buildAdjacencyGraph([]),
+    state: makeState(),
+    rng: createRng(123n),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    moveParams: {},
+    collector: createCollector({ trace: true }),
+    traceContext: { eventContext: 'actionEffect', actionId: 'test-draw', effectPathRoot: 'test.effects' },
+    effectPath: '',
+    ...overrides,
+  });
+
+  it('draw emits one moveToken trace entry per token drawn', () => {
+    const ctx = makeTraceCtx();
+
+    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, ctx);
+
+    const trace = ctx.collector.trace ?? [];
+    assert.equal(trace.length, 2);
+    for (const entry of trace) {
+      assert.equal(entry.kind, 'moveToken');
+      assert.equal(entry.from, 'deck:none');
+      assert.equal(entry.to, 'hand:0');
+    }
+    const first = trace[0]!;
+    const second = trace[1]!;
+    assert.equal(first.kind, 'moveToken');
+    assert.equal(second.kind, 'moveToken');
+    if (first.kind === 'moveToken') assert.equal(first.tokenId, 'd1');
+    if (second.kind === 'moveToken') assert.equal(second.tokenId, 'd2');
+  });
+
+  it('draw from empty source emits no trace entries', () => {
+    const state = makeState();
+    const ctx = makeTraceCtx({
+      state: {
+        ...state,
+        zones: { ...state.zones, 'deck:none': [] },
+      },
+    });
+
+    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, ctx);
+
+    assert.deepEqual(ctx.collector.trace, []);
+  });
+
+  it('draw with count 0 emits no trace entries', () => {
+    const ctx = makeTraceCtx();
+
+    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 0 } }, ctx);
+
+    assert.deepEqual(ctx.collector.trace, []);
+  });
+
+  it('draw with count > source length emits entries for actual count', () => {
+    const ctx = makeTraceCtx();
+
+    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 5 } }, ctx);
+
+    const trace = ctx.collector.trace ?? [];
+    assert.equal(trace.length, 3);
+    for (const entry of trace) {
+      assert.equal(entry.kind, 'moveToken');
+    }
+  });
+});
+
 describe('effects moveToken stacking enforcement', () => {
   const stackingConstraints: StackingConstraint[] = [
     {

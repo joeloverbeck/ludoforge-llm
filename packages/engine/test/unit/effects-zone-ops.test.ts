@@ -200,6 +200,86 @@ describe('effects moveAll and shuffle', () => {
     assert.equal(singleResult.rng, ctx.rng);
   });
 
+  it('moveAll emits one moveToken trace entry per token moved', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-moveAll', effectPathRoot: 'test.effects' },
+      effectPath: '',
+    });
+
+    applyEffect({ moveAll: { from: 'deck:none', to: 'discard:none' } }, ctx);
+
+    const trace = ctx.collector.trace ?? [];
+    assert.equal(trace.length, 4);
+    for (const entry of trace) {
+      assert.equal(entry.kind, 'moveToken');
+      assert.equal(entry.from, 'deck:none');
+      assert.equal(entry.to, 'discard:none');
+    }
+    const first = trace[0]!;
+    const last = trace[3]!;
+    assert.equal(first.kind, 'moveToken');
+    assert.equal(last.kind, 'moveToken');
+    if (first.kind === 'moveToken') assert.equal(first.tokenId, 'd1');
+    if (last.kind === 'moveToken') assert.equal(last.tokenId, 'd4');
+  });
+
+  it('moveAll with filter emits entries only for matched tokens', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-moveAll', effectPathRoot: 'test.effects' },
+      effectPath: '',
+    });
+
+    applyEffect(
+      {
+        moveAll: {
+          from: 'deck:none',
+          to: 'discard:none',
+          filter: {
+            op: '>=',
+            left: { ref: 'tokenProp', token: '$token', prop: 'rank' },
+            right: 2,
+          },
+        },
+      },
+      ctx,
+    );
+
+    const trace = ctx.collector.trace ?? [];
+    assert.equal(trace.length, 2);
+    const first = trace[0]!;
+    const second = trace[1]!;
+    if (first.kind === 'moveToken') assert.equal(first.tokenId, 'd2');
+    if (second.kind === 'moveToken') assert.equal(second.tokenId, 'd3');
+  });
+
+  it('moveAll on empty source emits no trace entries', () => {
+    const state = makeState();
+    const ctx = makeCtx({
+      state: { ...state, zones: { ...state.zones, 'deck:none': [] } },
+      collector: createCollector({ trace: true }),
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-moveAll', effectPathRoot: 'test.effects' },
+      effectPath: '',
+    });
+
+    applyEffect({ moveAll: { from: 'deck:none', to: 'discard:none' } }, ctx);
+
+    assert.deepEqual(ctx.collector.trace, []);
+  });
+
+  it('moveAll with same source and destination emits no trace entries', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-moveAll', effectPathRoot: 'test.effects' },
+      effectPath: '',
+    });
+
+    applyEffect({ moveAll: { from: 'deck:none', to: 'deck:none' } }, ctx);
+
+    assert.deepEqual(ctx.collector.trace, []);
+  });
+
   it('moveTokenAdjacent without direction throws SPATIAL_DESTINATION_REQUIRED', () => {
     const ctx = makeCtx();
     const effect = { moveTokenAdjacent: { token: '$token', from: 'board:none' } } as const;

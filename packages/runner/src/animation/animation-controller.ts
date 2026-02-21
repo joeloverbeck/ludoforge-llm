@@ -16,6 +16,7 @@ import type {
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
+import { createAnimationLogger, type AnimationLogger } from './animation-logger.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -68,6 +69,7 @@ interface AnimationControllerDeps {
   readonly onError: (message: string, error: unknown) => void;
   readonly onWarning?: (message: string) => void;
   readonly scheduleFrame?: (callback: () => void) => void;
+  readonly logger?: AnimationLogger;
 }
 
 export function createAnimationController(
@@ -88,9 +90,15 @@ export function createAnimationController(
   let destroyed = false;
   let unsubscribeEffectTrace: (() => void) | null = null;
 
+  const logger = deps.logger;
+
   const processTrace = (trace: readonly EffectTraceEntry[], isSetup = false): void => {
     if (destroyed || trace.length === 0) {
       return;
+    }
+
+    if (logger?.enabled) {
+      logger.logTraceReceived({ traceLength: trace.length, isSetup, entries: trace });
     }
 
     let descriptors: readonly AnimationDescriptor[];
@@ -121,6 +129,16 @@ export function createAnimationController(
       return;
     }
 
+    if (logger?.enabled) {
+      const skippedCount = descriptors.filter((d) => d.kind === 'skipped').length;
+      logger.logDescriptorsMapped({
+        inputCount: trace.length,
+        outputCount: descriptors.length,
+        skippedCount,
+        descriptors,
+      });
+    }
+
     if (!hasVisualDescriptors(descriptors)) {
       return;
     }
@@ -146,6 +164,11 @@ export function createAnimationController(
               ...(isSetup ? { isSetupTrace: true } : {}),
             },
       );
+
+      if (logger?.enabled) {
+        const visualCount = descriptors.filter((d) => d.kind !== 'skipped').length;
+        logger.logTimelineBuilt({ visualDescriptorCount: visualCount, groupCount: 1 });
+      }
 
       if (reducedMotion) {
         timeline.progress?.(1);
@@ -386,7 +409,21 @@ function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): bool
   return descriptors.some((descriptor) => descriptor.kind !== 'skipped');
 }
 
+function detectAnimDebugEnabled(): boolean {
+  try {
+    return new URLSearchParams(globalThis.location?.search ?? '').has('animDebug');
+  } catch {
+    return false;
+  }
+}
+
 function createDefaultDeps(): AnimationControllerDeps {
+  const logger = createAnimationLogger({ enabled: detectAnimDebugEnabled() });
+
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as Record<string, unknown>).__animationLogger = logger;
+  }
+
   return {
     gsap: getGsapRuntime(),
     presetRegistry: createPresetRegistry(),
@@ -394,6 +431,7 @@ function createDefaultDeps(): AnimationControllerDeps {
       setAnimationPlaying: (playing) => {
         store.getState().setAnimationPlaying(playing);
       },
+      logger,
     }),
     traceToDescriptors,
     buildTimeline,
@@ -403,5 +441,6 @@ function createDefaultDeps(): AnimationControllerDeps {
     onWarning: (message) => {
       console.warn(message);
     },
+    logger,
   };
 }

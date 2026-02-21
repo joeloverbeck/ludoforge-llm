@@ -34,11 +34,13 @@ const { MockContainer } = vi.hoisted(() => {
       }
     }
 
-    removeChildren(): void {
+    removeChildren(): HoistedMockContainer[] {
+      const removed = this.children;
       for (const child of this.children) {
         child.parent = null;
       }
       this.children = [];
+      return removed;
     }
 
     removeFromParent(): void {
@@ -66,7 +68,11 @@ vi.mock('pixi.js', () => ({
 }));
 
 import type { Container } from 'pixi.js';
-import { safeDestroyContainer } from '../../../src/canvas/renderers/safe-destroy';
+import {
+  safeDestroyChildren,
+  safeDestroyContainer,
+  safeDestroyDisplayObject,
+} from '../../../src/canvas/renderers/safe-destroy';
 
 describe('safeDestroyContainer', () => {
   it('calls destroy() normally when no error occurs', () => {
@@ -115,9 +121,46 @@ describe('safeDestroyContainer', () => {
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Container.destroy()'),
+      expect.stringContaining('destroy() failed'),
       error,
     );
+
+    warnSpy.mockRestore();
+  });
+});
+
+describe('safeDestroyDisplayObject', () => {
+  it('passes destroy options through to destroy()', () => {
+    const container = new MockContainer();
+    const destroySpy = vi.spyOn(container, 'destroy');
+
+    safeDestroyDisplayObject(
+      container,
+      { children: true },
+    );
+
+    expect(destroySpy).toHaveBeenCalledWith({ children: true });
+  });
+});
+
+describe('safeDestroyChildren', () => {
+  it('continues destroying remaining children when one child destroy throws', () => {
+    const parent = new MockContainer();
+    const first = new MockContainer();
+    const second = new MockContainer();
+    parent.addChild(first, second);
+
+    vi.spyOn(first, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    const secondDestroySpy = vi.spyOn(second, 'destroy');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(() => safeDestroyChildren(parent as unknown as Container)).not.toThrow();
+
+    expect(secondDestroySpy).toHaveBeenCalledTimes(1);
+    expect(parent.children).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
 
     warnSpy.mockRestore();
   });

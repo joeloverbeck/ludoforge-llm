@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
+import { safeDestroyChildren } from './safe-destroy.js';
 
 interface HiddenStackMetrics {
   readonly layerCount: number;
@@ -156,10 +157,7 @@ function rebuildCards(cards: Container, metrics: HiddenStackMetrics): void {
 }
 
 function destroyChildren(container: Container): void {
-  for (const child of container.children) {
-    child.destroy();
-  }
-  container.removeChildren();
+  safeDestroyChildren(container);
 }
 
 function resolveCardColor(index: number): number {

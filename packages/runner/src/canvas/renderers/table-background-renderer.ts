@@ -2,6 +2,7 @@ import { Graphics, type Container } from 'pixi.js';
 
 import type { TableBackgroundConfig } from '../../config/visual-config-types.js';
 import { parseHexColor } from './shape-utils.js';
+import { safeDestroyChildren } from './safe-destroy.js';
 
 export interface TableBounds {
   readonly minX: number;
@@ -62,8 +63,5 @@ export function drawTableBackground(
 }
 
 function clearContainer(container: Container): void {
-  const removed = container.removeChildren();
-  for (const child of removed) {
-    child.destroy();
-  }
+  safeDestroyChildren(container);
 }

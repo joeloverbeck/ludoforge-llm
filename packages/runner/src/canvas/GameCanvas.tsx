@@ -276,7 +276,7 @@ export async function createGameCanvasRuntime(
     getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
   });
   canvasUpdater.start();
-  let canvasReady = true;
+  const canvasReady = true;
 
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;

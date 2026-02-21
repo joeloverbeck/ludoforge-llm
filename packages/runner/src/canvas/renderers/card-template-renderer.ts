@@ -2,6 +2,7 @@ import { Text, type Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import { resolveCardTemplateFields } from '../../config/card-field-resolver.js';
+import { safeDestroyDisplayObject } from './safe-destroy.js';
 
 export function drawCardContent(
   container: Container,
@@ -11,7 +12,7 @@ export function drawCardContent(
   const removed = [...container.children];
   container.removeChildren();
   for (const child of removed) {
-    child.destroy();
+    safeDestroyDisplayObject(child);
   }
 
   const resolvedFields = resolveCardTemplateFields(template.layout, fields);

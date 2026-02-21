@@ -6,6 +6,7 @@ import type { StoreApi } from 'zustand';
 import type { AppliedMoveEvent, GameStore } from '../../store/game-store.js';
 import type { PositionStore } from '../position-store.js';
 import { formatIdAsDisplayName } from '../../utils/format-display-name.js';
+import { safeDestroyDisplayObject } from './safe-destroy.js';
 
 const FADE_IN_SECONDS = 0.3;
 const HOLD_SECONDS = 1.5;
@@ -133,7 +134,7 @@ export function createActionAnnouncementRenderer(
 
     playerState.active.timeline.kill();
     playerState.active.textNode.removeFromParent();
-    playerState.active.textNode.destroy();
+    safeDestroyDisplayObject(playerState.active.textNode);
     playerState.active = null;
   };
 
@@ -186,7 +187,7 @@ export function createActionAnnouncementRenderer(
       onComplete: () => {
         const currentPlayerState = announcementByPlayer.get(playerKey);
         textNode.removeFromParent();
-        textNode.destroy();
+        safeDestroyDisplayObject(textNode);
         if (currentPlayerState !== undefined) {
           currentPlayerState.active = null;
           maybeRenderNext(playerKey);

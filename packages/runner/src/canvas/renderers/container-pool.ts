@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { safeDestroyDisplayObject } from './safe-destroy.js';
 
 const DEFAULT_EVENT_MODE = 'none' as const;
 
@@ -44,7 +45,7 @@ export class ContainerPool {
     this.destroyContainer =
       policy.destroyContainer ??
       ((container: Container) => {
-        container.destroy({ children: true });
+        safeDestroyDisplayObject(container, { children: true });
       });
   }
 

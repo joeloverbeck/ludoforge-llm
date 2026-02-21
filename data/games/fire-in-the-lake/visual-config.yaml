@@ -21,7 +21,7 @@ layout:
           - "the-parrots-beak:none"
           - "sihanoukville:none"
       - name: South Vietnam
-        position: center
+        position: e
         zones:
           - "saigon:none"
           - "hue:none"

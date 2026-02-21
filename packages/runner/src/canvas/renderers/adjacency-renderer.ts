@@ -5,6 +5,7 @@ import type { EdgeStrokeStyle, VisualConfigProvider } from '../../config/visual-
 import type { RenderAdjacency } from '../../model/render-model';
 import type { Position } from '../geometry';
 import type { AdjacencyRenderer } from './renderer-types';
+import { safeDestroyDisplayObject } from './safe-destroy.js';
 
 const DEFAULT_LINE_STYLE = {
   color: 0x6b7280,
@@ -58,7 +59,7 @@ export function createAdjacencyRenderer(
         }
 
         graphics.removeFromParent();
-        graphics.destroy();
+        safeDestroyDisplayObject(graphics);
         graphicsByPair.delete(pairKey);
       }
 
@@ -87,7 +88,7 @@ export function createAdjacencyRenderer(
     destroy(): void {
       for (const graphics of graphicsByPair.values()) {
         graphics.removeFromParent();
-        graphics.destroy();
+        safeDestroyDisplayObject(graphics);
       }
       graphicsByPair.clear();
     },

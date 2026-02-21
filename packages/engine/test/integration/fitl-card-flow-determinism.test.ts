@@ -13,6 +13,7 @@ import {
   legalMoves,
   serializeGameState,
   type GameDef,
+  type GameState,
   type Move,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
@@ -129,7 +130,7 @@ const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join
 const completeProfileMoveDeterministically = (
   baseMove: Move,
   def: GameDef,
-  state: ReturnType<typeof initialState>,
+  state: GameState,
 ): Move => {
   return completeMoveDecisionSequenceOrThrow(
     baseMove,
@@ -149,8 +150,8 @@ const completeProfileMoveDeterministically = (
 };
 
 const runScriptedOperations = (def: GameDef, seed: number, actions: readonly string[]) => {
-  let state: ReturnType<typeof initialState> = {
-    ...initialState(def, seed, 2),
+  let state: GameState = {
+    ...initialState(def, seed, 2).state,
     turnOrderState: { type: 'roundRobin' },
   };
   const logs: unknown[] = [];
@@ -313,7 +314,7 @@ describe('FITL card-flow determinism integration', () => {
   it('produces byte-identical state and trace logs for same seed and move sequence across repeated runs', () => {
     const def = createDef();
     const run = () => {
-      let state = initialState(def, 97, 4);
+      let state = initialState(def, 97, 4).state;
       const logs: unknown[] = [];
 
       for (const move of scriptedMoves) {
@@ -365,7 +366,7 @@ describe('FITL card-flow determinism integration', () => {
     const seed = 113;
 
     const run = (): FitlEventInitialPackGolden => {
-      const start = initialState(def, seed, 4);
+      const start = initialState(def, seed, 4).state;
       const initialLegalMoves = legalMoves(def, start);
 
       // Event action has an operation profile → legalMoves emits a template move.

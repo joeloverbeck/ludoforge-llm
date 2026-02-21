@@ -32,7 +32,7 @@ const LIMOP_SELECTOR_MACRO_IDS = [
   'insurgent-terror-select-spaces',
 ] as const;
 const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
-  ...initialState(def, seed, playerCount),
+  ...initialState(def, seed, playerCount).state,
   turnOrderState: { type: 'roundRobin' },
 });
 

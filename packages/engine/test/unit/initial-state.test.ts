@@ -56,7 +56,7 @@ const createDef = (): GameDef =>
 
 describe('initialState', () => {
   it('initializes vars, zones, and player metadata', () => {
-    const state = initialState(createDef(), 11, 3);
+    const state = initialState(createDef(), 11, 3).state;
 
     assert.equal(state.playerCount, 3);
     assert.equal(state.activePlayer, asPlayerId(0));
@@ -83,7 +83,7 @@ describe('initialState', () => {
       triggers: [],
     };
 
-    const state = initialState(def, 9, 2);
+    const state = initialState(def, 9, 2).state;
     assert.deepEqual(state.markers, {
       'alpha:none': { supportOpposition: 'support' },
     });
@@ -100,7 +100,7 @@ describe('initialState', () => {
       triggers: [],
     };
 
-    const state = initialState(def, 9, 2);
+    const state = initialState(def, 9, 2).state;
     assert.deepEqual(state.globalMarkers, {
       cap_topGun: 'inactive',
       activeLeader: 'minh',
@@ -108,12 +108,12 @@ describe('initialState', () => {
   });
 
   it('defaults omitted playerCount to metadata.players.min', () => {
-    const state = initialState(createDef(), 11);
+    const state = initialState(createDef(), 11).state;
     assert.equal(state.playerCount, 2);
   });
 
   it('always initializes turnOrderState, defaulting to roundRobin when turnOrder is omitted', () => {
-    const state = initialState(createDef(), 11, 3);
+    const state = initialState(createDef(), 11, 3).state;
     assert.deepEqual(state.turnOrderState, { type: 'roundRobin' });
   });
 
@@ -124,7 +124,7 @@ describe('initialState', () => {
       triggers: [],
     };
 
-    const state = initialState(def, 11, 3);
+    const state = initialState(def, 11, 3).state;
     assert.equal(state.activePlayer, asPlayerId(2));
     assert.deepEqual(state.turnOrderState, { type: 'fixedOrder', currentIndex: 0 });
   });
@@ -138,7 +138,7 @@ describe('initialState', () => {
       triggers: [],
     };
 
-    const state = initialState(def, 11, 3);
+    const state = initialState(def, 11, 3).state;
     assert.equal(state.activePlayer, asPlayerId(0));
   });
 
@@ -149,7 +149,7 @@ describe('initialState', () => {
       triggers: [],
     };
 
-    const state = initialState(def, 11, 4);
+    const state = initialState(def, 11, 4).state;
 
     assert.equal(state.activePlayer, asPlayerId(0));
     assert.deepEqual(state.turnOrderState, {
@@ -160,14 +160,14 @@ describe('initialState', () => {
   });
 
   it('throws descriptive errors for invalid playerCount', () => {
-    assert.throws(() => initialState(createDef(), 11, 1), /out of range/);
-    assert.throws(() => initialState(createDef(), 11, 5), /out of range/);
-    assert.throws(() => initialState(createDef(), 11, 1.5), /safe integer/);
+    assert.throws(() => initialState(createDef(), 11, 1).state, /out of range/);
+    assert.throws(() => initialState(createDef(), 11, 5).state, /out of range/);
+    assert.throws(() => initialState(createDef(), 11, 1.5).state, /safe integer/);
   });
 
   it('applies setup effects and startup triggers before final hash capture', () => {
     const def = createDef();
-    const state = initialState(def, 7, 2);
+    const state = initialState(def, 7, 2).state;
 
     assert.equal(state.globalVars.coins, 12);
     assert.equal(state.zones['deck:none']?.length, 1);
@@ -177,7 +177,7 @@ describe('initialState', () => {
   });
 
   it('dispatches startup trigger order as turnStart then phaseEnter', () => {
-    const state = initialState(createDef(), 3, 2);
+    const state = initialState(createDef(), 3, 2).state;
     assert.equal(state.globalVars.coins, 12);
   });
 
@@ -195,14 +195,14 @@ describe('initialState', () => {
       triggers: [],
     };
 
-    const state = initialState(def, 3, 2);
+    const state = initialState(def, 3, 2).state;
     assert.equal(state.globalVars.coins, 8);
   });
 
   it('is deterministic for same seed and GameDef', () => {
     const def = createDef();
-    const first = initialState(def, 42, 2);
-    const second = initialState(def, 42, 2);
+    const first = initialState(def, 42, 2).state;
+    const second = initialState(def, 42, 2).state;
 
     assert.deepEqual(first, second);
   });
@@ -215,7 +215,7 @@ describe('initialState', () => {
     };
 
     assert.throws(
-      () => initialState(noPhaseDef, 1, 2),
+      () => initialState(noPhaseDef, 1, 2).state,
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.match(error.message, /Invalid GameDef: validation failed/);
@@ -233,7 +233,7 @@ describe('initialState', () => {
     assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
-    const serialized = serializeGameState(initialState(compiled.gameDef!, 17, 2));
+    const serialized = serializeGameState(initialState(compiled.gameDef!, 17, 2).state);
     const fixture = readJsonFixture<SerializedGameState>('test/fixtures/trace/fitl-foundation-initial-state.golden.json');
 
     assert.deepEqual(serialized, fixture);
@@ -288,7 +288,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const state = initialState(def, 1, 2);
+    const state = initialState(def, 1, 2).state;
     assert.equal(state.zones['played:none']?.length, 1);
     assert.equal(state.zones['lookahead:none']?.length, 1);
     assert.equal(state.zones['deck:none']?.length, 1);
@@ -323,7 +323,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const state = initialState(def, 1, 2);
+    const state = initialState(def, 1, 2).state;
     assert.equal(state.activePlayer, asPlayerId(1));
     assert.deepEqual(requireCardDrivenRuntime(state).factionOrder, ['1', '0']);
     assert.deepEqual(requireCardDrivenRuntime(state).eligibility, { '1': true, '0': true });

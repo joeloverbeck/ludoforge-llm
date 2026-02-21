@@ -51,13 +51,13 @@ describe('FITL momentum formula modifiers', () => {
 
     const base = withActivePlayer(
       {
-        ...initialState(def, 9101, 2),
+        ...initialState(def, 9101, 2).state,
         globalVars: {
-          ...initialState(def, 9101, 2).globalVars,
+          ...initialState(def, 9101, 2).state.globalVars,
           trail: 2,
         },
         zones: {
-          ...initialState(def, 9101, 2).zones,
+          ...initialState(def, 9101, 2).state.zones,
           [space]: [
             makeToken('ww-us', 'troops', 'US', { type: 'troops' }),
             makeToken('ww-nva-g1', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
@@ -109,9 +109,9 @@ describe('FITL momentum formula modifiers', () => {
 
     const base = withActivePlayer(
       {
-        ...initialState(def, 9102, 2),
+        ...initialState(def, 9102, 2).state,
         globalVars: {
-          ...initialState(def, 9102, 2).globalVars,
+          ...initialState(def, 9102, 2).state.globalVars,
           trail: 2,
           nvaResources: 10,
         },
@@ -143,9 +143,9 @@ describe('FITL momentum formula modifiers', () => {
 
     const baseNva = withActivePlayer(
       {
-        ...initialState(def, 9102, 4),
+        ...initialState(def, 9102, 4).state,
         globalVars: {
-          ...initialState(def, 9102, 4).globalVars,
+          ...initialState(def, 9102, 4).state.globalVars,
           trail: 2,
           nvaResources: 10,
         },
@@ -174,13 +174,13 @@ describe('FITL momentum formula modifiers', () => {
     const mover = asTokenId('clay-march-g');
     const state = withActivePlayer(
       {
-        ...initialState(def, 9103, 4),
+        ...initialState(def, 9103, 4).state,
         globalVars: {
-          ...initialState(def, 9103, 4).globalVars,
+          ...initialState(def, 9103, 4).state.globalVars,
           nvaResources: 8,
         },
         zones: {
-          ...initialState(def, 9103, 4).zones,
+          ...initialState(def, 9103, 4).state.zones,
           [RALLY_SPACE]: [
             {
               id: mover,
@@ -221,9 +221,9 @@ describe('FITL momentum formula modifiers', () => {
     const second = ATTACK_SPACE;
     const base = withActivePlayer(
       {
-        ...initialState(def, 9104, 4),
+        ...initialState(def, 9104, 4).state,
         zones: {
-          ...initialState(def, 9104, 4).zones,
+          ...initialState(def, 9104, 4).state.zones,
           [first]: [makeToken('inf559-base-1', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' })],
           [second]: [makeToken('inf559-base-2', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' })],
         },
@@ -260,14 +260,14 @@ describe('FITL momentum formula modifiers', () => {
     const assaultSpace = 'quang-tin-quang-ngai:none';
     const assaultState = withActivePlayer(
       {
-        ...initialState(def, 9105, 2),
+        ...initialState(def, 9105, 2).state,
         globalVars: {
-          ...initialState(def, 9105, 2).globalVars,
+          ...initialState(def, 9105, 2).state.globalVars,
           arvnResources: 0,
           aid: 12,
         },
         zones: {
-          ...initialState(def, 9105, 2).zones,
+          ...initialState(def, 9105, 2).state.zones,
           [assaultSpace]: [
             makeToken('bodycount-arvn-assault', 'troops', 'ARVN', { type: 'troops' }),
             makeToken('bodycount-arvn-assault-2', 'troops', 'ARVN', { type: 'troops' }),
@@ -296,13 +296,13 @@ describe('FITL momentum formula modifiers', () => {
 
     const patrolState = withActivePlayer(
       {
-        ...initialState(def, 9106, 2),
+        ...initialState(def, 9106, 2).state,
         globalVars: {
-          ...initialState(def, 9106, 2).globalVars,
+          ...initialState(def, 9106, 2).state.globalVars,
           arvnResources: 0,
         },
         zones: {
-          ...initialState(def, 9106, 2).zones,
+          ...initialState(def, 9106, 2).state.zones,
           [RALLY_SPACE]: [
             makeToken('bodycount-arvn-patrol', 'troops', 'ARVN', { type: 'troops' }),
           ],

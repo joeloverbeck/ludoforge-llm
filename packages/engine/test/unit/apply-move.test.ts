@@ -824,7 +824,7 @@ phase: [asPhaseId('main')],
     } as unknown as GameDef;
 
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
-    const start = initialState(def, 5, 4);
+    const start = initialState(def, 5, 4).state;
     const first = applyMove(def, start, passMove);
     const second = applyMove(def, first.state, passMove);
     const third = applyMove(def, second.state, passMove);
@@ -897,7 +897,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const start = initialState(def, 13, 4);
+    const start = initialState(def, 13, 4).state;
     const first = applyMove(def, start, { actionId: asActionId('operation'), params: {} }).state;
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} });
 
@@ -996,7 +996,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const start = initialState(def, 17, 4);
+    const start = initialState(def, 17, 4).state;
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-overrides', side: 'unshaded' },
@@ -1419,7 +1419,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const start = initialState(def, 7, 4);
+    const start = initialState(def, 7, 4).state;
     const beforeEligibility = requireCardDrivenRuntime(start).eligibility;
     const beforeCard = requireCardDrivenRuntime(start).currentCard;
 
@@ -1487,7 +1487,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as unknown as GameDef;
 
-    const start = initialState(def, 71, 4);
+    const start = initialState(def, 71, 4).state;
     const withOneGrant = withPendingFreeOperationGrant(start, { actionIds: ['operate'] });
     const withTwoGrants = withPendingFreeOperationGrant(withOneGrant, { actionIds: ['operate'] });
     assert.equal(requireCardDrivenRuntime(withTwoGrants).pendingFreeOperationGrants?.length, 2);

@@ -15,7 +15,7 @@ export const makeIsolatedInitialState = (
     readonly turnOrderMode?: IsolatedStateTurnOrderMode;
   },
 ): GameState => {
-  const base = clearAllZones(initialState(def, seed, playerCount));
+  const base = clearAllZones(initialState(def, seed, playerCount).state);
   if (options?.turnOrderMode === 'roundRobin') {
     return {
       ...base,

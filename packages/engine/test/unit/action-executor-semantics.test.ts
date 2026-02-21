@@ -41,13 +41,13 @@ const buildDef = (): GameDef =>
 describe('action executor semantics', () => {
   it('legalMoves evaluates action preconditions under executor context', () => {
     const def = buildDef();
-    const state = initialState(def, 123, 2);
+    const state = initialState(def, 123, 2).state;
     assert.deepEqual(legalMoves(def, state).map((move) => String(move.actionId)), ['crossFactionScore']);
   });
 
   it('applyMove mutates executor-owned state, not active-player state', () => {
     const def = buildDef();
-    const state = initialState(def, 123, 2);
+    const state = initialState(def, 123, 2).state;
     const result = applyMove(def, state, { actionId: asActionId('crossFactionScore'), params: {} });
 
     assert.equal(result.state.perPlayerVars[0]?.score, 0);

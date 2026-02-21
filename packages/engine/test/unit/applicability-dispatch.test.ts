@@ -77,7 +77,7 @@ phase: [asPhaseId('main')],
 
 const createState = (activePlayer: number): GameState => {
   const def = createMultiProfileDef();
-  const base = initialState(def, 42);
+  const base = initialState(def, 42).state;
   return {
     ...base,
     activePlayer: asPlayerId(activePlayer),

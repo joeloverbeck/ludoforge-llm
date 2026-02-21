@@ -9,8 +9,13 @@ import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { createCollector } from './execution-collector.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { assertValidatedGameDef } from './validate-gamedef.js';
-import type { GameDef, GameState } from './types.js';
+import type { EffectTraceEntry, ExecutionOptions, GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
+
+export interface InitialStateResult {
+  readonly state: GameState;
+  readonly setupTrace: readonly EffectTraceEntry[];
+}
 
 const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | null => {
   const numeric = Number(playerId);
@@ -20,7 +25,7 @@ const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | 
   return numeric;
 };
 
-export const initialState = (def: GameDef, seed: number, playerCount?: number): GameState => {
+export const initialState = (def: GameDef, seed: number, playerCount?: number, options?: ExecutionOptions): InitialStateResult => {
   const validatedDef = assertValidatedGameDef(def);
   const resolvedPlayerCount = resolvePlayerCount(validatedDef, playerCount);
   const initialPhase = resolveInitialPhase(validatedDef);
@@ -30,6 +35,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
   const runtimeTableIndex = buildRuntimeTableIndex(validatedDef);
   const initialMarkers = buildInitialMarkers(validatedDef.spaceMarkers);
   const initialGlobalMarkers = buildInitialGlobalMarkers(validatedDef.globalMarkerLattices);
+  const collector = createCollector(options);
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(validatedDef.globalVars.map((variable) => [variable.name, variable.init])),
@@ -64,7 +70,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     bindings: {},
     runtimeTableIndex,
     moveParams: {},
-    collector: createCollector(),
+    collector,
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
   });
@@ -72,14 +78,17 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
     ...lifecycleResult.state,
     rng: setupResult.rng.state,
-  }, { type: 'turnStart' });
-  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase });
+  }, { type: 'turnStart' }, undefined, undefined, collector);
+  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, undefined, undefined, collector);
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
   const table = createZobristTable(validatedDef);
 
   return {
-    ...withTurnFlow,
-    stateHash: computeFullHash(table, withTurnFlow),
+    state: {
+      ...withTurnFlow,
+      stateHash: computeFullHash(table, withTurnFlow),
+    },
+    setupTrace: collector.trace ?? [],
   };
 };
 

@@ -217,6 +217,7 @@ function buildInitSuccessState(
   legalMoveResult: LegalMoveEnumerationResult,
   terminal: TerminalResult | null,
   lifecycle: GameLifecycle,
+  setupTrace: readonly EffectTraceEntry[],
 ): Partial<MutableGameStoreState> {
   const humanSeat = playerConfig.find((seat) => seat.type === 'human');
   return {
@@ -227,7 +228,7 @@ function buildInitSuccessState(
     terminal,
     gameLifecycle: lifecycle,
     error: null,
-    effectTrace: [],
+    effectTrace: setupTrace,
     triggerFirings: [],
     playerSeats: buildPlayerSeatsFromConfig(playerConfig),
     ...resetMoveConstructionState(),
@@ -717,7 +718,7 @@ export function createGameStore(
           });
 
           try {
-            const gameState = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
+            const { state: gameState, setupTrace } = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
             const lifecycle = assertLifecycleTransition(
@@ -725,7 +726,7 @@ export function createGameStore(
               lifecycleFromTerminal(terminal),
               'initGame:success',
             );
-            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle));
+            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle, setupTrace));
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGame:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
@@ -757,7 +758,7 @@ export function createGameStore(
               lifecycleFromTerminal(terminal),
               'initGameFromHistory:success',
             );
-            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle));
+            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle, []));
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGameFromHistory:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));

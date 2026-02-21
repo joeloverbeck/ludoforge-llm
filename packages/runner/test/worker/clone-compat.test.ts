@@ -185,7 +185,7 @@ describe('worker boundary structured clone compatibility', () => {
   it('round-trips GameDef, GameState, Move, ApplyMoveResult, ChoiceRequest, TerminalResult, and legal move enumeration', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
-    const state = await worker.init(TEST_DEF, 31, undefined, nextStamp());
+    const initResult = await worker.init(TEST_DEF, 31, undefined, nextStamp());
     const legalMoveEnumeration = await worker.enumerateLegalMoves();
     const move = legalMoveEnumeration.moves[0] ?? LEGAL_TICK_MOVE;
     const applyMoveResult = await worker.applyMove(move, undefined, nextStamp());
@@ -193,15 +193,15 @@ describe('worker boundary structured clone compatibility', () => {
     const terminal = await worker.terminalResult();
 
     roundTripClone(TEST_DEF);
-    const clonedState = roundTripClone(state);
+    const clonedInitResult = roundTripClone(initResult);
     roundTripClone(move);
     roundTripClone(applyMoveResult);
     roundTripClone(choiceRequest);
     roundTripClone(terminal);
     roundTripClone(legalMoveEnumeration);
 
-    expect(typeof clonedState.stateHash).toBe('bigint');
-    expect(typeof clonedState.rng.state[0]).toBe('bigint');
+    expect(typeof clonedInitResult.state.stateHash).toBe('bigint');
+    expect(typeof clonedInitResult.state.rng.state[0]).toBe('bigint');
   });
 
   it('round-trips all EffectTraceEntry variants', () => {

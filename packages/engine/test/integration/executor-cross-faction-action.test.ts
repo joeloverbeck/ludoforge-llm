@@ -41,7 +41,7 @@ const buildDef = (): GameDef =>
 describe('integration: cross-faction action executor', () => {
   it('applies effects under non-active executor while move remains active-player initiated', () => {
     const def = buildDef();
-    const initial = initialState(def, 99, 2);
+    const initial = initialState(def, 99, 2).state;
     const moves = legalMoves(def, initial);
 
     assert.deepEqual(moves.map((move) => String(move.actionId)), ['pressure']);

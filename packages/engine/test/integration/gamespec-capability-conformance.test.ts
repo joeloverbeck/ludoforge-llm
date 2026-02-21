@@ -43,7 +43,7 @@ function countTokens(state: GameState): number {
 describe('GameSpec capability conformance fixtures', () => {
   it('covers hidden->owner->reveal flow with deterministic reveal grants', () => {
     const def = compileConformanceFixture('hidden-reveal.md');
-    const start = initialState(def, 11, 2);
+    const start = initialState(def, 11, 2).state;
     const move: Move = { actionId: asActionId('showCard'), params: {} };
 
     const result = applyMove(def, start, move).state;
@@ -57,8 +57,8 @@ describe('GameSpec capability conformance fixtures', () => {
     const def = compileConformanceFixture('turn-phase.md');
     const move: Move = { actionId: asActionId('commit'), params: {} };
 
-    const first = applyMove(def, initialState(def, 19, 2), move).state;
-    const second = applyMove(def, initialState(def, 19, 2), move).state;
+    const first = applyMove(def, initialState(def, 19, 2).state, move).state;
+    const second = applyMove(def, initialState(def, 19, 2).state, move).state;
 
     assert.deepEqual(first, second);
     assert.equal(first.currentPhase, asPhaseId('main'));
@@ -71,8 +71,8 @@ describe('GameSpec capability conformance fixtures', () => {
     const def = compileConformanceFixture('pipeline-resource.md');
     const move: Move = { actionId: asActionId('operate'), params: {} };
 
-    const first = applyMove(def, initialState(def, 19, 2), move).state;
-    const second = applyMove(def, initialState(def, 19, 2), move).state;
+    const first = applyMove(def, initialState(def, 19, 2).state, move).state;
+    const second = applyMove(def, initialState(def, 19, 2).state, move).state;
     const offActorState: GameState = { ...first, activePlayer: asPlayerId(1) };
 
     assert.deepEqual(first, second);
@@ -103,8 +103,8 @@ describe('GameSpec capability conformance fixtures', () => {
     const legalityDef = compileConformanceFixture('pipeline-legality.md');
     const def = compileConformanceFixture('pipeline-resource.md');
     const move: Move = { actionId: asActionId('operate'), params: {} };
-    const legalityStart = initialState(legalityDef, 23, 2);
-    const start = initialState(def, 29, 2);
+    const legalityStart = initialState(legalityDef, 23, 2).state;
+    const start = initialState(def, 29, 2).state;
 
     const legalityFailedState: GameState = {
       ...legalityStart,
@@ -154,8 +154,8 @@ describe('GameSpec capability conformance fixtures', () => {
     const def = compileConformanceFixture('subset-scoring.md');
     const move: Move = { actionId: asActionId('scoreBestPair'), params: {} };
 
-    const first = applyMove(def, initialState(def, 31, 2), move).state;
-    const second = applyMove(def, initialState(def, 31, 2), move).state;
+    const first = applyMove(def, initialState(def, 31, 2).state, move).state;
+    const second = applyMove(def, initialState(def, 31, 2).state, move).state;
 
     assert.deepEqual(first, second);
     assert.equal(first.globalVars.winner, 7);
@@ -163,7 +163,7 @@ describe('GameSpec capability conformance fixtures', () => {
 
   it('covers token lifecycle invariants for movement, creation, uniqueness, and conservation', () => {
     const def = compileConformanceFixture('token-lifecycle.md');
-    const start = initialState(def, 47, 2);
+    const start = initialState(def, 47, 2).state;
     const move: Move = { actionId: asActionId('deploy'), params: {} };
 
     const afterFirst = applyMove(def, start, move).state;

@@ -175,7 +175,7 @@ describe('runGame', () => {
     const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], 3);
 
     const table = createZobristTable(def);
-    let replayState = initialState(def, seed, 2);
+    let replayState = initialState(def, seed, 2).state;
     for (const moveLog of trace.moves) {
       replayState = applyMove(def, replayState, moveLog.move).state;
       assert.equal(moveLog.stateHash, replayState.stateHash);

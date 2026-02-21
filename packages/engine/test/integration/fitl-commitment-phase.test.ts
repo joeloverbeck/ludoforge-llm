@@ -54,7 +54,7 @@ describe('FITL commitment phase production wiring', () => {
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
 
-    const baseState = initialState(def, 7301, 2);
+    const baseState = initialState(def, 7301, 2).state;
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),

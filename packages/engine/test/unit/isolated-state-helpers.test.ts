@@ -66,7 +66,7 @@ const token = (id: string, faction: string, type: string): Token => ({
 describe('isolated state helpers', () => {
   it('clearAllZones removes all zone tokens deterministically', () => {
     const def = createCardDrivenDef();
-    const base = initialState(def, 5, 2);
+    const base = initialState(def, 5, 2).state;
     const seeded: GameState = {
       ...base,
       zones: {

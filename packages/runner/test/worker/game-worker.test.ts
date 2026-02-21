@@ -85,8 +85,8 @@ describe('createGameWorker', () => {
   it('supports explicit playerCount on init', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
-    const state = await worker.init(ALT_TEST_DEF, 8, { playerCount: 3 }, nextStamp());
-    expect(state.playerCount).toBe(3);
+    const result = await worker.init(ALT_TEST_DEF, 8, { playerCount: 3 }, nextStamp());
+    expect(result.state.playerCount).toBe(3);
   });
 
   it('respects init-level trace config', async () => {
@@ -172,7 +172,7 @@ describe('createGameWorker', () => {
   it('rolls back history when applyMove fails', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
-    const initial = await worker.init(TEST_DEF, 13, undefined, nextStamp());
+    const { state: initial } = await worker.init(TEST_DEF, 13, undefined, nextStamp());
 
     expect(await worker.getHistoryLength()).toBe(0);
 
@@ -277,7 +277,7 @@ describe('createGameWorker', () => {
   it('supports metadata, undo, and reset lifecycle', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
-    const initial = await worker.init(TEST_DEF, 17, undefined, nextStamp());
+    const { state: initial } = await worker.init(TEST_DEF, 17, undefined, nextStamp());
 
     const metadata = await worker.getMetadata();
     expect(metadata).toEqual({
@@ -299,8 +299,8 @@ describe('createGameWorker', () => {
     await worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp());
     expect(await worker.getHistoryLength()).toBe(1);
 
-    const reset = await worker.reset(undefined, undefined, undefined, nextStamp());
-    expect(reset.globalVars.tick).toBe(0);
+    const { state: resetState } = await worker.reset(undefined, undefined, undefined, nextStamp());
+    expect(resetState.globalVars.tick).toBe(0);
     expect(await worker.getHistoryLength()).toBe(0);
   });
 
@@ -314,13 +314,13 @@ describe('createGameWorker', () => {
   it('supports reset with new seed, new def, and new playerCount', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
-    const initial = await worker.init(RANGE_TEST_DEF, 19, { playerCount: 2 }, nextStamp());
+    const { state: initial } = await worker.init(RANGE_TEST_DEF, 19, { playerCount: 2 }, nextStamp());
 
-    const reseeded = await worker.reset(undefined, 20, undefined, nextStamp());
+    const { state: reseeded } = await worker.reset(undefined, 20, undefined, nextStamp());
     expect(reseeded.rng.state).not.toEqual(initial.rng.state);
     expect(await worker.getHistoryLength()).toBe(0);
 
-    const resetWithNewDef = await worker.reset(ALT_TEST_DEF, 21, { playerCount: 3 }, nextStamp());
+    const { state: resetWithNewDef } = await worker.reset(ALT_TEST_DEF, 21, { playerCount: 3 }, nextStamp());
     expect(resetWithNewDef.playerCount).toBe(3);
     expect(await worker.getMetadata()).toEqual({
       gameId: 'runner-worker-test-alt',
@@ -330,7 +330,7 @@ describe('createGameWorker', () => {
       zoneNames: ['table:none'],
     });
 
-    const resetWithNewPlayerCount = await worker.reset(RANGE_TEST_DEF, 22, { playerCount: 4 }, nextStamp());
+    const { state: resetWithNewPlayerCount } = await worker.reset(RANGE_TEST_DEF, 22, { playerCount: 4 }, nextStamp());
     expect(resetWithNewPlayerCount.playerCount).toBe(4);
   });
 
@@ -340,7 +340,7 @@ describe('createGameWorker', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(TEST_DEF), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const state = await worker.loadFromUrl('https://example.com/game-def.json', 23, {
+    const { state } = await worker.loadFromUrl('https://example.com/game-def.json', 23, {
       playerCount: 2,
       enableTrace: false,
     }, nextStamp());

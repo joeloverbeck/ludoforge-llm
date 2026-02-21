@@ -44,7 +44,7 @@ const runEscalate = (
     readonly ante: number;
   },
 ) => {
-  const seedState = initialState(def, 71, 4);
+  const seedState = initialState(def, 71, 4).state;
   const state = {
     ...seedState,
     globalVars: {

@@ -37,7 +37,7 @@ describe('FITL momentum prohibition preconditions', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const base = withActivePlayer(initialState(def, 9001, 2), 0);
+    const base = withActivePlayer(initialState(def, 9001, 2).state, 0);
 
     const runAirStrike = (state: GameState) =>
       applyMoveWithResolvedDecisionIds(def, state, {
@@ -65,7 +65,7 @@ describe('FITL momentum prohibition preconditions', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const base = withActivePlayer(initialState(def, 9002, 2), 0);
+    const base = withActivePlayer(initialState(def, 9002, 2).state, 0);
 
     const runAirLift = (state: GameState) =>
       applyMoveWithResolvedDecisionIds(def, state, {
@@ -90,9 +90,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const usState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9003, 2),
+          ...initialState(def, 9003, 2).state,
           zones: {
-            ...initialState(def, 9003, 2).zones,
+            ...initialState(def, 9003, 2).state.zones,
             [space]: [
               makeToken('us-assault-t', 'troops', 'US', { type: 'troops' }),
               makeToken('us-assault-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
@@ -119,9 +119,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const arvnState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9004, 2),
+          ...initialState(def, 9004, 2).state,
           zones: {
-            ...initialState(def, 9004, 2).zones,
+            ...initialState(def, 9004, 2).state.zones,
             [space]: [
               makeToken('arvn-assault-t', 'troops', 'ARVN', { type: 'troops' }),
               makeToken('arvn-assault-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
@@ -152,9 +152,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const nvaState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9005, 2),
+          ...initialState(def, 9005, 2).state,
           zones: {
-            ...initialState(def, 9005, 2).zones,
+            ...initialState(def, 9005, 2).state.zones,
             [nvaSpace]: [
               makeToken('nva-ambush-g', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'underground' }),
               makeToken('nva-ambush-us', 'troops', 'US', { type: 'troops' }),
@@ -182,9 +182,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const vcState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9006, 2),
+          ...initialState(def, 9006, 2).state,
           zones: {
-            ...initialState(def, 9006, 2).zones,
+            ...initialState(def, 9006, 2).state.zones,
             [vcSpace]: [
               makeToken('vc-ambush-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
               makeToken('vc-ambush-us', 'troops', 'US', { type: 'troops' }),
@@ -218,9 +218,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const infiltrateState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9007, 2),
+          ...initialState(def, 9007, 2).state,
           zones: {
-            ...initialState(def, 9007, 2).zones,
+            ...initialState(def, 9007, 2).state.zones,
             [infilSpace]: [
               makeToken('inf-nva-base', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' }),
               makeToken('inf-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
@@ -265,9 +265,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const transportState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9009, 2),
+          ...initialState(def, 9009, 2).state,
           zones: {
-            ...initialState(def, 9009, 2).zones,
+            ...initialState(def, 9009, 2).state.zones,
             [origin]: [makeToken('typhoon-transport-arvn', 'troops', 'ARVN', { type: 'troops' })],
             [destination]: [],
           },
@@ -293,9 +293,9 @@ describe('FITL momentum prohibition preconditions', () => {
     const bombardState = withMom(
       withActivePlayer(
         {
-          ...initialState(def, 9010, 2),
+          ...initialState(def, 9010, 2).state,
           zones: {
-            ...initialState(def, 9010, 2).zones,
+            ...initialState(def, 9010, 2).state.zones,
             [bombardSpace]: [
               makeToken('typhoon-bombard-nva-1', 'troops', 'NVA', { type: 'troops' }),
               makeToken('typhoon-bombard-nva-2', 'troops', 'NVA', { type: 'troops' }),
@@ -324,7 +324,7 @@ describe('FITL momentum prohibition preconditions', () => {
 
     const adviseA = 'quang-nam:none';
     const adviseB = 'saigon:none';
-    const adviseBase = withActivePlayer(initialState(def, 9011, 2), 0);
+    const adviseBase = withActivePlayer(initialState(def, 9011, 2).state, 0);
 
     assert.doesNotThrow(() =>
       applyMoveWithResolvedDecisionIds(def, adviseBase, {
@@ -355,7 +355,7 @@ describe('FITL momentum prohibition preconditions', () => {
 
     const raidA = 'quang-nam:none';
     const raidB = 'tay-ninh:none';
-    const raidBase = withActivePlayer(initialState(def, 9012, 2), 1);
+    const raidBase = withActivePlayer(initialState(def, 9012, 2).state, 1);
 
     assert.doesNotThrow(() =>
       applyMoveWithResolvedDecisionIds(def, raidBase, {
@@ -394,13 +394,13 @@ describe('FITL momentum prohibition preconditions', () => {
 
     const baseState = withActivePlayer(
       {
-        ...initialState(def, 9013, 2),
+        ...initialState(def, 9013, 2).state,
         globalVars: {
-          ...initialState(def, 9013, 2).globalVars,
+          ...initialState(def, 9013, 2).state.globalVars,
           trail: 2,
         },
         zones: {
-          ...initialState(def, 9013, 2).zones,
+          ...initialState(def, 9013, 2).state.zones,
           [space]: [
             makeToken('oriskany-us', 'troops', 'US', { type: 'troops' }),
             makeToken('oriskany-vc-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),

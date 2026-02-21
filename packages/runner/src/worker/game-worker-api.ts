@@ -11,6 +11,7 @@ import {
 import type {
   ApplyMoveResult,
   ChoiceRequest,
+  EffectTraceEntry,
   ExecutionOptions,
   GameDef,
   GameState,
@@ -44,8 +45,13 @@ export interface BridgeInitOptions {
   readonly enableTrace?: boolean;
 }
 
+export interface InitResult {
+  readonly state: GameState;
+  readonly setupTrace: readonly EffectTraceEntry[];
+}
+
 export interface GameWorkerAPI {
-  init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState>;
+  init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
   enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult>;
   legalChoices(partialMove: Move): Promise<ChoiceRequest>;
@@ -65,8 +71,8 @@ export interface GameWorkerAPI {
   getMetadata(): Promise<GameMetadata>;
   getHistoryLength(): Promise<number>;
   undo(stamp: OperationStamp): Promise<GameState | null>;
-  reset(nextDef: GameDef | undefined, seed: number | undefined, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState>;
-  loadFromUrl(url: string, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState>;
+  reset(nextDef: GameDef | undefined, seed: number | undefined, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
+  loadFromUrl(url: string, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
 }
 
 const isWorkerErrorCode = (value: unknown): value is WorkerError['code'] => {
@@ -184,16 +190,18 @@ export function createGameWorker(): GameWorkerAPI {
     latestMutationStamp = stamp;
   };
 
-  const initState = (nextDef: GameDef, seed: number, options?: BridgeInitOptions): GameState => {
+  const initState = (nextDef: GameDef, seed: number, options?: BridgeInitOptions): InitResult => {
     def = nextDef;
-    state = initialState(nextDef, seed, options?.playerCount);
+    const traceEnabled = options?.enableTrace ?? true;
+    const result = initialState(nextDef, seed, options?.playerCount, { trace: traceEnabled });
+    state = result.state;
     history = [];
-    enableTrace = options?.enableTrace ?? true;
-    return state;
+    enableTrace = traceEnabled;
+    return { state: result.state, setupTrace: result.setupTrace };
   };
 
   const api: GameWorkerAPI = {
-    async init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState> {
+    async init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult> {
       return withInternalErrorMapping(() => {
         ensureFreshMutation(stamp);
         return initState(nextDef, seed, options);
@@ -323,7 +331,7 @@ export function createGameWorker(): GameWorkerAPI {
       seed: number | undefined,
       options: BridgeInitOptions | undefined,
       stamp: OperationStamp,
-    ): Promise<GameState> {
+    ): Promise<InitResult> {
       ensureFreshMutation(stamp);
       const resolvedDef = nextDef ?? def;
       if (resolvedDef === null) {
@@ -338,7 +346,7 @@ export function createGameWorker(): GameWorkerAPI {
       seed: number,
       options: BridgeInitOptions | undefined,
       stamp: OperationStamp,
-    ): Promise<GameState> {
+    ): Promise<InitResult> {
       ensureFreshMutation(stamp);
       return withValidationFailureMapping(async () => {
         const response = await fetch(url);

@@ -31,13 +31,13 @@ describe('FITL production terminal victory', () => {
 
   it('does not auto-terminal at initial production state', () => {
     const def = compileProductionDef();
-    const start = initialState(def, 7101, 4);
+    const start = initialState(def, 7101, 4).state;
     assert.equal(terminalResult(def, start), null);
   });
 
   it('resolves during-coup threshold wins from production terminal formulas', () => {
     const def = compileProductionDef();
-    const start = withClearedZones(initialState(def, 7102, 4));
+    const start = withClearedZones(initialState(def, 7102, 4).state);
     const usReserve = Array.from({ length: 50 }, (_unused, index) => ({
       id: asTokenId(`us-reserve-${index}`),
       type: 'piece',
@@ -71,7 +71,7 @@ describe('FITL production terminal victory', () => {
 
   it('uses configured final-coup tie-break precedence when margins tie', () => {
     const def = compileProductionDef();
-    const start = withClearedZones(initialState(def, 7103, 4));
+    const start = withClearedZones(initialState(def, 7103, 4).state);
     const state: GameState = {
       ...start,
       globalVars: {

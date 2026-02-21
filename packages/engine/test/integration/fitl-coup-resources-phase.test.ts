@@ -192,7 +192,7 @@ describe('FITL coup resources phase integration', () => {
       laosControl: true,
       cambodiaControl: true,
     });
-    const start = initialState(def, 17, 2);
+    const start = initialState(def, 17, 2).state;
 
     const next = advancePhase(def, start);
 
@@ -221,7 +221,7 @@ describe('FITL coup resources phase integration', () => {
     });
 
     const runOnce = () => {
-      const start = initialState(def, 23, 2);
+      const start = initialState(def, 23, 2).state;
       return advancePhase(def, start);
     };
 

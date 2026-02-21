@@ -476,10 +476,6 @@ function resolvePulseTarget(descriptor: VisualAnimationDescriptor, context: Pres
 }
 
 function resolveBoardTargets(context: PresetTweenContext): TweenTarget[] {
-  const tokenTargets = [...context.spriteRefs.tokenContainers.values()] as TweenTarget[];
-  if (tokenTargets.length > 0) {
-    return tokenTargets;
-  }
   return [...context.spriteRefs.zoneContainers.values()] as TweenTarget[];
 }
 

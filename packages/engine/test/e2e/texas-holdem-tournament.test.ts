@@ -93,7 +93,7 @@ const replayTrace = (
 ): { readonly initial: GameState; readonly final: GameState; readonly steps: readonly ReplayExecutedStep[] } =>
   replayScript({
     def,
-    initialState: initialState(def, trace.seed, playerCount),
+    initialState: initialState(def, trace.seed, playerCount).state,
     script: trace.moves.map((entry) => ({
       move: entry.move,
       expectedStateHash: entry.stateHash,
@@ -137,7 +137,7 @@ describe('texas hold\'em tournament e2e', () => {
       const playerCount = 4;
       const trace = loadTrace(def, 42, createAgents(playerCount, 'random'), playerCount, FULL_TOURNAMENT_MAX_TURNS);
 
-      const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount));
+      const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount).state);
       assert.equal(totalChipsInPlay(trace.finalState), totalInitialChips);
       assert.notEqual(
         trace.stopReason,
@@ -259,7 +259,7 @@ describe('texas hold\'em tournament e2e', () => {
 
   it('marks eliminated players and removes them from future participation', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 13, 3));
+    const base = advanceToDecisionPoint(def, initialState(def, 13, 3).state);
     const engineered: GameState = {
       ...base,
       currentPhase: asPhaseId('showdown'),
@@ -289,7 +289,7 @@ describe('texas hold\'em tournament e2e', () => {
 
   it('switches to heads-up blind/order rules after 3-player to 2-player transition', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 31, 3));
+    const base = advanceToDecisionPoint(def, initialState(def, 31, 3).state);
     const engineered: GameState = {
       ...base,
       currentPhase: asPhaseId('hand-cleanup'),
@@ -341,7 +341,7 @@ describe('texas hold\'em tournament e2e', () => {
 
   it('handles simultaneous elimination in a single hand-cleanup pass', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 11, 3));
+    const base = advanceToDecisionPoint(def, initialState(def, 11, 3).state);
 
     const engineered: GameState = {
       ...base,
@@ -384,7 +384,7 @@ describe('texas hold\'em tournament e2e', () => {
 
   it('changes blinds exactly on hand boundaries at schedule thresholds', () => {
     const def = compileTexasDef();
-    const state = advanceToDecisionPoint(def, initialState(def, 71, 4));
+    const state = advanceToDecisionPoint(def, initialState(def, 71, 4).state);
     const beforeBoundary: GameState = {
       ...state,
       currentPhase: asPhaseId('showdown'),
@@ -410,7 +410,7 @@ describe('texas hold\'em tournament e2e', () => {
 
   it('resolves all-in preflop hands by dealing out the board before cleanup', () => {
     const def = compileTexasDef();
-    let state = advanceToDecisionPoint(def, initialState(def, 91, 4));
+    let state = advanceToDecisionPoint(def, initialState(def, 91, 4).state);
 
     let safety = 0;
     while (state.currentPhase === 'preflop' && Number(state.globalVars.handsPlayed) === 0 && safety < 16) {
@@ -437,7 +437,7 @@ describe('texas hold\'em tournament e2e', () => {
 
   it('terminates once one player remains and ranks that player first', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 17, 3));
+    const base = advanceToDecisionPoint(def, initialState(def, 17, 3).state);
     const engineered: GameState = {
       ...base,
       globalVars: {

@@ -308,7 +308,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
 describe('deriveRenderModel state metadata', () => {
   it('derives global/player vars and space/global markers with lattice states', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 5, 2);
+    const baseState = initialState(baseDef, 5, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
@@ -338,7 +338,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('keeps unknown marker states while retaining known lattice state domains', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 50, 2);
+    const baseState = initialState(baseDef, 50, 2).state;
     const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
     const state: GameState = {
       ...stateWithMetadata,
@@ -361,7 +361,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('handles missing optional metadata without crashing', () => {
     const def = compileFixture();
-    const state = initialState(def, 6, 2);
+    const state = initialState(def, 6, 2).state;
 
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
 
@@ -374,7 +374,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('derives tracks for global and faction scopes with safe fallback', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 7, 2);
+    const baseState = initialState(baseDef, 7, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
@@ -412,7 +412,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('derives active effects, interrupt stack, and event deck metadata', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 8, 2);
+    const baseState = initialState(baseDef, 8, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
 
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
@@ -460,7 +460,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('projects lasting effect attributes deterministically and excludes non-display payloads', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 80, 2);
+    const baseState = initialState(baseDef, 80, 2).state;
     const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
     const state: GameState = {
       ...stateWithMetadata,
@@ -497,7 +497,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('projects global markers and active effects in deterministic source order/key order', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 81, 2);
+    const baseState = initialState(baseDef, 81, 2).state;
     const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
     const state: GameState = {
       ...stateWithMetadata,
@@ -534,7 +534,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('derives players and card-driven turn order', () => {
     const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 21, 2);
+    const baseState = initialState(baseDef, 21, 2).state;
     const { def, state } = withStateMetadata(baseDef, {
       ...baseState,
       activePlayer: asPlayerId(1),
@@ -578,7 +578,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('derives fixed-order turn order from currentIndex', () => {
     const def = compileFixture();
-    const baseState = initialState(def, 22, 2);
+    const baseState = initialState(def, 22, 2).state;
     const state: GameState = {
       ...baseState,
       turnOrderState: {
@@ -595,7 +595,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('groups actions, derives choice fields, and maps move warnings', () => {
     const def = compileFixture();
-    const state = initialState(def, 23, 2);
+    const state = initialState(def, 23, 2).state;
 
     const legalMoveResult: LegalMoveEnumerationResult = {
       moves: [
@@ -663,7 +663,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('projects choice option legality and illegal reason from choicePending metadata', () => {
     const def = compileFixture();
-    const state = initialState(def, 230, 2);
+    const state = initialState(def, 230, 2).state;
 
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
@@ -703,7 +703,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('resolves token target labels and metadata using projected tokens', () => {
     const def = compileFixture();
-    const baseState = initialState(def, 2310, 2);
+    const baseState = initialState(def, 2310, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -748,7 +748,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('formats scalar and array choice values deterministically without coercion collisions', () => {
     const def = compileFixture();
-    const state = initialState(def, 233, 2);
+    const state = initialState(def, 233, 2).state;
 
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
@@ -794,7 +794,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('surfaces unknown legality in rendered choice options', () => {
     const def = compileFixture();
-    const state = initialState(def, 231, 2);
+    const state = initialState(def, 231, 2).state;
 
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
@@ -834,7 +834,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps chooseOne with empty options to discreteOne without numeric inference', () => {
     const def = compileFixture();
-    const state = initialState(def, 232, 2);
+    const state = initialState(def, 232, 2).state;
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
@@ -863,7 +863,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('normalizes invalid chooseN bounds deterministically', () => {
     const def = compileFixture();
-    const state = initialState(def, 233, 2);
+    const state = initialState(def, 233, 2).state;
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
@@ -898,7 +898,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps no-pending selected-action context to confirmReady choiceUi', () => {
     const def = compileFixture();
-    const state = initialState(def, 234, 2);
+    const state = initialState(def, 234, 2).state;
     const model = deriveRenderModel(
       state,
       def,
@@ -913,7 +913,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps pending choice without selectedAction to invalid choiceUi', () => {
     const def = compileFixture();
-    const state = initialState(def, 235, 2);
+    const state = initialState(def, 235, 2).state;
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
@@ -937,7 +937,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps pending choice without partialMove to invalid choiceUi', () => {
     const def = compileFixture();
-    const state = initialState(def, 238, 2);
+    const state = initialState(def, 238, 2).state;
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
@@ -961,7 +961,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps selectedAction without partialMove to invalid confirm-ready state', () => {
     const def = compileFixture();
-    const state = initialState(def, 236, 2);
+    const state = initialState(def, 236, 2).state;
     const model = deriveRenderModel(
       state,
       def,
@@ -976,7 +976,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps partialMove without selectedAction to invalid confirm-ready state', () => {
     const def = compileFixture();
-    const state = initialState(def, 239, 2);
+    const state = initialState(def, 239, 2).state;
     const model = deriveRenderModel(
       state,
       def,
@@ -991,7 +991,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps selectedAction/partialMove action mismatch to invalid choiceUi', () => {
     const def = compileFixture();
-    const state = initialState(def, 237, 2);
+    const state = initialState(def, 237, 2).state;
     const model = deriveRenderModel(
       state,
       def,
@@ -1006,7 +1006,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps terminal variants to render terminal payloads', () => {
     const def = compileFixture();
-    const state = initialState(def, 24, 2);
+    const state = initialState(def, 24, 2).state;
     const winTerminal: TerminalResult = {
       type: 'win',
       player: asPlayerId(1),

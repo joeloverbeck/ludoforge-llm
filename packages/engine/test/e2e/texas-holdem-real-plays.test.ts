@@ -98,7 +98,7 @@ const applyLoggedMove = (
 describe('texas hold\'em real-play action-by-action replay e2e', () => {
   it('real #1: replays the full preflop all-in sequence and verifies runout + side-pot settlement', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 501, 6));
+    const base = advanceToDecisionPoint(def, initialState(def, 501, 6).state);
     const tokenIndex = buildTokenIndex(base);
 
     const handsByPlayer = {
@@ -226,7 +226,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
 
   it('real #2: replays the full logged hand action-by-action from preflop through showdown', () => {
     const def = compileTexasDef();
-    const base = advanceToDecisionPoint(def, initialState(def, 502, 8));
+    const base = advanceToDecisionPoint(def, initialState(def, 502, 8).state);
     const tokenIndex = buildTokenIndex(base);
 
     const handsByPlayer = {

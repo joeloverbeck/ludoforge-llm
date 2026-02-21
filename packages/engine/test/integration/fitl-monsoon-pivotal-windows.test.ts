@@ -119,7 +119,7 @@ phase: [asPhaseId('main')],
 describe('FITL monsoon/pivotal windows integration', () => {
   it('applies monsoon restrictions and only allows configured pivotal override metadata', () => {
     const def = createDef();
-    const start = initialState(def, 53, 2);
+    const start = initialState(def, 53, 2).state;
 
     assert.equal(start.zones['lookahead:none']?.[0]?.props.isCoup, true);
     assert.deepEqual(legalMoves(def, start), [
@@ -133,7 +133,7 @@ describe('FITL monsoon/pivotal windows integration', () => {
 
   it('disallows pivotal actions once the first eligible non-pass action has resolved', () => {
     const def = createDef();
-    const start = initialState(def, 59, 2);
+    const start = initialState(def, 59, 2).state;
     const afterFirst = applyMove(def, start, { actionId: asActionId('operate'), params: {} });
 
     const actions = legalMoves(def, afterFirst.state).map((move: Move) => move.actionId);

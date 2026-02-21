@@ -119,7 +119,7 @@ const runForcedThreeWayAllIn = (
   readonly startHandsPlayed: number;
   readonly steps: number;
 } => {
-  let state = advanceToDecisionPoint(def, initialState(def, seed, 3));
+  let state = advanceToDecisionPoint(def, initialState(def, seed, 3).state);
   state = mutateStacks(state, {
     '0': 30,
     '1': 80,
@@ -142,7 +142,7 @@ const runForcedThreeWayAllIn = (
 describe('texas hand mechanics integration', () => {
   it('deals two unique hole cards per player and preserves 52-card conservation', () => {
     const def = compileTexasDef();
-    const state = advanceToDecisionPoint(def, initialState(def, 23, 4));
+    const state = advanceToDecisionPoint(def, initialState(def, 23, 4).state);
 
     assert.equal(state.currentPhase, 'preflop');
     for (let player = 0; player < 4; player += 1) {
@@ -161,7 +161,7 @@ describe('texas hand mechanics integration', () => {
 
   it('applies flop/turn/river phase onEnter dealing contracts deterministically', () => {
     const def = compileTexasDef();
-    let state = advanceToDecisionPoint(def, initialState(def, 31, 2));
+    let state = advanceToDecisionPoint(def, initialState(def, 31, 2).state);
 
     const dealerSeat = Number(state.globalVars.dealerSeat);
     const bbSeat = dealerSeat === 0 ? 1 : 0;
@@ -194,7 +194,7 @@ describe('texas hand mechanics integration', () => {
 
   it('matches betting legality contracts for check/call/raise/allIn on preflop', () => {
     const def = compileTexasDef();
-    let state = advanceToDecisionPoint(def, initialState(def, 53, 2));
+    let state = advanceToDecisionPoint(def, initialState(def, 53, 2).state);
 
     const actor = String(state.activePlayer);
     const actorStreetBet = Number(state.perPlayerVars[actor]?.streetBet ?? 0);
@@ -235,7 +235,7 @@ describe('texas hand mechanics integration', () => {
 
   it('accepts exact no-limit raise amounts outside enumerated raise buckets for action-by-action log replay', () => {
     const def = compileTexasDef();
-    const state = advanceToDecisionPoint(def, initialState(def, 53, 2));
+    const state = advanceToDecisionPoint(def, initialState(def, 53, 2).state);
 
     const listedRaiseAmounts = legalMoves(def, state)
       .filter((move) => String(move.actionId) === 'raise')
@@ -250,7 +250,7 @@ describe('texas hand mechanics integration', () => {
 
   it('does not keep preflop BB option open after a raised pot is fully called', () => {
     const def = compileTexasDef();
-    let state = advanceToDecisionPoint(def, initialState(def, 77, 3));
+    let state = advanceToDecisionPoint(def, initialState(def, 77, 3).state);
     const bbSeat = Number(state.globalVars.preflopBigBlindSeat);
 
     state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 40);
@@ -268,7 +268,7 @@ describe('texas hand mechanics integration', () => {
 
   it('reopens betting after a full raise and restores raise rights to prior actors', () => {
     const def = compileTexasDef();
-    let state = advanceToDecisionPoint(def, initialState(def, 77, 3));
+    let state = advanceToDecisionPoint(def, initialState(def, 77, 3).state);
 
     state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 40);
     state = applyAction(def, state, 'call');
@@ -283,7 +283,7 @@ describe('texas hand mechanics integration', () => {
 
   it('does not reopen raise rights after a short all-in raise from a remaining actor', () => {
     const def = compileTexasDef();
-    let state = advanceToDecisionPoint(def, initialState(def, 77, 3));
+    let state = advanceToDecisionPoint(def, initialState(def, 77, 3).state);
 
     state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 40);
     state = applyAction(def, state, 'call');
@@ -300,7 +300,7 @@ describe('texas hand mechanics integration', () => {
 
   it('resolves early fold hands without traversing flop/turn/river dealing', () => {
     const def = compileTexasDef();
-    const initial = advanceToDecisionPoint(def, initialState(def, 43, 2));
+    const initial = advanceToDecisionPoint(def, initialState(def, 43, 2).state);
     const next = applyAction(def, initial, 'fold');
 
     assert.equal(next.globalVars.handsPlayed, 1);
@@ -369,7 +369,7 @@ describe('texas hand mechanics integration', () => {
     const def = compileTexasDef();
 
     const runLine = () => {
-      let state = advanceToDecisionPoint(def, initialState(def, 101, 4));
+      let state = advanceToDecisionPoint(def, initialState(def, 101, 4).state);
       const actionTrace: string[] = [];
       const hashTrace: bigint[] = [state.stateHash];
 
@@ -394,7 +394,7 @@ describe('texas hand mechanics integration', () => {
     const def = compileTexasDef();
 
     for (const seed of [61, 62, 63, 64, 65]) {
-      let state = advanceToDecisionPoint(def, initialState(def, seed, 3));
+      let state = advanceToDecisionPoint(def, initialState(def, seed, 3).state);
       state = mutateStacks(state, { '0': 35, '1': 45, '2': 55 });
       const startHandsPlayed = Number(state.globalVars.handsPlayed ?? 0);
 
@@ -418,7 +418,7 @@ describe('texas hand mechanics integration', () => {
     const def = compileTexasDef();
 
     for (const seed of [13, 17, 19]) {
-      let state = advanceToDecisionPoint(def, initialState(def, seed, 4));
+      let state = advanceToDecisionPoint(def, initialState(def, seed, 4).state);
       const expectedCardTotal = totalCardsAcrossZones(state);
       const expectedChipTotal = totalChipsInPlay(state);
 

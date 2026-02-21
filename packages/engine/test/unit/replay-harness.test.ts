@@ -64,7 +64,7 @@ const createPolicyAdvanceDef = (): GameDef => ({
 describe('replay harness helpers', () => {
   it('replays scripted moves and provides strict per-step assertions', () => {
     const def = createReplayDef();
-    const seeded = initialState(def, 7, 2);
+    const seeded = initialState(def, 7, 2).state;
     const move: Move = { actionId: asActionId('tick'), params: {} };
 
     const replayed = replayScript({
@@ -85,7 +85,7 @@ describe('replay harness helpers', () => {
 
   it('fails replay deterministically with actionable diagnostics when a step is illegal', () => {
     const def = createReplayDef();
-    const seeded = initialState(def, 7, 2);
+    const seeded = initialState(def, 7, 2).state;
     const illegalMove: Move = { actionId: asActionId('missingAction'), params: {} };
 
     assert.throws(
@@ -102,7 +102,7 @@ describe('replay harness helpers', () => {
 
   it('wraps thrown applyMove failures with replay context and preserves root reason', () => {
     const def = createReplayDef();
-    const seeded = initialState(def, 7, 2);
+    const seeded = initialState(def, 7, 2).state;
     const move: Move = { actionId: asActionId('tick'), params: {} };
 
     assert.throws(
@@ -149,7 +149,7 @@ describe('replay harness helpers', () => {
       turnStructure: { phases: [{ id: asPhaseId('p1') }] },
       actions: [action],
     } as unknown as GameDef;
-    const seeded = initialState(def, 7, 2);
+    const seeded = initialState(def, 7, 2).state;
     const scripted: Move = {
       actionId: asActionId('pair'),
       params: { second: 'B', first: 'A' },
@@ -165,7 +165,7 @@ describe('replay harness helpers', () => {
 
   it('fails bounded phase advance with deterministic diagnostics when cap is exceeded', () => {
     const def = createReplayDef();
-    const seeded = initialState(def, 7, 2);
+    const seeded = initialState(def, 7, 2).state;
 
     assert.throws(
       () =>
@@ -182,7 +182,7 @@ describe('replay harness helpers', () => {
 
   it('forwards execution policy through bounded phase advancement', () => {
     const def = createPolicyAdvanceDef();
-    const seeded = initialState(def, 11, 2);
+    const seeded = initialState(def, 11, 2).state;
     const zeroBudgetPolicy: MoveExecutionPolicy = { phaseTransitionBudget: { remaining: 0 } };
 
     assert.throws(

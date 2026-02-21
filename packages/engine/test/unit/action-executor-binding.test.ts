@@ -68,7 +68,7 @@ const buildInvalidBindingDef = (): GameDef =>
 describe('action executor binding', () => {
   it('resolves executor from declared action params in legalMoves and applyMove', () => {
     const def = buildDef();
-    const state = initialState(def, 7, 2);
+    const state = initialState(def, 7, 2).state;
     const moves = legalMoves(def, state);
 
     assert.deepEqual(
@@ -86,7 +86,7 @@ describe('action executor binding', () => {
 
   it('reports applyMove surface for missing required executor binding', () => {
     const def = buildDef();
-    const state = initialState(def, 7, 2);
+    const state = initialState(def, 7, 2).state;
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('assignScore'), params: {} }), (error: unknown) => {
       assert.ok(error instanceof Error);
@@ -101,7 +101,7 @@ describe('action executor binding', () => {
 
   it('projects missing executor binding as runtime contract error on legalMoves surface', () => {
     const def = buildInvalidBindingDef();
-    const state = initialState(def, 7, 2);
+    const state = initialState(def, 7, 2).state;
 
     assert.throws(() => legalMoves(def, state), (error: unknown) => {
       assert.ok(error instanceof Error);

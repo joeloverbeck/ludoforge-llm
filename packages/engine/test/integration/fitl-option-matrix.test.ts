@@ -104,7 +104,7 @@ phase: [asPhaseId('main')],
 describe('FITL option matrix integration', () => {
   it('gates second eligible legal moves after first eligible resolves event', () => {
     const def = createDef();
-    const start = initialState(def, 31, 3);
+    const start = initialState(def, 31, 3).state;
     const firstMove: Move = { actionId: asActionId('event'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
 
@@ -118,7 +118,7 @@ describe('FITL option matrix integration', () => {
 
   it('treats limitedOperation as operation for next eligible matrix classification', () => {
     const def = createDef();
-    const start = initialState(def, 37, 3);
+    const start = initialState(def, 37, 3).state;
     const firstMove: Move = { actionId: asActionId('limitedOperation'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
 
@@ -132,7 +132,7 @@ describe('FITL option matrix integration', () => {
 
   it('allows event or limitedOperation after first eligible resolves operationPlusSpecialActivity', () => {
     const def = createDef();
-    const start = initialState(def, 47, 3);
+    const start = initialState(def, 47, 3).state;
     const firstMove: Move = { actionId: asActionId('operationPlusSpecialActivity'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
 

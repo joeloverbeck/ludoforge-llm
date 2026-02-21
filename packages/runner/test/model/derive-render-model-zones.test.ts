@@ -168,7 +168,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ],
     });
 
-    const state = initialState(def, 99, 2);
+    const state = initialState(def, 99, 2).state;
     const model = deriveRenderModel(
       state,
       def,
@@ -223,7 +223,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const state = initialState(def, 123, 2);
+    const state = initialState(def, 123, 2).state;
     const contextA = makeRenderContext(state.playerCount, asPlayerId(0), {
       visualConfigProvider: new VisualConfigProvider({
         version: 1,
@@ -278,7 +278,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const state = initialState(defA, 123, 2);
+    const state = initialState(defA, 123, 2).state;
     const context = makeRenderContext(state.playerCount);
 
     const firstModel = deriveRenderModel(state, defA, context);
@@ -309,7 +309,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 123, 2);
+    const baseState = initialState(def, 123, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -411,7 +411,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
     };
 
-    const baseState = initialState(def, 111, 2);
+    const baseState = initialState(def, 111, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -457,7 +457,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         { id: 'arvn-police', faction: 'arvn', props: { faction: 'string' } },
       ],
     };
-    const baseState = initialState(def, 112, 2);
+    const baseState = initialState(def, 112, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -500,7 +500,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ],
     });
 
-    const state = initialState(def, 9, 2);
+    const state = initialState(def, 9, 2).state;
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
@@ -533,7 +533,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ],
     });
 
-    const state = initialState(def, 33, 2);
+    const state = initialState(def, 33, 2).state;
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
@@ -564,7 +564,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ],
     });
 
-    const state = initialState(def, 27, 2);
+    const state = initialState(def, 27, 2).state;
     const model = deriveRenderModel(
       state,
       def,
@@ -603,7 +603,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       ],
     });
 
-    const baseState = initialState(def, 2, 2);
+    const baseState = initialState(def, 2, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {},
@@ -633,7 +633,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 11, 2);
+    const baseState = initialState(def, 11, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -665,7 +665,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 12, 2);
+    const baseState = initialState(def, 12, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -707,7 +707,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 13, 2);
+    const baseState = initialState(def, 13, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -736,7 +736,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 14, 2);
+    const baseState = initialState(def, 14, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -777,7 +777,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 15, 3);
+    const baseState = initialState(def, 15, 3).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -817,7 +817,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 16, 2);
+    const baseState = initialState(def, 16, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -854,7 +854,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 17, 2);
+    const baseState = initialState(def, 17, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -898,7 +898,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const state = initialState(def, 18, 2);
+    const state = initialState(def, 18, 2).state;
 
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(1)));
     expect(model.zones.map((zone) => [zone.id, zone.tokenIDs, zone.hiddenTokenCount])).toEqual([
@@ -923,7 +923,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const baseState = initialState(def, 19, 2);
+    const baseState = initialState(def, 19, 2).state;
     const state: GameState = {
       ...baseState,
       zones: {
@@ -1022,7 +1022,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const state = initialState(def, 191, 2);
+    const state = initialState(def, 191, 2).state;
 
     const model = deriveRenderModel(
       state,
@@ -1067,7 +1067,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         },
       ],
     });
-    const state = initialState(def, 192, 2);
+    const state = initialState(def, 192, 2).state;
 
     const model = deriveRenderModel(
       state,

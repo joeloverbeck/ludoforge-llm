@@ -50,7 +50,7 @@ const playersInHandFromFlags = (state: GameState): number => {
 describe('texas runtime bootstrap and position flow', () => {
   it('initializes into a playable preflop state with card conservation', () => {
     const def = compileTexasDef();
-    const seeded = initialState(def, 23, 4);
+    const seeded = initialState(def, 23, 4).state;
     const state = advanceToDecisionPoint(def, seeded);
     const moves = legalMoves(def, state);
 
@@ -64,7 +64,7 @@ describe('texas runtime bootstrap and position flow', () => {
 
   it('advances active actor after an opening preflop action and keeps actingPosition synced', () => {
     const def = compileTexasDef();
-    const seeded = initialState(def, 29, 4);
+    const seeded = initialState(def, 29, 4).state;
     const state = advanceToDecisionPoint(def, seeded);
     const moves = legalMoves(def, state);
     assert.equal(moves.length > 0, true);
@@ -79,7 +79,7 @@ describe('texas runtime bootstrap and position flow', () => {
 
   it('applies heads-up blind and opening-order policy (button=SB, preflop button acts first)', () => {
     const def = compileTexasDef();
-    const seeded = initialState(def, 31, 2);
+    const seeded = initialState(def, 31, 2).state;
     const state = advanceToDecisionPoint(def, seeded);
 
     const dealerSeat = state.globalVars.dealerSeat;
@@ -95,7 +95,7 @@ describe('texas runtime bootstrap and position flow', () => {
 
   it('ends a heads-up hand on fold without traversing flop/turn/river side effects', () => {
     const def = compileTexasDef();
-    const seeded = initialState(def, 43, 2);
+    const seeded = initialState(def, 43, 2).state;
     const state = advanceToDecisionPoint(def, seeded);
     const foldMove = legalMoves(def, state).find((move) => move.actionId === 'fold');
     assert.ok(foldMove, 'expected fold to be legal in opening preflop state');
@@ -190,7 +190,7 @@ describe('texas runtime bootstrap and position flow', () => {
           maxSteps: 24,
           minAppliedMoves,
           policy,
-          bootstrapState: (targetDef, seed, playerCount) => advanceToDecisionPoint(targetDef, initialState(targetDef, seed, playerCount)),
+          bootstrapState: (targetDef, seed, playerCount) => advanceToDecisionPoint(targetDef, initialState(targetDef, seed, playerCount).state),
           invariants: texasInvariants,
         });
       });

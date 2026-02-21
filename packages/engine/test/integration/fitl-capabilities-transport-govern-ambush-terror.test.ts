@@ -45,7 +45,7 @@ const countTokens = (state: GameState, zone: string, predicate: (token: Token) =
   (state.zones[zone] ?? []).filter(predicate).length;
 
 const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
-  ...initialState(def, seed, playerCount),
+  ...initialState(def, seed, playerCount).state,
   turnOrderState: { type: 'roundRobin' },
 });
 
@@ -143,7 +143,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const destination = 'loc-hue-da-nang:none';
 
     const run = (marker: MarkerState, seed: number): GameState => {
-      const start = withMarker(initialState(def, seed, 2), 'cap_armoredCavalry', marker);
+      const start = withMarker(initialState(def, seed, 2).state, 'cap_armoredCavalry', marker);
       const setup = addTokenToZone(
         addTokenToZone(start, origin, makeToken(`transport-${marker}-troop`, 'troops', 'ARVN', { type: 'troops' })),
         origin,
@@ -194,7 +194,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const spaceB = 'can-tho:none';
 
     const base = (marker: MarkerState, seed: number): GameState => {
-      const start = withMarker(initialState(def, seed, 2), 'cap_mandateOfHeaven', marker);
+      const start = withMarker(initialState(def, seed, 2).state, 'cap_mandateOfHeaven', marker);
       const withSpaceA = addTokenToZone(
         addTokenToZone(
           addTokenToZone(start, spaceA, makeToken(`govern-${marker}-a-arvn-t`, 'troops', 'ARVN', { type: 'troops' })),

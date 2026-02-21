@@ -71,7 +71,7 @@ const replayTrace = (
 ): readonly ReplaySnapshot[] => {
   const replayed = replayScript({
     def,
-    initialState: initialState(def, trace.seed, PLAYER_COUNT),
+    initialState: initialState(def, trace.seed, PLAYER_COUNT).state,
     script: trace.moves.map((entry) => ({
       move: entry.move,
       expectedStateHash: entry.stateHash,

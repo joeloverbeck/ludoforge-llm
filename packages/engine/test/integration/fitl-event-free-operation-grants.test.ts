@@ -452,7 +452,7 @@ phase: [asPhaseId('main')],
 describe('event free-operation grants integration', () => {
   it('creates pending free-operation grants from event side declarations', () => {
     const def = createDef();
-    const start = initialState(def, 9, 4);
+    const start = initialState(def, 9, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -480,7 +480,7 @@ describe('event free-operation grants integration', () => {
 
   it('creates pending free-operation grants from event branch declarations', () => {
     const def = createDef();
-    const start = initialState(def, 10, 4);
+    const start = initialState(def, 10, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -501,7 +501,7 @@ describe('event free-operation grants integration', () => {
 
   it('creates pending free-operation grants from event effect execution', () => {
     const def = createDef();
-    const start = initialState(def, 12, 4);
+    const start = initialState(def, 12, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -519,7 +519,7 @@ describe('event free-operation grants integration', () => {
 
   it('supports two consecutive free operations when two grants exist for one faction', () => {
     const def = createDef();
-    const start = initialState(def, 17, 4);
+    const start = initialState(def, 17, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -546,7 +546,7 @@ describe('event free-operation grants integration', () => {
 
   it('tracks reusable grants with remainingUses and stable explicit grant id', () => {
     const def = createDef();
-    const start = initialState(def, 18, 4);
+    const start = initialState(def, 18, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -571,7 +571,7 @@ describe('event free-operation grants integration', () => {
 
   it('enforces operationClass on free-operation grants', () => {
     const def = createDef();
-    const start = initialState(def, 21, 4);
+    const start = initialState(def, 21, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -598,7 +598,7 @@ describe('event free-operation grants integration', () => {
 
   it('enforces ordered same-faction grant chains within one event resolution', () => {
     const def = createDef();
-    const start = initialState(def, 25, 4);
+    const start = initialState(def, 25, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -633,7 +633,7 @@ describe('event free-operation grants integration', () => {
 
   it('enforces ordered cross-faction grant chains within one event resolution', () => {
     const def = createDef();
-    const start = initialState(def, 26, 4);
+    const start = initialState(def, 26, 4).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -652,7 +652,7 @@ describe('event free-operation grants integration', () => {
 
   it('enforces Cambodia-only free-operation grants across discovery, decision flow, and final apply', () => {
     const def = createZoneFilteredDef();
-    const start = initialState(def, 11, 3);
+    const start = initialState(def, 11, 3).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
@@ -687,7 +687,7 @@ describe('event free-operation grants integration', () => {
 
   it('applies free-operation grants with executeAsFaction using the overridden action profile', () => {
     const def = createExecuteAsFactionDef();
-    const start = initialState(def, 33, 2);
+    const start = initialState(def, 33, 2).state;
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),

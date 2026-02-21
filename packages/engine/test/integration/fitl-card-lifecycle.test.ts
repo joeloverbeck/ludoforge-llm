@@ -60,7 +60,7 @@ const lifecycleSteps = (entries: readonly TriggerLogEntry[]): readonly string[] 
 describe('FITL card lifecycle integration', () => {
   it('promotes lookahead and records coup handoff lifecycle trace entries in applyMove logs', () => {
     const def = createLifecycleDef();
-    const start = initialState(def, 9, 2);
+    const start = initialState(def, 9, 2).state;
 
     assert.equal(start.zones['played:none']?.[0]?.id, 'tok_card_3');
     assert.equal(start.zones['lookahead:none']?.[0]?.id, 'tok_card_2');
@@ -111,7 +111,7 @@ describe('FITL card lifecycle integration', () => {
       },
     };
 
-    const start = initialState(def, 9, 2);
+    const start = initialState(def, 9, 2).state;
     const first = applyMove(def, start, legalMoves(def, start)[0]!);
     const second = applyMove(def, first.state, legalMoves(def, first.state)[0]!);
     const third = applyMove(def, second.state, legalMoves(def, second.state)[0]!);

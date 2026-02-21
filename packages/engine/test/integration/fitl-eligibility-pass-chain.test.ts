@@ -65,7 +65,7 @@ describe('FITL eligibility/pass-chain integration', () => {
   it('scans candidates deterministically, applies pass rewards, and resets on rightmost pass', () => {
     const def = createDef();
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
-    const start = initialState(def, 19, 4);
+    const start = initialState(def, 19, 4).state;
 
     assert.equal(start.activePlayer, asPlayerId(0));
     assert.equal(requireCardDrivenRuntime(start).currentCard.firstEligible, '0');
@@ -99,7 +99,7 @@ describe('FITL eligibility/pass-chain integration', () => {
   it('ends the card after two non-pass actions and resets candidate slots', () => {
     const def = createDef();
     const operateMove: Move = { actionId: asActionId('operate'), params: {} };
-    const start = initialState(def, 23, 4);
+    const start = initialState(def, 23, 4).state;
 
     const first = applyMove(def, start, operateMove).state;
     assert.equal(first.globalVars.ops, 1);

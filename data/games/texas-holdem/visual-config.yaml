@@ -50,6 +50,13 @@ cardAnimation:
     burn: ["burn:none"]
     discard: ["muck:none"]
 
+animations:
+  sequencing:
+    cardDeal: { mode: stagger, staggerOffset: 0.15 }
+  timing:
+    cardDeal: { duration: 0.3 }
+    cardFlip: { duration: 0.3 }
+
 cards:
   assignments:
     - match:

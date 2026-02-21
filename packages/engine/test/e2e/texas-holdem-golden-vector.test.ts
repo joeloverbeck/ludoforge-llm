@@ -269,7 +269,7 @@ const engineerPreflopState = (setup: HandSetup): GameState => {
 
 describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
   const def = compileTexasDef();
-  const base = advanceToDecisionPoint(def, initialState(def, 100, 3));
+  const base = advanceToDecisionPoint(def, initialState(def, 100, 3).state);
   const tokenIndex = buildTokenIndex(base);
 
   // =========================================================================

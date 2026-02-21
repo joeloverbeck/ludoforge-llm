@@ -14,6 +14,7 @@ export type PresetCompatibleDescriptorKind = VisualAnimationDescriptor['kind'];
 export interface PresetTweenContext {
   readonly gsap: GsapLike;
   readonly timeline: GsapTimelineLike;
+  readonly durationSeconds: number;
   readonly spriteRefs: {
     readonly tokenContainers: ReadonlyMap<string, unknown>;
     readonly zoneContainers: ReadonlyMap<string, unknown>;
@@ -77,6 +78,8 @@ const VISUAL_DESCRIPTOR_KINDS: readonly PresetCompatibleDescriptorKind[] = [
   'phaseTransition',
 ];
 
+const ARC_TWEEN_EASE = 'power2.inOut';
+
 const BUILTIN_PRESET_METADATA = {
   'arc-tween': {
     defaultDurationSeconds: 0.4,
@@ -107,14 +110,14 @@ const BUILTIN_PRESET_METADATA = {
     defaultDurationSeconds: 0.3,
     compatibleKinds: ['varChange', 'resourceTransfer'],
     createTween: (_descriptor, context) => {
-      appendDelay(context, 0.3);
+      appendDelay(context, context.durationSeconds);
     },
   },
   'banner-slide': {
     defaultDurationSeconds: 1.5,
     compatibleKinds: ['phaseTransition'],
     createTween: (_descriptor, context) => {
-      appendDelay(context, 1.5);
+      appendDelay(context, context.durationSeconds);
     },
   },
   pulse: {
@@ -288,7 +291,7 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
   const from = context.spriteRefs.zonePositions.positions.get(descriptor.from);
   const to = context.spriteRefs.zonePositions.positions.get(descriptor.to);
   if (target === undefined || from === undefined || to === undefined) {
-    appendDelay(context, 0.4);
+    appendDelay(context, context.durationSeconds);
     return;
   }
 
@@ -299,12 +302,12 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
 
   const midX = (from.x + to.x) / 2;
   const midY = Math.min(from.y, to.y) - liftHeight;
-  const halfDuration = 0.2;
+  const halfDuration = context.durationSeconds / 2;
 
   target.x = from.x;
   target.y = from.y;
-  appendTween(context, target, { x: midX, y: midY }, halfDuration);
-  appendTween(context, target, { x: to.x, y: to.y }, halfDuration);
+  appendTween(context, target, { x: midX, y: midY, ease: ARC_TWEEN_EASE }, halfDuration);
+  appendTween(context, target, { x: to.x, y: to.y, ease: ARC_TWEEN_EASE }, halfDuration);
 }
 
 function createFadeInScaleTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -314,13 +317,13 @@ function createFadeInScaleTween(descriptor: VisualAnimationDescriptor, context: 
 
   const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
   if (target === undefined) {
-    appendDelay(context, 0.3);
+    appendDelay(context, context.durationSeconds);
     return;
   }
 
   target.alpha = 0;
   setScale(target, 0.5);
-  appendTween(context, target, { alpha: 1, scale: 1 }, 0.3);
+  appendTween(context, target, { alpha: 1, scale: 1 }, context.durationSeconds);
 }
 
 function createFadeOutScaleTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -330,7 +333,7 @@ function createFadeOutScaleTween(descriptor: VisualAnimationDescriptor, context:
 
   const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
   if (target === undefined) {
-    appendDelay(context, 0.3);
+    appendDelay(context, context.durationSeconds);
     return;
   }
 
@@ -338,7 +341,7 @@ function createFadeOutScaleTween(descriptor: VisualAnimationDescriptor, context:
     target.alpha = 1;
   }
   setScale(target, 1);
-  appendTween(context, target, { alpha: 0, scale: 0.5 }, 0.3);
+  appendTween(context, target, { alpha: 0, scale: 0.5 }, context.durationSeconds);
 }
 
 function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -348,11 +351,11 @@ function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: P
 
   const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
   if (target === undefined) {
-    appendDelay(context, 0.3);
+    appendDelay(context, context.durationSeconds);
     return;
   }
 
-  const halfDuration = 0.15;
+  const halfDuration = context.durationSeconds / 2;
   appendTween(context, target, { scaleX: 0 }, halfDuration);
   appendTween(context, target, { scaleX: 1 }, halfDuration);
 }
@@ -364,25 +367,27 @@ function createTintFlashTween(descriptor: VisualAnimationDescriptor, context: Pr
 
   const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
   if (target === undefined) {
-    appendDelay(context, 0.4);
+    appendDelay(context, context.durationSeconds);
     return;
   }
 
   const originalTint = target.tint ?? 0xffffff;
-  appendTween(context, target, { tint: 0xffd54f }, 0.2);
-  appendTween(context, target, { tint: originalTint }, 0.2);
+  const halfDuration = context.durationSeconds / 2;
+  appendTween(context, target, { tint: 0xffd54f }, halfDuration);
+  appendTween(context, target, { tint: originalTint }, halfDuration);
 }
 
 function createPulseTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
   const target = resolvePulseTarget(descriptor, context);
   if (target === undefined) {
-    appendDelay(context, 0.2);
+    appendDelay(context, context.durationSeconds);
     return;
   }
 
+  const halfDuration = context.durationSeconds / 2;
   setScale(target, 1);
-  appendTween(context, target, { scale: 1.08 }, 0.1);
-  appendTween(context, target, { scale: 1 }, 0.1);
+  appendTween(context, target, { scale: 1.08 }, halfDuration);
+  appendTween(context, target, { scale: 1 }, halfDuration);
 }
 
 function resolvePulseTarget(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): TweenTarget | undefined {

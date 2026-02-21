@@ -65,6 +65,41 @@ afterEach(() => {
 });
 
 describe('buildTimeline', () => {
+  it('passes resolved preset default duration to pulse and descriptor presets', () => {
+    const runtime = createRuntimeFixture();
+    const durations: number[] = [];
+
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: (_descriptor, context) => durations.push(context.durationSeconds),
+      },
+      {
+        id: 'pulse',
+        defaultDurationSeconds: 0.2,
+        compatibleKinds: ['moveToken'],
+        createTween: (_descriptor, context) => durations.push(context.durationSeconds),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: true,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    expect(durations).toEqual([0.2, 0.4]);
+  });
+
   it('builds sequential descriptors in order and prepends pulse for triggered effects', () => {
     const runtime = createRuntimeFixture();
 

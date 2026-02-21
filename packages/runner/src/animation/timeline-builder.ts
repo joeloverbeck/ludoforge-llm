@@ -7,7 +7,7 @@ import type {
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
-import type { PresetRegistry } from './preset-registry.js';
+import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
 
 type VisualAnimationDescriptor = Exclude<AnimationDescriptor, { kind: 'skipped' }>;
 
@@ -127,18 +127,24 @@ function groupConsecutiveSameKind(
 function processDescriptor(
   descriptor: VisualAnimationDescriptor,
   presetRegistry: PresetRegistry,
-  context: { readonly gsap: GsapLike; readonly timeline: GsapTimelineLike; readonly spriteRefs: TimelineSpriteRefs },
+  context: Omit<PresetTweenContext, 'durationSeconds'>,
 ): void {
   try {
     if (descriptor.isTriggered) {
       const pulsePreset = presetRegistry.get('pulse');
       if (pulsePreset !== undefined && pulsePreset.compatibleKinds.includes(descriptor.kind)) {
-        pulsePreset.createTween(descriptor, context);
+        pulsePreset.createTween(descriptor, {
+          ...context,
+          durationSeconds: pulsePreset.defaultDurationSeconds,
+        });
       }
     }
 
     const preset = presetRegistry.requireCompatible(descriptor.preset, descriptor.kind);
-    preset.createTween(descriptor, context);
+    preset.createTween(descriptor, {
+      ...context,
+      durationSeconds: preset.defaultDurationSeconds,
+    });
   } catch (error) {
     console.warn(`Animation tween generation failed for descriptor "${descriptor.kind}".`, error);
   }

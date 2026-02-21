@@ -157,7 +157,7 @@ describe('preset-registry', () => {
         preset: 'arc-tween',
         isTriggered: false,
       },
-      context,
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
     );
     registry.require('fade-in-scale').createTween(
       {
@@ -168,7 +168,7 @@ describe('preset-registry', () => {
         preset: 'fade-in-scale',
         isTriggered: false,
       },
-      context,
+      { ...context, durationSeconds: registry.require('fade-in-scale').defaultDurationSeconds },
     );
     registry.require('tint-flash').createTween(
       {
@@ -180,7 +180,7 @@ describe('preset-registry', () => {
         preset: 'tint-flash',
         isTriggered: false,
       },
-      context,
+      { ...context, durationSeconds: registry.require('tint-flash').defaultDurationSeconds },
     );
 
     expect(gsap.to).toHaveBeenCalledWith(token, expect.objectContaining({
@@ -197,6 +197,8 @@ describe('preset-registry', () => {
 
   it('arc-tween creates two-phase tween with midpoint lift', () => {
     const registry = createPresetRegistry();
+    const arcDurationSeconds = registry.require('arc-tween').defaultDurationSeconds;
+    const halfArcDurationSeconds = arcDurationSeconds / 2;
     const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
     const timeline = { add: vi.fn() };
     const gsap = {
@@ -229,7 +231,7 @@ describe('preset-registry', () => {
         preset: 'arc-tween',
         isTriggered: false,
       },
-      context,
+      { ...context, durationSeconds: arcDurationSeconds },
     );
 
     expect(gsap.to).toHaveBeenCalledTimes(2);
@@ -238,21 +240,25 @@ describe('preset-registry', () => {
     const firstCall = arcCalls[0]!;
     expect(firstCall[0]).toBe(token);
     const firstVars = firstCall[1] as Record<string, unknown>;
-    expect(firstVars['duration']).toBe(0.2);
+    expect(firstVars['duration']).toBe(halfArcDurationSeconds);
     expect(firstVars['x']).toBe(150);
+    expect(firstVars['ease']).toBe('power2.inOut');
     const firstY = firstVars['y'] as number;
     expect(firstY).toBeLessThan(0);
 
     const secondCall = arcCalls[1]!;
     expect(secondCall[0]).toBe(token);
     const secondVars = secondCall[1] as Record<string, unknown>;
-    expect(secondVars['duration']).toBe(0.2);
+    expect(secondVars['duration']).toBe(halfArcDurationSeconds);
     expect(secondVars['x']).toBe(300);
     expect(secondVars['y']).toBe(0);
+    expect(secondVars['ease']).toBe('power2.inOut');
   });
 
   it('card-flip-3d creates two-phase scaleX tween', () => {
     const registry = createPresetRegistry();
+    const cardFlipDurationSeconds = registry.require('card-flip-3d').defaultDurationSeconds;
+    const halfCardFlipDurationSeconds = cardFlipDurationSeconds / 2;
     const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
     const timeline = { add: vi.fn() };
     const gsap = {
@@ -283,7 +289,7 @@ describe('preset-registry', () => {
         preset: 'card-flip-3d',
         isTriggered: false,
       },
-      context,
+      { ...context, durationSeconds: cardFlipDurationSeconds },
     );
 
     expect(gsap.to).toHaveBeenCalledTimes(2);
@@ -292,13 +298,13 @@ describe('preset-registry', () => {
     const firstFlipCall = flipCalls[0]!;
     expect(firstFlipCall[0]).toBe(token);
     const firstFlipVars = firstFlipCall[1] as Record<string, unknown>;
-    expect(firstFlipVars['duration']).toBe(0.15);
+    expect(firstFlipVars['duration']).toBe(halfCardFlipDurationSeconds);
     expect(firstFlipVars['scaleX']).toBe(0);
 
     const secondFlipCall = flipCalls[1]!;
     expect(secondFlipCall[0]).toBe(token);
     const secondFlipVars = secondFlipCall[1] as Record<string, unknown>;
-    expect(secondFlipVars['duration']).toBe(0.15);
+    expect(secondFlipVars['duration']).toBe(halfCardFlipDurationSeconds);
     expect(secondFlipVars['scaleX']).toBe(1);
   });
 
@@ -345,7 +351,7 @@ describe('preset-registry', () => {
         preset: 'arc-tween',
         isTriggered: false,
       },
-      contextClose,
+      { ...contextClose, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
     );
 
     const closeCalls = gsap.to.mock.calls as unknown[][];

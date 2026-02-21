@@ -276,7 +276,6 @@ export async function createGameCanvasRuntime(
     getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
   });
   canvasUpdater.start();
-  const canvasReady = true;
 
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
@@ -289,7 +288,6 @@ export async function createGameCanvasRuntime(
       tokenContainers: () => tokenRenderer.getContainerMap(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),
-      isCanvasReady: () => canvasReady,
     });
     animationController.start();
 

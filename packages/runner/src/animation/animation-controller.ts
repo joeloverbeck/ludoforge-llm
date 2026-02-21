@@ -54,7 +54,6 @@ export interface AnimationControllerOptions {
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
-  readonly isCanvasReady?: () => boolean;
 }
 
 interface AnimationControllerDeps {
@@ -84,11 +83,6 @@ export function createAnimationController(
 
   const processTrace = (trace: readonly EffectTraceEntry[]): void => {
     if (destroyed || trace.length === 0) {
-      return;
-    }
-
-    if (options.isCanvasReady !== undefined && !options.isCanvasReady()) {
-      deps.onWarning?.('Animation controller skipped trace: canvas not ready.');
       return;
     }
 

@@ -1,4 +1,5 @@
 import type { PlayerId, VariableValue } from '@ludoforge/engine/runtime';
+import type { SkippedTraceKind } from '../model/effect-trace-kind-config.js';
 
 export const ANIMATION_PRESET_IDS = [
   'arc-tween',
@@ -149,7 +150,7 @@ export interface ZoneHighlightDescriptor extends BaseAnimationDescriptor {
 
 export interface SkippedDescriptor {
   readonly kind: 'skipped';
-  readonly traceKind: 'forEach' | 'reduce' | 'createToken';
+  readonly traceKind: 'createToken' | SkippedTraceKind;
 }
 
 export type AnimationDescriptor =

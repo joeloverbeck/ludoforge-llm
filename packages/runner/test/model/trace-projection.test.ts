@@ -86,6 +86,47 @@ describe('trace-projection', () => {
       zoneIds: [],
       tokenIds: ['tok-3'],
     });
+
+    const revealToSingle: EffectTraceEntry = {
+      kind: 'reveal',
+      zone: 'zone-secret',
+      observers: [asPlayerId(1)],
+      provenance: provenance('actionEffect'),
+    };
+    expect(projectEffectTraceEntry(revealToSingle)).toEqual({
+      kind: 'reveal',
+      isTriggered: false,
+      zoneIds: ['zone-secret'],
+      tokenIds: [],
+      playerId: 1,
+    });
+
+    const revealToAll: EffectTraceEntry = {
+      kind: 'reveal',
+      zone: 'zone-secret',
+      observers: 'all',
+      provenance: provenance('triggerEffect'),
+    };
+    expect(projectEffectTraceEntry(revealToAll)).toEqual({
+      kind: 'reveal',
+      isTriggered: true,
+      zoneIds: ['zone-secret'],
+      tokenIds: [],
+    });
+
+    const concealFromMany: EffectTraceEntry = {
+      kind: 'conceal',
+      zone: 'zone-secret',
+      from: [asPlayerId(0), asPlayerId(2)],
+      grantsRemoved: 2,
+      provenance: provenance('actionEffect'),
+    };
+    expect(projectEffectTraceEntry(concealFromMany)).toEqual({
+      kind: 'conceal',
+      isTriggered: false,
+      zoneIds: ['zone-secret'],
+      tokenIds: [],
+    });
   });
 
   it('projects trigger event refs and player context', () => {

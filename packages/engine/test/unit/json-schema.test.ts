@@ -280,6 +280,47 @@ describe('json schema artifacts', () => {
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace with reveal/conceal effect entries validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          effectTrace: [
+            {
+              kind: 'reveal',
+              zone: 'deck:none',
+              observers: [0],
+              filter: [{ prop: 'cost', op: 'eq', value: 2 }],
+              provenance: {
+                phase: 'main',
+                eventContext: 'actionEffect',
+                effectPath: 'effects[0]',
+              },
+            },
+            {
+              kind: 'conceal',
+              zone: 'deck:none',
+              from: [0],
+              filter: [{ prop: 'cost', op: 'eq', value: 2 }],
+              grantsRemoved: 1,
+              provenance: {
+                phase: 'main',
+                eventContext: 'actionEffect',
+                effectPath: 'effects[1]',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
   it('trace with non-hex stateHash fails schema validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);

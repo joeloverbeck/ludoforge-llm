@@ -670,6 +670,23 @@ export interface EffectTraceSetTokenProp {
   readonly provenance: EffectTraceProvenance;
 }
 
+export interface EffectTraceReveal {
+  readonly kind: 'reveal';
+  readonly zone: string;
+  readonly observers: 'all' | readonly PlayerId[];
+  readonly filter?: readonly TokenFilterPredicate[];
+  readonly provenance: EffectTraceProvenance;
+}
+
+export interface EffectTraceConceal {
+  readonly kind: 'conceal';
+  readonly zone: string;
+  readonly from?: 'all' | readonly PlayerId[];
+  readonly filter?: readonly TokenFilterPredicate[];
+  readonly grantsRemoved: number;
+  readonly provenance: EffectTraceProvenance;
+}
+
 export interface EffectTraceVarChange {
   readonly kind: 'varChange';
   readonly scope: 'global' | 'perPlayer';
@@ -741,6 +758,8 @@ export type EffectTraceEntry =
   | EffectTraceReduce
   | EffectTraceMoveToken
   | EffectTraceSetTokenProp
+  | EffectTraceReveal
+  | EffectTraceConceal
   | EffectTraceVarChange
   | EffectTraceResourceTransfer
   | EffectTraceCreateToken

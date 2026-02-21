@@ -71,6 +71,28 @@ export function projectEffectTraceEntry(entry: EffectTraceEntry): EffectTracePro
         zoneIds: [],
         tokenIds: [],
       };
+
+    case 'reveal': {
+      const playerId = resolveOptionalSinglePlayer(entry.observers);
+      return {
+        kind: entry.kind,
+        isTriggered: isTriggeredEffectTraceEntry(entry),
+        zoneIds: [entry.zone],
+        tokenIds: [],
+        ...optionalPlayerId(playerId),
+      };
+    }
+
+    case 'conceal': {
+      const playerId = resolveOptionalSinglePlayer(entry.from);
+      return {
+        kind: entry.kind,
+        isTriggered: isTriggeredEffectTraceEntry(entry),
+        zoneIds: [entry.zone],
+        tokenIds: [],
+        ...optionalPlayerId(playerId),
+      };
+    }
   }
 }
 
@@ -97,4 +119,11 @@ function toNumberOrUndefined(value: unknown): number | undefined {
     return undefined;
   }
   return value;
+}
+
+function resolveOptionalSinglePlayer(players: 'all' | readonly number[] | undefined): number | undefined {
+  if (players === undefined || players === 'all' || players.length !== 1) {
+    return undefined;
+  }
+  return toNumberOrUndefined(players[0]);
 }

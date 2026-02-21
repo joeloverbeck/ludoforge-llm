@@ -8,6 +8,8 @@ import {
   removeMatchingRevealGrants,
   revealGrantEquals,
 } from './hidden-info-grants.js';
+import { emitTrace } from './execution-collector.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, RevealGrant } from './types.js';
 
@@ -56,6 +58,15 @@ export const applyConceal = (
   if (removal.removedCount === 0) {
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
+
+  emitTrace(ctx.collector, {
+    kind: 'conceal',
+    zone: zoneId,
+    ...(from === undefined ? {} : { from }),
+    ...(effect.conceal.filter === undefined ? {} : { filter: effect.conceal.filter }),
+    grantsRemoved: removal.removedCount,
+    provenance: resolveTraceProvenance(ctx),
+  });
 
   const remainingReveals = { ...existingReveals } as Record<string, readonly RevealGrant[]>;
   if (remainingZoneGrants.length === 0) {
@@ -112,6 +123,14 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
       [zoneId]: [...existingZoneGrants, grant],
     },
   };
+
+  emitTrace(ctx.collector, {
+    kind: 'reveal',
+    zone: zoneId,
+    observers,
+    ...(effect.reveal.filter === undefined ? {} : { filter: effect.reveal.filter }),
+    provenance: resolveTraceProvenance(ctx),
+  });
 
   return { state: nextState, rng: ctx.rng, emittedEvents: [] };
 };

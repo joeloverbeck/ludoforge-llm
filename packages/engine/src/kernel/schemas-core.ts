@@ -512,6 +512,25 @@ export const EffectTraceEntrySchema = z.union([
     .strict(),
   z
     .object({
+      kind: z.literal('reveal'),
+      zone: StringSchema,
+      observers: z.union([z.literal('all'), z.array(IntegerSchema)]),
+      filter: z.array(TokenFilterPredicateSchema).optional(),
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('conceal'),
+      zone: StringSchema,
+      from: z.union([z.literal('all'), z.array(IntegerSchema)]).optional(),
+      filter: z.array(TokenFilterPredicateSchema).optional(),
+      grantsRemoved: IntegerSchema.min(0),
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('varChange'),
       scope: z.union([z.literal('global'), z.literal('perPlayer')]),
       varName: StringSchema,

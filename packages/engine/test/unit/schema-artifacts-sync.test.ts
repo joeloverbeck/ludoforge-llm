@@ -14,4 +14,12 @@ describe('schema artifact synchronization', () => {
       assert.deepEqual(artifact, generated[filename], filename);
     }
   });
+
+  it('uses deterministic definition names instead of volatile __schemaN keys', () => {
+    const generated = buildSchemaArtifactMap();
+    for (const filename of SCHEMA_ARTIFACT_FILENAMES) {
+      const serialized = JSON.stringify(generated[filename]);
+      assert.equal(serialized.includes('__schema'), false, filename);
+    }
+  });
 });

@@ -105,6 +105,22 @@ function translateEffectEntry(
         message: `Set ${formatIdAsDisplayName(entry.prop)} on ${formatIdAsDisplayName(entry.tokenId)} from ${formatValue(entry.oldValue)} to ${formatValue(entry.newValue)}.`,
       };
 
+    case 'reveal':
+      return {
+        ...base,
+        kind: 'lifecycle',
+        message: `Reveal in ${resolveZoneName(entry.zone, visualConfig)} to ${formatObserverSelection(entry.observers, visualConfig, lookup)}${formatOptionalFilter(entry.filter)}.`,
+      };
+
+    case 'conceal':
+      return {
+        ...base,
+        kind: 'lifecycle',
+        message:
+          `Conceal in ${resolveZoneName(entry.zone, visualConfig)} removed ${entry.grantsRemoved} grant(s)` +
+          `${formatConcealScope(entry.from, visualConfig, lookup)}${formatOptionalFilter(entry.filter)}.`,
+      };
+
     case 'lifecycleEvent':
       return {
         ...base,
@@ -280,6 +296,73 @@ function resolvePlayerName(
   }
 
   return resolveFactionName(factionId, visualConfig);
+}
+
+function formatObserverSelection(
+  observers: 'all' | readonly number[],
+  visualConfig: VisualConfigProvider,
+  lookup: PlayerLookup,
+): string {
+  if (observers === 'all') {
+    return 'all players';
+  }
+  if (observers.length === 0) {
+    return 'no players';
+  }
+  return observers.map((playerId) => resolvePlayerName(playerId, visualConfig, lookup)).join(', ');
+}
+
+function formatConcealScope(
+  from: 'all' | readonly number[] | undefined,
+  visualConfig: VisualConfigProvider,
+  lookup: PlayerLookup,
+): string {
+  if (from === undefined) {
+    return '';
+  }
+  if (from === 'all') {
+    return ' from public grants';
+  }
+  if (from.length === 0) {
+    return ' from no players';
+  }
+  return ` from ${from.map((playerId) => resolvePlayerName(playerId, visualConfig, lookup)).join(', ')}`;
+}
+
+function formatOptionalFilter(
+  filter:
+    | readonly {
+      readonly prop: string;
+      readonly op: 'eq' | 'neq' | 'in' | 'notIn';
+      readonly value: unknown;
+    }[]
+    | undefined,
+): string {
+  if (filter === undefined || filter.length === 0) {
+    return '';
+  }
+  return ` (filter: ${filter.map(formatFilterPredicate).join(' and ')})`;
+}
+
+function formatFilterPredicate(predicate: {
+  readonly prop: string;
+  readonly op: 'eq' | 'neq' | 'in' | 'notIn';
+  readonly value: unknown;
+}): string {
+  return `${formatIdAsDisplayName(predicate.prop)} ${formatFilterOp(predicate.op)} ${formatValue(predicate.value)}`;
+}
+
+function formatFilterOp(op: 'eq' | 'neq' | 'in' | 'notIn'): string {
+  switch (op) {
+    case 'eq':
+      return '==';
+    case 'neq':
+      return '!=';
+    case 'in':
+      return 'in';
+    case 'notIn':
+      return 'not in';
+  }
 }
 
 function formatResourceEndpoint(

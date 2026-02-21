@@ -107,6 +107,19 @@ describe('traceToDescriptors', () => {
         iteratedCount: 3,
         provenance: traceEntryProvenance('actionEffect'),
       },
+      {
+        kind: 'reveal',
+        zone: 'zone:secret',
+        observers: [asPlayerId(1)],
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'conceal',
+        zone: 'zone:secret',
+        from: [asPlayerId(1)],
+        grantsRemoved: 1,
+        provenance: traceEntryProvenance('actionEffect'),
+      },
     ];
 
     expect(traceToDescriptors(trace)).toEqual([
@@ -180,6 +193,14 @@ describe('traceToDescriptors', () => {
       {
         kind: 'skipped',
         traceKind: 'reduce',
+      },
+      {
+        kind: 'skipped',
+        traceKind: 'reveal',
+      },
+      {
+        kind: 'skipped',
+        traceKind: 'conceal',
       },
     ]);
   });

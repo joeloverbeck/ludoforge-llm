@@ -163,6 +163,49 @@ describe('effects reveal', () => {
     });
   });
 
+  it('emits reveal trace entry on successful grant addition', () => {
+    const ctx = makeCtx({ collector: createCollector({ trace: true }) });
+    const effect: EffectAST = {
+      reveal: {
+        zone: 'hand:0',
+        to: { id: asPlayerId(1) },
+        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+      },
+    };
+
+    applyEffect(effect, ctx);
+
+    assert.deepEqual(ctx.collector.trace, [
+      {
+        kind: 'reveal',
+        zone: 'hand:0',
+        observers: [asPlayerId(1)],
+        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        provenance: {
+          phase: 'main',
+          eventContext: 'actionEffect',
+          effectPath: 'effects',
+        },
+      },
+    ]);
+  });
+
+  it('does not emit reveal trace entry on duplicate grant no-op', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: [asPlayerId(1)] }],
+        },
+      },
+    });
+
+    applyEffect({ reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } }, ctx);
+
+    assert.deepEqual(ctx.collector.trace, []);
+  });
+
   it('throws runtime error when state is missing resolved zone entry', () => {
     const ctx = makeCtx({
       state: {
@@ -348,6 +391,64 @@ describe('effects conceal', () => {
     const result = applyEffect(effect, ctx);
 
     assert.equal(result.state, state);
+  });
+
+  it('emits conceal trace entry with removal metadata', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [
+            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+            { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+          ],
+        },
+      },
+    });
+
+    applyEffect(
+      {
+        conceal: {
+          zone: 'hand:0',
+          from: { id: asPlayerId(1) },
+          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(ctx.collector.trace, [
+      {
+        kind: 'conceal',
+        zone: 'hand:0',
+        from: [asPlayerId(1)],
+        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        grantsRemoved: 1,
+        provenance: {
+          phase: 'main',
+          eventContext: 'actionEffect',
+          effectPath: 'effects',
+        },
+      },
+    ]);
+  });
+
+  it('does not emit conceal trace entry when selective conceal matches no grants', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: [asPlayerId(0)] }],
+        },
+      },
+    });
+
+    applyEffect({ conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } }, ctx);
+
+    assert.deepEqual(ctx.collector.trace, []);
   });
 
   it('matches conceal.filter regardless of predicate order', () => {

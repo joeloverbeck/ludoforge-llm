@@ -13,6 +13,7 @@ import {
   type PresetRegistry,
 } from './preset-registry.js';
 import { classifyCardSemantic } from './card-classification.js';
+import { isSkippedTraceEntry } from '../model/effect-trace-kind-config.js';
 import { isTriggeredEffectTraceEntry } from '../model/trace-projection.js';
 
 const BUILTIN_PRESET_REGISTRY = createPresetRegistry();
@@ -142,18 +143,21 @@ function mapEntry(
         preset: resolvePreset(entry.kind, 'phaseTransition', options, presetRegistry),
         isTriggered: triggered,
       };
-    case 'forEach':
-      return {
-        kind: 'skipped',
-        traceKind: 'forEach',
-      };
-    case 'reduce':
-      return {
-        kind: 'skipped',
-        traceKind: 'reduce',
-      };
   }
+
+  if (isSkippedTraceEntry(entry)) {
+    return {
+      kind: 'skipped',
+      traceKind: entry.kind,
+    };
+  }
+
+  return assertNever(entry);
 }
+
+const assertNever = (_value: never): never => {
+  throw new Error('Unhandled effect trace kind.');
+};
 
 function passesDetailFilter(detailLevel: AnimationDetailLevel, descriptor: AnimationDescriptor): boolean {
   if (descriptor.kind === 'skipped') {

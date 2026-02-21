@@ -318,6 +318,69 @@ describe('translateEffectTrace', () => {
     expect(entries[5]?.message).toBe('Reduce Best Score iterated 5/5.');
   });
 
+  it('translates reveal/conceal entries with observer scope and filter summaries', () => {
+    const visualConfig = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        overrides: {
+          'hand:0': { label: 'US Hand' },
+        },
+      },
+      factions: {
+        us: { displayName: 'United States' },
+        arvn: { displayName: 'ARVN' },
+      },
+    });
+
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'reveal',
+        zone: 'hand:0',
+        observers: [asPlayerId(0)],
+        filter: [{ prop: 'faction', op: 'eq', value: 'us' }],
+        provenance: provenance(),
+      },
+      {
+        kind: 'reveal',
+        zone: 'hand:0',
+        observers: 'all',
+        provenance: provenance(),
+      },
+      {
+        kind: 'conceal',
+        zone: 'hand:0',
+        from: [asPlayerId(0), asPlayerId(1)],
+        filter: [{ prop: 'status', op: 'notIn', value: ['revealed', 'peeked'] }],
+        grantsRemoved: 2,
+        provenance: provenance(),
+      },
+      {
+        kind: 'conceal',
+        zone: 'hand:0',
+        from: 'all',
+        grantsRemoved: 1,
+        provenance: provenance(),
+      },
+    ];
+
+    const entries = translateEffectTrace(effectTrace, [], visualConfig, gameDefFixture(), 3);
+
+    expect(entries[0]?.kind).toBe('lifecycle');
+    expect(entries[0]?.message).toBe('Reveal in US Hand to United States (filter: Faction == us).');
+    expect(entries[0]?.playerId).toBe(0);
+    expect(entries[0]?.zoneIds).toEqual(['hand:0']);
+
+    expect(entries[1]?.message).toBe('Reveal in US Hand to all players.');
+    expect(entries[1]?.playerId).toBeUndefined();
+
+    expect(entries[2]?.message).toBe(
+      'Conceal in US Hand removed 2 grant(s) from United States, ARVN (filter: Status not in ["revealed","peeked"]).',
+    );
+    expect(entries[2]?.playerId).toBeUndefined();
+
+    expect(entries[3]?.message).toBe('Conceal in US Hand removed 1 grant(s) from public grants.');
+  });
+
   it('falls back to formatted ids and player labels when visual names are missing', () => {
     const visualConfig = new VisualConfigProvider(null);
     const effectTrace: readonly EffectTraceEntry[] = [

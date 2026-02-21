@@ -1,4 +1,5 @@
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
+import { TRACE_KIND_DEFAULT_PRESET_IDS } from '../model/effect-trace-kind-config.js';
 
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import {
@@ -58,17 +59,8 @@ export interface PresetRegistry {
   registerMany(definitions: readonly AnimationPresetDefinition[]): PresetRegistry;
 }
 
-const DEFAULT_TRACE_KIND_PRESET_IDS: Readonly<Record<EffectTraceEntry['kind'], AnimationPresetId | null>> = {
-  moveToken: 'arc-tween',
-  createToken: 'fade-in-scale',
-  destroyToken: 'fade-out-scale',
-  setTokenProp: 'tint-flash',
-  varChange: 'counter-tick',
-  resourceTransfer: 'counter-tick',
-  lifecycleEvent: 'banner-overlay',
-  forEach: null,
-  reduce: null,
-};
+const DEFAULT_TRACE_KIND_PRESET_IDS: Readonly<Record<EffectTraceEntry['kind'], AnimationPresetId | null>> =
+  TRACE_KIND_DEFAULT_PRESET_IDS;
 
 const VISUAL_DESCRIPTOR_KINDS: readonly PresetCompatibleDescriptorKind[] = [
   'moveToken',

@@ -406,7 +406,10 @@ function syncCardContent(
   isFaceUp: boolean,
 ): void {
   if (cardTemplate === null) {
-    visuals.frontContent?.removeFromParent();
+    if (visuals.frontContent !== null) {
+      visuals.frontContent.removeFromParent();
+      safeDestroyContainer(visuals.frontContent);
+    }
     visuals.frontContent = null;
     return;
   }

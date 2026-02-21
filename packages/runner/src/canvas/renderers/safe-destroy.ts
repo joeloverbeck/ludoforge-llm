@@ -1,5 +1,15 @@
 import type { Container } from 'pixi.js';
 
+let destroyFallbackCount = 0;
+
+export function getDestroyFallbackCount(): number {
+  return destroyFallbackCount;
+}
+
+export function resetDestroyFallbackCount(): void {
+  destroyFallbackCount = 0;
+}
+
 interface DestroyableDisplayObject {
   destroy(options?: unknown): void;
   removeFromParent(): void;
@@ -21,6 +31,7 @@ export function safeDestroyDisplayObject(
   try {
     displayObject.destroy(options);
   } catch (error) {
+    destroyFallbackCount += 1;
     console.warn('Display object destroy() failed; falling back to removeFromParent().', error);
     displayObject.removeFromParent();
   }

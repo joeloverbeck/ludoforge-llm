@@ -399,6 +399,69 @@ describe('createTableOverlayRenderer', () => {
     expect(parent.children).toHaveLength(0);
   });
 
+  describe('memoization', () => {
+    it('does not destroy and recreate children when update is called with identical inputs', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
+
+      const firstChild = parent.children[0] as InstanceType<typeof MockText>;
+      expect(parent.children).toHaveLength(1);
+      expect(firstChild.text).toBe('Pot: 42');
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 42)] }), positions);
+
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBe(firstChild);
+      expect(firstChild.destroyed).toBe(false);
+    });
+
+    it('rebuilds children when overlay values change', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      const firstChild = parent.children[0] as InstanceType<typeof MockText>;
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 20)] }), positions);
+
+      expect(firstChild.destroyed).toBe(true);
+      expect(parent.children).toHaveLength(1);
+      const secondChild = parent.children[0] as InstanceType<typeof MockText>;
+      expect(secondChild.text).toBe('Pot: 20');
+    });
+
+    it('clears children when renderModel becomes null after a non-null update', () => {
+      const parent = new MockContainer();
+      const provider = new VisualConfigProvider({
+        version: 1,
+        tableOverlays: {
+          items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+        },
+      });
+      const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+      renderer.update(makeRenderModel({ globalVars: [asVar('pot', 10)] }), positions);
+      expect(parent.children).toHaveLength(1);
+
+      renderer.update(null as unknown as RenderModel, positions);
+      expect(parent.children).toHaveLength(0);
+    });
+  });
+
   describe('safe-destroy behavior', () => {
     it('update() calls destroy() on removed Text children', () => {
       const parent = new MockContainer();

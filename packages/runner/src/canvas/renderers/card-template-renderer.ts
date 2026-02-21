@@ -1,16 +1,52 @@
 import { Text, type Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
-import { resolveCardTemplateFields } from '../../config/card-field-resolver.js';
+import { type ResolvedCardField, resolveCardTemplateFields } from '../../config/card-field-resolver.js';
 import { safeDestroyChildren } from './safe-destroy.js';
+
+type CardFieldValue = number | string | boolean;
+
+const contentSignatureCache = new WeakMap<Container, string>();
+
+function buildContentSignature(
+  template: CardTemplate,
+  resolvedFields: readonly ResolvedCardField[],
+): string {
+  const mapped = resolvedFields.map((field) => ([
+    field.fieldName,
+    field.align,
+    field.x,
+    field.y,
+    field.fontSize,
+    field.wrap ?? null,
+    field.text,
+    field.color,
+  ]));
+  return JSON.stringify({
+    width: template.width,
+    height: template.height,
+    fields: mapped,
+  });
+}
+
 export function drawCardContent(
   container: Container,
   template: CardTemplate,
-  fields: Readonly<Record<string, number | string | boolean>>,
+  fields: Readonly<Record<string, CardFieldValue>>,
 ): void {
-  safeDestroyChildren(container);
-
   const resolvedFields = resolveCardTemplateFields(template.layout, fields);
+
+  const nextSignature = resolvedFields.length === 0
+    ? ''
+    : buildContentSignature(template, resolvedFields);
+
+  if (contentSignatureCache.get(container) === nextSignature) {
+    return;
+  }
+
+  safeDestroyChildren(container);
+  contentSignatureCache.set(container, nextSignature);
+
   if (resolvedFields.length === 0) return;
 
   const cardWidth = template.width;

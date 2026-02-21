@@ -23,6 +23,8 @@ export interface HiddenZoneStackVisual {
   readonly cards: Container;
   readonly badge: Graphics;
   readonly countLabel: Text;
+  /** @internal Tracks (layerCount, cardWidth, cardHeight) to skip redundant rebuildCards(). */
+  lastCardSignature: string | null;
 }
 
 const MAX_STACK_LAYERS = 5;
@@ -65,6 +67,7 @@ export function createHiddenZoneStackVisual(): HiddenZoneStackVisual {
     cards,
     badge,
     countLabel,
+    lastCardSignature: null,
   };
 }
 
@@ -80,12 +83,17 @@ export function updateHiddenZoneStackVisual(
     destroyChildren(visual.cards);
     visual.badge.clear();
     visual.countLabel.text = '';
+    visual.lastCardSignature = null;
     return;
   }
 
   visual.root.visible = true;
   const metrics = deriveMetrics(clampedCount, zoneWidth, zoneHeight);
-  rebuildCards(visual.cards, metrics);
+  const nextSignature = `${metrics.layerCount}|${metrics.cardWidth}|${metrics.cardHeight}`;
+  if (visual.lastCardSignature !== nextSignature) {
+    rebuildCards(visual.cards, metrics);
+    visual.lastCardSignature = nextSignature;
+  }
 
   visual.badge.clear();
   const badgeWidth = 26;

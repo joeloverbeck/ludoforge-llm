@@ -23,15 +23,24 @@ export function createTableOverlayRenderer(
   parentContainer: Container,
   visualConfigProvider: VisualConfigProvider,
 ): TableOverlayRenderer {
+  let lastSignature: string | null = null;
+
   return {
     update(renderModel, positions): void {
-      clearContainer(parentContainer);
       if (renderModel === null) {
+        if (lastSignature !== null) {
+          clearContainer(parentContainer);
+          lastSignature = null;
+        }
         return;
       }
 
       const items = visualConfigProvider.getTableOverlays()?.items ?? [];
       if (items.length === 0) {
+        if (lastSignature !== null) {
+          clearContainer(parentContainer);
+          lastSignature = null;
+        }
         return;
       }
 
@@ -42,63 +51,115 @@ export function createTableOverlayRenderer(
       );
       const tableCenter = deriveTableCenter(renderModel, positions);
 
-      for (const item of items) {
-        switch (item.kind) {
-          case 'globalVar': {
-            const value = findVarValue(renderModel.globalVars, item.varName);
-            if (value === null) {
-              continue;
-            }
-            const target = resolvePosition(item, tableCenter, null);
-            if (target === null) {
-              continue;
-            }
-            parentContainer.addChild(
-              createOverlayText(resolveOverlayLabel(item.label, value), item, target),
-            );
-            break;
-          }
-          case 'perPlayerVar': {
-            for (const player of renderModel.players) {
-              if (player.isEliminated) {
-                continue;
-              }
-              const target = resolvePosition(item, tableCenter, seatAnchors.get(player.id) ?? null);
-              if (target === null) {
-                continue;
-              }
-              const playerVars = renderModel.playerVars.get(player.id) ?? [];
-              const value = findVarValue(playerVars, item.varName);
-              if (value === null) {
-                continue;
-              }
-              parentContainer.addChild(
-                createOverlayText(resolveOverlayLabel(item.label, value), item, target),
-              );
-            }
-            break;
-          }
-          case 'marker': {
-            const rawValue = findVarValue(renderModel.globalVars, item.varName);
-            if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
-              continue;
-            }
-            const playerId = asPlayerId(Math.trunc(rawValue));
-            const target = resolvePosition(item, tableCenter, seatAnchors.get(playerId) ?? null);
-            if (target === null) {
-              continue;
-            }
-            parentContainer.addChild(createMarker(item, target));
-            break;
-          }
+      const resolvedItems = resolveOverlayItems(items, renderModel, tableCenter, seatAnchors);
+      const nextSignature = buildOverlaySignature(resolvedItems);
+      if (lastSignature === nextSignature) {
+        return;
+      }
+
+      clearContainer(parentContainer);
+      lastSignature = nextSignature;
+
+      for (const resolved of resolvedItems) {
+        if (resolved.type === 'text') {
+          parentContainer.addChild(createOverlayText(resolved.text, resolved.item, resolved.point));
+        } else {
+          parentContainer.addChild(createMarker(resolved.item, resolved.point));
         }
       }
     },
 
     destroy(): void {
       clearContainer(parentContainer);
+      lastSignature = null;
     },
   };
+}
+
+interface ResolvedTextItem {
+  readonly type: 'text';
+  readonly text: string;
+  readonly item: TableOverlayItemConfig;
+  readonly point: Point;
+}
+
+interface ResolvedMarkerItem {
+  readonly type: 'marker';
+  readonly item: TableOverlayItemConfig;
+  readonly point: Point;
+}
+
+type ResolvedOverlayItem = ResolvedTextItem | ResolvedMarkerItem;
+
+function resolveOverlayItems(
+  items: readonly TableOverlayItemConfig[],
+  renderModel: RenderModel,
+  tableCenter: Point,
+  seatAnchors: ReadonlyMap<number, Point>,
+): readonly ResolvedOverlayItem[] {
+  const result: ResolvedOverlayItem[] = [];
+
+  for (const item of items) {
+    switch (item.kind) {
+      case 'globalVar': {
+        const value = findVarValue(renderModel.globalVars, item.varName);
+        if (value === null) {
+          continue;
+        }
+        const target = resolvePosition(item, tableCenter, null);
+        if (target === null) {
+          continue;
+        }
+        result.push({ type: 'text', text: resolveOverlayLabel(item.label, value), item, point: target });
+        break;
+      }
+      case 'perPlayerVar': {
+        for (const player of renderModel.players) {
+          if (player.isEliminated) {
+            continue;
+          }
+          const target = resolvePosition(item, tableCenter, seatAnchors.get(player.id) ?? null);
+          if (target === null) {
+            continue;
+          }
+          const playerVars = renderModel.playerVars.get(player.id) ?? [];
+          const value = findVarValue(playerVars, item.varName);
+          if (value === null) {
+            continue;
+          }
+          result.push({ type: 'text', text: resolveOverlayLabel(item.label, value), item, point: target });
+        }
+        break;
+      }
+      case 'marker': {
+        const rawValue = findVarValue(renderModel.globalVars, item.varName);
+        if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
+          continue;
+        }
+        const playerId = asPlayerId(Math.trunc(rawValue));
+        const target = resolvePosition(item, tableCenter, seatAnchors.get(playerId) ?? null);
+        if (target === null) {
+          continue;
+        }
+        result.push({ type: 'marker', item, point: target });
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+function buildOverlaySignature(items: readonly ResolvedOverlayItem[]): string {
+  const parts: string[] = [];
+  for (const resolved of items) {
+    if (resolved.type === 'text') {
+      parts.push(`t|${resolved.text}|${resolved.point.x}|${resolved.point.y}`);
+    } else {
+      parts.push(`m|${resolved.item.label ?? ''}|${resolved.item.markerShape ?? ''}|${resolved.point.x}|${resolved.point.y}`);
+    }
+  }
+  return parts.join('\n');
 }
 
 function resolvePosition(item: TableOverlayItemConfig, tableCenter: Point, seatAnchor: Point | null): Point | null {

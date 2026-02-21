@@ -69,6 +69,8 @@ vi.mock('pixi.js', () => ({
 
 import type { Container } from 'pixi.js';
 import {
+  getDestroyFallbackCount,
+  resetDestroyFallbackCount,
   safeDestroyChildren,
   safeDestroyContainer,
   safeDestroyDisplayObject,
@@ -140,6 +142,39 @@ describe('safeDestroyDisplayObject', () => {
     );
 
     expect(destroySpy).toHaveBeenCalledWith({ children: true });
+  });
+});
+
+describe('destroy fallback counter', () => {
+  it('increments when destroy() throws and resets to zero', () => {
+    resetDestroyFallbackCount();
+    expect(getDestroyFallbackCount()).toBe(0);
+
+    const container = new MockContainer() as unknown as Container;
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    safeDestroyContainer(container);
+    expect(getDestroyFallbackCount()).toBe(1);
+
+    safeDestroyContainer(container);
+    expect(getDestroyFallbackCount()).toBe(2);
+
+    resetDestroyFallbackCount();
+    expect(getDestroyFallbackCount()).toBe(0);
+
+    warnSpy.mockRestore();
+  });
+
+  it('does not increment when destroy() succeeds', () => {
+    resetDestroyFallbackCount();
+
+    const container = new MockContainer() as unknown as Container;
+    safeDestroyContainer(container);
+
+    expect(getDestroyFallbackCount()).toBe(0);
   });
 });
 

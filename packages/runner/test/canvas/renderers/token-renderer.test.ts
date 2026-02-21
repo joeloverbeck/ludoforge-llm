@@ -586,6 +586,49 @@ describe('createTokenRenderer', () => {
     expect(cardContent.visible).toBe(true);
   });
 
+  it('does not recreate card text nodes when card content is unchanged across updates', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+            suit: { y: 20, align: 'center' },
+          },
+        },
+      },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A', suit: 'Spades' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const cardContent = tokenContainer.children[5] as InstanceType<typeof MockContainer>;
+    const firstTextNode = cardContent.children[0] as InstanceType<typeof MockText>;
+    const secondTextNode = cardContent.children[1] as InstanceType<typeof MockText>;
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: false, properties: { rank: 'A', suit: 'Spades' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(cardContent.visible).toBe(false);
+    expect(cardContent.children[0]).toBe(firstTextNode);
+    expect(cardContent.children[1]).toBe(secondTextNode);
+    expect(firstTextNode.destroyed).toBe(false);
+    expect(secondTextNode.destroyed).toBe(false);
+  });
+
   it('renders non-card token shapes using shape-specific primitives instead of circle fallback', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({

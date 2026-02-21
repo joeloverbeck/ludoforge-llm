@@ -14,7 +14,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          seatOrder: ["ARVN", "VC", "US", "NVA"]
           flavorText: "U.S. prestige is on the line."
         unshaded:
           text: "Aid and ARVN Resources each +9. Return pieces from Out of Play."
@@ -75,7 +75,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          seatOrder: ["ARVN", "US", "NVA", "VC"]
           flavorText: "Summit signals renewed support for Saigon."
         unshaded:
           text: "Aid and Patronage each +6."
@@ -91,16 +91,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          seatOrder: ["ARVN", "US", "VC", "NVA"]
           flavorText: "Coastal insertion opens a fast COIN push."
         unshaded:
           text: "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault."
           freeOperationGrants:
-            - faction: "1"
+            - seat: "1"
               sequence: { chain: amphib-landing-arvn, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - faction: "1"
+            - seat: "1"
               sequence: { chain: amphib-landing-arvn, step: 1 }
               operationClass: operation
               actionIds: [assault]
@@ -113,12 +113,12 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          seatOrder: ["ARVN", "US", "VC", "NVA"]
           flavorText: "Command integration accelerates ARVN tempo."
         unshaded:
           text: "ARVN executes free Special Activities."
           freeOperationGrants:
-            - faction: "1"
+            - seat: "1"
               sequence: { chain: macv-arvn-special-activity, step: 0 }
               operationClass: limitedOperation
       - id: card-70
@@ -128,18 +128,18 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          seatOrder: ["ARVN", "US", "VC", "NVA"]
           flavorText: "Allied contingents strengthen ARVN offensive options."
         unshaded:
           text: "ARVN Sweep/Assault in selected spaces as if US."
           freeOperationGrants:
-            - faction: "1"
-              executeAsFaction: "0"
+            - seat: "1"
+              executeAsSeat: "0"
               sequence: { chain: roks-arvn-as-us, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - faction: "1"
-              executeAsFaction: "0"
+            - seat: "1"
+              executeAsSeat: "0"
               sequence: { chain: roks-arvn-as-us, step: 1 }
               operationClass: operation
               actionIds: [assault]
@@ -152,7 +152,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          seatOrder: ["ARVN", "NVA", "US", "VC"]
           flavorText: "Kill metrics begin to drive battlefield behavior."
         unshaded:
           text: "US/ARVN operations prioritize attrition. MOMENTUM"
@@ -174,7 +174,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          seatOrder: ["ARVN", "NVA", "US", "VC"]
           flavorText: "LBJ advances social agenda."
         unshaded:
           text: "Conduct a Commitment Phase."
@@ -201,7 +201,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          seatOrder: ["ARVN", "NVA", "VC", "US"]
           flavorText: "Regional instability strains Saigon's finances."
         unshaded:
           text: "NVA and VC Resources each -3; Patronage +3."
@@ -226,7 +226,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          seatOrder: ["ARVN", "NVA", "VC", "US"]
           flavorText: "Political warfare effort reshapes pacification tempo."
         unshaded:
           text: "Landsdale sidelined; no lasting momentum effect."
@@ -248,7 +248,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          seatOrder: ["ARVN", "VC", "US", "NVA"]
           flavorText: "Civilian irregular networks are reorganized."
         unshaded:
           text: "Replace ARVN pieces with Irregulars/Rangers in selected spaces."
@@ -309,7 +309,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          seatOrder: ["ARVN", "VC", "US", "NVA"]
           flavorText: "Balloting reshapes control and aid expectations."
         unshaded:
           text: "Shift up to 3 spaces one level toward Active Support; Aid +6."
@@ -350,7 +350,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          seatOrder: ["ARVN", "VC", "US", "NVA"]
           flavorText: "Development spending competes with local capture."
         unshaded:
           text: "Shift up to 2 spaces one level toward Active Support."
@@ -379,7 +379,7 @@ eventDecks:
         tags: [capability, ARVN]
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          seatOrder: ["ARVN", "VC", "NVA", "US"]
           flavorText: "Legitimacy campaign rewrites ARVN governance limits."
         unshaded:
           text: "Capability: ARVN Govern in one space without support shift."
@@ -398,7 +398,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          seatOrder: ["ARVN", "VC", "NVA", "US"]
           flavorText: "Regional command turnover drives sudden force shifts."
         unshaded:
           text: "Place ARVN pieces and shift one selected city toward Support."
@@ -471,7 +471,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          seatOrder: ["ARVN", "VC", "NVA", "US"]
           flavorText: "Buddhist political leverage expands in Saigon."
         unshaded:
           text: "Shift Saigon one level toward Active Support; Patronage +3."
@@ -494,7 +494,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          seatOrder: ["ARVN", "VC", "NVA", "US"]
           flavorText: "Escalation planning accelerates deployment adjustments."
         unshaded:
           text: "Place and relocate COIN pieces among selected spaces."
@@ -545,7 +545,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          seatOrder: ["ARVN", "US", "VC", "NVA"]
           flavorText: "Elite trainers."
         unshaded:
           text: "Place 3 Irregulars or 3 Rangers in a Province without NVA Control. Set it to Active Support."
@@ -629,12 +629,12 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Escalation trigger."
         unshaded:
           text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
@@ -689,7 +689,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Backchannel diplomacy reshapes leverage."
         unshaded:
           text: "Diplomatic leverage: US pressures Hanoi for concessions."
@@ -702,7 +702,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Public negotiations mask battlefield pressure."
         unshaded:
           text: "NVA Resources -9. Linebacker 11 allowed when Support + Available US (Troops + Bases) > 25."
@@ -769,7 +769,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1968"
-          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Naval aviators sharpen air-superiority tactics."
         unshaded:
           text: "US capability: Air Strike pressures Trail and suppresses MiG losses."
@@ -788,7 +788,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Air defense suppression."
         unshaded:
           text: "Remove shaded SA-2s or, if no shaded SA-2s, Degrade Trail 2 boxes and NVA Resources -9."
@@ -819,12 +819,12 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Robin Olds ambushes MiGs."
         unshaded:
           text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: aces-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
@@ -853,7 +853,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Air-delivered seismic intrusion detector."
         unshaded:
           text: "Through Coup, -6 NVA Resources at any Trail change. MOMENTUM"
@@ -882,7 +882,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1965"
-          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Guided B-52 tactical bombing."
         unshaded:
           text: "1 space each Air Strike may be a Province without COIN pieces."
@@ -901,7 +901,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Field improvisation expands helicopter mobility."
         unshaded:
           text: "US mobility surge: redeploy Troops to contested spaces."
@@ -914,7 +914,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Sustained bombing."
         unshaded:
           text: "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card."
@@ -941,7 +941,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1968"
-          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Command shift prioritizes selective base targeting."
         unshaded:
           text: "US capability: one Assault space removes untunneled base first."
@@ -960,7 +960,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Aggressive river command disrupts entrenched cells."
         unshaded:
           text: "River assault: flip guerrillas and remove exposed insurgents."
@@ -973,7 +973,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1968"
-          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Gunship support amplifies Sweep and complicates Assault."
         unshaded:
           text: "US capability: up to 2 Sweep spaces each remove 1 active/untunneled enemy."
@@ -992,7 +992,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1965"
-          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Armored punch."
         unshaded:
           text: "2 non-Lowland US Assault spaces each remove 2 extra enemy pieces."
@@ -1011,7 +1011,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1968"
-          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Pacification drive intensifies political pressure."
         unshaded:
           text: "Through Coup, Pacification shifts 1 additional level toward Support. MOMENTUM"
@@ -1033,7 +1033,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1965"
-          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Hamlet defense."
         unshaded:
           text: "US Training places or relocates an added Police into any 1 space with US Troops."
@@ -1052,7 +1052,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1968"
-          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Civil-military integration accelerates local governance."
         unshaded:
           text: "US capability: US/ARVN Train may execute sub-activity in up to 2 spaces."
@@ -1071,7 +1071,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1968"
-          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Precision strike doctrine changes target priorities."
         unshaded:
           text: "US capability: Air Strike may spare one selected space from casualties."
@@ -1090,7 +1090,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          seatOrder: ["US", "VC", "NVA", "ARVN"]
           flavorText: "Rapid redeployment reshapes local balance."
         unshaded:
           text: "US Troops reposition to pressure insurgent strongholds."
@@ -1103,7 +1103,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          seatOrder: ["US", "VC", "NVA", "ARVN"]
           flavorText: "US Marines arrive."
         unshaded:
           text: "US places up to 6 Troops in Da Nang, up to 3 from out of play."
@@ -1150,20 +1150,20 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          seatOrder: ["US", "VC", "NVA", "ARVN"]
           flavorText: "Stab at Iron Triangle."
         unshaded:
           text: "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: operation-attleboro-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: operation-attleboro-us, step: 1 }
               operationClass: operation
               actionIds: [sweep]
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: operation-attleboro-us, step: 2 }
               operationClass: operation
               actionIds: [assault]
@@ -1176,7 +1176,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          seatOrder: ["US", "VC", "NVA", "ARVN"]
           flavorText: "VC caught off guard."
         unshaded:
           text: "Remove all VC from a coastal Province with or adjacent to US Troops."
@@ -1225,16 +1225,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          seatOrder: ["US", "VC", "NVA", "ARVN"]
           flavorText: "Delta boats."
         unshaded:
           text: "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: tf116-us, step: 0 }
               operationClass: operation
               actionIds: [sweep, assault]
-            - faction: "1"
+            - seat: "1"
               sequence: { chain: tf116-arvn, step: 0 }
               operationClass: operation
               actionIds: [sweep, assault]
@@ -1290,7 +1290,7 @@ eventDecks:
         tags: [capability, US]
         metadata:
           period: "1965"
-          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Mobile counter-guerrilla ops."
         unshaded:
           text: "Each US Assault space may remove 1 Underground Guerrilla."
@@ -1309,7 +1309,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Neutralization campaigns expand."
         unshaded:
           text: "Intelligence campaign: Aid -1."
@@ -1337,7 +1337,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Free World aids Saigon."
         unshaded:
           text: "2 ARVN or 2 US Bases out-of-play to Available. Then ARVN Resources +6 or Aid +12."
@@ -1404,12 +1404,12 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Silver Bayonet."
         unshaded:
           text: "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: ia-drang-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
@@ -1424,7 +1424,7 @@ eventDecks:
                       filter:
                         - { prop: faction, eq: NVA }
                 right: 0
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: ia-drang-us, step: 1 }
               operationClass: operation
               actionIds: [sweep]
@@ -1439,7 +1439,7 @@ eventDecks:
                       filter:
                         - { prop: faction, eq: NVA }
                 right: 0
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: ia-drang-us, step: 2 }
               operationClass: operation
               actionIds: [assault]
@@ -1526,7 +1526,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          seatOrder: ["ARVN", "NVA", "VC", "US"]
           flavorText: "Ambassador proposes US protectorate."
         unshaded:
           text: "Aid +20."
@@ -1597,7 +1597,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          seatOrder: ["VC", "NVA", "ARVN", "US"]
           flavorText: "Gruesome protests close elite ranks."
         unshaded:
           text: "Patronage +3 or, if Saigon at Active Support, +6."
@@ -1626,7 +1626,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          seatOrder: ["VC", "ARVN", "US", "NVA"]
           flavorText: "Census-grievance teams."
         unshaded:
           text: "Place 1 Police into each of 6 Provinces."
@@ -1679,7 +1679,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          seatOrder: ["NVA", "VC", "US", "ARVN"]
           flavorText: "Logistics under pressure."
         unshaded:
           text: "Trail degrades. Remove NVA pieces in Laos/Cambodia."
@@ -1759,7 +1759,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          seatOrder: ["VC", "US", "ARVN", "NVA"]
           flavorText: "Saigon shaken."
         unshaded:
           text: "Aid +10 or transfer Patronage to Aid. Flip RVN leader."
@@ -1826,20 +1826,20 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          seatOrder: ["VC", "US", "NVA", "ARVN"]
           flavorText: "Root 'em out."
         unshaded:
           text: "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: westmoreland-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: westmoreland-us, step: 1 }
               operationClass: operation
               actionIds: [sweep, assault]
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: westmoreland-us, step: 2 }
               operationClass: operation
               actionIds: [airStrike]
@@ -1852,7 +1852,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          seatOrder: ["VC", "US", "ARVN", "NVA"]
           flavorText: "Royal Australians."
         unshaded:
           text: "Place 2 out-of-play US Troops into a Province or remove all Guerrillas from all Jungle with US Troops."
@@ -1967,26 +1967,26 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          seatOrder: ["VC", "US", "ARVN", "NVA"]
           flavorText: "Sweep flushes enemy into kill zone."
         unshaded:
           text: "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US."
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: masher-white-wing-us, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: masher-white-wing-us, step: 1 }
               operationClass: operation
               actionIds: [assault]
-            - faction: "1"
-              executeAsFaction: "0"
+            - seat: "1"
+              executeAsSeat: "0"
               sequence: { chain: masher-white-wing-arvn-as-us, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - faction: "1"
-              executeAsFaction: "0"
+            - seat: "1"
+              executeAsSeat: "0"
               sequence: { chain: masher-white-wing-arvn-as-us, step: 1 }
               operationClass: operation
               actionIds: [assault]
@@ -1999,7 +1999,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          seatOrder: ["VC", "US", "ARVN", "NVA"]
           flavorText: "Riverines hunt Charlie."
         unshaded:
           text: "Remove all VC or all non-Troop NVA from a Lowland with US Troops."
@@ -2140,7 +2140,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          seatOrder: ["VC", "NVA", "US", "ARVN"]
           flavorText: "Clear and secure."
         unshaded:
           text: "Remove all Guerrillas from 1 space with a Tunnel and COIN Control."
@@ -2215,7 +2215,7 @@ eventDecks:
         tags: [capability, VC]
         metadata:
           period: "1965"
-          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          seatOrder: ["VC", "NVA", "US", "ARVN"]
           flavorText: "Larger footprints."
         unshaded:
           text: "Capability: March into Support/LoC Activates if moving plus non-Base COIN >1 (vice >3)."
@@ -2234,7 +2234,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          seatOrder: ["VC", "NVA", "US", "ARVN"]
           flavorText: "Onerous VC taxation."
         unshaded:
           text: "Shift 4 Provinces with any VC each by 1 level toward Active Support."
@@ -2304,7 +2304,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          seatOrder: ["VC", "NVA", "ARVN", "US"]
           flavorText: "Revolutionary land reform seeks traction in prosperous districts."
         unshaded:
           text: "In each of 2 Provinces adjacent to Saigon, shift Support/Opposition 1 level either direction and place a VC Guerrilla or Police."
@@ -2340,7 +2340,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          seatOrder: ["VC", "NVA", "ARVN", "US"]
           flavorText: "Public furor sparks enlistment."
         unshaded:
           text: "If fewer than 3 Casualty pieces, 3 US Troops from out of play to Available."
@@ -2424,7 +2424,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          seatOrder: ["VC", "NVA", "ARVN", "US"]
           flavorText: "Party control of NLF draws anti-communist reaction."
         unshaded:
           text: "Shift each City with VC 1 level toward Active Support."
@@ -2439,7 +2439,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          seatOrder: ["VC", "ARVN", "US", "NVA"]
           flavorText: "Buddhists counter Communists."
         unshaded:
           text: "Set up to 3 Neutral or Opposition Cities to Passive Support."
@@ -2485,7 +2485,7 @@ eventDecks:
         tags: [capability, VC]
         metadata:
           period: "1964"
-          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          seatOrder: ["VC", "ARVN", "NVA", "US"]
           flavorText: "Manpower to political sections."
         unshaded:
           text: "Capability: VC to Terror or Agitate must remove 2 VC Guerrillas per space."
@@ -2504,12 +2504,12 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          seatOrder: ["ARVN", "NVA", "US", "VC"]
           flavorText: "Cambodian maneuvering."
         unshaded:
           text: "ARVN free Sweep or Assault in Cambodia."
           freeOperationGrants:
-            - faction: "1"
+            - seat: "1"
               sequence: { chain: sihanouk-unshaded-arvn, step: 0 }
               operationClass: operation
               actionIds: [sweep, assault]
@@ -2520,10 +2520,10 @@ eventDecks:
         shaded:
           text: "VC then NVA each get a free operation."
           freeOperationGrants:
-            - faction: "3"
+            - seat: "3"
               sequence: { chain: sihanouk-shaded-vc-nva, step: 0 }
               operationClass: operation
-            - faction: "2"
+            - seat: "2"
               sequence: { chain: sihanouk-shaded-vc-nva, step: 1 }
               operationClass: operation
       - id: card-51
@@ -2533,7 +2533,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          seatOrder: ["NVA", "VC", "US", "ARVN"]
           flavorText: "Throughput under strain."
         unshaded:
           text: "Remove non-base Insurgents outside South Vietnam."
@@ -2597,7 +2597,7 @@ eventDecks:
         tags: [capability, VC]
         metadata:
           period: "1964"
-          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          seatOrder: ["VC", "NVA", "US", "ARVN"]
           flavorText: "Preparations tip off enemy."
         unshaded:
           text: "VC and NVA Ambush in max 1 space."
@@ -2616,7 +2616,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1964"
-          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Perimeter."
         unshaded:
           text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates."
@@ -2694,7 +2694,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1964"
-          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Helicopter evacuation doctrine expands."
         unshaded:
           text: "Through Coup, all Troop casualties return to Available."
@@ -2725,7 +2725,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Long-range reconnaissance patrols probe deep."
         unshaded:
           text: "Place up to 2 Irregulars, then US executes free Air Strike."
@@ -2748,7 +2748,7 @@ eventDecks:
                     to:
                       zoneExpr: $targetSpace
           freeOperationGrants:
-            - faction: "0"
+            - seat: "0"
               sequence: { chain: lrrp-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
@@ -2779,7 +2779,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Highland loyalties shift under pressure."
         unshaded:
           text: "Remove Insurgent Guerrillas, then replace with Irregulars."
@@ -2852,7 +2852,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Battleship fire support pounds coastal positions."
         unshaded:
           text: "US executes free Air Strikes in coastal spaces."
@@ -2865,7 +2865,7 @@ eventDecks:
         tags: [capability, NVA]
         metadata:
           period: "1964"
-          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Air defense guns thicken around infiltration routes."
         unshaded:
           text: "NVA capability: Rally Trail improvement restricted."
@@ -2884,7 +2884,7 @@ eventDecks:
         tags: [capability, NVA]
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Long-range artillery extends pressure across contested routes."
         unshaded:
           text: "NVA capability: Bombard can target adjacent spaces from farther range."
@@ -2903,7 +2903,7 @@ eventDecks:
         tags: [capability, NVA]
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Interceptors contest US air power over the North."
         unshaded:
           text: "NVA capability: Air Strike pressure is reduced unless unshaded Top Gun is active."
@@ -2922,7 +2922,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Air-defense concentration blunts repeated bridge attacks."
         unshaded:
           text: "NVA fortifies logistics corridor resilience around Trail adjustments."
@@ -2935,7 +2935,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "A brutal highland battle drives force repositioning and tunnel pressure."
         unshaded:
           text: "Reposition selected NVA/VC forces and intensify pressure against exposed COIN units."
@@ -2948,7 +2948,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Siege operations force major commitment and casualties."
         unshaded:
           text: "Mass removal pressure in one contested area; route vulnerable US losses to Casualties."
@@ -2961,7 +2961,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Prisoner exchanges and detention politics alter casualty flows."
         unshaded:
           text: "Move selected Casualties and adjust resources based on exchange outcomes."
@@ -2974,7 +2974,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Air campaign pauses shift tempo across infiltration and support tracks."
         unshaded:
           text: "No Air Strike until Coup. MOMENTUM"
@@ -2996,7 +2996,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Chinese leverage links diplomacy to wartime resource shifts."
         unshaded:
           text: "Resource shifts follow diplomatic signaling and die-based political momentum."
@@ -3009,7 +3009,7 @@ eventDecks:
         tags: [capability, NVA]
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          seatOrder: ["NVA", "ARVN", "US", "VC"]
           flavorText: "Amphibious armor expands NVA assault options in difficult terrain."
         unshaded:
           text: "NVA capability: selected Assaults gain armored removal pressure."
@@ -3028,7 +3028,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          seatOrder: ["NVA", "ARVN", "VC", "US"]
           flavorText: "External materiel shipments increase insurgent placement flexibility."
         unshaded:
           text: "Place NVA/VC pieces into eligible spaces and improve insurgent posture."
@@ -3041,7 +3041,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          seatOrder: ["NVA", "VC", "US", "ARVN"]
           flavorText: "Analyst leaks expose hidden assumptions and reverse perceived advantages."
         unshaded:
           text: "Flip one currently active capability to its opposite side."
@@ -3074,7 +3074,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          seatOrder: ["NVA", "VC", "US", "ARVN"]
           flavorText: "Raid planning reshapes near-term eligibility and initiative windows."
         unshaded:
           text: "Adjust next-card eligibility to favor COIN follow-on operations."
@@ -3087,7 +3087,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          seatOrder: ["NVA", "VC", "ARVN", "US"]
           flavorText: "Global pressure amplifies domestic war costs and casualty politics."
         unshaded:
           text: "Casualty-driven die roll reduces COIN political leverage."
@@ -3100,7 +3100,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          seatOrder: ["NVA", "VC", "ARVN", "US"]
           flavorText: "Laotian coordination alters trail security and redeployment pressure."
         unshaded:
           text: "Conditionally improve Trail or trigger selective redeploy effects."
@@ -3113,7 +3113,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          seatOrder: ["NVA", "VC", "ARVN", "US"]
           flavorText: "Images from the front alter force posture and political appetite."
         unshaded:
           text: "Place pieces from Out of Play into selected spaces."
@@ -3126,7 +3126,7 @@ eventDecks:
         tags: [capability, ARVN]
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          seatOrder: ["ARVN", "US", "NVA", "VC"]
           flavorText: "Mechanized formations increase ARVN operational reach."
         unshaded:
           text: "ARVN capability: Armored columns improve ARVN mobile operation efficiency."
@@ -3145,7 +3145,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          seatOrder: ["ARVN", "US", "NVA", "VC"]
           flavorText: "Border conflict opens corridors for rapid intervention and disruption."
         unshaded:
           text: "COIN executes free Air Lift then free Sweep; remove one insurgent Base from Cambodia."
@@ -3158,7 +3158,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          seatOrder: ["ARVN", "US", "NVA", "VC"]
           flavorText: "External contingents alter force availability and aid posture."
         unshaded:
           text: "Roll a die and move up to that many COIN pieces from Out of Play to Available."
@@ -3171,7 +3171,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          seatOrder: ["ARVN", "NVA", "US", "VC"]
           flavorText: "Urban defense at An Loc forces troop losses and emergency repositioning."
         unshaded:
           text: "Remove selected NVA Troops and place ARVN Troops in contested spaces."
@@ -3184,7 +3184,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          seatOrder: ["ARVN", "NVA", "US", "VC"]
           flavorText: "Cross-border incursion strains ARVN logistics and Trail stability."
         unshaded:
           text: "Place ARVN Troops in Laos/Cambodia and degrade Trail by 1."
@@ -3197,7 +3197,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          seatOrder: ["ARVN", "NVA", "VC", "US"]
           flavorText: "Great-power easing cools conflict intensity and shrinks wartime budgets."
         unshaded:
           text: "Cut ARVN, NVA, and VC Resources in half."
@@ -3236,7 +3236,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          seatOrder: ["ARVN", "NVA", "VC", "US"]
           flavorText: "War-weariness and optimism collide in piecemeal force adjustments."
         unshaded:
           text: "Apply piece-by-piece force adjustments across factions as listed on the card."
@@ -3247,7 +3247,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          seatOrder: ["ARVN", "VC", "US", "NVA"]
           flavorText: "Nationalist appeals drive local recruitment and police concentration."
         unshaded:
           text: "Place ARVN pieces by space and shift support where ARVN presence expands."
@@ -3260,7 +3260,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          seatOrder: ["ARVN", "VC", "NVA", "US"]
           flavorText: "Political reforms in Saigon trade patronage for public support."
         unshaded:
           text: "Shift Saigon toward Support and adjust Patronage."
@@ -3273,7 +3273,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          seatOrder: ["VC", "US", "NVA", "ARVN"]
           flavorText: "Show-tour logistics and media optics reshape force posture."
         unshaded:
           text: "Relocate US Troops among selected spaces and move matching losses to Casualties."
@@ -3286,7 +3286,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          seatOrder: ["VC", "US", "NVA", "ARVN"]
           flavorText: "Riverine interdiction drives concentrated operations around the delta."
         unshaded:
           text: "US executes free Sweep then free Assault in/adjacent to Can Tho."
@@ -3299,7 +3299,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          seatOrder: ["VC", "US", "NVA", "ARVN"]
           flavorText: "Close-quarters tunnel fighting shifts subterranean control."
         unshaded:
           text: "Place or remove a Tunnel marker in one selected space."
@@ -3310,7 +3310,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          seatOrder: ["VC", "US", "ARVN", "NVA"]
           flavorText: "Mechanized pacification pressure collides with insurgent shock timing."
         unshaded:
           text: "ARVN executes free Pacify in selected spaces."
@@ -3345,7 +3345,7 @@ eventDecks:
                             to: leader:none
                 else:
                   - grantFreeOperation:
-                      faction: "3"
+                      seat: "3"
                       operationClass: operation
                       actionIds: [operation]
       - id: card-103
@@ -3355,7 +3355,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          seatOrder: ["VC", "NVA", "US", "ARVN"]
           flavorText: "Domestic unrest converts battlefield casualties into political constraints."
         unshaded:
           text: "Move selected US Troops from map to Casualties."
@@ -3368,7 +3368,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          seatOrder: ["VC", "ARVN", "US", "NVA"]
           flavorText: "Defoliation campaigns reveal insurgent networks while escalating costs."
         unshaded:
           text: "Flip selected Guerrillas to Active and execute free Air Strikes."
@@ -3381,7 +3381,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          seatOrder: ["VC", "ARVN", "US", "NVA"]
           flavorText: "Regional force restructuring shifts police and militia composition."
         unshaded:
           text: "Place ARVN Police in selected spaces."
@@ -3394,7 +3394,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1968"
-          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          seatOrder: ["VC", "ARVN", "US", "NVA"]
           flavorText: "Storm disruption constrains mobility and long-range support tempo."
         unshaded:
           text: "No Air Lift, Transport, or Bombard; remaining SAs to 1 space until Coup. MOMENTUM"
@@ -3414,7 +3414,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          seatOrder: ["VC", "ARVN", "NVA", "US"]
           flavorText: "Regional command intervention reallocates troops by political roll of the dice."
         unshaded:
           text: "Place ARVN Troops, then execute free Sweep in one selected region."
@@ -3427,7 +3427,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          seatOrder: ["VC", "ARVN", "NVA", "US"]
           flavorText: "Atrocity fallout drives opposition shifts and force repositioning."
         unshaded:
           text: "Shift selected spaces toward Opposition and place VC pieces."
@@ -3440,7 +3440,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1968"
-          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          seatOrder: ["VC", "ARVN", "NVA", "US"]
           flavorText: "Media access changes where pressure can be concentrated or withdrawn."
         unshaded:
           text: "Conditionally move US pieces among selected spaces."
@@ -3453,7 +3453,7 @@ eventDecks:
         tags: [capability, NVA]
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          seatOrder: ["NVA", "US", "ARVN", "VC"]
           flavorText: "Surface-to-air missiles tighten the northern shield."
         unshaded:
           text: "NVA capability: Air Strike can remove only 2 pieces in one selected space."
@@ -3472,7 +3472,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Barrier planning constrains infiltration routes."
         unshaded:
           text: "No Infiltrate or Trail Improvement until Coup. MOMENTUM"
@@ -3492,7 +3492,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          seatOrder: ["NVA", "US", "VC", "ARVN"]
           flavorText: "Carrier deck fire disrupts strike tempo."
         unshaded:
           text: "Air Strike degrades Trail by 2 and lowers NVA Resources by 9."
@@ -3514,7 +3514,7 @@ eventDecks:
         tags: [momentum]
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          seatOrder: ["NVA", "ARVN", "VC", "US"]
           flavorText: "Route command tightens corridor discipline."
         unshaded:
           text: "NVA Infiltrate to only 1 destination space through Coup. MOMENTUM"
@@ -3539,7 +3539,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          seatOrder: ["NVA", "ARVN", "VC", "US"]
           flavorText: "Main-force concentration accelerates in contested provinces."
         unshaded:
           text: "Place 3 NVA Troops into any spaces with NVA pieces."
@@ -3610,7 +3610,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          seatOrder: ["NVA", "VC", "US", "ARVN"]
           flavorText: "Shock teams probe base perimeters."
         unshaded:
           text: "Remove a COIN Base and up to 2 Troops from one selected space."
@@ -3668,16 +3668,16 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          seatOrder: ["NVA", "VC", "ARVN", "US"]
           flavorText: "Operational tempo follows strategic concentration."
         unshaded:
           text: "NVA execute free March then free Attack."
           freeOperationGrants:
-            - faction: "2"
+            - seat: "2"
               sequence: { chain: vo-nguyen-giap-nva, step: 0 }
               operationClass: operation
               actionIds: [march]
-            - faction: "2"
+            - seat: "2"
               sequence: { chain: vo-nguyen-giap-nva, step: 1 }
               operationClass: operation
               actionIds: [attack]
@@ -3690,19 +3690,19 @@ eventDecks:
         tags: []
         metadata:
           period: "1965"
-          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          seatOrder: ["NVA", "VC", "ARVN", "US"]
           flavorText: "Highland clashes force rapid tactical repositioning."
         unshaded:
           text: "Remove enemy pieces in one selected Highland and execute free March."
           freeOperationGrants:
-            - faction: "2"
+            - seat: "2"
               sequence: { chain: plei-mei-nva, step: 0 }
               operationClass: operation
               actionIds: [march]
         shaded:
           text: "Remove COIN pieces in one selected Highland and execute free Attack."
           freeOperationGrants:
-            - faction: "2"
+            - seat: "2"
               sequence: { chain: plei-mei-nva, step: 0 }
               operationClass: operation
               actionIds: [attack]
@@ -3713,7 +3713,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          seatOrder: ["NVA", "ARVN", "VC", "US"]
           flavorText: "A CIDG camp attack ripples across I Corps."
         unshaded:
           text: "Remove Guerrillas and a COIN Base in one space."
@@ -3775,7 +3775,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          seatOrder: ["NVA", "ARVN", "VC", "US"]
           flavorText: "Strategic guidance reshapes tempo of operations."
         unshaded:
           text: "Either ARVN executes 2 free Limited Operations, or VC then NVA execute 3 total."
@@ -3783,22 +3783,22 @@ eventDecks:
             - id: arvn-two-free-limited-ops
               order: 1
               freeOperationGrants:
-                - faction: "1"
+                - seat: "1"
                   sequence: { chain: uncle-ho-unshaded-arvn-two, step: 0 }
                   operationClass: limitedOperation
-                - faction: "1"
+                - seat: "1"
                   sequence: { chain: uncle-ho-unshaded-arvn-two, step: 1 }
                   operationClass: limitedOperation
             - id: vc-then-nva-three-free-limited-ops
               order: 2
               freeOperationGrants:
-                - faction: "3"
+                - seat: "3"
                   sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 0 }
                   operationClass: limitedOperation
-                - faction: "3"
+                - seat: "3"
                   sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 1 }
                   operationClass: limitedOperation
-                - faction: "2"
+                - seat: "2"
                   sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 2 }
                   operationClass: limitedOperation
         shaded:
@@ -3807,22 +3807,22 @@ eventDecks:
             - id: us-then-arvn-three-free-limited-ops
               order: 1
               freeOperationGrants:
-                - faction: "0"
+                - seat: "0"
                   sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 0 }
                   operationClass: limitedOperation
-                - faction: "1"
+                - seat: "1"
                   sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 1 }
                   operationClass: limitedOperation
-                - faction: "1"
+                - seat: "1"
                   sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 2 }
                   operationClass: limitedOperation
             - id: us-two-free-limited-ops
               order: 2
               freeOperationGrants:
-                - faction: "0"
+                - seat: "0"
                   sequence: { chain: uncle-ho-shaded-us-two, step: 0 }
                   operationClass: limitedOperation
-                - faction: "0"
+                - seat: "0"
                   sequence: { chain: uncle-ho-shaded-us-two, step: 1 }
                   operationClass: limitedOperation
       - id: card-63
@@ -3832,7 +3832,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          seatOrder: ["ARVN", "US", "NVA", "VC"]
           flavorText: "Investigations expose gaps in pacification claims."
         unshaded:
           text: "Return pieces from Out of Play; transfer die-roll Patronage to Aid."
@@ -3901,7 +3901,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          seatOrder: ["ARVN", "US", "VC", "NVA"]
           flavorText: "Military envoy presses for tighter control."
         unshaded:
           text: "Aid and ARVN Resources rise; remove a level of Support."
@@ -3937,7 +3937,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          seatOrder: ["VC", "US", "NVA", "ARVN"]
           flavorText: "Congressional skepticism constrains intervention."
         unshaded:
           text: "Move US pieces to Available and reduce Aid."
@@ -4024,7 +4024,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          seatOrder: ["VC", "NVA", "ARVN", "US"]
           flavorText: "Fog of war creates sudden reversals."
         unshaded:
           text: "Place US Casualties on map; flip up to 2 Insurgent Guerrillas Active."
@@ -4096,7 +4096,7 @@ eventDecks:
         tags: []
         metadata:
           period: "1964"
-          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          seatOrder: ["VC", "ARVN", "NVA", "US"]
           flavorText: "Old stockpiles rearm southern insurgency."
         unshaded:
           text: "VC remove Guerrillas, then place VC pieces."
@@ -4168,7 +4168,7 @@ eventDecks:
         order: 121
         tags: [pivotal, US]
         metadata:
-          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Unrestricted air war."
         playCondition:
           op: and
@@ -4222,7 +4222,7 @@ eventDecks:
         order: 122
         tags: [pivotal, NVA]
         metadata:
-          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          seatOrder: ["NVA", "VC", "ARVN", "US"]
           flavorText: "Invasion."
         playCondition:
           op: and
@@ -4253,7 +4253,7 @@ eventDecks:
         order: 123
         tags: [pivotal, ARVN]
         metadata:
-          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          seatOrder: ["ARVN", "US", "NVA", "VC"]
           flavorText: "Mechanization."
         playCondition:
           op: and
@@ -4277,7 +4277,7 @@ eventDecks:
         order: 124
         tags: [pivotal, VC]
         metadata:
-          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          seatOrder: ["VC", "NVA", "US", "ARVN"]
           flavorText: "General uprising."
         playCondition:
           op: and

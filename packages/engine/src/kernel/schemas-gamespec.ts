@@ -21,7 +21,7 @@ export const PieceStatusTransitionSchema = z
 export const PieceTypeCatalogEntrySchema = z
   .object({
     id: StringSchema.min(1),
-    faction: StringSchema.min(1),
+    seat: StringSchema.min(1),
     statusDimensions: z.array(PieceStatusDimensionSchema),
     transitions: z.array(PieceStatusTransitionSchema),
     runtimeProps: z.record(StringSchema, z.union([StringSchema, NumberSchema, BooleanSchema])).optional(),
@@ -31,12 +31,12 @@ export const PieceTypeCatalogEntrySchema = z
 export const PieceInventoryEntrySchema = z
   .object({
     pieceTypeId: StringSchema.min(1),
-    faction: StringSchema.min(1),
+    seat: StringSchema.min(1),
     total: IntegerSchema.min(0),
   })
   .strict();
 
-export const FactionDefSchema = z
+export const SeatDefSchema = z
   .object({
     id: StringSchema.min(1),
   })
@@ -46,7 +46,7 @@ export const PieceCatalogPayloadSchema = z
   .object({
     pieceTypes: z.array(PieceTypeCatalogEntrySchema),
     inventory: z.array(PieceInventoryEntrySchema),
-    factions: z.array(FactionDefSchema).min(1),
+    seats: z.array(SeatDefSchema).min(1),
   })
   .strict();
 
@@ -86,8 +86,8 @@ export const ProvisionalAdjacencySchema = z
 export const NumericTrackSchema = z
   .object({
     id: StringSchema.min(1),
-    scope: z.union([z.literal('global'), z.literal('faction')]),
-    faction: StringSchema.min(1).optional(),
+    scope: z.union([z.literal('global'), z.literal('seat')]),
+    seat: StringSchema.min(1).optional(),
     min: IntegerSchema,
     max: IntegerSchema,
     initial: IntegerSchema,
@@ -142,7 +142,7 @@ export const StackingConstraintSchema = z
     pieceFilter: z
       .object({
         pieceTypeIds: z.array(StringSchema.min(1)).optional(),
-        factions: z.array(StringSchema.min(1)).optional(),
+        seats: z.array(StringSchema.min(1)).optional(),
       })
       .strict(),
     rule: z.union([z.literal('maxCount'), z.literal('prohibit')]),
@@ -174,7 +174,7 @@ export const ScenarioPiecePlacementSchema = z
   .object({
     spaceId: StringSchema.min(1),
     pieceTypeId: StringSchema.min(1),
-    faction: StringSchema.min(1),
+    seat: StringSchema.min(1),
     count: IntegerSchema.positive(),
     status: z.record(StringSchema, StringSchema).optional(),
   })
@@ -225,17 +225,17 @@ export const ScenarioPayloadSchema = z
         z
           .object({
             pieceTypeId: StringSchema.min(1),
-            faction: StringSchema.min(1),
+            seat: StringSchema.min(1),
             count: IntegerSchema.positive(),
           })
           .strict(),
       )
       .optional(),
-    factionPools: z
+    seatPools: z
       .array(
         z
           .object({
-            faction: StringSchema.min(1),
+            seat: StringSchema.min(1),
             availableZoneId: StringSchema.min(1),
             outOfPlayZoneId: StringSchema.min(1).optional(),
           })
@@ -259,7 +259,7 @@ export const ScenarioPayloadSchema = z
       .array(
         z
           .object({
-            faction: StringSchema.min(1),
+            seat: StringSchema.min(1),
             eligible: BooleanSchema,
           })
           .strict(),

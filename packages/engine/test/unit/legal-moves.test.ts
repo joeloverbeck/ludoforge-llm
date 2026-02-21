@@ -224,13 +224,13 @@ describe('legalMoves', () => {
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-        factionOrder: ['0', '1', '2'],
+        seatOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
         currentCard: {
           firstEligible: '1',
           secondEligible: '2',
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
@@ -306,7 +306,7 @@ describe('legalMoves', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
             optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -381,13 +381,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-        factionOrder: ['0', '1', '2'],
+        seatOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
         currentCard: {
           firstEligible: '1',
           secondEligible: '2',
-          actedFactions: ['0'],
-          passedFactions: [],
+          actedSeats: ['0'],
+          passedSeats: [],
           nonPassCount: 1,
           firstActionClass: 'event',
         },
@@ -411,7 +411,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
             optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -475,13 +475,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-        factionOrder: ['0', '1', '2'],
+        seatOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
         currentCard: {
           firstEligible: '1',
           secondEligible: '2',
-          actedFactions: ['0'],
-          passedFactions: [],
+          actedSeats: ['0'],
+          passedSeats: [],
           nonPassCount: 1,
           firstActionClass: 'operation',
         },
@@ -507,7 +507,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -590,13 +590,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-        factionOrder: ['0', '1'],
+        seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
           firstEligible: '0',
           secondEligible: '1',
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
@@ -622,7 +622,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -678,13 +678,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-        factionOrder: ['0', '1'],
+        seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
           firstEligible: '0',
           secondEligible: '1',
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
@@ -708,7 +708,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -771,13 +771,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-        factionOrder: ['0', '1'],
+        seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
           firstEligible: '1',
           secondEligible: '0',
-          actedFactions: [],
-          passedFactions: [],
+          actedSeats: [],
+          passedSeats: [],
           nonPassCount: 0,
           firstActionClass: null,
         },
@@ -801,7 +801,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -873,13 +873,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['0', '1'],
+          seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           currentCard: {
             firstEligible: '1',
             secondEligible: '0',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },
@@ -907,7 +907,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -964,13 +964,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['0', '1'],
+          seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },
@@ -978,7 +978,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
-              faction: '0',
+              seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
               zoneFilter: {

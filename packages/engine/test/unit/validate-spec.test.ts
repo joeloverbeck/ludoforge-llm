@@ -220,7 +220,7 @@ describe('validateGameSpec structural rules', () => {
         {
           id: 'fitl-pieces-foundation',
           kind: 'pieceCatalog',
-          payload: { factions: [{ id: 'us' }], pieceTypes: [], inventory: [] },
+          payload: { seats: [{ id: 'us' }], pieceTypes: [], inventory: [] },
         },
         {
           id: 'fitl-scenario-foundation',
@@ -571,19 +571,19 @@ describe('validateGameSpec structural rules', () => {
           id: 'fitl-pieces',
           kind: 'pieceCatalog',
           payload: {
-            factions: [
+            seats: [
               { id: 'us', color: '#e63946', displayName: 'United States' },
             ],
             pieceTypes: [
               {
                 id: 'us-troops',
-                faction: 'us',
+                seat: 'us',
                 statusDimensions: [],
                 transitions: [],
                 visual: { shape: 'cube' },
               },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 10 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 10 }],
           },
         },
       ],
@@ -593,7 +593,7 @@ describe('validateGameSpec structural rules', () => {
       diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
-          diagnostic.path.startsWith('doc.dataAssets.0.payload.factions') &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.seats') &&
           diagnostic.message.includes('color') &&
           diagnostic.severity === 'error',
       ),
@@ -603,7 +603,7 @@ describe('validateGameSpec structural rules', () => {
       diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
-          diagnostic.path.startsWith('doc.dataAssets.0.payload.factions') &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.seats') &&
           diagnostic.message.includes('displayName') &&
           diagnostic.severity === 'error',
       ),
@@ -756,11 +756,11 @@ describe('validateGameSpec structural rules', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
-              factions: ['us', 'arvn', 'nva', 'vc'],
+              seats: ['us', 'arvn', 'nva', 'vc'],
               overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
             },
             optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-            passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
+            passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: 3 }],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
@@ -779,11 +779,11 @@ describe('validateGameSpec structural rules', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: '', leader: 'leader:none' },
             eligibility: {
-              factions: ['us', ''],
+              seats: ['us', ''],
               overrideWindows: [{ id: 'window-a', duration: 'season' }],
             },
             optionMatrix: [{ first: 'event', second: ['operation', 'invalid'] }],
-            passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: '3' }],
+            passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: '3' }],
             durationWindows: ['cycle', 'epoch'],
           },
         },

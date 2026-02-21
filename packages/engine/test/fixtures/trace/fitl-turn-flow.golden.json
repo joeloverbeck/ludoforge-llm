@@ -49,22 +49,22 @@
         {
           "kind": "turnFlowEligibility",
           "step": "passChain",
-          "faction": "0",
+          "seat": "0",
           "before": {
             "firstEligible": "0",
             "secondEligible": "1",
-            "actedFactions": [],
-            "passedFactions": [],
+            "actedSeats": [],
+            "passedSeats": [],
             "nonPassCount": 0,
             "firstActionClass": null
           },
           "after": {
             "firstEligible": "1",
             "secondEligible": "2",
-            "actedFactions": [
+            "actedSeats": [
               "0"
             ],
-            "passedFactions": [
+            "passedSeats": [
               "0"
             ],
             "nonPassCount": 0,
@@ -152,7 +152,7 @@
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
-            "factionOrder": [
+            "seatOrder": [
               "0",
               "1",
               "2",
@@ -168,10 +168,10 @@
             "currentCard": {
               "firstEligible": "1",
               "secondEligible": "2",
-              "actedFactions": [
+              "actedSeats": [
                 "0"
               ],
-              "passedFactions": [
+              "passedSeats": [
                 "0"
               ],
               "nonPassCount": 0,
@@ -287,7 +287,7 @@
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
-            "factionOrder": [
+            "seatOrder": [
               "0",
               "1",
               "2",
@@ -303,10 +303,10 @@
             "currentCard": {
               "firstEligible": "1",
               "secondEligible": "2",
-              "actedFactions": [
+              "actedSeats": [
                 "0"
               ],
-              "passedFactions": [
+              "passedSeats": [
                 "0"
               ],
               "nonPassCount": 0,
@@ -328,14 +328,14 @@
         {
           "kind": "turnFlowEligibility",
           "step": "candidateScan",
-          "faction": "1",
+          "seat": "1",
           "before": {
             "firstEligible": "1",
             "secondEligible": "2",
-            "actedFactions": [
+            "actedSeats": [
               "0"
             ],
-            "passedFactions": [
+            "passedSeats": [
               "0"
             ],
             "nonPassCount": 0,
@@ -344,11 +344,11 @@
           "after": {
             "firstEligible": "2",
             "secondEligible": "3",
-            "actedFactions": [
+            "actedSeats": [
               "0",
               "1"
             ],
-            "passedFactions": [
+            "passedSeats": [
               "0"
             ],
             "nonPassCount": 1,
@@ -358,15 +358,15 @@
         {
           "kind": "turnFlowEligibility",
           "step": "overrideCreate",
-          "faction": "1",
+          "seat": "1",
           "before": {
             "firstEligible": "2",
             "secondEligible": "3",
-            "actedFactions": [
+            "actedSeats": [
               "0",
               "1"
             ],
-            "passedFactions": [
+            "passedSeats": [
               "0"
             ],
             "nonPassCount": 1,
@@ -375,11 +375,11 @@
           "after": {
             "firstEligible": "2",
             "secondEligible": "3",
-            "actedFactions": [
+            "actedSeats": [
               "0",
               "1"
             ],
-            "passedFactions": [
+            "passedSeats": [
               "0"
             ],
             "nonPassCount": 1,
@@ -387,7 +387,7 @@
           },
           "overrides": [
             {
-              "faction": "1",
+              "seat": "1",
               "eligible": true,
               "windowId": "remain-eligible",
               "duration": "nextTurn"
@@ -467,7 +467,7 @@
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
-            "factionOrder": [
+            "seatOrder": [
               "0",
               "1",
               "2",
@@ -481,7 +481,7 @@
             },
             "pendingEligibilityOverrides": [
               {
-                "faction": "1",
+                "seat": "1",
                 "eligible": true,
                 "windowId": "remain-eligible",
                 "duration": "nextTurn"
@@ -490,11 +490,11 @@
             "currentCard": {
               "firstEligible": "2",
               "secondEligible": "3",
-              "actedFactions": [
+              "actedSeats": [
                 "0",
                 "1"
               ],
-              "passedFactions": [
+              "passedSeats": [
                 "0"
               ],
               "nonPassCount": 1,
@@ -653,7 +653,7 @@
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
-            "factionOrder": [
+            "seatOrder": [
               "0",
               "1",
               "2",
@@ -667,7 +667,7 @@
             },
             "pendingEligibilityOverrides": [
               {
-                "faction": "1",
+                "seat": "1",
                 "eligible": true,
                 "windowId": "remain-eligible",
                 "duration": "nextTurn"
@@ -676,11 +676,11 @@
             "currentCard": {
               "firstEligible": "2",
               "secondEligible": "3",
-              "actedFactions": [
+              "actedSeats": [
                 "0",
                 "1"
               ],
-              "passedFactions": [
+              "passedSeats": [
                 "0"
               ],
               "nonPassCount": 1,

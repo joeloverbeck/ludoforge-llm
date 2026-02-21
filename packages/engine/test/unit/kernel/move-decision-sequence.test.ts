@@ -510,7 +510,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -525,13 +525,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['0', '1'],
+          seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },
@@ -539,7 +539,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
-              faction: '0',
+              seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
               zoneFilter: {
@@ -613,7 +613,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -628,13 +628,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['0', '1'],
+          seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },
@@ -642,7 +642,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
-              faction: '0',
+              seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
               zoneFilter: {

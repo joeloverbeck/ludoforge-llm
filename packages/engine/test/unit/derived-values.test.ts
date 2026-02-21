@@ -6,9 +6,9 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  countFactionTokens,
+  countSeatTokens,
   isCoinControlled,
-  isSoloFactionControlled,
+  isSoloSeatControlled,
   getPopulationMultiplier,
   computeTotalSupport,
   computeTotalOpposition,
@@ -19,7 +19,7 @@ import {
   countBasesOnMap,
   computeVictoryMarker,
   isKernelErrorCode,
-  type FactionConfig,
+  type SeatGroupConfig,
   type GameDef,
   type MarkerWeightConfig,
   type VictoryFormula,
@@ -90,11 +90,11 @@ const makeState = (zones: Record<string, readonly Token[]>, globalVars: Record<s
   markers: {},
 });
 
-const DEFAULT_FACTION_CONFIG: FactionConfig = {
-  coinFactions: ['US', 'ARVN'],
-  insurgentFactions: ['NVA', 'VC'],
-  soloFaction: 'NVA',
-  factionProp: 'faction',
+const DEFAULT_FACTION_CONFIG: SeatGroupConfig = {
+  coinSeats: ['US', 'ARVN'],
+  insurgentSeats: ['NVA', 'VC'],
+  soloSeat: 'NVA',
+  seatProp: 'faction',
 };
 
 const SUPPORT_CONFIG: MarkerWeightConfig = {
@@ -124,9 +124,9 @@ const DERIVED_METRICS_CONTEXT: Pick<GameDef, 'derivedMetrics'> = {
   ],
 };
 
-// ─── countFactionTokens ──────────────────────────────────────────────────────
+// ─── countSeatTokens ──────────────────────────────────────────────────────
 
-describe('countFactionTokens', () => {
+describe('countSeatTokens', () => {
   it('counts tokens matching any faction in the list', () => {
     const state = makeState({
       'space-a': [
@@ -136,17 +136,17 @@ describe('countFactionTokens', () => {
         makeFactionToken('t4', 'NVA'),
       ],
     });
-    assert.equal(countFactionTokens(state, 'space-a', ['US', 'ARVN'], 'faction'), 3);
+    assert.equal(countSeatTokens(state, 'space-a', ['US', 'ARVN'], 'faction'), 3);
   });
 
   it('returns 0 for missing zone', () => {
     const state = makeState({});
-    assert.equal(countFactionTokens(state, 'nonexistent', ['US'], 'faction'), 0);
+    assert.equal(countSeatTokens(state, 'nonexistent', ['US'], 'faction'), 0);
   });
 
   it('returns 0 for empty zone', () => {
     const state = makeState({ 'space-a': [] });
-    assert.equal(countFactionTokens(state, 'space-a', ['US'], 'faction'), 0);
+    assert.equal(countSeatTokens(state, 'space-a', ['US'], 'faction'), 0);
   });
 
   it('ignores tokens without the faction prop', () => {
@@ -156,7 +156,7 @@ describe('countFactionTokens', () => {
         makeFactionToken('t2', 'US'),
       ],
     });
-    assert.equal(countFactionTokens(state, 'space-a', ['US'], 'faction'), 1);
+    assert.equal(countSeatTokens(state, 'space-a', ['US'], 'faction'), 1);
   });
 });
 
@@ -208,9 +208,9 @@ describe('isCoinControlled', () => {
   });
 });
 
-// ─── isSoloFactionControlled ─────────────────────────────────────────────────────────
+// ─── isSoloSeatControlled ─────────────────────────────────────────────────────────
 
-describe('isSoloFactionControlled', () => {
+describe('isSoloSeatControlled', () => {
   it('returns true when solo faction > all others (4 vs 2 + 1)', () => {
     const state = makeState({
       'space-a': [
@@ -223,19 +223,19 @@ describe('isSoloFactionControlled', () => {
         makeFactionToken('t7', 'VC'),
       ],
     });
-    assert.equal(isSoloFactionControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), true);
+    assert.equal(isSoloSeatControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), true);
   });
 
   it('returns true when 1 solo faction vs 0 others', () => {
     const state = makeState({
       'space-a': [makeFactionToken('t1', 'NVA')],
     });
-    assert.equal(isSoloFactionControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), true);
+    assert.equal(isSoloSeatControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), true);
   });
 
   it('returns false for empty space', () => {
     const state = makeState({ 'space-a': [] });
-    assert.equal(isSoloFactionControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), false);
+    assert.equal(isSoloSeatControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), false);
   });
 
   it('returns false when solo faction equals others (strict >)', () => {
@@ -245,7 +245,7 @@ describe('isSoloFactionControlled', () => {
         makeFactionToken('t2', 'US'),
       ],
     });
-    assert.equal(isSoloFactionControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), false);
+    assert.equal(isSoloSeatControlled(state, 'space-a', DEFAULT_FACTION_CONFIG), false);
   });
 });
 
@@ -590,7 +590,7 @@ describe('computeVictoryMarker', () => {
     const formula: VictoryFormula = {
       type: 'markerTotalPlusMapBases',
       markerConfig: OPPOSITION_CONFIG,
-      baseFaction: 'VC',
+      baseSeat: 'VC',
       basePieceTypes: ['base'],
     };
     assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, oppSpaces, oppMarkers, DEFAULT_FACTION_CONFIG, formula), 4);
@@ -627,7 +627,7 @@ describe('computeVictoryMarker', () => {
     const formula: VictoryFormula = {
       type: 'controlledPopulationPlusMapBases',
       controlFn: 'solo',
-      baseFaction: 'NVA',
+      baseSeat: 'NVA',
       basePieceTypes: ['base'],
     };
     assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, nvaSpaces, {}, DEFAULT_FACTION_CONFIG, formula), 8);

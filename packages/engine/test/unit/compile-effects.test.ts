@@ -557,7 +557,7 @@ describe('compile-effects lowering', () => {
         {
           grantFreeOperation: {
             id: 'apc-vc-uprising',
-            faction: '3',
+            seat: '3',
             operationClass: 'limitedOperation',
             actionIds: ['operation'],
             uses: 1,
@@ -575,7 +575,7 @@ describe('compile-effects lowering', () => {
       {
         grantFreeOperation: {
           id: 'apc-vc-uprising',
-          faction: '3',
+          seat: '3',
           operationClass: 'limitedOperation',
           actionIds: ['operation'],
           uses: 1,

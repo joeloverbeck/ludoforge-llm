@@ -24,7 +24,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "US",
           "NVA",
           "ARVN",
@@ -42,7 +42,7 @@
       ],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "US",
           "ARVN",
           "VC",
@@ -58,7 +58,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "NVA",
           "ARVN",
           "US",
@@ -74,7 +74,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "NVA",
           "VC",
           "US",
@@ -90,7 +90,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "NVA",
           "VC",
           "US",
@@ -106,7 +106,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "ARVN",
           "NVA",
           "US",
@@ -122,7 +122,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "ARVN",
           "NVA",
           "VC",
@@ -138,7 +138,7 @@
       "tags": [],
       "metadata": {
         "period": "1965",
-        "factionOrder": [
+        "seatOrder": [
           "ARVN",
           "VC",
           "US",
@@ -154,7 +154,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "VC",
           "US",
           "ARVN",
@@ -173,7 +173,7 @@
       ],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "VC",
           "NVA",
           "US",
@@ -189,7 +189,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "VC",
           "NVA",
           "ARVN",
@@ -205,7 +205,7 @@
       "tags": [],
       "metadata": {
         "period": "1964",
-        "factionOrder": [
+        "seatOrder": [
           "VC",
           "ARVN",
           "US",
@@ -223,7 +223,7 @@
       ],
       "metadata": {
         "period": null,
-        "factionOrder": null
+        "seatOrder": null
       }
     }
   ]

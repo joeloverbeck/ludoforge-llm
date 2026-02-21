@@ -167,7 +167,7 @@ describe('exhaustive kernel unions', () => {
     const placement: ScenarioPiecePlacement = {
       spaceId: 'space:a',
       pieceTypeId: 'troops',
-      faction: 'us',
+      seat: 'us',
       count: 2,
       status: { activity: 'active' },
     };
@@ -189,12 +189,12 @@ describe('exhaustive kernel unions', () => {
       initialPlacements: [placement],
       initialTrackValues: [{ trackId: 'patronage', value: 15 }],
       initialMarkers: [{ spaceId: 'saigon', markerId: 'support', state: 'activeSupport' }],
-      outOfPlay: [{ pieceTypeId: 'base', faction: 'us', count: 1 }],
+      outOfPlay: [{ pieceTypeId: 'base', seat: 'us', count: 1 }],
       deckComposition,
       startingLeader: 'duong-van-minh',
       leaderStack: ['duong-van-minh', 'nguyen-cao-ky'],
       startingCapabilities: [{ capabilityId: 'boeing-vertol', side: 'unshaded' }],
-      startingEligibility: [{ faction: 'us', eligible: true }],
+      startingEligibility: [{ seat: 'us', eligible: true }],
       usPolicy: 'lbj',
     };
 

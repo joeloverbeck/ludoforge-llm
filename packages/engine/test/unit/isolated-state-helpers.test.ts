@@ -33,7 +33,7 @@ const createCardDrivenDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { factions: ['0', '1'], overrideWindows: [] },
+          eligibility: { seats: ['0', '1'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

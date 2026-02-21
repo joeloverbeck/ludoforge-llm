@@ -796,11 +796,11 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [
-              { factionClass: '0', resource: 'res0', amount: 1 },
-              { factionClass: '1', resource: 'res1', amount: 3 },
+              { seatClass: '0', resource: 'res0', amount: 1 },
+              { seatClass: '1', resource: 'res1', amount: 3 },
             ],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
@@ -862,7 +862,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
             optionMatrix: [{ first: 'operation', second: ['limitedOperation', 'operation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -931,7 +931,7 @@ phase: [asPhaseId('main')],
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
-              factions: ['0', '1', '2', '3'],
+              seats: ['0', '1', '2', '3'],
               overrideWindows: [
                 { id: 'remain-eligible', duration: 'nextTurn' },
                 { id: 'force-ineligible', duration: 'nextTurn' },
@@ -985,7 +985,7 @@ phase: [asPhaseId('main')],
                 text: 'Declare next-turn eligibility updates.',
                 eligibilityOverrides: [
                   { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
-                  { target: { kind: 'faction', faction: '2' }, eligible: false, windowId: 'force-ineligible' },
+                  { target: { kind: 'seat', seat: '2' }, eligible: false, windowId: 'force-ineligible' },
                 ],
               },
             },
@@ -1384,7 +1384,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1429,7 +1429,7 @@ phase: [asPhaseId('main')],
     assert.deepEqual(requireCardDrivenRuntime(result.state).eligibility, beforeEligibility, 'eligibility should be unchanged');
     assert.equal(requireCardDrivenRuntime(result.state).currentCard.firstEligible, beforeCard.firstEligible);
     assert.equal(requireCardDrivenRuntime(result.state).currentCard.secondEligible, beforeCard.secondEligible);
-    assert.deepEqual(requireCardDrivenRuntime(result.state).currentCard.actedFactions, beforeCard.actedFactions);
+    assert.deepEqual(requireCardDrivenRuntime(result.state).currentCard.actedSeats, beforeCard.actedSeats);
     const eligibilityEntries = result.triggerFirings.filter(
       (entry) => entry.kind === 'turnFlowEligibility',
     );
@@ -1451,7 +1451,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1499,7 +1499,7 @@ phase: [asPhaseId('main')],
     }).state;
     const firstPending = requireCardDrivenRuntime(firstFree).pendingFreeOperationGrants ?? [];
     assert.equal(firstPending.length, 1);
-    assert.equal(firstPending[0]?.faction, '0');
+    assert.equal(firstPending[0]?.seat, '0');
     assert.deepEqual(firstPending[0]?.actionIds, ['operate']);
     assert.equal(firstPending[0]?.remainingUses, 1);
     assert.equal(typeof firstPending[0]?.grantId, 'string');
@@ -2026,7 +2026,7 @@ phase: [asPhaseId('main')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2088,13 +2088,13 @@ phase: [asPhaseId('main')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['0', '1'],
+          seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },

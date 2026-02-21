@@ -17,7 +17,7 @@ describe('FITL Green Berets event-card production spec', () => {
     assert.equal(greenBerets?.sideMode, 'dual');
     assert.deepEqual(greenBerets?.tags, []);
     assert.equal(greenBerets?.metadata?.period, '1964');
-    assert.deepEqual(greenBerets?.metadata?.factionOrder, ['ARVN', 'US', 'VC', 'NVA']);
+    assert.deepEqual(greenBerets?.metadata?.seatOrder, ['ARVN', 'US', 'VC', 'NVA']);
     assert.equal(typeof greenBerets?.metadata?.flavorText, 'string');
     assert.equal(
       greenBerets?.unshaded?.text,

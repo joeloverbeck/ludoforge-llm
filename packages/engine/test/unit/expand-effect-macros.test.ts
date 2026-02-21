@@ -450,11 +450,11 @@ phase: ['main'],
           id: 'pieces',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'US' }],
+            seats: [{ id: 'US' }],
             pieceTypes: [
-              { id: 'us-troops', faction: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'US', total: 1 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'US', total: 1 }],
           },
         },
         {
@@ -492,11 +492,11 @@ phase: ['main'],
           id: 'pieces',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'US' }],
+            seats: [{ id: 'US' }],
             pieceTypes: [
-              { id: 'us-troops', faction: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'US', total: 1 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'US', total: 1 }],
           },
         },
         {
@@ -534,11 +534,11 @@ phase: ['main'],
           id: 'pieces',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'US' }],
+            seats: [{ id: 'US' }],
             pieceTypes: [
-              { id: 'us-troops', faction: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'US', total: 1 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'US', total: 1 }],
           },
         },
         {

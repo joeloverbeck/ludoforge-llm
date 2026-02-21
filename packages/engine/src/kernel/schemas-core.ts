@@ -33,7 +33,7 @@ import {
 } from './schemas-extensions.js';
 import {
   AttributeValueSchema,
-  FactionDefSchema,
+  SeatDefSchema,
   NumericTrackSchema,
   GlobalMarkerLatticeSchema,
   SpaceMarkerLatticeSchema,
@@ -93,7 +93,7 @@ export const TokenTypeTransitionSchema = z
 export const TokenTypeDefSchema = z
   .object({
     id: StringSchema,
-    faction: StringSchema.optional(),
+    seat: StringSchema.optional(),
     props: z.record(StringSchema, z.union([z.literal('int'), z.literal('string'), z.literal('boolean')])),
     transitions: z.array(TokenTypeTransitionSchema).optional(),
   })
@@ -319,7 +319,7 @@ export const GameDefSchema = z
     globalVars: z.array(VariableDefSchema),
     perPlayerVars: z.array(VariableDefSchema),
     zones: z.array(ZoneDefSchema),
-    factions: z.array(FactionDefSchema).optional(),
+    seats: z.array(SeatDefSchema).optional(),
     tracks: z.array(NumericTrackSchema).optional(),
     spaceMarkers: z.array(SpaceMarkerValueSchema).optional(),
     tokenTypes: z.array(TokenTypeDefSchema),

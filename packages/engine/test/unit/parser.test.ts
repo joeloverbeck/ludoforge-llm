@@ -310,7 +310,7 @@ describe('parseGameSpec API shape', () => {
       '        lookahead: lookahead:none',
       '        leader: leader:none',
       '      eligibility:',
-      '        factions: [us, nva]',
+      '        seats: [us, nva]',
       '        overrideWindows: []',
       '      optionMatrix: []',
       '      passRewards: []',

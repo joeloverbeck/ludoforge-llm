@@ -248,17 +248,17 @@ actor: 'active',
           id: 'pieces-foundation',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'US' }],
+            seats: [{ id: 'US' }],
             pieceTypes: [
               {
                 id: 'us-troops',
-                faction: 'US',
+                seat: 'US',
                 statusDimensions: [],
                 transitions: [],
                 runtimeProps: { faction: 'US', type: 'troops' },
               },
             ],
-            inventory: [{ pieceTypeId: 'us-troops', faction: 'US', total: 2 }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'US', total: 2 }],
           },
         },
         {

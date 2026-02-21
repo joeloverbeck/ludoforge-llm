@@ -181,22 +181,22 @@ function translateTriggerEntry(
       return {
         ...base,
         kind: 'phase',
-        message: `Eligibility ${formatIdAsDisplayName(entry.step)}${entry.faction === null ? '' : ` for ${resolveFactionName(entry.faction, visualConfig)}`}.`,
+        message: `Eligibility ${formatIdAsDisplayName(entry.step)}${entry.seat === null ? '' : ` for ${resolveFactionName(entry.seat, visualConfig)}`}.`,
         depth: 0,
         zoneIds: [],
         tokenIds: [],
-        ...optionalPlayerId(entry.faction === null ? undefined : lookup.playerByFaction.get(entry.faction)),
+        ...optionalPlayerId(entry.seat === null ? undefined : lookup.playerByFaction.get(entry.seat)),
       };
 
     case 'simultaneousSubmission':
       return {
         ...base,
         kind: 'lifecycle',
-        message: `${resolveFactionName(entry.player, visualConfig)} submitted ${formatIdAsDisplayName(entry.move.actionId)}.`,
+        message: `${resolvePlayerName(entry.player, visualConfig, lookup)} submitted ${formatIdAsDisplayName(entry.move.actionId)}.`,
         depth: 0,
         zoneIds: [],
         tokenIds: [],
-        ...optionalPlayerId(lookup.playerByFaction.get(entry.player)),
+        ...optionalPlayerId(entry.player),
       };
 
     case 'simultaneousCommit':
@@ -249,12 +249,12 @@ function buildPlayerLookup(gameDef: GameDef): PlayerLookup {
 
 function resolveOrderedFactions(gameDef: GameDef): readonly string[] {
   if (gameDef.turnOrder?.type === 'cardDriven') {
-    return gameDef.turnOrder.config.turnFlow.eligibility.factions;
+    return gameDef.turnOrder.config.turnFlow.eligibility.seats;
   }
   if (gameDef.turnOrder?.type === 'fixedOrder') {
     return gameDef.turnOrder.order;
   }
-  return (gameDef.factions ?? []).map((faction) => faction.id);
+  return (gameDef.seats ?? []).map((seat) => seat.id);
 }
 
 function resolveZoneName(zoneId: string, visualConfig: VisualConfigProvider): string {

@@ -9,12 +9,12 @@ import {
   asTokenId,
   asZoneId,
   isCoinControlled,
-  isSoloFactionControlled,
+  isSoloSeatControlled,
   computeTotalSupport,
   computeTotalOpposition,
   computeTotalEcon,
   computeVictoryMarker,
-  type FactionConfig,
+  type SeatGroupConfig,
   type GameDef,
   type GameState,
   type MapPayload,
@@ -93,10 +93,10 @@ function loadFitlData(): ParsedFitlData {
 /**
  * Build a faction lookup from the piece catalog: pieceTypeId → faction.
  */
-function buildFactionLookup(catalogPayload: PieceCatalogPayload): ReadonlyMap<string, string> {
+function buildSeatLookup(catalogPayload: PieceCatalogPayload): ReadonlyMap<string, string> {
   const lookup = new Map<string, string>();
   for (const entry of catalogPayload.pieceTypes) {
-    lookup.set(entry.id, entry.faction);
+    lookup.set(entry.id, entry.seat);
   }
   return lookup;
 }
@@ -110,7 +110,7 @@ function buildStateFromScenario(
   catalogPayload: PieceCatalogPayload,
   scenario: ScenarioPayload,
 ): GameState {
-  const factionLookup = buildFactionLookup(catalogPayload);
+  const seatLookup = buildSeatLookup(catalogPayload);
   const zones: Record<string, Token[]> = {};
 
   // Initialize all map space zones as empty
@@ -122,7 +122,7 @@ function buildStateFromScenario(
   let ordinal = 0;
   const placements = scenario.initialPlacements ?? [];
   for (const placement of placements) {
-    const faction = factionLookup.get(placement.pieceTypeId) ?? placement.faction;
+    const faction = seatLookup.get(placement.pieceTypeId) ?? placement.seat;
     const tokens: Token[] = [];
     for (let i = 0; i < placement.count; i++) {
       tokens.push({
@@ -181,11 +181,11 @@ function buildMarkerStates(scenario: ScenarioPayload): Record<string, string> {
 
 // ─── FITL-Specific Config ────────────────────────────────────────────────────
 
-const FITL_FACTION_CONFIG: FactionConfig = {
-  coinFactions: ['us', 'arvn'],
-  insurgentFactions: ['nva', 'vc'],
-  soloFaction: 'nva',
-  factionProp: 'faction',
+const FITL_FACTION_CONFIG: SeatGroupConfig = {
+  coinSeats: ['us', 'arvn'],
+  insurgentSeats: ['nva', 'vc'],
+  soloSeat: 'nva',
+  seatProp: 'faction',
 };
 
 const FITL_SUPPORT_CONFIG: MarkerWeightConfig = {
@@ -226,7 +226,7 @@ const FITL_DERIVED_METRICS_CONTEXT: Pick<GameDef, 'derivedMetrics'> = {
 const VC_FORMULA: VictoryFormula = {
   type: 'markerTotalPlusMapBases',
   markerConfig: FITL_OPPOSITION_CONFIG,
-  baseFaction: 'vc',
+  baseSeat: 'vc',
   basePieceTypes: ['vc-bases'],
 };
 
@@ -234,7 +234,7 @@ const VC_FORMULA: VictoryFormula = {
 const NVA_FORMULA: VictoryFormula = {
   type: 'controlledPopulationPlusMapBases',
   controlFn: 'solo',
-  baseFaction: 'nva',
+  baseSeat: 'nva',
   basePieceTypes: ['nva-bases'],
 };
 
@@ -283,7 +283,7 @@ describe('FITL derived values — integration', () => {
 
       it('Quang Tri has NVA control', () => {
         assert.equal(
-          isSoloFactionControlled(state, 'quang-tri-thua-thien:none', FITL_FACTION_CONFIG),
+          isSoloSeatControlled(state, 'quang-tri-thua-thien:none', FITL_FACTION_CONFIG),
           true,
           'Quang Tri should be NVA-controlled in short scenario',
         );

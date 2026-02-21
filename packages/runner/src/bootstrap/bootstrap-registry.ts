@@ -228,7 +228,7 @@ function resolveGameMetadataSummary(targetId: string, fixtureInput: unknown): Bo
   }
   const name = readOptionalString(metadata.name);
   const description = readOptionalString(metadata.description);
-  const factionIds = readFactionIds(fixture.factions);
+  const factionIds = readFactionIds(fixture.seats);
 
   return {
     name: name ?? targetId,

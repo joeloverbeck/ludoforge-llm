@@ -5,18 +5,18 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-5', order: 5, title: 'Wild Weasels', factionOrder: ['US', 'NVA', 'ARVN', 'VC'] },
-  { id: 'card-6', order: 6, title: 'Aces', factionOrder: ['US', 'NVA', 'VC', 'ARVN'] },
-  { id: 'card-7', order: 7, title: 'ADSID', factionOrder: ['US', 'NVA', 'VC', 'ARVN'] },
-  { id: 'card-8', order: 8, title: 'Arc Light', factionOrder: ['US', 'NVA', 'VC', 'ARVN'] },
-  { id: 'card-10', order: 10, title: 'Rolling Thunder', factionOrder: ['US', 'NVA', 'VC', 'ARVN'] },
-  { id: 'card-14', order: 14, title: 'M-48 Patton', factionOrder: ['US', 'ARVN', 'NVA', 'VC'] },
-  { id: 'card-18', order: 18, title: 'Combined Action Platoons', factionOrder: ['US', 'ARVN', 'VC', 'NVA'] },
-  { id: 'card-22', order: 22, title: 'Da Nang', factionOrder: ['US', 'VC', 'NVA', 'ARVN'] },
-  { id: 'card-23', order: 23, title: 'Operation Attleboro', factionOrder: ['US', 'VC', 'NVA', 'ARVN'] },
-  { id: 'card-24', order: 24, title: 'Operation Starlite', factionOrder: ['US', 'VC', 'NVA', 'ARVN'] },
-  { id: 'card-25', order: 25, title: 'TF-116 Riverines', factionOrder: ['US', 'VC', 'NVA', 'ARVN'] },
-  { id: 'card-28', order: 28, title: 'Search and Destroy', factionOrder: ['US', 'VC', 'ARVN', 'NVA'] },
+  { id: 'card-5', order: 5, title: 'Wild Weasels', seatOrder: ['US', 'NVA', 'ARVN', 'VC'] },
+  { id: 'card-6', order: 6, title: 'Aces', seatOrder: ['US', 'NVA', 'VC', 'ARVN'] },
+  { id: 'card-7', order: 7, title: 'ADSID', seatOrder: ['US', 'NVA', 'VC', 'ARVN'] },
+  { id: 'card-8', order: 8, title: 'Arc Light', seatOrder: ['US', 'NVA', 'VC', 'ARVN'] },
+  { id: 'card-10', order: 10, title: 'Rolling Thunder', seatOrder: ['US', 'NVA', 'VC', 'ARVN'] },
+  { id: 'card-14', order: 14, title: 'M-48 Patton', seatOrder: ['US', 'ARVN', 'NVA', 'VC'] },
+  { id: 'card-18', order: 18, title: 'Combined Action Platoons', seatOrder: ['US', 'ARVN', 'VC', 'NVA'] },
+  { id: 'card-22', order: 22, title: 'Da Nang', seatOrder: ['US', 'VC', 'NVA', 'ARVN'] },
+  { id: 'card-23', order: 23, title: 'Operation Attleboro', seatOrder: ['US', 'VC', 'NVA', 'ARVN'] },
+  { id: 'card-24', order: 24, title: 'Operation Starlite', seatOrder: ['US', 'VC', 'NVA', 'ARVN'] },
+  { id: 'card-25', order: 25, title: 'TF-116 Riverines', seatOrder: ['US', 'VC', 'NVA', 'ARVN'] },
+  { id: 'card-28', order: 28, title: 'Search and Destroy', seatOrder: ['US', 'VC', 'ARVN', 'NVA'] },
 ] as const;
 
 describe('FITL 1965 US-first event-card production spec', () => {
@@ -33,7 +33,7 @@ describe('FITL 1965 US-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, 'dual');
       assert.equal(card?.metadata?.period, '1965');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
       assert.equal(typeof card?.shaded?.text, 'string', `${expected.id} must include shaded text`);
     }

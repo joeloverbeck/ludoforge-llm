@@ -16,7 +16,7 @@ interface TutorialGoldenCard {
   readonly tags: readonly string[];
   readonly metadata: {
     readonly period: string | null;
-    readonly factionOrder: readonly string[] | null;
+    readonly seatOrder: readonly string[] | null;
   };
 }
 
@@ -70,24 +70,24 @@ describe('FITL full deck compilation and golden invariants', () => {
       }
 
       const isCoup = card.tags?.includes('coup') ?? false;
-      const factionOrderRaw = card.metadata?.factionOrder;
+      const factionOrderRaw = card.metadata?.seatOrder;
 
       if (isCoup) {
         assert.equal(card.sideMode, 'single', `${card.id} coup cards must be single side mode`);
-        assert.equal(factionOrderRaw, undefined, `${card.id} coup cards should omit factionOrder`);
+        assert.equal(factionOrderRaw, undefined, `${card.id} coup cards should omit seatOrder`);
       } else {
-        assert.equal(Array.isArray(factionOrderRaw), true, `${card.id} should define factionOrder`);
+        assert.equal(Array.isArray(factionOrderRaw), true, `${card.id} should define seatOrder`);
         if (!Array.isArray(factionOrderRaw)) {
-          assert.fail(`${card.id} factionOrder must be an array`);
+          assert.fail(`${card.id} seatOrder must be an array`);
         }
-        const factionOrder = factionOrderRaw.filter((faction): faction is string => typeof faction === 'string');
-        assert.equal(factionOrder.length, factionOrderRaw.length, `${card.id} factionOrder entries must all be strings`);
-        assert.equal(factionOrder?.length, 4, `${card.id} factionOrder should contain 4 entries`);
-        assert.equal(new Set(factionOrder).size, 4, `${card.id} factionOrder should not repeat factions`);
+        const seatOrder = factionOrderRaw.filter((faction): faction is string => typeof faction === 'string');
+        assert.equal(seatOrder.length, factionOrderRaw.length, `${card.id} seatOrder entries must all be strings`);
+        assert.equal(seatOrder?.length, 4, `${card.id} seatOrder should contain 4 entries`);
+        assert.equal(new Set(seatOrder).size, 4, `${card.id} seatOrder should not repeat factions`);
         assert.equal(
-          factionOrder?.every((faction) => FITL_FACTIONS.has(faction)) ?? false,
+          seatOrder?.every((faction) => FITL_FACTIONS.has(faction)) ?? false,
           true,
-          `${card.id} factionOrder should only contain FITL factions`,
+          `${card.id} seatOrder should only contain FITL factions`,
         );
       }
 
@@ -127,7 +127,7 @@ describe('FITL full deck compilation and golden invariants', () => {
         assert.fail(`Expected tutorial card ${id} to define order`);
       }
       const periodRaw = card?.metadata?.period;
-      const factionOrderRaw = card?.metadata?.factionOrder;
+      const factionOrderRaw = card?.metadata?.seatOrder;
 
       return {
         id,
@@ -137,7 +137,7 @@ describe('FITL full deck compilation and golden invariants', () => {
         tags: [...(card?.tags ?? [])],
         metadata: {
           period: typeof periodRaw === 'string' ? periodRaw : null,
-          factionOrder:
+          seatOrder:
             Array.isArray(factionOrderRaw) && factionOrderRaw.every((faction) => typeof faction === 'string')
               ? [...factionOrderRaw]
               : null,

@@ -19,7 +19,7 @@ export interface TurnFlowEligibilityOverrideWindowDef {
 }
 
 export interface TurnFlowEligibilityDef {
-  readonly factions: readonly string[];
+  readonly seats: readonly string[];
   readonly overrideWindows: readonly TurnFlowEligibilityOverrideWindowDef[];
 }
 
@@ -29,7 +29,7 @@ export interface TurnFlowOptionMatrixRowDef {
 }
 
 export interface TurnFlowPassRewardDef {
-  readonly factionClass: string;
+  readonly seatClass: string;
   readonly resource: string;
   readonly amount: number;
 }
@@ -111,14 +111,14 @@ export interface CoupPlanDef {
 export interface TurnFlowRuntimeCardState {
   readonly firstEligible: string | null;
   readonly secondEligible: string | null;
-  readonly actedFactions: readonly string[];
-  readonly passedFactions: readonly string[];
+  readonly actedSeats: readonly string[];
+  readonly passedSeats: readonly string[];
   readonly nonPassCount: number;
   readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
 }
 
 export interface TurnFlowPendingEligibilityOverride {
-  readonly faction: string;
+  readonly seat: string;
   readonly eligible: boolean;
   readonly windowId: string;
   readonly duration: TurnFlowDuration;
@@ -126,8 +126,8 @@ export interface TurnFlowPendingEligibilityOverride {
 
 export interface TurnFlowPendingFreeOperationGrant {
   readonly grantId: string;
-  readonly faction: string;
-  readonly executeAsFaction?: string;
+  readonly seat: string;
+  readonly executeAsSeat?: string;
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
@@ -163,7 +163,7 @@ export interface SimultaneousCommitTraceEntry {
 }
 
 export interface TurnFlowRuntimeState {
-  readonly factionOrder: readonly string[];
+  readonly seatOrder: readonly string[];
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
@@ -213,20 +213,20 @@ export interface TurnFlowLifecycleTraceEntry {
 export interface TurnFlowEligibilityTraceEntry {
   readonly kind: 'turnFlowEligibility';
   readonly step: 'candidateScan' | 'passChain' | 'cardEnd' | 'overrideCreate';
-  readonly faction: string | null;
+  readonly seat: string | null;
   readonly before: {
     readonly firstEligible: string | null;
     readonly secondEligible: string | null;
-    readonly actedFactions: readonly string[];
-    readonly passedFactions: readonly string[];
+    readonly actedSeats: readonly string[];
+    readonly passedSeats: readonly string[];
     readonly nonPassCount: number;
     readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
   };
   readonly after: {
     readonly firstEligible: string | null;
     readonly secondEligible: string | null;
-    readonly actedFactions: readonly string[];
-    readonly passedFactions: readonly string[];
+    readonly actedSeats: readonly string[];
+    readonly passedSeats: readonly string[];
     readonly nonPassCount: number;
     readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
   };

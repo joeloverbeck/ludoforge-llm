@@ -3,7 +3,7 @@ import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
 import type {
   EffectAST,
-  FactionDef,
+  SeatDef,
   MapPayload,
   NumericTrackDef,
   PieceCatalogPayload,
@@ -33,12 +33,12 @@ const COMPILER_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvaria
     outOfPlayMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario outOfPlay.`,
     suggestion: 'Use a pieceTypeId declared in the selected piece catalog.',
   },
-  factionMismatch: {
-    initialPlacementsCode: 'CNL_COMPILER_SCENARIO_PLACEMENT_FACTION_MISMATCH',
-    outOfPlayCode: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH',
-    message: (actualFaction, pieceTypeId, expectedFaction) =>
-      `Faction "${actualFaction}" does not match piece type "${pieceTypeId}" (expected "${expectedFaction}").`,
-    suggestion: (expectedFaction) => `Set faction to "${expectedFaction}" or use a different piece type.`,
+  seatMismatch: {
+    initialPlacementsCode: 'CNL_COMPILER_SCENARIO_PLACEMENT_SEAT_MISMATCH',
+    outOfPlayCode: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH',
+    message: (actualSeat, pieceTypeId, expectedSeat) =>
+      `Seat "${actualSeat}" does not match piece type "${pieceTypeId}" (expected "${expectedSeat}").`,
+    suggestion: (expectedSeat) => `Set seat to "${expectedSeat}" or use a different piece type.`,
   },
   conservationViolation: {
     code: 'CNL_COMPILER_SCENARIO_PIECE_CONSERVATION_VIOLATED',
@@ -58,7 +58,7 @@ export function deriveSectionsFromDataAssets(
 ): {
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
-  readonly factions: readonly FactionDef[] | null;
+  readonly seats: readonly SeatDef[] | null;
   readonly tracks: readonly NumericTrackDef[] | null;
   readonly scenarioInitialTrackValues: ReadonlyArray<{ readonly trackId: string; readonly value: number }> | null;
   readonly markerLattices: readonly SpaceMarkerLatticeDef[] | null;
@@ -78,7 +78,7 @@ export function deriveSectionsFromDataAssets(
     return {
       zones: null,
       tokenTypes: null,
-      factions: null,
+      seats: null,
       tracks: null,
       scenarioInitialTrackValues: null,
       markerLattices: null,
@@ -254,7 +254,7 @@ export function deriveSectionsFromDataAssets(
       ? null
       : selectedPieceCatalog.payload.pieceTypes.map((pieceType) => ({
           id: pieceType.id,
-          faction: pieceType.faction,
+          seat: pieceType.seat,
           props: Object.fromEntries(
             Object.entries({
               ...(pieceType.runtimeProps === undefined ? {} : inferRuntimePropSchema(pieceType.runtimeProps)),
@@ -276,7 +276,7 @@ export function deriveSectionsFromDataAssets(
   return {
     zones,
     tokenTypes,
-    factions: selectedPieceCatalog?.payload.factions ?? null,
+    seats: selectedPieceCatalog?.payload.seats ?? null,
     tracks: selectedMap?.payload.tracks ?? null,
     scenarioInitialTrackValues: selectedScenario?.initialTrackValues ?? null,
     markerLattices: selectedMap?.payload.markerLattices ?? null,
@@ -402,14 +402,14 @@ const buildScenarioSetupEffects = ({
 
   const scenario = selectedScenario.payload;
   const hasProjectionInputs = (scenario.initialPlacements ?? []).length > 0 || (scenario.outOfPlay ?? []).length > 0;
-  if ((scenario.factionPools ?? []).length === 0) {
+  if ((scenario.seatPools ?? []).length === 0) {
     if (hasProjectionInputs) {
       diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_FACTION_POOLS_REQUIRED',
-        path: `${selectedScenario.path}.factionPools`,
+        code: 'CNL_COMPILER_SCENARIO_SEAT_POOLS_REQUIRED',
+        path: `${selectedScenario.path}.seatPools`,
         severity: 'error',
-        message: 'Scenario defines initialPlacements/outOfPlay but payload.factionPools is missing or empty.',
-        suggestion: 'Add payload.factionPools entries with availableZoneId/outOfPlayZoneId for participating factions.',
+        message: 'Scenario defines initialPlacements/outOfPlay but payload.seatPools is missing or empty.',
+        suggestion: 'Add payload.seatPools entries with availableZoneId/outOfPlayZoneId for participating seats.',
       });
     }
     return [];
@@ -420,17 +420,17 @@ const buildScenarioSetupEffects = ({
     inventoryByPieceType.set(entry.pieceTypeId, (inventoryByPieceType.get(entry.pieceTypeId) ?? 0) + entry.total);
   }
 
-  const poolByFaction = new Map((scenario.factionPools ?? []).map((pool) => [pool.faction, pool]));
+  const poolBySeat = new Map((scenario.seatPools ?? []).map((pool) => [pool.seat, pool]));
   const effects: EffectAST[] = [];
   const usedByPieceType = new Map<string, number>();
-  const pieceTypeFactionById = new Map<string, string>();
+  const pieceTypeSeatById = new Map<string, string>();
   for (const [pieceTypeId, pieceType] of pieceTypesById.entries()) {
-    pieceTypeFactionById.set(pieceTypeId, pieceType.faction);
+    pieceTypeSeatById.set(pieceTypeId, pieceType.seat);
   }
   const scenarioEntries = collectScenarioProjectionEntries(scenario, selectedScenario.path);
   const projectionIssues = evaluateScenarioProjectionInvariants(
     scenarioEntries,
-    pieceTypeFactionById,
+    pieceTypeSeatById,
     inventoryByPieceType,
   );
   diagnostics.push(
@@ -445,7 +445,7 @@ const buildScenarioSetupEffects = ({
     if (pieceType === undefined) {
       continue;
     }
-    if (placement.faction !== pieceType.faction) {
+    if (placement.seat !== pieceType.seat) {
       continue;
     }
     const props = resolveScenarioTokenProps(pieceType, placement.status);
@@ -466,17 +466,17 @@ const buildScenarioSetupEffects = ({
     if (pieceType === undefined) {
       continue;
     }
-    if (outOfPlay.faction !== pieceType.faction) {
+    if (outOfPlay.seat !== pieceType.seat) {
       continue;
     }
-    const pool = poolByFaction.get(outOfPlay.faction);
+    const pool = poolBySeat.get(outOfPlay.seat);
     if (pool?.outOfPlayZoneId === undefined) {
       diagnostics.push({
         code: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_POOL_MISSING',
-        path: `${selectedScenario.path}.outOfPlay.${index}.faction`,
+        path: `${selectedScenario.path}.outOfPlay.${index}.seat`,
         severity: 'error',
-        message: `Scenario outOfPlay entry references faction "${outOfPlay.faction}" without an out-of-play zone mapping.`,
-        suggestion: 'Add payload.factionPools entry with outOfPlayZoneId for this faction.',
+        message: `Scenario outOfPlay entry references seat "${outOfPlay.seat}" without an out-of-play zone mapping.`,
+        suggestion: 'Add payload.seatPools entry with outOfPlayZoneId for this seat.',
       });
       continue;
     }
@@ -507,14 +507,14 @@ const buildScenarioSetupEffects = ({
     if (remaining === 0) {
       continue;
     }
-    const pool = poolByFaction.get(pieceType.faction);
+    const pool = poolBySeat.get(pieceType.seat);
     if (pool?.availableZoneId === undefined) {
       diagnostics.push({
         code: 'CNL_COMPILER_SCENARIO_AVAILABLE_POOL_MISSING',
-        path: `${selectedScenario.path}.factionPools`,
+        path: `${selectedScenario.path}.seatPools`,
         severity: 'error',
-        message: `Scenario is missing available pool mapping for faction "${pieceType.faction}" (pieceType "${pieceTypeId}").`,
-        suggestion: 'Add payload.factionPools entries with availableZoneId for each faction used by piece catalog inventory.',
+        message: `Scenario is missing available pool mapping for seat "${pieceType.seat}" (pieceType "${pieceTypeId}").`,
+        suggestion: 'Add payload.seatPools entries with availableZoneId for each seat used by piece catalog inventory.',
       });
       continue;
     }

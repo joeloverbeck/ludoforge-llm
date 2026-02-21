@@ -39,22 +39,22 @@
     {
       "kind": "turnFlowEligibility",
       "step": "candidateScan",
-      "faction": "0",
+      "seat": "0",
       "before": {
         "firstEligible": "0",
         "secondEligible": "1",
-        "actedFactions": [],
-        "passedFactions": [],
+        "actedSeats": [],
+        "passedSeats": [],
         "nonPassCount": 0,
         "firstActionClass": null
       },
       "after": {
         "firstEligible": "1",
         "secondEligible": "2",
-        "actedFactions": [
+        "actedSeats": [
           "0"
         ],
-        "passedFactions": [],
+        "passedSeats": [],
         "nonPassCount": 1,
         "firstActionClass": "event"
       }
@@ -62,30 +62,30 @@
     {
       "kind": "turnFlowEligibility",
       "step": "overrideCreate",
-      "faction": "0",
+      "seat": "0",
       "before": {
         "firstEligible": "1",
         "secondEligible": "2",
-        "actedFactions": [
+        "actedSeats": [
           "0"
         ],
-        "passedFactions": [],
+        "passedSeats": [],
         "nonPassCount": 1,
         "firstActionClass": "event"
       },
       "after": {
         "firstEligible": "1",
         "secondEligible": "2",
-        "actedFactions": [
+        "actedSeats": [
           "0"
         ],
-        "passedFactions": [],
+        "passedSeats": [],
         "nonPassCount": 1,
         "firstActionClass": "event"
       },
       "overrides": [
         {
-          "faction": "0",
+          "seat": "0",
           "eligible": true,
           "windowId": "remain-eligible",
           "duration": "nextTurn"
@@ -99,7 +99,7 @@
       "resolved": 1
     },
     "turnFlow": {
-      "factionOrder": [
+      "seatOrder": [
         "0",
         "1",
         "2",
@@ -113,7 +113,7 @@
       },
       "pendingEligibilityOverrides": [
         {
-          "faction": "0",
+          "seat": "0",
           "eligible": true,
           "windowId": "remain-eligible",
           "duration": "nextTurn"
@@ -122,10 +122,10 @@
       "currentCard": {
         "firstEligible": "1",
         "secondEligible": "2",
-        "actedFactions": [
+        "actedSeats": [
           "0"
         ],
-        "passedFactions": [],
+        "passedSeats": [],
         "nonPassCount": 1,
         "firstActionClass": "event"
       }

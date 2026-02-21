@@ -16,7 +16,7 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
     assert.equal(card?.title, 'Booby Traps');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    const boobyFactionOrder = card?.metadata?.factionOrder;
+    const boobyFactionOrder = card?.metadata?.seatOrder;
     assert.equal(Array.isArray(boobyFactionOrder), true);
     assert.equal((boobyFactionOrder as readonly string[]).join(','), 'VC,NVA,US,ARVN');
     assert.equal(card?.tags?.includes('capability'), true);
@@ -36,7 +36,7 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
     assert.equal(card?.title, 'Claymores');
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
-    const claymoresFactionOrder = card?.metadata?.factionOrder;
+    const claymoresFactionOrder = card?.metadata?.seatOrder;
     assert.equal(Array.isArray(claymoresFactionOrder), true);
     assert.equal((claymoresFactionOrder as readonly string[]).join(','), 'US,ARVN,VC,NVA');
     assert.equal(card?.tags?.includes('momentum'), true);

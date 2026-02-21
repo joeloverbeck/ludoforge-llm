@@ -190,16 +190,16 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-foundation',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'vc' }],
+            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
-                faction: 'vc',
+                seat: 'vc',
                 statusDimensions: ['activity'],
                 transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
               },
             ],
-            inventory: [{ pieceTypeId: 'vc-guerrilla', faction: 'vc', total: 30 }],
+            inventory: [{ pieceTypeId: 'vc-guerrilla', seat: 'vc', total: 30 }],
           },
         }),
         'utf8',
@@ -235,7 +235,7 @@ describe('data asset loader scaffold', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID'
-          && diagnostic.path === 'doc.dataAssets.0.payload.factions',
+          && diagnostic.path === 'doc.dataAssets.0.payload.seats',
       ),
       true,
     );
@@ -397,16 +397,16 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-invalid-transition',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'vc' }],
+            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-base',
-                faction: 'vc',
+                seat: 'vc',
                 statusDimensions: ['activity'],
                 transitions: [{ dimension: 'tunnel', from: 'untunneled', to: 'tunneled' }],
               },
             ],
-            inventory: [{ pieceTypeId: 'vc-base', faction: 'vc', total: 9 }],
+            inventory: [{ pieceTypeId: 'vc-base', seat: 'vc', total: 9 }],
           },
         }),
         'utf8',
@@ -433,11 +433,11 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-missing-inventory',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'vc' }],
+            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
-                faction: 'vc',
+                seat: 'vc',
                 statusDimensions: ['activity'],
                 transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
               },
@@ -469,16 +469,16 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-negative-total',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'vc' }],
+            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
-                faction: 'vc',
+                seat: 'vc',
                 statusDimensions: ['activity'],
                 transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
               },
             ],
-            inventory: [{ pieceTypeId: 'vc-guerrilla', faction: 'vc', total: -1 }],
+            inventory: [{ pieceTypeId: 'vc-guerrilla', seat: 'vc', total: -1 }],
           },
         }),
         'utf8',
@@ -504,16 +504,16 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-faction-undeclared',
           kind: 'pieceCatalog',
           payload: {
-            factions: [{ id: 'us' }],
+            seats: [{ id: 'us' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
-                faction: 'vc',
+                seat: 'vc',
                 statusDimensions: ['activity'],
                 transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
               },
             ],
-            inventory: [{ pieceTypeId: 'vc-guerrilla', faction: 'vc', total: 10 }],
+            inventory: [{ pieceTypeId: 'vc-guerrilla', seat: 'vc', total: 10 }],
           },
         }),
         'utf8',
@@ -521,12 +521,12 @@ describe('data asset loader scaffold', () => {
 
       const result = loadDataAssetEnvelopeFromFile(assetPath);
       assert.equal(result.asset, null);
-      const pieceTypeDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_PIECE_TYPE_FACTION_UNDECLARED');
-      const inventoryDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_INVENTORY_FACTION_UNDECLARED');
+      const pieceTypeDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_PIECE_TYPE_SEAT_UNDECLARED');
+      const inventoryDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_INVENTORY_SEAT_UNDECLARED');
       assert.notEqual(pieceTypeDiag, undefined);
       assert.notEqual(inventoryDiag, undefined);
-      assert.equal(pieceTypeDiag?.path, 'asset.payload.pieceTypes[0].faction');
-      assert.equal(inventoryDiag?.path, 'asset.payload.inventory[0].faction');
+      assert.equal(pieceTypeDiag?.path, 'asset.payload.pieceTypes[0].seat');
+      assert.equal(inventoryDiag?.path, 'asset.payload.inventory[0].seat');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

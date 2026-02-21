@@ -6,7 +6,7 @@ import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const minimalCardDrivenTurnFlow = {
   cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
-  eligibility: { factions: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
+  eligibility: { seats: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
   optionMatrix: [],
   passRewards: [],
   durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
@@ -302,13 +302,13 @@ describe('compile top-level actions/triggers/end conditions', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
-              factions: ['us', 'arvn', 'nva', 'vc'],
+              seats: ['us', 'arvn', 'nva', 'vc'],
               overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' as const }],
             },
             optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
             passRewards: [
-              { factionClass: 'coin', resource: 'arvnResources', amount: 3 },
-              { factionClass: 'insurgent', resource: 'factionResource', amount: 1 },
+              { seatClass: 'coin', resource: 'arvnResources', amount: 3 },
+              { seatClass: 'insurgent', resource: 'factionResource', amount: 1 },
             ],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
           },
@@ -399,7 +399,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none' },
-            eligibility: { factions: ['us'], overrideWindows: [] },
+            eligibility: { seats: ['us'], overrideWindows: [] },
           },
         },
       },
@@ -433,7 +433,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
-              factions: ['us', 'arvn', 'us'],
+              seats: ['us', 'arvn', 'us'],
               overrideWindows: [],
             },
             optionMatrix: [
@@ -466,8 +466,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_FACTION' &&
-          diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.factions.2',
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_SEAT' &&
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.2',
       ),
       true,
     );
@@ -482,7 +482,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_FACTION' &&
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_SEAT' &&
           diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.1',
       ),
       true,
@@ -889,7 +889,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
-              factions: ['us', 'arvn', 'nva', 'vc'],
+              seats: ['us', 'arvn', 'nva', 'vc'],
               overrideWindows: [],
             },
             optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
@@ -1046,12 +1046,12 @@ describe('compile top-level actions/triggers/end conditions', () => {
         checkpoints: [
           {
             id: 'us-threshold',
-            faction: 'us',
+            seat: 'us',
             timing: 'duringCoup' as const,
             when: { op: '>' as const, left: 51, right: 50 },
           },
         ],
-        margins: [{ faction: 'us', value: { op: '-' as const, left: 55, right: 50 } }],
+        margins: [{ seat: 'us', value: { op: '-' as const, left: 55, right: 50 } }],
         ranking: { order: 'desc' as const },
       },
     };
@@ -1089,8 +1089,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
       triggers: [],
       terminal: {
         conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
-        checkpoints: [{ id: 'c1', faction: 'us', timing: 'not-valid', when: null }],
-        margins: [{ faction: '', value: null }],
+        checkpoints: [{ id: 'c1', seat: 'us', timing: 'not-valid', when: null }],
+        margins: [{ seat: '', value: null }],
         ranking: { order: 'up' },
       },
     };

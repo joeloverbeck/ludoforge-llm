@@ -29,7 +29,7 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            factions: ['0', '1', '2', '3'],
+            seats: ['0', '1', '2', '3'],
             overrideWindows: [
               { id: 'remain-eligible', duration: 'nextTurn' },
               { id: 'force-ineligible', duration: 'nextTurn' },
@@ -86,7 +86,7 @@ phase: [asPhaseId('main')],
               text: 'No free operation grant.',
               eligibilityOverrides: [
                 { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
-                { target: { kind: 'faction', faction: '2' }, eligible: false, windowId: 'force-ineligible' },
+                { target: { kind: 'seat', seat: '2' }, eligible: false, windowId: 'force-ineligible' },
               ],
             },
           },
@@ -98,7 +98,7 @@ phase: [asPhaseId('main')],
               text: 'Grant a free operation.',
               freeOperationGrants: [
                 {
-                  faction: '2',
+                  seat: '2',
                   sequence: { chain: 'grant-nva-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -143,7 +143,7 @@ describe('FITL eligibility window integration', () => {
 
     const pendingFreeOperationGrants = requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [];
     assert.equal(pendingFreeOperationGrants.length, 1);
-    assert.equal(pendingFreeOperationGrants[0]?.faction, '2');
+    assert.equal(pendingFreeOperationGrants[0]?.seat, '2');
     assert.equal(pendingFreeOperationGrants[0]?.operationClass, 'operation');
     assert.deepEqual(pendingFreeOperationGrants[0]?.actionIds, ['operation']);
     assert.equal(pendingFreeOperationGrants[0]?.remainingUses, 1);

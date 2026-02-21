@@ -15,7 +15,7 @@ export function withPendingFreeOperationGrant(
   state: GameState,
   grant?: {
     readonly grantId?: string;
-    readonly faction?: string;
+    readonly seat?: string;
     readonly operationClass?: TurnFlowPendingFreeOperationGrant['operationClass'];
     readonly actionIds?: readonly string[];
     readonly zoneFilter?: TurnFlowPendingFreeOperationGrant['zoneFilter'];
@@ -28,7 +28,7 @@ export function withPendingFreeOperationGrant(
   const nextIndex = (runtime.pendingFreeOperationGrants ?? []).length;
   const nextGrant: TurnFlowPendingFreeOperationGrant = {
     grantId: grant?.grantId ?? `test-grant-${nextIndex}`,
-    faction: grant?.faction ?? String(state.activePlayer),
+    seat: grant?.seat ?? String(state.activePlayer),
     operationClass: grant?.operationClass ?? 'operation',
     ...(grant?.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant?.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),

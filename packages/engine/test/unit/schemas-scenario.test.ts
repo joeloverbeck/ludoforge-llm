@@ -9,7 +9,7 @@ const validScenarioPayload = {
   scenarioName: 'Full',
   yearRange: '1964-1972',
   usPolicy: 'jfk',
-  initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', faction: 'us', count: 2 }],
+  initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'us', count: 2 }],
   deckComposition: {
     pileCount: 6,
     eventsPerPile: 12,
@@ -60,7 +60,7 @@ describe('scenario payload schema', () => {
   it('rejects negative placement counts', () => {
     const result = ScenarioPayloadSchema.safeParse({
       ...validScenarioPayload,
-      initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', faction: 'us', count: -1 }],
+      initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'us', count: -1 }],
     });
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initialPlacements.0.count'));

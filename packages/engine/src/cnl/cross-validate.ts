@@ -18,7 +18,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
   const cardDrivenTurnFlow = sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow : null;
-  const factionTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.factions);
+  const seatTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.seats);
   const windowTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.overrideWindows.map((window) => window.id));
   const globalVarTargets = collectIdentifierTargets(sections.globalVars?.map((globalVar) => globalVar.name));
   const perPlayerVarTargets = collectIdentifierTargets(sections.perPlayerVars?.map((playerVar) => playerVar.name));
@@ -212,24 +212,24 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [checkpointIndex, checkpoint] of sections.terminal.checkpoints.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_VICTORY_FACTION_MISSING',
-        `doc.terminal.checkpoints.${checkpointIndex}.faction`,
-        checkpoint.faction,
-        factionTargets,
-        `Victory checkpoint "${checkpoint.id}" references unknown faction "${checkpoint.faction}".`,
-        'Use one of the declared turnFlow.eligibility.factions ids.',
+        'CNL_XREF_VICTORY_SEAT_MISSING',
+        `doc.terminal.checkpoints.${checkpointIndex}.seat`,
+        checkpoint.seat,
+        seatTargets,
+        `Victory checkpoint "${checkpoint.id}" references unknown seat "${checkpoint.seat}".`,
+        'Use one of the declared turnFlow.eligibility.seats ids.',
       );
     }
 
     for (const [marginIndex, margin] of (sections.terminal.margins ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_MARGIN_FACTION_MISSING',
-        `doc.terminal.margins.${marginIndex}.faction`,
-        margin.faction,
-        factionTargets,
-        `Victory margin references unknown faction "${margin.faction}".`,
-        'Use one of the declared turnFlow.eligibility.factions ids.',
+        'CNL_XREF_MARGIN_SEAT_MISSING',
+        `doc.terminal.margins.${marginIndex}.seat`,
+        margin.seat,
+        seatTargets,
+        `Victory margin references unknown seat "${margin.seat}".`,
+        'Use one of the declared turnFlow.eligibility.seats ids.',
       );
     }
   }
@@ -309,7 +309,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           `${deckPath}.cards.${cardIndex}.unshaded`,
           zoneTargets,
           card.id,
-          factionTargets,
+          seatTargets,
           windowTargets,
           actionTargets,
           cardDrivenTurnFlow !== null,
@@ -320,7 +320,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           `${deckPath}.cards.${cardIndex}.shaded`,
           zoneTargets,
           card.id,
-          factionTargets,
+          seatTargets,
           windowTargets,
           actionTargets,
           cardDrivenTurnFlow !== null,
@@ -552,10 +552,10 @@ function validateEventCardSide(
   pathPrefix: string,
   zoneTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   cardId: string,
-  factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  seatTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   windowTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
-  validateFactions: boolean,
+  validateSeats: boolean,
 ): void {
   if (side === undefined) {
     return;
@@ -568,18 +568,18 @@ function validateEventCardSide(
     side.freeOperationGrants,
     `${pathPrefix}.freeOperationGrants`,
     cardId,
-    factionTargets,
+    seatTargets,
     actionTargets,
-    validateFactions,
+    validateSeats,
   );
   validateEventEligibilityOverrides(
     diagnostics,
     side.eligibilityOverrides,
     `${pathPrefix}.eligibilityOverrides`,
     cardId,
-    factionTargets,
+    seatTargets,
     windowTargets,
-    validateFactions,
+    validateSeats,
   );
 
   if (side.effects !== undefined) {
@@ -609,18 +609,18 @@ function validateEventCardSide(
       branch.freeOperationGrants,
       `${pathPrefix}.branches.${branchIndex}.freeOperationGrants`,
       cardId,
-      factionTargets,
+      seatTargets,
       actionTargets,
-      validateFactions,
+      validateSeats,
     );
     validateEventEligibilityOverrides(
       diagnostics,
       branch.eligibilityOverrides,
       `${pathPrefix}.branches.${branchIndex}.eligibilityOverrides`,
       cardId,
-      factionTargets,
+      seatTargets,
       windowTargets,
-      validateFactions,
+      validateSeats,
     );
 
     if (branch.effects === undefined) {
@@ -700,34 +700,34 @@ function validateEventFreeOperationGrants(
   grants: EventSideDef['freeOperationGrants'],
   pathPrefix: string,
   cardId: string,
-  factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  seatTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
-  validateFactions: boolean,
+  validateSeats: boolean,
 ): void {
   if (grants === undefined) {
     return;
   }
 
   for (const [grantIndex, grant] of grants.entries()) {
-    if (validateFactions) {
+    if (validateSeats) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_GRANT_FACTION_MISSING',
-        `${pathPrefix}.${grantIndex}.faction`,
-        grant.faction,
-        factionTargets,
-        `Event card "${cardId}" freeOperationGrant references unknown faction "${grant.faction}".`,
-        'Use one of the declared turnFlow.eligibility.factions ids.',
+        'CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING',
+        `${pathPrefix}.${grantIndex}.seat`,
+        grant.seat,
+        seatTargets,
+        `Event card "${cardId}" freeOperationGrant references unknown seat "${grant.seat}".`,
+        'Use one of the declared turnFlow.eligibility.seats ids.',
       );
-      if (grant.executeAsFaction !== undefined && grant.executeAsFaction !== 'self') {
+      if (grant.executeAsSeat !== undefined && grant.executeAsSeat !== 'self') {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_FACTION_MISSING',
-          `${pathPrefix}.${grantIndex}.executeAsFaction`,
-          grant.executeAsFaction,
-          factionTargets,
-          `Event card "${cardId}" freeOperationGrant executeAsFaction references unknown faction "${grant.executeAsFaction}".`,
-          'Use "self" or one of the declared turnFlow.eligibility.factions ids.',
+          'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING',
+          `${pathPrefix}.${grantIndex}.executeAsSeat`,
+          grant.executeAsSeat,
+          seatTargets,
+          `Event card "${cardId}" freeOperationGrant executeAsSeat references unknown seat "${grant.executeAsSeat}".`,
+          'Use "self" or one of the declared turnFlow.eligibility.seats ids.',
         );
       }
     }
@@ -751,24 +751,24 @@ function validateEventEligibilityOverrides(
   overrides: EventSideDef['eligibilityOverrides'],
   pathPrefix: string,
   cardId: string,
-  factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  seatTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   windowTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
-  validateFactions: boolean,
+  validateSeats: boolean,
 ): void {
   if (overrides === undefined) {
     return;
   }
 
   for (const [overrideIndex, override] of overrides.entries()) {
-    if (validateFactions && override.target.kind === 'faction') {
+    if (validateSeats && override.target.kind === 'seat') {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING',
-        `${pathPrefix}.${overrideIndex}.target.faction`,
-        override.target.faction,
-        factionTargets,
-        `Event card "${cardId}" eligibilityOverride references unknown faction "${override.target.faction}".`,
-        'Use one of the declared turnFlow.eligibility.factions ids.',
+        'CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING',
+        `${pathPrefix}.${overrideIndex}.target.seat`,
+        override.target.seat,
+        seatTargets,
+        `Event card "${cardId}" eligibilityOverride references unknown seat "${override.target.seat}".`,
+        'Use one of the declared turnFlow.eligibility.seats ids.',
       );
     }
 

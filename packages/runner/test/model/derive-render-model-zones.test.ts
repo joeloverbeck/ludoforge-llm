@@ -400,7 +400,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
               leader: 'discard:none',
             },
             eligibility: {
-              factions: ['us', 'nva'],
+              seats: ['us', 'nva'],
               overrideWindows: [],
             },
             optionMatrix: [],
@@ -448,13 +448,13 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
     const def: GameDef = {
       ...baseDef,
-      factions: [
+      seats: [
         { id: 'us' },
         { id: 'arvn' },
       ],
       tokenTypes: [
-        { id: 'us-troops', faction: 'us', props: { faction: 'string' } },
-        { id: 'arvn-police', faction: 'arvn', props: { faction: 'string' } },
+        { id: 'us-troops', seat: 'us', props: { faction: 'string' } },
+        { id: 'arvn-police', seat: 'arvn', props: { faction: 'string' } },
       ],
     };
     const baseState = initialState(def, 112, 2);

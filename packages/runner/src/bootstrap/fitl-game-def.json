@@ -2445,7 +2445,7 @@
       "ordering": "stack"
     }
   ],
-  "factions": [
+  "seats": [
     {
       "id": "us"
     },
@@ -2462,24 +2462,24 @@
   "tracks": [
     {
       "id": "nvaResources",
-      "scope": "faction",
-      "faction": "nva",
+      "scope": "seat",
+      "seat": "nva",
       "min": 0,
       "max": 75,
       "initial": 0
     },
     {
       "id": "vcResources",
-      "scope": "faction",
-      "faction": "vc",
+      "scope": "seat",
+      "seat": "vc",
       "min": 0,
       "max": 75,
       "initial": 0
     },
     {
       "id": "arvnResources",
-      "scope": "faction",
-      "faction": "arvn",
+      "scope": "seat",
+      "seat": "arvn",
       "min": 0,
       "max": 75,
       "initial": 0
@@ -4390,24 +4390,24 @@
         "tracks": [
           {
             "id": "nvaResources",
-            "scope": "faction",
-            "faction": "nva",
+            "scope": "seat",
+            "seat": "nva",
             "min": 0,
             "max": 75,
             "initial": 0
           },
           {
             "id": "vcResources",
-            "scope": "faction",
-            "faction": "vc",
+            "scope": "seat",
+            "seat": "vc",
             "min": 0,
             "max": 75,
             "initial": 0
           },
           {
             "id": "arvnResources",
-            "scope": "faction",
-            "faction": "arvn",
+            "scope": "seat",
+            "seat": "arvn",
             "min": 0,
             "max": 75,
             "initial": 0
@@ -4583,7 +4583,7 @@
       "id": "fitl-piece-catalog-production",
       "kind": "pieceCatalog",
       "payload": {
-        "factions": [
+        "seats": [
           {
             "id": "us"
           },
@@ -4600,7 +4600,7 @@
         "pieceTypes": [
           {
             "id": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -4610,7 +4610,7 @@
           },
           {
             "id": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -4620,7 +4620,7 @@
           },
           {
             "id": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "statusDimensions": [
               "activity"
             ],
@@ -4644,7 +4644,7 @@
           },
           {
             "id": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -4654,7 +4654,7 @@
           },
           {
             "id": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -4664,7 +4664,7 @@
           },
           {
             "id": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "statusDimensions": [
               "activity"
             ],
@@ -4688,7 +4688,7 @@
           },
           {
             "id": "arvn-bases",
-            "faction": "arvn",
+            "seat": "arvn",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -4698,7 +4698,7 @@
           },
           {
             "id": "nva-troops",
-            "faction": "nva",
+            "seat": "nva",
             "statusDimensions": [],
             "transitions": [],
             "runtimeProps": {
@@ -4708,7 +4708,7 @@
           },
           {
             "id": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "statusDimensions": [
               "activity"
             ],
@@ -4732,7 +4732,7 @@
           },
           {
             "id": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "statusDimensions": [
               "tunnel"
             ],
@@ -4756,7 +4756,7 @@
           },
           {
             "id": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "statusDimensions": [
               "activity"
             ],
@@ -4780,7 +4780,7 @@
           },
           {
             "id": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "statusDimensions": [
               "tunnel"
             ],
@@ -4806,62 +4806,62 @@
         "inventory": [
           {
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "total": 40
           },
           {
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "total": 6
           },
           {
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "total": 6
           },
           {
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "total": 30
           },
           {
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "total": 30
           },
           {
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "total": 6
           },
           {
             "pieceTypeId": "arvn-bases",
-            "faction": "arvn",
+            "seat": "arvn",
             "total": 3
           },
           {
             "pieceTypeId": "nva-troops",
-            "faction": "nva",
+            "seat": "nva",
             "total": 40
           },
           {
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "total": 20
           },
           {
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "total": 9
           },
           {
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "total": 30
           },
           {
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "total": 9
           }
         ]
@@ -4885,19 +4885,19 @@
         },
         "startingEligibility": [
           {
-            "faction": "us",
+            "seat": "us",
             "eligible": true
           },
           {
-            "faction": "arvn",
+            "seat": "arvn",
             "eligible": true
           },
           {
-            "faction": "nva",
+            "seat": "nva",
             "eligible": true
           },
           {
-            "faction": "vc",
+            "seat": "vc",
             "eligible": true
           }
         ],
@@ -4934,47 +4934,47 @@
         "outOfPlay": [
           {
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 10
           },
           {
             "pieceTypeId": "arvn-bases",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 10
           },
           {
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 3
           }
         ],
-        "factionPools": [
+        "seatPools": [
           {
-            "faction": "us",
+            "seat": "us",
             "availableZoneId": "available-US:none",
             "outOfPlayZoneId": "out-of-play-US:none"
           },
           {
-            "faction": "arvn",
+            "seat": "arvn",
             "availableZoneId": "available-ARVN:none",
             "outOfPlayZoneId": "out-of-play-ARVN:none"
           },
           {
-            "faction": "nva",
+            "seat": "nva",
             "availableZoneId": "available-NVA:none"
           },
           {
-            "faction": "vc",
+            "seat": "vc",
             "availableZoneId": "available-VC:none"
           }
         ],
@@ -5059,241 +5059,241 @@
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 3
           },
           {
             "spaceId": "hue:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "hue:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "qui-nhon:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "qui-nhon:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "cam-ranh:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "cam-ranh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "an-loc:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "an-loc:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "da-nang:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "da-nang:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "quang-nam:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-nam:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1,
             "status": {
               "tunnel": "tunneled"
@@ -5302,91 +5302,91 @@
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "phu-bon-phu-yen:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-hoa-vinh-binh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "ba-xuyen:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-phong:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "kien-giang-an-xuyen:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 3
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 3
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 3
           },
           {
             "spaceId": "the-parrots-beak:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "the-parrots-beak:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 3
           }
         ]
@@ -5418,19 +5418,19 @@
         ],
         "startingEligibility": [
           {
-            "faction": "us",
+            "seat": "us",
             "eligible": true
           },
           {
-            "faction": "arvn",
+            "seat": "arvn",
             "eligible": true
           },
           {
-            "faction": "nva",
+            "seat": "nva",
             "eligible": true
           },
           {
-            "faction": "vc",
+            "seat": "vc",
             "eligible": true
           }
         ],
@@ -5467,37 +5467,37 @@
         "outOfPlay": [
           {
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 6
           },
           {
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 10
           },
           {
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 3
           }
         ],
-        "factionPools": [
+        "seatPools": [
           {
-            "faction": "us",
+            "seat": "us",
             "availableZoneId": "available-US:none",
             "outOfPlayZoneId": "out-of-play-US:none"
           },
           {
-            "faction": "arvn",
+            "seat": "arvn",
             "availableZoneId": "available-ARVN:none",
             "outOfPlayZoneId": "out-of-play-ARVN:none"
           },
           {
-            "faction": "nva",
+            "seat": "nva",
             "availableZoneId": "available-NVA:none"
           },
           {
-            "faction": "vc",
+            "seat": "vc",
             "availableZoneId": "available-VC:none"
           }
         ],
@@ -5577,301 +5577,301 @@
           {
             "spaceId": "da-nang:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "da-nang:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 4
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 4
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "arvn-bases",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 4
           },
           {
             "spaceId": "quang-nam:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-nam:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 4
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "hue:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "kien-hoa-vinh-binh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "ba-xuyen:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "an-loc:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "qui-nhon:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "cam-ranh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1,
             "status": {
               "tunnel": "tunneled"
@@ -5880,97 +5880,97 @@
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "kien-phong:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "kien-giang-an-xuyen:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-troops",
-            "faction": "nva",
+            "seat": "nva",
             "count": 6
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-troops",
-            "faction": "nva",
+            "seat": "nva",
             "count": 6
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "the-fishhook:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "the-fishhook:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "the-parrots-beak:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "the-parrots-beak:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           }
         ]
@@ -6023,19 +6023,19 @@
         ],
         "startingEligibility": [
           {
-            "faction": "us",
+            "seat": "us",
             "eligible": true
           },
           {
-            "faction": "arvn",
+            "seat": "arvn",
             "eligible": true
           },
           {
-            "faction": "nva",
+            "seat": "nva",
             "eligible": true
           },
           {
-            "faction": "vc",
+            "seat": "vc",
             "eligible": true
           }
         ],
@@ -6072,37 +6072,37 @@
         "outOfPlay": [
           {
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 5
           },
           {
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 10
           },
           {
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 3
           }
         ],
-        "factionPools": [
+        "seatPools": [
           {
-            "faction": "us",
+            "seat": "us",
             "availableZoneId": "available-US:none",
             "outOfPlayZoneId": "out-of-play-US:none"
           },
           {
-            "faction": "arvn",
+            "seat": "arvn",
             "availableZoneId": "available-ARVN:none",
             "outOfPlayZoneId": "out-of-play-ARVN:none"
           },
           {
-            "faction": "nva",
+            "seat": "nva",
             "availableZoneId": "available-NVA:none"
           },
           {
-            "faction": "vc",
+            "seat": "vc",
             "availableZoneId": "available-VC:none"
           }
         ],
@@ -6207,397 +6207,397 @@
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 4
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 3
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "quang-tri-thua-thien:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 3
           },
           {
             "spaceId": "quang-nam:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "quang-nam:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "hue:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "hue:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "da-nang:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "da-nang:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "qui-nhon:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "qui-nhon:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "cam-ranh:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "cam-ranh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "quang-tin-quang-ngai:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "kontum:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "binh-dinh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "pleiku-darlac:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "khanh-hoa:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "phu-bon-phu-yen:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "phu-bon-phu-yen:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "phu-bon-phu-yen:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "phu-bon-phu-yen:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 3
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "binh-tuy-binh-thuan:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 2
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 4
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "saigon:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "quang-duc-long-khanh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "phuoc-long:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "phuoc-long:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 2
           },
           {
             "spaceId": "phuoc-long:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "us-bases",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "vc-bases",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1,
             "status": {
               "tunnel": "tunneled"
@@ -6606,205 +6606,205 @@
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 3
           },
           {
             "spaceId": "tay-ninh:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "an-loc:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "an-loc:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "us-troops",
-            "faction": "us",
+            "seat": "us",
             "count": 3
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "us-irregulars",
-            "faction": "us",
+            "seat": "us",
             "count": 1
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "can-tho:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-phong:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-phong:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "kien-hoa-vinh-binh:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-hoa-vinh-binh:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "ba-xuyen:none",
             "pieceTypeId": "arvn-police",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "ba-xuyen:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "kien-giang-an-xuyen:none",
             "pieceTypeId": "arvn-bases",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-giang-an-xuyen:none",
             "pieceTypeId": "arvn-troops",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 2
           },
           {
             "spaceId": "kien-giang-an-xuyen:none",
             "pieceTypeId": "arvn-rangers",
-            "faction": "arvn",
+            "seat": "arvn",
             "count": 1
           },
           {
             "spaceId": "kien-giang-an-xuyen:none",
             "pieceTypeId": "vc-guerrillas",
-            "faction": "vc",
+            "seat": "vc",
             "count": 1
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "north-vietnam:none",
             "pieceTypeId": "nva-troops",
-            "faction": "nva",
+            "seat": "nva",
             "count": 9
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "central-laos:none",
             "pieceTypeId": "nva-troops",
-            "faction": "nva",
+            "seat": "nva",
             "count": 9
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "southern-laos:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "northeast-cambodia:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "northeast-cambodia:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "the-fishhook:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "the-fishhook:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "the-parrots-beak:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "the-parrots-beak:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           },
           {
             "spaceId": "sihanoukville:none",
             "pieceTypeId": "nva-bases",
-            "faction": "nva",
+            "seat": "nva",
             "count": 1
           },
           {
             "spaceId": "sihanoukville:none",
             "pieceTypeId": "nva-guerrillas",
-            "faction": "nva",
+            "seat": "nva",
             "count": 2
           }
         ]
@@ -6817,10 +6817,6 @@
       "assetId": "fitl-map-production",
       "tablePath": "tracks",
       "fields": [
-        {
-          "field": "faction",
-          "type": "string"
-        },
         {
           "field": "id",
           "type": "string"
@@ -6840,21 +6836,9 @@
         {
           "field": "scope",
           "type": "string"
-        }
-      ],
-      "uniqueBy": [
-        [
-          "id"
-        ]
-      ]
-    },
-    {
-      "id": "fitl-piece-catalog-production::factions",
-      "assetId": "fitl-piece-catalog-production",
-      "tablePath": "factions",
-      "fields": [
+        },
         {
-          "field": "id",
+          "field": "seat",
           "type": "string"
         }
       ],
@@ -6870,11 +6854,11 @@
       "tablePath": "inventory",
       "fields": [
         {
-          "field": "faction",
+          "field": "pieceTypeId",
           "type": "string"
         },
         {
-          "field": "pieceTypeId",
+          "field": "seat",
           "type": "string"
         },
         {
@@ -6889,29 +6873,18 @@
       ]
     },
     {
-      "id": "fitl-scenario-full::factionPools",
-      "assetId": "fitl-scenario-full",
-      "tablePath": "factionPools",
+      "id": "fitl-piece-catalog-production::seats",
+      "assetId": "fitl-piece-catalog-production",
+      "tablePath": "seats",
       "fields": [
         {
-          "field": "availableZoneId",
-          "type": "string"
-        },
-        {
-          "field": "faction",
-          "type": "string"
-        },
-        {
-          "field": "outOfPlayZoneId",
+          "field": "id",
           "type": "string"
         }
       ],
       "uniqueBy": [
         [
-          "availableZoneId"
-        ],
-        [
-          "faction"
+          "id"
         ]
       ]
     },
@@ -6975,17 +6948,44 @@
           "type": "int"
         },
         {
-          "field": "faction",
+          "field": "pieceTypeId",
           "type": "string"
         },
         {
-          "field": "pieceTypeId",
+          "field": "seat",
           "type": "string"
         }
       ],
       "uniqueBy": [
         [
           "pieceTypeId"
+        ]
+      ]
+    },
+    {
+      "id": "fitl-scenario-full::seatPools",
+      "assetId": "fitl-scenario-full",
+      "tablePath": "seatPools",
+      "fields": [
+        {
+          "field": "availableZoneId",
+          "type": "string"
+        },
+        {
+          "field": "outOfPlayZoneId",
+          "type": "string"
+        },
+        {
+          "field": "seat",
+          "type": "string"
+        }
+      ],
+      "uniqueBy": [
+        [
+          "availableZoneId"
+        ],
+        [
+          "seat"
         ]
       ]
     },
@@ -6999,40 +6999,13 @@
           "type": "boolean"
         },
         {
-          "field": "faction",
+          "field": "seat",
           "type": "string"
         }
       ],
       "uniqueBy": [
         [
-          "faction"
-        ]
-      ]
-    },
-    {
-      "id": "fitl-scenario-short::factionPools",
-      "assetId": "fitl-scenario-short",
-      "tablePath": "factionPools",
-      "fields": [
-        {
-          "field": "availableZoneId",
-          "type": "string"
-        },
-        {
-          "field": "faction",
-          "type": "string"
-        },
-        {
-          "field": "outOfPlayZoneId",
-          "type": "string"
-        }
-      ],
-      "uniqueBy": [
-        [
-          "availableZoneId"
-        ],
-        [
-          "faction"
+          "seat"
         ]
       ]
     },
@@ -7090,11 +7063,11 @@
           "type": "int"
         },
         {
-          "field": "faction",
+          "field": "pieceTypeId",
           "type": "string"
         },
         {
-          "field": "pieceTypeId",
+          "field": "seat",
           "type": "string"
         }
       ],
@@ -7104,6 +7077,33 @@
         ],
         [
           "pieceTypeId"
+        ]
+      ]
+    },
+    {
+      "id": "fitl-scenario-short::seatPools",
+      "assetId": "fitl-scenario-short",
+      "tablePath": "seatPools",
+      "fields": [
+        {
+          "field": "availableZoneId",
+          "type": "string"
+        },
+        {
+          "field": "outOfPlayZoneId",
+          "type": "string"
+        },
+        {
+          "field": "seat",
+          "type": "string"
+        }
+      ],
+      "uniqueBy": [
+        [
+          "availableZoneId"
+        ],
+        [
+          "seat"
         ]
       ]
     },
@@ -7140,40 +7140,13 @@
           "type": "boolean"
         },
         {
-          "field": "faction",
+          "field": "seat",
           "type": "string"
         }
       ],
       "uniqueBy": [
         [
-          "faction"
-        ]
-      ]
-    },
-    {
-      "id": "fitl-scenario-medium::factionPools",
-      "assetId": "fitl-scenario-medium",
-      "tablePath": "factionPools",
-      "fields": [
-        {
-          "field": "availableZoneId",
-          "type": "string"
-        },
-        {
-          "field": "faction",
-          "type": "string"
-        },
-        {
-          "field": "outOfPlayZoneId",
-          "type": "string"
-        }
-      ],
-      "uniqueBy": [
-        [
-          "availableZoneId"
-        ],
-        [
-          "faction"
+          "seat"
         ]
       ]
     },
@@ -7231,11 +7204,11 @@
           "type": "int"
         },
         {
-          "field": "faction",
+          "field": "pieceTypeId",
           "type": "string"
         },
         {
-          "field": "pieceTypeId",
+          "field": "seat",
           "type": "string"
         }
       ],
@@ -7245,6 +7218,33 @@
         ],
         [
           "pieceTypeId"
+        ]
+      ]
+    },
+    {
+      "id": "fitl-scenario-medium::seatPools",
+      "assetId": "fitl-scenario-medium",
+      "tablePath": "seatPools",
+      "fields": [
+        {
+          "field": "availableZoneId",
+          "type": "string"
+        },
+        {
+          "field": "outOfPlayZoneId",
+          "type": "string"
+        },
+        {
+          "field": "seat",
+          "type": "string"
+        }
+      ],
+      "uniqueBy": [
+        [
+          "availableZoneId"
+        ],
+        [
+          "seat"
         ]
       ]
     },
@@ -7278,13 +7278,13 @@
           "type": "boolean"
         },
         {
-          "field": "faction",
+          "field": "seat",
           "type": "string"
         }
       ],
       "uniqueBy": [
         [
-          "faction"
+          "seat"
         ]
       ]
     }
@@ -7296,7 +7296,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "us"
+      "seat": "us"
     },
     {
       "id": "us-bases",
@@ -7304,7 +7304,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "us"
+      "seat": "us"
     },
     {
       "id": "us-irregulars",
@@ -7313,7 +7313,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "us"
+      "seat": "us"
     },
     {
       "id": "arvn-troops",
@@ -7321,7 +7321,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "arvn"
+      "seat": "arvn"
     },
     {
       "id": "arvn-police",
@@ -7329,7 +7329,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "arvn"
+      "seat": "arvn"
     },
     {
       "id": "arvn-rangers",
@@ -7338,7 +7338,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "arvn"
+      "seat": "arvn"
     },
     {
       "id": "arvn-bases",
@@ -7346,7 +7346,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "arvn"
+      "seat": "arvn"
     },
     {
       "id": "nva-troops",
@@ -7354,7 +7354,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "nva"
+      "seat": "nva"
     },
     {
       "id": "nva-guerrillas",
@@ -7363,7 +7363,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "nva"
+      "seat": "nva"
     },
     {
       "id": "nva-bases",
@@ -7372,7 +7372,7 @@
         "type": "string",
         "tunnel": "string"
       },
-      "faction": "nva"
+      "seat": "nva"
     },
     {
       "id": "vc-guerrillas",
@@ -7381,7 +7381,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "vc"
+      "seat": "vc"
     },
     {
       "id": "vc-bases",
@@ -7390,7 +7390,7 @@
         "type": "string",
         "tunnel": "string"
       },
-      "faction": "vc"
+      "seat": "vc"
     }
   ],
   "setup": [
@@ -9787,7 +9787,7 @@
           "leader": "leader:none"
         },
         "eligibility": {
-          "factions": [
+          "seats": [
             "0",
             "1",
             "2",
@@ -9849,7 +9849,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "0"
+        "right": 0
       },
       "legality": true,
       "costValidation": null,
@@ -11830,7 +11830,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "1"
+        "right": 1
       },
       "legality": true,
       "costValidation": null,
@@ -13576,7 +13576,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "0"
+        "right": 0
       },
       "legality": true,
       "costValidation": null,
@@ -14520,7 +14520,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "1"
+        "right": 1
       },
       "legality": {
         "op": "or",
@@ -15485,7 +15485,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "0"
+        "right": 0
       },
       "legality": true,
       "costValidation": null,
@@ -16301,7 +16301,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "1"
+        "right": 1
       },
       "legality": {
         "op": ">=",
@@ -17023,7 +17023,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "0"
+        "right": 0
       },
       "legality": {
         "op": "!=",
@@ -19453,7 +19453,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "1"
+        "right": 1
       },
       "legality": {
         "op": "or",
@@ -21310,7 +21310,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "2"
+        "right": 2
       },
       "legality": true,
       "costValidation": null,
@@ -22519,7 +22519,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "3"
+        "right": 3
       },
       "legality": true,
       "costValidation": null,
@@ -23698,7 +23698,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "2"
+        "right": 2
       },
       "legality": true,
       "costValidation": null,
@@ -24904,7 +24904,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "3"
+        "right": 3
       },
       "legality": true,
       "costValidation": null,
@@ -25570,7 +25570,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "2"
+        "right": 2
       },
       "legality": true,
       "costValidation": null,
@@ -26428,7 +26428,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "3"
+        "right": 3
       },
       "legality": true,
       "costValidation": null,
@@ -26924,7 +26924,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "2"
+        "right": 2
       },
       "legality": true,
       "costValidation": null,
@@ -27490,7 +27490,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "3"
+        "right": 3
       },
       "legality": true,
       "costValidation": null,
@@ -39743,7 +39743,7 @@
             "left": {
               "ref": "activePlayer"
             },
-            "right": "2"
+            "right": 2
           },
           {
             "op": ">=",
@@ -39814,7 +39814,7 @@
             "left": {
               "ref": "activePlayer"
             },
-            "right": "3"
+            "right": 3
           },
           {
             "op": ">=",
@@ -39899,7 +39899,7 @@
         "left": {
           "ref": "activePlayer"
         },
-        "right": "0"
+        "right": 0
       },
       "cost": [],
       "effects": [
@@ -40879,7 +40879,7 @@
     "checkpoints": [
       {
         "id": "us-victory",
-        "faction": "0",
+        "seat": "0",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -40974,7 +40974,7 @@
       },
       {
         "id": "arvn-victory",
-        "faction": "1",
+        "seat": "1",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -41104,7 +41104,7 @@
       },
       {
         "id": "nva-victory",
-        "faction": "2",
+        "seat": "2",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -41250,7 +41250,7 @@
       },
       {
         "id": "vc-victory",
-        "faction": "3",
+        "seat": "3",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -41346,7 +41346,7 @@
       },
       {
         "id": "final-coup-ranking",
-        "faction": "2",
+        "seat": "2",
         "timing": "finalCoup",
         "when": {
           "op": "and",
@@ -41393,7 +41393,7 @@
     ],
     "margins": [
       {
-        "faction": "0",
+        "seat": "0",
         "value": {
           "op": "+",
           "left": {
@@ -41457,7 +41457,7 @@
         }
       },
       {
-        "faction": "1",
+        "seat": "1",
         "value": {
           "op": "+",
           "left": {
@@ -41556,7 +41556,7 @@
         }
       },
       {
-        "faction": "2",
+        "seat": "2",
         "value": {
           "op": "+",
           "left": {
@@ -41671,7 +41671,7 @@
         }
       },
       {
-        "faction": "3",
+        "seat": "3",
         "value": {
           "op": "+",
           "left": {
@@ -41761,7 +41761,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "ARVN",
@@ -41773,7 +41773,7 @@
             "text": "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "gulf-of-tonkin-us-airstrike",
                   "step": 0
@@ -41889,7 +41889,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "ARVN",
@@ -41912,7 +41912,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "ARVN",
@@ -42134,7 +42134,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "ARVN",
@@ -42175,7 +42175,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "ARVN",
@@ -42260,7 +42260,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "VC",
@@ -42272,7 +42272,7 @@
             "text": "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "aces-us-airstrike",
                   "step": 0
@@ -42345,7 +42345,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "VC",
@@ -42432,7 +42432,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "VC",
@@ -42471,7 +42471,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "VC",
@@ -42496,7 +42496,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "NVA",
               "VC",
@@ -42571,7 +42571,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "NVA",
@@ -42610,7 +42610,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "NVA",
@@ -42636,7 +42636,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "NVA",
@@ -42678,7 +42678,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "NVA",
@@ -42719,7 +42719,7 @@
           ],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "NVA",
@@ -42792,7 +42792,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "VC",
@@ -42841,7 +42841,7 @@
           ],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "VC",
@@ -43063,7 +43063,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "VC",
@@ -43105,7 +43105,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "VC",
@@ -43147,7 +43147,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "VC",
@@ -43186,7 +43186,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "NVA",
@@ -43211,7 +43211,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "NVA",
@@ -43318,7 +43318,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "NVA",
@@ -43330,7 +43330,7 @@
             "text": "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "operation-attleboro-us",
                   "step": 0
@@ -43341,7 +43341,7 @@
                 ]
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "operation-attleboro-us",
                   "step": 1
@@ -43352,7 +43352,7 @@
                 ]
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "operation-attleboro-us",
                   "step": 2
@@ -43376,7 +43376,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "NVA",
@@ -43493,7 +43493,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "NVA",
@@ -43505,7 +43505,7 @@
             "text": "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "tf116-us",
                   "step": 0
@@ -43517,7 +43517,7 @@
                 ]
               },
               {
-                "faction": "1",
+                "seat": "1",
                 "sequence": {
                   "chain": "tf116-arvn",
                   "step": 0
@@ -43656,7 +43656,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "ARVN",
@@ -43710,7 +43710,7 @@
             ],
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "lrrp-us-airstrike",
                   "step": 0
@@ -43776,7 +43776,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "ARVN",
@@ -43849,7 +43849,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "ARVN",
@@ -43888,7 +43888,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "ARVN",
@@ -44066,7 +44066,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "VC",
               "ARVN",
@@ -44092,7 +44092,7 @@
           ],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "ARVN",
@@ -44134,7 +44134,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "ARVN",
@@ -44176,7 +44176,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "ARVN",
@@ -44218,7 +44218,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "ARVN",
@@ -44257,7 +44257,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "ARVN",
@@ -44280,7 +44280,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "VC",
@@ -44303,7 +44303,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "VC",
@@ -44328,7 +44328,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "VC",
@@ -44374,7 +44374,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "VC",
@@ -44421,7 +44421,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "US",
               "VC",
@@ -44446,7 +44446,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "US",
@@ -44493,7 +44493,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "US",
@@ -44516,7 +44516,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "US",
@@ -44689,7 +44689,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "US",
@@ -44701,7 +44701,7 @@
             "text": "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 0
@@ -44732,7 +44732,7 @@
                 }
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 1
@@ -44763,7 +44763,7 @@
                 }
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 2
@@ -44967,7 +44967,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "US",
@@ -45008,7 +45008,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "VC",
@@ -45071,7 +45071,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "VC",
@@ -45222,7 +45222,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "VC",
@@ -45404,7 +45404,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "VC",
@@ -45427,7 +45427,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "ARVN",
               "VC",
@@ -45443,7 +45443,7 @@
                 "order": 1,
                 "freeOperationGrants": [
                   {
-                    "faction": "1",
+                    "seat": "1",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-arvn-two",
                       "step": 0
@@ -45451,7 +45451,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "faction": "1",
+                    "seat": "1",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-arvn-two",
                       "step": 1
@@ -45465,7 +45465,7 @@
                 "order": 2,
                 "freeOperationGrants": [
                   {
-                    "faction": "3",
+                    "seat": "3",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-vc-nva-three",
                       "step": 0
@@ -45473,7 +45473,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "faction": "3",
+                    "seat": "3",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-vc-nva-three",
                       "step": 1
@@ -45481,7 +45481,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "faction": "2",
+                    "seat": "2",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-vc-nva-three",
                       "step": 2
@@ -45500,7 +45500,7 @@
                 "order": 1,
                 "freeOperationGrants": [
                   {
-                    "faction": "0",
+                    "seat": "0",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-arvn-three",
                       "step": 0
@@ -45508,7 +45508,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "faction": "1",
+                    "seat": "1",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-arvn-three",
                       "step": 1
@@ -45516,7 +45516,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "faction": "1",
+                    "seat": "1",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-arvn-three",
                       "step": 2
@@ -45530,7 +45530,7 @@
                 "order": 2,
                 "freeOperationGrants": [
                   {
-                    "faction": "0",
+                    "seat": "0",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-two",
                       "step": 0
@@ -45538,7 +45538,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "faction": "0",
+                    "seat": "0",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-two",
                       "step": 1
@@ -45558,7 +45558,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "US",
@@ -45706,7 +45706,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "US",
@@ -45779,7 +45779,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "US",
@@ -45947,7 +45947,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "US",
@@ -45970,7 +45970,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "US",
@@ -46189,7 +46189,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "ARVN",
@@ -46201,7 +46201,7 @@
             "text": "NVA execute free March then free Attack.",
             "freeOperationGrants": [
               {
-                "faction": "2",
+                "seat": "2",
                 "sequence": {
                   "chain": "vo-nguyen-giap-nva",
                   "step": 0
@@ -46212,7 +46212,7 @@
                 ]
               },
               {
-                "faction": "2",
+                "seat": "2",
                 "sequence": {
                   "chain": "vo-nguyen-giap-nva",
                   "step": 1
@@ -46236,7 +46236,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "ARVN",
@@ -46259,7 +46259,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "ARVN",
@@ -46282,7 +46282,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "ARVN",
@@ -46294,7 +46294,7 @@
             "text": "Remove enemy pieces in one selected Highland and execute free March.",
             "freeOperationGrants": [
               {
-                "faction": "2",
+                "seat": "2",
                 "sequence": {
                   "chain": "plei-mei-nva",
                   "step": 0
@@ -46310,7 +46310,7 @@
             "text": "Remove COIN pieces in one selected Highland and execute free Attack.",
             "freeOperationGrants": [
               {
-                "faction": "2",
+                "seat": "2",
                 "sequence": {
                   "chain": "plei-mei-nva",
                   "step": 0
@@ -46331,7 +46331,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "ARVN",
@@ -46357,7 +46357,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "NVA",
@@ -46396,7 +46396,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "NVA",
@@ -46419,7 +46419,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "NVA",
@@ -46560,7 +46560,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "NVA",
@@ -46596,7 +46596,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "NVA",
@@ -46619,7 +46619,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "VC",
@@ -46703,7 +46703,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "VC",
@@ -46715,7 +46715,7 @@
             "text": "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault.",
             "freeOperationGrants": [
               {
-                "faction": "1",
+                "seat": "1",
                 "sequence": {
                   "chain": "amphib-landing-arvn",
                   "step": 0
@@ -46726,7 +46726,7 @@
                 ]
               },
               {
-                "faction": "1",
+                "seat": "1",
                 "sequence": {
                   "chain": "amphib-landing-arvn",
                   "step": 1
@@ -46750,7 +46750,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "VC",
@@ -46930,7 +46930,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "VC",
@@ -46942,7 +46942,7 @@
             "text": "ARVN executes free Special Activities.",
             "freeOperationGrants": [
               {
-                "faction": "1",
+                "seat": "1",
                 "sequence": {
                   "chain": "macv-arvn-special-activity",
                   "step": 0
@@ -46960,7 +46960,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "VC",
@@ -46972,8 +46972,8 @@
             "text": "ARVN Sweep/Assault in selected spaces as if US.",
             "freeOperationGrants": [
               {
-                "faction": "1",
-                "executeAsFaction": "0",
+                "seat": "1",
+                "executeAsSeat": "0",
                 "sequence": {
                   "chain": "roks-arvn-as-us",
                   "step": 0
@@ -46984,8 +46984,8 @@
                 ]
               },
               {
-                "faction": "1",
-                "executeAsFaction": "0",
+                "seat": "1",
+                "executeAsSeat": "0",
                 "sequence": {
                   "chain": "roks-arvn-as-us",
                   "step": 1
@@ -47009,7 +47009,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "US",
@@ -47034,7 +47034,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "US",
@@ -47081,7 +47081,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "US",
@@ -47138,7 +47138,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "US",
@@ -47161,7 +47161,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "US",
@@ -47173,7 +47173,7 @@
             "text": "ARVN free Sweep or Assault in Cambodia.",
             "freeOperationGrants": [
               {
-                "faction": "1",
+                "seat": "1",
                 "sequence": {
                   "chain": "sihanouk-unshaded-arvn",
                   "step": 0
@@ -47199,7 +47199,7 @@
             "text": "VC then NVA each get a free operation.",
             "freeOperationGrants": [
               {
-                "faction": "3",
+                "seat": "3",
                 "sequence": {
                   "chain": "sihanouk-shaded-vc-nva",
                   "step": 0
@@ -47207,7 +47207,7 @@
                 "operationClass": "operation"
               },
               {
-                "faction": "2",
+                "seat": "2",
                 "sequence": {
                   "chain": "sihanouk-shaded-vc-nva",
                   "step": 1
@@ -47225,7 +47225,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "VC",
@@ -47287,7 +47287,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "VC",
@@ -47400,7 +47400,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "VC",
@@ -47447,7 +47447,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "VC",
@@ -47606,7 +47606,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "NVA",
               "VC",
@@ -47626,7 +47626,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "US",
@@ -47762,7 +47762,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "US",
@@ -47908,7 +47908,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "US",
@@ -48028,7 +48028,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "US",
@@ -48051,7 +48051,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "US",
@@ -48117,7 +48117,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "NVA",
@@ -48156,7 +48156,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "NVA",
@@ -48328,7 +48328,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "NVA",
@@ -48351,7 +48351,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "NVA",
@@ -48406,7 +48406,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "VC",
               "NVA",
@@ -48528,7 +48528,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "NVA",
@@ -48551,7 +48551,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "NVA",
@@ -48574,7 +48574,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "NVA",
@@ -48783,7 +48783,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "NVA",
@@ -48803,7 +48803,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "NVA",
@@ -48815,7 +48815,7 @@
             "text": "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "westmoreland-us",
                   "step": 0
@@ -48826,7 +48826,7 @@
                 ]
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "westmoreland-us",
                   "step": 1
@@ -48838,7 +48838,7 @@
                 ]
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "westmoreland-us",
                   "step": 2
@@ -48862,7 +48862,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "ARVN",
@@ -48929,7 +48929,7 @@
                   "else": [
                     {
                       "grantFreeOperation": {
-                        "faction": "3",
+                        "seat": "3",
                         "operationClass": "operation",
                         "actionIds": [
                           "operation"
@@ -48950,7 +48950,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "ARVN",
@@ -49136,7 +49136,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "ARVN",
@@ -49417,7 +49417,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "ARVN",
@@ -49429,7 +49429,7 @@
             "text": "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US.",
             "freeOperationGrants": [
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "masher-white-wing-us",
                   "step": 0
@@ -49440,7 +49440,7 @@
                 ]
               },
               {
-                "faction": "0",
+                "seat": "0",
                 "sequence": {
                   "chain": "masher-white-wing-us",
                   "step": 1
@@ -49451,8 +49451,8 @@
                 ]
               },
               {
-                "faction": "1",
-                "executeAsFaction": "0",
+                "seat": "1",
+                "executeAsSeat": "0",
                 "sequence": {
                   "chain": "masher-white-wing-arvn-as-us",
                   "step": 0
@@ -49463,8 +49463,8 @@
                 ]
               },
               {
-                "faction": "1",
-                "executeAsFaction": "0",
+                "seat": "1",
+                "executeAsSeat": "0",
                 "sequence": {
                   "chain": "masher-white-wing-arvn-as-us",
                   "step": 1
@@ -49488,7 +49488,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "US",
               "ARVN",
@@ -49829,7 +49829,7 @@
           ],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "US",
@@ -49868,7 +49868,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "US",
@@ -50061,7 +50061,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "US",
@@ -50087,7 +50087,7 @@
           ],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "US",
@@ -50126,7 +50126,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "US",
@@ -50299,7 +50299,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "ARVN",
@@ -50389,7 +50389,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "ARVN",
@@ -50461,7 +50461,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "ARVN",
@@ -50633,7 +50633,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "ARVN",
@@ -50665,7 +50665,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "ARVN",
@@ -50845,7 +50845,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "US",
@@ -50868,7 +50868,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "US",
@@ -50982,7 +50982,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "US",
@@ -51005,7 +51005,7 @@
           "tags": [],
           "metadata": {
             "period": "1965",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "US",
@@ -51116,7 +51116,7 @@
           ],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "US",
@@ -51163,7 +51163,7 @@
           ],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "NVA",
@@ -51202,7 +51202,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "NVA",
@@ -51225,7 +51225,7 @@
           "tags": [],
           "metadata": {
             "period": "1964",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "NVA",
@@ -51390,7 +51390,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "NVA",
@@ -51413,7 +51413,7 @@
           "tags": [],
           "metadata": {
             "period": "1968",
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "ARVN",
               "NVA",
@@ -51438,7 +51438,7 @@
             "US"
           ],
           "metadata": {
-            "factionOrder": [
+            "seatOrder": [
               "US",
               "ARVN",
               "VC",
@@ -51561,7 +51561,7 @@
             "NVA"
           ],
           "metadata": {
-            "factionOrder": [
+            "seatOrder": [
               "NVA",
               "VC",
               "ARVN",
@@ -51639,7 +51639,7 @@
             "ARVN"
           ],
           "metadata": {
-            "factionOrder": [
+            "seatOrder": [
               "ARVN",
               "US",
               "NVA",
@@ -51698,7 +51698,7 @@
             "VC"
           ],
           "metadata": {
-            "factionOrder": [
+            "seatOrder": [
               "VC",
               "NVA",
               "US",

@@ -420,8 +420,8 @@ export type EffectAST =
   | {
       readonly grantFreeOperation: {
         readonly id?: string;
-        readonly faction: string;
-        readonly executeAsFaction?: string;
+        readonly seat: string;
+        readonly executeAsSeat?: string;
         readonly operationClass: 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity';
         readonly actionIds?: readonly string[];
         readonly zoneFilter?: ConditionAST;

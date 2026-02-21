@@ -42,14 +42,14 @@ export function validateMapPayload(
 
   const trackKeys = new Set<string>();
   tracks.forEach((track, trackIndex) => {
-    const trackKey = `${track.id}::${track.scope}::${track.faction ?? ''}`;
+    const trackKey = `${track.id}::${track.scope}::${track.seat ?? ''}`;
     if (trackKeys.has(trackKey)) {
       diagnostics.push(withContext(
         {
           code: 'MAP_TRACK_DUPLICATE',
           path: `asset.payload.tracks[${trackIndex}].id`,
           severity: 'error',
-          message: `Duplicate track "${track.id}" for scope "${track.scope}${track.faction ? `:${track.faction}` : ''}".`,
+          message: `Duplicate track "${track.id}" for scope "${track.scope}${track.seat ? `:${track.seat}` : ''}".`,
         },
         context,
       ));
@@ -69,25 +69,25 @@ export function validateMapPayload(
       ));
     }
 
-    if (track.scope === 'faction' && track.faction === undefined) {
+    if (track.scope === 'seat' && track.seat === undefined) {
       diagnostics.push(withContext(
         {
           code: 'MAP_TRACK_SCOPE_INVALID',
-          path: `asset.payload.tracks[${trackIndex}].faction`,
+          path: `asset.payload.tracks[${trackIndex}].seat`,
           severity: 'error',
-          message: `Track "${track.id}" with scope "faction" requires a faction id.`,
+          message: `Track "${track.id}" with scope "seat" requires a seat id.`,
         },
         context,
       ));
     }
 
-    if (track.scope === 'global' && track.faction !== undefined) {
+    if (track.scope === 'global' && track.seat !== undefined) {
       diagnostics.push(withContext(
         {
           code: 'MAP_TRACK_SCOPE_INVALID',
-          path: `asset.payload.tracks[${trackIndex}].faction`,
+          path: `asset.payload.tracks[${trackIndex}].seat`,
           severity: 'error',
-          message: `Track "${track.id}" with scope "global" must not declare a faction id.`,
+          message: `Track "${track.id}" with scope "global" must not declare a seat id.`,
         },
         context,
       ));

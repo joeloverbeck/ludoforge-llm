@@ -28,7 +28,7 @@ const createDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+          eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
           optionMatrix: [
             { first: 'event', second: ['operation', 'operationPlusSpecialActivity'] },
             { first: 'operation', second: ['limitedOperation'] },

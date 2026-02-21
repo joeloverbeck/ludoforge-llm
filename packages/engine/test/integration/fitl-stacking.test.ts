@@ -43,7 +43,7 @@ const fitlConstraints: readonly StackingConstraint[] = [
     id: 'nv-restriction',
     description: 'Only NVA/VC in North Vietnam',
     spaceFilter: { attributeEquals: { country: 'northVietnam' } },
-    pieceFilter: { factions: ['US', 'ARVN'] },
+    pieceFilter: { seats: ['US', 'ARVN'] },
     rule: 'prohibit',
   },
 ];
@@ -72,8 +72,8 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
   describe('compile-time validation detects violations', () => {
     it('rejects 3 bases in a province', () => {
       const placements: ScenarioPiecePlacement[] = [
-        { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'US', count: 2 },
-        { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
+        { spaceId: 'quangTri', pieceTypeId: 'base', seat: 'US', count: 2 },
+        { spaceId: 'quangTri', pieceTypeId: 'base', seat: 'ARVN', count: 1 },
       ];
 
       const diags = validateInitialPlacementsAgainstStackingConstraints(
@@ -88,7 +88,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
 
     it('rejects base on LoC', () => {
       const placements: ScenarioPiecePlacement[] = [
-        { spaceId: 'route1', pieceTypeId: 'base', faction: 'NVA', count: 1 },
+        { spaceId: 'route1', pieceTypeId: 'base', seat: 'NVA', count: 1 },
       ];
 
       const diags = validateInitialPlacementsAgainstStackingConstraints(
@@ -103,7 +103,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
 
     it('rejects US/ARVN pieces in North Vietnam', () => {
       const placements: ScenarioPiecePlacement[] = [
-        { spaceId: 'hanoi', pieceTypeId: 'troops', faction: 'US', count: 1 },
+        { spaceId: 'hanoi', pieceTypeId: 'troops', seat: 'US', count: 1 },
       ];
 
       const diags = validateInitialPlacementsAgainstStackingConstraints(
@@ -118,10 +118,10 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
 
     it('accepts valid placements', () => {
       const placements: ScenarioPiecePlacement[] = [
-        { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'US', count: 1 },
-        { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
-        { spaceId: 'quangTri', pieceTypeId: 'troops', faction: 'US', count: 3 },
-        { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'NVA', count: 2 },
+        { spaceId: 'quangTri', pieceTypeId: 'base', seat: 'US', count: 1 },
+        { spaceId: 'quangTri', pieceTypeId: 'base', seat: 'ARVN', count: 1 },
+        { spaceId: 'quangTri', pieceTypeId: 'troops', seat: 'US', count: 3 },
+        { spaceId: 'hanoi', pieceTypeId: 'guerrilla', seat: 'NVA', count: 2 },
       ];
 
       const diags = validateInitialPlacementsAgainstStackingConstraints(
@@ -148,9 +148,9 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { id: asZoneId('available:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       ],
       tokenTypes: [
-        { id: 'base', faction: 'US', props: { faction: 'string' } },
-        { id: 'troops', faction: 'US', props: { faction: 'string' } },
-        { id: 'guerrilla', faction: 'NVA', props: { faction: 'string' } },
+        { id: 'base', seat: 'US', props: { faction: 'string' } },
+        { id: 'troops', seat: 'US', props: { faction: 'string' } },
+        { id: 'guerrilla', seat: 'NVA', props: { faction: 'string' } },
       ],
       setup: [],
       turnStructure: { phases: [] },
@@ -236,7 +236,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
     it('same constraint set produces both compile-time and runtime violations', () => {
       // Compile-time: 3 bases in province (uses zone IDs without :none suffix)
       const placements: ScenarioPiecePlacement[] = [
-        { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'US', count: 3 },
+        { spaceId: 'quangTri', pieceTypeId: 'base', seat: 'US', count: 3 },
       ];
       const compileTimeDiags = validateInitialPlacementsAgainstStackingConstraints(
         fitlConstraints,

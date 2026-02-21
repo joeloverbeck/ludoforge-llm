@@ -48,7 +48,7 @@ export interface GameSpecZoneDef {
 export interface GameSpecTokenTypeDef {
   readonly id: string;
   readonly props: Readonly<Record<string, string>>;
-  readonly faction?: string;
+  readonly seat?: string;
 }
 
 export interface GameSpecTurnStructure {
@@ -182,7 +182,7 @@ export interface GameSpecTurnFlowEligibilityOverrideWindow {
 }
 
 export interface GameSpecTurnFlowEligibility {
-  readonly factions: readonly string[];
+  readonly seats: readonly string[];
   readonly overrideWindows: readonly GameSpecTurnFlowEligibilityOverrideWindow[];
 }
 
@@ -192,7 +192,7 @@ export interface GameSpecTurnFlowOptionMatrixRow {
 }
 
 export interface GameSpecTurnFlowPassReward {
-  readonly factionClass: string;
+  readonly seatClass: string;
   readonly resource: string;
   readonly amount: number;
 }
@@ -304,13 +304,13 @@ export type GameSpecVictoryTiming = 'duringCoup' | 'finalCoup';
 
 export interface GameSpecVictoryCheckpoint {
   readonly id: string;
-  readonly faction: string;
+  readonly seat: string;
   readonly timing: GameSpecVictoryTiming;
   readonly when: ConditionAST;
 }
 
 export interface GameSpecVictoryMargin {
-  readonly faction: string;
+  readonly seat: string;
   readonly value: ValueExpr;
 }
 

@@ -32,18 +32,18 @@ export function validatePieceCatalogPayload(
   const diagnostics: Diagnostic[] = [];
   const catalog = parseResult.data as PieceCatalogPayload;
   const pieceTypeById = new Map<string, PieceCatalogPayload['pieceTypes'][number]>();
-  const declaredFactions = new Set<string>();
-  for (const [index, faction] of (catalog.factions ?? []).entries()) {
-    if (!declaredFactions.has(faction.id)) {
-      declaredFactions.add(faction.id);
+  const declaredSeats = new Set<string>();
+  for (const [index, seatDef] of (catalog.seats ?? []).entries()) {
+    if (!declaredSeats.has(seatDef.id)) {
+      declaredSeats.add(seatDef.id);
       continue;
     }
     diagnostics.push(withContext(
       {
-        code: 'PIECE_CATALOG_DUPLICATE_FACTION',
-        path: `asset.payload.factions[${index}].id`,
+        code: 'PIECE_CATALOG_DUPLICATE_SEAT',
+        path: `asset.payload.seats[${index}].id`,
         severity: 'error',
-        message: `Duplicate faction id "${faction.id}" in piece catalog payload.`,
+        message: `Duplicate seat id "${seatDef.id}" in piece catalog payload.`,
       },
       context,
     ));
@@ -65,14 +65,14 @@ export function validatePieceCatalogPayload(
 
     pieceTypeById.set(pieceType.id, pieceType);
 
-    if (declaredFactions.size > 0 && !declaredFactions.has(pieceType.faction)) {
+    if (declaredSeats.size > 0 && !declaredSeats.has(pieceType.seat)) {
       diagnostics.push(withContext(
         {
-          code: 'PIECE_CATALOG_PIECE_TYPE_FACTION_UNDECLARED',
-          path: `asset.payload.pieceTypes[${index}].faction`,
+          code: 'PIECE_CATALOG_PIECE_TYPE_SEAT_UNDECLARED',
+          path: `asset.payload.pieceTypes[${index}].seat`,
           severity: 'error',
-          message: `Piece type "${pieceType.id}" references undeclared faction "${pieceType.faction}".`,
-          suggestion: 'Add the faction to payload.factions or update pieceTypes[*].faction.',
+          message: `Piece type "${pieceType.id}" references undeclared seat "${pieceType.seat}".`,
+          suggestion: 'Add the seat to payload.seats or update pieceTypes[*].seat.',
         },
         context,
       ));
@@ -138,26 +138,26 @@ export function validatePieceCatalogPayload(
       return;
     }
 
-    if (pieceType.faction !== entry.faction) {
+    if (pieceType.seat !== entry.seat) {
       diagnostics.push(withContext(
         {
-          code: 'PIECE_INVENTORY_FACTION_MISMATCH',
-          path: `asset.payload.inventory[${index}].faction`,
+          code: 'PIECE_INVENTORY_SEAT_MISMATCH',
+          path: `asset.payload.inventory[${index}].seat`,
           severity: 'error',
-          message: `Inventory faction "${entry.faction}" does not match piece type "${entry.pieceTypeId}" faction "${pieceType.faction}".`,
+          message: `Inventory seat "${entry.seat}" does not match piece type "${entry.pieceTypeId}" seat "${pieceType.seat}".`,
         },
         context,
       ));
     }
 
-    if (declaredFactions.size > 0 && !declaredFactions.has(entry.faction)) {
+    if (declaredSeats.size > 0 && !declaredSeats.has(entry.seat)) {
       diagnostics.push(withContext(
         {
-          code: 'PIECE_CATALOG_INVENTORY_FACTION_UNDECLARED',
-          path: `asset.payload.inventory[${index}].faction`,
+          code: 'PIECE_CATALOG_INVENTORY_SEAT_UNDECLARED',
+          path: `asset.payload.inventory[${index}].seat`,
           severity: 'error',
-          message: `Inventory entry for piece type "${entry.pieceTypeId}" references undeclared faction "${entry.faction}".`,
-          suggestion: 'Add the faction to payload.factions or update inventory[*].faction.',
+          message: `Inventory entry for piece type "${entry.pieceTypeId}" references undeclared seat "${entry.seat}".`,
+          suggestion: 'Add the seat to payload.seats or update inventory[*].seat.',
         },
         context,
       ));

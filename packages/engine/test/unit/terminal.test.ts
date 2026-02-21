@@ -181,7 +181,7 @@ describe('terminalResult', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -193,7 +193,7 @@ describe('terminalResult', () => {
         checkpoints: [
           {
             id: 'us-threshold',
-            faction: 'us',
+            seat: 'us',
             timing: 'duringCoup',
             when: { op: '>', left: { ref: 'gvar', var: 'done' }, right: 0 },
           },
@@ -206,13 +206,13 @@ describe('terminalResult', () => {
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['us', 'nva', 'arvn'],
+          seatOrder: ['us', 'nva', 'arvn'],
           eligibility: { us: true, nva: true, arvn: true },
           currentCard: {
             firstEligible: 'us',
             secondEligible: 'nva',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },
@@ -227,7 +227,7 @@ describe('terminalResult', () => {
       victory: {
         timing: 'duringCoup',
         checkpointId: 'us-threshold',
-        winnerFaction: 'us',
+        winnerSeat: 'us',
       },
     });
   });
@@ -246,7 +246,7 @@ describe('terminalResult', () => {
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -258,15 +258,15 @@ describe('terminalResult', () => {
         checkpoints: [
           {
             id: 'final-coup',
-            faction: 'us',
+            seat: 'us',
             timing: 'finalCoup',
             when: { op: '==', left: { ref: 'gvar', var: 'finalCoup' }, right: 1 },
           },
         ],
         margins: [
-          { faction: 'us', value: { ref: 'gvar', var: 'mUs' } },
-          { faction: 'nva', value: { ref: 'gvar', var: 'mNva' } },
-          { faction: 'arvn', value: { ref: 'gvar', var: 'mArvn' } },
+          { seat: 'us', value: { ref: 'gvar', var: 'mUs' } },
+          { seat: 'nva', value: { ref: 'gvar', var: 'mNva' } },
+          { seat: 'arvn', value: { ref: 'gvar', var: 'mArvn' } },
         ],
         ranking: { order: 'desc', tieBreakOrder: ['us', 'nva', 'arvn'] },
       },
@@ -277,13 +277,13 @@ describe('terminalResult', () => {
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          factionOrder: ['us', 'nva', 'arvn'],
+          seatOrder: ['us', 'nva', 'arvn'],
           eligibility: { us: true, nva: true, arvn: true },
           currentCard: {
             firstEligible: 'us',
             secondEligible: 'nva',
-            actedFactions: [],
-            passedFactions: [],
+            actedSeats: [],
+            passedSeats: [],
             nonPassCount: 0,
             firstActionClass: null,
           },
@@ -298,11 +298,11 @@ describe('terminalResult', () => {
       victory: {
         timing: 'finalCoup',
         checkpointId: 'final-coup',
-        winnerFaction: 'us',
+        winnerSeat: 'us',
         ranking: [
-          { faction: 'us', margin: 8, rank: 1, tieBreakKey: 'us' },
-          { faction: 'nva', margin: 8, rank: 2, tieBreakKey: 'nva' },
-          { faction: 'arvn', margin: 2, rank: 3, tieBreakKey: 'arvn' },
+          { seat: 'us', margin: 8, rank: 1, tieBreakKey: 'us' },
+          { seat: 'nva', margin: 8, rank: 2, tieBreakKey: 'nva' },
+          { seat: 'arvn', margin: 2, rank: 3, tieBreakKey: 'arvn' },
         ],
       },
     });

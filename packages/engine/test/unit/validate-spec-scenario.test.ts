@@ -46,7 +46,7 @@ function createMapPayload() {
     ],
     tracks: [
       { id: 'aid', scope: 'global', min: 0, max: 75, initial: 15 },
-      { id: 'patronage', scope: 'faction', faction: 'arvn', min: 0, max: 50, initial: 15 },
+      { id: 'patronage', scope: 'seat', seat: 'arvn', min: 0, max: 50, initial: 15 },
     ],
     markerLattices: [
       { id: 'support', states: ['active-support', 'passive-support', 'neutral', 'passive-opposition', 'active-opposition'], defaultState: 'neutral' },
@@ -56,20 +56,20 @@ function createMapPayload() {
 
 function createPieceCatalogPayload() {
   return {
-    factions: [
+    seats: [
       { id: 'us' },
       { id: 'nva' },
     ],
     pieceTypes: [
       {
         id: 'us-troops',
-        faction: 'us',
+        seat: 'us',
         statusDimensions: [],
         transitions: [],
       },
       {
         id: 'nva-guerrillas',
-        faction: 'nva',
+        seat: 'nva',
         statusDimensions: ['activity'],
         transitions: [
           { dimension: 'activity', from: 'underground', to: 'active' },
@@ -78,8 +78,8 @@ function createPieceCatalogPayload() {
       },
     ],
     inventory: [
-      { pieceTypeId: 'us-troops', faction: 'us', total: 30 },
-      { pieceTypeId: 'nva-guerrillas', faction: 'nva', total: 20 },
+      { pieceTypeId: 'us-troops', seat: 'us', total: 30 },
+      { pieceTypeId: 'nva-guerrillas', seat: 'nva', total: 20 },
     ],
   };
 }
@@ -113,19 +113,19 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario with valid placements referencing existing map spaces produces no placement errors', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', faction: 'us', count: 5 }],
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'us', count: 5 }],
       }),
     );
 
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_SPACE_INVALID').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_PIECE_INVALID').length, 0);
-    assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_FACTION_MISMATCH').length, 0);
+    assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_SEAT_MISMATCH').length, 0);
   });
 
   it('scenario referencing a non-existent space ID emits CNL_VALIDATOR_SCENARIO_PLACEMENT_SPACE_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'hanoi', pieceTypeId: 'us-troops', faction: 'us', count: 5 }],
+        initialPlacements: [{ spaceId: 'hanoi', pieceTypeId: 'us-troops', seat: 'us', count: 5 }],
       }),
     );
 
@@ -137,7 +137,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario referencing a non-existent piece type emits CNL_VALIDATOR_SCENARIO_PLACEMENT_PIECE_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'arvn-rangers', faction: 'arvn', count: 2 }],
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'arvn-rangers', seat: 'arvn', count: 2 }],
       }),
     );
 
@@ -146,14 +146,14 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.ok(matches[0]!.message.includes('arvn-rangers'));
   });
 
-  it('scenario with faction mismatch on placement emits CNL_VALIDATOR_SCENARIO_PLACEMENT_FACTION_MISMATCH', () => {
+  it('scenario with faction mismatch on placement emits CNL_VALIDATOR_SCENARIO_PLACEMENT_SEAT_MISMATCH', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', faction: 'nva', count: 5 }],
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'nva', count: 5 }],
       }),
     );
 
-    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_FACTION_MISMATCH');
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_SEAT_MISMATCH');
     assert.equal(matches.length, 1);
   });
 
@@ -220,8 +220,8 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario exceeding piece inventory emits CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', faction: 'us', count: 25 }],
-        outOfPlay: [{ pieceTypeId: 'us-troops', faction: 'us', count: 10 }],
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'us', count: 25 }],
+        outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'us', count: 10 }],
       }),
     );
 
@@ -233,8 +233,8 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario within piece inventory limits emits no conservation violation', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', faction: 'us', count: 10 }],
-        outOfPlay: [{ pieceTypeId: 'us-troops', faction: 'us', count: 10 }],
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'us', count: 10 }],
+        outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'us', count: 10 }],
       }),
     );
 
@@ -244,7 +244,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario with invalid outOfPlay pieceTypeId emits CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        outOfPlay: [{ pieceTypeId: 'unknown-piece', faction: 'us', count: 5 }],
+        outOfPlay: [{ pieceTypeId: 'unknown-piece', seat: 'us', count: 5 }],
       }),
     );
 
@@ -253,14 +253,14 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.ok(matches[0]!.message.includes('unknown-piece'));
   });
 
-  it('scenario with outOfPlay faction mismatch emits CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH', () => {
+  it('scenario with outOfPlay faction mismatch emits CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        outOfPlay: [{ pieceTypeId: 'us-troops', faction: 'nva', count: 1 }],
+        outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'nva', count: 1 }],
       }),
     );
 
-    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH');
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH');
     assert.equal(matches.length, 1);
     assert.ok(matches[0]!.message.includes('expected "us"'));
   });
@@ -291,7 +291,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_TRACK_VALUE_INVALID').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_MARKER_INVALID').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_INVALID').length, 0);
-    assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH').length, 0);
+    assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID').length, 0);
   });

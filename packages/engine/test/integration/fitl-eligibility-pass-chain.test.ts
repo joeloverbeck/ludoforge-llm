@@ -23,11 +23,11 @@ const createDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+          eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [
-            { factionClass: '0', resource: 'res0', amount: 1 },
-            { factionClass: '1', resource: 'res1', amount: 3 },
+            { seatClass: '0', resource: 'res0', amount: 1 },
+            { seatClass: '1', resource: 'res1', amount: 3 },
           ],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
@@ -93,7 +93,7 @@ describe('FITL eligibility/pass-chain integration', () => {
     assert.equal(requireCardDrivenRuntime(fourth).currentCard.firstEligible, '0');
     assert.equal(requireCardDrivenRuntime(fourth).currentCard.secondEligible, '1');
     assert.equal(requireCardDrivenRuntime(fourth).currentCard.nonPassCount, 0);
-    assert.deepEqual(requireCardDrivenRuntime(fourth).currentCard.passedFactions, []);
+    assert.deepEqual(requireCardDrivenRuntime(fourth).currentCard.passedSeats, []);
   });
 
   it('ends the card after two non-pass actions and resets candidate slots', () => {
@@ -115,6 +115,6 @@ describe('FITL eligibility/pass-chain integration', () => {
     assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, '2');
     assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, '3');
     assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { '0': false, '1': false, '2': true, '3': true });
-    assert.deepEqual(requireCardDrivenRuntime(second).currentCard.actedFactions, []);
+    assert.deepEqual(requireCardDrivenRuntime(second).currentCard.actedSeats, []);
   });
 });

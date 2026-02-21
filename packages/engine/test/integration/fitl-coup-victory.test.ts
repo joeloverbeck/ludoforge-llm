@@ -45,7 +45,7 @@ describe('FITL coup victory integration', () => {
       victory: {
         timing: 'duringCoup',
         checkpointId: 'us-threshold',
-        winnerFaction: 'us',
+        winnerSeat: 'us',
       },
     });
   });
@@ -62,10 +62,10 @@ describe('FITL coup victory integration', () => {
       victory: {
         timing: 'finalCoup',
         checkpointId: 'final-coup',
-        winnerFaction: 'nva',
+        winnerSeat: 'nva',
         ranking: [
-          { faction: 'nva', margin: 4, rank: 1, tieBreakKey: 'nva' },
-          { faction: 'us', margin: 2, rank: 2, tieBreakKey: 'us' },
+          { seat: 'nva', margin: 4, rank: 1, tieBreakKey: 'nva' },
+          { seat: 'us', margin: 2, rank: 2, tieBreakKey: 'us' },
         ],
       },
     });

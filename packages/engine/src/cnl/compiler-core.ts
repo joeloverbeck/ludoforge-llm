@@ -437,7 +437,7 @@ function compileExpandedDoc(
     globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,
     zones,
-    ...(derivedFromAssets.factions === null ? {} : { factions: derivedFromAssets.factions }),
+    ...(derivedFromAssets.seats === null ? {} : { seats: derivedFromAssets.seats }),
     ...(derivedFromAssets.tracks === null ? {} : { tracks: derivedFromAssets.tracks }),
     ...(derivedFromAssets.markerLattices === null ? {} : { markerLattices: derivedFromAssets.markerLattices }),
     ...(derivedFromAssets.spaceMarkers === null ? {} : { spaceMarkers: derivedFromAssets.spaceMarkers }),

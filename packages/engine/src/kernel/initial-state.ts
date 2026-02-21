@@ -116,13 +116,13 @@ const resolveInitialTurnOrderState = (def: GameDef, playerCount: number): GameSt
   return {
     type: 'cardDriven',
     runtime: {
-      factionOrder: [],
+      seatOrder: [],
       eligibility: {},
       currentCard: {
         firstEligible: null,
         secondEligible: null,
-        actedFactions: [],
-        passedFactions: [],
+        actedSeats: [],
+        passedSeats: [],
         nonPassCount: 0,
         firstActionClass: null,
       },

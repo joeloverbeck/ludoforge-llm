@@ -6,10 +6,10 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-121', title: 'Linebacker II', order: 121, factionTag: 'US', factionOrder: ['US', 'ARVN', 'VC', 'NVA'] },
-  { id: 'card-122', title: 'Easter Offensive', order: 122, factionTag: 'NVA', factionOrder: ['NVA', 'VC', 'ARVN', 'US'] },
-  { id: 'card-123', title: 'Vietnamization', order: 123, factionTag: 'ARVN', factionOrder: ['ARVN', 'US', 'NVA', 'VC'] },
-  { id: 'card-124', title: 'Tet Offensive', order: 124, factionTag: 'VC', factionOrder: ['VC', 'NVA', 'US', 'ARVN'] },
+  { id: 'card-121', title: 'Linebacker II', order: 121, factionTag: 'US', seatOrder: ['US', 'ARVN', 'VC', 'NVA'] },
+  { id: 'card-122', title: 'Easter Offensive', order: 122, factionTag: 'NVA', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+  { id: 'card-123', title: 'Vietnamization', order: 123, factionTag: 'ARVN', seatOrder: ['ARVN', 'US', 'NVA', 'VC'] },
+  { id: 'card-124', title: 'Tet Offensive', order: 124, factionTag: 'VC', seatOrder: ['VC', 'NVA', 'US', 'ARVN'] },
 ] as const;
 
 describe('FITL pivotal event-card production spec', () => {
@@ -27,7 +27,7 @@ describe('FITL pivotal event-card production spec', () => {
       assert.equal(card?.sideMode, 'single');
       assert.equal(card?.tags?.includes('pivotal'), true);
       assert.equal(card?.tags?.includes(expected.factionTag), true);
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.metadata?.flavorText, 'string');
       assert.equal(typeof card?.unshaded?.text, 'string');
       assert.equal(card?.shaded, undefined);

@@ -572,7 +572,7 @@
                         }
                       ]
                     },
-                    "faction": {
+                    "seat": {
                       "anyOf": [
                         {
                           "type": "string",
@@ -608,14 +608,14 @@
                             }
                           ]
                         },
-                        "actedFactions": {
+                        "actedSeats": {
                           "type": "array",
                           "items": {
                             "type": "string",
                             "minLength": 1
                           }
                         },
-                        "passedFactions": {
+                        "passedSeats": {
                           "type": "array",
                           "items": {
                             "type": "string",
@@ -652,8 +652,8 @@
                       "required": [
                         "firstEligible",
                         "secondEligible",
-                        "actedFactions",
-                        "passedFactions",
+                        "actedSeats",
+                        "passedSeats",
                         "nonPassCount",
                         "firstActionClass"
                       ],
@@ -684,14 +684,14 @@
                             }
                           ]
                         },
-                        "actedFactions": {
+                        "actedSeats": {
                           "type": "array",
                           "items": {
                             "type": "string",
                             "minLength": 1
                           }
                         },
-                        "passedFactions": {
+                        "passedSeats": {
                           "type": "array",
                           "items": {
                             "type": "string",
@@ -728,8 +728,8 @@
                       "required": [
                         "firstEligible",
                         "secondEligible",
-                        "actedFactions",
-                        "passedFactions",
+                        "actedSeats",
+                        "passedSeats",
                         "nonPassCount",
                         "firstActionClass"
                       ],
@@ -778,7 +778,7 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "faction": {
+                          "seat": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -811,7 +811,7 @@
                           }
                         },
                         "required": [
-                          "faction",
+                          "seat",
                           "eligible",
                           "windowId",
                           "duration"
@@ -835,7 +835,7 @@
                   "required": [
                     "kind",
                     "step",
-                    "faction",
+                    "seat",
                     "before",
                     "after"
                   ],
@@ -2116,7 +2116,7 @@
                 "runtime": {
                   "type": "object",
                   "properties": {
-                    "factionOrder": {
+                    "seatOrder": {
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -2157,14 +2157,14 @@
                             }
                           ]
                         },
-                        "actedFactions": {
+                        "actedSeats": {
                           "type": "array",
                           "items": {
                             "type": "string",
                             "minLength": 1
                           }
                         },
-                        "passedFactions": {
+                        "passedSeats": {
                           "type": "array",
                           "items": {
                             "type": "string",
@@ -2201,8 +2201,8 @@
                       "required": [
                         "firstEligible",
                         "secondEligible",
-                        "actedFactions",
-                        "passedFactions",
+                        "actedSeats",
+                        "passedSeats",
                         "nonPassCount",
                         "firstActionClass"
                       ],
@@ -2213,7 +2213,7 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "faction": {
+                          "seat": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -2246,7 +2246,7 @@
                           }
                         },
                         "required": [
-                          "faction",
+                          "seat",
                           "eligible",
                           "windowId",
                           "duration"
@@ -2263,11 +2263,11 @@
                             "type": "string",
                             "minLength": 1
                           },
-                          "faction": {
+                          "seat": {
                             "type": "string",
                             "minLength": 1
                           },
-                          "executeAsFaction": {
+                          "executeAsSeat": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -2327,7 +2327,7 @@
                         },
                         "required": [
                           "grantId",
-                          "faction",
+                          "seat",
                           "operationClass",
                           "remainingUses"
                         ],
@@ -2374,7 +2374,7 @@
                     }
                   },
                   "required": [
-                    "factionOrder",
+                    "seatOrder",
                     "eligibility",
                     "currentCard"
                   ],
@@ -2748,7 +2748,7 @@
                       "type": "string",
                       "minLength": 1
                     },
-                    "winnerFaction": {
+                    "winnerSeat": {
                       "type": "string",
                       "minLength": 1
                     },
@@ -2757,7 +2757,7 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "faction": {
+                          "seat": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -2775,7 +2775,7 @@
                           }
                         },
                         "required": [
-                          "faction",
+                          "seat",
                           "margin",
                           "rank",
                           "tieBreakKey"
@@ -2787,7 +2787,7 @@
                   "required": [
                     "timing",
                     "checkpointId",
-                    "winnerFaction"
+                    "winnerSeat"
                   ],
                   "additionalProperties": false
                 }
@@ -6820,10 +6820,10 @@
                 "id": {
                   "type": "string"
                 },
-                "faction": {
+                "seat": {
                   "type": "string"
                 },
-                "executeAsFaction": {
+                "executeAsSeat": {
                   "type": "string"
                 },
                 "operationClass": {
@@ -6884,7 +6884,7 @@
                 }
               },
               "required": [
-                "faction",
+                "seat",
                 "operationClass"
               ],
               "additionalProperties": false

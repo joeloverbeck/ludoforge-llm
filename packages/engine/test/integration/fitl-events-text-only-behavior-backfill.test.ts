@@ -93,7 +93,7 @@ describe('FITL text-only card behavior backfill', () => {
     ]);
 
     const card69 = cardById.get('card-69');
-    assert.equal(card69?.unshaded?.freeOperationGrants?.[0]?.faction, '1');
+    assert.equal(card69?.unshaded?.freeOperationGrants?.[0]?.seat, '1');
     assert.equal(card69?.unshaded?.freeOperationGrants?.[0]?.operationClass, 'limitedOperation');
 
     const card76 = cardById.get('card-76');

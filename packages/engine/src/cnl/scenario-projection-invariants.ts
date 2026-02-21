@@ -3,10 +3,10 @@ import { isFiniteNumber } from './validate-spec-shared.js';
 export interface ScenarioProjectionEntry {
   readonly source: 'initialPlacements' | 'outOfPlay';
   readonly pieceTypeId: string | undefined;
-  readonly faction: string | undefined;
+  readonly seat: string | undefined;
   readonly count: number | undefined;
   readonly pieceTypePath: string;
-  readonly factionPath: string;
+  readonly seatPath: string;
 }
 
 export interface ScenarioProjectionInvariantIssues {
@@ -15,12 +15,12 @@ export interface ScenarioProjectionInvariantIssues {
     readonly pieceTypeId: string;
     readonly pieceTypePath: string;
   }>;
-  readonly factionMismatch: ReadonlyArray<{
+  readonly seatMismatch: ReadonlyArray<{
     readonly source: 'initialPlacements' | 'outOfPlay';
     readonly pieceTypeId: string;
-    readonly actualFaction: string;
-    readonly expectedFaction: string;
-    readonly factionPath: string;
+    readonly actualSeat: string;
+    readonly expectedSeat: string;
+    readonly seatPath: string;
   }>;
   readonly conservationViolation: ReadonlyArray<{
     readonly pieceTypeId: string;
@@ -45,11 +45,11 @@ export interface ScenarioProjectionInvariantDiagnosticDialect {
     readonly outOfPlayMessage: (pieceTypeId: string) => string;
     readonly suggestion: string;
   };
-  readonly factionMismatch: {
+  readonly seatMismatch: {
     readonly initialPlacementsCode: string;
     readonly outOfPlayCode: string;
-    readonly message: (actualFaction: string, pieceTypeId: string, expectedFaction: string) => string;
-    readonly suggestion: (expectedFaction: string) => string;
+    readonly message: (actualSeat: string, pieceTypeId: string, expectedSeat: string) => string;
+    readonly suggestion: (expectedSeat: string) => string;
   };
   readonly conservationViolation: {
     readonly code: string;
@@ -73,10 +73,10 @@ export function collectScenarioProjectionEntries(
     entries.push({
       source: 'initialPlacements',
       pieceTypeId: typeof record?.pieceTypeId === 'string' ? record.pieceTypeId : undefined,
-      faction: typeof record?.faction === 'string' ? record.faction : undefined,
+      seat: typeof record?.seat === 'string' ? record.seat : undefined,
       count: isFiniteNumber(record?.count) ? record.count : undefined,
       pieceTypePath: `${baseEntryPath}.pieceTypeId`,
-      factionPath: `${baseEntryPath}.faction`,
+      seatPath: `${baseEntryPath}.seat`,
     });
   }
 
@@ -86,10 +86,10 @@ export function collectScenarioProjectionEntries(
     entries.push({
       source: 'outOfPlay',
       pieceTypeId: typeof record?.pieceTypeId === 'string' ? record.pieceTypeId : undefined,
-      faction: typeof record?.faction === 'string' ? record.faction : undefined,
+      seat: typeof record?.seat === 'string' ? record.seat : undefined,
       count: isFiniteNumber(record?.count) ? record.count : undefined,
       pieceTypePath: `${baseEntryPath}.pieceTypeId`,
-      factionPath: `${baseEntryPath}.faction`,
+      seatPath: `${baseEntryPath}.seat`,
     });
   }
 
@@ -98,7 +98,7 @@ export function collectScenarioProjectionEntries(
 
 export function evaluateScenarioProjectionInvariants(
   entries: readonly ScenarioProjectionEntry[],
-  pieceTypeFactionById: ReadonlyMap<string, string>,
+  pieceTypeSeatById: ReadonlyMap<string, string>,
   inventoryTotalByPieceType: ReadonlyMap<string, number>,
 ): ScenarioProjectionInvariantIssues {
   const unknownPieceType: Array<{
@@ -106,31 +106,31 @@ export function evaluateScenarioProjectionInvariants(
     readonly pieceTypeId: string;
     readonly pieceTypePath: string;
   }> = [];
-  const factionMismatch: Array<{
+  const seatMismatch: Array<{
     readonly source: 'initialPlacements' | 'outOfPlay';
     readonly pieceTypeId: string;
-    readonly actualFaction: string;
-    readonly expectedFaction: string;
-    readonly factionPath: string;
+    readonly actualSeat: string;
+    readonly expectedSeat: string;
+    readonly seatPath: string;
   }> = [];
   const usedCounts = new Map<string, number>();
 
   for (const entry of entries) {
-    if (entry.pieceTypeId !== undefined && pieceTypeFactionById.size > 0) {
-      const expectedFaction = pieceTypeFactionById.get(entry.pieceTypeId);
-      if (expectedFaction === undefined) {
+    if (entry.pieceTypeId !== undefined && pieceTypeSeatById.size > 0) {
+      const expectedSeat = pieceTypeSeatById.get(entry.pieceTypeId);
+      if (expectedSeat === undefined) {
         unknownPieceType.push({
           source: entry.source,
           pieceTypeId: entry.pieceTypeId,
           pieceTypePath: entry.pieceTypePath,
         });
-      } else if (entry.faction !== undefined && entry.faction !== expectedFaction) {
-        factionMismatch.push({
+      } else if (entry.seat !== undefined && entry.seat !== expectedSeat) {
+        seatMismatch.push({
           source: entry.source,
           pieceTypeId: entry.pieceTypeId,
-          actualFaction: entry.faction,
-          expectedFaction,
-          factionPath: entry.factionPath,
+          actualSeat: entry.seat,
+          expectedSeat,
+          seatPath: entry.seatPath,
         });
       }
     }
@@ -158,7 +158,7 @@ export function evaluateScenarioProjectionInvariants(
 
   return {
     unknownPieceType,
-    factionMismatch,
+    seatMismatch,
     conservationViolation,
   };
 }
@@ -188,16 +188,16 @@ export function mapScenarioProjectionInvariantIssuesToDiagnostics(
     });
   }
 
-  for (const issue of issues.factionMismatch) {
+  for (const issue of issues.seatMismatch) {
     diagnostics.push({
       code:
         issue.source === 'initialPlacements'
-          ? dialect.factionMismatch.initialPlacementsCode
-          : dialect.factionMismatch.outOfPlayCode,
-      path: issue.factionPath,
+          ? dialect.seatMismatch.initialPlacementsCode
+          : dialect.seatMismatch.outOfPlayCode,
+      path: issue.seatPath,
       severity: 'error',
-      message: dialect.factionMismatch.message(issue.actualFaction, issue.pieceTypeId, issue.expectedFaction),
-      suggestion: dialect.factionMismatch.suggestion(issue.expectedFaction),
+      message: dialect.seatMismatch.message(issue.actualSeat, issue.pieceTypeId, issue.expectedSeat),
+      suggestion: dialect.seatMismatch.suggestion(issue.expectedSeat),
     });
   }
 

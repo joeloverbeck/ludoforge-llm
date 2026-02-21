@@ -112,7 +112,7 @@ export function GameContainer({
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
-  const gameDefFactions = useStore(store, (state) => state.gameDef?.factions);
+  const gameDefFactions = useStore(store, (state) => state.gameDef?.seats);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
   const [eventLogVisible, setEventLogVisible] = useState(true);
   const [interactionHighlights, setInteractionHighlights] = useState<InteractionHighlights>(EMPTY_INTERACTION_HIGHLIGHTS);
@@ -180,7 +180,7 @@ export function GameContainer({
     ? { kind: 'hidden' as const }
     : deriveBottomBarState(renderModel);
   const factionCssVariableStyle = buildFactionCssVariableStyle(
-    gameDefFactions?.map((faction) => faction.id),
+    gameDefFactions?.map((seat) => seat.id),
     (factionId) => visualConfigProvider.getFactionColor(factionId),
   );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);

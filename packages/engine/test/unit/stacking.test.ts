@@ -56,7 +56,7 @@ const noUsArvnInNv: StackingConstraint = {
   id: 'nv-restriction',
   description: 'Only NVA/VC in North Vietnam',
   spaceFilter: { attributeEquals: { country: 'northVietnam' } },
-  pieceFilter: { factions: ['US', 'ARVN'] },
+  pieceFilter: { seats: ['US', 'ARVN'] },
   rule: 'prohibit',
 };
 const tokenTypeFactionById = new Map<string, string>([
@@ -186,7 +186,7 @@ describe('checkStackingConstraints', () => {
       id: 'nv-restriction-canonical',
       description: 'Only nva/vc in North Vietnam (canonical ids)',
       spaceFilter: { attributeEquals: { country: 'northVietnam' } },
-      pieceFilter: { factions: ['us', 'arvn'] },
+      pieceFilter: { seats: ['us', 'arvn'] },
       rule: 'prohibit',
     };
     const violationsWithoutMapping = checkStackingConstraints([lowerCaseConstraint], spaces, 'hanoi', tokens);

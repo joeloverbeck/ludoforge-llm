@@ -17,7 +17,7 @@ describe('FITL Domino Theory event-card production spec', () => {
     assert.equal(domino?.sideMode, 'dual');
     assert.deepEqual(domino?.tags, []);
     assert.equal(domino?.metadata?.period, '1965');
-    assert.deepEqual(domino?.metadata?.factionOrder, ['ARVN', 'VC', 'US', 'NVA']);
+    assert.deepEqual(domino?.metadata?.seatOrder, ['ARVN', 'VC', 'US', 'NVA']);
     assert.equal(typeof domino?.metadata?.flavorText, 'string');
     assert.equal(typeof domino?.unshaded?.text, 'string');
     assert.equal(typeof domino?.shaded?.text, 'string');

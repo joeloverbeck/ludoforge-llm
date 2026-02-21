@@ -60,7 +60,7 @@ describe('render-model types', () => {
           id: 'tempo',
           displayName: 'Tempo',
           scope: 'global',
-          faction: null,
+          seat: null,
           min: 0,
           max: 10,
           currentValue: 4,

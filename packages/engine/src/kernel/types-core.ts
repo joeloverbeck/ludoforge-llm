@@ -70,7 +70,7 @@ export type VariableValue = number | boolean;
 
 export type AttributeValue = string | number | boolean | readonly string[];
 
-export interface FactionDef {
+export interface SeatDef {
   readonly id: string;
 }
 
@@ -101,7 +101,7 @@ export interface TokenTypeTransition {
 
 export interface TokenTypeDef {
   readonly id: string;
-  readonly faction?: string;
+  readonly seat?: string;
   readonly props: Readonly<Record<string, 'int' | 'string' | 'boolean'>>;
   readonly transitions?: readonly TokenTypeTransition[];
 }
@@ -227,7 +227,7 @@ export interface GameDef {
   readonly globalVars: readonly VariableDef[];
   readonly perPlayerVars: readonly VariableDef[];
   readonly zones: readonly ZoneDef[];
-  readonly factions?: readonly FactionDef[];
+  readonly seats?: readonly SeatDef[];
   readonly tracks?: readonly NumericTrackDef[];
   readonly spaceMarkers?: readonly SpaceMarkerValueDef[];
   readonly tokenTypes: readonly TokenTypeDef[];
@@ -263,7 +263,7 @@ export interface PieceStatusTransition {
 
 export interface PieceTypeCatalogEntry {
   readonly id: string;
-  readonly faction: string;
+  readonly seat: string;
   readonly statusDimensions: readonly PieceStatusDimension[];
   readonly transitions: readonly PieceStatusTransition[];
   readonly runtimeProps?: Readonly<Record<string, string | number | boolean>>;
@@ -271,14 +271,14 @@ export interface PieceTypeCatalogEntry {
 
 export interface PieceInventoryEntry {
   readonly pieceTypeId: string;
-  readonly faction: string;
+  readonly seat: string;
   readonly total: number;
 }
 
 export interface PieceCatalogPayload {
   readonly pieceTypes: readonly PieceTypeCatalogEntry[];
   readonly inventory: readonly PieceInventoryEntry[];
-  readonly factions: readonly FactionDef[];
+  readonly seats: readonly SeatDef[];
 }
 
 export interface ProvisionalAdjacencyDef {
@@ -289,8 +289,8 @@ export interface ProvisionalAdjacencyDef {
 
 export interface NumericTrackDef {
   readonly id: string;
-  readonly scope: 'global' | 'faction';
-  readonly faction?: string;
+  readonly scope: 'global' | 'seat';
+  readonly seat?: string;
   readonly min: number;
   readonly max: number;
   readonly initial: number;
@@ -332,7 +332,7 @@ export interface StackingConstraint {
   };
   readonly pieceFilter: {
     readonly pieceTypeIds?: readonly string[];
-    readonly factions?: readonly string[];
+    readonly seats?: readonly string[];
   };
   readonly rule: 'maxCount' | 'prohibit';
   readonly maxCount?: number;

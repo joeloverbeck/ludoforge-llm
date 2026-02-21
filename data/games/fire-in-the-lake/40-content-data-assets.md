@@ -756,20 +756,20 @@ dataAssets:
             - to: ba-xuyen:none
       tracks:
         - id: nvaResources
-          scope: faction
-          faction: nva
+          scope: seat
+          seat: nva
           min: 0
           max: 75
           initial: 0
         - id: vcResources
-          scope: faction
-          faction: vc
+          scope: seat
+          seat: vc
           min: 0
           max: 75
           initial: 0
         - id: arvnResources
-          scope: faction
-          faction: arvn
+          scope: seat
+          seat: arvn
           min: 0
           max: 75
           initial: 0
@@ -882,28 +882,28 @@ dataAssets:
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:
-      factions:
+      seats:
         - id: us
         - id: arvn
         - id: nva
         - id: vc
       pieceTypes:
         - id: us-troops
-          faction: us
+          seat: us
           statusDimensions: []
           transitions: []
           runtimeProps:
             faction: US
             type: troops
         - id: us-bases
-          faction: us
+          seat: us
           statusDimensions: []
           transitions: []
           runtimeProps:
             faction: US
             type: base
         - id: us-irregulars
-          faction: us
+          seat: us
           statusDimensions:
             - activity
           transitions:
@@ -918,21 +918,21 @@ dataAssets:
             type: irregular
             activity: underground
         - id: arvn-troops
-          faction: arvn
+          seat: arvn
           statusDimensions: []
           transitions: []
           runtimeProps:
             faction: ARVN
             type: troops
         - id: arvn-police
-          faction: arvn
+          seat: arvn
           statusDimensions: []
           transitions: []
           runtimeProps:
             faction: ARVN
             type: police
         - id: arvn-rangers
-          faction: arvn
+          seat: arvn
           statusDimensions:
             - activity
           transitions:
@@ -947,21 +947,21 @@ dataAssets:
             type: ranger
             activity: underground
         - id: arvn-bases
-          faction: arvn
+          seat: arvn
           statusDimensions: []
           transitions: []
           runtimeProps:
             faction: ARVN
             type: base
         - id: nva-troops
-          faction: nva
+          seat: nva
           statusDimensions: []
           transitions: []
           runtimeProps:
             faction: NVA
             type: troops
         - id: nva-guerrillas
-          faction: nva
+          seat: nva
           statusDimensions:
             - activity
           transitions:
@@ -976,7 +976,7 @@ dataAssets:
             type: guerrilla
             activity: underground
         - id: nva-bases
-          faction: nva
+          seat: nva
           statusDimensions:
             - tunnel
           transitions:
@@ -991,7 +991,7 @@ dataAssets:
             type: base
             tunnel: untunneled
         - id: vc-guerrillas
-          faction: vc
+          seat: vc
           statusDimensions:
             - activity
           transitions:
@@ -1006,7 +1006,7 @@ dataAssets:
             type: guerrilla
             activity: underground
         - id: vc-bases
-          faction: vc
+          seat: vc
           statusDimensions:
             - tunnel
           transitions:
@@ -1022,40 +1022,40 @@ dataAssets:
             tunnel: untunneled
       inventory:
         - pieceTypeId: us-troops
-          faction: us
+          seat: us
           total: 40
         - pieceTypeId: us-bases
-          faction: us
+          seat: us
           total: 6
         - pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           total: 6
         - pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           total: 30
         - pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           total: 30
         - pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           total: 6
         - pieceTypeId: arvn-bases
-          faction: arvn
+          seat: arvn
           total: 3
         - pieceTypeId: nva-troops
-          faction: nva
+          seat: nva
           total: 40
         - pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           total: 20
         - pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           total: 9
         - pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           total: 30
         - pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           total: 9
   - id: fitl-scenario-full
     kind: scenario
@@ -1072,13 +1072,13 @@ dataAssets:
         eventsPerPile: 12
         coupsPerPile: 1
       startingEligibility:
-        - faction: us
+        - seat: us
           eligible: true
-        - faction: arvn
+        - seat: arvn
           eligible: true
-        - faction: nva
+        - seat: nva
           eligible: true
-        - faction: vc
+        - seat: vc
           eligible: true
       initialTrackValues:
         - trackId: aid
@@ -1097,30 +1097,30 @@ dataAssets:
           value: 30
       outOfPlay:
         - pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 2
         - pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 10
         - pieceTypeId: arvn-bases
-          faction: arvn
+          seat: arvn
           count: 2
         - pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 10
         - pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 3
-      factionPools:
-        - faction: us
+      seatPools:
+        - seat: us
           availableZoneId: available-US:none
           outOfPlayZoneId: out-of-play-US:none
-        - faction: arvn
+        - seat: arvn
           availableZoneId: available-ARVN:none
           outOfPlayZoneId: out-of-play-ARVN:none
-        - faction: nva
+        - seat: nva
           availableZoneId: available-NVA:none
-        - faction: vc
+        - seat: vc
           availableZoneId: available-VC:none
       initialMarkers:
         - spaceId: saigon:none
@@ -1171,225 +1171,225 @@ dataAssets:
       initialPlacements:
         - spaceId: saigon:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: saigon:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: saigon:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: saigon:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 3
         - spaceId: hue:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: hue:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: qui-nhon:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: qui-nhon:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: cam-ranh:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: cam-ranh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: an-loc:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: an-loc:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: can-tho:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: can-tho:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: da-nang:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: da-nang:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kontum:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: kontum:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: binh-dinh:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: quang-nam:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-nam:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: tay-ninh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
           status:
             tunnel: tunneled
         - spaceId: tay-ninh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: phu-bon-phu-yen:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: khanh-hoa:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-hoa-vinh-binh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: ba-xuyen:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-phong:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: kien-giang-an-xuyen:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: north-vietnam:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: north-vietnam:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 3
         - spaceId: central-laos:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: central-laos:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 3
         - spaceId: southern-laos:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: southern-laos:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 3
         - spaceId: the-parrots-beak:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: the-parrots-beak:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 3
   - id: fitl-scenario-short
     kind: scenario
@@ -1410,13 +1410,13 @@ dataAssets:
         - capabilityId: aaa
           side: shaded
       startingEligibility:
-        - faction: us
+        - seat: us
           eligible: true
-        - faction: arvn
+        - seat: arvn
           eligible: true
-        - faction: nva
+        - seat: nva
           eligible: true
-        - faction: vc
+        - seat: vc
           eligible: true
       initialTrackValues:
         - trackId: aid
@@ -1435,24 +1435,24 @@ dataAssets:
           value: 30
       outOfPlay:
         - pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 6
         - pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 10
         - pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 3
-      factionPools:
-        - faction: us
+      seatPools:
+        - seat: us
           availableZoneId: available-US:none
           outOfPlayZoneId: out-of-play-US:none
-        - faction: arvn
+        - seat: arvn
           availableZoneId: available-ARVN:none
           outOfPlayZoneId: out-of-play-ARVN:none
-        - faction: nva
+        - seat: nva
           availableZoneId: available-NVA:none
-        - faction: vc
+        - seat: vc
           availableZoneId: available-VC:none
       initialMarkers:
         - spaceId: da-nang:none
@@ -1500,269 +1500,269 @@ dataAssets:
       initialPlacements:
         - spaceId: da-nang:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: da-nang:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kontum:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: kontum:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: saigon:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: saigon:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: saigon:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 4
         - spaceId: saigon:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: saigon:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: can-tho:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: can-tho:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: can-tho:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 4
         - spaceId: can-tho:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: can-tho:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: arvn-bases
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 4
         - spaceId: quang-nam:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-nam:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 4
         - spaceId: binh-dinh:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: binh-dinh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: khanh-hoa:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: khanh-hoa:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: hue:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: kien-hoa-vinh-binh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: ba-xuyen:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: an-loc:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: qui-nhon:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: cam-ranh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: tay-ninh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
           status:
             tunnel: tunneled
         - spaceId: tay-ninh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: tay-ninh:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: kien-phong:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: kien-giang-an-xuyen:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: north-vietnam:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: north-vietnam:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: north-vietnam:none
           pieceTypeId: nva-troops
-          faction: nva
+          seat: nva
           count: 6
         - spaceId: southern-laos:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: southern-laos:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: southern-laos:none
           pieceTypeId: nva-troops
-          faction: nva
+          seat: nva
           count: 6
         - spaceId: central-laos:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: central-laos:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: the-fishhook:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: the-fishhook:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: the-parrots-beak:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: the-parrots-beak:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
   - id: fitl-scenario-medium
     kind: scenario
@@ -1794,13 +1794,13 @@ dataAssets:
         - capabilityId: m-48-patton
           side: unshaded
       startingEligibility:
-        - faction: us
+        - seat: us
           eligible: true
-        - faction: arvn
+        - seat: arvn
           eligible: true
-        - faction: nva
+        - seat: nva
           eligible: true
-        - faction: vc
+        - seat: vc
           eligible: true
       initialTrackValues:
         - trackId: aid
@@ -1819,24 +1819,24 @@ dataAssets:
           value: 30
       outOfPlay:
         - pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 5
         - pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 10
         - pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 3
-      factionPools:
-        - faction: us
+      seatPools:
+        - seat: us
           availableZoneId: available-US:none
           outOfPlayZoneId: out-of-play-US:none
-        - faction: arvn
+        - seat: arvn
           availableZoneId: available-ARVN:none
           outOfPlayZoneId: out-of-play-ARVN:none
-        - faction: nva
+        - seat: nva
           availableZoneId: available-NVA:none
-        - faction: vc
+        - seat: vc
           availableZoneId: available-VC:none
       initialMarkers:
         - spaceId: binh-dinh:none
@@ -1899,404 +1899,404 @@ dataAssets:
       initialPlacements:
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 4
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 3
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: quang-tri-thua-thien:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 3
         - spaceId: quang-nam:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: quang-nam:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: hue:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: hue:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: da-nang:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: da-nang:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: qui-nhon:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: qui-nhon:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: cam-ranh:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: cam-ranh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: quang-tin-quang-ngai:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kontum:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: kontum:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 1
         - spaceId: kontum:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: binh-dinh:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: binh-dinh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: pleiku-darlac:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: pleiku-darlac:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: khanh-hoa:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: khanh-hoa:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: khanh-hoa:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: khanh-hoa:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: khanh-hoa:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: phu-bon-phu-yen:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: phu-bon-phu-yen:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: phu-bon-phu-yen:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: phu-bon-phu-yen:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 3
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: binh-tuy-binh-thuan:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: saigon:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: saigon:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 2
         - spaceId: saigon:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: saigon:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: saigon:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 4
         - spaceId: saigon:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: saigon:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: quang-duc-long-khanh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: phuoc-long:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: phuoc-long:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 2
         - spaceId: phuoc-long:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: tay-ninh:none
           pieceTypeId: us-bases
-          faction: us
+          seat: us
           count: 1
         - spaceId: tay-ninh:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: tay-ninh:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: tay-ninh:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: tay-ninh:none
           pieceTypeId: vc-bases
-          faction: vc
+          seat: vc
           count: 1
           status:
             tunnel: tunneled
         - spaceId: tay-ninh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 3
         - spaceId: tay-ninh:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: an-loc:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: an-loc:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: can-tho:none
           pieceTypeId: us-troops
-          faction: us
+          seat: us
           count: 3
         - spaceId: can-tho:none
           pieceTypeId: us-irregulars
-          faction: us
+          seat: us
           count: 1
         - spaceId: can-tho:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: can-tho:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-phong:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-phong:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: kien-hoa-vinh-binh:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-hoa-vinh-binh:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: ba-xuyen:none
           pieceTypeId: arvn-police
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: ba-xuyen:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: kien-giang-an-xuyen:none
           pieceTypeId: arvn-bases
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-giang-an-xuyen:none
           pieceTypeId: arvn-troops
-          faction: arvn
+          seat: arvn
           count: 2
         - spaceId: kien-giang-an-xuyen:none
           pieceTypeId: arvn-rangers
-          faction: arvn
+          seat: arvn
           count: 1
         - spaceId: kien-giang-an-xuyen:none
           pieceTypeId: vc-guerrillas
-          faction: vc
+          seat: vc
           count: 1
         - spaceId: north-vietnam:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: north-vietnam:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: north-vietnam:none
           pieceTypeId: nva-troops
-          faction: nva
+          seat: nva
           count: 9
         - spaceId: central-laos:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: central-laos:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: central-laos:none
           pieceTypeId: nva-troops
-          faction: nva
+          seat: nva
           count: 9
         - spaceId: southern-laos:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: southern-laos:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: northeast-cambodia:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: northeast-cambodia:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: the-fishhook:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: the-fishhook:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: the-parrots-beak:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: the-parrots-beak:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
         - spaceId: sihanoukville:none
           pieceTypeId: nva-bases
-          faction: nva
+          seat: nva
           count: 1
         - spaceId: sihanoukville:none
           pieceTypeId: nva-guerrillas
-          faction: nva
+          seat: nva
           count: 2
 ```

@@ -89,11 +89,11 @@ describe('runtime error context contracts', () => {
 
   it('kernelRuntimeError enforces per-code context contract for kernel-emitted codes', () => {
     const error = kernelRuntimeError('TERMINAL_MARGIN_NON_NUMERIC', 'margin must be numeric', {
-      faction: 'US',
+      seat: 'US',
     });
 
     assert.equal(error.code, 'TERMINAL_MARGIN_NON_NUMERIC');
     const context: KernelRuntimeErrorContext<'TERMINAL_MARGIN_NON_NUMERIC'> = error.context!;
-    assert.equal(context.faction, 'US');
+    assert.equal(context.seat, 'US');
   });
 });

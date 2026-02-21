@@ -5,15 +5,15 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-34', order: 34, title: 'SA-2s', sideMode: 'dual', factionOrder: ['NVA', 'US', 'ARVN', 'VC'] },
-  { id: 'card-38', order: 38, title: 'McNamara Line', sideMode: 'single', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
-  { id: 'card-39', order: 39, title: 'Oriskany', sideMode: 'dual', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
-  { id: 'card-44', order: 44, title: 'Ia Drang', sideMode: 'dual', factionOrder: ['NVA', 'ARVN', 'US', 'VC'] },
-  { id: 'card-46', order: 46, title: '559th Transport Grp', sideMode: 'dual', factionOrder: ['NVA', 'ARVN', 'VC', 'US'] },
-  { id: 'card-47', order: 47, title: 'Chu Luc', sideMode: 'dual', factionOrder: ['NVA', 'ARVN', 'VC', 'US'] },
-  { id: 'card-53', order: 53, title: 'Sappers', sideMode: 'dual', factionOrder: ['NVA', 'VC', 'US', 'ARVN'] },
-  { id: 'card-56', order: 56, title: 'Vo Nguyen Giap', sideMode: 'dual', factionOrder: ['NVA', 'VC', 'ARVN', 'US'] },
-  { id: 'card-59', order: 59, title: 'Plei Mei', sideMode: 'dual', factionOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+  { id: 'card-34', order: 34, title: 'SA-2s', sideMode: 'dual', seatOrder: ['NVA', 'US', 'ARVN', 'VC'] },
+  { id: 'card-38', order: 38, title: 'McNamara Line', sideMode: 'single', seatOrder: ['NVA', 'US', 'VC', 'ARVN'] },
+  { id: 'card-39', order: 39, title: 'Oriskany', sideMode: 'dual', seatOrder: ['NVA', 'US', 'VC', 'ARVN'] },
+  { id: 'card-44', order: 44, title: 'Ia Drang', sideMode: 'dual', seatOrder: ['NVA', 'ARVN', 'US', 'VC'] },
+  { id: 'card-46', order: 46, title: '559th Transport Grp', sideMode: 'dual', seatOrder: ['NVA', 'ARVN', 'VC', 'US'] },
+  { id: 'card-47', order: 47, title: 'Chu Luc', sideMode: 'dual', seatOrder: ['NVA', 'ARVN', 'VC', 'US'] },
+  { id: 'card-53', order: 53, title: 'Sappers', sideMode: 'dual', seatOrder: ['NVA', 'VC', 'US', 'ARVN'] },
+  { id: 'card-56', order: 56, title: 'Vo Nguyen Giap', sideMode: 'dual', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
+  { id: 'card-59', order: 59, title: 'Plei Mei', sideMode: 'dual', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
 ] as const;
 
 describe('FITL 1965 NVA-first event-card production spec', () => {
@@ -30,7 +30,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, expected.sideMode);
       assert.equal(card?.metadata?.period, '1965');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
 
       if (expected.sideMode === 'dual') {
@@ -92,7 +92,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
 
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'ia-drang-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['airLift'],
@@ -108,7 +108,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         },
       },
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'ia-drang-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['sweep'],
@@ -124,7 +124,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         },
       },
       {
-        faction: '0',
+        seat: '0',
         sequence: { chain: 'ia-drang-us', step: 2 },
         operationClass: 'operation',
         actionIds: ['assault'],

@@ -21,19 +21,19 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
     return;
   }
 
-  const tokenTypeFactionById = new Map<string, string>();
+  const tokenTypeSeatById = new Map<string, string>();
   for (const tokenType of ctx.def.tokenTypes) {
-    if (typeof tokenType.faction === 'string') {
-      tokenTypeFactionById.set(tokenType.id, tokenType.faction);
+    if (typeof tokenType.seat === 'string') {
+      tokenTypeSeatById.set(tokenType.id, tokenType.seat);
     }
   }
-  const factionFilteredConstraints = constraints.filter(
-    (constraint) => (constraint.pieceFilter.factions?.length ?? 0) > 0,
+  const seatFilteredConstraints = constraints.filter(
+    (constraint) => (constraint.pieceFilter.seats?.length ?? 0) > 0,
   );
-  if (factionFilteredConstraints.length > 0) {
+  if (seatFilteredConstraints.length > 0) {
     const requiredTokenTypeIds = new Set<string>();
     const allTokenTypeIds = ctx.def.tokenTypes.map((tokenType) => tokenType.id);
-    for (const constraint of factionFilteredConstraints) {
+    for (const constraint of seatFilteredConstraints) {
       const scopedPieceTypeIds = constraint.pieceFilter.pieceTypeIds;
       if (scopedPieceTypeIds !== undefined && scopedPieceTypeIds.length > 0) {
         for (const pieceTypeId of scopedPieceTypeIds) {
@@ -45,17 +45,17 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
         }
       }
     }
-    const missingFactionTokenTypes = [...requiredTokenTypeIds]
-      .filter((tokenTypeId) => !tokenTypeFactionById.has(tokenTypeId))
+    const missingSeatTokenTypes = [...requiredTokenTypeIds]
+      .filter((tokenTypeId) => !tokenTypeSeatById.has(tokenTypeId))
       .sort((left, right) => left.localeCompare(right));
-    if (missingFactionTokenTypes.length > 0) {
+    if (missingSeatTokenTypes.length > 0) {
       throw effectRuntimeError(
         'tokenRuntimeValidationFailed',
-        'Stacking constraint faction filters require canonical tokenType.faction mapping.',
+        'Stacking constraint seat filters require canonical tokenType.seat mapping.',
         {
           effectType,
           zoneId,
-          missingTokenTypeFactions: missingFactionTokenTypes,
+          missingTokenTypeSeats: missingSeatTokenTypes,
         },
       );
     }
@@ -65,7 +65,7 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
     ctx.def.zones,
     zoneId,
     zoneContentsAfter,
-    tokenTypeFactionById,
+    tokenTypeSeatById,
   );
   if (violations.length > 0) {
     const first = violations[0]!;

@@ -333,7 +333,7 @@ function derivePlayerVars(state: GameState): ReadonlyMap<PlayerId, readonly Rend
   const playerVars = new Map<PlayerId, readonly RenderVariable[]>();
 
   for (const playerId of numericPlayerIds) {
-    const playerEntry = state.perPlayerVars[String(playerId)] ?? {};
+    const playerEntry = state.perPlayerVars[playerId] ?? {};
     const vars: readonly RenderVariable[] = Object.entries(playerEntry)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => ({
@@ -392,7 +392,7 @@ function deriveTracks(state: GameState, trackDefs: readonly NumericTrackDef[]): 
     id: track.id,
     displayName: formatIdAsDisplayName(track.id),
     scope: track.scope,
-    faction: track.faction ?? null,
+    seat: track.seat ?? null,
     min: track.min,
     max: track.max,
     currentValue: resolveTrackValue(state, track),
@@ -405,17 +405,17 @@ function resolveTrackValue(state: GameState, track: NumericTrackDef): number {
     return typeof value === 'number' ? value : track.min;
   }
 
-  const faction = track.faction;
-  if (faction === undefined || state.turnOrderState.type !== 'cardDriven') {
+  const seat = track.seat;
+  if (seat === undefined || state.turnOrderState.type !== 'cardDriven') {
     return track.min;
   }
 
-  const playerIndex = state.turnOrderState.runtime.factionOrder.indexOf(faction);
+  const playerIndex = state.turnOrderState.runtime.seatOrder.indexOf(seat);
   if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.playerCount) {
     return track.min;
   }
 
-  const value = state.perPlayerVars[String(playerIndex)]?.[track.id];
+  const value = state.perPlayerVars[playerIndex]?.[track.id];
   return typeof value === 'number' ? value : track.min;
 }
 
@@ -622,8 +622,8 @@ function deriveTokens(
 function buildTokenTypeFactionById(def: GameDef): ReadonlyMap<string, string> {
   const factionByTokenType = new Map<string, string>();
   for (const tokenType of def.tokenTypes) {
-    if (typeof tokenType.faction === 'string' && tokenType.faction.length > 0) {
-      factionByTokenType.set(tokenType.id, tokenType.faction);
+    if (typeof tokenType.seat === 'string' && tokenType.seat.length > 0) {
+      factionByTokenType.set(tokenType.id, tokenType.seat);
     }
   }
   return factionByTokenType;
@@ -914,7 +914,7 @@ function deriveFactionByPlayer(state: GameState): ReadonlyMap<PlayerId, string> 
     return factionByPlayer;
   }
 
-  state.turnOrderState.runtime.factionOrder.forEach((faction, index) => {
+  state.turnOrderState.runtime.seatOrder.forEach((faction, index) => {
     if (index >= state.playerCount) {
       return;
     }
@@ -938,7 +938,7 @@ function derivePlayers(
       displayName: faction === null ? formatIdAsDisplayName(String(index)) : formatIdAsDisplayName(faction),
       isHuman: context.playerSeats.get(playerId) === 'human',
       isActive: playerId === state.activePlayer,
-      isEliminated: state.perPlayerVars[String(index)]?.eliminated === true,
+      isEliminated: state.perPlayerVars[index]?.eliminated === true,
       factionId: faction,
     };
   });
@@ -952,7 +952,7 @@ function deriveTurnOrder(state: GameState, factionByPlayer: ReadonlyMap<PlayerId
   }
 
   if (state.turnOrderState.type === 'cardDriven') {
-    const byFaction = state.turnOrderState.runtime.factionOrder
+    const byFaction = state.turnOrderState.runtime.seatOrder
       .map((faction) => findPlayerIdForFaction(factionByPlayer, faction))
       .filter((playerId): playerId is PlayerId => playerId !== null);
     const seen = new Set(byFaction);
@@ -1226,12 +1226,12 @@ function deriveTerminal(terminal: TerminalResult | null): RenderModel['terminal'
         victory: {
           timing: terminal.victory.timing,
           checkpointId: terminal.victory.checkpointId,
-          winnerFaction: terminal.victory.winnerFaction,
+          winnerFaction: terminal.victory.winnerSeat,
           ...(terminal.victory.ranking === undefined
             ? {}
             : {
                 ranking: terminal.victory.ranking.map((entry) => ({
-                  faction: entry.faction,
+                  faction: entry.seat,
                   margin: entry.margin,
                   rank: entry.rank,
                   tieBreakKey: entry.tieBreakKey,

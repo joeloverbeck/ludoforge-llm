@@ -5,17 +5,17 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
-  { id: 'card-91', order: 91, title: 'Bob Hope', sideMode: 'dual', factionOrder: ['VC', 'US', 'NVA', 'ARVN'] },
-  { id: 'card-92', order: 92, title: 'SEALORDS', sideMode: 'dual', factionOrder: ['VC', 'US', 'NVA', 'ARVN'] },
-  { id: 'card-94', order: 94, title: 'Tunnel Rats', sideMode: 'single', factionOrder: ['VC', 'US', 'NVA', 'ARVN'] },
-  { id: 'card-96', order: 96, title: 'APC', sideMode: 'dual', factionOrder: ['VC', 'US', 'ARVN', 'NVA'] },
-  { id: 'card-103', order: 103, title: 'Kent State', sideMode: 'dual', factionOrder: ['VC', 'NVA', 'US', 'ARVN'] },
-  { id: 'card-111', order: 111, title: 'Agent Orange', sideMode: 'dual', factionOrder: ['VC', 'ARVN', 'US', 'NVA'] },
-  { id: 'card-113', order: 113, title: 'Ruff Puff', sideMode: 'dual', factionOrder: ['VC', 'ARVN', 'US', 'NVA'] },
-  { id: 'card-115', order: 115, title: 'Typhoon Kate', sideMode: 'single', factionOrder: ['VC', 'ARVN', 'US', 'NVA'] },
-  { id: 'card-117', order: 117, title: 'Corps Commander', sideMode: 'dual', factionOrder: ['VC', 'ARVN', 'NVA', 'US'] },
-  { id: 'card-119', order: 119, title: 'My Lai', sideMode: 'dual', factionOrder: ['VC', 'ARVN', 'NVA', 'US'] },
-  { id: 'card-120', order: 120, title: 'US Press Corps', sideMode: 'dual', factionOrder: ['VC', 'ARVN', 'NVA', 'US'] },
+  { id: 'card-91', order: 91, title: 'Bob Hope', sideMode: 'dual', seatOrder: ['VC', 'US', 'NVA', 'ARVN'] },
+  { id: 'card-92', order: 92, title: 'SEALORDS', sideMode: 'dual', seatOrder: ['VC', 'US', 'NVA', 'ARVN'] },
+  { id: 'card-94', order: 94, title: 'Tunnel Rats', sideMode: 'single', seatOrder: ['VC', 'US', 'NVA', 'ARVN'] },
+  { id: 'card-96', order: 96, title: 'APC', sideMode: 'dual', seatOrder: ['VC', 'US', 'ARVN', 'NVA'] },
+  { id: 'card-103', order: 103, title: 'Kent State', sideMode: 'dual', seatOrder: ['VC', 'NVA', 'US', 'ARVN'] },
+  { id: 'card-111', order: 111, title: 'Agent Orange', sideMode: 'dual', seatOrder: ['VC', 'ARVN', 'US', 'NVA'] },
+  { id: 'card-113', order: 113, title: 'Ruff Puff', sideMode: 'dual', seatOrder: ['VC', 'ARVN', 'US', 'NVA'] },
+  { id: 'card-115', order: 115, title: 'Typhoon Kate', sideMode: 'single', seatOrder: ['VC', 'ARVN', 'US', 'NVA'] },
+  { id: 'card-117', order: 117, title: 'Corps Commander', sideMode: 'dual', seatOrder: ['VC', 'ARVN', 'NVA', 'US'] },
+  { id: 'card-119', order: 119, title: 'My Lai', sideMode: 'dual', seatOrder: ['VC', 'ARVN', 'NVA', 'US'] },
+  { id: 'card-120', order: 120, title: 'US Press Corps', sideMode: 'dual', seatOrder: ['VC', 'ARVN', 'NVA', 'US'] },
 ] as const;
 
 describe('FITL 1968 VC-first event-card production spec', () => {
@@ -32,7 +32,7 @@ describe('FITL 1968 VC-first event-card production spec', () => {
       assert.equal(card?.order, expected.order);
       assert.equal(card?.sideMode, expected.sideMode);
       assert.equal(card?.metadata?.period, '1968');
-      assert.deepEqual(card?.metadata?.factionOrder, expected.factionOrder);
+      assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.metadata?.flavorText, 'string', `${expected.id} must include flavorText`);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
 
@@ -91,8 +91,8 @@ describe('FITL 1968 VC-first event-card production spec', () => {
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.from, 'played:none');
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.to, 'leader:none');
     assert.equal(
-      (conditional?.else?.[0] as { grantFreeOperation?: { faction?: string; operationClass?: string; actionIds?: string[] } })?.grantFreeOperation
-        ?.faction,
+      (conditional?.else?.[0] as { grantFreeOperation?: { seat?: string; operationClass?: string; actionIds?: string[] } })?.grantFreeOperation
+        ?.seat,
       '3',
     );
     assert.equal(

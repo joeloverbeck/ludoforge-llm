@@ -305,7 +305,7 @@ describe('texas hand mechanics integration', () => {
 
     assert.equal(next.globalVars.handsPlayed, 1);
     assert.equal(next.currentPhase, 'preflop');
-    assert.equal(zoneCount(next, 'deck:none'), 44);
+    assert.equal(zoneCount(next, 'deck:none'), 48);
     assert.equal(zoneCount(next, 'burn:none'), 0);
     assert.equal(zoneCount(next, 'community:none'), 0);
     assert.equal(totalChipsInPlay(next), totalChipsInPlay(initial), 'uncontested path should conserve chips');

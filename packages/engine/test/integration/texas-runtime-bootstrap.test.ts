@@ -108,7 +108,7 @@ describe('texas runtime bootstrap and position flow', () => {
     const communityCount = nextState.zones['community:none']?.length ?? 0;
 
     assert.equal(nextState.currentPhase, 'preflop');
-    assert.equal(deckCount, 44);
+    assert.equal(deckCount, 48);
     assert.equal(burnCount, 0);
     assert.equal(communityCount, 0);
   });

@@ -53,6 +53,7 @@ turnStructure:
               - moveAll:
                   from: { zoneExpr: { concat: ['hand:', { ref: binding, name: $player }] } }
                   to: muck:none
+        - moveAll: { from: muck:none, to: deck:none }
         - shuffle: { zone: deck:none }
         - forEach:
             bind: $player

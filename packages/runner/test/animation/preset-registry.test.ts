@@ -308,6 +308,51 @@ describe('preset-registry', () => {
     expect(secondFlipVars['scaleX']).toBe(1);
   });
 
+  it('card-flip-3d swaps face visibility at midpoint when face controller is available', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const setFaceUp = vi.fn();
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    registry.require('card-flip-3d').createTween(
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:1',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'card-flip-3d',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('card-flip-3d').defaultDurationSeconds,
+        spriteRefs: {
+          tokenContainers: new Map([['tok:1', token]]),
+          tokenFaceControllers: new Map([['tok:1', { setFaceUp }]]),
+          zoneContainers: new Map(),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    expect(setFaceUp).toHaveBeenCalledWith(false);
+
+    const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
+    const midpointCallback = midpointVars['onComplete'];
+    expect(typeof midpointCallback).toBe('function');
+
+    (midpointCallback as () => void)();
+    expect(setFaceUp).toHaveBeenLastCalledWith(true);
+  });
+
   it('card-flip-3d is mapped to cardFlip kind instead of tint-flash', () => {
     const registry = createPresetRegistry();
     const preset = registry.requireCompatible('card-flip-3d', 'cardFlip');

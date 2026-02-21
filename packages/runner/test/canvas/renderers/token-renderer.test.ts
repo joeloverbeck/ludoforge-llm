@@ -421,6 +421,35 @@ describe('createTokenRenderer', () => {
     expect(frontSymbol.circleArgs).toBeNull();
   });
 
+  it('exposes face controllers that can toggle front/back visibility for animation presets', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider();
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'leader', faceUp: false, isSelectable: true })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const backBase = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
+    const controller = renderer.getFaceControllerMap?.().get('token:1');
+    expect(controller).toBeDefined();
+    expect(backBase.visible).toBe(true);
+    expect(frontBase.visible).toBe(false);
+
+    controller?.setFaceUp(true);
+    expect(backBase.visible).toBe(false);
+    expect(frontBase.visible).toBe(true);
+
+    controller?.setFaceUp(false);
+    expect(backBase.visible).toBe(true);
+    expect(frontBase.visible).toBe(false);
+  });
+
   it('resolves token symbols from token properties through provider', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({ tokenVisual: { shape: 'beveled-cylinder' } });
@@ -784,11 +813,14 @@ describe('createTokenRenderer', () => {
     );
 
     const mapView = renderer.getContainerMap();
+    const faceMapView = renderer.getFaceControllerMap?.();
     expect(mapView.size).toBe(2);
+    expect(faceMapView?.size).toBe(2);
 
     renderer.destroy();
 
     expect(mapView.size).toBe(0);
+    expect(faceMapView?.size).toBe(0);
     expect(parent.children).toHaveLength(0);
   });
 

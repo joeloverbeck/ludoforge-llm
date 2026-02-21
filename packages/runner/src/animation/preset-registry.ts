@@ -17,11 +17,16 @@ export interface PresetTweenContext {
   readonly durationSeconds: number;
   readonly spriteRefs: {
     readonly tokenContainers: ReadonlyMap<string, unknown>;
+    readonly tokenFaceControllers?: ReadonlyMap<string, TokenFaceControllerRef>;
     readonly zoneContainers: ReadonlyMap<string, unknown>;
     readonly zonePositions: {
       readonly positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>;
     };
   };
+}
+
+export interface TokenFaceControllerRef {
+  setFaceUp(faceUp: boolean): void;
 }
 
 export type PresetTweenFactory = (
@@ -350,13 +355,29 @@ function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: P
   }
 
   const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  const faceController = context.spriteRefs.tokenFaceControllers?.get(descriptor.tokenId);
   if (target === undefined) {
     appendDelay(context, context.durationSeconds);
     return;
   }
 
+  const oldFaceUp = typeof descriptor.oldValue === 'boolean' ? descriptor.oldValue : undefined;
+  const newFaceUp = typeof descriptor.newValue === 'boolean' ? descriptor.newValue : undefined;
+  if (oldFaceUp !== undefined) {
+    faceController?.setFaceUp(oldFaceUp);
+  }
+
   const halfDuration = context.durationSeconds / 2;
-  appendTween(context, target, { scaleX: 0 }, halfDuration);
+  appendTween(context, target, {
+    scaleX: 0,
+    ...(newFaceUp === undefined || faceController === undefined
+      ? {}
+      : {
+          onComplete: () => {
+            faceController.setFaceUp(newFaceUp);
+          },
+        }),
+  }, halfDuration);
   appendTween(context, target, { scaleX: 1 }, halfDuration);
 }
 

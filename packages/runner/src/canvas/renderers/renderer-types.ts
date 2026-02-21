@@ -28,7 +28,12 @@ export interface TokenRenderer {
     highlightedTokenIDs?: ReadonlySet<string>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
+  getFaceControllerMap?(): ReadonlyMap<string, TokenFaceController>;
   destroy(): void;
+}
+
+export interface TokenFaceController {
+  setFaceUp(faceUp: boolean): void;
 }
 
 export interface AdjacencyRenderer {

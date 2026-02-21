@@ -13,6 +13,7 @@ type VisualAnimationDescriptor = Exclude<AnimationDescriptor, { kind: 'skipped' 
 
 export interface TimelineSpriteRefs {
   readonly tokenContainers: ReadonlyMap<string, Container>;
+  readonly tokenFaceControllers?: ReadonlyMap<string, { setFaceUp(faceUp: boolean): void }>;
   readonly zoneContainers: ReadonlyMap<string, Container>;
   readonly zonePositions: ZonePositionMap;
 }

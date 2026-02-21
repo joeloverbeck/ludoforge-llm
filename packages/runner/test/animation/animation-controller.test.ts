@@ -300,6 +300,78 @@ describe('createAnimationController', () => {
     controller.destroy();
   });
 
+  it('passes token face controllers to timeline builder when provided', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const tokenContainers = new Map([['tok:1', {}]]);
+    const tokenFaceControllers = new Map([['tok:1', { setFaceUp: vi.fn() }]]);
+    const zoneContainers = new Map([['zone:a', {}], ['zone:b', {}]]);
+    const zonePositions = {
+      positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+      bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+    };
+    const presetRegistry = createPresetRegistry();
+
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => tokenContainers as never,
+        tokenFaceControllers: () => tokenFaceControllers,
+        zoneContainers: () => zoneContainers as never,
+        zonePositions: () => zonePositions,
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry,
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          {
+            kind: 'moveToken',
+            tokenId: 'tok:1',
+            from: 'zone:a',
+            to: 'zone:b',
+            preset: 'arc-tween',
+            isTriggered: false,
+          } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(buildTimelineMock).toHaveBeenCalledWith(
+      expect.any(Array),
+      presetRegistry,
+      expect.objectContaining({
+        tokenContainers,
+        tokenFaceControllers,
+      }),
+      expect.any(Object),
+      undefined,
+    );
+
+    controller.destroy();
+  });
+
   it('passes configured animation preset overrides to traceToDescriptors', () => {
     const store = createControllerStore();
     const traceToDescriptorsMock = vi.fn(() => []);

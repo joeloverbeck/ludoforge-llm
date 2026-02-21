@@ -53,6 +53,7 @@ export interface AnimationControllerOptions {
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
+  readonly tokenFaceControllers?: () => ReadonlyMap<string, { setFaceUp(faceUp: boolean): void }>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
 }
@@ -115,6 +116,9 @@ export function createAnimationController(
         deps.presetRegistry,
         {
           tokenContainers: options.tokenContainers(),
+          ...(options.tokenFaceControllers === undefined
+            ? {}
+            : { tokenFaceControllers: options.tokenFaceControllers() }),
           zoneContainers: options.zoneContainers(),
           zonePositions: options.zonePositions(),
         },

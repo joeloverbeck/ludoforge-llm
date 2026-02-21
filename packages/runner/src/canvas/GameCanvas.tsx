@@ -286,6 +286,7 @@ export async function createGameCanvasRuntime(
       store: options.store,
       visualConfigProvider: options.visualConfigProvider,
       tokenContainers: () => tokenRenderer.getContainerMap(),
+      tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),
     });

@@ -5,7 +5,7 @@ import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
 import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
-import type { FactionColorProvider, TokenRenderer } from './renderer-types';
+import type { FactionColorProvider, TokenFaceController, TokenRenderer } from './renderer-types';
 import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
@@ -62,6 +62,7 @@ export function createTokenRenderer(
 ): TokenRenderer {
   const tokenContainers = new Map<string, Container>();
   const tokenContainerByTokenId = new Map<string, Container>();
+  const tokenFaceControllerByTokenId = new Map<string, TokenFaceController>();
   const visualsByContainer = new WeakMap<Container, TokenVisualElements>();
   const selectionCleanupByRenderId = new Map<string, () => void>();
   const boundTokenIdByRenderId = new Map<string, string>();
@@ -76,6 +77,7 @@ export function createTokenRenderer(
       const renderEntries = buildRenderEntries(tokens);
       const nextTokenIds = new Set(renderEntries.map((entry) => entry.renderId));
       tokenContainerByTokenId.clear();
+      tokenFaceControllerByTokenId.clear();
 
       for (const [renderId, tokenContainer] of tokenContainers) {
         if (nextTokenIds.has(renderId)) {
@@ -139,13 +141,13 @@ export function createTokenRenderer(
         if (entry.tokenIds.length === 1) {
           selectableByTokenId.set(token.id, token.isSelectable);
         }
-        for (const tokenId of entry.tokenIds) {
-          tokenContainerByTokenId.set(tokenId, tokenContainer);
-        }
-
         const visuals = visualsByContainer.get(tokenContainer);
         if (visuals === undefined) {
           continue;
+        }
+        for (const tokenId of entry.tokenIds) {
+          tokenContainerByTokenId.set(tokenId, tokenContainer);
+          tokenFaceControllerByTokenId.set(tokenId, createFaceController(visuals));
         }
 
         const tokenIndexInZone = zoneTokenCounts.get(token.zoneID) ?? 0;
@@ -181,6 +183,10 @@ export function createTokenRenderer(
       return tokenContainerByTokenId;
     },
 
+    getFaceControllerMap(): ReadonlyMap<string, TokenFaceController> {
+      return tokenFaceControllerByTokenId;
+    },
+
     destroy(): void {
       for (const cleanup of selectionCleanupByRenderId.values()) {
         cleanup();
@@ -189,6 +195,7 @@ export function createTokenRenderer(
       boundTokenIdByRenderId.clear();
       selectableByTokenId.clear();
       tokenContainerByTokenId.clear();
+      tokenFaceControllerByTokenId.clear();
 
       for (const tokenContainer of tokenContainers.values()) {
         tokenContainer.removeFromParent();
@@ -253,11 +260,7 @@ function updateTokenVisuals(
   drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(shape, dimensions));
   tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
   syncCardContent(tokenContainer, visuals, token, cardTemplate, isFaceUp);
-
-  visuals.frontBase.visible = isFaceUp;
-  visuals.frontSymbol.visible = isFaceUp;
-  visuals.backBase.visible = !isFaceUp;
-  visuals.backSymbol.visible = !isFaceUp;
+  setTokenFaceVisibility(visuals, isFaceUp);
   visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
   visuals.countBadge.visible = tokenCount > 1;
   visuals.countBadge.position.set(dimensions.width / 2 - 2, -dimensions.height / 2 + 2);
@@ -411,6 +414,24 @@ function syncCardContent(
   const contentContainer = ensureFrontContentContainer(tokenContainer, visuals);
   drawCardContent(contentContainer, cardTemplate, token.properties);
   contentContainer.visible = isFaceUp;
+}
+
+function createFaceController(visuals: TokenVisualElements): TokenFaceController {
+  return {
+    setFaceUp(faceUp: boolean): void {
+      setTokenFaceVisibility(visuals, faceUp);
+    },
+  };
+}
+
+function setTokenFaceVisibility(visuals: TokenVisualElements, isFaceUp: boolean): void {
+  visuals.frontBase.visible = isFaceUp;
+  visuals.frontSymbol.visible = isFaceUp;
+  visuals.backBase.visible = !isFaceUp;
+  visuals.backSymbol.visible = !isFaceUp;
+  if (visuals.frontContent !== null) {
+    visuals.frontContent.visible = isFaceUp;
+  }
 }
 
 function resolveTokenHitArea(

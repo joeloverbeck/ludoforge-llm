@@ -97,204 +97,253 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(ValueExprSchema.parse(expression), expression);
   });
 
-  it('parses all EffectAST variants', () => {
-    const effects: EffectAST[] = [
-      { setVar: { scope: 'global', var: 'gold', value: 1 } },
-      { setActivePlayer: { player: { chosen: '$targetPlayer' } } },
-      { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
+  describe('EffectAST schema contracts', () => {
+    const cases: ReadonlyArray<{ name: string; effects: readonly EffectAST[] }> = [
       {
-        transferVar: {
-          from: { scope: 'pvar', player: 'actor', var: 'coins' },
-          to: { scope: 'global', var: 'pot' },
-          amount: 5,
-          min: 1,
-          max: 10,
-          actualBind: '$actual',
-        },
-      },
-      { moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor', position: 'top' } },
-      {
-        moveToken: {
-          token: '$card',
-          from: { zoneExpr: { ref: 'tokenZone', token: '$card' } },
-          to: { zoneExpr: { concat: ['discard:', { ref: 'activePlayer' }] } },
-        },
-      },
-      { moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } },
-      { moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } },
-      { moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } },
-      { moveTokenAdjacent: { token: '$unit', from: { zoneExpr: 'board:active' }, direction: 'north' } },
-      { draw: { from: 'deck:none', to: 'hand:actor', count: 1 } },
-      { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: 'hand:actor' }, count: 1 } },
-      { reveal: { zone: 'hand:actor', to: 'all' } },
-      {
-        reveal: {
-          zone: { zoneExpr: 'hand:actor' },
-          to: { chosen: '$targetPlayer' },
-          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
-        },
-      },
-      { shuffle: { zone: 'deck:none' } },
-      { shuffle: { zone: { zoneExpr: 'deck:none' } } },
-      { createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } },
-      { createToken: { type: 'card', zone: { zoneExpr: 'deck:none' }, props: { cost: 3, rare: false } } },
-      { destroyToken: { token: '$dead' } },
-      { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
-      {
-        rollRandom: {
-          bind: '$die',
-          min: 1,
-          max: 6,
-          in: [{ setVar: { scope: 'global', var: 'roll', value: { ref: 'binding', name: '$die' } } }],
-        },
-      },
-      {
-        if: {
-          when: { op: 'and', args: [{ op: '==', left: 1, right: 1 }] },
-          then: [{ addVar: { scope: 'global', var: 'turn', delta: 1 } }],
-          else: [{ shuffle: { zone: 'deck:none' } }],
-        },
-      },
-      {
-        forEach: {
-          bind: '$p',
-          over: { query: 'players' },
-          effects: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$p' } } }],
-          limit: 10,
-        },
-      },
-      {
-        reduce: {
-          itemBind: '$n',
-          accBind: '$acc',
-          over: { query: 'intsInRange', min: 1, max: 3 },
-          initial: 0,
-          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
-          resultBind: '$sum',
-          in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$sum' } } }],
-        },
-      },
-      {
-        removeByPriority: {
-          budget: 3,
-          groups: [
-            {
-              bind: '$tok',
-              over: { query: 'tokensInZone', zone: 'board:none' },
-              to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
-              countBind: '$removed',
-            },
-          ],
-          remainingBind: '$remaining',
-          in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$removed' } } }],
-        },
-      },
-      {
-        let: {
-          bind: '$n',
-          value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
-          in: [{ chooseN: { internalDecisionId: 'decision:$pick', bind: '$pick', options: { query: 'players' }, n: 1 } }],
-        },
-      },
-      {
-        bindValue: {
-          bind: '$score',
-          value: { op: '+', left: 1, right: 2 },
-        },
-      },
-      {
-        evaluateSubset: {
-          source: { query: 'tokensInZone', zone: 'deck:none' },
-          subsetSize: 2,
-          subsetBind: '$subset',
-          compute: [],
-          scoreExpr: {
-            aggregate: {
-              op: 'sum',
-              query: { query: 'binding', name: '$subset' },
-              bind: '$token',
-              valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+        name: 'variable and player state operations',
+        effects: [
+          { setVar: { scope: 'global', var: 'gold', value: 1 } },
+          { setActivePlayer: { player: { chosen: '$targetPlayer' } } },
+          { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
+          {
+            transferVar: {
+              from: { scope: 'pvar', player: 'actor', var: 'coins' },
+              to: { scope: 'global', var: 'pot' },
+              amount: 5,
+              min: 1,
+              max: 10,
+              actualBind: '$actual',
             },
           },
-          resultBind: '$score',
-          bestSubsetBind: '$best',
-          in: [{ setVar: { scope: 'global', var: 'bestScore', value: { ref: 'binding', name: '$score' } } }],
-        },
+        ],
       },
       {
-        chooseOne: {
-          internalDecisionId: 'decision:$zone',
-          bind: '$zone',
-          options: { query: 'zones', filter: { owner: 'active' } },
-        },
+        name: 'token and zone movement operations',
+        effects: [
+          { moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor', position: 'top' } },
+          {
+            moveToken: {
+              token: '$card',
+              from: { zoneExpr: { ref: 'tokenZone', token: '$card' } },
+              to: { zoneExpr: { concat: ['discard:', { ref: 'activePlayer' }] } },
+            },
+          },
+          { moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } },
+          { moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } },
+          { moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } },
+          { moveTokenAdjacent: { token: '$unit', from: { zoneExpr: 'board:active' }, direction: 'north' } },
+          { draw: { from: 'deck:none', to: 'hand:actor', count: 1 } },
+          { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: 'hand:actor' }, count: 1 } },
+          { shuffle: { zone: 'deck:none' } },
+          { shuffle: { zone: { zoneExpr: 'deck:none' } } },
+        ],
       },
       {
-        chooseN: {
-          internalDecisionId: 'decision:$token',
-          bind: '$token',
-          options: { query: 'tokensInAdjacentZones', zone: 'board:actor' },
-          n: 2,
-        },
-      },
-      { chooseN: { internalDecisionId: 'decision:$opt', bind: '$opt', options: { query: 'players' }, max: 2 } },
-      {
-        chooseN: {
-          internalDecisionId: 'decision:$range',
-          bind: '$range',
-          options: { query: 'players' },
-          min: 1,
-          max: 3,
-        },
-      },
-      {
-        chooseN: {
-          internalDecisionId: 'decision:$dynamicRange',
-          bind: '$dynamicRange',
-          options: { query: 'players' },
-          min: { if: { when: true, then: 0, else: 1 } },
-          max: { ref: 'gvar', var: 'maxTargets' },
-        },
+        name: 'hidden-information visibility operations',
+        effects: [
+          { reveal: { zone: 'hand:actor', to: 'all' } },
+          {
+            reveal: {
+              zone: { zoneExpr: 'hand:actor' },
+              to: { chosen: '$targetPlayer' },
+              filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+            },
+          },
+          { conceal: { zone: 'hand:actor' } },
+          { conceal: { zone: 'hand:actor', from: 'all' } },
+          { conceal: { zone: 'hand:actor', from: { id: asPlayerId(2) } } },
+          { conceal: { zone: 'hand:actor', from: { chosen: '$targetPlayer' } } },
+          { conceal: { zone: 'hand:actor', filter: [{ prop: 'faction', op: 'neq', value: 'US' }] } },
+        ],
       },
       {
-        grantFreeOperation: {
-          id: 'grant-vc-op',
-          seat: '3',
-          executeAsSeat: 'self',
-          operationClass: 'limitedOperation',
-          actionIds: ['operation'],
-          zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },
-          uses: 2,
-          sequence: { chain: 'vc-ops', step: 1 },
-        },
+        name: 'token lifecycle and property operations',
+        effects: [
+          { createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } },
+          { createToken: { type: 'card', zone: { zoneExpr: 'deck:none' }, props: { cost: 3, rare: false } } },
+          { destroyToken: { token: '$dead' } },
+          { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+        ],
       },
       {
-        gotoPhaseExact: {
-          phase: 'commitment',
-        },
+        name: 'control flow and binding operations',
+        effects: [
+          {
+            rollRandom: {
+              bind: '$die',
+              min: 1,
+              max: 6,
+              in: [{ setVar: { scope: 'global', var: 'roll', value: { ref: 'binding', name: '$die' } } }],
+            },
+          },
+          {
+            if: {
+              when: { op: 'and', args: [{ op: '==', left: 1, right: 1 }] },
+              then: [{ addVar: { scope: 'global', var: 'turn', delta: 1 } }],
+              else: [{ shuffle: { zone: 'deck:none' } }],
+            },
+          },
+          {
+            forEach: {
+              bind: '$p',
+              over: { query: 'players' },
+              effects: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$p' } } }],
+              limit: 10,
+            },
+          },
+          {
+            reduce: {
+              itemBind: '$n',
+              accBind: '$acc',
+              over: { query: 'intsInRange', min: 1, max: 3 },
+              initial: 0,
+              next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+              resultBind: '$sum',
+              in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$sum' } } }],
+            },
+          },
+          {
+            let: {
+              bind: '$n',
+              value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
+              in: [{ chooseN: { internalDecisionId: 'decision:$pick', bind: '$pick', options: { query: 'players' }, n: 1 } }],
+            },
+          },
+          {
+            bindValue: {
+              bind: '$score',
+              value: { op: '+', left: 1, right: 2 },
+            },
+          },
+        ],
       },
       {
-        advancePhase: {},
+        name: 'choice and search operations',
+        effects: [
+          {
+            evaluateSubset: {
+              source: { query: 'tokensInZone', zone: 'deck:none' },
+              subsetSize: 2,
+              subsetBind: '$subset',
+              compute: [],
+              scoreExpr: {
+                aggregate: {
+                  op: 'sum',
+                  query: { query: 'binding', name: '$subset' },
+                  bind: '$token',
+                  valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+                },
+              },
+              resultBind: '$score',
+              bestSubsetBind: '$best',
+              in: [{ setVar: { scope: 'global', var: 'bestScore', value: { ref: 'binding', name: '$score' } } }],
+            },
+          },
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$zone',
+              bind: '$zone',
+              options: { query: 'zones', filter: { owner: 'active' } },
+            },
+          },
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$token',
+              bind: '$token',
+              options: { query: 'tokensInAdjacentZones', zone: 'board:actor' },
+              n: 2,
+            },
+          },
+          { chooseN: { internalDecisionId: 'decision:$opt', bind: '$opt', options: { query: 'players' }, max: 2 } },
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$range',
+              bind: '$range',
+              options: { query: 'players' },
+              min: 1,
+              max: 3,
+            },
+          },
+          {
+            chooseN: {
+              internalDecisionId: 'decision:$dynamicRange',
+              bind: '$dynamicRange',
+              options: { query: 'players' },
+              min: { if: { when: true, then: 0, else: 1 } },
+              max: { ref: 'gvar', var: 'maxTargets' },
+            },
+          },
+        ],
       },
       {
-        pushInterruptPhase: {
-          phase: 'commitment',
-          resumePhase: 'main',
-        },
+        name: 'priority removal and phase operations',
+        effects: [
+          {
+            removeByPriority: {
+              budget: 3,
+              groups: [
+                {
+                  bind: '$tok',
+                  over: { query: 'tokensInZone', zone: 'board:none' },
+                  to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+                  countBind: '$removed',
+                },
+              ],
+              remainingBind: '$remaining',
+              in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$removed' } } }],
+            },
+          },
+          {
+            grantFreeOperation: {
+              id: 'grant-vc-op',
+              seat: '3',
+              executeAsSeat: 'self',
+              operationClass: 'limitedOperation',
+              actionIds: ['operation'],
+              zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },
+              uses: 2,
+              sequence: { chain: 'vc-ops', step: 1 },
+            },
+          },
+          {
+            gotoPhaseExact: {
+              phase: 'commitment',
+            },
+          },
+          {
+            advancePhase: {},
+          },
+          {
+            pushInterruptPhase: {
+              phase: 'commitment',
+              resumePhase: 'main',
+            },
+          },
+          {
+            popInterruptPhase: {},
+          },
+        ],
       },
       {
-        popInterruptPhase: {},
+        name: 'spatial marker operations',
+        effects: [
+          { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
+          { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
+          { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
+          { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
+          { setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } },
+          { flipGlobalMarker: { marker: { ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } },
+          { shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } },
+        ],
       },
-      { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
-      { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
-      { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
-      { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
-      { setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } },
-      { flipGlobalMarker: { marker: { ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } },
-      { shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } },
     ];
 
-    for (const effect of effects) {
-      assert.deepEqual(EffectASTSchema.parse(effect), effect);
+    for (const effectCase of cases) {
+      it(`parses ${effectCase.name}`, () => {
+        for (const effect of effectCase.effects) {
+          assert.deepEqual(EffectASTSchema.parse(effect), effect);
+        }
+      });
     }
   });
 
@@ -715,6 +764,28 @@ describe('AST and selector schemas', () => {
     });
 
     assert.equal(result.success, false);
+  });
+
+  it('rejects malformed conceal payloads', () => {
+    const invalidFromShape = EffectASTSchema.safeParse({
+      conceal: { zone: 'hand:actor', from: { playerId: 1 } },
+    });
+    assert.equal(invalidFromShape.success, false);
+
+    const invalidFilterOp = EffectASTSchema.safeParse({
+      conceal: { zone: 'hand:actor', filter: [{ prop: 'faction', op: 'contains', value: 'US' }] },
+    });
+    assert.equal(invalidFilterOp.success, false);
+
+    const invalidFilterValueShape = EffectASTSchema.safeParse({
+      conceal: { zone: 'hand:actor', filter: [{ prop: 'faction', op: 'in', value: ['US', { bad: true }] }] },
+    });
+    assert.equal(invalidFilterValueShape.success, false);
+
+    const unknownConcealKey = EffectASTSchema.safeParse({
+      conceal: { zone: 'hand:actor', from: 'all', extra: true },
+    });
+    assert.equal(unknownConcealKey.success, false);
   });
 
   it('rejects malformed spatial ConditionAST payloads', () => {

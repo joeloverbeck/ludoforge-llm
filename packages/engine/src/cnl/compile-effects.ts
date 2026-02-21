@@ -616,12 +616,46 @@ function lowerConcealEffect(
   path: string,
 ): EffectLoweringResult<EffectAST> {
   const zone = lowerZoneSelector(source.zone, context, scope, `${path}.zone`);
+  const diagnostics = [...zone.diagnostics];
   if (zone.value === null) {
-    return { value: null, diagnostics: zone.diagnostics };
+    return { value: null, diagnostics };
   }
+
+  let from: 'all' | PlayerSel | undefined;
+  if (source.from === 'all') {
+    from = 'all';
+  } else if (source.from !== undefined) {
+    const loweredFrom = lowerPlayerSelector(source.from, scope, `${path}.from`);
+    diagnostics.push(...loweredFrom.diagnostics);
+    if (loweredFrom.value === null) {
+      return { value: null, diagnostics };
+    }
+    from = loweredFrom.value;
+  }
+
+  let filter: readonly TokenFilterPredicate[] | undefined;
+  if (source.filter !== undefined) {
+    if (!Array.isArray(source.filter)) {
+      diagnostics.push(...missingCapability(`${path}.filter`, 'conceal filter', source.filter, ['Array<{ prop, op, value }>']).diagnostics);
+      return { value: null, diagnostics };
+    }
+    const loweredFilter = lowerTokenFilterArray(source.filter, makeConditionContext(context, scope), `${path}.filter`);
+    diagnostics.push(...loweredFilter.diagnostics);
+    if (loweredFilter.value === null) {
+      return { value: null, diagnostics };
+    }
+    filter = loweredFilter.value;
+  }
+
   return {
-    value: { conceal: { zone: zone.value } },
-    diagnostics: zone.diagnostics,
+    value: {
+      conceal: {
+        zone: zone.value,
+        ...(from === undefined ? {} : { from }),
+        ...(filter === undefined ? {} : { filter }),
+      },
+    },
+    diagnostics,
   };
 }
 

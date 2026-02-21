@@ -265,6 +265,37 @@ describe('zobrist full hash and incremental update helpers', () => {
     assert.equal(incremental, recomputed);
   });
 
+  it('reveal grant filter predicate ordering does not change state hash', () => {
+    const table = createZobristTable(createGameDef());
+    const base = createBaseState();
+    const left: GameState = {
+      ...base,
+      reveals: {
+        'hand:none': [{
+          observers: [asPlayerId(1)],
+          filter: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 1 },
+          ],
+        }],
+      },
+    };
+    const right: GameState = {
+      ...base,
+      reveals: {
+        'hand:none': [{
+          observers: [asPlayerId(1)],
+          filter: [
+            { prop: 'rank', op: 'eq', value: 1 },
+            { prop: 'faction', op: 'eq', value: 'US' },
+          ],
+        }],
+      },
+    };
+
+    assert.equal(computeFullHash(table, left), computeFullHash(table, right));
+  });
+
   it('different transition paths to the same final state produce the same hash', () => {
     const table = createZobristTable(createGameDef());
     const before = createBaseState();

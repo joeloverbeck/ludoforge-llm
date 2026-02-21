@@ -124,6 +124,45 @@ describe('effects reveal', () => {
     });
   });
 
+  it('deduplicates semantically equivalent reveal filters regardless of predicate order', () => {
+    const effects: readonly EffectAST[] = [
+      {
+        reveal: {
+          zone: 'hand:0',
+          to: { id: asPlayerId(1) },
+          filter: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 1 },
+          ],
+        },
+      },
+      {
+        reveal: {
+          zone: 'hand:0',
+          to: { id: asPlayerId(1) },
+          filter: [
+            { prop: 'rank', op: 'eq', value: 1 },
+            { prop: 'faction', op: 'eq', value: 'US' },
+          ],
+        },
+      },
+    ];
+
+    const result = applyEffects(effects, makeCtx());
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [
+        {
+          observers: [asPlayerId(1)],
+          filter: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 1 },
+          ],
+        },
+      ],
+    });
+  });
+
   it('throws runtime error when state is missing resolved zone entry', () => {
     const ctx = makeCtx({
       state: {
@@ -184,6 +223,163 @@ describe('effects conceal', () => {
     assert.deepEqual(result.state.reveals, {
       'hand:1': [{ observers: [asPlayerId(0)] }],
     });
+  });
+
+  it('removes only grants matching conceal.from selector', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [
+            { observers: [asPlayerId(0)] },
+            { observers: [asPlayerId(1)] },
+            { observers: 'all' },
+          ],
+        },
+      },
+    });
+
+    const effect: EffectAST = { conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } };
+    const result = applyEffect(effect, ctx);
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [
+        { observers: [asPlayerId(0)] },
+        { observers: 'all' },
+      ],
+    });
+  });
+
+  it('removes only grants matching conceal.filter', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [
+            { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+            { observers: [asPlayerId(1)] },
+          ],
+        },
+      },
+    });
+
+    const effect: EffectAST = {
+      conceal: {
+        zone: 'hand:0',
+        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+      },
+    };
+    const result = applyEffect(effect, ctx);
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [
+        { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+        { observers: [asPlayerId(1)] },
+      ],
+    });
+  });
+
+  it('applies AND semantics when conceal.from and conceal.filter are both present', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [
+            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+            { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+          ],
+        },
+      },
+    });
+
+    const effect: EffectAST = {
+      conceal: {
+        zone: 'hand:0',
+        from: { id: asPlayerId(1) },
+        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+      },
+    };
+    const result = applyEffect(effect, ctx);
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [
+        { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+        { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+      ],
+    });
+  });
+
+  it('treats conceal.from=all as matching only public grants', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [
+            { observers: 'all' },
+            { observers: [asPlayerId(0)] },
+            { observers: [asPlayerId(1)] },
+          ],
+        },
+      },
+    });
+
+    const effect: EffectAST = { conceal: { zone: 'hand:0', from: 'all' } };
+    const result = applyEffect(effect, ctx);
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [
+        { observers: [asPlayerId(0)] },
+        { observers: [asPlayerId(1)] },
+      ],
+    });
+  });
+
+  it('is a no-op when selective conceal matches no grants', () => {
+    const state = {
+      ...makeState(),
+      reveals: {
+        'hand:0': [{ observers: [asPlayerId(0)] }],
+      },
+    };
+    const ctx = makeCtx({ state });
+    const effect: EffectAST = { conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } };
+    const result = applyEffect(effect, ctx);
+
+    assert.equal(result.state, state);
+  });
+
+  it('matches conceal.filter regardless of predicate order', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [
+            {
+              observers: [asPlayerId(1)],
+              filter: [
+                { prop: 'faction', op: 'eq', value: 'US' },
+                { prop: 'rank', op: 'eq', value: 1 },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    const effect: EffectAST = {
+      conceal: {
+        zone: 'hand:0',
+        filter: [
+          { prop: 'rank', op: 'eq', value: 1 },
+          { prop: 'faction', op: 'eq', value: 'US' },
+        ],
+      },
+    };
+    const result = applyEffect(effect, ctx);
+
+    assert.equal(result.state.reveals, undefined);
   });
 
   it('is idempotent', () => {

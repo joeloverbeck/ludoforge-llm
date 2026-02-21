@@ -101,6 +101,11 @@ describe('binder-surface-registry', () => {
     ]);
   });
 
+  it('tracks conceal binding template references for from.chosen parity with reveal', () => {
+    assert.deepEqual(EFFECT_BINDER_SURFACES.reveal.bindingTemplateReferencerPaths, [['to', 'chosen']]);
+    assert.deepEqual(EFFECT_BINDER_SURFACES.conceal.bindingTemplateReferencerPaths, [['from', 'chosen']]);
+  });
+
   it('defines a centralized registry for non-effect binder referencer shapes', () => {
     assert.equal(NON_EFFECT_BINDER_REFERENCER_SURFACES.length > 0, true);
     assert.deepEqual(

@@ -15,6 +15,7 @@ export * from './move-runtime-bindings.js';
 export * from './apply-move.js';
 export * from './trigger-dispatch.js';
 export * from './phase-advance.js';
+export * from './hidden-info-grants.js';
 export * from './action-actor.js';
 export * from './action-usage.js';
 export * from './terminal.js';

@@ -100,6 +100,55 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers conceal effect optional from/filter fields without changing zone-only behavior', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          conceal: {
+            zone: 'hand:$actor',
+            from: { chosen: '$actor' },
+            filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+          },
+        },
+        {
+          conceal: {
+            zone: 'hand:$actor',
+            from: 'all',
+          },
+        },
+        {
+          conceal: {
+            zone: 'hand:$actor',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        conceal: {
+          zone: 'hand:$actor',
+          from: { chosen: '$actor' },
+          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        },
+      },
+      {
+        conceal: {
+          zone: 'hand:$actor',
+          from: 'all',
+        },
+      },
+      {
+        conceal: {
+          zone: 'hand:$actor',
+        },
+      },
+    ]);
+  });
+
   it('rejects reduce effects with conflicting binder identifiers', () => {
     const result = lowerEffectArray(
       [

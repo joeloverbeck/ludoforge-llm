@@ -1,4 +1,5 @@
 import type { GameDef, GameState, ZobristFeature, ZobristTable } from './types.js';
+import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 
 const MASK_64 = (1n << 64n) - 1n;
 const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
@@ -279,7 +280,7 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
         zoneId,
         slot,
         observers: grant.observers,
-        filterKey: JSON.stringify(grant.filter ?? null),
+        filterKey: canonicalTokenFilterKey(grant.filter),
       });
     });
   }

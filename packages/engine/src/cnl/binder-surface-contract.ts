@@ -111,7 +111,7 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
-    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    bindingTemplateReferencerPaths: [['from', 'chosen']],
     zoneSelectorReferencerPaths: [['zone']],
   },
   shuffle: {

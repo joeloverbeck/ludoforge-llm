@@ -53,6 +53,27 @@ describe('GameSpec capability conformance fixtures', () => {
     assert.deepEqual(result.reveals?.['hand:0'], [{ observers: 'all' }]);
   });
 
+  it('covers selective conceal from compiled GameSpecDoc with order-insensitive filter matching', () => {
+    const def = compileConformanceFixture('hidden-reveal-conceal.md');
+    const start = initialState(def, 13, 2).state;
+    const revealMove: Move = { actionId: asActionId('revealFiltered'), params: {} };
+    const concealMove: Move = { actionId: asActionId('concealFilteredReordered'), params: {} };
+
+    const revealed = applyMove(def, start, revealMove).state;
+    assert.deepEqual(revealed.reveals?.['hand:0'], [
+      {
+        observers: [asPlayerId(1)],
+        filter: [
+          { prop: 'faction', op: 'eq', value: 'US' },
+          { prop: 'rank', op: 'eq', value: 1 },
+        ],
+      },
+    ]);
+
+    const concealed = applyMove(def, revealed, concealMove).state;
+    assert.equal(concealed.reveals, undefined);
+  });
+
   it('covers deterministic turn/phase progression from compiled GameSpecDoc', () => {
     const def = compileConformanceFixture('turn-phase.md');
     const move: Move = { actionId: asActionId('commit'), params: {} };

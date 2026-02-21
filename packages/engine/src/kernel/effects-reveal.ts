@@ -2,6 +2,12 @@ import type { PlayerId } from './branded.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { effectRuntimeError } from './effect-error.js';
+import {
+  canonicalTokenFilterKey,
+  canonicalizeObserverSelection,
+  removeMatchingRevealGrants,
+  revealGrantEquals,
+} from './hidden-info-grants.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, RevealGrant } from './types.js';
 
@@ -31,9 +37,32 @@ export const applyConceal = (
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
-  const remainingReveals = Object.fromEntries(
-    Object.entries(existingReveals).filter(([revealedZoneId]) => revealedZoneId !== zoneId),
-  ) as Record<string, readonly RevealGrant[]>;
+  let from: 'all' | readonly PlayerId[] | undefined;
+  if (effect.conceal.from !== undefined) {
+    if (effect.conceal.from === 'all') {
+      from = 'all';
+    } else {
+      from = canonicalizeObserverSelection(resolvePlayerSel(effect.conceal.from, evalCtx), ctx.state.playerCount);
+    }
+  }
+  const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKey(effect.conceal.filter);
+  const existingZoneGrants = existingReveals[zoneId] ?? [];
+  const removal = removeMatchingRevealGrants(existingZoneGrants, {
+    ...(from === undefined ? {} : { from }),
+    ...(expectedFilterKey === null ? {} : { filterKey: expectedFilterKey }),
+  });
+  const remainingZoneGrants = removal.remaining;
+
+  if (removal.removedCount === 0) {
+    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
+  }
+
+  const remainingReveals = { ...existingReveals } as Record<string, readonly RevealGrant[]>;
+  if (remainingZoneGrants.length === 0) {
+    delete remainingReveals[zoneId];
+  } else {
+    remainingReveals[zoneId] = remainingZoneGrants;
+  }
 
   if (Object.keys(remainingReveals).length === 0) {
     const stateWithoutReveals = Object.fromEntries(
@@ -43,31 +72,6 @@ export const applyConceal = (
   }
 
   return { state: { ...ctx.state, reveals: remainingReveals }, rng: ctx.rng, emittedEvents: [] };
-};
-
-const normalizeObservers = (players: readonly PlayerId[]): readonly PlayerId[] => (
-  [...new Set(players)].sort((left, right) => left - right)
-);
-
-const filterKey = (grant: RevealGrant): string => JSON.stringify(grant.filter ?? null);
-
-const grantsEqual = (left: RevealGrant, right: RevealGrant): boolean => {
-  if (left.observers === 'all' || right.observers === 'all') {
-    if (left.observers !== right.observers) {
-      return false;
-    }
-  } else {
-    if (left.observers.length !== right.observers.length) {
-      return false;
-    }
-    for (let index = 0; index < left.observers.length; index += 1) {
-      if (left.observers[index] !== right.observers[index]) {
-        return false;
-      }
-    }
-  }
-
-  return filterKey(left) === filterKey(right);
 };
 
 export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknown }>, ctx: EffectContext): EffectResult => {
@@ -87,8 +91,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
   if (effect.reveal.to === 'all') {
     observers = 'all';
   } else {
-    const selected = normalizeObservers(resolvePlayerSel(effect.reveal.to, evalCtx));
-    observers = selected.length === ctx.state.playerCount ? 'all' : selected;
+    observers = canonicalizeObserverSelection(resolvePlayerSel(effect.reveal.to, evalCtx), ctx.state.playerCount);
   }
 
   const grant: RevealGrant = {
@@ -98,7 +101,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
 
   const existingReveals = ctx.state.reveals ?? {};
   const existingZoneGrants = existingReveals[zoneId] ?? [];
-  if (existingZoneGrants.some((existing) => grantsEqual(existing, grant))) {
+  if (existingZoneGrants.some((existing) => revealGrantEquals(existing, grant))) {
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 

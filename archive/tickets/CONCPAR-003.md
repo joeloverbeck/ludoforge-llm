@@ -1,6 +1,6 @@
 # CONCPAR-003: Selective conceal runtime implementation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel (effects-reveal.ts)
@@ -94,3 +94,19 @@ Replace the blanket zone-key removal with selective grant filtering:
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "conceal"`
 2. `pnpm turbo test && pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-02-21
+- **What changed**:
+  - Reworked `applyConceal` in `packages/engine/src/kernel/effects-reveal.ts` to support selective conceal matching by `from`, `filter`, or both.
+  - Preserved blanket conceal behavior when neither `from` nor `filter` is authored.
+  - Added observer matching normalization parity with reveal semantics (`'all'` canonicalization for full-player selection).
+  - Added selective conceal coverage in `packages/engine/test/unit/effects-reveal.test.ts`.
+- **Deviations from original plan**:
+  - None in scope; implementation and tests aligned with the ticket plan.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine test -- --test-name-pattern "effects reveal|effects conceal|conceal"` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

@@ -282,6 +282,7 @@ describe('traceToDescriptors', () => {
         to: 'zone:hand:p1',
         preset: 'arc-tween',
         isTriggered: false,
+        destinationRole: 'hand',
       },
       {
         kind: 'cardBurn',
@@ -366,6 +367,7 @@ describe('traceToDescriptors', () => {
         to: 'zone:hand:p1',
         preset: 'pulse',
         isTriggered: false,
+        destinationRole: 'hand',
       },
       {
         kind: 'cardBurn',
@@ -691,6 +693,62 @@ describe('traceToDescriptors', () => {
     expect(traceToDescriptors(trace, { detailLevel: 'minimal' }).map((d) => d.kind)).toEqual([
       'phaseTransition',
     ]);
+  });
+
+  it('populates destinationRole for cardDeal based on zone roles', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace, { cardContext: CARD_CONTEXT });
+    expect(result).toEqual([
+      expect.objectContaining({
+        kind: 'cardDeal',
+        to: 'zone:board',
+        destinationRole: 'shared',
+      }),
+      expect.objectContaining({
+        kind: 'cardDeal',
+        to: 'zone:hand:p1',
+        destinationRole: 'hand',
+      }),
+    ]);
+  });
+
+  it('omits destinationRole for cardDeal when no card context is provided', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    // Without card context, moveToken stays as moveToken (no cardDeal classification)
+    const result = traceToDescriptors(trace);
+    expect(result).toEqual([
+      expect.objectContaining({
+        kind: 'moveToken',
+        to: 'zone:hand:p1',
+      }),
+    ]);
+    const descriptor = result[0] as { destinationRole?: string };
+    expect(descriptor.destinationRole).toBeUndefined();
   });
 
   it('is deterministic and does not mutate input', () => {

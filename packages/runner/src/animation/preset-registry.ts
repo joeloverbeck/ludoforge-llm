@@ -314,6 +314,22 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
     ease: ARC_TWEEN_EASE,
   }, halfDuration);
   appendTween(context, target, { x: to.x, y: to.y, ease: ARC_TWEEN_EASE }, halfDuration);
+
+  if (descriptor.kind === 'cardDeal' && descriptor.destinationRole === 'shared') {
+    const faceController = context.spriteRefs.tokenFaceControllers?.get(descriptor.tokenId);
+    const flipHalf = 0.1;
+    appendTween(context, target, {
+      scaleX: 0,
+      ...(faceController === undefined
+        ? {}
+        : {
+            onComplete: () => {
+              faceController.setFaceUp(true);
+            },
+          }),
+    }, flipHalf);
+    appendTween(context, target, { scaleX: 1 }, flipHalf);
+  }
 }
 
 function createFadeInScaleTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {

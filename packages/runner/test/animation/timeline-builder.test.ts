@@ -6,7 +6,7 @@ import type {
   AnimationSequencingPolicy,
   VisualAnimationDescriptorKind,
 } from '../../src/animation/animation-types';
-import type { EphemeralContainerFactory } from '../../src/animation/ephemeral-container-factory';
+import { createEphemeralContainerFactory, type EphemeralContainerFactory } from '../../src/animation/ephemeral-container-factory';
 import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { createPresetRegistry, type AnimationPresetDefinition } from '../../src/animation/preset-registry';
 import { buildTimeline, type TimelineSpriteRefs } from '../../src/animation/timeline-builder';
@@ -981,6 +981,64 @@ describe('buildTimeline ephemeral containers', () => {
     // No factory, no throw — just skip
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
     expect(moveTween).not.toHaveBeenCalled();
+  });
+
+  it('ephemeral face controllers toggle back/front child visibility', () => {
+    const runtime = createRuntimeFixture();
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+
+    const capturedControllers: ReadonlyMap<string, { setFaceUp(faceUp: boolean): void }>[] = [];
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: (_descriptor, context) => {
+          if (context.spriteRefs.tokenFaceControllers) {
+            capturedControllers.push(context.spriteRefs.tokenFaceControllers);
+          }
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    expect(capturedControllers.length).toBe(1);
+    const controller = capturedControllers[0]!.get('tok:missing')!;
+    expect(controller).toBeDefined();
+
+    // Find the ephemeral container created by the real factory
+    const ephemeralContainer = parent.children.find((c) => c.label === 'ephemeral:tok:missing')!;
+    const backChild = ephemeralContainer.getChildByLabel('back')!;
+    const frontChild = ephemeralContainer.getChildByLabel('front')!;
+
+    // Initially: back visible, front hidden
+    expect(backChild.visible).toBe(true);
+    expect(frontChild.visible).toBe(false);
+
+    // Flip face-up
+    controller.setFaceUp(true);
+    expect(backChild.visible).toBe(false);
+    expect(frontChild.visible).toBe(true);
+
+    // Flip face-down again
+    controller.setFaceUp(false);
+    expect(backChild.visible).toBe(true);
+    expect(frontChild.visible).toBe(false);
   });
 
   it('handles mixed persistent and ephemeral token containers', () => {

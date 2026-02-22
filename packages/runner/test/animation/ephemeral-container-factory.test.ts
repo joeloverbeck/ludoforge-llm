@@ -79,6 +79,30 @@ describe('createEphemeralContainerFactory', () => {
     expect(bounds.height).toBeLessThan(71);
   });
 
+  it('creates containers with back and front Graphics children', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+
+    const container = factory.create('tok:faces');
+
+    const backChild = container.getChildByLabel('back');
+    const frontChild = container.getChildByLabel('front');
+    expect(backChild).toBeInstanceOf(Graphics);
+    expect(frontChild).toBeInstanceOf(Graphics);
+  });
+
+  it('front child is initially hidden and back child is visible', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+
+    const container = factory.create('tok:visibility');
+
+    const backChild = container.getChildByLabel('back');
+    const frontChild = container.getChildByLabel('front');
+    expect(backChild!.visible).toBe(true);
+    expect(frontChild!.visible).toBe(false);
+  });
+
   it('falls back to default dimensions when no options provided', () => {
     const parent = new Container();
     const factory = createEphemeralContainerFactory(parent);

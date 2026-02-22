@@ -30,6 +30,7 @@ import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
 import { PhaseBannerOverlay } from './PhaseBannerOverlay.js';
+import { ShowdownOverlay } from './ShowdownOverlay.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
 import { AnimationControls } from './AnimationControls.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
@@ -292,6 +293,7 @@ export function GameContainer({
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
               <PhaseBannerOverlay store={store} />
+              <ShowdownOverlay store={store} />
               <TerminalOverlay
                 store={store}
                 {...(onNewGame === undefined ? {} : { onNewGame })}

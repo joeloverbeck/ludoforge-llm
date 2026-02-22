@@ -41,6 +41,14 @@ function mapEntry(
       {
         const semanticKind = classifyCardSemantic(entry, options?.cardContext);
         if (semanticKind === 'cardDeal' || semanticKind === 'cardBurn') {
+          const destinationRole =
+            semanticKind === 'cardDeal'
+              ? options?.cardContext?.zoneRoles.shared.has(entry.to)
+                ? ('shared' as const)
+                : options?.cardContext?.zoneRoles.hand.has(entry.to)
+                  ? ('hand' as const)
+                  : undefined
+              : undefined;
           return {
             kind: semanticKind,
             tokenId: entry.tokenId,
@@ -48,6 +56,7 @@ function mapEntry(
             to: entry.to,
             preset: resolvePreset(entry.kind, semanticKind, options, presetRegistry),
             isTriggered: triggered,
+            ...(destinationRole === undefined ? {} : { destinationRole }),
           };
         }
       }

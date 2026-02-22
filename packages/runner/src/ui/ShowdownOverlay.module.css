@@ -1,0 +1,122 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 19, 0.6);
+  padding: var(--space-lg);
+}
+
+.card {
+  width: min(560px, calc(100vw - (2 * var(--space-lg))));
+  max-height: calc(100vh - (4 * var(--space-lg)));
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-panel) 90%, black);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
+  color: var(--text-primary);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-family: var(--font-ui);
+  text-align: center;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+}
+
+.cardRow {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.playerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.playerEntry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-panel) 82%, white 8%);
+}
+
+.playerHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.playerRank {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: 700;
+  min-width: 2ch;
+}
+
+.playerName {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  flex: 1;
+}
+
+.playerScore {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.playerCards {
+  display: flex;
+  gap: var(--space-xs);
+  padding-left: var(--space-md);
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.button {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 36%, var(--bg-panel));
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.button:hover {
+  background: color-mix(in srgb, var(--accent) 52%, var(--bg-panel));
+}

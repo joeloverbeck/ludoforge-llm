@@ -158,8 +158,13 @@ function provisionEphemeralContainers(
       const container = factory.create(descriptor.tokenId);
       ephemeralTokens.set(descriptor.tokenId, container);
       ephemeralFaceControllers.set(descriptor.tokenId, {
-        setFaceUp() {
-          // Ephemeral containers always show face-down; ignore flip requests.
+        setFaceUp(faceUp: boolean) {
+          const backChild = container.getChildByLabel('back');
+          const frontChild = container.getChildByLabel('front');
+          if (backChild !== null && frontChild !== null) {
+            backChild.visible = !faceUp;
+            frontChild.visible = faceUp;
+          }
         },
       });
     }

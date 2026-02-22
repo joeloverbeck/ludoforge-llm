@@ -672,6 +672,149 @@ describe('preset-registry', () => {
     expect(timeline.add).toHaveBeenCalledWith(subTimeline);
   });
 
+  it('arc-tween appends flip sub-animation for cardDeal with destinationRole shared', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 0, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const setFaceUp = vi.fn();
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        tokenFaceControllers: new Map([['tok:1', { setFaceUp }]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 300, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+        destinationRole: 'shared',
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    // 2 arc phases + 2 flip phases = 4 calls
+    expect(gsap.to).toHaveBeenCalledTimes(4);
+
+    const calls = gsap.to.mock.calls as unknown[][];
+    // Third call: scaleX -> 0 (first half of flip)
+    const flipFirstHalf = calls[2]![1] as Record<string, unknown>;
+    expect(flipFirstHalf['scaleX']).toBe(0);
+    expect(flipFirstHalf['duration']).toBe(0.1);
+    expect(typeof flipFirstHalf['onComplete']).toBe('function');
+
+    // Fourth call: scaleX -> 1 (second half of flip)
+    const flipSecondHalf = calls[3]![1] as Record<string, unknown>;
+    expect(flipSecondHalf['scaleX']).toBe(1);
+    expect(flipSecondHalf['duration']).toBe(0.1);
+
+    // Execute the onComplete callback
+    (flipFirstHalf['onComplete'] as () => void)();
+    expect(setFaceUp).toHaveBeenCalledWith(true);
+  });
+
+  it('arc-tween does NOT append flip for cardDeal with destinationRole hand', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 0, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 300, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+        destinationRole: 'hand',
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    // Only 2 arc phases, no flip
+    expect(gsap.to).toHaveBeenCalledTimes(2);
+  });
+
+  it('arc-tween does NOT append flip for moveToken (non-cardDeal)', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 300, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    // Only 2 arc phases, no flip
+    expect(gsap.to).toHaveBeenCalledTimes(2);
+  });
+
   it('zone-pulse emits alpha+tint tween for zoneHighlight', () => {
     const registry = createPresetRegistry();
     const zone = { alpha: 1, tint: 0xffffff };

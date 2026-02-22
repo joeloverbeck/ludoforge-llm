@@ -71,6 +71,7 @@ export interface CardDealDescriptor extends BaseAnimationDescriptor {
   readonly tokenId: string;
   readonly from: string;
   readonly to: string;
+  readonly destinationRole?: 'hand' | 'shared';
 }
 
 export interface CardBurnDescriptor extends BaseAnimationDescriptor {

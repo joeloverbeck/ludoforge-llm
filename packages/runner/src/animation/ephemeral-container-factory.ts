@@ -3,6 +3,7 @@ import { Container, Graphics } from 'pixi.js';
 import { safeDestroyContainer } from '../canvas/renderers/safe-destroy.js';
 
 const CARD_BACK_COLOR = 0x1f2937;
+const CARD_FRONT_COLOR = 0xf0f0f0;
 const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
 const STROKE_COLOR = 0x0f172a;
@@ -34,11 +35,21 @@ export function createEphemeralContainerFactory(
       container.alpha = 0;
 
       const back = new Graphics();
+      back.label = 'back';
       back
         .roundRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 3)
         .fill(CARD_BACK_COLOR)
         .stroke({ color: STROKE_COLOR, width: STROKE_WIDTH, alpha: STROKE_ALPHA });
       container.addChild(back);
+
+      const front = new Graphics();
+      front.label = 'front';
+      front
+        .roundRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 3)
+        .fill(CARD_FRONT_COLOR)
+        .stroke({ color: STROKE_COLOR, width: STROKE_WIDTH, alpha: STROKE_ALPHA });
+      front.visible = false;
+      container.addChild(front);
 
       parentContainer.addChild(container);
       created.push(container);

@@ -65,6 +65,29 @@ export interface DiagnosticQueueEvent {
   readonly isPlaying: boolean;
 }
 
+export interface DiagnosticPlayerConfig {
+  readonly seat: number;
+  readonly type: string;
+}
+
+export interface DiagnosticTokenFaceState {
+  readonly tokenId: string;
+  readonly faceUp: boolean;
+}
+
+export interface DiagnosticRenderSummary {
+  readonly visibleTokenCount: number;
+  readonly hiddenTokenCount: number;
+  readonly faceUpCount: number;
+  readonly faceDownCount: number;
+}
+
+export interface DiagnosticChoiceEvent {
+  readonly actionId: string;
+  readonly selectedValue: unknown;
+  readonly timestampIso: string;
+}
+
 export interface DiagnosticBatch {
   readonly batchId: number;
   readonly timestampIso: string;
@@ -79,4 +102,8 @@ export interface DiagnosticBatch {
   readonly tokenVisibilityInits: readonly TokenVisibilityInitEntry[];
   readonly queueEvent?: DiagnosticQueueEvent;
   readonly warnings: readonly string[];
+  readonly playerConfig?: readonly DiagnosticPlayerConfig[];
+  readonly tokenFaceStates?: readonly DiagnosticTokenFaceState[];
+  readonly renderSummary?: DiagnosticRenderSummary;
+  readonly choiceEvents?: readonly DiagnosticChoiceEvent[];
 }

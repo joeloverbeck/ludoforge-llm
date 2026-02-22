@@ -191,6 +191,15 @@ export function createTokenRenderer(
       return tokenFaceControllerByTokenId;
     },
 
+    reconcileFaceState(tokens: readonly RenderToken[]): void {
+      for (const token of tokens) {
+        const faceController = tokenFaceControllerByTokenId.get(token.id);
+        if (faceController !== undefined) {
+          faceController.setFaceUp(token.faceUp);
+        }
+      }
+    },
+
     destroy(): void {
       for (const cleanup of selectionCleanupByRenderId.values()) {
         cleanup();

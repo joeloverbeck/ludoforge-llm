@@ -78,6 +78,7 @@ export function deriveRenderModel(
     zoneDerivation.visibleTokenIDsByZone,
     selectionTargets.selectableTokenIDs,
     staticDerivation.tokenTypeFactionById,
+    context.playerID,
   );
   const adjacencies = deriveAdjacencies(def, zones, highlightedAdjacencyKeys);
   const globalVars = deriveGlobalVars(state);
@@ -587,6 +588,7 @@ function deriveTokens(
   visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>,
   selectableTokenIDs: ReadonlySet<string>,
   tokenTypeFactionById: ReadonlyMap<string, string>,
+  viewingPlayerID: PlayerId,
 ): readonly RenderToken[] {
   const tokens: RenderToken[] = [];
 
@@ -608,7 +610,7 @@ function deriveTokens(
         zoneID: zone.id,
         ownerID: zone.ownerID,
         factionId: resolveTokenFactionId(token, tokenTypeFactionById),
-        faceUp: true,
+        faceUp: deriveTokenFaceUp(zone.visibility, zone.ownerID, viewingPlayerID, token),
         properties: token.props,
         isSelectable: selectableTokenIDs.has(String(token.id)),
         isSelected: false,
@@ -617,6 +619,24 @@ function deriveTokens(
   }
 
   return tokens;
+}
+
+function deriveTokenFaceUp(
+  zoneVisibility: RenderZone['visibility'],
+  zoneOwnerID: PlayerId | null,
+  viewingPlayerID: PlayerId,
+  token: Token,
+): boolean {
+  if (zoneVisibility === 'public') {
+    return true;
+  }
+  if (zoneVisibility === 'owner' && zoneOwnerID === viewingPlayerID) {
+    return true;
+  }
+  if (typeof token.props['faceUp'] === 'boolean') {
+    return token.props['faceUp'];
+  }
+  return true;
 }
 
 function buildTokenTypeFactionById(def: GameDef): ReadonlyMap<string, string> {

@@ -388,6 +388,15 @@ actions:
         - { op: '==', left: { ref: pvar, player: actor, var: allIn }, right: false }
         - { op: '>', left: { ref: pvar, player: actor, var: chipStack }, right: 0 }
         - { op: '==', left: { ref: pvar, player: actor, var: actedSinceLastFullRaise }, right: false }
+        - op: '<'
+          left:
+            op: '+'
+            left: { ref: pvar, player: actor, var: streetBet }
+            right: { ref: pvar, player: actor, var: chipStack }
+          right:
+            op: '+'
+            left: { ref: gvar, var: currentBet }
+            right: { ref: gvar, var: lastRaiseSize }
     cost: []
     effects:
       - let:

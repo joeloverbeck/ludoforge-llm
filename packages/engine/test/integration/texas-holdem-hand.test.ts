@@ -208,7 +208,12 @@ describe('texas hand mechanics integration', () => {
     assert.equal(openingActions.has('check'), false, 'check must be illegal when streetBet < currentBet');
     assert.equal(openingActions.has('call'), true, 'call must be legal when currentBet > streetBet');
     assert.equal(openingActions.has('fold'), true);
-    assert.equal(openingActions.has('allIn'), true, 'allIn requires positive chipStack');
+    const canAffordMinRaise = actorStreetBet + actorStack >= currentBet + lastRaiseSize;
+    assert.equal(
+      openingActions.has('allIn'),
+      !canAffordMinRaise,
+      'allIn is legal only when player cannot afford the minimum raise (short-stack)',
+    );
 
     const raiseAmounts = legalMoves(def, state)
       .filter((move) => String(move.actionId) === 'raise')

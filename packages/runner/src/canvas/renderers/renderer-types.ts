@@ -29,6 +29,7 @@ export interface TokenRenderer {
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
   getFaceControllerMap?(): ReadonlyMap<string, TokenFaceController>;
+  reconcileFaceState?(tokens: readonly RenderToken[]): void;
   destroy(): void;
 }
 

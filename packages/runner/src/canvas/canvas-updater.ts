@@ -113,6 +113,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
           const snapshotToApply = queuedSnapshot ?? latestSnapshot;
           queuedSnapshot = null;
           applySnapshot(snapshotToApply);
+          deps.tokenRenderer.reconcileFaceState?.(snapshotToApply.tokens);
         }),
       );
 

@@ -2,7 +2,11 @@ import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 
 import type {
   DiagnosticBatch,
+  DiagnosticChoiceEvent,
+  DiagnosticPlayerConfig,
   DiagnosticQueueEvent,
+  DiagnosticRenderSummary,
+  DiagnosticTokenFaceState,
   EphemeralCreatedEntry,
   FaceControllerCallEntry,
   SpriteResolutionEntry,
@@ -22,6 +26,10 @@ export interface DiagnosticBuffer {
   recordFaceControllerCall(entry: FaceControllerCallEntry): void;
   recordTokenVisibilityInit(entry: TokenVisibilityInitEntry): void;
   recordQueueEvent(entry: DiagnosticQueueEvent): void;
+  recordPlayerConfig(config: readonly DiagnosticPlayerConfig[]): void;
+  recordTokenFaceStates(states: readonly DiagnosticTokenFaceState[]): void;
+  recordRenderSummary(summary: DiagnosticRenderSummary): void;
+  recordChoiceEvent(event: DiagnosticChoiceEvent): void;
   recordWarning(message: string): void;
   endBatch(): void;
   getBatches(): readonly DiagnosticBatch[];
@@ -47,6 +55,10 @@ interface MutableBatch {
   tokenVisibilityInits: TokenVisibilityInitEntry[];
   queueEvent?: DiagnosticQueueEvent;
   warnings: string[];
+  playerConfig?: DiagnosticPlayerConfig[];
+  tokenFaceStates?: DiagnosticTokenFaceState[];
+  renderSummary?: DiagnosticRenderSummary;
+  choiceEvents: DiagnosticChoiceEvent[];
 }
 
 function cloneSerializable<T>(value: T): T {
@@ -86,6 +98,10 @@ function toFrozenBatch(batch: MutableBatch): DiagnosticBatch {
     tokenVisibilityInits: cloneSerializable(batch.tokenVisibilityInits),
     ...(batch.queueEvent ? { queueEvent: cloneSerializable(batch.queueEvent) } : {}),
     warnings: cloneSerializable(batch.warnings),
+    ...(batch.playerConfig ? { playerConfig: cloneSerializable(batch.playerConfig) } : {}),
+    ...(batch.tokenFaceStates ? { tokenFaceStates: cloneSerializable(batch.tokenFaceStates) } : {}),
+    ...(batch.renderSummary ? { renderSummary: cloneSerializable(batch.renderSummary) } : {}),
+    ...(batch.choiceEvents.length > 0 ? { choiceEvents: cloneSerializable(batch.choiceEvents) } : {}),
   };
   return deepFreeze(frozen);
 }
@@ -132,6 +148,7 @@ function createMutableBatch(batchId: number, isSetup: boolean): MutableBatch {
     faceControllerCalls: [],
     tokenVisibilityInits: [],
     warnings: [],
+    choiceEvents: [],
   };
 }
 
@@ -235,6 +252,30 @@ export function createDiagnosticBuffer(
     recordQueueEvent(entry: DiagnosticQueueEvent): void {
       withCurrentBatch((batch) => {
         batch.queueEvent = cloneSerializable(entry);
+      });
+    },
+
+    recordPlayerConfig(config: readonly DiagnosticPlayerConfig[]): void {
+      withCurrentBatch((batch) => {
+        batch.playerConfig = cloneSerializable(config as DiagnosticPlayerConfig[]);
+      });
+    },
+
+    recordTokenFaceStates(states: readonly DiagnosticTokenFaceState[]): void {
+      withCurrentBatch((batch) => {
+        batch.tokenFaceStates = cloneSerializable(states as DiagnosticTokenFaceState[]);
+      });
+    },
+
+    recordRenderSummary(summary: DiagnosticRenderSummary): void {
+      withCurrentBatch((batch) => {
+        batch.renderSummary = cloneSerializable(summary);
+      });
+    },
+
+    recordChoiceEvent(event: DiagnosticChoiceEvent): void {
+      withCurrentBatch((batch) => {
+        batch.choiceEvents.push(cloneSerializable(event));
       });
     },
 

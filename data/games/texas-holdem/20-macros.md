@@ -808,6 +808,7 @@ effectMacros:
           from: deck:none
           to: community:none
           count: { param: count }
+      - reveal: { zone: community:none, to: all }
 
   - id: reset-reopen-state-for-live-seats
     params: []

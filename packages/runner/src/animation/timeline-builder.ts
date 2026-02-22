@@ -16,13 +16,14 @@ import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
 type VisualAnimationDescriptor = Exclude<AnimationDescriptor, { kind: 'skipped' }>;
 type TimelineLogger = Pick<
 AnimationLogger,
-'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit'
+'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit' | 'logFaceControllerCall'
 >;
 
 const NOOP_TIMELINE_LOGGER: TimelineLogger = {
   logSpriteResolution() {},
   logEphemeralCreated() {},
   logTweenCreated() {},
+  logFaceControllerCall() {},
   logTokenVisibilityInit() {},
 };
 
@@ -54,8 +55,10 @@ export function buildTimeline(
   const durationByKind = options?.durationSecondsByKind;
   const factory = options?.ephemeralContainerFactory;
   const logger = options?.logger ?? NOOP_TIMELINE_LOGGER;
-  const bannerCallbackPart: Pick<PresetTweenContext, 'phaseBannerCallback'> =
-    options?.phaseBannerCallback !== undefined ? { phaseBannerCallback: options.phaseBannerCallback } : {};
+  const contextExtras: Pick<PresetTweenContext, 'phaseBannerCallback' | 'logger'> = {
+    ...(options?.phaseBannerCallback !== undefined ? { phaseBannerCallback: options.phaseBannerCallback } : {}),
+    logger,
+  };
 
   const effectiveRefs = factory !== undefined
     ? provisionEphemeralContainers(descriptors, spriteRefs, factory, logger)
@@ -86,7 +89,7 @@ export function buildTimeline(
         processDescriptor(
           descriptor,
           presetRegistry,
-          { gsap, timeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
+          { gsap, timeline, spriteRefs: effectiveRefs, ...contextExtras },
           durationOverrideSeconds,
           logger,
         );
@@ -104,7 +107,7 @@ export function buildTimeline(
       processDescriptor(
         descriptor,
         presetRegistry,
-        { gsap, timeline: subTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
+        { gsap, timeline: subTimeline, spriteRefs: effectiveRefs, ...contextExtras },
         durationOverrideSeconds,
         logger,
       );
@@ -126,7 +129,7 @@ export function buildTimeline(
       processDescriptor(
         descriptor,
         presetRegistry,
-        { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
+        { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs, ...contextExtras },
         durationByKind?.get('zoneHighlight'),
         logger,
       );

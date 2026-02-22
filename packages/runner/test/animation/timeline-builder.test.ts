@@ -88,17 +88,19 @@ function createMockEphemeralFactory(): EphemeralContainerFactory & {
 
 function createMockTimelineLogger(): Pick<
 AnimationLogger,
-'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit'
+'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logFaceControllerCall' | 'logTokenVisibilityInit'
 > & {
   readonly logSpriteResolution: ReturnType<typeof vi.fn>;
   readonly logEphemeralCreated: ReturnType<typeof vi.fn>;
   readonly logTweenCreated: ReturnType<typeof vi.fn>;
+  readonly logFaceControllerCall: ReturnType<typeof vi.fn>;
   readonly logTokenVisibilityInit: ReturnType<typeof vi.fn>;
 } {
   return {
     logSpriteResolution: vi.fn(),
     logEphemeralCreated: vi.fn(),
     logTweenCreated: vi.fn(),
+    logFaceControllerCall: vi.fn(),
     logTokenVisibilityInit: vi.fn(),
   };
 }

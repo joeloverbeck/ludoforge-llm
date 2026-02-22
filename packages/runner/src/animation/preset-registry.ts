@@ -1,5 +1,6 @@
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 import { TRACE_KIND_DEFAULT_PRESET_IDS } from '../model/effect-trace-kind-config.js';
+import type { FaceControllerCallEntry } from './animation-diagnostics.js';
 
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import {
@@ -16,6 +17,7 @@ export interface PresetTweenContext {
   readonly gsap: GsapLike;
   readonly timeline: GsapTimelineLike;
   readonly durationSeconds: number;
+  readonly logger?: PresetFaceControllerLogger;
   readonly spriteRefs: {
     readonly tokenContainers: ReadonlyMap<string, unknown>;
     readonly tokenFaceControllers?: ReadonlyMap<string, TokenFaceControllerRef>;
@@ -29,6 +31,10 @@ export interface PresetTweenContext {
 
 export interface TokenFaceControllerRef {
   setFaceUp(faceUp: boolean): void;
+}
+
+export interface PresetFaceControllerLogger {
+  logFaceControllerCall(entry: FaceControllerCallEntry): void;
 }
 
 export type PresetTweenFactory = (
@@ -324,7 +330,13 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
         ? {}
         : {
             onComplete: () => {
-              faceController.setFaceUp(true);
+              setFaceUpWithLogging(
+                context,
+                descriptor.tokenId,
+                faceController,
+                true,
+                'card-deal-to-shared-mid-arc',
+              );
             },
           }),
     }, flipHalf);
@@ -381,7 +393,7 @@ function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: P
   const oldFaceUp = typeof descriptor.oldValue === 'boolean' ? descriptor.oldValue : undefined;
   const newFaceUp = typeof descriptor.newValue === 'boolean' ? descriptor.newValue : undefined;
   if (oldFaceUp !== undefined) {
-    faceController?.setFaceUp(oldFaceUp);
+    setFaceUpWithLogging(context, descriptor.tokenId, faceController, oldFaceUp, 'card-flip-3d-initial');
   }
 
   const halfDuration = context.durationSeconds / 2;
@@ -391,7 +403,7 @@ function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: P
       ? {}
       : {
           onComplete: () => {
-            faceController.setFaceUp(newFaceUp);
+            setFaceUpWithLogging(context, descriptor.tokenId, faceController, newFaceUp, 'card-flip-3d-mid');
           },
         }),
   }, halfDuration);
@@ -546,4 +558,18 @@ function setScale(target: TweenTarget, value: number): void {
   }
 
   target.scale = { x: value, y: value };
+}
+
+function setFaceUpWithLogging(
+  context: PresetTweenContext,
+  tokenId: string,
+  faceController: TokenFaceControllerRef | undefined,
+  faceUp: boolean,
+  callContext: FaceControllerCallEntry['context'],
+): void {
+  if (faceController === undefined) {
+    return;
+  }
+  faceController.setFaceUp(faceUp);
+  context.logger?.logFaceControllerCall({ tokenId, faceUp, context: callContext });
 }

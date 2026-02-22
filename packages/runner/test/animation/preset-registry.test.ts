@@ -311,7 +311,72 @@ describe('preset-registry', () => {
     expect(secondFlipVars['scaleX']).toBe(1);
   });
 
-  it('card-flip-3d swaps face visibility at midpoint when face controller is available', () => {
+  it('card-flip-3d logs initial and midpoint face-controller calls when available', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const setFaceUp = vi.fn();
+    const logger = { logFaceControllerCall: vi.fn() };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    registry.require('card-flip-3d').createTween(
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:1',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'card-flip-3d',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('card-flip-3d').defaultDurationSeconds,
+        logger,
+        spriteRefs: {
+          tokenContainers: new Map([['tok:1', token]]),
+          tokenFaceControllers: new Map([['tok:1', { setFaceUp }]]),
+          zoneContainers: new Map(),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    expect(setFaceUp).toHaveBeenCalledWith(false);
+    expect(logger.logFaceControllerCall).toHaveBeenCalledWith({
+      tokenId: 'tok:1',
+      faceUp: false,
+      context: 'card-flip-3d-initial',
+    });
+
+    const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
+    const midpointCallback = midpointVars['onComplete'];
+    expect(typeof midpointCallback).toBe('function');
+
+    (midpointCallback as () => void)();
+    expect(setFaceUp).toHaveBeenLastCalledWith(true);
+    expect(logger.logFaceControllerCall).toHaveBeenLastCalledWith({
+      tokenId: 'tok:1',
+      faceUp: true,
+      context: 'card-flip-3d-mid',
+    });
+  });
+
+  it('card-flip-3d is mapped to cardFlip kind instead of tint-flash', () => {
+    const registry = createPresetRegistry();
+    const preset = registry.requireCompatible('card-flip-3d', 'cardFlip');
+    expect(preset.id).toBe('card-flip-3d');
+
+    expect(() => registry.requireCompatible('tint-flash', 'cardFlip')).toThrow(/not compatible/u);
+  });
+
+  it('remains safe when face controller exists but logger is omitted', () => {
     const registry = createPresetRegistry();
     const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
     const setFaceUp = vi.fn();
@@ -346,22 +411,50 @@ describe('preset-registry', () => {
       },
     );
 
-    expect(setFaceUp).toHaveBeenCalledWith(false);
-
     const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
-    const midpointCallback = midpointVars['onComplete'];
-    expect(typeof midpointCallback).toBe('function');
-
-    (midpointCallback as () => void)();
-    expect(setFaceUp).toHaveBeenLastCalledWith(true);
+    const midpointCallback = midpointVars['onComplete'] as (() => void) | undefined;
+    expect(() => midpointCallback?.()).not.toThrow();
   });
 
-  it('card-flip-3d is mapped to cardFlip kind instead of tint-flash', () => {
+  it('does not log face-controller calls when no face controller exists for token', () => {
     const registry = createPresetRegistry();
-    const preset = registry.requireCompatible('card-flip-3d', 'cardFlip');
-    expect(preset.id).toBe('card-flip-3d');
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const logger = { logFaceControllerCall: vi.fn() };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
 
-    expect(() => registry.requireCompatible('tint-flash', 'cardFlip')).toThrow(/not compatible/u);
+    registry.require('card-flip-3d').createTween(
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:1',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'card-flip-3d',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        logger,
+        durationSeconds: registry.require('card-flip-3d').defaultDurationSeconds,
+        spriteRefs: {
+          tokenContainers: new Map([['tok:1', token]]),
+          zoneContainers: new Map(),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
+    const midpointCallback = midpointVars['onComplete'] as (() => void) | undefined;
+    midpointCallback?.();
+    expect(logger.logFaceControllerCall).not.toHaveBeenCalled();
   });
 
   it('arc-tween includes alpha fade-in when target alpha is 0', () => {
@@ -676,6 +769,7 @@ describe('preset-registry', () => {
     const registry = createPresetRegistry();
     const token = { x: 0, y: 0, alpha: 0, tint: 0xffffff, scale: { x: 1, y: 1 } };
     const setFaceUp = vi.fn();
+    const logger = { logFaceControllerCall: vi.fn() };
     const timeline = { add: vi.fn() };
     const gsap = {
       registerPlugin: vi.fn(),
@@ -686,6 +780,7 @@ describe('preset-registry', () => {
     const context = {
       gsap,
       timeline,
+      logger,
       spriteRefs: {
         tokenContainers: new Map([['tok:1', token]]),
         tokenFaceControllers: new Map([['tok:1', { setFaceUp }]]),
@@ -730,6 +825,11 @@ describe('preset-registry', () => {
     // Execute the onComplete callback
     (flipFirstHalf['onComplete'] as () => void)();
     expect(setFaceUp).toHaveBeenCalledWith(true);
+    expect(logger.logFaceControllerCall).toHaveBeenCalledWith({
+      tokenId: 'tok:1',
+      faceUp: true,
+      context: 'card-deal-to-shared-mid-arc',
+    });
   });
 
   it('arc-tween does NOT append flip for cardDeal with destinationRole hand', () => {

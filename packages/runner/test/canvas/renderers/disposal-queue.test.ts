@@ -98,6 +98,18 @@ describe('createDisposalQueue', () => {
     expect(destroySpy).not.toHaveBeenCalled();
   });
 
+  it('enqueue keeps children attached until deferred flush', () => {
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const container = new MockContainer();
+    const child = new MockContainer();
+    container.addChild(child);
+
+    queue.enqueue(container as unknown as Container);
+
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]).toBe(child);
+  });
+
   it('flush calls safeDestroyDisplayObject on enqueued items and clears the queue', () => {
     const queue = createDisposalQueue({ scheduleFlush: () => {} });
     const container = new MockContainer();
@@ -106,6 +118,17 @@ describe('createDisposalQueue', () => {
     queue.flush();
 
     expect(container.destroyed).toBe(true);
+  });
+
+  it('flush destroys enqueued containers with children option enabled', () => {
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const container = new MockContainer();
+    const destroySpy = vi.spyOn(container, 'destroy');
+
+    queue.enqueue(container as unknown as Container);
+    queue.flush();
+
+    expect(destroySpy).toHaveBeenCalledWith({ children: true });
   });
 
   it('flush is idempotent — second flush has no effect', () => {

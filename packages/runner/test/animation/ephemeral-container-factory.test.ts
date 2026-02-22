@@ -138,9 +138,14 @@ describe('createEphemeralContainerFactory', () => {
     expect(parent.children).not.toContain(c2);
     expect(c1.visible).toBe(false);
     expect(c2.visible).toBe(false);
+    expect(c1.children.length).toBeGreaterThan(0);
+    expect(c2.children.length).toBeGreaterThan(0);
 
     // But NOT yet destroyed — deferred until queue.flush()
     queue.flush();
+
+    expect(c1.destroyed).toBe(true);
+    expect(c2.destroyed).toBe(true);
   });
 
   it('releaseAll clears the internal list so subsequent destroyAll is a no-op', () => {

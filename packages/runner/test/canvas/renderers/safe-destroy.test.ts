@@ -300,14 +300,15 @@ describe('neutralizeDisplayObject', () => {
     expect(container.interactiveChildren).toBe(false);
   });
 
-  it('removes children from the object', () => {
+  it('keeps children attached for deferred destroy paths', () => {
     const container = new MockContainer();
     const child = new MockContainer();
     container.addChild(child);
 
     neutralizeDisplayObject(container as unknown as Container);
 
-    expect(container.children).toHaveLength(0);
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]).toBe(child);
   });
 
   it('nulls out _texture if present', () => {

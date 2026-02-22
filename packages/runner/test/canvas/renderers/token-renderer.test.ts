@@ -215,6 +215,7 @@ vi.mock('pixi.js', () => ({
 }));
 
 import { createTokenRenderer } from '../../../src/canvas/renderers/token-renderer';
+import { createDisposalQueue } from '../../../src/canvas/renderers/disposal-queue';
 import type { TokenShape } from '../../../src/config/visual-config-defaults';
 import type { RenderToken } from '../../../src/model/render-model';
 
@@ -762,6 +763,39 @@ describe('createTokenRenderer', () => {
 
     expect(renderer.getContainerMap().has('token:2')).toBe(false);
     expect(parent.children).toHaveLength(1);
+    expect(removed.destroyed).toBe(true);
+  });
+
+  it('defers destroy for removed tokens with disposalQueue while preserving children until flush', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider();
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+      disposalQueue: queue,
+    });
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'troop-a' }), makeToken({ id: 'token:2', type: 'troop-b' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const removed = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
+    expect(removed.children.length).toBeGreaterThan(0);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'troop-a' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(removed.destroyed).toBe(false);
+    expect(removed.children.length).toBeGreaterThan(0);
+
+    queue.flush();
+
     expect(removed.destroyed).toBe(true);
   });
 

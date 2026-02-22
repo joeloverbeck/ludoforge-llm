@@ -19,15 +19,12 @@ interface DestroyableDisplayObject {
 
 /**
  * Neutralizes a PixiJS display object without calling destroy().
- * Removes from parent, removes children, hides, disables interaction,
- * and nulls internal texture references so PixiJS's render loop
- * cannot access dangling state.
+ * Removes from parent, hides, disables interaction, and nulls internal
+ * texture references so PixiJS's render loop cannot access dangling state.
+ * Children remain attached for deferred destroy paths.
  */
 export function neutralizeDisplayObject(displayObject: Container): void {
   displayObject.removeFromParent();
-  if ('removeChildren' in displayObject && typeof displayObject.removeChildren === 'function') {
-    displayObject.removeChildren();
-  }
   displayObject.visible = false;
   displayObject.renderable = false;
   if ('eventMode' in displayObject) {
@@ -60,9 +57,7 @@ export function safeDestroyDisplayObject(
     destroyFallbackCount += 1;
     console.warn('Display object destroy() failed; falling back to removeFromParent().', error);
     displayObject.removeFromParent();
-    if ('removeChildren' in displayObject && typeof displayObject.removeChildren === 'function') {
-      (displayObject as { removeChildren(): unknown }).removeChildren();
-    }
+    fallbackDestroyChildren(displayObject, options);
     if ('renderable' in displayObject) {
       displayObject.renderable = false;
     }
@@ -78,6 +73,19 @@ export function safeDestroyDisplayObject(
     if ('_texture' in displayObject) {
       (displayObject as { _texture: unknown })._texture = null;
     }
+  }
+}
+
+function fallbackDestroyChildren(displayObject: DestroyableDisplayObject, options?: unknown): void {
+  if (!('removeChildren' in displayObject) || typeof displayObject.removeChildren !== 'function') {
+    return;
+  }
+  const removed = displayObject.removeChildren();
+  if (!Array.isArray(removed)) {
+    return;
+  }
+  for (const child of removed) {
+    safeDestroyDisplayObject(child as DestroyableDisplayObject, options);
   }
 }
 

@@ -21,7 +21,7 @@ export function createDisposalQueue(options?: DisposalQueueOptions): DisposalQue
   const flush = (): void => {
     flushScheduled = false;
     for (const container of pending) {
-      safeDestroyDisplayObject(container);
+      safeDestroyDisplayObject(container, { children: true });
     }
     pending.clear();
   };

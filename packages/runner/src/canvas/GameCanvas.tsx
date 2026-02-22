@@ -21,6 +21,7 @@ import { createHoverTargetController } from './interactions/hover-target-control
 import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
+import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
 import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
 import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
@@ -233,6 +234,7 @@ export async function createGameCanvasRuntime(
     },
   });
 
+  const disposalQueue = createDisposalQueue();
   const viewportResult = createViewportResult(deps, gameCanvas, positionStore);
   const zonePool = new ContainerPool();
   let publishHoverAnchor: () => void = () => {};
@@ -278,6 +280,7 @@ export async function createGameCanvasRuntime(
           },
         },
       ),
+    disposalQueue,
   });
   const tableOverlayRenderer = deps.createTableOverlayRenderer(
     gameCanvas.layers.tableOverlayLayer,
@@ -314,6 +317,7 @@ export async function createGameCanvasRuntime(
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),
       ephemeralParent: () => gameCanvas.layers.effectsGroup,
+      disposalQueue,
     });
     animationController.start();
 
@@ -521,6 +525,7 @@ export async function createGameCanvasRuntime(
         zonePool,
         viewportResult,
         gameCanvas,
+        disposalQueue,
       );
     },
   };
@@ -635,6 +640,7 @@ function destroyCanvasPipeline(
   zonePool: ContainerPool,
   viewportResult: ViewportResult,
   gameCanvas: PixiGameCanvas,
+  disposalQueue: DisposalQueue,
 ): void {
   canvasUpdater.destroy();
   zoneRenderer.destroy();
@@ -642,6 +648,7 @@ function destroyCanvasPipeline(
   tokenRenderer.destroy();
   tableOverlayRenderer.destroy();
   zonePool.destroyAll();
+  disposalQueue.destroy();
   viewportResult.destroy();
   gameCanvas.destroy();
 }

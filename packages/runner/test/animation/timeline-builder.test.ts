@@ -7,6 +7,7 @@ import type {
   VisualAnimationDescriptorKind,
 } from '../../src/animation/animation-types';
 import { createEphemeralContainerFactory, type EphemeralContainerFactory } from '../../src/animation/ephemeral-container-factory';
+import { createDisposalQueue } from '../../src/canvas/renderers/disposal-queue';
 import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { createPresetRegistry, type AnimationPresetDefinition } from '../../src/animation/preset-registry';
 import { buildTimeline, type TimelineSpriteRefs } from '../../src/animation/timeline-builder';
@@ -65,13 +66,16 @@ function createSpriteRefs(overrides: Partial<TimelineSpriteRefs> = {}): Timeline
 function createMockEphemeralFactory(): EphemeralContainerFactory & {
   readonly createdIds: string[];
   readonly destroyAllCalls: number[];
+  readonly releaseAllCalls: number[];
 } {
   const createdIds: string[] = [];
   const destroyAllCalls: number[] = [];
+  const releaseAllCalls: number[] = [];
   let callCount = 0;
   return {
     createdIds,
     destroyAllCalls,
+    releaseAllCalls,
     create(tokenId: string): Container {
       createdIds.push(tokenId);
       const container = new Container();
@@ -82,6 +86,10 @@ function createMockEphemeralFactory(): EphemeralContainerFactory & {
     destroyAll(): void {
       callCount += 1;
       destroyAllCalls.push(callCount);
+    },
+    releaseAll(): void {
+      callCount += 1;
+      releaseAllCalls.push(callCount);
     },
   };
 }
@@ -1340,6 +1348,83 @@ describe('buildTimeline ephemeral containers', () => {
     expect(factory.createdIds).toEqual(['tok:ephemeral']);
     // Both should animate
     expect(tweenedTokenIds).toEqual(['tok:1', 'tok:ephemeral']);
+  });
+
+  it('calls factory.releaseAll when disposalQueue is provided', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+      disposalQueue: queue,
+    });
+
+    // The cleanup function should have been added to the timeline
+    expect(runtime.timeline.add).toHaveBeenCalled();
+    const lastCall = runtime.timeline.add.mock.calls[runtime.timeline.add.mock.calls.length - 1];
+    const cleanupFn = lastCall?.[0];
+    expect(typeof cleanupFn).toBe('function');
+
+    // Invoke the cleanup callback — should use releaseAll, not destroyAll
+    (cleanupFn as () => void)();
+    expect(factory.releaseAllCalls.length).toBe(1);
+    expect(factory.destroyAllCalls.length).toBe(0);
+  });
+
+  it('falls back to factory.destroyAll when no disposalQueue is provided', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      ephemeralContainerFactory: factory,
+    });
+
+    const lastCall = runtime.timeline.add.mock.calls[runtime.timeline.add.mock.calls.length - 1];
+    const cleanupFn = lastCall?.[0];
+    (cleanupFn as () => void)();
+    expect(factory.destroyAllCalls.length).toBe(1);
+    expect(factory.releaseAllCalls.length).toBe(0);
   });
 });
 

@@ -70,6 +70,7 @@ vi.mock('pixi.js', () => ({
 import type { Container } from 'pixi.js';
 import {
   getDestroyFallbackCount,
+  neutralizeDisplayObject,
   resetDestroyFallbackCount,
   safeDestroyChildren,
   safeDestroyContainer,
@@ -220,5 +221,101 @@ describe('safeDestroyChildren', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
 
     warnSpy.mockRestore();
+  });
+});
+
+describe('safeDestroyDisplayObject fallback hardening', () => {
+  it('removes children recursively when destroy() throws', () => {
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    const child1 = new MockContainer();
+    const child2 = new MockContainer();
+    container.addChild(child1, child2);
+    parent.addChild(container);
+
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    safeDestroyDisplayObject(container as unknown as Container);
+
+    expect(container.children).toHaveLength(0);
+  });
+
+  it('nulls out _texture when destroy() throws and _texture exists', () => {
+    const container = new MockContainer() as unknown as Container & { _texture?: unknown };
+    container._texture = { uid: 42 };
+
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    safeDestroyDisplayObject(container);
+
+    expect(container._texture).toBeNull();
+  });
+
+  it('sets eventMode to none and interactiveChildren to false when destroy() throws', () => {
+    const container = new MockContainer();
+    container.eventMode = 'static';
+    container.interactiveChildren = true;
+
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    safeDestroyDisplayObject(container as unknown as Container);
+
+    expect(container.eventMode).toBe('none');
+    expect(container.interactiveChildren).toBe(false);
+  });
+});
+
+describe('neutralizeDisplayObject', () => {
+  it('removes from parent without calling destroy()', () => {
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    parent.addChild(container);
+    const destroySpy = vi.spyOn(container, 'destroy');
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(parent.children).not.toContain(container);
+    expect(destroySpy).not.toHaveBeenCalled();
+  });
+
+  it('sets visible=false, renderable=false, eventMode=none, interactiveChildren=false', () => {
+    const container = new MockContainer();
+    container.eventMode = 'static';
+    container.interactiveChildren = true;
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(container.visible).toBe(false);
+    expect(container.renderable).toBe(false);
+    expect(container.eventMode).toBe('none');
+    expect(container.interactiveChildren).toBe(false);
+  });
+
+  it('removes children from the object', () => {
+    const container = new MockContainer();
+    const child = new MockContainer();
+    container.addChild(child);
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(container.children).toHaveLength(0);
+  });
+
+  it('nulls out _texture if present', () => {
+    const container = new MockContainer() as unknown as Container & { _texture?: unknown };
+    container._texture = { uid: 99 };
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(container._texture).toBeNull();
   });
 });

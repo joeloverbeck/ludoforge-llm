@@ -5,6 +5,7 @@ import {
   createEphemeralContainerFactory,
   type EphemeralContainerFactoryOptions,
 } from '../../src/animation/ephemeral-container-factory';
+import { createDisposalQueue } from '../../src/canvas/renderers/disposal-queue';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -117,5 +118,40 @@ describe('createEphemeralContainerFactory', () => {
     expect(bounds.width).toBeLessThan(27);
     expect(bounds.height).toBeGreaterThan(33);
     expect(bounds.height).toBeLessThan(37);
+  });
+
+  it('releaseAll enqueues containers to disposal queue instead of destroying', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    const c1 = factory.create('tok:a');
+    const c2 = factory.create('tok:b');
+
+    expect(parent.children).toContain(c1);
+    expect(parent.children).toContain(c2);
+
+    factory.releaseAll(queue);
+
+    // Containers should be neutralized (removed from parent, hidden)
+    expect(parent.children).not.toContain(c1);
+    expect(parent.children).not.toContain(c2);
+    expect(c1.visible).toBe(false);
+    expect(c2.visible).toBe(false);
+
+    // But NOT yet destroyed — deferred until queue.flush()
+    queue.flush();
+  });
+
+  it('releaseAll clears the internal list so subsequent destroyAll is a no-op', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    factory.create('tok:x');
+    factory.releaseAll(queue);
+
+    // destroyAll should have nothing to destroy
+    expect(() => factory.destroyAll()).not.toThrow();
   });
 });

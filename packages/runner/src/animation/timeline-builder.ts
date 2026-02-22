@@ -1,6 +1,7 @@
 import type { Container } from 'pixi.js';
 
 import type { AnimationLogger } from './animation-logger.js';
+import type { DisposalQueue } from '../canvas/renderers/disposal-queue.js';
 import type { ZonePositionMap } from '../spatial/position-types.js';
 import type {
   AnimationDescriptor,
@@ -39,6 +40,7 @@ export interface BuildTimelineOptions {
   readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
   readonly initializeTokenVisibility?: boolean;
   readonly ephemeralContainerFactory?: EphemeralContainerFactory;
+  readonly disposalQueue?: DisposalQueue;
   readonly phaseBannerCallback?: (phase: string | null) => void;
   readonly logger?: TimelineLogger;
 }
@@ -138,7 +140,14 @@ export function buildTimeline(
   }
 
   if (factory !== undefined) {
-    timeline.add(() => factory.destroyAll());
+    const queue = options?.disposalQueue;
+    timeline.add(() => {
+      if (queue !== undefined) {
+        factory.releaseAll(queue);
+      } else {
+        factory.destroyAll();
+      }
+    });
   }
 
   return timeline;

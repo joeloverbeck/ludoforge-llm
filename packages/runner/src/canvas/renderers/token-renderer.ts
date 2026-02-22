@@ -5,6 +5,7 @@ import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
 import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
 import type { CardTemplate } from '../../config/visual-config-types.js';
+import type { DisposalQueue } from './disposal-queue.js';
 import type { FactionColorProvider, TokenFaceController, TokenRenderer } from './renderer-types';
 import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
@@ -53,6 +54,7 @@ interface TokenRendererOptions {
     tokenId: string,
     isSelectable: () => boolean,
   ) => () => void;
+  readonly disposalQueue?: DisposalQueue;
 }
 
 export function createTokenRenderer(
@@ -93,8 +95,12 @@ export function createTokenRenderer(
         if (removedVisuals?.frontContent !== null && removedVisuals?.frontContent !== undefined) {
           destroyCardContentPool(removedVisuals.frontContent);
         }
-        tokenContainer.removeFromParent();
-        safeDestroyContainer(tokenContainer);
+        if (options.disposalQueue !== undefined) {
+          options.disposalQueue.enqueue(tokenContainer);
+        } else {
+          tokenContainer.removeFromParent();
+          safeDestroyContainer(tokenContainer);
+        }
         tokenContainers.delete(renderId);
         visualsByContainer.delete(tokenContainer);
       }
@@ -215,8 +221,12 @@ export function createTokenRenderer(
         if (destroyedVisuals?.frontContent !== null && destroyedVisuals?.frontContent !== undefined) {
           destroyCardContentPool(destroyedVisuals.frontContent);
         }
-        tokenContainer.removeFromParent();
-        safeDestroyContainer(tokenContainer);
+        if (options.disposalQueue !== undefined) {
+          options.disposalQueue.enqueue(tokenContainer);
+        } else {
+          tokenContainer.removeFromParent();
+          safeDestroyContainer(tokenContainer);
+        }
         visualsByContainer.delete(tokenContainer);
       }
 

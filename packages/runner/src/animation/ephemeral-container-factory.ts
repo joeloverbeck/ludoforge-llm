@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 
+import type { DisposalQueue } from '../canvas/renderers/disposal-queue.js';
 import { safeDestroyContainer } from '../canvas/renderers/safe-destroy.js';
 
 const CARD_BACK_COLOR = 0x1f2937;
@@ -13,6 +14,7 @@ const STROKE_ALPHA = 0.9;
 export interface EphemeralContainerFactory {
   create(tokenId: string): Container;
   destroyAll(): void;
+  releaseAll(queue: DisposalQueue): void;
 }
 
 export interface EphemeralContainerFactoryOptions {
@@ -59,6 +61,13 @@ export function createEphemeralContainerFactory(
     destroyAll(): void {
       for (const container of created) {
         safeDestroyContainer(container);
+      }
+      created.length = 0;
+    },
+
+    releaseAll(queue: DisposalQueue): void {
+      for (const container of created) {
+        queue.enqueue(container);
       }
       created.length = 0;
     },

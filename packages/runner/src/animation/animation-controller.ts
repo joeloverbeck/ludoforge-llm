@@ -2,6 +2,7 @@ import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 import type { StoreApi } from 'zustand';
 
+import type { DisposalQueue } from '../canvas/renderers/disposal-queue.js';
 import type { ZonePositionMap } from '../spatial/position-types.js';
 import type { CardAnimationConfig } from '../config/visual-config-types.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
@@ -62,6 +63,7 @@ export interface AnimationControllerOptions {
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
   readonly ephemeralParent?: () => Container;
+  readonly disposalQueue?: DisposalQueue;
 }
 
 interface AnimationControllerDeps {
@@ -165,7 +167,8 @@ export function createAnimationController(
           ? (phase: string | null) => { options.store.getState().setActivePhaseBanner(phase); }
           : undefined;
 
-        const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined || phaseBannerCallback !== undefined || logger !== undefined;
+        const disposalQueue = options.disposalQueue;
+        const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined || disposalQueue !== undefined || phaseBannerCallback !== undefined || logger !== undefined;
 
         const timeline = deps.buildTimeline(
           descriptors,
@@ -190,6 +193,7 @@ export function createAnimationController(
                     }
                   : {}),
                 ...(ephemeralContainerFactory === undefined ? {} : { ephemeralContainerFactory }),
+                ...(disposalQueue === undefined ? {} : { disposalQueue }),
                 ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
                 ...(logger === undefined ? {} : { logger }),
               },

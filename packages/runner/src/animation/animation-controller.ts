@@ -18,6 +18,7 @@ import type {
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
 import { createAnimationLogger, type AnimationLogger } from './animation-logger.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
+import { createDiagnosticBuffer, type DiagnosticBuffer } from './diagnostic-buffer.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
 import { createEphemeralContainerFactory } from './ephemeral-container-factory.js';
@@ -50,6 +51,7 @@ export interface AnimationController {
   skipCurrent(): void;
   skipAll(): void;
   forceFlush(): void;
+  getDiagnosticBuffer(): DiagnosticBuffer | undefined;
 }
 
 export interface AnimationControllerOptions {
@@ -72,6 +74,7 @@ interface AnimationControllerDeps {
   readonly onWarning?: (message: string) => void;
   readonly scheduleFrame?: (callback: () => void) => void;
   readonly logger?: AnimationLogger;
+  readonly diagnosticBuffer?: DiagnosticBuffer;
 }
 
 export function createAnimationController(
@@ -100,112 +103,113 @@ export function createAnimationController(
       return;
     }
 
-    if (logger?.enabled) {
-      logger.logTraceReceived({ traceLength: trace.length, isSetup, entries: trace });
-    }
+    logger?.beginBatch(isSetup);
 
-    const phaseBannerPhases = options.visualConfigProvider.getPhaseBannerPhases();
-
-    let descriptors: readonly AnimationDescriptor[];
     try {
-      const state = options.store.getState();
-      const cardContext = buildCardContext(state, options.visualConfigProvider);
-      descriptors = deps.traceToDescriptors(
-        trace,
-        {
-          detailLevel,
-          ...(presetOverrides.size === 0 ? {} : { presetOverrides }),
-          ...(cardContext === undefined ? {} : { cardContext }),
-          ...(isSetup ? { suppressCreateToken: true } : {}),
-          ...(phaseBannerPhases.size === 0 ? {} : { phaseBannerPhases }),
-        },
-        deps.presetRegistry,
-      );
-      if (!isSetup) {
-        descriptors = decorateWithZoneHighlights(
-          descriptors,
-          {
-            presetId: zoneHighlightPresetId,
-            policy: zoneHighlightPolicy,
-          },
-        );
-      }
-    } catch (error) {
-      deps.onError('Descriptor mapping failed.', error);
-      return;
-    }
+      logger?.logTraceReceived({ traceLength: trace.length, isSetup, entries: trace });
 
-    if (logger?.enabled) {
+      const phaseBannerPhases = options.visualConfigProvider.getPhaseBannerPhases();
+
+      let descriptors: readonly AnimationDescriptor[];
+      try {
+        const state = options.store.getState();
+        const cardContext = buildCardContext(state, options.visualConfigProvider);
+        descriptors = deps.traceToDescriptors(
+          trace,
+          {
+            detailLevel,
+            ...(presetOverrides.size === 0 ? {} : { presetOverrides }),
+            ...(cardContext === undefined ? {} : { cardContext }),
+            ...(isSetup ? { suppressCreateToken: true } : {}),
+            ...(phaseBannerPhases.size === 0 ? {} : { phaseBannerPhases }),
+          },
+          deps.presetRegistry,
+        );
+        if (!isSetup) {
+          descriptors = decorateWithZoneHighlights(
+            descriptors,
+            {
+              presetId: zoneHighlightPresetId,
+              policy: zoneHighlightPolicy,
+            },
+          );
+        }
+      } catch (error) {
+        deps.onError('Descriptor mapping failed.', error);
+        return;
+      }
+
       const skippedCount = descriptors.filter((d) => d.kind === 'skipped').length;
-      logger.logDescriptorsMapped({
+      logger?.logDescriptorsMapped({
         inputCount: trace.length,
         outputCount: descriptors.length,
         skippedCount,
         descriptors,
       });
-    }
 
-    if (!hasVisualDescriptors(descriptors)) {
-      return;
-    }
-
-    try {
-      const ephemeralContainerFactory = options.ephemeralParent !== undefined
-        ? createEphemeralContainerFactory(
-            options.ephemeralParent(),
-            cardDimensions !== null
-              ? { cardWidth: cardDimensions.width, cardHeight: cardDimensions.height }
-              : undefined,
-          )
-        : undefined;
-
-      const phaseBannerCallback = phaseBannerPhases.size > 0
-        ? (phase: string | null) => { options.store.getState().setActivePhaseBanner(phase); }
-        : undefined;
-
-      const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined || phaseBannerCallback !== undefined;
-
-      const timeline = deps.buildTimeline(
-        descriptors,
-        deps.presetRegistry,
-        {
-          tokenContainers: options.tokenContainers(),
-          ...(options.tokenFaceControllers === undefined
-            ? {}
-            : { tokenFaceControllers: options.tokenFaceControllers() }),
-          zoneContainers: options.zoneContainers(),
-          zonePositions: options.zonePositions(),
-        },
-        deps.gsap,
-        !needsOptions
-          ? undefined
-          : {
-              ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
-              ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
-              ...(isSetup
-                ? {
-                    initializeTokenVisibility: true,
-                  }
-                : {}),
-              ...(ephemeralContainerFactory === undefined ? {} : { ephemeralContainerFactory }),
-              ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
-            },
-      );
-
-      if (logger?.enabled) {
-        const visualCount = descriptors.filter((d) => d.kind !== 'skipped').length;
-        logger.logTimelineBuilt({ visualDescriptorCount: visualCount, groupCount: 1 });
-      }
-
-      if (reducedMotion) {
-        timeline.progress?.(1);
-        timeline.kill?.();
+      if (!hasVisualDescriptors(descriptors)) {
         return;
       }
 
-      queue.enqueue(timeline);
-    } catch (error) {
-      deps.onError('Timeline build failed.', error);
+      try {
+        const ephemeralContainerFactory = options.ephemeralParent !== undefined
+          ? createEphemeralContainerFactory(
+              options.ephemeralParent(),
+              cardDimensions !== null
+                ? { cardWidth: cardDimensions.width, cardHeight: cardDimensions.height }
+                : undefined,
+            )
+          : undefined;
+
+        const phaseBannerCallback = phaseBannerPhases.size > 0
+          ? (phase: string | null) => { options.store.getState().setActivePhaseBanner(phase); }
+          : undefined;
+
+        const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined || phaseBannerCallback !== undefined || logger !== undefined;
+
+        const timeline = deps.buildTimeline(
+          descriptors,
+          deps.presetRegistry,
+          {
+            tokenContainers: options.tokenContainers(),
+            ...(options.tokenFaceControllers === undefined
+              ? {}
+              : { tokenFaceControllers: options.tokenFaceControllers() }),
+            zoneContainers: options.zoneContainers(),
+            zonePositions: options.zonePositions(),
+          },
+          deps.gsap,
+          !needsOptions
+            ? undefined
+            : {
+                ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
+                ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
+                ...(isSetup
+                  ? {
+                      initializeTokenVisibility: true,
+                    }
+                  : {}),
+                ...(ephemeralContainerFactory === undefined ? {} : { ephemeralContainerFactory }),
+                ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
+                ...(logger === undefined ? {} : { logger }),
+              },
+        );
+
+        const visualCount = descriptors.filter((d) => d.kind !== 'skipped').length;
+        logger?.logTimelineBuilt({ visualDescriptorCount: visualCount, groupCount: 1 });
+
+        if (reducedMotion) {
+          timeline.progress?.(1);
+          timeline.kill?.();
+          return;
+        }
+
+        queue.enqueue(timeline);
+      } catch (error) {
+        deps.onError('Timeline build failed.', error);
+      }
+    } finally {
+      logger?.endBatch();
     }
   };
 
@@ -304,6 +308,10 @@ export function createAnimationController(
         return;
       }
       queue.forceFlush();
+    },
+
+    getDiagnosticBuffer(): DiagnosticBuffer | undefined {
+      return deps.diagnosticBuffer;
     },
   };
 }
@@ -445,7 +453,15 @@ function detectAnimDebugEnabled(): boolean {
 }
 
 function createDefaultDeps(): AnimationControllerDeps {
-  const logger = createAnimationLogger({ enabled: detectAnimDebugEnabled() });
+  const diagnosticBuffer = createDiagnosticBuffer();
+  const logger = createAnimationLogger({
+    enabled: detectAnimDebugEnabled(),
+    diagnosticBuffer,
+  });
+
+  if (typeof globalThis !== 'undefined' && import.meta.env.DEV) {
+    (globalThis as Record<string, unknown>).__animDiagnosticBuffer = diagnosticBuffer;
+  }
 
   if (typeof globalThis !== 'undefined') {
     (globalThis as Record<string, unknown>).__animationLogger = logger;
@@ -469,5 +485,6 @@ function createDefaultDeps(): AnimationControllerDeps {
       console.warn(message);
     },
     logger,
+    diagnosticBuffer,
   };
 }

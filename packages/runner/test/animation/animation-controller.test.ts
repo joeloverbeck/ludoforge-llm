@@ -5,7 +5,11 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { createAnimationController } from '../../src/animation/animation-controller';
+import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer';
+import { createDiagnosticBuffer } from '../../src/animation/diagnostic-buffer';
+import type { AnimationLogger } from '../../src/animation/animation-logger';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../../src/animation/animation-types';
+import { createNoopGsapRuntime, initializeAnimationRuntime } from '../../src/animation/bootstrap-runtime';
 import { createPresetRegistry } from '../../src/animation/preset-registry';
 import type { BuildTimelineOptions } from '../../src/animation/timeline-builder';
 import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
@@ -68,6 +72,30 @@ function createTimelineFixture(): TimelineFixture {
     },
     progress,
     kill,
+  };
+}
+
+function createMockLogger(enabledInitial = false): AnimationLogger {
+  let enabled = enabledInitial;
+  return {
+    get enabled(): boolean {
+      return enabled;
+    },
+    setEnabled: vi.fn((value: boolean) => {
+      enabled = value;
+    }),
+    beginBatch: vi.fn(),
+    endBatch: vi.fn(),
+    logTraceReceived: vi.fn(),
+    logDescriptorsMapped: vi.fn(),
+    logTimelineBuilt: vi.fn(),
+    logQueueEvent: vi.fn(),
+    logSpriteResolution: vi.fn(),
+    logEphemeralCreated: vi.fn(),
+    logTweenCreated: vi.fn(),
+    logFaceControllerCall: vi.fn(),
+    logTokenVisibilityInit: vi.fn(),
+    logWarning: vi.fn(),
   };
 }
 
@@ -1698,6 +1726,182 @@ describe('createAnimationController', () => {
     expect(queue.enqueue).toHaveBeenCalledTimes(1);
 
     controller.destroy();
+  });
+
+  it('exposes injected diagnostic buffer via getDiagnosticBuffer', () => {
+    const store = createControllerStore();
+    const diagnosticBuffer = createDiagnosticBuffer();
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: vi.fn(() => []),
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+        logger: createMockLogger(false),
+        diagnosticBuffer,
+      },
+    );
+
+    expect(controller.getDiagnosticBuffer()).toBe(diagnosticBuffer);
+  });
+
+  it('wraps processing in logger batch lifecycle and threads logger to timeline options even when disabled', () => {
+    const store = createControllerStore();
+    const logger = createMockLogger(false);
+    const buildTimelineMock = vi.fn(() => ({ add: vi.fn(), progress: vi.fn(), kill: vi.fn() }));
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+        logger,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(logger.beginBatch).toHaveBeenCalledWith(false);
+    expect(logger.endBatch).toHaveBeenCalledTimes(1);
+    expect(logger.logTraceReceived).toHaveBeenCalledTimes(1);
+    expect(logger.logDescriptorsMapped).toHaveBeenCalledTimes(1);
+    expect(logger.logTimelineBuilt).toHaveBeenCalledTimes(1);
+
+    const options = (buildTimelineMock as unknown as {
+      readonly mock: { readonly calls: readonly (readonly unknown[])[] };
+    }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
+    expect(options?.logger).toBe(logger);
+
+    controller.destroy();
+  });
+
+  it('calls logger.endBatch when descriptor mapping fails', () => {
+    const store = createControllerStore();
+    const logger = createMockLogger(false);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: vi.fn(() => {
+          throw new Error('mapping failed');
+        }),
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+        logger,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(logger.beginBatch).toHaveBeenCalledWith(false);
+    expect(logger.endBatch).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('calls logger.endBatch when timeline building fails', () => {
+    const store = createControllerStore();
+    const logger = createMockLogger(false);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: vi.fn(() => {
+          throw new Error('timeline failed');
+        }),
+        onError: vi.fn(),
+        logger,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(logger.beginBatch).toHaveBeenCalledWith(false);
+    expect(logger.endBatch).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('creates a default diagnostic buffer and exposes it on the controller API', () => {
+    const store = createControllerStore();
+    initializeAnimationRuntime({ runtime: createNoopGsapRuntime() });
+
+    const controller = createAnimationController({
+      store: store as unknown as StoreApi<GameStore>,
+      visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+      tokenContainers: () => new Map() as never,
+      zoneContainers: () => new Map() as never,
+      zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+    });
+
+    const buffer = controller.getDiagnosticBuffer() as DiagnosticBuffer | undefined;
+    expect(buffer).toBeDefined();
+    expect(typeof buffer?.beginBatch).toBe('function');
+    expect(typeof buffer?.downloadAsJson).toBe('function');
   });
 
 });

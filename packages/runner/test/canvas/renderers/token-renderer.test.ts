@@ -214,7 +214,7 @@ vi.mock('pixi.js', () => ({
   Text: MockText,
 }));
 
-import { createTokenRenderer } from '../../../src/canvas/renderers/token-renderer';
+import { createTokenRenderer, type TokenLayoutConfig } from '../../../src/canvas/renderers/token-renderer';
 import { createDisposalQueue } from '../../../src/canvas/renderers/disposal-queue';
 import type { TokenShape } from '../../../src/config/visual-config-defaults';
 import type { RenderToken } from '../../../src/model/render-model';
@@ -297,12 +297,14 @@ function createRenderer(
       isSelectable: () => boolean,
     ) => () => void;
     readonly disposalQueue?: ReturnType<typeof createDisposalQueue>;
+    readonly layoutConfig?: TokenLayoutConfig;
   },
 ) {
   const disposalQueue = options?.disposalQueue ?? createDisposalQueue({ scheduleFlush: () => {} });
   return createTokenRenderer(parent as unknown as Container, colorProvider, {
     disposalQueue,
     ...(options?.bindSelection === undefined ? {} : { bindSelection: options.bindSelection }),
+    ...(options?.layoutConfig === undefined ? {} : { layoutConfig: options.layoutConfig }),
   });
 }
 
@@ -1062,6 +1064,136 @@ describe('createTokenRenderer', () => {
     expect(bindSelection).toHaveBeenNthCalledWith(2, expect.any(MockContainer), 'token:2');
     expect(cleanupByTokenId.get('token:1')).toHaveBeenCalledTimes(1);
     expect(cleanupByTokenId.get('token:2')).toHaveBeenCalledTimes(0);
+  });
+
+  it('uses fan layout for zones in sharedZoneIds, spreading cards horizontally', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-2S': { width: 48, height: 68 },
+        'card-3H': { width: 48, height: 68 },
+        'card-4D': { width: 48, height: 68 },
+      },
+    });
+    const layoutConfig: TokenLayoutConfig = {
+      zoneLayoutRoles: new Map([['community:none', 'other']]),
+      sharedZoneIds: new Set(['community:none']),
+    };
+    const renderer = createRenderer(parent, colorProvider, { layoutConfig });
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', type: 'card-2S', zoneID: 'community:none', isSelectable: true }),
+        makeToken({ id: 'token:2', type: 'card-3H', zoneID: 'community:none', isSelectable: true }),
+        makeToken({ id: 'token:3', type: 'card-4D', zoneID: 'community:none', isSelectable: true }),
+      ],
+      createZoneContainers([
+        ['community:none', { x: 400, y: 300 }],
+      ]),
+    );
+
+    const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
+    const t3 = renderer.getContainerMap().get('token:3') as InstanceType<typeof MockContainer>;
+
+    // Fan layout: spacing = cardWidth(48) + gap(4) = 52, totalWidth = 2*52 = 104
+    // card 0: x = 0*52 - 104/2 = -52, card 1: x = 52 - 52 = 0, card 2: x = 104 - 52 = 52
+    expect(t1.position.x).toBe(400 - 52);
+    expect(t2.position.x).toBe(400);
+    expect(t3.position.x).toBe(400 + 52);
+    // All y should be at zone center
+    expect(t1.position.y).toBe(300);
+    expect(t2.position.y).toBe(300);
+    expect(t3.position.y).toBe(300);
+  });
+
+  it('uses fan layout for zones with hand role', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': { width: 48, height: 68 },
+        'card-KH': { width: 48, height: 68 },
+      },
+    });
+    const layoutConfig: TokenLayoutConfig = {
+      zoneLayoutRoles: new Map([['hand:0', 'hand']]),
+      sharedZoneIds: new Set(),
+    };
+    const renderer = createRenderer(parent, colorProvider, { layoutConfig });
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', type: 'card-AS', zoneID: 'hand:0', isSelectable: true }),
+        makeToken({ id: 'token:2', type: 'card-KH', zoneID: 'hand:0', isSelectable: true }),
+      ],
+      createZoneContainers([
+        ['hand:0', { x: 200, y: 500 }],
+      ]),
+    );
+
+    const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
+
+    // Fan layout: spacing = 48 + 4 = 52, totalWidth = 1*52 = 52
+    // card 0: x = 0 - 52/2 = -26, card 1: x = 52 - 26 = 26
+    expect(t1.position.x).toBe(200 - 26);
+    expect(t2.position.x).toBe(200 + 26);
+  });
+
+  it('uses stack layout for zones with card role', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+    });
+    const layoutConfig: TokenLayoutConfig = {
+      zoneLayoutRoles: new Map([['deck:none', 'card']]),
+      sharedZoneIds: new Set(),
+    };
+    const renderer = createRenderer(parent, colorProvider, { layoutConfig });
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', type: 'card-deck', zoneID: 'deck:none' }),
+        makeToken({ id: 'token:2', type: 'card-deck', zoneID: 'deck:none' }),
+        makeToken({ id: 'token:3', type: 'card-deck', zoneID: 'deck:none' }),
+      ],
+      createZoneContainers([
+        ['deck:none', { x: 100, y: 100 }],
+      ]),
+    );
+
+    const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+
+    // Stack layout: small offset per card (2px x, 1px y)
+    expect(t1.position.x).toBe(100);
+    expect(t1.position.y).toBe(100);
+  });
+
+  it('falls back to grid layout when no layoutConfig is provided', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider();
+    const renderer = createRenderer(parent, colorProvider);
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1' }),
+        makeToken({ id: 'token:2', type: 'troop-b' }),
+      ],
+      createZoneContainers([
+        ['zone:a', { x: 500, y: 250 }],
+      ]),
+    );
+
+    const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
+
+    // Grid layout: column-based offset (same as original tokenOffset)
+    expect(t1.position.x).toBe(455);
+    expect(t1.position.y).toBe(235);
+    expect(t2.position.x).toBe(485);
+    expect(t2.position.y).toBe(235);
   });
 
   it('completes update cycle even when container.destroy() throws', () => {

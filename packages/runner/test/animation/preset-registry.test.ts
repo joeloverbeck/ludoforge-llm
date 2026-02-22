@@ -258,7 +258,7 @@ describe('preset-registry', () => {
     expect(secondVars['ease']).toBe('power2.inOut');
   });
 
-  it('card-flip-3d creates two-phase scaleX tween', () => {
+  it('card-flip-3d creates two-phase scaleX tween via proxy to avoid GSAP CSS property issues', () => {
     const registry = createPresetRegistry();
     const cardFlipDurationSeconds = registry.require('card-flip-3d').defaultDurationSeconds;
     const halfCardFlipDurationSeconds = cardFlipDurationSeconds / 2;
@@ -298,17 +298,32 @@ describe('preset-registry', () => {
     expect(gsap.to).toHaveBeenCalledTimes(2);
 
     const flipCalls = gsap.to.mock.calls as unknown[][];
+    // First call: proxy object tweening value from 1 to 0
     const firstFlipCall = flipCalls[0]!;
-    expect(firstFlipCall[0]).toBe(token);
+    const firstProxy = firstFlipCall[0] as { value: number };
+    expect(firstProxy).toHaveProperty('value');
     const firstFlipVars = firstFlipCall[1] as Record<string, unknown>;
     expect(firstFlipVars['duration']).toBe(halfCardFlipDurationSeconds);
-    expect(firstFlipVars['scaleX']).toBe(0);
+    expect(firstFlipVars['value']).toBe(0);
+    expect(firstFlipVars['onUpdate']).toBeTypeOf('function');
+    // scaleX should NOT be in the vars — that was the bug
+    expect(firstFlipVars).not.toHaveProperty('scaleX');
 
+    // Second call: proxy object tweening value from 0 to 1
     const secondFlipCall = flipCalls[1]!;
-    expect(secondFlipCall[0]).toBe(token);
+    const secondProxy = secondFlipCall[0] as { value: number };
+    expect(secondProxy).toHaveProperty('value');
     const secondFlipVars = secondFlipCall[1] as Record<string, unknown>;
     expect(secondFlipVars['duration']).toBe(halfCardFlipDurationSeconds);
-    expect(secondFlipVars['scaleX']).toBe(1);
+    expect(secondFlipVars['value']).toBe(1);
+    expect(secondFlipVars['onUpdate']).toBeTypeOf('function');
+    expect(secondFlipVars).not.toHaveProperty('scaleX');
+
+    // Simulate onUpdate — verify it drives target.scale.x
+    token.scale.x = 1;
+    firstProxy.value = 0.5;
+    (firstFlipVars['onUpdate'] as () => void)();
+    expect(token.scale.x).toBe(0.5);
   });
 
   it('card-flip-3d logs initial and midpoint face-controller calls when available', () => {
@@ -355,8 +370,9 @@ describe('preset-registry', () => {
       context: 'card-flip-3d-initial',
     });
 
-    const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
-    const midpointCallback = midpointVars['onComplete'];
+    // First proxy tween (scale 1→0) has onComplete for face flip
+    const firstCallVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
+    const midpointCallback = firstCallVars['onComplete'];
     expect(typeof midpointCallback).toBe('function');
 
     (midpointCallback as () => void)();
@@ -411,8 +427,8 @@ describe('preset-registry', () => {
       },
     );
 
-    const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
-    const midpointCallback = midpointVars['onComplete'] as (() => void) | undefined;
+    const firstCallVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
+    const midpointCallback = firstCallVars['onComplete'] as (() => void) | undefined;
     expect(() => midpointCallback?.()).not.toThrow();
   });
 
@@ -451,9 +467,11 @@ describe('preset-registry', () => {
       },
     );
 
-    const midpointVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
-    const midpointCallback = midpointVars['onComplete'] as (() => void) | undefined;
-    midpointCallback?.();
+    // No face controller → no onComplete callback on the proxy tween
+    const firstCallVars = (gsap.to.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>;
+    const midpointCallback = firstCallVars['onComplete'] as (() => void) | undefined;
+    // Should not have onComplete when no face controller
+    expect(midpointCallback).toBeUndefined();
     expect(logger.logFaceControllerCall).not.toHaveBeenCalled();
   });
 
@@ -807,20 +825,25 @@ describe('preset-registry', () => {
       { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
     );
 
-    // 2 arc phases + 2 flip phases = 4 calls
+    // 2 arc phases + 2 proxy scaleX phases = 4 calls
     expect(gsap.to).toHaveBeenCalledTimes(4);
 
     const calls = gsap.to.mock.calls as unknown[][];
-    // Third call: scaleX -> 0 (first half of flip)
+    // Third call: proxy tween value → 0 (first half of flip)
+    const flipFirstHalfProxy = calls[2]![0] as { value: number };
+    expect(flipFirstHalfProxy).toHaveProperty('value');
     const flipFirstHalf = calls[2]![1] as Record<string, unknown>;
-    expect(flipFirstHalf['scaleX']).toBe(0);
+    expect(flipFirstHalf['value']).toBe(0);
     expect(flipFirstHalf['duration']).toBe(0.1);
     expect(typeof flipFirstHalf['onComplete']).toBe('function');
+    expect(typeof flipFirstHalf['onUpdate']).toBe('function');
+    expect(flipFirstHalf).not.toHaveProperty('scaleX');
 
-    // Fourth call: scaleX -> 1 (second half of flip)
+    // Fourth call: proxy tween value → 1 (second half of flip)
     const flipSecondHalf = calls[3]![1] as Record<string, unknown>;
-    expect(flipSecondHalf['scaleX']).toBe(1);
+    expect(flipSecondHalf['value']).toBe(1);
     expect(flipSecondHalf['duration']).toBe(0.1);
+    expect(flipSecondHalf).not.toHaveProperty('scaleX');
 
     // Execute the onComplete callback
     (flipFirstHalf['onComplete'] as () => void)();

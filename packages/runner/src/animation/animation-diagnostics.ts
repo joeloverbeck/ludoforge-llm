@@ -37,6 +37,7 @@ export interface TweenLogEntry {
   readonly fromPosition?: DiagnosticPosition;
   readonly toPosition?: DiagnosticPosition;
   readonly faceState?: FaceStateChange;
+  readonly tweenedProperties?: readonly string[];
 }
 
 export interface FaceControllerCallEntry {

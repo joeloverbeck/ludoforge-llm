@@ -17,7 +17,7 @@ import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
 type VisualAnimationDescriptor = Exclude<AnimationDescriptor, { kind: 'skipped' }>;
 type TimelineLogger = Pick<
 AnimationLogger,
-'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit' | 'logFaceControllerCall'
+'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit' | 'logFaceControllerCall' | 'logWarning'
 >;
 
 const NOOP_TIMELINE_LOGGER: TimelineLogger = {
@@ -26,6 +26,7 @@ const NOOP_TIMELINE_LOGGER: TimelineLogger = {
   logTweenCreated() {},
   logFaceControllerCall() {},
   logTokenVisibilityInit() {},
+  logWarning() {},
 };
 
 export interface TimelineSpriteRefs {
@@ -335,23 +336,29 @@ function processDescriptor(
       const pulsePreset = presetRegistry.get('pulse');
       if (pulsePreset !== undefined && pulsePreset.compatibleKinds.includes(descriptor.kind)) {
         const pulseDuration = durationOverrideSeconds ?? pulsePreset.defaultDurationSeconds;
+        const pulseProps: string[] = [];
         pulsePreset.createTween(descriptor, {
           ...context,
           durationSeconds: pulseDuration,
+          tweenedProperties: pulseProps,
         });
-        logger.logTweenCreated(buildTweenLogEntry(descriptor, pulsePreset.id, pulseDuration, true, context.spriteRefs));
+        logger.logTweenCreated(buildTweenLogEntry(descriptor, pulsePreset.id, pulseDuration, true, context.spriteRefs, pulseProps));
       }
     }
 
     const preset = presetRegistry.requireCompatible(descriptor.preset, descriptor.kind);
     const durationSeconds = durationOverrideSeconds ?? preset.defaultDurationSeconds;
+    const tweenProps: string[] = [];
     preset.createTween(descriptor, {
       ...context,
       durationSeconds,
+      tweenedProperties: tweenProps,
     });
-    logger.logTweenCreated(buildTweenLogEntry(descriptor, preset.id, durationSeconds, false, context.spriteRefs));
+    logger.logTweenCreated(buildTweenLogEntry(descriptor, preset.id, durationSeconds, false, context.spriteRefs, tweenProps));
   } catch (error) {
-    console.warn(`Animation tween generation failed for descriptor "${descriptor.kind}".`, error);
+    const message = `Animation tween generation failed for descriptor "${descriptor.kind}".`;
+    console.warn(message, error);
+    logger.logWarning(message);
   }
 }
 
@@ -361,6 +368,7 @@ function buildTweenLogEntry(
   durationSeconds: number,
   isTriggeredPulse: boolean,
   spriteRefs: PresetTweenContext['spriteRefs'],
+  tweenedProperties: readonly string[],
 ): TweenLogEntry {
   const tokenId = getDescriptorTokenId(descriptor);
   const fromPosition = getDescriptorFromPosition(descriptor, spriteRefs);
@@ -377,6 +385,7 @@ function buildTweenLogEntry(
     ...(descriptor.kind === 'cardFlip' && isBooleanFaceChange(descriptor)
       ? { faceState: { oldValue: descriptor.oldValue, newValue: descriptor.newValue } }
       : {}),
+    tweenedProperties,
   };
 }
 

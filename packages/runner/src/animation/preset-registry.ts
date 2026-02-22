@@ -27,6 +27,8 @@ export interface PresetTweenContext {
     };
   };
   readonly phaseBannerCallback?: (phase: string | null) => void;
+  /** Mutable collector for property names tweened by appendTween / appendScaleXTween. */
+  readonly tweenedProperties?: string[];
 }
 
 export interface TokenFaceControllerRef {
@@ -280,7 +282,6 @@ interface TweenTarget {
   y?: number;
   alpha?: number;
   tint?: number;
-  scaleX?: number;
   scale?: {
     x?: number;
     y?: number;
@@ -324,23 +325,20 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
   if (descriptor.kind === 'cardDeal' && descriptor.destinationRole === 'shared') {
     const faceController = context.spriteRefs.tokenFaceControllers?.get(descriptor.tokenId);
     const flipHalf = 0.1;
-    appendTween(context, target, {
-      scaleX: 0,
-      ...(faceController === undefined
-        ? {}
-        : {
-            onComplete: () => {
-              setFaceUpWithLogging(
-                context,
-                descriptor.tokenId,
-                faceController,
-                true,
-                'card-deal-to-shared-mid-arc',
-              );
-            },
-          }),
-    }, flipHalf);
-    appendTween(context, target, { scaleX: 1 }, flipHalf);
+    appendScaleXTween(context, target, 1, 0, flipHalf,
+      faceController === undefined
+        ? undefined
+        : () => {
+            setFaceUpWithLogging(
+              context,
+              descriptor.tokenId,
+              faceController,
+              true,
+              'card-deal-to-shared-mid-arc',
+            );
+          },
+    );
+    appendScaleXTween(context, target, 0, 1, flipHalf);
   }
 }
 
@@ -397,17 +395,14 @@ function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: P
   }
 
   const halfDuration = context.durationSeconds / 2;
-  appendTween(context, target, {
-    scaleX: 0,
-    ...(newFaceUp === undefined || faceController === undefined
-      ? {}
-      : {
-          onComplete: () => {
-            setFaceUpWithLogging(context, descriptor.tokenId, faceController, newFaceUp, 'card-flip-3d-mid');
-          },
-        }),
-  }, halfDuration);
-  appendTween(context, target, { scaleX: 1 }, halfDuration);
+  appendScaleXTween(context, target, 1, 0, halfDuration,
+    newFaceUp === undefined || faceController === undefined
+      ? undefined
+      : () => {
+          setFaceUpWithLogging(context, descriptor.tokenId, faceController, newFaceUp, 'card-flip-3d-mid');
+        },
+  );
+  appendScaleXTween(context, target, 0, 1, halfDuration);
 }
 
 function createTintFlashTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -507,12 +502,42 @@ function appendTween(
   vars: Record<string, unknown>,
   durationSeconds: number,
 ): void {
+  context.tweenedProperties?.push(...Object.keys(vars));
   if (typeof context.gsap.to === 'function') {
     context.timeline.add(context.gsap.to(target, { duration: durationSeconds, ...vars }));
     return;
   }
 
   applyVars(target, vars);
+  appendDelay(context, durationSeconds);
+}
+
+function appendScaleXTween(
+  context: PresetTweenContext,
+  target: TweenTarget,
+  fromScaleX: number,
+  toScaleX: number,
+  durationSeconds: number,
+  onComplete?: () => void,
+): void {
+  context.tweenedProperties?.push('scaleX(proxy)');
+  setScaleX(target, fromScaleX);
+
+  if (typeof context.gsap.to === 'function') {
+    const proxy = { value: fromScaleX };
+    context.timeline.add(context.gsap.to(proxy, {
+      value: toScaleX,
+      duration: durationSeconds,
+      onUpdate: () => { setScaleX(target, proxy.value); },
+      ...(onComplete !== undefined ? { onComplete } : {}),
+    }));
+    return;
+  }
+
+  setScaleX(target, toScaleX);
+  if (onComplete !== undefined) {
+    onComplete();
+  }
   appendDelay(context, durationSeconds);
 }
 
@@ -538,9 +563,6 @@ function applyVars(target: TweenTarget, vars: Record<string, unknown>): void {
       target.tint = value;
       continue;
     }
-    if (key === 'scaleX' && typeof value === 'number') {
-      target.scaleX = value;
-    }
   }
 }
 
@@ -558,6 +580,16 @@ function setScale(target: TweenTarget, value: number): void {
   }
 
   target.scale = { x: value, y: value };
+}
+
+function setScaleX(target: TweenTarget, value: number): void {
+  const scale = target.scale;
+  if (scale !== undefined) {
+    scale.x = value;
+    return;
+  }
+
+  target.scale = { x: value, y: 1 };
 }
 
 function setFaceUpWithLogging(

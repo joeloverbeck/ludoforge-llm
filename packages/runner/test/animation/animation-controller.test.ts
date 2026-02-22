@@ -24,6 +24,9 @@ interface ControllerStoreState {
       readonly id: string;
     }[];
   } | null;
+  readonly gameState: {
+    readonly zones: Readonly<Record<string, readonly { readonly id: string | number; readonly type: string; readonly props: Readonly<Record<string, unknown>> }[]>>;
+  } | null;
   readonly renderModel: {
     readonly tokens: readonly {
       readonly id: string;
@@ -52,6 +55,7 @@ function createControllerStore(): StoreApi<ControllerStoreState> {
       effectTrace: [] as readonly EffectTraceEntry[],
       animationPlaying: false,
       gameDef: null,
+      gameState: null,
       renderModel: null,
       setAnimationPlaying: (playing: boolean) => {
         store.setState({ animationPlaying: playing });
@@ -220,6 +224,20 @@ function cardRenderModel() {
       { id: 'tok:card', type: 'card' },
       { id: 'tok:chip', type: 'chip' },
     ],
+  } as const;
+}
+
+function cardGameState() {
+  return {
+    zones: {
+      'zone:deck': [
+        { id: 'tok:card', type: 'card', props: {} },
+      ],
+      'zone:hand:p1': [],
+      'zone:board': [],
+      'zone:burn': [],
+      'zone:discard': [],
+    },
   } as const;
 }
 
@@ -706,6 +724,17 @@ describe('createAnimationController', () => {
     controller.start();
     store.setState({
       gameDef: cardGameDef(),
+      gameState: {
+        zones: {
+          'zone:deck': [
+            { id: 'tok:card', type: 'card', props: {} },
+            { id: 'tok:card-special', type: 'card-special', props: {} },
+          ],
+          'zone:hand:p1': [
+            { id: 'tok:chip', type: 'chip', props: {} },
+          ],
+        },
+      },
       renderModel: {
         tokens: [
           { id: 'tok:card', type: 'card' },
@@ -860,6 +889,7 @@ describe('createAnimationController', () => {
     controller.start();
     store.setState({
       gameDef: cardGameDef(),
+      gameState: cardGameState(),
       renderModel: cardRenderModel(),
       effectTrace: cardTraceEntries(),
     });
@@ -948,6 +978,7 @@ describe('createAnimationController', () => {
     controller.setReducedMotion(true);
     store.setState({
       gameDef: cardGameDef(),
+      gameState: cardGameState(),
       renderModel: cardRenderModel(),
       effectTrace: cardTraceEntries(),
     });
@@ -1908,6 +1939,102 @@ describe('createAnimationController', () => {
     expect(buffer).toBeDefined();
     expect(typeof buffer?.beginBatch).toBe('function');
     expect(typeof buffer?.downloadAsJson).toBe('function');
+  });
+
+  it('classifies deck-to-community moves as cardDeal even when deck tokens are only in gameState (hidden zone)', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    const communityDealTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: {
+          phase: 'main',
+          eventContext: 'actionEffect',
+          effectPath: 'effects.0',
+        },
+      },
+    ];
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: cardAnimationProvider(),
+        tokenContainers: () => new Map([['tok:card', {}]]) as never,
+        zoneContainers: () => new Map([
+          ['zone:deck', {}],
+          ['zone:board', {}],
+        ]) as never,
+        zonePositions: () => ({
+          positions: new Map([
+            ['zone:deck', { x: 0, y: 0 }],
+            ['zone:board', { x: 5, y: 5 }],
+          ]),
+          bounds: { minX: 0, minY: 0, maxX: 5, maxY: 5 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors,
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+
+    // Token is only in gameState.zones (hidden deck zone), NOT in renderModel.tokens
+    store.setState({
+      gameDef: cardGameDef(),
+      gameState: {
+        zones: {
+          'zone:deck': [
+            { id: 'tok:card', type: 'card', props: {} },
+          ],
+          'zone:board': [],
+        },
+      },
+      renderModel: {
+        tokens: [
+          // tok:card is NOT here — it's in the hidden deck zone
+          { id: 'tok:chip', type: 'chip' },
+        ],
+      },
+      effectTrace: communityDealTrace,
+    });
+
+    expect(buildTimelineMock).toHaveBeenCalledTimes(1);
+    const buildTimelineCalls = (buildTimelineMock as unknown as {
+      readonly mock: {
+        readonly calls: readonly (readonly [readonly { readonly kind: string }[]])[];
+      };
+    }).mock.calls;
+    const descriptors = buildTimelineCalls[0]?.[0] ?? [];
+
+    // The deck-to-community move should be classified as cardDeal, not moveToken
+    expect(descriptors.some((d) => d.kind === 'cardDeal')).toBe(true);
+    expect(descriptors.some((d) => d.kind === 'moveToken')).toBe(false);
+
+    controller.destroy();
   });
 
 });

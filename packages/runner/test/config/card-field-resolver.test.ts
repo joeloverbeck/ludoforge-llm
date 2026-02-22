@@ -108,4 +108,84 @@ describe('card-field-resolver', () => {
       },
     ]);
   });
+
+  it('resolves all three poker card fields with suit-based colors matching visual-config', () => {
+    const colorMap: Record<string, string> = {
+      Spades: '#1e293b',
+      Hearts: '#dc2626',
+      Diamonds: '#dc2626',
+      Clubs: '#1e293b',
+    };
+    const symbolMap: Record<string, string> = {
+      Spades: '♠',
+      Hearts: '♥',
+      Diamonds: '♦',
+      Clubs: '♣',
+    };
+
+    const fields = resolveCardTemplateFields(
+      {
+        rankCorner: {
+          y: 4,
+          x: 4,
+          fontSize: 9,
+          align: 'left',
+          sourceField: 'rankName',
+          colorFromProp: 'suitName',
+          colorMap,
+        },
+        suitCenter: {
+          y: 20,
+          fontSize: 18,
+          align: 'center',
+          sourceField: 'suitName',
+          symbolMap,
+          colorFromProp: 'suitName',
+          colorMap,
+        },
+        rankBottom: {
+          y: 52,
+          x: -4,
+          fontSize: 9,
+          align: 'right',
+          sourceField: 'rankName',
+          colorFromProp: 'suitName',
+          colorMap,
+        },
+      },
+      { rankName: '2', suitName: 'Spades' },
+    );
+
+    expect(fields).toHaveLength(3);
+    expect(fields[0]).toEqual({
+      fieldName: 'rankCorner',
+      align: 'left',
+      x: 4,
+      y: 4,
+      fontSize: 9,
+      wrap: undefined,
+      text: '2',
+      color: '#1e293b',
+    });
+    expect(fields[1]).toEqual({
+      fieldName: 'suitCenter',
+      align: 'center',
+      x: 0,
+      y: 20,
+      fontSize: 18,
+      wrap: undefined,
+      text: '♠',
+      color: '#1e293b',
+    });
+    expect(fields[2]).toEqual({
+      fieldName: 'rankBottom',
+      align: 'right',
+      x: -4,
+      y: 52,
+      fontSize: 9,
+      wrap: undefined,
+      text: '2',
+      color: '#1e293b',
+    });
+  });
 });

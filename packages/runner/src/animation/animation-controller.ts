@@ -397,15 +397,17 @@ function buildCardContext(
   visualConfigProvider: VisualConfigProvider,
 ): CardAnimationMappingContext | undefined {
   const cardAnimation = visualConfigProvider.getCardAnimation();
-  const renderModel = state.renderModel;
-  if (cardAnimation === null || renderModel === null) {
+  const gameState = state.gameState;
+  if (cardAnimation === null || gameState === null) {
     return undefined;
   }
 
   const tokenTypeIds = state.gameDef?.tokenTypes.map((tokenType) => tokenType.id) ?? [];
   const tokenTypeByTokenId = new Map<string, string>();
-  for (const token of renderModel.tokens) {
-    tokenTypeByTokenId.set(token.id, token.type);
+  for (const zoneTokens of Object.values(gameState.zones)) {
+    for (const token of zoneTokens ?? []) {
+      tokenTypeByTokenId.set(String(token.id), token.type);
+    }
   }
 
   return {

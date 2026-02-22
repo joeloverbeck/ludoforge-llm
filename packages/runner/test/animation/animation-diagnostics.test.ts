@@ -44,7 +44,17 @@ describe('animation-diagnostics types', () => {
       fromPosition: { x: 0, y: 0 },
       toPosition: { x: 100, y: 20 },
       faceState: { oldValue: false, newValue: true },
+      tweenedProperties: ['scaleX(proxy)'],
     };
+
+    const tweenWithoutProps: TweenLogEntry = {
+      descriptorKind: 'moveToken',
+      tokenId: 'tok:1',
+      preset: 'arc-tween',
+      durationSeconds: 0.6,
+      isTriggeredPulse: false,
+    };
+    expect(tweenWithoutProps.tweenedProperties).toBeUndefined();
 
     const faceControllerCall: FaceControllerCallEntry = {
       tokenId: 'tok:card',

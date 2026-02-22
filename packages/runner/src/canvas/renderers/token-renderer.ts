@@ -48,6 +48,11 @@ interface TokenVisualElements {
   frontContent: Container | null;
 }
 
+export interface TokenLayoutConfig {
+  readonly zoneLayoutRoles: ReadonlyMap<string, string>;
+  readonly sharedZoneIds: ReadonlySet<string>;
+}
+
 interface TokenRendererOptions {
   readonly disposalQueue: DisposalQueue;
   readonly bindSelection?: (
@@ -55,6 +60,7 @@ interface TokenRendererOptions {
     tokenId: string,
     isSelectable: () => boolean,
   ) => () => void;
+  readonly layoutConfig?: TokenLayoutConfig;
 }
 
 export function createTokenRenderer(
@@ -101,6 +107,11 @@ export function createTokenRenderer(
       }
 
       const zoneTokenCounts = new Map<string, number>();
+      const zoneTotalCounts = new Map<string, number>();
+      for (const entry of renderEntries) {
+        const zoneId = entry.representative.zoneID;
+        zoneTotalCounts.set(zoneId, (zoneTotalCounts.get(zoneId) ?? 0) + 1);
+      }
       selectableByTokenId.clear();
 
       for (const entry of renderEntries) {
@@ -174,7 +185,17 @@ export function createTokenRenderer(
           continue;
         }
 
-        const offset = tokenOffset(tokenIndexInZone);
+        const totalInZone = zoneTotalCounts.get(token.zoneID) ?? 1;
+        const cardTemplate = colorProvider.getCardTemplateForTokenType(token.type);
+        const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
+        const offset = resolveZoneAwareOffset(
+          token.zoneID,
+          tokenIndexInZone,
+          totalInZone,
+          tokenVisual.shape ?? 'circle',
+          cardTemplate,
+          options.layoutConfig,
+        );
         tokenContainer.visible = true;
         tokenContainer.alpha = 1;
         tokenContainer.position.set(
@@ -499,7 +520,87 @@ function resolveTokenHitArea(
   }
 }
 
-function tokenOffset(index: number): { x: number; y: number } {
+const FAN_GAP = 4;
+const STACK_OFFSET_X = 2;
+const STACK_OFFSET_Y = 1;
+
+function resolveZoneAwareOffset(
+  zoneId: string,
+  index: number,
+  totalInZone: number,
+  shape: TokenShape | undefined,
+  cardTemplate: CardTemplate | null,
+  layoutConfig: TokenLayoutConfig | undefined,
+): { x: number; y: number } {
+  const layoutRole = resolveZoneLayoutRole(zoneId, layoutConfig);
+
+  if (layoutRole === 'fan') {
+    return fanOffset(index, totalInZone, shape, cardTemplate);
+  }
+  if (layoutRole === 'stack') {
+    return stackOffset(index);
+  }
+  return gridOffset(index);
+}
+
+function resolveZoneLayoutRole(
+  zoneId: string,
+  layoutConfig: TokenLayoutConfig | undefined,
+): 'fan' | 'stack' | 'grid' {
+  if (layoutConfig === undefined) {
+    return 'grid';
+  }
+
+  if (layoutConfig.sharedZoneIds.has(zoneId)) {
+    return 'fan';
+  }
+
+  const role = layoutConfig.zoneLayoutRoles.get(zoneId);
+  if (role === 'hand') {
+    return 'fan';
+  }
+  if (role === 'card') {
+    return 'stack';
+  }
+  return 'grid';
+}
+
+function fanOffset(
+  index: number,
+  total: number,
+  shape: TokenShape | undefined,
+  cardTemplate: CardTemplate | null,
+): { x: number; y: number } {
+  const itemWidth = resolveItemWidth(shape, cardTemplate);
+  const spacing = itemWidth + FAN_GAP;
+  const totalWidth = (total - 1) * spacing;
+  return {
+    x: index * spacing - totalWidth / 2,
+    y: 0,
+  };
+}
+
+function resolveItemWidth(
+  shape: TokenShape | undefined,
+  cardTemplate: CardTemplate | null,
+): number {
+  if (cardTemplate !== null) {
+    return cardTemplate.width;
+  }
+  if (shape === 'card') {
+    return CARD_WIDTH;
+  }
+  return TOKEN_RADIUS * 2;
+}
+
+function stackOffset(index: number): { x: number; y: number } {
+  return {
+    x: index * STACK_OFFSET_X,
+    y: index * STACK_OFFSET_Y,
+  };
+}
+
+function gridOffset(index: number): { x: number; y: number } {
   const column = index % TOKENS_PER_ROW;
   const row = Math.floor(index / TOKENS_PER_ROW);
 

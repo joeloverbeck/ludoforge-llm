@@ -19,6 +19,9 @@ interface ControllerStoreState {
       readonly id: string;
     }[];
   } | null;
+  readonly gameState: {
+    readonly zones: Readonly<Record<string, readonly { readonly id: string | number; readonly type: string; readonly props: Readonly<Record<string, unknown>> }[]>>;
+  } | null;
   readonly renderModel: {
     readonly tokens: readonly {
       readonly id: string;
@@ -46,6 +49,7 @@ function createControllerStore(): StoreApi<ControllerStoreState> {
       effectTrace: [] as readonly EffectTraceEntry[],
       animationPlaying: false,
       gameDef: null,
+      gameState: null,
       renderModel: null,
       setAnimationPlaying: (playing: boolean) => {
         store.setState({ animationPlaying: playing });
@@ -323,6 +327,12 @@ describe('animation pipeline integration', () => {
     store.setState({
       gameDef: {
         tokenTypes: [{ id: 'card' }],
+      },
+      gameState: {
+        zones: {
+          'zone:deck': [{ id: 'tok:card', type: 'card', props: {} }],
+          'zone:hand:p1': [],
+        },
       },
       renderModel: {
         tokens: [{ id: 'tok:card', type: 'card' }],

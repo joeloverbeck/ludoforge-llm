@@ -89,13 +89,14 @@ function createMockEphemeralFactory(): EphemeralContainerFactory & {
 
 function createMockTimelineLogger(): Pick<
 AnimationLogger,
-'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logFaceControllerCall' | 'logTokenVisibilityInit'
+'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logFaceControllerCall' | 'logTokenVisibilityInit' | 'logWarning'
 > & {
   readonly logSpriteResolution: ReturnType<typeof vi.fn>;
   readonly logEphemeralCreated: ReturnType<typeof vi.fn>;
   readonly logTweenCreated: ReturnType<typeof vi.fn>;
   readonly logFaceControllerCall: ReturnType<typeof vi.fn>;
   readonly logTokenVisibilityInit: ReturnType<typeof vi.fn>;
+  readonly logWarning: ReturnType<typeof vi.fn>;
 } {
   return {
     logSpriteResolution: vi.fn(),
@@ -103,6 +104,7 @@ AnimationLogger,
     logTweenCreated: vi.fn(),
     logFaceControllerCall: vi.fn(),
     logTokenVisibilityInit: vi.fn(),
+    logWarning: vi.fn(),
   };
 }
 
@@ -871,6 +873,77 @@ describe('buildTimeline diagnostics logging', () => {
     expect(() => {
       buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
     }).not.toThrow();
+  });
+
+  it('routes tween creation errors through logWarning', () => {
+    const runtime = createRuntimeFixture();
+    const logger = createMockTimelineLogger();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: () => {
+          throw new Error('boom');
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      logger,
+    });
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(logger.logWarning).toHaveBeenCalledTimes(1);
+    expect(logger.logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('Animation tween generation failed'),
+    );
+  });
+
+  it('includes tweenedProperties in tween log entries', () => {
+    const runtime = createRuntimeFixture();
+    const logger = createMockTimelineLogger();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      logger,
+    });
+
+    expect(logger.logTweenCreated).toHaveBeenCalledTimes(1);
+    const loggedEntry = logger.logTweenCreated.mock.calls[0]?.[0];
+    expect(loggedEntry).toHaveProperty('tweenedProperties');
+    expect(Array.isArray(loggedEntry.tweenedProperties)).toBe(true);
   });
 });
 

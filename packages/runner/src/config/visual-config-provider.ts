@@ -233,6 +233,10 @@ export class VisualConfigProvider {
     return this.config?.zones?.layoutRoles?.[zoneId] ?? null;
   }
 
+  getLayoutRoles(): Readonly<Record<string, LayoutRole>> | null {
+    return this.config?.zones?.layoutRoles ?? null;
+  }
+
   getCardAnimation(): CardAnimationConfig | null {
     return this.config?.cardAnimation ?? null;
   }

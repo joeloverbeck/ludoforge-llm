@@ -8,6 +8,7 @@ import type { StoreApi } from 'zustand';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { GameStore } from '../../src/store/game-store.js';
+import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
 
 vi.mock('zustand', () => ({
   useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => {
@@ -120,5 +121,53 @@ describe('AnimationControls', () => {
 
     expect(containerBlock).toContain('pointer-events: auto;');
     expect(speedBlock).toContain('pointer-events: auto;');
+  });
+
+  it('renders download button in dev mode when diagnostic buffer is provided', () => {
+    const diagnosticBuffer = {
+      downloadAsJson: vi.fn(),
+    } as unknown as DiagnosticBuffer;
+
+    render(createElement(AnimationControls, {
+      store: createAnimationControlsStore({}),
+      diagnostics: { animationDiagnosticBuffer: diagnosticBuffer },
+    }));
+
+    if (!import.meta.env.DEV) {
+      expect(screen.queryByTestId('animation-download-log')).toBeNull();
+      return;
+    }
+
+    expect(screen.queryByTestId('animation-download-log')).not.toBeNull();
+  });
+
+  it('does not render download button without diagnostic buffer', () => {
+    render(createElement(AnimationControls, {
+      store: createAnimationControlsStore({}),
+    }));
+
+    expect(screen.queryByTestId('animation-download-log')).toBeNull();
+  });
+
+  it('downloads diagnostics when download button is clicked', () => {
+    const downloadAsJson = vi.fn();
+    const diagnosticBuffer = {
+      downloadAsJson,
+    } as unknown as DiagnosticBuffer;
+
+    render(createElement(AnimationControls, {
+      store: createAnimationControlsStore({}),
+      diagnostics: { animationDiagnosticBuffer: diagnosticBuffer },
+    }));
+
+    const downloadButton = screen.queryByTestId('animation-download-log');
+    if (downloadButton === null) {
+      expect(import.meta.env.DEV).toBe(false);
+      expect(downloadAsJson).not.toHaveBeenCalled();
+      return;
+    }
+
+    fireEvent.click(downloadButton);
+    expect(downloadAsJson).toHaveBeenCalledTimes(1);
   });
 });

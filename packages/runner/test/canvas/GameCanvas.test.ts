@@ -8,6 +8,7 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import { GameCanvas, createGameCanvasRuntime } from '../../src/canvas/GameCanvas';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
+import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
 import { getOrComputeLayout } from '../../src/layout/layout-cache.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { drawTableBackground } from '../../src/canvas/renderers/table-background-renderer.js';
@@ -248,6 +249,7 @@ function createRuntimeFixture() {
     resume: vi.fn(),
     skipCurrent: vi.fn(),
     skipAll: vi.fn(),
+    getDiagnosticBuffer: vi.fn(),
   };
   const aiPlaybackController = {
     start: vi.fn(() => {
@@ -562,6 +564,33 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.animationController.skipCurrent).toHaveBeenCalledTimes(1);
 
     runtime.destroy();
+  });
+
+  it('publishes diagnostic buffer at runtime init and clears it on destroy', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const onAnimationDiagnosticBufferChange = vi.fn();
+    const diagnosticBuffer = {
+      downloadAsJson: vi.fn(),
+    } as unknown as DiagnosticBuffer;
+    fixture.animationController.getDiagnosticBuffer.mockReturnValue(diagnosticBuffer);
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onAnimationDiagnosticBufferChange,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(fixture.animationController.getDiagnosticBuffer).toHaveBeenCalledTimes(1);
+    expect(onAnimationDiagnosticBufferChange).toHaveBeenNthCalledWith(1, diagnosticBuffer);
+
+    runtime.destroy();
+    expect(onAnimationDiagnosticBufferChange).toHaveBeenNthCalledWith(2, null);
   });
 
   it('routes reduced-motion updates to animation controller', async () => {

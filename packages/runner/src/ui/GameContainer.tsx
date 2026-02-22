@@ -6,6 +6,7 @@ import { GameCanvas } from '../canvas/GameCanvas.js';
 import type { ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from '../canvas/interaction-highlights.js';
+import type { DiagnosticBuffer } from '../animation/diagnostic-buffer.js';
 import { isEditableTarget } from '../input/editable-target.js';
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store.js';
@@ -38,6 +39,7 @@ import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { EventLogPanel } from './EventLogPanel.js';
 import { useEventLogEntries } from './useEventLogEntries.js';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
+import type { OverlayPanelComponent, OverlayPanelDiagnostics, OverlayPanelProps } from './overlay-panel-contract.js';
 import styles from './GameContainer.module.css';
 
 interface GameContainerProps {
@@ -51,10 +53,9 @@ interface GameContainerProps {
   readonly onLoad?: () => void;
 }
 
-type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement | null;
 type OverlayRegion = 'top' | 'side' | 'floating';
 
-const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegionPanel[]>> = {
+const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
   top: [
     InterruptBanner,
     PhaseIndicator,
@@ -75,11 +76,11 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegi
 };
 
 function renderOverlayRegionPanels(
-  panels: readonly OverlayRegionPanel[],
-  store: StoreApi<GameStore>,
+  panels: readonly OverlayPanelComponent[],
+  props: OverlayPanelProps,
 ): ReactElement[] {
   return panels.map((Panel, index) => (
-    <Panel key={Panel.name || `overlay-panel-${index}`} store={store} />
+    <Panel key={Panel.name || `overlay-panel-${index}`} {...props} />
   ));
 }
 
@@ -119,6 +120,7 @@ export function GameContainer({
   const [eventLogVisible, setEventLogVisible] = useState(true);
   const [interactionHighlights, setInteractionHighlights] = useState<InteractionHighlights>(EMPTY_INTERACTION_HIGHLIGHTS);
   const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
+  const [animationDiagnosticBuffer, setAnimationDiagnosticBuffer] = useState<DiagnosticBuffer | undefined>(undefined);
   const eventLogEntries = useEventLogEntries(store, visualConfigProvider);
   const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
@@ -157,9 +159,15 @@ export function GameContainer({
     setInteractionHighlights(EMPTY_INTERACTION_HIGHLIGHTS);
     setSelectedEventLogEntryId(null);
   }, [store]);
+  useEffect(() => {
+    setAnimationDiagnosticBuffer(undefined);
+  }, [store]);
 
   const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null): void => {
     setHoverAnchor(anchor);
+  }, []);
+  const onAnimationDiagnosticBufferChange = useCallback((buffer: DiagnosticBuffer | null): void => {
+    setAnimationDiagnosticBuffer(buffer ?? undefined);
   }, []);
 
   if (error !== null) {
@@ -186,9 +194,18 @@ export function GameContainer({
     (factionId) => visualConfigProvider.getFactionColor(factionId),
   );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
+  const overlayDiagnostics: OverlayPanelDiagnostics | undefined = animationDiagnosticBuffer === undefined
+    ? undefined
+    : { animationDiagnosticBuffer };
+  const overlayPanelProps: OverlayPanelProps = overlayDiagnostics === undefined
+    ? { store }
+    : {
+        store,
+        diagnostics: overlayDiagnostics,
+      };
   const sidePanelContent = (
     <>
-      {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
+      {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, overlayPanelProps)}
       {eventLogVisible ? (
         <EventLogPanel
           entries={eventLogEntries}
@@ -237,12 +254,13 @@ export function GameContainer({
             interactionHighlights={interactionHighlights}
             {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
             onHoverAnchorChange={onHoverAnchorChange}
+            onAnimationDiagnosticBufferChange={onAnimationDiagnosticBufferChange}
           />
         </div>
         <UIOverlay
           topBarContent={(
             <>
-              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, overlayPanelProps)}
               <div className={styles.sessionButtons}>
                 <button
                   type="button"
@@ -291,7 +309,7 @@ export function GameContainer({
           bottomBarContent={bottomBarContent}
           floatingContent={(
             <>
-              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
+              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, overlayPanelProps)}
               <PhaseBannerOverlay store={store} />
               <ShowdownOverlay store={store} />
               <TerminalOverlay

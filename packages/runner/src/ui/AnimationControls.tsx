@@ -1,18 +1,14 @@
 import type { ReactElement } from 'react';
-import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
-import type { GameStore } from '../store/game-store.js';
+import type { OverlayPanelProps } from './overlay-panel-contract.js';
 import styles from './AnimationControls.module.css';
-
-interface AnimationControlsProps {
-  readonly store: StoreApi<GameStore>;
-}
 
 const SPEED_OPTIONS: readonly AnimationPlaybackSpeed[] = ['1x', '2x', '4x'];
 
-export function AnimationControls({ store }: AnimationControlsProps): ReactElement {
+export function AnimationControls({ store, diagnostics }: OverlayPanelProps): ReactElement {
+  const diagnosticBuffer = diagnostics?.animationDiagnosticBuffer;
   const animationPlaying = useStore(store, (state) => state.animationPlaying);
   const animationPaused = useStore(store, (state) => state.animationPaused);
   const animationSpeed = useStore(store, (state) => state.animationPlaybackSpeed);
@@ -95,6 +91,19 @@ export function AnimationControls({ store }: AnimationControlsProps): ReactEleme
         />
         AI Auto-Skip
       </label>
+
+      {import.meta.env.DEV && diagnosticBuffer !== undefined ? (
+        <button
+          type="button"
+          className={styles.controlButton}
+          data-testid="animation-download-log"
+          onClick={() => {
+            diagnosticBuffer.downloadAsJson();
+          }}
+        >
+          Download Log
+        </button>
+      ) : null}
     </section>
   );
 }

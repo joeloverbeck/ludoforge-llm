@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
+import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
 import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { computeDefaultFactionColor } from '../../src/config/visual-config-defaults.js';
@@ -30,12 +31,21 @@ interface CapturedGameCanvasProps {
     readonly space: 'world' | 'screen';
     readonly version: number;
   } | null) => void;
+  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
+}
+
+interface CapturedAnimationControlsProps {
+  readonly store: unknown;
+  readonly diagnostics?: {
+    readonly animationDiagnosticBuffer?: DiagnosticBuffer;
+  };
 }
 
 const testDoubles = vi.hoisted(() => ({
   errorStateProps: null as CapturedErrorStateProps | null,
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
+  animationControlsProps: null as CapturedAnimationControlsProps | null,
 }));
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
@@ -75,7 +85,10 @@ vi.mock('../../src/ui/EventDeckPanel.js', () => ({
 }));
 
 vi.mock('../../src/ui/AnimationControls.js', () => ({
-  AnimationControls: () => createElement('div', { 'data-testid': 'animation-controls' }),
+  AnimationControls: (props: CapturedAnimationControlsProps) => {
+    testDoubles.animationControlsProps = props;
+    return createElement('div', { 'data-testid': 'animation-controls' });
+  },
 }));
 
 vi.mock('../../src/ui/EventLogPanel.js', () => ({
@@ -285,6 +298,7 @@ describe('GameContainer', () => {
   it('renders GameCanvas and UIOverlay when lifecycle is playing', () => {
     testDoubles.tooltipLayerProps = null;
     testDoubles.gameCanvasProps = null;
+    testDoubles.animationControlsProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         store: createContainerStore({
@@ -337,7 +351,10 @@ describe('GameContainer', () => {
       throw new Error('Expected GameCanvas props to be captured.');
     }
     expect(gameCanvasProps.onHoverAnchorChange).toEqual(expect.any(Function));
+    expect(gameCanvasProps.onAnimationDiagnosticBufferChange).toEqual(expect.any(Function));
     expect(gameCanvasProps.interactionHighlights).toEqual({ zoneIDs: [], tokenIDs: [] });
+    const animationControlsProps = testDoubles.animationControlsProps as CapturedAnimationControlsProps | null;
+    expect(animationControlsProps?.diagnostics?.animationDiagnosticBuffer).toBeUndefined();
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {

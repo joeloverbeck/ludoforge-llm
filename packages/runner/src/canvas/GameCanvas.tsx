@@ -3,6 +3,7 @@ import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { AnimationPlaybackSpeed } from '../animation/animation-types.js';
+import type { DiagnosticBuffer } from '../animation/diagnostic-buffer.js';
 import type { GameStore } from '../store/game-store';
 import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
 import { createAiPlaybackController, type AiPlaybackController } from '../animation/ai-playback.js';
@@ -67,6 +68,7 @@ export interface GameCanvasProps {
   readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly interactionHighlights?: InteractionHighlights;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
+  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -84,6 +86,7 @@ interface GameCanvasRuntimeOptions {
   readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly interactionHighlights?: InteractionHighlights;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
+  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
 }
 
 interface GameCanvasRuntimeDeps {
@@ -312,6 +315,7 @@ export async function createGameCanvasRuntime(
   };
   applyAnimationSpeed(selectorStore.getState().animationPlaybackSpeed);
   applyAnimationPaused(selectorStore.getState().animationPaused);
+  options.onAnimationDiagnosticBufferChange?.(animationController?.getDiagnosticBuffer() ?? null);
 
   try {
     actionAnnouncementRenderer.start();
@@ -474,6 +478,7 @@ export async function createGameCanvasRuntime(
       viewport.off('moved', publishHoverAnchor);
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
+      options.onAnimationDiagnosticBufferChange?.(null);
       unsubscribeZoneIDs();
       unsubscribeGameDef();
       unsubscribeAnimationPlaybackSpeed();
@@ -508,6 +513,7 @@ export function GameCanvas({
   keyboardCoordinator,
   interactionHighlights = EMPTY_INTERACTION_HIGHLIGHTS,
   onHoverAnchorChange,
+  onAnimationDiagnosticBufferChange,
   onError,
 }: GameCanvasProps): ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -531,6 +537,7 @@ export function GameCanvas({
       ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
       interactionHighlights: interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
       ...(onHoverAnchorChange === undefined ? {} : { onHoverAnchorChange }),
+      ...(onAnimationDiagnosticBufferChange === undefined ? {} : { onAnimationDiagnosticBufferChange }),
     };
 
     void createGameCanvasRuntime(runtimeOptions).then((createdRuntime) => {
@@ -543,6 +550,7 @@ export function GameCanvas({
     }).catch((error: unknown) => {
       if (!cancelled) {
         onHoverAnchorChange?.(null);
+        onAnimationDiagnosticBufferChange?.(null);
         onError?.(error);
       }
     });
@@ -558,6 +566,7 @@ export function GameCanvas({
     backgroundColor,
     keyboardCoordinator,
     onHoverAnchorChange,
+    onAnimationDiagnosticBufferChange,
     onError,
   ]);
 

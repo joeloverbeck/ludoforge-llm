@@ -10,6 +10,7 @@ import { createEphemeralContainerFactory, type EphemeralContainerFactory } from 
 import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { createPresetRegistry, type AnimationPresetDefinition } from '../../src/animation/preset-registry';
 import { buildTimeline, type TimelineSpriteRefs } from '../../src/animation/timeline-builder';
+import type { AnimationLogger } from '../../src/animation/animation-logger';
 
 function createRuntimeFixture(): {
   readonly gsap: GsapLike;
@@ -82,6 +83,23 @@ function createMockEphemeralFactory(): EphemeralContainerFactory & {
       callCount += 1;
       destroyAllCalls.push(callCount);
     },
+  };
+}
+
+function createMockTimelineLogger(): Pick<
+AnimationLogger,
+'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit'
+> & {
+  readonly logSpriteResolution: ReturnType<typeof vi.fn>;
+  readonly logEphemeralCreated: ReturnType<typeof vi.fn>;
+  readonly logTweenCreated: ReturnType<typeof vi.fn>;
+  readonly logTokenVisibilityInit: ReturnType<typeof vi.fn>;
+} {
+  return {
+    logSpriteResolution: vi.fn(),
+    logEphemeralCreated: vi.fn(),
+    logTweenCreated: vi.fn(),
+    logTokenVisibilityInit: vi.fn(),
   };
 }
 
@@ -615,6 +633,240 @@ describe('buildTimeline phase transition', () => {
     expect(phaseBannerCallback).toHaveBeenCalledWith('flop');
     (callbackItems[1] as () => void)();
     expect(phaseBannerCallback).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('buildTimeline diagnostics logging', () => {
+  it('logs sprite resolution for missing descriptors, suppressed zoneHighlight, and resolved descriptors', () => {
+    const runtime = createRuntimeFixture();
+    const logger = createMockTimelineLogger();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+      {
+        id: 'zone-pulse',
+        defaultDurationSeconds: 0.5,
+        compatibleKinds: ['zoneHighlight'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'missing-token',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'zoneHighlight',
+        zoneId: 'zone:a',
+        sourceKind: 'moveToken',
+        preset: 'zone-pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, { logger });
+
+    expect(logger.logSpriteResolution).toHaveBeenCalledWith(expect.objectContaining({
+      descriptorKind: 'moveToken',
+      tokenId: 'missing-token',
+      resolved: false,
+      reason: expect.stringContaining('token container not found'),
+    }));
+    expect(logger.logSpriteResolution).toHaveBeenCalledWith(expect.objectContaining({
+      descriptorKind: 'zoneHighlight',
+      zoneId: 'zone:a',
+      resolved: false,
+      reason: expect.stringContaining('suppressed'),
+    }));
+    expect(logger.logSpriteResolution).toHaveBeenCalledWith(expect.objectContaining({
+      descriptorKind: 'moveToken',
+      tokenId: 'tok:1',
+      zoneId: 'zone:a',
+      resolved: true,
+      containerType: 'existing',
+      position: { x: 0, y: 0 },
+    }));
+  });
+
+  it('logs tween creation metadata for pulse and descriptor tweens including positions', () => {
+    const runtime = createRuntimeFixture();
+    const logger = createMockTimelineLogger();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+      {
+        id: 'pulse',
+        defaultDurationSeconds: 0.2,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: true,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      logger,
+    });
+
+    expect(logger.logTweenCreated).toHaveBeenCalledTimes(2);
+    expect(logger.logTweenCreated).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      descriptorKind: 'moveToken',
+      tokenId: 'tok:1',
+      preset: 'pulse',
+      durationSeconds: 0.2,
+      isTriggeredPulse: true,
+      fromPosition: { x: 0, y: 0 },
+      toPosition: { x: 100, y: 50 },
+    }));
+    expect(logger.logTweenCreated).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      descriptorKind: 'moveToken',
+      tokenId: 'tok:1',
+      preset: 'move-preset',
+      durationSeconds: 0.4,
+      isTriggeredPulse: false,
+      fromPosition: { x: 0, y: 0 },
+      toPosition: { x: 100, y: 50 },
+    }));
+  });
+
+  it('logs cardFlip face-state changes when boolean values are available', () => {
+    const runtime = createRuntimeFixture();
+    const logger = createMockTimelineLogger();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'flip-preset',
+        defaultDurationSeconds: 0.3,
+        compatibleKinds: ['cardFlip'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:1',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'flip-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      logger,
+    });
+
+    expect(logger.logTweenCreated).toHaveBeenCalledWith(expect.objectContaining({
+      descriptorKind: 'cardFlip',
+      tokenId: 'tok:1',
+      preset: 'flip-preset',
+      isTriggeredPulse: false,
+      faceState: { oldValue: false, newValue: true },
+    }));
+  });
+
+  it('logs visibility initialization and ephemeral container creation', () => {
+    const runtime = createRuntimeFixture();
+    const factory = createMockEphemeralFactory();
+    const logger = createMockTimelineLogger();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['cardDeal', 'moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:missing',
+        from: 'zone:b',
+        to: 'zone:a',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      initializeTokenVisibility: true,
+      ephemeralContainerFactory: factory,
+      logger,
+    });
+
+    expect(logger.logTokenVisibilityInit).toHaveBeenCalledWith({ tokenId: 'tok:1', alphaSetTo: 0 });
+    expect(logger.logTokenVisibilityInit).toHaveBeenCalledWith({ tokenId: 'tok:missing', alphaSetTo: 0 });
+    expect(logger.logEphemeralCreated).toHaveBeenCalledWith(expect.objectContaining({
+      tokenId: 'tok:missing',
+      width: expect.any(Number),
+      height: expect.any(Number),
+    }));
+  });
+
+  it('remains safe when logger is omitted', () => {
+    const runtime = createRuntimeFixture();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['moveToken'],
+        createTween: vi.fn(),
+      },
+    ];
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    expect(() => {
+      buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+    }).not.toThrow();
   });
 });
 

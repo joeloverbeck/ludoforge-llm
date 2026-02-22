@@ -1,16 +1,30 @@
 import type { Container } from 'pixi.js';
 
+import type { AnimationLogger } from './animation-logger.js';
 import type { ZonePositionMap } from '../spatial/position-types.js';
 import type {
   AnimationDescriptor,
   AnimationSequencingPolicy,
+  CardFlipDescriptor,
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
+import type { DiagnosticPosition, TweenLogEntry } from './animation-diagnostics.js';
 import type { EphemeralContainerFactory } from './ephemeral-container-factory.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
 
 type VisualAnimationDescriptor = Exclude<AnimationDescriptor, { kind: 'skipped' }>;
+type TimelineLogger = Pick<
+AnimationLogger,
+'logSpriteResolution' | 'logEphemeralCreated' | 'logTweenCreated' | 'logTokenVisibilityInit'
+>;
+
+const NOOP_TIMELINE_LOGGER: TimelineLogger = {
+  logSpriteResolution() {},
+  logEphemeralCreated() {},
+  logTweenCreated() {},
+  logTokenVisibilityInit() {},
+};
 
 export interface TimelineSpriteRefs {
   readonly tokenContainers: ReadonlyMap<string, Container>;
@@ -25,6 +39,7 @@ export interface BuildTimelineOptions {
   readonly initializeTokenVisibility?: boolean;
   readonly ephemeralContainerFactory?: EphemeralContainerFactory;
   readonly phaseBannerCallback?: (phase: string | null) => void;
+  readonly logger?: TimelineLogger;
 }
 
 export function buildTimeline(
@@ -38,19 +53,20 @@ export function buildTimeline(
   const policies = options?.sequencingPolicies;
   const durationByKind = options?.durationSecondsByKind;
   const factory = options?.ephemeralContainerFactory;
+  const logger = options?.logger ?? NOOP_TIMELINE_LOGGER;
   const bannerCallbackPart: Pick<PresetTweenContext, 'phaseBannerCallback'> =
     options?.phaseBannerCallback !== undefined ? { phaseBannerCallback: options.phaseBannerCallback } : {};
 
   const effectiveRefs = factory !== undefined
-    ? provisionEphemeralContainers(descriptors, spriteRefs, factory)
+    ? provisionEphemeralContainers(descriptors, spriteRefs, factory, logger)
     : spriteRefs;
 
-  const visual = filterVisualDescriptors(descriptors, effectiveRefs);
+  const visual = filterVisualDescriptors(descriptors, effectiveRefs, logger);
 
   const { mainDescriptors, zoneHighlights } = partitionZoneHighlights(visual);
 
   if (options?.initializeTokenVisibility) {
-    prepareTokensForAnimation(mainDescriptors, effectiveRefs);
+    prepareTokensForAnimation(mainDescriptors, effectiveRefs, logger);
   }
 
   const groups = groupConsecutiveSameKind(mainDescriptors);
@@ -67,7 +83,13 @@ export function buildTimeline(
 
     if (mode === 'sequential' || group.length <= 1) {
       for (const descriptor of group) {
-        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs: effectiveRefs, ...bannerCallbackPart }, durationOverrideSeconds);
+        processDescriptor(
+          descriptor,
+          presetRegistry,
+          { gsap, timeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
+          durationOverrideSeconds,
+          logger,
+        );
       }
       continue;
     }
@@ -84,6 +106,7 @@ export function buildTimeline(
         presetRegistry,
         { gsap, timeline: subTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
         durationOverrideSeconds,
+        logger,
       );
 
       if (i === 0) {
@@ -100,7 +123,13 @@ export function buildTimeline(
   if (zoneHighlights.length > 0) {
     const highlightTimeline = gsap.timeline();
     for (const descriptor of zoneHighlights) {
-      processDescriptor(descriptor, presetRegistry, { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart }, durationByKind?.get('zoneHighlight'));
+      processDescriptor(
+        descriptor,
+        presetRegistry,
+        { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
+        durationByKind?.get('zoneHighlight'),
+        logger,
+      );
     }
     timeline.add(highlightTimeline, 0);
   }
@@ -115,6 +144,7 @@ export function buildTimeline(
 function filterVisualDescriptors(
   descriptors: readonly AnimationDescriptor[],
   spriteRefs: TimelineSpriteRefs,
+  logger: TimelineLogger,
 ): readonly VisualAnimationDescriptor[] {
   const result: VisualAnimationDescriptor[] = [];
   let lastSourceSkipped = false;
@@ -123,14 +153,22 @@ function filterVisualDescriptors(
       continue;
     }
     if (descriptor.kind === 'zoneHighlight' && lastSourceSkipped) {
+      logger.logSpriteResolution({
+        descriptorKind: descriptor.kind,
+        zoneId: descriptor.zoneId,
+        resolved: false,
+        reason: 'zoneHighlight suppressed because its source descriptor was skipped',
+      });
       continue;
     }
     lastSourceSkipped = false;
     const missingReason = getMissingSpriteReason(descriptor, spriteRefs);
     if (missingReason !== null) {
+      logger.logSpriteResolution(buildSpriteResolutionEntry(descriptor, spriteRefs, false, missingReason));
       lastSourceSkipped = true;
       continue;
     }
+    logger.logSpriteResolution(buildSpriteResolutionEntry(descriptor, spriteRefs, true));
     result.push(descriptor);
   }
   return result;
@@ -140,6 +178,7 @@ function provisionEphemeralContainers(
   descriptors: readonly AnimationDescriptor[],
   spriteRefs: TimelineSpriteRefs,
   factory: EphemeralContainerFactory,
+  logger: TimelineLogger,
 ): TimelineSpriteRefs {
   const ephemeralTokens = new Map<string, Container>();
   const ephemeralFaceControllers = new Map<string, { setFaceUp(faceUp: boolean): void }>();
@@ -157,6 +196,11 @@ function provisionEphemeralContainers(
     ) {
       const container = factory.create(descriptor.tokenId);
       ephemeralTokens.set(descriptor.tokenId, container);
+      logger.logEphemeralCreated({
+        tokenId: descriptor.tokenId,
+        width: container.width,
+        height: container.height,
+      });
       ephemeralFaceControllers.set(descriptor.tokenId, {
         setFaceUp(faceUp: boolean) {
           const backChild = container.getChildByLabel('back');
@@ -243,6 +287,7 @@ function groupConsecutiveSameKind(
 function prepareTokensForAnimation(
   descriptors: readonly VisualAnimationDescriptor[],
   spriteRefs: TimelineSpriteRefs,
+  logger: TimelineLogger,
 ): void {
   for (const d of descriptors) {
     if (d.kind === 'cardDeal' || d.kind === 'moveToken' || d.kind === 'cardBurn') {
@@ -251,6 +296,7 @@ function prepareTokensForAnimation(
         | undefined;
       if (container) {
         container.alpha = 0;
+        logger.logTokenVisibilityInit({ tokenId: d.tokenId, alphaSetTo: 0 });
       }
     }
   }
@@ -261,26 +307,172 @@ function processDescriptor(
   presetRegistry: PresetRegistry,
   context: Omit<PresetTweenContext, 'durationSeconds'>,
   durationOverrideSeconds: number | undefined,
+  logger: TimelineLogger,
 ): void {
   try {
     if (descriptor.isTriggered) {
       const pulsePreset = presetRegistry.get('pulse');
       if (pulsePreset !== undefined && pulsePreset.compatibleKinds.includes(descriptor.kind)) {
+        const pulseDuration = durationOverrideSeconds ?? pulsePreset.defaultDurationSeconds;
         pulsePreset.createTween(descriptor, {
           ...context,
-          durationSeconds: durationOverrideSeconds ?? pulsePreset.defaultDurationSeconds,
+          durationSeconds: pulseDuration,
         });
+        logger.logTweenCreated(buildTweenLogEntry(descriptor, pulsePreset.id, pulseDuration, true, context.spriteRefs));
       }
     }
 
     const preset = presetRegistry.requireCompatible(descriptor.preset, descriptor.kind);
+    const durationSeconds = durationOverrideSeconds ?? preset.defaultDurationSeconds;
     preset.createTween(descriptor, {
       ...context,
-      durationSeconds: durationOverrideSeconds ?? preset.defaultDurationSeconds,
+      durationSeconds,
     });
+    logger.logTweenCreated(buildTweenLogEntry(descriptor, preset.id, durationSeconds, false, context.spriteRefs));
   } catch (error) {
     console.warn(`Animation tween generation failed for descriptor "${descriptor.kind}".`, error);
   }
+}
+
+function buildTweenLogEntry(
+  descriptor: VisualAnimationDescriptor,
+  preset: string,
+  durationSeconds: number,
+  isTriggeredPulse: boolean,
+  spriteRefs: PresetTweenContext['spriteRefs'],
+): TweenLogEntry {
+  const tokenId = getDescriptorTokenId(descriptor);
+  const fromPosition = getDescriptorFromPosition(descriptor, spriteRefs);
+  const toPosition = getDescriptorToPosition(descriptor, spriteRefs);
+
+  return {
+    descriptorKind: descriptor.kind,
+    ...(tokenId === undefined ? {} : { tokenId }),
+    preset,
+    durationSeconds,
+    isTriggeredPulse,
+    ...(fromPosition === undefined ? {} : { fromPosition }),
+    ...(toPosition === undefined ? {} : { toPosition }),
+    ...(descriptor.kind === 'cardFlip' && isBooleanFaceChange(descriptor)
+      ? { faceState: { oldValue: descriptor.oldValue, newValue: descriptor.newValue } }
+      : {}),
+  };
+}
+
+function isBooleanFaceChange(descriptor: CardFlipDescriptor): descriptor is CardFlipDescriptor & { oldValue: boolean; newValue: boolean } {
+  return typeof descriptor.oldValue === 'boolean' && typeof descriptor.newValue === 'boolean';
+}
+
+function getDescriptorTokenId(descriptor: VisualAnimationDescriptor): string | undefined {
+  switch (descriptor.kind) {
+    case 'moveToken':
+    case 'cardDeal':
+    case 'cardBurn':
+    case 'createToken':
+    case 'destroyToken':
+    case 'setTokenProp':
+    case 'cardFlip':
+      return descriptor.tokenId;
+    default:
+      return undefined;
+  }
+}
+
+function getDescriptorZoneId(descriptor: VisualAnimationDescriptor): string | undefined {
+  switch (descriptor.kind) {
+    case 'moveToken':
+    case 'cardDeal':
+    case 'cardBurn':
+      return descriptor.from;
+    case 'createToken':
+    case 'destroyToken':
+      return descriptor.zone;
+    case 'zoneHighlight':
+      return descriptor.zoneId;
+    default:
+      return undefined;
+  }
+}
+
+function getDescriptorPrimaryPosition(
+  descriptor: VisualAnimationDescriptor,
+  spriteRefs: TimelineSpriteRefs,
+): DiagnosticPosition | undefined {
+  const zoneId = getDescriptorZoneId(descriptor);
+  if (zoneId !== undefined) {
+    const position = spriteRefs.zonePositions.positions.get(zoneId);
+    if (position !== undefined) {
+      return { x: position.x, y: position.y };
+    }
+  }
+  return undefined;
+}
+
+function getDescriptorFromPosition(
+  descriptor: VisualAnimationDescriptor,
+  spriteRefs: Pick<PresetTweenContext['spriteRefs'], 'zonePositions'>,
+): DiagnosticPosition | undefined {
+  if (descriptor.kind === 'moveToken' || descriptor.kind === 'cardDeal' || descriptor.kind === 'cardBurn') {
+    const position = spriteRefs.zonePositions.positions.get(descriptor.from);
+    if (position !== undefined) {
+      return { x: position.x, y: position.y };
+    }
+  }
+  return undefined;
+}
+
+function getDescriptorToPosition(
+  descriptor: VisualAnimationDescriptor,
+  spriteRefs: Pick<PresetTweenContext['spriteRefs'], 'zonePositions'>,
+): DiagnosticPosition | undefined {
+  if (descriptor.kind === 'moveToken' || descriptor.kind === 'cardDeal' || descriptor.kind === 'cardBurn') {
+    const position = spriteRefs.zonePositions.positions.get(descriptor.to);
+    if (position !== undefined) {
+      return { x: position.x, y: position.y };
+    }
+  }
+  return undefined;
+}
+
+function getDescriptorContainerType(
+  descriptor: VisualAnimationDescriptor,
+  spriteRefs: TimelineSpriteRefs,
+): 'existing' | 'ephemeral' | undefined {
+  const tokenId = getDescriptorTokenId(descriptor);
+  if (tokenId === undefined) {
+    return undefined;
+  }
+
+  const container = spriteRefs.tokenContainers.get(tokenId);
+  if (container === undefined) {
+    return undefined;
+  }
+  if (typeof container.label === 'string' && container.label.startsWith('ephemeral:')) {
+    return 'ephemeral';
+  }
+  return 'existing';
+}
+
+function buildSpriteResolutionEntry(
+  descriptor: VisualAnimationDescriptor,
+  spriteRefs: TimelineSpriteRefs,
+  resolved: boolean,
+  reason?: string,
+) {
+  const tokenId = getDescriptorTokenId(descriptor);
+  const zoneId = getDescriptorZoneId(descriptor);
+  const containerType = getDescriptorContainerType(descriptor, spriteRefs);
+  const position = resolved ? getDescriptorPrimaryPosition(descriptor, spriteRefs) : undefined;
+
+  return {
+    descriptorKind: descriptor.kind,
+    resolved,
+    ...(tokenId === undefined ? {} : { tokenId }),
+    ...(zoneId === undefined ? {} : { zoneId }),
+    ...(containerType === undefined ? {} : { containerType }),
+    ...(position === undefined ? {} : { position }),
+    ...(reason === undefined ? {} : { reason }),
+  };
 }
 
 function getMissingSpriteReason(

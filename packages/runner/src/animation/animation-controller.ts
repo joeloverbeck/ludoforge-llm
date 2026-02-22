@@ -184,7 +184,6 @@ export function createAnimationController(
               ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
               ...(isSetup
                 ? {
-                    spriteValidation: 'permissive' as const,
                     initializeTokenVisibility: true,
                   }
                 : {}),

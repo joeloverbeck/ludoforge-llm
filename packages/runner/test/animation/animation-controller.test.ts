@@ -1318,10 +1318,7 @@ describe('createAnimationController', () => {
     // Should have passed setup-specific timeline policies
     const buildOptions = (buildTimelineMock as unknown as {
       readonly mock: { readonly calls: readonly (readonly unknown[])[] };
-    }).mock.calls[0]?.[4] as
-      | { readonly spriteValidation?: 'strict' | 'permissive'; readonly initializeTokenVisibility?: boolean }
-      | undefined;
-    expect(buildOptions?.spriteValidation).toBe('permissive');
+    }).mock.calls[0]?.[4] as { readonly initializeTokenVisibility?: boolean } | undefined;
     expect(buildOptions?.initializeTokenVisibility).toBe(true);
 
     controller.destroy();

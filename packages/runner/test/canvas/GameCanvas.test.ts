@@ -5,7 +5,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameDef } from '@ludoforge/engine/runtime';
 
-import { GameCanvas, createGameCanvasRuntime } from '../../src/canvas/GameCanvas';
+import { GameCanvas, createGameCanvasRuntime, createScopedLifecycleCallback } from '../../src/canvas/GameCanvas';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
 import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
@@ -358,6 +358,28 @@ function makeGameDefWithZones(zoneIDs: readonly string[]): GameDef {
 }
 
 describe('GameCanvas', () => {
+  it('createScopedLifecycleCallback ignores values after deactivation', () => {
+    const callback = vi.fn();
+    const scoped = createScopedLifecycleCallback(callback);
+
+    scoped.invoke('first');
+    scoped.deactivate();
+    scoped.invoke('second');
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith('first');
+  });
+
+  it('createScopedLifecycleCallback safely handles undefined callbacks', () => {
+    const scoped = createScopedLifecycleCallback<string>();
+
+    expect(() => {
+      scoped.invoke('value');
+      scoped.deactivate();
+      scoped.invoke('ignored');
+    }).not.toThrow();
+  });
+
   it('renders an accessible game board container', () => {
     const html = renderToStaticMarkup(
       createElement(GameCanvas, {
@@ -566,7 +588,7 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
-  it('publishes diagnostic buffer at runtime init and clears it on destroy', async () => {
+  it('publishes diagnostic buffer at runtime init', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));
     const onAnimationDiagnosticBufferChange = vi.fn();
@@ -590,7 +612,7 @@ describe('createGameCanvasRuntime', () => {
     expect(onAnimationDiagnosticBufferChange).toHaveBeenNthCalledWith(1, diagnosticBuffer);
 
     runtime.destroy();
-    expect(onAnimationDiagnosticBufferChange).toHaveBeenNthCalledWith(2, null);
+    expect(onAnimationDiagnosticBufferChange).toHaveBeenCalledTimes(1);
   });
 
   it('routes reduced-motion updates to animation controller', async () => {

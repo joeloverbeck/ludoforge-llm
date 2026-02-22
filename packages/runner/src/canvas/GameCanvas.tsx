@@ -78,6 +78,11 @@ export interface GameCanvasRuntime {
   destroy(): void;
 }
 
+interface ScopedLifecycleCallback<T> {
+  invoke(value: T): void;
+  deactivate(): void;
+}
+
 interface GameCanvasRuntimeOptions {
   readonly container: HTMLElement;
   readonly store: StoreApi<GameStore>;
@@ -143,6 +148,22 @@ const LIVE_REGION_STYLE = {
   clipPath: 'inset(50%)',
   whiteSpace: 'nowrap',
 } as const;
+
+export function createScopedLifecycleCallback<T>(callback?: (value: T) => void): ScopedLifecycleCallback<T> {
+  let active = true;
+
+  return {
+    invoke(value: T): void {
+      if (!active || callback === undefined) {
+        return;
+      }
+      callback(value);
+    },
+    deactivate(): void {
+      active = false;
+    },
+  };
+}
 
 export async function createGameCanvasRuntime(
   options: GameCanvasRuntimeOptions,
@@ -478,7 +499,6 @@ export async function createGameCanvasRuntime(
       viewport.off('moved', publishHoverAnchor);
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
-      options.onAnimationDiagnosticBufferChange?.(null);
       unsubscribeZoneIDs();
       unsubscribeGameDef();
       unsubscribeAnimationPlaybackSpeed();
@@ -528,6 +548,8 @@ export function GameCanvas({
 
     let cancelled = false;
     let runtime: GameCanvasRuntime | null = null;
+    const hoverAnchorCallback = createScopedLifecycleCallback(onHoverAnchorChange);
+    const diagnosticBufferCallback = createScopedLifecycleCallback(onAnimationDiagnosticBufferChange);
 
     const runtimeOptions: GameCanvasRuntimeOptions = {
       container,
@@ -536,8 +558,20 @@ export function GameCanvas({
       backgroundColor,
       ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
       interactionHighlights: interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
-      ...(onHoverAnchorChange === undefined ? {} : { onHoverAnchorChange }),
-      ...(onAnimationDiagnosticBufferChange === undefined ? {} : { onAnimationDiagnosticBufferChange }),
+      ...(onHoverAnchorChange === undefined
+        ? {}
+        : {
+            onHoverAnchorChange: (anchor) => {
+              hoverAnchorCallback.invoke(anchor);
+            },
+          }),
+      ...(onAnimationDiagnosticBufferChange === undefined
+        ? {}
+        : {
+            onAnimationDiagnosticBufferChange: (buffer) => {
+              diagnosticBufferCallback.invoke(buffer);
+            },
+          }),
     };
 
     void createGameCanvasRuntime(runtimeOptions).then((createdRuntime) => {
@@ -549,14 +583,18 @@ export function GameCanvas({
       runtimeRef.current = createdRuntime;
     }).catch((error: unknown) => {
       if (!cancelled) {
-        onHoverAnchorChange?.(null);
-        onAnimationDiagnosticBufferChange?.(null);
+        hoverAnchorCallback.invoke(null);
+        diagnosticBufferCallback.invoke(null);
         onError?.(error);
       }
     });
 
     return () => {
       cancelled = true;
+      hoverAnchorCallback.deactivate();
+      diagnosticBufferCallback.deactivate();
+      onHoverAnchorChange?.(null);
+      onAnimationDiagnosticBufferChange?.(null);
       runtime?.destroy();
       runtimeRef.current = null;
     };

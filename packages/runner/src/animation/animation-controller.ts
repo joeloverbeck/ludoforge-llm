@@ -55,16 +55,26 @@ export interface AnimationController {
   getDiagnosticBuffer(): DiagnosticBuffer | undefined;
 }
 
-export interface AnimationControllerOptions {
+interface AnimationControllerBaseOptions {
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
   readonly tokenFaceControllers?: () => ReadonlyMap<string, { setFaceUp(faceUp: boolean): void }>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
-  readonly ephemeralParent?: () => Container;
-  readonly disposalQueue?: DisposalQueue;
 }
+
+type AnimationControllerEphemeralOptions =
+  | {
+      readonly ephemeralParent: () => Container;
+      readonly disposalQueue: DisposalQueue;
+    }
+  | {
+      readonly ephemeralParent?: undefined;
+      readonly disposalQueue?: undefined;
+    };
+
+export type AnimationControllerOptions = AnimationControllerBaseOptions & AnimationControllerEphemeralOptions;
 
 interface AnimationControllerDeps {
   readonly gsap: GsapLike;
@@ -167,8 +177,40 @@ export function createAnimationController(
           ? (phase: string | null) => { options.store.getState().setActivePhaseBanner(phase); }
           : undefined;
 
-        const disposalQueue = options.disposalQueue;
-        const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined || disposalQueue !== undefined || phaseBannerCallback !== undefined || logger !== undefined;
+        const needsOptions = sequencingPolicies.size > 0
+          || timingOverrides.size > 0
+          || isSetup
+          || ephemeralContainerFactory !== undefined
+          || phaseBannerCallback !== undefined
+          || logger !== undefined;
+
+        const sharedTimelineOptions = {
+          ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
+          ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
+          ...(isSetup
+            ? {
+                initializeTokenVisibility: true,
+              }
+            : {}),
+          ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
+          ...(logger === undefined ? {} : { logger }),
+        };
+
+        let timelineOptions: Parameters<typeof deps.buildTimeline>[4] | undefined;
+        if (needsOptions) {
+          if (ephemeralContainerFactory === undefined) {
+            timelineOptions = sharedTimelineOptions;
+          } else {
+            if (options.disposalQueue === undefined) {
+              throw new TypeError('Animation controller requires disposalQueue when ephemeralParent is configured.');
+            }
+            timelineOptions = {
+              ...sharedTimelineOptions,
+              ephemeralContainerFactory,
+              disposalQueue: options.disposalQueue,
+            };
+          }
+        }
 
         const timeline = deps.buildTimeline(
           descriptors,
@@ -182,21 +224,7 @@ export function createAnimationController(
             zonePositions: options.zonePositions(),
           },
           deps.gsap,
-          !needsOptions
-            ? undefined
-            : {
-                ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
-                ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
-                ...(isSetup
-                  ? {
-                      initializeTokenVisibility: true,
-                    }
-                  : {}),
-                ...(ephemeralContainerFactory === undefined ? {} : { ephemeralContainerFactory }),
-                ...(disposalQueue === undefined ? {} : { disposalQueue }),
-                ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
-                ...(logger === undefined ? {} : { logger }),
-              },
+          timelineOptions,
         );
 
         const visualCount = descriptors.filter((d) => d.kind !== 'skipped').length;

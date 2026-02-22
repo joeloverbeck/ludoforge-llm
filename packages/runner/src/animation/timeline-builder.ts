@@ -35,15 +35,25 @@ export interface TimelineSpriteRefs {
   readonly zonePositions: ZonePositionMap;
 }
 
-export interface BuildTimelineOptions {
+interface BuildTimelineSharedOptions {
   readonly sequencingPolicies?: ReadonlyMap<VisualAnimationDescriptorKind, AnimationSequencingPolicy>;
   readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
   readonly initializeTokenVisibility?: boolean;
-  readonly ephemeralContainerFactory?: EphemeralContainerFactory;
-  readonly disposalQueue?: DisposalQueue;
   readonly phaseBannerCallback?: (phase: string | null) => void;
   readonly logger?: TimelineLogger;
 }
+
+type BuildTimelineEphemeralOptions =
+  | {
+      readonly ephemeralContainerFactory: EphemeralContainerFactory;
+      readonly disposalQueue: DisposalQueue;
+    }
+  | {
+      readonly ephemeralContainerFactory?: undefined;
+      readonly disposalQueue?: undefined;
+    };
+
+export type BuildTimelineOptions = BuildTimelineSharedOptions & BuildTimelineEphemeralOptions;
 
 export function buildTimeline(
   descriptors: readonly AnimationDescriptor[],
@@ -140,13 +150,12 @@ export function buildTimeline(
   }
 
   if (factory !== undefined) {
-    const queue = options?.disposalQueue;
+    if (options === undefined || options.disposalQueue === undefined) {
+      throw new TypeError('Timeline cleanup requires disposalQueue when ephemeralContainerFactory is configured.');
+    }
+    const queue = options.disposalQueue;
     timeline.add(() => {
-      if (queue !== undefined) {
-        factory.releaseAll(queue);
-      } else {
-        factory.destroyAll();
-      }
+      factory.releaseAll(queue);
     });
   }
 

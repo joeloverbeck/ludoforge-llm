@@ -1490,6 +1490,7 @@ describe('createAnimationController', () => {
     const buildTimelineMock = vi.fn(() => timeline.timeline);
 
     const ephemeralParent = {};
+    const disposalQueue = { enqueue: vi.fn() } as never;
 
     const controller = createAnimationController(
       {
@@ -1499,6 +1500,7 @@ describe('createAnimationController', () => {
         zoneContainers: () => zoneContainers as never,
         zonePositions: () => zonePositions,
         ephemeralParent: () => ephemeralParent as never,
+        disposalQueue,
       },
       {
         gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
@@ -1527,6 +1529,7 @@ describe('createAnimationController', () => {
     }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
     expect(options).toBeDefined();
     expect(options?.ephemeralContainerFactory).toBeDefined();
+    expect(options?.disposalQueue).toBe(disposalQueue);
 
     controller.destroy();
   });
@@ -1633,6 +1636,7 @@ describe('createAnimationController', () => {
     });
 
     const ephemeralParent = new PixiContainer();
+    const disposalQueue = { enqueue: vi.fn() } as never;
 
     const controller = createAnimationController(
       {
@@ -1642,6 +1646,7 @@ describe('createAnimationController', () => {
         zoneContainers: () => zoneContainers as never,
         zonePositions: () => zonePositions,
         ephemeralParent: () => ephemeralParent,
+        disposalQueue,
       },
       {
         gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
@@ -1671,6 +1676,7 @@ describe('createAnimationController', () => {
     }).mock.calls[0]?.[4] as BuildTimelineOptions | undefined;
     expect(options).toBeDefined();
     expect(options?.ephemeralContainerFactory).toBeDefined();
+    expect(options?.disposalQueue).toBe(disposalQueue);
 
     // Create a container via the factory and verify it uses the configured dimensions
     const ephemeral = options!.ephemeralContainerFactory!.create('tok:test');

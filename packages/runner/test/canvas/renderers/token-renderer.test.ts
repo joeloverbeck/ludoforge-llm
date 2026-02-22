@@ -287,11 +287,30 @@ function createColorProvider(overrides: {
   };
 }
 
+function createRenderer(
+  parent: InstanceType<typeof MockContainer>,
+  colorProvider: ReturnType<typeof createColorProvider>,
+  options?: {
+    readonly bindSelection?: (
+      tokenContainer: Container,
+      tokenId: string,
+      isSelectable: () => boolean,
+    ) => () => void;
+    readonly disposalQueue?: ReturnType<typeof createDisposalQueue>;
+  },
+) {
+  const disposalQueue = options?.disposalQueue ?? createDisposalQueue({ scheduleFlush: () => {} });
+  return createTokenRenderer(parent as unknown as Container, colorProvider, {
+    disposalQueue,
+    ...(options?.bindSelection === undefined ? {} : { bindSelection: options.bindSelection }),
+  });
+}
+
 describe('createTokenRenderer', () => {
   it('update with empty token array creates no containers', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({ factionColor: '#abcdef' });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update([], new Map());
 
@@ -302,7 +321,7 @@ describe('createTokenRenderer', () => {
   it('creates token containers and calls color provider for owned tokens', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -326,7 +345,7 @@ describe('createTokenRenderer', () => {
   it('uses neutral fallback for unowned tokens without calling color provider', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', ownerID: null, factionId: null })],
@@ -345,7 +364,7 @@ describe('createTokenRenderer', () => {
   it('parses owned token colors from #RGB and falls back to neutral for invalid provider colors', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({ factionColor: '#abc' });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', ownerID: asPlayerId(0) })],
@@ -374,7 +393,7 @@ describe('createTokenRenderer', () => {
       tokenVisual: { color: 'bright-blue' },
       factionColor: '#ff0000',
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'vc-guerrillas', ownerID: asPlayerId(0), factionId: 'vc' })],
@@ -392,7 +411,7 @@ describe('createTokenRenderer', () => {
   it('shows only symbol graphics for token identity and toggles front/back layers by faceUp', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'leader', faceUp: false, isSelectable: true })],
@@ -425,7 +444,7 @@ describe('createTokenRenderer', () => {
   it('exposes face controllers that can toggle front/back visibility for animation presets', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'leader', faceUp: false, isSelectable: true })],
@@ -458,7 +477,7 @@ describe('createTokenRenderer', () => {
       symbol: tokenProperties.activity === 'active' ? 'star' : null,
       backSymbol: null,
     }));
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'vc-guerrillas', properties: { activity: 'underground' } })],
@@ -487,7 +506,7 @@ describe('createTokenRenderer', () => {
     const colorProvider = createColorProvider({
       tokenVisual: { shape: 'card', symbol: 'diamond', backSymbol: 'circle-dot', color: '#ff0000' },
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'playing-card', faceUp: false })],
@@ -534,7 +553,7 @@ describe('createTokenRenderer', () => {
         },
       },
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
@@ -562,7 +581,7 @@ describe('createTokenRenderer', () => {
         },
       },
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'card-AS', faceUp: false, properties: { rank: 'A' } })],
@@ -602,7 +621,7 @@ describe('createTokenRenderer', () => {
         },
       },
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A', suit: 'Spades' } })],
@@ -635,7 +654,7 @@ describe('createTokenRenderer', () => {
     const colorProvider = createColorProvider({
       tokenVisual: { shape: 'cube', color: '#ff0000' },
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'us-troops', faceUp: true })],
@@ -655,7 +674,7 @@ describe('createTokenRenderer', () => {
     const colorProvider = createColorProvider({
       tokenVisual: { shape: 'card', size: 28 },
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'playing-card' })],
@@ -689,7 +708,7 @@ describe('createTokenRenderer', () => {
   it('renders selectable and selected states with distinct stroke styles and scale', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', isSelectable: true })],
@@ -718,7 +737,7 @@ describe('createTokenRenderer', () => {
   it('renders interaction-highlighted stroke for selected event-log token ids', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1' })],
@@ -736,7 +755,8 @@ describe('createTokenRenderer', () => {
   it('removes and destroys containers for deleted token IDs', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const renderer = createRenderer(parent, colorProvider, { disposalQueue: queue });
 
     renderer.update(
       [makeToken({ id: 'token:1', isSelectable: true }), makeToken({ id: 'token:2', isSelectable: true })],
@@ -763,6 +783,7 @@ describe('createTokenRenderer', () => {
 
     expect(renderer.getContainerMap().has('token:2')).toBe(false);
     expect(parent.children).toHaveLength(1);
+    queue.flush();
     expect(removed.destroyed).toBe(true);
   });
 
@@ -770,7 +791,7 @@ describe('createTokenRenderer', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
     const queue = createDisposalQueue({ scheduleFlush: () => {} });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+    const renderer = createRenderer(parent, colorProvider, {
       disposalQueue: queue,
     });
 
@@ -802,7 +823,7 @@ describe('createTokenRenderer', () => {
   it('hides tokens whose zone container is missing and restores when zone reappears', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update([makeToken({ id: 'token:1', zoneID: 'zone:missing', isSelectable: true })], new Map());
 
@@ -826,7 +847,7 @@ describe('createTokenRenderer', () => {
   it('keeps container references stable for unchanged token IDs across updates', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1', isSelectable: true }), makeToken({ id: 'token:2', isSelectable: true })],
@@ -852,7 +873,7 @@ describe('createTokenRenderer', () => {
   it('positions tokens using zone anchor plus per-zone deterministic offsets', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -880,7 +901,7 @@ describe('createTokenRenderer', () => {
   it('getContainerMap returns a live map and destroy clears all containers', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2' })],
@@ -910,7 +931,7 @@ describe('createTokenRenderer', () => {
       cleanupByTokenId.set(tokenId, cleanup);
       return cleanup;
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+    const renderer = createRenderer(parent, colorProvider, {
       bindSelection: (tokenContainer, tokenId, _isSelectable) => bindSelection(tokenContainer, tokenId),
     });
 
@@ -938,7 +959,7 @@ describe('createTokenRenderer', () => {
   it('stacks non-selectable tokens of same type/faction and shows a count badge', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -963,7 +984,7 @@ describe('createTokenRenderer', () => {
   it('does not stack non-selectable tokens when ownerID differs', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -986,7 +1007,7 @@ describe('createTokenRenderer', () => {
   it('uses collision-safe stack keying for zone/type dimensions', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const renderer = createRenderer(parent, colorProvider);
 
     renderer.update(
       [
@@ -1012,7 +1033,7 @@ describe('createTokenRenderer', () => {
       cleanupByTokenId.set(tokenId, cleanup);
       return cleanup;
     });
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+    const renderer = createRenderer(parent, colorProvider, {
       bindSelection: (tokenContainer, tokenId, _isSelectable) => bindSelection(tokenContainer, tokenId),
     });
 
@@ -1046,7 +1067,8 @@ describe('createTokenRenderer', () => {
   it('completes update cycle even when container.destroy() throws', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
-    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const renderer = createRenderer(parent, colorProvider, { disposalQueue: queue });
 
     renderer.update(
       [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2', type: 'troop-b' })],
@@ -1070,6 +1092,7 @@ describe('createTokenRenderer', () => {
 
     expect(renderer.getContainerMap().has('token:2')).toBe(false);
     expect(parent.children).toHaveLength(1);
+    queue.flush();
     expect(warnSpy).toHaveBeenCalledTimes(1);
 
     warnSpy.mockRestore();

@@ -284,7 +284,10 @@ function createRuntimeFixture() {
       return zoneRenderer;
     }),
     createAdjacencyRenderer: vi.fn(() => adjacencyRenderer),
-    createTokenRenderer: vi.fn((_parent, _colors, options: { bindSelection?: (tokenContainer: unknown, tokenId: string, isSelectable: () => boolean) => () => void }) => {
+    createTokenRenderer: vi.fn((_parent, _colors, options: {
+      bindSelection?: (tokenContainer: unknown, tokenId: string, isSelectable: () => boolean) => () => void;
+      disposalQueue: unknown;
+    }) => {
       options.bindSelection?.(tokenContainer, 'token:1', () => true);
       return tokenRenderer;
     }),

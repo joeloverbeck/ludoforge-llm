@@ -65,16 +65,13 @@ function createSpriteRefs(overrides: Partial<TimelineSpriteRefs> = {}): Timeline
 
 function createMockEphemeralFactory(): EphemeralContainerFactory & {
   readonly createdIds: string[];
-  readonly destroyAllCalls: number[];
   readonly releaseAllCalls: number[];
 } {
   const createdIds: string[] = [];
-  const destroyAllCalls: number[] = [];
   const releaseAllCalls: number[] = [];
   let callCount = 0;
   return {
     createdIds,
-    destroyAllCalls,
     releaseAllCalls,
     create(tokenId: string): Container {
       createdIds.push(tokenId);
@@ -83,11 +80,7 @@ function createMockEphemeralFactory(): EphemeralContainerFactory & {
       container.alpha = 0;
       return container;
     },
-    destroyAll(): void {
-      callCount += 1;
-      destroyAllCalls.push(callCount);
-    },
-    releaseAll(): void {
+    releaseAll(_queue: Parameters<EphemeralContainerFactory['releaseAll']>[0]): void {
       callCount += 1;
       releaseAllCalls.push(callCount);
     },
@@ -841,6 +834,7 @@ describe('buildTimeline diagnostics logging', () => {
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       initializeTokenVisibility: true,
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
       logger,
     });
 
@@ -1082,6 +1076,7 @@ describe('buildTimeline ephemeral containers', () => {
 
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
     });
 
     expect(factory.createdIds).toEqual(['tok:missing']);
@@ -1131,13 +1126,14 @@ describe('buildTimeline ephemeral containers', () => {
 
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
     });
 
     expect(factory.createdIds).toEqual(['tok:missing-a', 'tok:missing-b', 'tok:missing-c']);
     expect(moveTween).toHaveBeenCalledTimes(3);
   });
 
-  it('calls factory.destroyAll after timeline completes', () => {
+  it('calls factory.releaseAll after timeline completes', () => {
     const runtime = createRuntimeFixture();
     const factory = createMockEphemeralFactory();
 
@@ -1163,6 +1159,7 @@ describe('buildTimeline ephemeral containers', () => {
 
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
     });
 
     // The cleanup function should have been added to the timeline
@@ -1173,7 +1170,7 @@ describe('buildTimeline ephemeral containers', () => {
 
     // Invoke the cleanup callback
     (cleanupFn as () => void)();
-    expect(factory.destroyAllCalls.length).toBe(1);
+    expect(factory.releaseAllCalls.length).toBe(1);
   });
 
   it('creates face-down face controller for ephemeral tokens', () => {
@@ -1207,6 +1204,7 @@ describe('buildTimeline ephemeral containers', () => {
 
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
     });
 
     expect(capturedFaceControllers.length).toBe(1);
@@ -1277,6 +1275,7 @@ describe('buildTimeline ephemeral containers', () => {
 
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
     });
 
     expect(capturedControllers.length).toBe(1);
@@ -1342,6 +1341,7 @@ describe('buildTimeline ephemeral containers', () => {
 
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
       ephemeralContainerFactory: factory,
+      disposalQueue: createDisposalQueue({ scheduleFlush: () => {} }),
     });
 
     // Only the missing token should get an ephemeral container
@@ -1389,42 +1389,6 @@ describe('buildTimeline ephemeral containers', () => {
     // Invoke the cleanup callback — should use releaseAll, not destroyAll
     (cleanupFn as () => void)();
     expect(factory.releaseAllCalls.length).toBe(1);
-    expect(factory.destroyAllCalls.length).toBe(0);
-  });
-
-  it('falls back to factory.destroyAll when no disposalQueue is provided', () => {
-    const runtime = createRuntimeFixture();
-    const factory = createMockEphemeralFactory();
-
-    const defs: readonly AnimationPresetDefinition[] = [
-      {
-        id: 'move-preset',
-        defaultDurationSeconds: 0.4,
-        compatibleKinds: ['moveToken'],
-        createTween: vi.fn(),
-      },
-    ];
-
-    const descriptors: readonly AnimationDescriptor[] = [
-      {
-        kind: 'moveToken',
-        tokenId: 'tok:missing',
-        from: 'zone:a',
-        to: 'zone:b',
-        preset: 'move-preset',
-        isTriggered: false,
-      },
-    ];
-
-    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
-      ephemeralContainerFactory: factory,
-    });
-
-    const lastCall = runtime.timeline.add.mock.calls[runtime.timeline.add.mock.calls.length - 1];
-    const cleanupFn = lastCall?.[0];
-    (cleanupFn as () => void)();
-    expect(factory.destroyAllCalls.length).toBe(1);
-    expect(factory.releaseAllCalls.length).toBe(0);
   });
 });
 

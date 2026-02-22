@@ -34,22 +34,6 @@ describe('createEphemeralContainerFactory', () => {
     expect(container.alpha).toBe(0);
   });
 
-  it('destroyAll removes containers from parent and destroys them', () => {
-    const parent = new Container();
-    const factory = createEphemeralContainerFactory(parent);
-
-    const c1 = factory.create('tok:a');
-    const c2 = factory.create('tok:b');
-
-    expect(parent.children).toContain(c1);
-    expect(parent.children).toContain(c2);
-
-    factory.destroyAll();
-
-    expect(parent.children).not.toContain(c1);
-    expect(parent.children).not.toContain(c2);
-  });
-
   it('tracks multiple created containers independently', () => {
     const parent = new Container();
     const factory = createEphemeralContainerFactory(parent);
@@ -148,15 +132,17 @@ describe('createEphemeralContainerFactory', () => {
     expect(c2.destroyed).toBe(true);
   });
 
-  it('releaseAll clears the internal list so subsequent destroyAll is a no-op', () => {
+  it('releaseAll clears the internal list so subsequent releaseAll is a no-op', () => {
     const parent = new Container();
     const factory = createEphemeralContainerFactory(parent);
     const queue = createDisposalQueue({ scheduleFlush: () => {} });
 
     factory.create('tok:x');
     factory.releaseAll(queue);
+    const flushSpy = vi.spyOn(queue, 'flush');
 
-    // destroyAll should have nothing to destroy
-    expect(() => factory.destroyAll()).not.toThrow();
+    expect(() => factory.releaseAll(queue)).not.toThrow();
+    queue.flush();
+    expect(flushSpy).toHaveBeenCalledTimes(1);
   });
 });

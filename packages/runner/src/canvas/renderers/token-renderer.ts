@@ -49,18 +49,18 @@ interface TokenVisualElements {
 }
 
 interface TokenRendererOptions {
+  readonly disposalQueue: DisposalQueue;
   readonly bindSelection?: (
     tokenContainer: Container,
     tokenId: string,
     isSelectable: () => boolean,
   ) => () => void;
-  readonly disposalQueue?: DisposalQueue;
 }
 
 export function createTokenRenderer(
   parentContainer: Container,
   colorProvider: FactionColorProvider,
-  options: TokenRendererOptions = {},
+  options: TokenRendererOptions,
 ): TokenRenderer {
   const tokenContainers = new Map<string, Container>();
   const tokenContainerByTokenId = new Map<string, Container>();
@@ -95,12 +95,7 @@ export function createTokenRenderer(
         if (removedVisuals?.frontContent !== null && removedVisuals?.frontContent !== undefined) {
           destroyCardContentPool(removedVisuals.frontContent);
         }
-        if (options.disposalQueue !== undefined) {
-          options.disposalQueue.enqueue(tokenContainer);
-        } else {
-          tokenContainer.removeFromParent();
-          safeDestroyContainer(tokenContainer);
-        }
+        options.disposalQueue.enqueue(tokenContainer);
         tokenContainers.delete(renderId);
         visualsByContainer.delete(tokenContainer);
       }
@@ -221,12 +216,7 @@ export function createTokenRenderer(
         if (destroyedVisuals?.frontContent !== null && destroyedVisuals?.frontContent !== undefined) {
           destroyCardContentPool(destroyedVisuals.frontContent);
         }
-        if (options.disposalQueue !== undefined) {
-          options.disposalQueue.enqueue(tokenContainer);
-        } else {
-          tokenContainer.removeFromParent();
-          safeDestroyContainer(tokenContainer);
-        }
+        options.disposalQueue.enqueue(tokenContainer);
         visualsByContainer.delete(tokenContainer);
       }
 

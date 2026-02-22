@@ -466,6 +466,10 @@ function resolvePulseTarget(descriptor: VisualAnimationDescriptor, context: Pres
 }
 
 function appendDelay(context: PresetTweenContext, durationSeconds: number): void {
+  if (typeof context.gsap.to === 'function') {
+    context.timeline.add(context.gsap.to({}, { duration: durationSeconds }));
+    return;
+  }
   context.timeline.add(context.gsap.timeline({ paused: true, duration: durationSeconds }));
 }
 

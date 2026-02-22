@@ -1,12 +1,22 @@
-import { Text, type Container } from 'pixi.js';
+import type { Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import { type ResolvedCardField, resolveCardTemplateFields } from '../../config/card-field-resolver.js';
-import { safeDestroyChildren } from './safe-destroy.js';
+import { createTextSlotPool, type TextSlotPool } from './text-slot-pool.js';
 
 type CardFieldValue = number | string | boolean;
 
 const contentSignatureCache = new WeakMap<Container, string>();
+const poolByContainer = new WeakMap<Container, TextSlotPool>();
+
+function getOrCreatePool(container: Container): TextSlotPool {
+  let pool = poolByContainer.get(container);
+  if (pool === undefined) {
+    pool = createTextSlotPool(container);
+    poolByContainer.set(container, pool);
+  }
+  return pool;
+}
 
 function buildContentSignature(
   template: CardTemplate,
@@ -44,32 +54,39 @@ export function drawCardContent(
     return;
   }
 
-  safeDestroyChildren(container);
   contentSignatureCache.set(container, nextSignature);
 
-  if (resolvedFields.length === 0) return;
+  const pool = getOrCreatePool(container);
+
+  if (resolvedFields.length === 0) {
+    pool.hideFrom(0);
+    return;
+  }
 
   const cardWidth = template.width;
   const cardHeight = template.height;
   const left = -cardWidth / 2;
   const top = -cardHeight / 2;
 
-  for (const field of resolvedFields) {
+  for (let i = 0; i < resolvedFields.length; i++) {
+    const field = resolvedFields[i]!;
     const hasWrap = typeof field.wrap === 'number' && Number.isFinite(field.wrap);
-    const baseStyle = {
-      fill: field.color,
-      fontSize: field.fontSize,
-      fontFamily: 'monospace',
-      align: field.align,
-    };
-    const style = hasWrap
-      ? { ...baseStyle, wordWrap: true as const, wordWrapWidth: field.wrap as number }
-      : baseStyle;
 
-    const text = new Text({
-      text: field.text,
-      style,
-    });
+    const text = pool.acquire(i);
+
+    text.text = field.text;
+    text.style.fill = field.color;
+    text.style.fontSize = field.fontSize;
+    text.style.fontFamily = 'monospace';
+    text.style.align = field.align;
+
+    if (hasWrap) {
+      text.style.wordWrap = true;
+      text.style.wordWrapWidth = field.wrap as number;
+    } else {
+      text.style.wordWrap = false;
+      text.style.wordWrapWidth = 0;
+    }
 
     text.eventMode = 'none';
     text.interactiveChildren = false;
@@ -79,7 +96,16 @@ export function drawCardContent(
       baseX + field.x,
       top + field.y,
     );
-
-    container.addChild(text);
   }
+
+  pool.hideFrom(resolvedFields.length);
+}
+
+export function destroyCardContentPool(container: Container): void {
+  const pool = poolByContainer.get(container);
+  if (pool !== undefined) {
+    pool.destroyAll();
+    poolByContainer.delete(container);
+  }
+  contentSignatureCache.delete(container);
 }

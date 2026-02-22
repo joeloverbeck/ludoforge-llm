@@ -9,7 +9,7 @@ import type { FactionColorProvider, TokenFaceController, TokenRenderer } from '.
 import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
-import { drawCardContent } from './card-template-renderer.js';
+import { drawCardContent, destroyCardContentPool } from './card-template-renderer.js';
 import { safeDestroyContainer } from './safe-destroy.js';
 
 const TOKEN_RADIUS = 14;
@@ -89,6 +89,10 @@ export function createTokenRenderer(
         selectionCleanupByRenderId.delete(renderId);
         boundTokenIdByRenderId.delete(renderId);
 
+        const removedVisuals = visualsByContainer.get(tokenContainer);
+        if (removedVisuals?.frontContent !== null && removedVisuals?.frontContent !== undefined) {
+          destroyCardContentPool(removedVisuals.frontContent);
+        }
         tokenContainer.removeFromParent();
         safeDestroyContainer(tokenContainer);
         tokenContainers.delete(renderId);
@@ -198,6 +202,10 @@ export function createTokenRenderer(
       tokenFaceControllerByTokenId.clear();
 
       for (const tokenContainer of tokenContainers.values()) {
+        const destroyedVisuals = visualsByContainer.get(tokenContainer);
+        if (destroyedVisuals?.frontContent !== null && destroyedVisuals?.frontContent !== undefined) {
+          destroyCardContentPool(destroyedVisuals.frontContent);
+        }
         tokenContainer.removeFromParent();
         safeDestroyContainer(tokenContainer);
         visualsByContainer.delete(tokenContainer);
@@ -407,6 +415,7 @@ function syncCardContent(
 ): void {
   if (cardTemplate === null) {
     if (visuals.frontContent !== null) {
+      destroyCardContentPool(visuals.frontContent);
       visuals.frontContent.removeFromParent();
       safeDestroyContainer(visuals.frontContent);
     }

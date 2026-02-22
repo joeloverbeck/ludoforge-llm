@@ -566,6 +566,58 @@ describe('buildTimeline', () => {
   });
 });
 
+describe('buildTimeline phase transition', () => {
+  it('phaseTransition descriptors produce banner callbacks in the timeline via phaseBannerCallback', () => {
+    const runtime = createRuntimeFixture();
+    const phaseBannerCallback = vi.fn();
+    const addedItems: unknown[] = [];
+    runtime.timeline.add.mockImplementation((item: unknown) => {
+      addedItems.push(item);
+      return runtime.timeline;
+    });
+
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'banner-overlay',
+        defaultDurationSeconds: 3,
+        compatibleKinds: ['phaseTransition'],
+        createTween: (_descriptor, context) => {
+          const cb = context.phaseBannerCallback;
+          if (cb !== undefined && _descriptor.kind === 'phaseTransition' && _descriptor.phase !== undefined) {
+            context.timeline.add(() => cb(_descriptor.phase!));
+            // The delay tween would go here in production
+            context.timeline.add(() => cb(null));
+          }
+        },
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'phaseTransition',
+        eventType: 'phaseEnter',
+        phase: 'flop',
+        preset: 'banner-overlay',
+        isTriggered: false,
+      },
+    ];
+
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap, {
+      phaseBannerCallback,
+    });
+
+    // The phaseBannerCallback should have been wired into the timeline
+    const callbackItems = addedItems.filter((item) => typeof item === 'function');
+    expect(callbackItems.length).toBeGreaterThanOrEqual(2);
+
+    // Execute the callbacks to verify they invoke phaseBannerCallback
+    (callbackItems[0] as () => void)();
+    expect(phaseBannerCallback).toHaveBeenCalledWith('flop');
+    (callbackItems[1] as () => void)();
+    expect(phaseBannerCallback).toHaveBeenCalledWith(null);
+  });
+});
+
 describe('buildTimeline setup behavior', () => {
   it('sets alpha=0 on token containers for move/deal/burn descriptors when initializeTokenVisibility is true', () => {
     const runtime = createRuntimeFixture();
@@ -1014,7 +1066,7 @@ describe('buildTimeline zone highlight scheduling', () => {
   }
 
   it('schedules zone highlights at position 0 in parallel with main descriptors', () => {
-    const { gsap, mainTimeline, createdTimelines } = createZoneHighlightSequencingFixture();
+    const { gsap, mainTimeline } = createZoneHighlightSequencingFixture();
 
     const cardDealTween = vi.fn();
     const zoneTween = vi.fn();
@@ -1075,7 +1127,7 @@ describe('buildTimeline zone highlight scheduling', () => {
   });
 
   it('zone highlights do not break stagger groups when interleaved in input stream', () => {
-    const { gsap, mainTimeline, createdTimelines } = createZoneHighlightSequencingFixture();
+    const { gsap, mainTimeline } = createZoneHighlightSequencingFixture();
 
     const cardDealTween = vi.fn();
     const zoneTween = vi.fn();

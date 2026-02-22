@@ -500,18 +500,18 @@ describe('preset-registry', () => {
     expect(midYClose).toBe(-20);
   });
 
-  it('counter-tick adds an inert delay instead of tweening zone containers', () => {
+  it('counter-tick adds an inert delay via gsap.to instead of tweening zone containers', () => {
     const registry = createPresetRegistry();
     const tokenA = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'token' };
     const zoneA = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'zoneA' };
     const zoneB = { alpha: 1, scale: { x: 1, y: 1 }, _testId: 'zoneB' };
     const timeline = { add: vi.fn() };
-    const subTimeline = { add: vi.fn() };
+    const delayTween = { id: 'delay-tween' };
     const gsap = {
       registerPlugin: vi.fn(),
       defaults: vi.fn(),
-      timeline: vi.fn(() => subTimeline),
-      to: vi.fn(() => ({ id: 'tween' })),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => delayTween),
     };
 
     registry.require('counter-tick').createTween(
@@ -539,17 +539,17 @@ describe('preset-registry', () => {
       },
     );
 
-    // counter-tick should NOT call gsap.to on any targets
-    expect(gsap.to).not.toHaveBeenCalled();
-    // It should add a delay via gsap.timeline() + timeline.add()
-    expect(gsap.timeline).toHaveBeenCalledWith(expect.objectContaining({ paused: true }));
-    expect(timeline.add).toHaveBeenCalledWith(subTimeline);
+    // counter-tick should use gsap.to with an empty target for delay
+    expect(gsap.to).toHaveBeenCalledTimes(1);
+    expect(gsap.to).toHaveBeenCalledWith({}, { duration: 0.4 });
+    expect(timeline.add).toHaveBeenCalledWith(delayTween);
   });
 
   it('banner-overlay invokes phaseBannerCallback with phase on start and null on complete', () => {
     const registry = createPresetRegistry();
     const phaseBannerCallback = vi.fn();
     const addedCallbacks: (() => void)[] = [];
+    const delayTween = { id: 'banner-delay' };
     const timeline = { add: vi.fn() };
     timeline.add.mockImplementation((fn: unknown) => {
       if (typeof fn === 'function') {
@@ -557,12 +557,11 @@ describe('preset-registry', () => {
       }
       return timeline;
     });
-    const subTimeline = { add: vi.fn() };
     const gsap = {
       registerPlugin: vi.fn(),
       defaults: vi.fn(),
-      timeline: vi.fn(() => subTimeline),
-      to: vi.fn(() => ({ id: 'tween' })),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => delayTween),
     };
 
     registry.require('banner-overlay').createTween(
@@ -586,23 +585,28 @@ describe('preset-registry', () => {
       },
     );
 
-    // Should add: callback(phase), delay, callback(null)
+    // Should add: callback(phase), delay tween via gsap.to, callback(null)
     expect(addedCallbacks).toHaveLength(2);
     addedCallbacks[0]!();
     expect(phaseBannerCallback).toHaveBeenCalledWith('flop');
     addedCallbacks[1]!();
     expect(phaseBannerCallback).toHaveBeenCalledWith(null);
+
+    // The delay between callbacks uses gsap.to with correct duration
+    expect(gsap.to).toHaveBeenCalledTimes(1);
+    expect(gsap.to).toHaveBeenCalledWith({}, { duration: 3 });
+    expect(timeline.add).toHaveBeenCalledWith(delayTween);
   });
 
   it('banner-overlay falls back to delay-only when no phaseBannerCallback is provided', () => {
     const registry = createPresetRegistry();
     const timeline = { add: vi.fn() };
-    const subTimeline = { add: vi.fn() };
+    const delayTween = { id: 'delay-tween' };
     const gsap = {
       registerPlugin: vi.fn(),
       defaults: vi.fn(),
-      timeline: vi.fn(() => subTimeline),
-      to: vi.fn(() => ({ id: 'tween' })),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => delayTween),
     };
 
     registry.require('banner-overlay').createTween(
@@ -625,8 +629,46 @@ describe('preset-registry', () => {
       },
     );
 
-    // Should add a delay via gsap.timeline() + timeline.add()
-    expect(gsap.timeline).toHaveBeenCalledWith(expect.objectContaining({ paused: true }));
+    // Should add a delay via gsap.to({}, { duration })
+    expect(gsap.to).toHaveBeenCalledWith({}, { duration: 3 });
+    expect(timeline.add).toHaveBeenCalledWith(delayTween);
+  });
+
+  it('appendDelay falls back to gsap.timeline when gsap.to is not available', () => {
+    const registry = createPresetRegistry();
+    const timeline = { add: vi.fn() };
+    const subTimeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => subTimeline),
+      // no `to` method — simulates noop runtime without gsap.to
+    };
+
+    registry.require('counter-tick').createTween(
+      {
+        kind: 'varChange',
+        scope: 'global',
+        varName: 'pot',
+        oldValue: 1,
+        newValue: 2,
+        preset: 'counter-tick',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('counter-tick').defaultDurationSeconds,
+        spriteRefs: {
+          tokenContainers: new Map(),
+          zoneContainers: new Map(),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    // Should fall back to gsap.timeline({ paused, duration }) when gsap.to is absent
+    expect(gsap.timeline).toHaveBeenCalledWith(expect.objectContaining({ paused: true, duration: 0.4 }));
     expect(timeline.add).toHaveBeenCalledWith(subTimeline);
   });
 

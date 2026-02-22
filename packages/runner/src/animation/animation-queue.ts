@@ -22,7 +22,8 @@ export interface AnimationQueue {
   destroy(): void;
 }
 
-import type { AnimationLogger, QueueEventType } from './animation-logger.js';
+import type { DiagnosticQueueEventType } from './animation-diagnostics.js';
+import type { AnimationLogger } from './animation-logger.js';
 
 export interface AnimationQueueOptions {
   readonly setAnimationPlaying: (playing: boolean) => void;
@@ -83,10 +84,8 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
 
   const logger = options.logger;
 
-  const logEvent = (event: QueueEventType): void => {
-    if (logger?.enabled) {
-      logger.logQueueEvent({ event, queueLength: queue.length + (active === null ? 0 : 1), isPlaying: active !== null });
-    }
+  const logEvent = (event: DiagnosticQueueEventType): void => {
+    logger?.logQueueEvent({ event, queueLength: queue.length + (active === null ? 0 : 1), isPlaying: active !== null });
   };
 
   const notifyAllComplete = (): void => {
@@ -269,7 +268,6 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
       }
 
       callbacks.clear();
-      paused = false;
       setStoreFlag(false);
     },
   };

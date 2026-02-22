@@ -1,5 +1,6 @@
 export * from './animation-types.js';
 export * from './animation-diagnostics.js';
+export * from './diagnostic-buffer.js';
 export * from './animation-controller.js';
 export * from './animation-logger.js';
 export * from './animation-queue.js';

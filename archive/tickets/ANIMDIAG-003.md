@@ -1,6 +1,6 @@
 # ANIMDIAG-003: Extend AnimationLogger Interface
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -12,9 +12,10 @@ The existing `AnimationLogger` interface only logs high-level summaries (trace r
 
 ## Assumption Reassessment (2026-02-22)
 
-1. `AnimationLogger` interface exists in `packages/runner/src/animation/animation-logger.ts` with methods: `logTraceReceived`, `logDescriptorsMapped`, `logTimelineBuilt`, `logQueueEvent`, plus `enabled`/`setEnabled` — to be confirmed by reading file during implementation.
-2. `createAnimationLogger()` factory exists and returns the concrete implementation.
-3. Test file `packages/runner/test/animation/animation-logger.test.ts` exists and tests the current interface.
+1. `AnimationLogger` interface exists in `packages/runner/src/animation/animation-logger.ts` with methods: `logTraceReceived`, `logDescriptorsMapped`, `logTimelineBuilt`, `logQueueEvent`, plus `enabled`/`setEnabled` — confirmed.
+2. `createAnimationLogger()` factory exists and returns the concrete implementation — confirmed.
+3. Test file `packages/runner/test/animation/animation-logger.test.ts` exists and tests the current interface — confirmed.
+4. `packages/runner/src/animation/animation-queue.ts` currently calls `logger.logQueueEvent(...)` only when `logger.enabled` is true. This must be corrected because it conflicts with the required invariant that buffer recording is independent of console logging.
 
 ## Architecture Check
 
@@ -44,13 +45,19 @@ Add these methods to the interface:
 - Existing log methods (`logTraceReceived`, `logDescriptorsMapped`, etc.) should also forward to the buffer where applicable (e.g., `logQueueEvent` → `diagnosticBuffer.recordQueueEvent()`).
 - `beginBatch()` / `endBatch()` delegate directly to the buffer.
 
-### 3. Handle no-buffer case gracefully
+### 3. Remove caller-side logger gating in queue
+
+- In `packages/runner/src/animation/animation-queue.ts`, call `logger.logQueueEvent(...)` whenever a logger exists, without checking `logger.enabled`.
+- Logger implementation owns console gating; callers should always emit events.
+
+### 4. Handle no-buffer case gracefully
 
 When no buffer is provided, the new methods are no-ops beyond optional console logging. No errors, no conditionals in callers.
 
 ## Files to Touch
 
 - `packages/runner/src/animation/animation-logger.ts` (modify)
+- `packages/runner/src/animation/animation-queue.ts` (modify)
 - `packages/runner/test/animation/animation-logger.test.ts` (modify)
 
 ## Out of Scope
@@ -66,9 +73,10 @@ When no buffer is provided, the new methods are no-ops beyond optional console l
 1. New log methods write to the diagnostic buffer when one is provided.
 2. Buffer records even when `enabled=false` — console is silent, buffer is populated.
 3. When no buffer is provided, new methods are no-ops (no errors).
-4. Existing log methods (`logTraceReceived`, etc.) continue to work unchanged.
+4. Existing log methods (`logTraceReceived`, etc.) continue to work unchanged for console behavior while now also forwarding to buffer when present.
 5. `beginBatch()` / `endBatch()` delegate to buffer correctly.
-6. Existing suite: `pnpm -F @ludoforge/runner test`
+6. Queue events are emitted to logger regardless of `enabled` (so buffer capture is not suppressed).
+7. Existing suite: `pnpm -F @ludoforge/runner test`
 
 ### Invariants
 
@@ -85,9 +93,33 @@ When no buffer is provided, the new methods are no-ops beyond optional console l
    - Buffer populated when `enabled=false`
    - No-op behavior without buffer
    - `beginBatch`/`endBatch` delegation
+2. `packages/runner/test/animation/animation-queue.test.ts` — update/add assertion that queue still emits `logQueueEvent()` calls even when logger `enabled=false`.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test -- animation-logger`
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- Completion date: 2026-02-22
+- What changed:
+  - Extended `AnimationLogger` in `packages/runner/src/animation/animation-logger.ts` with:
+    - batch lifecycle methods (`beginBatch`, `endBatch`)
+    - fine-grained diagnostic methods (`logSpriteResolution`, `logEphemeralCreated`, `logTweenCreated`, `logFaceControllerCall`, `logTokenVisibilityInit`, `logWarning`)
+    - diagnostic buffer wiring (`diagnosticBuffer` option in factory)
+  - Updated existing logger methods (`logTraceReceived`, `logDescriptorsMapped`, `logQueueEvent`) to forward to diagnostic buffer regardless of `enabled`.
+  - Removed duplicate queue-event typing from logger and reused diagnostics contracts.
+  - Updated `packages/runner/src/animation/animation-queue.ts` to always emit queue events to logger without caller-side `enabled` gating.
+  - Extended test coverage in:
+    - `packages/runner/test/animation/animation-logger.test.ts`
+    - `packages/runner/test/animation/animation-queue.test.ts`
+- Deviations from original plan:
+  - Scope was expanded to include `animation-queue.ts` because queue-side `enabled` gating prevented buffer recording and violated the intended invariant.
+  - Logger queue event contract was unified with diagnostics types to eliminate duplicated event definitions.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test -- animation-logger animation-queue` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm -F @ludoforge/runner test` passed (138 files, 1189 tests).

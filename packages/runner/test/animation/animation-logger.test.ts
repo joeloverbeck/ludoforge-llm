@@ -7,6 +7,7 @@ import {
   type LoggerConsole,
 } from '../../src/animation/animation-logger';
 
+import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer';
 import type { AnimationDescriptor } from '../../src/animation/animation-types';
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 
@@ -34,6 +35,61 @@ function createMockConsole(): LoggerConsole & {
 }
 
 const provenance = { phase: 'main', eventContext: 'actionEffect' as const, actionId: 'test', effectPath: 'test.0' };
+
+function createMockDiagnosticBuffer(): DiagnosticBuffer & {
+  readonly beginBatchCalls: ReturnType<typeof vi.fn>;
+  readonly recordTraceCalls: ReturnType<typeof vi.fn>;
+  readonly recordDescriptorsCalls: ReturnType<typeof vi.fn>;
+  readonly recordSpriteResolutionCalls: ReturnType<typeof vi.fn>;
+  readonly recordEphemeralCreatedCalls: ReturnType<typeof vi.fn>;
+  readonly recordTweenCalls: ReturnType<typeof vi.fn>;
+  readonly recordFaceControllerCallCalls: ReturnType<typeof vi.fn>;
+  readonly recordTokenVisibilityInitCalls: ReturnType<typeof vi.fn>;
+  readonly recordQueueEventCalls: ReturnType<typeof vi.fn>;
+  readonly recordWarningCalls: ReturnType<typeof vi.fn>;
+  readonly endBatchCalls: ReturnType<typeof vi.fn>;
+} {
+  const beginBatchCalls = vi.fn();
+  const recordTraceCalls = vi.fn();
+  const recordDescriptorsCalls = vi.fn();
+  const recordSpriteResolutionCalls = vi.fn();
+  const recordEphemeralCreatedCalls = vi.fn();
+  const recordTweenCalls = vi.fn();
+  const recordFaceControllerCallCalls = vi.fn();
+  const recordTokenVisibilityInitCalls = vi.fn();
+  const recordQueueEventCalls = vi.fn();
+  const recordWarningCalls = vi.fn();
+  const endBatchCalls = vi.fn();
+
+  return {
+    maxBatches: 100,
+    beginBatch: beginBatchCalls,
+    recordTrace: recordTraceCalls,
+    recordDescriptors: recordDescriptorsCalls,
+    recordSpriteResolution: recordSpriteResolutionCalls,
+    recordEphemeralCreated: recordEphemeralCreatedCalls,
+    recordTween: recordTweenCalls,
+    recordFaceControllerCall: recordFaceControllerCallCalls,
+    recordTokenVisibilityInit: recordTokenVisibilityInitCalls,
+    recordQueueEvent: recordQueueEventCalls,
+    recordWarning: recordWarningCalls,
+    endBatch: endBatchCalls,
+    getBatches: vi.fn(() => []),
+    downloadAsJson: vi.fn(),
+    clear: vi.fn(),
+    beginBatchCalls,
+    recordTraceCalls,
+    recordDescriptorsCalls,
+    recordSpriteResolutionCalls,
+    recordEphemeralCreatedCalls,
+    recordTweenCalls,
+    recordFaceControllerCallCalls,
+    recordTokenVisibilityInitCalls,
+    recordQueueEventCalls,
+    recordWarningCalls,
+    endBatchCalls,
+  };
+}
 
 describe('AnimationLogger', () => {
   it('is disabled by default and emits no console calls', () => {
@@ -130,6 +186,71 @@ describe('AnimationLogger', () => {
     logger.setEnabled(false);
     logger.logQueueEvent({ event: 'enqueue', queueLength: 1, isPlaying: false });
     expect(cons.log).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards all supported entries to diagnostic buffer even when disabled', () => {
+    const cons = createMockConsole();
+    const diagnosticBuffer = createMockDiagnosticBuffer();
+    const logger = createAnimationLogger({ console: cons, enabled: false, diagnosticBuffer });
+
+    const entries: readonly EffectTraceEntry[] = [
+      { kind: 'moveToken', tokenId: 'tok1', from: 'deck:none', to: 'hand:0', provenance },
+    ];
+    const descriptors: readonly AnimationDescriptor[] = [
+      { kind: 'moveToken', tokenId: 'tok1', from: 'a', to: 'b', preset: 'arc-tween', isTriggered: false },
+    ];
+
+    logger.beginBatch(false);
+    logger.logTraceReceived({ traceLength: 1, isSetup: false, entries });
+    logger.logDescriptorsMapped({ inputCount: 1, outputCount: 1, skippedCount: 0, descriptors });
+    logger.logQueueEvent({ event: 'enqueue', queueLength: 1, isPlaying: false });
+    logger.logSpriteResolution({ descriptorKind: 'cardDeal', resolved: true, tokenId: 'tok1' });
+    logger.logEphemeralCreated({ tokenId: 'tok2', width: 64, height: 96 });
+    logger.logTweenCreated({
+      descriptorKind: 'cardFlip',
+      tokenId: 'tok1',
+      preset: 'card-flip-3d',
+      durationSeconds: 0.5,
+      isTriggeredPulse: false,
+    });
+    logger.logFaceControllerCall({ tokenId: 'tok1', faceUp: true, context: 'test' });
+    logger.logTokenVisibilityInit({ tokenId: 'tok1', alphaSetTo: 0 });
+    logger.logWarning('buffer warning');
+    logger.endBatch();
+
+    expect(diagnosticBuffer.beginBatchCalls).toHaveBeenCalledWith(false);
+    expect(diagnosticBuffer.recordTraceCalls).toHaveBeenCalledWith(entries);
+    expect(diagnosticBuffer.recordDescriptorsCalls).toHaveBeenCalledWith(descriptors, 0);
+    expect(diagnosticBuffer.recordQueueEventCalls).toHaveBeenCalledWith({ event: 'enqueue', queueLength: 1, isPlaying: false });
+    expect(diagnosticBuffer.recordSpriteResolutionCalls).toHaveBeenCalledWith({ descriptorKind: 'cardDeal', resolved: true, tokenId: 'tok1' });
+    expect(diagnosticBuffer.recordEphemeralCreatedCalls).toHaveBeenCalledWith({ tokenId: 'tok2', width: 64, height: 96 });
+    expect(diagnosticBuffer.recordTweenCalls).toHaveBeenCalledTimes(1);
+    expect(diagnosticBuffer.recordFaceControllerCallCalls).toHaveBeenCalledWith({ tokenId: 'tok1', faceUp: true, context: 'test' });
+    expect(diagnosticBuffer.recordTokenVisibilityInitCalls).toHaveBeenCalledWith({ tokenId: 'tok1', alphaSetTo: 0 });
+    expect(diagnosticBuffer.recordWarningCalls).toHaveBeenCalledWith('buffer warning');
+    expect(diagnosticBuffer.endBatchCalls).toHaveBeenCalledTimes(1);
+    expect(cons.group).not.toHaveBeenCalled();
+    expect(cons.log).not.toHaveBeenCalled();
+    expect(cons.table).not.toHaveBeenCalled();
+  });
+
+  it('new logger methods are safe without diagnostic buffer', () => {
+    const logger = createAnimationLogger({ console: createMockConsole(), enabled: false });
+
+    expect(() => logger.beginBatch(false)).not.toThrow();
+    expect(() => logger.endBatch()).not.toThrow();
+    expect(() => logger.logSpriteResolution({ descriptorKind: 'cardDeal', resolved: false, reason: 'missing' })).not.toThrow();
+    expect(() => logger.logEphemeralCreated({ tokenId: 'tok1', width: 64, height: 96 })).not.toThrow();
+    expect(() => logger.logTweenCreated({
+      descriptorKind: 'cardFlip',
+      tokenId: 'tok1',
+      preset: 'card-flip-3d',
+      durationSeconds: 0.5,
+      isTriggeredPulse: false,
+    })).not.toThrow();
+    expect(() => logger.logFaceControllerCall({ tokenId: 'tok1', faceUp: true, context: 'test' })).not.toThrow();
+    expect(() => logger.logTokenVisibilityInit({ tokenId: 'tok1', alphaSetTo: 0 })).not.toThrow();
+    expect(() => logger.logWarning('test warning')).not.toThrow();
   });
 });
 

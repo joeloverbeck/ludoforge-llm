@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createAnimationQueue, type AnimationQueueTimeline } from '../../src/animation/animation-queue';
+import type { AnimationLogger } from '../../src/animation/animation-logger';
 
 interface TimelineFixture {
   readonly timeline: AnimationQueueTimeline;
@@ -311,5 +312,33 @@ describe('createAnimationQueue', () => {
 
     const queue = createAnimationQueue({ setAnimationPlaying: vi.fn() });
     expect(() => queue.setSpeed(0)).toThrowError('Animation speed multiplier must be a finite number > 0.');
+  });
+
+  it('emits queue events to logger even when logger.enabled is false', () => {
+    const logQueueEvent = vi.fn();
+    const logger: AnimationLogger = {
+      enabled: false,
+      setEnabled: vi.fn(),
+      beginBatch: vi.fn(),
+      endBatch: vi.fn(),
+      logTraceReceived: vi.fn(),
+      logDescriptorsMapped: vi.fn(),
+      logTimelineBuilt: vi.fn(),
+      logQueueEvent,
+      logSpriteResolution: vi.fn(),
+      logEphemeralCreated: vi.fn(),
+      logTweenCreated: vi.fn(),
+      logFaceControllerCall: vi.fn(),
+      logTokenVisibilityInit: vi.fn(),
+      logWarning: vi.fn(),
+    };
+
+    const queue = createAnimationQueue({ setAnimationPlaying: vi.fn(), logger });
+    const timeline = createTimelineFixture();
+
+    queue.enqueue(timeline.timeline);
+
+    expect(logQueueEvent).toHaveBeenCalled();
+    expect(logQueueEvent).toHaveBeenCalledWith({ event: 'enqueue', queueLength: 1, isPlaying: false });
   });
 });

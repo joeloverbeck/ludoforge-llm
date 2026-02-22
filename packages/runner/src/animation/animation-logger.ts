@@ -1,4 +1,14 @@
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
+
+import type { DiagnosticBuffer } from './diagnostic-buffer.js';
+import type {
+  DiagnosticQueueEvent,
+  EphemeralCreatedEntry,
+  FaceControllerCallEntry,
+  SpriteResolutionEntry,
+  TokenVisibilityInitEntry,
+  TweenLogEntry,
+} from './animation-diagnostics.js';
 import type { AnimationDescriptor } from './animation-types.js';
 
 // ---------------------------------------------------------------------------
@@ -23,21 +33,6 @@ export interface TimelineBuiltLogEntry {
   readonly groupCount: number;
 }
 
-export type QueueEventType =
-  | 'enqueue'
-  | 'playStart'
-  | 'playComplete'
-  | 'skip'
-  | 'skipAll'
-  | 'drop'
-  | 'flush';
-
-export interface QueueEventLogEntry {
-  readonly event: QueueEventType;
-  readonly queueLength: number;
-  readonly isPlaying: boolean;
-}
-
 // ---------------------------------------------------------------------------
 // Console abstraction (for testing)
 // ---------------------------------------------------------------------------
@@ -56,10 +51,18 @@ export interface LoggerConsole {
 export interface AnimationLogger {
   readonly enabled: boolean;
   setEnabled(enabled: boolean): void;
+  beginBatch(isSetup: boolean): void;
+  endBatch(): void;
   logTraceReceived(entry: TraceReceivedLogEntry): void;
   logDescriptorsMapped(entry: DescriptorsMappedLogEntry): void;
   logTimelineBuilt(entry: TimelineBuiltLogEntry): void;
-  logQueueEvent(entry: QueueEventLogEntry): void;
+  logQueueEvent(entry: DiagnosticQueueEvent): void;
+  logSpriteResolution(entry: SpriteResolutionEntry): void;
+  logEphemeralCreated(entry: EphemeralCreatedEntry): void;
+  logTweenCreated(entry: TweenLogEntry): void;
+  logFaceControllerCall(entry: FaceControllerCallEntry): void;
+  logTokenVisibilityInit(entry: TokenVisibilityInitEntry): void;
+  logWarning(message: string): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +135,8 @@ const STAGE_STYLES: Record<string, string> = {
   descriptors: 'color: #4caf50; font-weight: bold',
   timeline: 'color: #ff9800; font-weight: bold',
   queue: 'color: #9c27b0; font-weight: bold',
+  detail: 'color: #607d8b; font-weight: bold',
+  warning: 'color: #f44336; font-weight: bold',
 };
 
 // ---------------------------------------------------------------------------
@@ -141,10 +146,12 @@ const STAGE_STYLES: Record<string, string> = {
 export interface CreateAnimationLoggerOptions {
   readonly console?: LoggerConsole;
   readonly enabled?: boolean;
+  readonly diagnosticBuffer?: DiagnosticBuffer;
 }
 
 export function createAnimationLogger(options?: CreateAnimationLoggerOptions): AnimationLogger {
   const cons: LoggerConsole = options?.console ?? globalThis.console;
+  const diagnosticBuffer = options?.diagnosticBuffer;
   let enabled = options?.enabled ?? false;
 
   return {
@@ -156,7 +163,16 @@ export function createAnimationLogger(options?: CreateAnimationLoggerOptions): A
       enabled = value;
     },
 
+    beginBatch(isSetup: boolean): void {
+      diagnosticBuffer?.beginBatch(isSetup);
+    },
+
+    endBatch(): void {
+      diagnosticBuffer?.endBatch();
+    },
+
     logTraceReceived(entry: TraceReceivedLogEntry): void {
+      diagnosticBuffer?.recordTrace(entry.entries);
       if (!enabled) return;
       cons.group(`%c[AnimTrace] Trace received (${entry.traceLength} entries, setup=${entry.isSetup})`, STAGE_STYLES.trace);
       cons.table(summarizeTraceEntries(entry.entries));
@@ -164,6 +180,7 @@ export function createAnimationLogger(options?: CreateAnimationLoggerOptions): A
     },
 
     logDescriptorsMapped(entry: DescriptorsMappedLogEntry): void {
+      diagnosticBuffer?.recordDescriptors(entry.descriptors, entry.skippedCount);
       if (!enabled) return;
       cons.group(`%c[AnimDesc] Mapped ${entry.inputCount} trace → ${entry.outputCount} descriptors (${entry.skippedCount} skipped)`, STAGE_STYLES.descriptors);
       cons.table(summarizeDescriptors(entry.descriptors));
@@ -175,9 +192,46 @@ export function createAnimationLogger(options?: CreateAnimationLoggerOptions): A
       cons.log(`%c[AnimTimeline] Built timeline: ${entry.visualDescriptorCount} visual descriptors, ${entry.groupCount} groups`, STAGE_STYLES.timeline);
     },
 
-    logQueueEvent(entry: QueueEventLogEntry): void {
+    logQueueEvent(entry: DiagnosticQueueEvent): void {
+      diagnosticBuffer?.recordQueueEvent(entry);
       if (!enabled) return;
       cons.log(`%c[AnimQueue] ${entry.event} — queue: ${entry.queueLength}, playing: ${entry.isPlaying}`, STAGE_STYLES.queue);
+    },
+
+    logSpriteResolution(entry: SpriteResolutionEntry): void {
+      diagnosticBuffer?.recordSpriteResolution(entry);
+      if (!enabled) return;
+      cons.log(`%c[AnimDetail] Sprite resolution kind=${entry.descriptorKind}, resolved=${entry.resolved}`, STAGE_STYLES.detail, entry);
+    },
+
+    logEphemeralCreated(entry: EphemeralCreatedEntry): void {
+      diagnosticBuffer?.recordEphemeralCreated(entry);
+      if (!enabled) return;
+      cons.log(`%c[AnimDetail] Ephemeral created token=${entry.tokenId}`, STAGE_STYLES.detail, entry);
+    },
+
+    logTweenCreated(entry: TweenLogEntry): void {
+      diagnosticBuffer?.recordTween(entry);
+      if (!enabled) return;
+      cons.log(`%c[AnimDetail] Tween kind=${entry.descriptorKind}, preset=${entry.preset}`, STAGE_STYLES.detail, entry);
+    },
+
+    logFaceControllerCall(entry: FaceControllerCallEntry): void {
+      diagnosticBuffer?.recordFaceControllerCall(entry);
+      if (!enabled) return;
+      cons.log(`%c[AnimDetail] Face controller token=${entry.tokenId}, faceUp=${entry.faceUp}`, STAGE_STYLES.detail, entry);
+    },
+
+    logTokenVisibilityInit(entry: TokenVisibilityInitEntry): void {
+      diagnosticBuffer?.recordTokenVisibilityInit(entry);
+      if (!enabled) return;
+      cons.log(`%c[AnimDetail] Visibility init token=${entry.tokenId}, alpha=${entry.alphaSetTo}`, STAGE_STYLES.detail, entry);
+    },
+
+    logWarning(message: string): void {
+      diagnosticBuffer?.recordWarning(message);
+      if (!enabled) return;
+      cons.log(`%c[AnimWarn] ${message}`, STAGE_STYLES.warning);
     },
   };
 }

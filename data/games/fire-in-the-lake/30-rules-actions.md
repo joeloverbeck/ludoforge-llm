@@ -45,6 +45,10 @@ turnOrder:
         coupPacifyUS: operation
         coupPacifyARVN: operation
         coupAgitateVC: operation
+        coupArvnRedeployMandatory: operation
+        coupArvnRedeployOptionalTroops: operation
+        coupArvnRedeployPolice: operation
+        coupNvaRedeployTroops: operation
         coupPacifyPass: pass
         coupAgitatePass: pass
         coupRedeployPass: pass
@@ -557,6 +561,409 @@ actions:
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: -1 }
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupAgitateSpaceUsage, state: used }
+    limits: []
+  - id: coupArvnRedeployMandatory
+    actor: active
+    executor: '1'
+    phase: [coupRedeploy]
+    params:
+      - name: sourceSpace
+        domain: { query: mapSpaces }
+      - name: targetSpace
+        domain: { query: mapSpaces }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, eq: troops }
+          right: 0
+        - op: or
+          args:
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+              right: 0
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+              right: 0
+        - op: '=='
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                  - { prop: type, eq: base }
+          right: 0
+        - op: or
+          args:
+            - op: and
+              args:
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                  right: 0
+                - op: '<='
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                        filter:
+                          - { prop: faction, eq: NVA }
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                        filter:
+                          - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                    filter:
+                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                      - { prop: type, eq: base }
+              right: 0
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+              right: 0
+    cost: []
+    effects:
+      - forEach:
+          bind: $movedTroop
+          over:
+            query: tokensInZone
+            zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+            filter:
+              - { prop: faction, eq: ARVN }
+              - { prop: type, eq: troops }
+          limit: 1
+          effects:
+            - moveToken:
+                token: $movedTroop
+                from: { zoneExpr: { ref: binding, name: sourceSpace } }
+                to: { zoneExpr: { ref: binding, name: targetSpace } }
+    limits: []
+  - id: coupArvnRedeployOptionalTroops
+    actor: active
+    executor: '1'
+    phase: [coupRedeploy]
+    params:
+      - name: sourceSpace
+        domain: { query: mapSpaces }
+      - name: targetSpace
+        domain: { query: mapSpaces }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+        - op: '=='
+          left:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: or
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - op: '=='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                              - { prop: type, eq: base }
+                      right: 0
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: troops }
+                      right: 0
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, eq: troops }
+          right: 0
+        - op: or
+          args:
+            - op: and
+              args:
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                  right: 0
+                - op: '<='
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                        filter:
+                          - { prop: faction, eq: NVA }
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                        filter:
+                          - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                    filter:
+                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                      - { prop: type, eq: base }
+              right: 0
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+              right: 0
+    cost: []
+    effects:
+      - forEach:
+          bind: $movedTroop
+          over:
+            query: tokensInZone
+            zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+            filter:
+              - { prop: faction, eq: ARVN }
+              - { prop: type, eq: troops }
+          limit: 1
+          effects:
+            - moveToken:
+                token: $movedTroop
+                from: { zoneExpr: { ref: binding, name: sourceSpace } }
+                to: { zoneExpr: { ref: binding, name: targetSpace } }
+    limits: []
+  - id: coupArvnRedeployPolice
+    actor: active
+    executor: '1'
+    phase: [coupRedeploy]
+    params:
+      - name: sourceSpace
+        domain: { query: mapSpaces }
+      - name: targetSpace
+        domain: { query: mapSpaces }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, eq: police }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+          right: 0
+        - op: or
+          args:
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+              right: 0
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                    filter:
+                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+              right:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                    filter:
+                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+    cost: []
+    effects:
+      - forEach:
+          bind: $movedPolice
+          over:
+            query: tokensInZone
+            zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+            filter:
+              - { prop: faction, eq: ARVN }
+              - { prop: type, eq: police }
+          limit: 1
+          effects:
+            - moveToken:
+                token: $movedPolice
+                from: { zoneExpr: { ref: binding, name: sourceSpace } }
+                to: { zoneExpr: { ref: binding, name: targetSpace } }
+    limits: []
+  - id: coupNvaRedeployTroops
+    actor: active
+    executor: '2'
+    phase: [coupRedeploy]
+    params:
+      - name: sourceSpace
+        domain: { query: mapSpaces }
+      - name: targetSpace
+        domain: { query: mapSpaces }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 2 }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+                filter:
+                  - { prop: faction, eq: NVA }
+                  - { prop: type, eq: troops }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, eq: NVA }
+                  - { prop: type, eq: base }
+          right: 0
+    cost: []
+    effects:
+      - forEach:
+          bind: $movedTroop
+          over:
+            query: tokensInZone
+            zone: { zoneExpr: { ref: binding, name: sourceSpace } }
+            filter:
+              - { prop: faction, eq: NVA }
+              - { prop: type, eq: troops }
+          limit: 1
+          effects:
+            - moveToken:
+                token: $movedTroop
+                from: { zoneExpr: { ref: binding, name: sourceSpace } }
+                to: { zoneExpr: { ref: binding, name: targetSpace } }
     limits: []
   - id: coupRedeployPass
     actor: active
@@ -4770,6 +5177,12 @@ triggers:
       phase: coupSupport
     effects:
       - macro: coup-support-reset-trackers
+  - id: on-coup-redeploy-enter
+    event:
+      type: phaseEnter
+      phase: coupRedeploy
+    effects:
+      - macro: coup-laos-cambodia-removal
   - id: mom-adsid-on-trail-change
     event:
       type: varChanged

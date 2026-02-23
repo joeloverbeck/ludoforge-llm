@@ -1745,6 +1745,46 @@ effectMacros:
                                   from: { param: loc }
                                   to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
 
+  # ── coup-laos-cambodia-removal ────────────────────────────────────────────
+  # Rule 6.4.1: remove all US/ARVN pieces from Laos/Cambodia.
+  - id: coup-laos-cambodia-removal
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $space
+          over:
+            query: mapSpaces
+            filter:
+              op: or
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+          effects:
+            - moveAll:
+                from: $space
+                to: out-of-play-US:none
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: tokenProp, token: $token, prop: faction }, right: US }
+                    - { op: '==', left: { ref: tokenProp, token: $token, prop: type }, right: troops }
+            - moveAll:
+                from: $space
+                to: available-US:none
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: tokenProp, token: $token, prop: faction }, right: US }
+                    - { op: '!=', left: { ref: tokenProp, token: $token, prop: type }, right: troops }
+            - moveAll:
+                from: $space
+                to: available-ARVN:none
+                filter:
+                  op: '=='
+                  left: { ref: tokenProp, token: $token, prop: faction }
+                  right: ARVN
+
   # ── coup-auto-sabotage ────────────────────────────────────────────────────
   # Rule 6.2.1: place sabotage on eligible unSabotaged LoCs up to marker cap.
   - id: coup-auto-sabotage

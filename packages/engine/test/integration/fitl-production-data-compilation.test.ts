@@ -241,7 +241,7 @@ describe('FITL production data integration compilation', () => {
         ['vcResources', 5],
         ['nvaResources', 10],
         ['arvnResources', 30],
-        ['totalEcon', 10],
+        ['totalEcon', 15],
         ['terrorSabotageMarkersPlaced', 0],
       ]),
       'Track globalVars must be initialized from selected scenario initialTrackValues with map defaults for omitted tracks',

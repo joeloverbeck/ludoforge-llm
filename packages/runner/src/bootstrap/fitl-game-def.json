@@ -324,7 +324,7 @@
     {
       "name": "totalEcon",
       "type": "int",
-      "init": 10,
+      "init": 15,
       "min": 0,
       "max": 75
     },
@@ -4916,7 +4916,7 @@
           },
           {
             "trackId": "totalEcon",
-            "value": 10
+            "value": 15
           },
           {
             "trackId": "vcResources",
@@ -5449,7 +5449,7 @@
           },
           {
             "trackId": "totalEcon",
-            "value": 10
+            "value": 15
           },
           {
             "trackId": "vcResources",
@@ -6054,7 +6054,7 @@
           },
           {
             "trackId": "totalEcon",
-            "value": 10
+            "value": 15
           },
           {
             "trackId": "vcResources",
@@ -9816,6 +9816,13 @@
             }
           ]
         },
+        "actionClassByActionId": {
+          "pass": "pass",
+          "event": "event",
+          "pivotalEvent": "event",
+          "usOp": "operation",
+          "arvnOp": "operation"
+        },
         "optionMatrix": [
           {
             "first": "operation",
@@ -9838,7 +9845,28 @@
             ]
           }
         ],
-        "passRewards": [],
+        "passRewards": [
+          {
+            "seat": "0",
+            "resource": "arvnResources",
+            "amount": 3
+          },
+          {
+            "seat": "1",
+            "resource": "arvnResources",
+            "amount": 3
+          },
+          {
+            "seat": "2",
+            "resource": "nvaResources",
+            "amount": 1
+          },
+          {
+            "seat": "3",
+            "resource": "vcResources",
+            "amount": 1
+          }
+        ],
         "freeOperationActionIds": [
           "train",
           "patrol",
@@ -9856,7 +9884,44 @@
           "cycle"
         ],
         "monsoon": {
-          "restrictedActions": []
+          "restrictedActions": [
+            {
+              "actionId": "sweep"
+            },
+            {
+              "actionId": "march"
+            },
+            {
+              "actionId": "airStrike",
+              "maxParam": {
+                "name": "spaces",
+                "max": 2
+              }
+            },
+            {
+              "actionId": "airLift",
+              "maxParam": {
+                "name": "spaces",
+                "max": 2
+              }
+            }
+          ],
+          "blockPivotal": true
+        },
+        "pivotal": {
+          "actionIds": [
+            "pivotalEvent"
+          ],
+          "requirePreActionWindow": true,
+          "disallowWhenLookaheadIsCoup": true,
+          "interrupt": {
+            "precedence": [
+              "3",
+              "1",
+              "2",
+              "0"
+            ]
+          }
         }
       }
     }
@@ -28094,24 +28159,12 @@
             {
               "if": {
                 "when": {
-                  "op": ">",
+                  "op": "==",
                   "left": {
-                    "aggregate": {
-                      "op": "count",
-                      "query": {
-                        "query": "tokensInZone",
-                        "zone": "lookahead:none",
-                        "filter": [
-                          {
-                            "prop": "isCoup",
-                            "op": "eq",
-                            "value": true
-                          }
-                        ]
-                      }
-                    }
+                    "ref": "gvar",
+                    "var": "mom_typhoonKate"
                   },
-                  "right": 0
+                  "right": true
                 },
                 "then": [
                   {
@@ -28167,119 +28220,53 @@
                 ],
                 "else": [
                   {
-                    "if": {
-                      "when": {
-                        "op": "==",
-                        "left": {
-                          "ref": "gvar",
-                          "var": "mom_typhoonKate"
-                        },
-                        "right": true
+                    "chooseN": {
+                      "internalDecisionId": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN",
+                      "bind": "targetSpaces",
+                      "options": {
+                        "query": "mapSpaces",
+                        "filter": {
+                          "condition": {
+                            "op": "and",
+                            "args": [
+                              {
+                                "op": "or",
+                                "args": [
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "category"
+                                    },
+                                    "right": "province"
+                                  },
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "category"
+                                    },
+                                    "right": "city"
+                                  }
+                                ]
+                              },
+                              {
+                                "op": "!=",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "northVietnam"
+                              }
+                            ]
+                          }
+                        }
                       },
-                      "then": [
-                        {
-                          "chooseN": {
-                            "internalDecisionId": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
-                            "options": {
-                              "query": "mapSpaces",
-                              "filter": {
-                                "condition": {
-                                  "op": "and",
-                                  "args": [
-                                    {
-                                      "op": "or",
-                                      "args": [
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "province"
-                                        },
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "city"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "op": "!=",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "country"
-                                      },
-                                      "right": "northVietnam"
-                                    }
-                                  ]
-                                }
-                              }
-                            },
-                            "max": 1,
-                            "min": 1
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "chooseN": {
-                            "internalDecisionId": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
-                            "options": {
-                              "query": "mapSpaces",
-                              "filter": {
-                                "condition": {
-                                  "op": "and",
-                                  "args": [
-                                    {
-                                      "op": "or",
-                                      "args": [
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "province"
-                                        },
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "city"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "op": "!=",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "country"
-                                      },
-                                      "right": "northVietnam"
-                                    }
-                                  ]
-                                }
-                              }
-                            },
-                            "max": 2,
-                            "min": 1
-                          }
-                        }
-                      ]
+                      "max": 2,
+                      "min": 1
                     }
                   }
                 ]
@@ -28299,17 +28286,58 @@
                 },
                 "effects": [
                   {
-                    "chooseOne": {
-                      "internalDecisionId": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.chooseOne",
-                      "bind": "$adviseMode@{$space}",
-                      "options": {
-                        "query": "enums",
-                        "values": [
-                          "sweep",
-                          "assault",
-                          "activate-remove"
-                        ]
-                      }
+                    "if": {
+                      "when": {
+                        "op": ">",
+                        "left": {
+                          "aggregate": {
+                            "op": "count",
+                            "query": {
+                              "query": "tokensInZone",
+                              "zone": "lookahead:none",
+                              "filter": [
+                                {
+                                  "prop": "isCoup",
+                                  "op": "eq",
+                                  "value": true
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "right": 0
+                      },
+                      "then": [
+                        {
+                          "chooseOne": {
+                            "internalDecisionId": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.then.0.chooseOne",
+                            "bind": "$adviseMode@{$space}",
+                            "options": {
+                              "query": "enums",
+                              "values": [
+                                "assault",
+                                "activate-remove"
+                              ]
+                            }
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "chooseOne": {
+                            "internalDecisionId": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.else.0.chooseOne",
+                            "bind": "$adviseMode@{$space}",
+                            "options": {
+                              "query": "enums",
+                              "values": [
+                                "sweep",
+                                "assault",
+                                "activate-remove"
+                              ]
+                            }
+                          }
+                        }
+                      ]
                     }
                   },
                   {
@@ -29667,75 +29695,25 @@
           "stage": "select-spaces",
           "effects": [
             {
-              "if": {
-                "when": {
-                  "op": ">",
-                  "left": {
-                    "aggregate": {
-                      "op": "count",
-                      "query": {
-                        "query": "tokensInZone",
-                        "zone": "lookahead:none",
-                        "filter": [
-                          {
-                            "prop": "isCoup",
-                            "op": "eq",
-                            "value": true
-                          }
-                        ]
-                      }
+              "chooseN": {
+                "internalDecisionId": "decision:doc.actionPipelines.17.stages[0].effects.0.chooseN",
+                "bind": "spaces",
+                "options": {
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "!=",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "northVietnam"
                     }
-                  },
-                  "right": 0
+                  }
                 },
-                "then": [
-                  {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.17.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "spaces",
-                      "options": {
-                        "query": "mapSpaces",
-                        "filter": {
-                          "condition": {
-                            "op": "!=",
-                            "left": {
-                              "ref": "zoneProp",
-                              "zone": "$zone",
-                              "prop": "country"
-                            },
-                            "right": "northVietnam"
-                          }
-                        }
-                      },
-                      "max": 1,
-                      "min": 1
-                    }
-                  }
-                ],
-                "else": [
-                  {
-                    "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.17.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "spaces",
-                      "options": {
-                        "query": "mapSpaces",
-                        "filter": {
-                          "condition": {
-                            "op": "!=",
-                            "left": {
-                              "ref": "zoneProp",
-                              "zone": "$zone",
-                              "prop": "country"
-                            },
-                            "right": "northVietnam"
-                          }
-                        }
-                      },
-                      "max": 4,
-                      "min": 1
-                    }
-                  }
-                ]
+                "max": 4,
+                "min": 1
               }
             }
           ]
@@ -30265,26 +30243,6 @@
                     "when": {
                       "op": "or",
                       "args": [
-                        {
-                          "op": ">",
-                          "left": {
-                            "aggregate": {
-                              "op": "count",
-                              "query": {
-                                "query": "tokensInZone",
-                                "zone": "lookahead:none",
-                                "filter": [
-                                  {
-                                    "prop": "isCoup",
-                                    "op": "eq",
-                                    "value": true
-                                  }
-                                ]
-                              }
-                            }
-                          },
-                          "right": 0
-                        },
                         {
                           "op": "==",
                           "left": {
@@ -39478,6 +39436,116 @@
       "limits": []
     },
     {
+      "id": "pivotalEvent",
+      "actor": "active",
+      "executor": "actor",
+      "phase": [
+        "main"
+      ],
+      "params": [
+        {
+          "name": "eventCardId",
+          "domain": {
+            "query": "enums",
+            "values": [
+              "card-121",
+              "card-122",
+              "card-123",
+              "card-124"
+            ]
+          }
+        }
+      ],
+      "pre": {
+        "op": "or",
+        "args": [
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "==",
+                "left": {
+                  "ref": "activePlayer"
+                },
+                "right": 0
+              },
+              {
+                "op": "==",
+                "left": {
+                  "ref": "binding",
+                  "name": "eventCardId"
+                },
+                "right": "card-121"
+              }
+            ]
+          },
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "==",
+                "left": {
+                  "ref": "activePlayer"
+                },
+                "right": 2
+              },
+              {
+                "op": "==",
+                "left": {
+                  "ref": "binding",
+                  "name": "eventCardId"
+                },
+                "right": "card-122"
+              }
+            ]
+          },
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "==",
+                "left": {
+                  "ref": "activePlayer"
+                },
+                "right": 1
+              },
+              {
+                "op": "==",
+                "left": {
+                  "ref": "binding",
+                  "name": "eventCardId"
+                },
+                "right": "card-123"
+              }
+            ]
+          },
+          {
+            "op": "and",
+            "args": [
+              {
+                "op": "==",
+                "left": {
+                  "ref": "activePlayer"
+                },
+                "right": 3
+              },
+              {
+                "op": "==",
+                "left": {
+                  "ref": "binding",
+                  "name": "eventCardId"
+                },
+                "right": "card-124"
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [],
+      "limits": []
+    },
+    {
       "id": "train",
       "actor": "active",
       "executor": "actor",
@@ -40025,7 +40093,7 @@
         },
         {
           "chooseN": {
-            "internalDecisionId": "decision:doc.actions.25.effects.3.chooseN",
+            "internalDecisionId": "decision:doc.actions.26.effects.3.chooseN",
             "bind": "$commitTroopsFromAvailable",
             "options": {
               "query": "tokensInZone",
@@ -40057,7 +40125,7 @@
             "effects": [
               {
                 "chooseOne": {
-                  "internalDecisionId": "decision:doc.actions.25.effects.4.forEach.effects.0.chooseOne",
+                  "internalDecisionId": "decision:doc.actions.26.effects.4.forEach.effects.0.chooseOne",
                   "bind": "$commitTroopDestFromAvailable",
                   "options": {
                     "query": "mapSpaces",
@@ -40193,7 +40261,7 @@
             "in": [
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.actions.25.effects.5.let.in.0.chooseN",
+                  "internalDecisionId": "decision:doc.actions.26.effects.5.let.in.0.chooseN",
                   "bind": "$commitTroopsFromMap",
                   "options": {
                     "query": "tokensInMapSpaces",
@@ -40242,7 +40310,7 @@
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.actions.25.effects.5.let.in.1.forEach.effects.0.chooseOne",
+                        "internalDecisionId": "decision:doc.actions.26.effects.5.let.in.1.forEach.effects.0.chooseOne",
                         "bind": "$commitTroopMapMoveMode",
                         "options": {
                           "query": "enums",
@@ -40282,7 +40350,7 @@
                         "else": [
                           {
                             "chooseOne": {
-                              "internalDecisionId": "decision:doc.actions.25.effects.5.let.in.1.forEach.effects.1.if.else.0.chooseOne",
+                              "internalDecisionId": "decision:doc.actions.26.effects.5.let.in.1.forEach.effects.1.if.else.0.chooseOne",
                               "bind": "$commitTroopDestFromMap",
                               "options": {
                                 "query": "mapSpaces",
@@ -40428,7 +40496,7 @@
         },
         {
           "chooseN": {
-            "internalDecisionId": "decision:doc.actions.25.effects.6.chooseN",
+            "internalDecisionId": "decision:doc.actions.26.effects.6.chooseN",
             "bind": "$commitBasesFromAvailable",
             "options": {
               "query": "tokensInZone",
@@ -40460,7 +40528,7 @@
             "effects": [
               {
                 "chooseOne": {
-                  "internalDecisionId": "decision:doc.actions.25.effects.7.forEach.effects.0.chooseOne",
+                  "internalDecisionId": "decision:doc.actions.26.effects.7.forEach.effects.0.chooseOne",
                   "bind": "$commitBaseDestFromAvailable",
                   "options": {
                     "query": "mapSpaces",
@@ -40596,7 +40664,7 @@
             "in": [
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.actions.25.effects.8.let.in.0.chooseN",
+                  "internalDecisionId": "decision:doc.actions.26.effects.8.let.in.0.chooseN",
                   "bind": "$commitBasesFromMap",
                   "options": {
                     "query": "tokensInMapSpaces",
@@ -40645,7 +40713,7 @@
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.actions.25.effects.8.let.in.1.forEach.effects.0.chooseOne",
+                        "internalDecisionId": "decision:doc.actions.26.effects.8.let.in.1.forEach.effects.0.chooseOne",
                         "bind": "$commitBaseMapMoveMode",
                         "options": {
                           "query": "enums",
@@ -40685,7 +40753,7 @@
                         "else": [
                           {
                             "chooseOne": {
-                              "internalDecisionId": "decision:doc.actions.25.effects.8.let.in.1.forEach.effects.1.if.else.0.chooseOne",
+                              "internalDecisionId": "decision:doc.actions.26.effects.8.let.in.1.forEach.effects.1.if.else.0.chooseOne",
                               "bind": "$commitBaseDestFromMap",
                               "options": {
                                 "query": "mapSpaces",
@@ -40962,9 +41030,31 @@
                     },
                     "bind": "$zone",
                     "valueExpr": {
-                      "ref": "zoneProp",
-                      "zone": "$zone",
-                      "prop": "population"
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$zone",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "activeSupport"
+                        },
+                        "then": {
+                          "op": "*",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "population"
+                          },
+                          "right": 2
+                        },
+                        "else": {
+                          "ref": "zoneProp",
+                          "zone": "$zone",
+                          "prop": "population"
+                        }
+                      }
                     }
                   }
                 },
@@ -41333,9 +41423,31 @@
                     },
                     "bind": "$zone",
                     "valueExpr": {
-                      "ref": "zoneProp",
-                      "zone": "$zone",
-                      "prop": "population"
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$zone",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "activeOpposition"
+                        },
+                        "then": {
+                          "op": "*",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "population"
+                          },
+                          "right": 2
+                        },
+                        "else": {
+                          "ref": "zoneProp",
+                          "zone": "$zone",
+                          "prop": "population"
+                        }
+                      }
                     }
                   }
                 },
@@ -41450,9 +41562,31 @@
               },
               "bind": "$zone",
               "valueExpr": {
-                "ref": "zoneProp",
-                "zone": "$zone",
-                "prop": "population"
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "markerState",
+                      "space": "$zone",
+                      "marker": "supportOpposition"
+                    },
+                    "right": "activeSupport"
+                  },
+                  "then": {
+                    "op": "*",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "population"
+                    },
+                    "right": 2
+                  },
+                  "else": {
+                    "ref": "zoneProp",
+                    "zone": "$zone",
+                    "prop": "population"
+                  }
+                }
               }
             }
           },
@@ -41728,9 +41862,31 @@
               },
               "bind": "$zone",
               "valueExpr": {
-                "ref": "zoneProp",
-                "zone": "$zone",
-                "prop": "population"
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "markerState",
+                      "space": "$zone",
+                      "marker": "supportOpposition"
+                    },
+                    "right": "activeOpposition"
+                  },
+                  "then": {
+                    "op": "*",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "population"
+                    },
+                    "right": 2
+                  },
+                  "else": {
+                    "ref": "zoneProp",
+                    "zone": "$zone",
+                    "prop": "population"
+                  }
+                }
               }
             }
           },

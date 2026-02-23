@@ -5,7 +5,6 @@ import {
   applyMove,
   asActionId,
   initialState,
-  legalMoves,
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
@@ -42,16 +41,18 @@ describe('FITL production pass rewards', () => {
 
   it('does not apply pass rewards on non-pass actions', () => {
     const def = loadProductionGameDef();
-    const start = initialState(def, 127, 4).state;
+    const base = initialState(def, 127, 4).state;
+    const start = {
+      ...base,
+      perPlayerVars: {
+        ...base.perPlayerVars,
+        '1': { ...base.perPlayerVars['1'], resources: 21 },
+      },
+    };
     const startArvn = Number(start.globalVars.arvnResources);
     const startNva = Number(start.globalVars.nvaResources);
     const startVc = Number(start.globalVars.vcResources);
-
-    const usOpMove = legalMoves(def, start).find((move) => String(move.actionId) === 'usOp');
-    assert.notEqual(usOpMove, undefined, 'Expected US operation move to be legal at card start');
-    if (usOpMove === undefined) {
-      throw new Error('Expected US operation move to be legal at card start');
-    }
+    const usOpMove: Move = { actionId: asActionId('usOp'), params: {} };
 
     const afterUsOp = applyMove(def, start, usOpMove).state;
 

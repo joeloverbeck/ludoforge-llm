@@ -1088,7 +1088,7 @@ dataAssets:
         - trackId: trail
           value: 1
         - trackId: totalEcon
-          value: 10
+          value: 15
         - trackId: vcResources
           value: 5
         - trackId: nvaResources
@@ -1426,7 +1426,7 @@ dataAssets:
         - trackId: trail
           value: 2
         - trackId: totalEcon
-          value: 10
+          value: 15
         - trackId: vcResources
           value: 10
         - trackId: nvaResources
@@ -1810,7 +1810,7 @@ dataAssets:
         - trackId: trail
           value: 3
         - trackId: totalEcon
-          value: 10
+          value: 15
         - trackId: vcResources
           value: 15
         - trackId: nvaResources

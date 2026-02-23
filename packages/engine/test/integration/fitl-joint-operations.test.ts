@@ -33,24 +33,24 @@ describe('FITL Joint Operation cost constraint integration', () => {
     }
   });
 
-  it('allows US operation when ARVN resources minus cost exceed Total Econ (20 - 5 = 15 > 10)', () => {
+  it('allows US operation when ARVN resources minus cost exceed Total Econ (21 - 5 = 16 > 15)', () => {
     const gameDef = compiled.gameDef!;
-    const state = initialState(gameDef, 42, 2).state;
+    const state = withArvnResources(initialState(gameDef, 42, 2).state, 21);
 
-    // ARVN resources = 20 (init), totalEcon = 10, cost = 5
-    // 20 - 5 = 15 >= 10 → allowed
+    // ARVN resources = 21, totalEcon = 15, cost = 5
+    // 21 - 5 = 16 > 15 → allowed
     const result = applyMove(gameDef, state, { actionId: asActionId('usOp'), params: {} });
 
-    assert.equal(result.state.perPlayerVars['1']!.resources, 15, 'ARVN resources reduced by 5');
+    assert.equal(result.state.perPlayerVars['1']!.resources, 16, 'ARVN resources reduced by 5');
     assert.equal(result.state.globalVars.usOpCount, 1, 'stages effect executed');
   });
 
-  it('blocks US operation at boundary (ARVN resources - cost == Total Econ: 15 - 5 = 10)', () => {
+  it('blocks US operation at boundary (ARVN resources - cost == Total Econ: 20 - 5 = 15)', () => {
     const gameDef = compiled.gameDef!;
-    const state = withArvnResources(initialState(gameDef, 42, 2).state, 15);
+    const state = withArvnResources(initialState(gameDef, 42, 2).state, 20);
 
-    // ARVN resources = 15, totalEcon = 10, cost = 5
-    // 15 - 5 = 10 == 10 → blocked (strict exceed required)
+    // ARVN resources = 20, totalEcon = 15, cost = 5
+    // 20 - 5 = 15 == 15 → blocked (strict exceed required)
     const snapshot = structuredClone(state);
 
     assert.throws(
@@ -73,12 +73,12 @@ describe('FITL Joint Operation cost constraint integration', () => {
     assert.deepEqual(state, snapshot, 'state unchanged after blocked operation');
   });
 
-  it('blocks US operation when ARVN resources minus cost would go below Total Econ (14 - 5 = 9 < 10)', () => {
+  it('blocks US operation when ARVN resources minus cost would go below Total Econ (19 - 5 = 14 < 15)', () => {
     const gameDef = compiled.gameDef!;
-    const state = withArvnResources(initialState(gameDef, 42, 2).state, 14);
+    const state = withArvnResources(initialState(gameDef, 42, 2).state, 19);
 
-    // ARVN resources = 14, totalEcon = 10, cost = 5
-    // 14 - 5 = 9 < 10 → blocked (forbid mode)
+    // ARVN resources = 19, totalEcon = 15, cost = 5
+    // 19 - 5 = 14 < 15 → blocked (forbid mode)
     const snapshot = structuredClone(state);
 
     assert.throws(

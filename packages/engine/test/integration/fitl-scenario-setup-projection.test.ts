@@ -24,6 +24,7 @@ describe('FITL scenario setup projection', () => {
     assert.equal(countFaction(state.zones['available-ARVN:none'], 'ARVN'), 21, 'Expected computed ARVN available reserve count');
     assert.equal(countFaction(state.zones['available-NVA:none'], 'NVA'), 53, 'Expected computed NVA available reserve count');
     assert.equal(countFaction(state.zones['available-VC:none'], 'VC'), 16, 'Expected computed VC available reserve count');
+    assert.equal(state.globalVars.totalEcon, 15, 'Expected scenario totalEcon projection from initialTrackValues');
 
     const tayNinhBase = (state.zones['tay-ninh:none'] ?? []).find(
       (token) => token.type === 'vc-bases' && token.props.faction === 'VC',

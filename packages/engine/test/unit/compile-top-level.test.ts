@@ -63,7 +63,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       metadata: { id: 'top-level', players: { min: 2, max: 2 } },
       globalVars: [{ name: 'tick', type: 'int', init: 0, min: 0, max: 10 }],
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }] },
+      turnStructure: { phases: [{ id: 'main' }, { id: 'victory' }] },
       actions: [
         { id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
@@ -106,7 +106,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'top-level-terminal-alias-player', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }] },
+      turnStructure: { phases: [{ id: 'main' }, { id: 'victory' }, { id: 'resources' }] },
       actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'win', player: 'activePlayer' } }] },
@@ -131,7 +131,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'bad-trigger-action', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }] },
+      turnStructure: { phases: [{ id: 'main' }, { id: 'victory' }, { id: 'resources' }] },
       actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [{ event: { type: 'actionResolved', action: 'psas' }, effects: [] }],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }] },
@@ -1238,7 +1238,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'coup-victory-pass-through', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }] },
+      turnStructure: { phases: [{ id: 'main' }, { id: 'victory' }, { id: 'resources' }] },
       turnOrder: {
         type: 'cardDriven' as const,
         config: {

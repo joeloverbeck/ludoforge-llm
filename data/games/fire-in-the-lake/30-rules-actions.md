@@ -4,6 +4,12 @@
 turnStructure:
   phases:
     - id: main
+    - id: coupVictory
+    - id: coupResources
+    - id: coupSupport
+    - id: coupRedeploy
+    - id: coupCommitment
+    - id: coupReset
   interrupts:
     - id: commitment
 
@@ -62,6 +68,22 @@ turnOrder:
         disallowWhenLookaheadIsCoup: true
         interrupt:
           precedence: ['3', '1', '2', '0']
+    coupPlan:
+      phases:
+        - id: coupVictory
+          steps: [check-victory]
+        - id: coupResources
+          steps: [resolve-resources]
+        - id: coupSupport
+          steps: [resolve-support]
+        - id: coupRedeploy
+          steps: [resolve-redeploy]
+        - id: coupCommitment
+          steps: [resolve-commitment]
+        - id: coupReset
+          steps: [resolve-reset]
+      finalRoundOmitPhases: [coupCommitment, coupReset]
+      maxConsecutiveRounds: 1
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)
@@ -69,6 +91,69 @@ turnOrder:
 
 actions:
   - { id: pass, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - id: coupVictoryCheck
+    actor: active
+    executor: 'actor'
+    phase: [coupVictory]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupResourcesProcess
+    actor: active
+    executor: 'actor'
+    phase: [coupResources]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupPacifyPass
+    actor: active
+    executor: 'actor'
+    phase: [coupSupport]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupAgitatePass
+    actor: active
+    executor: 'actor'
+    phase: [coupSupport]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupRedeployPass
+    actor: active
+    executor: 'actor'
+    phase: [coupRedeploy]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupCommitmentPass
+    actor: active
+    executor: 'actor'
+    phase: [coupCommitment]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupResetProcess
+    actor: active
+    executor: 'actor'
+    phase: [coupReset]
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: [{ scope: phase, max: 1 }]
   - id: pivotalEvent
     actor: active
     executor: 'actor'

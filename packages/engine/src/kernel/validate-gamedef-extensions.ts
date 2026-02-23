@@ -54,6 +54,20 @@ export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void 
   }
 
   const declaredPhases = new Set(coupPlan.phases.map((phase) => phase.id));
+  const turnPhaseIds = new Set(def.turnStructure.phases.map((phase) => String(phase.id)));
+  coupPlan.phases.forEach((phase, index) => {
+    if (turnPhaseIds.has(phase.id)) {
+      return;
+    }
+    diagnostics.push({
+      code: 'COUP_PLAN_PHASE_NOT_IN_TURN_STRUCTURE',
+      path: `turnOrder.config.coupPlan.phases[${index}].id`,
+      severity: 'error',
+      message: `coupPlan phase "${phase.id}" is not declared in turnStructure.phases.`,
+      suggestion: 'Declare each coupPlan phase id in turnStructure.phases with exact id match.',
+    });
+  });
+
   coupPlan.finalRoundOmitPhases?.forEach((phaseId, index) => {
     if (!declaredPhases.has(phaseId)) {
       diagnostics.push({

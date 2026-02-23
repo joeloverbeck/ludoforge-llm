@@ -29,6 +29,76 @@ const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | 
   return numeric;
 };
 
+const resolveCardDrivenCoupContext = (
+  def: GameDef,
+  state: GameState,
+): {
+  readonly coupPhaseIds: ReadonlySet<string>;
+  readonly coupActive: boolean;
+  readonly finalCoupRound: boolean;
+} | null => {
+  if (def.turnOrder?.type !== 'cardDriven' || state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+
+  const coupPlan = def.turnOrder.config.coupPlan;
+  if (coupPlan === undefined) {
+    return null;
+  }
+
+  const coupPhaseIds = new Set(coupPlan.phases.map((phase) => phase.id));
+  if (coupPhaseIds.size === 0) {
+    return null;
+  }
+
+  const cardLifecycle = def.turnOrder.config.turnFlow.cardLifecycle;
+  const playedTop = state.zones[cardLifecycle.played]?.[0];
+  const playedProps = playedTop?.props as Readonly<Record<string, unknown>> | undefined;
+  const isCoup = playedProps?.isCoup === true;
+
+  const consecutiveCoupRounds = state.turnOrderState.runtime.consecutiveCoupRounds ?? 0;
+  const maxConsecutiveRounds = coupPlan.maxConsecutiveRounds;
+  const coupActive = isCoup && (maxConsecutiveRounds === undefined || consecutiveCoupRounds < maxConsecutiveRounds);
+
+  if (!coupActive) {
+    return { coupPhaseIds, coupActive: false, finalCoupRound: false };
+  }
+
+  const lookaheadEmpty = (state.zones[cardLifecycle.lookahead]?.length ?? 0) === 0;
+  const slotIds = new Set([cardLifecycle.played, cardLifecycle.lookahead, cardLifecycle.leader]);
+  const drawPileIds = def.zones
+    .filter((zone) => zone.ordering === 'stack' && !slotIds.has(String(zone.id)))
+    .map((zone) => String(zone.id));
+  const drawPileEmpty =
+    drawPileIds.length === 1
+      ? (state.zones[drawPileIds[0]!] ?? []).length === 0
+      : true;
+
+  return {
+    coupPhaseIds,
+    coupActive: true,
+    finalCoupRound: lookaheadEmpty && drawPileEmpty,
+  };
+};
+
+const effectiveTurnPhases = (def: GameDef, state: GameState): GameDef['turnStructure']['phases'] => {
+  const context = resolveCardDrivenCoupContext(def, state);
+  if (context === null) {
+    return def.turnStructure.phases;
+  }
+
+  if (!context.coupActive) {
+    return def.turnStructure.phases.filter((phase) => !context.coupPhaseIds.has(String(phase.id)));
+  }
+
+  const omitted = new Set<string>(
+    context.finalCoupRound
+      ? (def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan?.finalRoundOmitPhases : undefined) ?? []
+      : [],
+  );
+  return def.turnStructure.phases.filter((phase) => !omitted.has(String(phase.id)));
+};
+
 const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'activePlayer' | 'turnOrderState'> => {
   const strategy = def.turnOrder;
   if (strategy === undefined || strategy.type === 'roundRobin') {
@@ -76,12 +146,12 @@ export const advancePhase = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
 ): GameState => {
-  const phases = def.turnStructure.phases;
+  const phases = effectiveTurnPhases(def, state);
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
   if (currentPhaseIndex < 0) {
     throw kernelRuntimeError(
       'PHASE_ADVANCE_CURRENT_PHASE_NOT_FOUND',
-      `advancePhase could not find current phase ${String(state.currentPhase)} in turnStructure.phases`,
+      `advancePhase could not find current phase ${String(state.currentPhase)} in effective turn phases`,
       { currentPhase: state.currentPhase },
     );
   }
@@ -150,11 +220,11 @@ export const advanceToDecisionPoint = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
 ): GameState => {
-  const phaseCount = def.turnStructure.phases.length;
+  const phaseCount = effectiveTurnPhases(def, state).length;
   if (phaseCount <= 0) {
     throw kernelRuntimeError(
       'DECISION_POINT_NO_PHASES',
-      'advanceToDecisionPoint requires at least one phase in turnStructure.phases',
+      'advanceToDecisionPoint requires at least one effective turn phase',
     );
   }
 

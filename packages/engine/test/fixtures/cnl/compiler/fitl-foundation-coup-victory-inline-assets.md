@@ -75,6 +75,8 @@ globalVars:
 turnStructure:
   phases:
     - id: main
+    - id: victory
+    - id: resources
 turnOrder:
   type: cardDriven
   config:

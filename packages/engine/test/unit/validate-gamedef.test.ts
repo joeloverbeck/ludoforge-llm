@@ -2113,7 +2113,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('does not require coupPlan phase ids to match turnStructure phase ids', () => {
+  it('requires coupPlan phase ids to match turnStructure phase ids', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -2143,8 +2143,12 @@ describe('validateGameDef reference checks', () => {
 
     const diagnostics = validateGameDef(def);
     assert.equal(
-      diagnostics.some((diag) => diag.code.startsWith('COUP_PLAN_')),
-      false,
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'COUP_PLAN_PHASE_NOT_IN_TURN_STRUCTURE' &&
+          diag.path === 'turnOrder.config.coupPlan.phases[0].id',
+      ),
+      true,
     );
   });
 

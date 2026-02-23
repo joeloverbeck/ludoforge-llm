@@ -39,7 +39,15 @@ describe('FITL commitment phase production wiring', () => {
 
     const phaseIds = compiled.gameDef?.turnStructure.phases.map((phase) => phase.id);
     const interruptIds = compiled.gameDef?.turnStructure.interrupts?.map((phase) => phase.id) ?? [];
-    assert.deepEqual(phaseIds, ['main']);
+    assert.deepEqual(phaseIds, [
+      'main',
+      'coupVictory',
+      'coupResources',
+      'coupSupport',
+      'coupRedeploy',
+      'coupCommitment',
+      'coupReset',
+    ]);
     assert.deepEqual(interruptIds, ['commitment']);
 
     const card73 = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-73');

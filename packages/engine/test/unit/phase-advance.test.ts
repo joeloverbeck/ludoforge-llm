@@ -424,7 +424,7 @@ phase: [asPhaseId('p2')],
       ],
       tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('victory') }] },
       turnOrder: {
         type: 'cardDriven',
         config: {
@@ -478,8 +478,10 @@ phase: [asPhaseId('p2')],
       markers: {},
     };
 
+    const firstPhaseStep = advancePhase(def, state);
+    assert.equal(firstPhaseStep.currentPhase, asPhaseId('victory'));
     const firstLogs: TriggerLogEntry[] = [];
-    const afterFirst = advancePhase(def, state, firstLogs);
+    const afterFirst = advancePhase(def, firstPhaseStep, firstLogs);
 
     const secondLogs: TriggerLogEntry[] = [];
     const afterSecond = advancePhase(def, afterFirst, secondLogs);

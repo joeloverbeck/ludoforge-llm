@@ -93,6 +93,7 @@ describe('FITL card lifecycle integration', () => {
           })();
     const def: GameDef = {
       ...baseDef,
+      turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('victory') }] },
       setup: [
         { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
         { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },

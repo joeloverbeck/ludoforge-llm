@@ -15,19 +15,36 @@ const cardDrivenConfig = (def: GameDef) =>
 const cardDrivenRuntime = (state: GameState) =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
-export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameState, move: Move): boolean {
+export function resolveConstrainedSecondEligibleActionClasses(
+  def: GameDef,
+  state: GameState,
+): readonly ('pass' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | 'event')[] | null {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
-    return true;
+    return null;
   }
 
   const interruptPhases = def.turnStructure.interrupts?.map((phase) => String(phase.id)) ?? [];
   if (interruptPhases.includes(String(state.currentPhase))) {
-    return true;
+    return null;
   }
 
   const firstActionClass = runtime.currentCard.firstActionClass;
   if (runtime.currentCard.nonPassCount !== 1 || firstActionClass === null) {
+    return null;
+  }
+
+  const row = cardDrivenConfig(def)?.turnFlow.optionMatrix.find((matrixRow) => matrixRow.first === firstActionClass);
+  if (row === undefined) {
+    return null;
+  }
+
+  return row.second;
+}
+
+export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameState, move: Move): boolean {
+  const constrained = resolveConstrainedSecondEligibleActionClasses(def, state);
+  if (constrained === null) {
     return true;
   }
 
@@ -35,13 +52,10 @@ export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameSta
   if (moveClass === 'pass') {
     return true;
   }
-
-  const row = cardDrivenConfig(def)?.turnFlow.optionMatrix.find((matrixRow) => matrixRow.first === firstActionClass);
-  if (row === undefined || moveClass === null) {
-    return row === undefined;
+  if (moveClass === null) {
+    return false;
   }
-
-  return row.second.includes(moveClass);
+  return constrained.includes(moveClass);
 }
 
 function containsToken(paramValue: MoveParamValue, token: string): boolean {

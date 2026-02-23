@@ -43,6 +43,9 @@ const isTurnFlowActionClass = (
   value === 'operationPlusSpecialActivity';
 
 export const resolveTurnFlowActionClass = (move: Move): 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | null => {
+  if (typeof move.actionClass === 'string' && isTurnFlowActionClass(move.actionClass)) {
+    return move.actionClass;
+  }
   const actionId = String(move.actionId);
   return isTurnFlowActionClass(actionId) ? actionId : null;
 };

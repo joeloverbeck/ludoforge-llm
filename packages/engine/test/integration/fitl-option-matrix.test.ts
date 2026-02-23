@@ -10,6 +10,7 @@ import {
   initialState,
   legalMoves,
   type GameDef,
+  type GameState,
   type Move,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -104,6 +105,55 @@ phase: [asPhaseId('main')],
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
+const compileProductionDef = (): GameDef => {
+  const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
+  assertNoErrors(parsed);
+  assert.deepEqual(validatorDiagnostics, []);
+  const compileErrors = compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+  assert.deepEqual(compileErrors, []);
+  assert.notEqual(compiled.gameDef, null);
+  return compiled.gameDef!;
+};
+
+const asSecondEligibleMatrixWindow = (
+  state: GameState,
+  firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity',
+): GameState => {
+  const runtime = requireCardDrivenRuntime(state);
+  return {
+    ...state,
+    currentPhase: asPhaseId('main'),
+    activePlayer: asPlayerId(1),
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        currentCard: {
+          ...runtime.currentCard,
+          firstEligible: '1',
+          secondEligible: '2',
+          actedSeats: ['0'],
+          passedSeats: [],
+          nonPassCount: 1,
+          firstActionClass,
+        },
+      },
+    },
+  };
+};
+
+const actionClasses = (moves: readonly Move[]): readonly string[] =>
+  [...new Set(moves.map((move) => {
+    const actionId = String(move.actionId);
+    if (actionId === 'pass') {
+      return 'pass';
+    }
+    if (actionId === 'event') {
+      return 'event';
+    }
+    return move.actionClass ?? 'unclassified';
+  }))].sort();
+
 describe('FITL option matrix integration', () => {
   const operationPipeline: ActionPipelineDef = {
     id: 'operation-profile',
@@ -117,15 +167,10 @@ describe('FITL option matrix integration', () => {
   };
 
   it('compiles production FITL spec with Rule 2.3.4 option matrix rows', () => {
-    const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
-    assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    const compileErrors = compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
-    assert.deepEqual(compileErrors, []);
-    assert.notEqual(compiled.gameDef, null);
-    assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven');
+    const gameDef = compileProductionDef();
+    assert.equal(gameDef.turnOrder?.type, 'cardDriven');
 
-    const turnFlow = compiled.gameDef?.turnOrder?.type === 'cardDriven' ? compiled.gameDef.turnOrder.config.turnFlow : null;
+    const turnFlow = gameDef.turnOrder?.type === 'cardDriven' ? gameDef.turnOrder.config.turnFlow : null;
     assert.notEqual(turnFlow, null);
     assert.deepEqual(turnFlow?.optionMatrix, [
       { first: 'operation', second: ['limitedOperation'] },
@@ -187,6 +232,77 @@ describe('FITL option matrix integration', () => {
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
       [asActionId('pass'), asActionId('event'), asActionId('limitedOperation')],
+    );
+  });
+
+  it('enforces production runtime matrix row for first=event', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 101, 4).state;
+    const secondEligible = asSecondEligibleMatrixWindow(start, 'event');
+
+    assert.deepEqual(actionClasses(legalMoves(def, secondEligible)), ['operation', 'operationPlusSpecialActivity', 'pass']);
+  });
+
+  it('enforces production runtime matrix row for first=operation', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 103, 4).state;
+    const secondEligible = asSecondEligibleMatrixWindow(start, 'operation');
+
+    assert.deepEqual(actionClasses(legalMoves(def, secondEligible)), ['limitedOperation', 'pass']);
+  });
+
+  it('enforces production runtime matrix row for first=operationPlusSpecialActivity', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 107, 4).state;
+    const secondEligible = asSecondEligibleMatrixWindow(start, 'operationPlusSpecialActivity');
+
+    assert.deepEqual(actionClasses(legalMoves(def, secondEligible)), ['event', 'limitedOperation', 'pass']);
+  });
+
+  it('does not apply option-matrix filtering during interrupt phases', () => {
+    const def = {
+      ...createDef(),
+      turnStructure: {
+        phases: [{ id: asPhaseId('main') }],
+        interrupts: [{ id: asPhaseId('commitment') }],
+      },
+      actions: createDef().actions.map((action) => ({
+        ...action,
+        phase: [asPhaseId('main'), asPhaseId('commitment')],
+      })),
+    } as unknown as GameDef;
+
+    const start = initialState(def, 109, 3).state;
+    const inInterrupt: GameState = {
+      ...start,
+      currentPhase: asPhaseId('commitment'),
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...requireCardDrivenRuntime(start),
+          currentCard: {
+            ...requireCardDrivenRuntime(start).currentCard,
+            firstEligible: '1',
+            secondEligible: '2',
+            actedSeats: ['0'],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'operation',
+          },
+        },
+      },
+    };
+
+    assert.deepEqual(
+      legalMoves(def, inInterrupt).map((move) => move.actionId),
+      [
+        asActionId('pass'),
+        asActionId('event'),
+        asActionId('operation'),
+        asActionId('limitedOperation'),
+        asActionId('operationPlusSpecialActivity'),
+      ],
     );
   });
 });

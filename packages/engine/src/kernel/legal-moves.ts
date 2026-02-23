@@ -4,7 +4,13 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
-import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
+import {
+  applyPendingFreeOperationVariants,
+  applyTurnFlowWindowFilters,
+  isMoveAllowedByTurnFlowOptionMatrix,
+  resolveConstrainedSecondEligibleActionClasses,
+} from './legal-moves-turn-order.js';
+import { resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
@@ -66,12 +72,34 @@ const tryPushOptionMatrixFilteredMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  actionId: ActionDef['id'],
+  action: ActionDef,
 ): boolean => {
-  if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
-    return false;
+  const constrainedClasses = resolveConstrainedSecondEligibleActionClasses(def, state);
+  const variants: Move[] = [];
+  const baseClass = resolveTurnFlowActionClass(move);
+  if (constrainedClasses !== null && String(action.id) !== 'pass' && !isCardEventAction(action) && baseClass === null) {
+    for (const actionClass of constrainedClasses) {
+      if (actionClass === 'event' || actionClass === 'pass') {
+        continue;
+      }
+      variants.push({
+        ...move,
+        actionClass,
+      });
+    }
+  } else {
+    variants.push(move);
   }
-  return tryPushTemplateMove(enumeration, move, actionId);
+
+  for (const variant of variants) {
+    if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, variant)) {
+      continue;
+    }
+    if (!tryPushTemplateMove(enumeration, variant, action.id)) {
+      return false;
+    }
+  }
+  return true;
 };
 
 const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: ActionDef['id']): boolean => {
@@ -166,7 +194,7 @@ function enumerateParams(
       actionId: action.id,
       params,
     };
-    tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action.id);
+    tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action);
     return;
   }
 
@@ -272,7 +300,7 @@ function enumerateCurrentEventMoves(
     if (!completion.complete) {
       continue;
     }
-    if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, completion.move, action.id)) {
+    if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, completion.move, action)) {
       return;
     }
   }
@@ -372,7 +400,7 @@ export const enumerateLegalMoves = (
         continue;
       }
 
-      tryPushOptionMatrixFilteredMove(enumeration, def, state, { actionId: action.id, params: {} }, action.id);
+      tryPushOptionMatrixFilteredMove(enumeration, def, state, { actionId: action.id, params: {} }, action);
       continue;
     }
   }

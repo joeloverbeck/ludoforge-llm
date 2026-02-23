@@ -1,7 +1,16 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import {
+  ILLEGAL_MOVE_REASONS,
+  asActionId,
+  asPlayerId,
+  asTokenId,
+  initialState,
+  type GameDef,
+  type GameState,
+  type Token,
+} from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -242,5 +251,74 @@ describe('FITL limited operation integration', () => {
     }).state;
 
     assert.equal(singleSpace.globalVars.vcResources, 9, 'Limited VC attack should resolve and spend one VC resource for one targeted space');
+  });
+
+  it('rejects special activity compounding when actionClass is limitedOperation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = operationInitialState(def, 511, 4);
+    const trainSpace = 'quang-nam:none';
+    const adviseSpace = 'saigon:none';
+    const seeded: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [trainSpace]: [
+          {
+            id: asTokenId('limop-train-arvn-police'),
+            type: 'arvn-police',
+            props: { faction: 'ARVN', type: 'police' },
+          },
+        ],
+        [adviseSpace]: [
+          {
+            id: asTokenId('limop-advise-arvn-troop'),
+            type: 'arvn-troops',
+            props: { faction: 'ARVN', type: 'troops' },
+          },
+          {
+            id: asTokenId('limop-train-vc-guerrilla'),
+            type: 'vc-guerrillas',
+            props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+          },
+        ],
+      },
+    };
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, seeded, {
+          actionId: asActionId('train'),
+          actionClass: 'limitedOperation',
+          params: {
+            targetSpaces: [trainSpace],
+            $trainChoice: 'govern',
+            $subActionSpaces: [],
+          },
+          compound: {
+            specialActivity: {
+              actionId: asActionId('advise'),
+              params: {
+                targetSpaces: [adviseSpace],
+                [`$adviseMode@${adviseSpace}`]: 'activate-remove',
+                $adviseAid: 'no',
+              },
+            },
+            timing: 'after',
+          },
+        }),
+      (error: unknown) => {
+        const details = error as { readonly reason?: string; readonly message?: string };
+        if (details.reason !== undefined) {
+          assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
+        } else {
+          assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed/);
+        }
+        return true;
+      },
+      'Limited operation must reject any accompanying special activity',
+    );
   });
 });

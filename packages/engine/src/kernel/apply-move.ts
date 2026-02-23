@@ -28,6 +28,7 @@ import {
   resolveTurnFlowActionClassMismatch,
   resolveFreeOperationExecutionPlayer,
 } from './turn-flow-eligibility.js';
+import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -255,6 +256,19 @@ interface ValidatedMoveContext {
   readonly executionPlayer: GameState['activePlayer'];
 }
 
+const validateTurnFlowWindowAccess = (def: GameDef, state: GameState, move: Move): void => {
+  if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+      detail: 'turnFlow option matrix rejected move action class',
+    });
+  }
+  if (applyTurnFlowWindowFilters(def, state, [move]).length === 0) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+      detail: 'turnFlow window filters rejected move',
+    });
+  }
+};
+
 const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
@@ -354,6 +368,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
       });
     }
     validateDecisionSequenceForMove(def, state, move);
+    validateTurnFlowWindowAccess(def, state, move);
     return {
       action,
       executionPlayer: preflight.executionPlayer,
@@ -361,6 +376,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
   }
   validateDeclaredActionParams(action, preflight.evalCtx, move);
   validateDecisionSequenceForMove(def, state, move);
+  validateTurnFlowWindowAccess(def, state, move);
   return {
     action,
     executionPlayer: preflight.executionPlayer,

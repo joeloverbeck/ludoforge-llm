@@ -87,7 +87,15 @@ describe('FITL production data integration compilation', () => {
         true,
         'Expected remain-eligible nextTurn override window for stay-eligible event cards',
       );
-      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.monsoon, { restrictedActions: [] });
+      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.monsoon, {
+        restrictedActions: [
+          { actionId: 'sweep' },
+          { actionId: 'march' },
+          { actionId: 'airStrike', maxParam: { name: 'spaces', max: 2 } },
+          { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
+        ],
+        blockPivotal: true,
+      });
     }
     const profileBackedActionIds = new Set((compiled.gameDef!.actionPipelines ?? []).map((profile) => String(profile.actionId)));
     for (const action of compiled.gameDef!.actions) {

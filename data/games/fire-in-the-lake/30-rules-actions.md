@@ -49,7 +49,12 @@ turnOrder:
       freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
       durationWindows: [turn, nextTurn, round, cycle]
       monsoon:
-        restrictedActions: []
+        restrictedActions:
+          - { actionId: sweep }
+          - { actionId: march }
+          - { actionId: airStrike, maxParam: { name: spaces, max: 2 } }
+          - { actionId: airLift, maxParam: { name: spaces, max: 2 } }
+        blockPivotal: true
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)
@@ -2387,41 +2392,41 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - if:
-              when:
-                op: '>'
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: lookahead:none
-                      filter:
-                        - { prop: isCoup, eq: true }
-                right: 0
+              when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
               then:
                 - macro: advise-select-spaces
                   args:
                     maxSpaces: 1
               else:
-                - if:
-                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
-                    then:
-                      - macro: advise-select-spaces
-                        args:
-                          maxSpaces: 1
-                    else:
-                      - macro: advise-select-spaces
-                        args:
-                          maxSpaces: 2
+                - macro: advise-select-spaces
+                  args:
+                    maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - forEach:
               bind: $space
               over: { query: binding, name: targetSpaces }
               effects:
-                - chooseOne:
-                    bind: '$adviseMode@{$space}'
-                    options: { query: enums, values: ['sweep', 'assault', 'activate-remove'] }
+                - if:
+                    when:
+                      op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: lookahead:none
+                            filter:
+                              - { prop: isCoup, eq: true }
+                      right: 0
+                    then:
+                      - chooseOne:
+                          bind: '$adviseMode@{$space}'
+                          options: { query: enums, values: ['assault', 'activate-remove'] }
+                    else:
+                      - chooseOne:
+                          bind: '$adviseMode@{$space}'
+                          options: { query: enums, values: ['sweep', 'assault', 'activate-remove'] }
                 - if:
                     when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: sweep }
                     then:
@@ -2516,40 +2521,16 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - if:
-              when:
-                op: '>'
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: lookahead:none
-                      filter:
-                        - { prop: isCoup, eq: true }
-                right: 0
-              then:
-                - chooseN:
-                    bind: spaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: '!='
-                        left: { ref: zoneProp, zone: $zone, prop: country }
-                        right: northVietnam
-                    min: 1
-                    max: 1
-              else:
-                - chooseN:
-                    bind: spaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: '!='
-                        left: { ref: zoneProp, zone: $zone, prop: country }
-                        right: northVietnam
-                    min: 1
-                    max: 4
+          - chooseN:
+              bind: spaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: '!='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: northVietnam
+              min: 1
+              max: 4
       - stage: select-destination
         effects:
           - chooseOne:
@@ -2735,16 +2716,6 @@ actionPipelines:
                   when:
                     op: or
                     args:
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: lookahead:none
-                              filter:
-                                - { prop: isCoup, eq: true }
-                        right: 0
                       - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
                       - { op: '==', left: { ref: gvar, var: mom_wildWeasels }, right: true }
                   then: 1

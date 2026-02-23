@@ -6,6 +6,7 @@ import {
   asTokenId,
   ILLEGAL_MOVE_REASONS,
   initialState,
+  legalMoves,
   type EffectAST,
   type GameState,
   type Token,
@@ -634,7 +635,7 @@ describe('FITL US/ARVN special activities integration', () => {
     );
   });
 
-  it('enforces Monsoon Advise cap at one selected space', () => {
+  it('disallows Advise sweep mode during Monsoon but still allows two non-sweep spaces', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -647,22 +648,34 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('advise'),
           params: {
-            targetSpaces: [spaceA, spaceB],
-            [`$adviseMode@${spaceA}`]: 'activate-remove',
-            [`$adviseMode@${spaceB}`]: 'assault',
+            targetSpaces: [spaceA],
+            [`$adviseMode@${spaceA}`]: 'sweep',
             $adviseAid: 'no',
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
+
+    assert.doesNotThrow(() =>
+      applyMoveWithResolvedDecisionIds(def, monsoonState, {
+        actionId: asActionId('advise'),
+        params: {
+          targetSpaces: [spaceA, spaceB],
+          [`$adviseMode@${spaceA}`]: 'activate-remove',
+          [`$adviseMode@${spaceB}`]: 'assault',
+          $adviseAid: 'no',
+        },
+      }),
+    );
   });
 
-  it('enforces Monsoon Air Lift and Air Strike caps at one selected space', () => {
+  it('enforces Monsoon Air Lift and Air Strike caps at two selected spaces', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const spaceA = 'da-nang:none';
     const spaceB = 'quang-nam:none';
+    const spaceC = 'saigon:none';
 
     const seeded = initialState(def, 457, 2).state;
     const monsoonState = withMonsoonLookahead({
@@ -671,31 +684,82 @@ describe('FITL US/ARVN special activities integration', () => {
         ...seeded.zones,
         [spaceA]: [makeToken('monsoon-us-a', 'troops', 'US', { type: 'troops' })],
         [spaceB]: [makeToken('monsoon-us-b', 'troops', 'US', { type: 'troops' })],
+        [spaceC]: [makeToken('monsoon-us-c', 'troops', 'US', { type: 'troops' })],
       },
     });
 
+    assert.doesNotThrow(() =>
+      applyMoveWithResolvedDecisionIds(def, monsoonState, {
+        actionId: asActionId('airLift'),
+        params: {
+          spaces: [spaceA, spaceB],
+          $airLiftDestination: spaceB,
+        },
+      }),
+    );
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('airLift'),
           params: {
-            spaces: [spaceA, spaceB],
+            spaces: [spaceA, spaceB, spaceC],
             $airLiftDestination: spaceB,
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
+    assert.doesNotThrow(() =>
+      applyMoveWithResolvedDecisionIds(def, monsoonState, {
+        actionId: asActionId('airStrike'),
+        params: {
+          spaces: [spaceA, spaceB],
+          $degradeTrail: 'no',
+        },
+      }),
+    );
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('airStrike'),
           params: {
-            spaces: [spaceA, spaceB],
+            spaces: [spaceA, spaceB, spaceC],
             $degradeTrail: 'no',
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
+  });
+
+  it('blocks Sweep and March action selection during Monsoon turn-flow window', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const baselineState = initialState(def, 461, 2).state;
+    const monsoonState = withMonsoonLookahead(baselineState);
+    const baselineMoves = legalMoves(def, baselineState);
+    const moves = legalMoves(def, monsoonState);
+
+    const baselineHasSweep = baselineMoves.some((move) => move.actionId === asActionId('sweep'));
+    const baselineHasMarch = baselineMoves.some((move) => move.actionId === asActionId('march'));
+    assert.equal(
+      baselineHasSweep || baselineHasMarch,
+      true,
+      'Fixture seed should expose at least one Monsoon-restricted operation in baseline legal moves',
+    );
+    if (baselineHasSweep) {
+      assert.equal(
+        moves.some((move) => move.actionId === asActionId('sweep')),
+        false,
+        'Monsoon should block Sweep action selection',
+      );
+    }
+    if (baselineHasMarch) {
+      assert.equal(
+        moves.some((move) => move.actionId === asActionId('march')),
+        false,
+        'Monsoon should block March action selection',
+      );
+    }
   });
 });

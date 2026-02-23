@@ -61,6 +61,19 @@ const tryPushTemplateMove = (state: MoveEnumerationState, move: Move, actionId: 
   return true;
 };
 
+const tryPushOptionMatrixFilteredMove = (
+  enumeration: MoveEnumerationState,
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  actionId: ActionDef['id'],
+): boolean => {
+  if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
+    return false;
+  }
+  return tryPushTemplateMove(enumeration, move, actionId);
+};
+
 const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: ActionDef['id']): boolean => {
   state.paramExpansions += 1;
   if (state.paramExpansions <= state.budgets.maxParamExpansions) {
@@ -153,10 +166,7 @@ function enumerateParams(
       actionId: action.id,
       params,
     };
-    if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
-      return;
-    }
-    tryPushTemplateMove(enumeration, move, action.id);
+    tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action.id);
     return;
   }
 
@@ -255,9 +265,6 @@ function enumerateCurrentEventMoves(
   }
 
   for (const move of baseMoves) {
-    if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
-      continue;
-    }
     const completion = resolveMoveDecisionSequence(def, state, move, {
       budgets: enumeration.budgets,
       onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
@@ -265,7 +272,7 @@ function enumerateCurrentEventMoves(
     if (!completion.complete) {
       continue;
     }
-    if (!tryPushTemplateMove(enumeration, completion.move, action.id)) {
+    if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, completion.move, action.id)) {
       return;
     }
   }
@@ -365,7 +372,7 @@ export const enumerateLegalMoves = (
         continue;
       }
 
-      tryPushTemplateMove(enumeration, { actionId: action.id, params: {} }, action.id);
+      tryPushOptionMatrixFilteredMove(enumeration, def, state, { actionId: action.id, params: {} }, action.id);
       continue;
     }
   }

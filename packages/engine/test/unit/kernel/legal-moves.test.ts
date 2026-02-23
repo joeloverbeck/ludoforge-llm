@@ -135,6 +135,99 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(moves[0]?.params, {});
   });
 
+  it('applies option-matrix gating to pipeline template emission for second eligible seat', () => {
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const operationAction: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const limitedOperationAction: ActionDef = {
+      id: asActionId('limitedOperation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const operationProfile: ActionPipelineDef = {
+      id: 'operationProfile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [passAction, operationAction, limitedOperationAction],
+        actionPipelines: [operationProfile],
+      }),
+      metadata: { id: 'legal-moves-option-matrix-pipeline', players: { min: 3, max: 3 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      playerCount: 3,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1', '2'],
+          eligibility: { '0': true, '1': true, '2': true },
+          currentCard: {
+            firstEligible: '1',
+            secondEligible: '2',
+            actedSeats: ['0'],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'operation',
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    });
+
+    assert.deepEqual(
+      legalMoves(def, state).map((move) => move.actionId),
+      [asActionId('pass'), asActionId('limitedOperation')],
+    );
+  });
+
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),

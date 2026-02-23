@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  type ActionPipelineDef,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -104,6 +105,17 @@ phase: [asPhaseId('main')],
   }) as unknown as GameDef;
 
 describe('FITL option matrix integration', () => {
+  const operationPipeline: ActionPipelineDef = {
+    id: 'operation-profile',
+    actionId: asActionId('operation'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [{ effects: [] }],
+    atomicity: 'partial',
+  };
+
   it('compiles production FITL spec with Rule 2.3.4 option matrix rows', () => {
     const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
     assertNoErrors(parsed);
@@ -140,6 +152,20 @@ describe('FITL option matrix integration', () => {
     const def = createDef();
     const start = initialState(def, 37, 3).state;
     const firstMove: Move = { actionId: asActionId('limitedOperation'), params: {} };
+    const afterFirst = applyMove(def, start, firstMove).state;
+
+    assert.equal(afterFirst.activePlayer, asPlayerId(1));
+    assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operation');
+    assert.deepEqual(
+      legalMoves(def, afterFirst).map((move) => move.actionId),
+      [asActionId('pass'), asActionId('limitedOperation')],
+    );
+  });
+
+  it('applies option-matrix gating to pipeline-backed operation templates', () => {
+    const def = { ...createDef(), actionPipelines: [operationPipeline] } as unknown as GameDef;
+    const start = initialState(def, 53, 3).state;
+    const firstMove: Move = { actionId: asActionId('operation'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));

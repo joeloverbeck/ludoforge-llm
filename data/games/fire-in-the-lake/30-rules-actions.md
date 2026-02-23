@@ -41,7 +41,11 @@ turnOrder:
           second: [limitedOperation, event]
         - first: event
           second: [operation, operationPlusSpecialActivity]
-      passRewards: []
+      passRewards:
+        - { seat: '0', resource: arvnResources, amount: 3 }
+        - { seat: '1', resource: arvnResources, amount: 3 }
+        - { seat: '2', resource: nvaResources, amount: 1 }
+        - { seat: '3', resource: vcResources, amount: 1 }
       freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
       durationWindows: [turn, nextTurn, round, cycle]
       monsoon:

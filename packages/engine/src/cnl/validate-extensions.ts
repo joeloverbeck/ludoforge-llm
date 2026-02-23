@@ -706,7 +706,7 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
       path: 'doc.turnOrder.config.turnFlow.passRewards',
       severity: 'error',
       message: 'turnFlow.passRewards must be an array.',
-      suggestion: 'Set passRewards to entries of { seatClass, resource, amount }.',
+      suggestion: 'Set passRewards to entries of { seat, resource, amount }.',
     });
   } else {
     for (const [index, reward] of turnFlow.passRewards.entries()) {
@@ -717,12 +717,12 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
           path: basePath,
           severity: 'error',
           message: 'Each pass reward must be an object.',
-          suggestion: 'Set pass reward entries to { seatClass, resource, amount }.',
+          suggestion: 'Set pass reward entries to { seat, resource, amount }.',
         });
         continue;
       }
       validateUnknownKeys(reward, TURN_FLOW_PASS_REWARD_KEYS, basePath, diagnostics, 'pass reward');
-      validateIdentifierField(reward, 'seatClass', `${basePath}.seatClass`, diagnostics, 'pass reward seatClass');
+      validateIdentifierField(reward, 'seat', `${basePath}.seat`, diagnostics, 'pass reward seat');
       validateIdentifierField(reward, 'resource', `${basePath}.resource`, diagnostics, 'pass reward resource');
       if (!isFiniteNumber(reward.amount)) {
         diagnostics.push({

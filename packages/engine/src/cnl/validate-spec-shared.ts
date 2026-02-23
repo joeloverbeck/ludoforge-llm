@@ -31,7 +31,7 @@ export const TURN_FLOW_CARD_LIFECYCLE_KEYS = ['played', 'lookahead', 'leader'] a
 export const TURN_FLOW_ELIGIBILITY_KEYS = ['seats', 'overrideWindows'] as const;
 export const TURN_FLOW_OVERRIDE_WINDOW_KEYS = ['id', 'duration'] as const;
 export const TURN_FLOW_OPTION_MATRIX_ROW_KEYS = ['first', 'second'] as const;
-export const TURN_FLOW_PASS_REWARD_KEYS = ['seatClass', 'resource', 'amount'] as const;
+export const TURN_FLOW_PASS_REWARD_KEYS = ['seat', 'resource', 'amount'] as const;
 export const ACTION_PIPELINE_KEYS = [
   'id',
   'actionId',

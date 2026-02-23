@@ -29,7 +29,7 @@ export interface TurnFlowOptionMatrixRowDef {
 }
 
 export interface TurnFlowPassRewardDef {
-  readonly seatClass: string;
+  readonly seat: string;
   readonly resource: string;
   readonly amount: number;
 }

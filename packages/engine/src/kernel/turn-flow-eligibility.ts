@@ -660,7 +660,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     step = 'passChain';
     passed.add(activeSeat);
     for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
-      if (reward.seatClass !== activeSeat) {
+      if (reward.seat !== activeSeat) {
         continue;
       }
       if (state.globalVars[reward.resource] === undefined) {

@@ -245,7 +245,7 @@ export const TurnFlowOptionMatrixRowSchema = z
 
 export const TurnFlowPassRewardSchema = z
   .object({
-    seatClass: StringSchema.min(1),
+    seat: StringSchema.min(1),
     resource: StringSchema.min(1),
     amount: NumberSchema,
   })

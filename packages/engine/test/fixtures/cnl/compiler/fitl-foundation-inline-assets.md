@@ -85,10 +85,10 @@ turnFlow:
     - first: operationPlusSpecialActivity
       second: [limitedOperation, event]
   passRewards:
-    - seatClass: "0"
+    - seat: "0"
       resource: insurgentPassReward
       amount: 1
-    - seatClass: "1"
+    - seat: "1"
       resource: coinPassReward
       amount: 3
   durationWindows: [turn, nextTurn, round, cycle]

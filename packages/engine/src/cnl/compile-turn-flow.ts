@@ -157,7 +157,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     passRewards: {
       valid: Array.isArray,
       message: 'turnFlow.passRewards is required and must be an array.',
-      suggestion: 'Define pass reward entries keyed by seat class.',
+      suggestion: 'Define pass reward entries keyed by seat.',
     },
     durationWindows: {
       valid: Array.isArray,

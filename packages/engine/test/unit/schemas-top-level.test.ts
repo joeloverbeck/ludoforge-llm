@@ -65,7 +65,7 @@ const fullGameDef = {
         },
         actionClassByActionId: { pass: 'pass' },
         optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-        passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: 3 }],
+        passRewards: [{ seat: 'coin', resource: 'arvnResources', amount: 3 }],
         durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
       },
       coupPlan: {

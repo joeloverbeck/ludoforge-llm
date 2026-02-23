@@ -42,7 +42,7 @@ function createRichCompilableDoc(): GameSpecDoc {
           eligibility: { seats: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
           actionClassByActionId: { act: 'operation', pass: 'pass', event: 'event' },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
-          passRewards: [{ seatClass: 'coin', resource: 'resources', amount: 2 }],
+          passRewards: [{ seat: 'coin', resource: 'resources', amount: 2 }],
           durationWindows: ['turn' as const],
         },
         coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },

@@ -26,8 +26,8 @@ const createDef = (): GameDef =>
           eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [
-            { seatClass: '0', resource: 'res0', amount: 1 },
-            { seatClass: '1', resource: 'res1', amount: 3 },
+            { seat: '0', resource: 'res0', amount: 1 },
+            { seat: '1', resource: 'res1', amount: 3 },
           ],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },

@@ -73,6 +73,12 @@ describe('FITL production data integration compilation', () => {
         lookahead: 'lookahead:none',
         leader: 'leader:none',
       });
+      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.passRewards, [
+        { seat: '0', resource: 'arvnResources', amount: 3 },
+        { seat: '1', resource: 'arvnResources', amount: 3 },
+        { seat: '2', resource: 'nvaResources', amount: 1 },
+        { seat: '3', resource: 'vcResources', amount: 1 },
+      ]);
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.durationWindows, ['turn', 'nextTurn', 'round', 'cycle']);
       assert.equal(
         compiled.gameDef.turnOrder.config.turnFlow.eligibility.overrideWindows.some(

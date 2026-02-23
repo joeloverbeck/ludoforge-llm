@@ -310,8 +310,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
             actionClassByActionId: { pass: 'pass' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
             passRewards: [
-              { seatClass: 'coin', resource: 'arvnResources', amount: 3 },
-              { seatClass: 'insurgent', resource: 'factionResource', amount: 1 },
+              { seat: 'coin', resource: 'arvnResources', amount: 3 },
+              { seat: 'insurgent', resource: 'factionResource', amount: 1 },
             ],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
           },

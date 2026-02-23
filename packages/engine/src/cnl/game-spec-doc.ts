@@ -192,7 +192,7 @@ export interface GameSpecTurnFlowOptionMatrixRow {
 }
 
 export interface GameSpecTurnFlowPassReward {
-  readonly seatClass: string;
+  readonly seat: string;
   readonly resource: string;
   readonly amount: number;
 }

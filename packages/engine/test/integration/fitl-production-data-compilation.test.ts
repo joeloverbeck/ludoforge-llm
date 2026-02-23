@@ -96,6 +96,19 @@ describe('FITL production data integration compilation', () => {
         ],
         blockPivotal: true,
       });
+      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.pivotal, {
+        actionIds: ['pivotalEvent'],
+        requirePreActionWindow: true,
+        disallowWhenLookaheadIsCoup: true,
+        interrupt: {
+          precedence: ['3', '1', '2', '0'],
+        },
+      });
+      assert.equal(
+        compiled.gameDef.turnOrder.config.turnFlow.actionClassByActionId.pivotalEvent,
+        'event',
+        'Expected pivotalEvent to be mapped as event class in turn flow',
+      );
     }
     const profileBackedActionIds = new Set((compiled.gameDef!.actionPipelines ?? []).map((profile) => String(profile.actionId)));
     for (const action of compiled.gameDef!.actions) {
@@ -109,6 +122,15 @@ describe('FITL production data integration compilation', () => {
       true,
       'Expected synthesized card-driven event action in production GameDef',
     );
+    const pivotalAction = compiled.gameDef!.actions.find((action) => String(action.id) === 'pivotalEvent');
+    assert.ok(pivotalAction, 'Expected pivotalEvent action in production GameDef');
+    assert.deepEqual(pivotalAction.executor, 'actor');
+    assert.deepEqual(
+      pivotalAction.params,
+      [{ name: 'eventCardId', domain: { query: 'enums', values: ['card-121', 'card-122', 'card-123', 'card-124'] } }],
+      'Expected pivotalEvent to expose only FITL pivotal card ids',
+    );
+    assert.notEqual(pivotalAction.pre, null, 'Expected pivotalEvent to enforce seat-to-card ownership in precondition');
     const operationActionIds = new Set(['train', 'patrol', 'sweep', 'assault', 'rally', 'march', 'attack', 'terror']);
     const operationProfiles = (compiled.gameDef!.actionPipelines ?? []).filter((profile) =>
       operationActionIds.has(String(profile.actionId)),

@@ -32,6 +32,7 @@ turnOrder:
       actionClassByActionId:
         pass: pass
         event: event
+        pivotalEvent: event
         usOp: operation
         arvnOp: operation
       optionMatrix:
@@ -55,6 +56,12 @@ turnOrder:
           - { actionId: airStrike, maxParam: { name: spaces, max: 2 } }
           - { actionId: airLift, maxParam: { name: spaces, max: 2 } }
         blockPivotal: true
+      pivotal:
+        actionIds: [pivotalEvent]
+        requirePreActionWindow: true
+        disallowWhenLookaheadIsCoup: true
+        interrupt:
+          precedence: ['3', '1', '2', '0']
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)
@@ -62,6 +69,35 @@ turnOrder:
 
 actions:
   - { id: pass, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - id: pivotalEvent
+    actor: active
+    executor: 'actor'
+    phase: [main]
+    params:
+      - name: eventCardId
+        domain: { query: enums, values: [card-121, card-122, card-123, card-124] }
+    pre:
+      op: or
+      args:
+        - op: and
+          args:
+            - { op: '==', left: { ref: activePlayer }, right: 0 }
+            - { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
+        - op: and
+          args:
+            - { op: '==', left: { ref: activePlayer }, right: 2 }
+            - { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
+        - op: and
+          args:
+            - { op: '==', left: { ref: activePlayer }, right: 1 }
+            - { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
+        - op: and
+          args:
+            - { op: '==', left: { ref: activePlayer }, right: 3 }
+            - { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
+    cost: []
+    effects: []
+    limits: []
   - { id: train, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: patrol, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: sweep, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }

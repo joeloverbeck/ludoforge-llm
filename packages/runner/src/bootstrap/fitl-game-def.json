@@ -2586,6 +2586,31 @@
           ]
         }
       ]
+    },
+    {
+      "id": "coupPacifySpaceUsage",
+      "states": [
+        "open",
+        "used"
+      ],
+      "defaultState": "open"
+    },
+    {
+      "id": "coupAgitateSpaceUsage",
+      "states": [
+        "open",
+        "used"
+      ],
+      "defaultState": "open"
+    },
+    {
+      "id": "coupSupportShiftCount",
+      "states": [
+        "zero",
+        "one",
+        "two"
+      ],
+      "defaultState": "zero"
     }
   ],
   "stackingConstraints": [
@@ -4514,6 +4539,31 @@
                 ]
               }
             ]
+          },
+          {
+            "id": "coupPacifySpaceUsage",
+            "states": [
+              "open",
+              "used"
+            ],
+            "defaultState": "open"
+          },
+          {
+            "id": "coupAgitateSpaceUsage",
+            "states": [
+              "open",
+              "used"
+            ],
+            "defaultState": "open"
+          },
+          {
+            "id": "coupSupportShiftCount",
+            "states": [
+              "zero",
+              "one",
+              "two"
+            ],
+            "defaultState": "zero"
           }
         ],
         "stackingConstraints": [
@@ -9769,6 +9819,24 @@
     "phases": [
       {
         "id": "main"
+      },
+      {
+        "id": "coupVictory"
+      },
+      {
+        "id": "coupResources"
+      },
+      {
+        "id": "coupSupport"
+      },
+      {
+        "id": "coupRedeploy"
+      },
+      {
+        "id": "coupCommitment"
+      },
+      {
+        "id": "coupReset"
       }
     ],
     "interrupts": [
@@ -9821,7 +9889,20 @@
           "event": "event",
           "pivotalEvent": "event",
           "usOp": "operation",
-          "arvnOp": "operation"
+          "arvnOp": "operation",
+          "coupVictoryCheck": "pass",
+          "coupPacifyUS": "operation",
+          "coupPacifyARVN": "operation",
+          "coupAgitateVC": "operation",
+          "coupArvnRedeployMandatory": "operation",
+          "coupArvnRedeployOptionalTroops": "operation",
+          "coupArvnRedeployPolice": "operation",
+          "coupNvaRedeployTroops": "operation",
+          "coupCommitmentResolve": "operation",
+          "coupPacifyPass": "pass",
+          "coupAgitatePass": "pass",
+          "coupRedeployPass": "pass",
+          "coupCommitmentPass": "pass"
         },
         "optionMatrix": [
           {
@@ -9923,6 +10004,51 @@
             ]
           }
         }
+      },
+      "coupPlan": {
+        "phases": [
+          {
+            "id": "coupVictory",
+            "steps": [
+              "check-victory"
+            ]
+          },
+          {
+            "id": "coupResources",
+            "steps": [
+              "resolve-resources"
+            ]
+          },
+          {
+            "id": "coupSupport",
+            "steps": [
+              "resolve-support"
+            ]
+          },
+          {
+            "id": "coupRedeploy",
+            "steps": [
+              "resolve-redeploy"
+            ]
+          },
+          {
+            "id": "coupCommitment",
+            "steps": [
+              "resolve-commitment"
+            ]
+          },
+          {
+            "id": "coupReset",
+            "steps": [
+              "resolve-reset"
+            ]
+          }
+        ],
+        "finalRoundOmitPhases": [
+          "coupCommitment",
+          "coupReset"
+        ],
+        "maxConsecutiveRounds": 1
       }
     }
   },
@@ -10988,7 +11114,7 @@
                                       "right": true
                                     },
                                     {
-                                      "op": ">",
+                                      "op": ">=",
                                       "left": {
                                         "ref": "gvar",
                                         "var": "arvnResources"
@@ -11597,7 +11723,7 @@
                                     {
                                       "if": {
                                         "when": {
-                                          "op": ">",
+                                          "op": ">=",
                                           "left": {
                                             "ref": "gvar",
                                             "var": "arvnResources"
@@ -11692,7 +11818,7 @@
                                           {
                                             "if": {
                                               "when": {
-                                                "op": ">",
+                                                "op": ">=",
                                                 "left": {
                                                   "ref": "gvar",
                                                   "var": "arvnResources"
@@ -11763,7 +11889,7 @@
                                     {
                                       "if": {
                                         "when": {
-                                          "op": ">",
+                                          "op": ">=",
                                           "left": {
                                             "ref": "gvar",
                                             "var": "arvnResources"
@@ -18882,7 +19008,7 @@
                       "right": true
                     },
                     {
-                      "op": ">",
+                      "op": ">=",
                       "left": {
                         "ref": "gvar",
                         "var": "arvnResources"
@@ -39328,7 +39454,7 @@
       "actionId": "usOp",
       "legality": null,
       "costValidation": {
-        "op": ">",
+        "op": ">=",
         "left": {
           "ref": "pvar",
           "player": {
@@ -39434,6 +39560,3721 @@
       "cost": [],
       "effects": [],
       "limits": []
+    },
+    {
+      "id": "coupVictoryCheck",
+      "actor": "active",
+      "executor": "actor",
+      "phase": [
+        "coupVictory"
+      ],
+      "params": [],
+      "pre": null,
+      "cost": [],
+      "effects": [],
+      "limits": [
+        {
+          "scope": "phase",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "coupPacifyPass",
+      "actor": "active",
+      "executor": "actor",
+      "phase": [
+        "coupSupport"
+      ],
+      "params": [],
+      "pre": {
+        "op": "or",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 0
+          },
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 1
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [],
+      "limits": [
+        {
+          "scope": "phase",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "coupAgitatePass",
+      "actor": "active",
+      "executor": "actor",
+      "phase": [
+        "coupSupport"
+      ],
+      "params": [],
+      "pre": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 3
+      },
+      "cost": [],
+      "effects": [],
+      "limits": [
+        {
+          "scope": "phase",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "coupPacifyUS",
+      "actor": "active",
+      "executor": {
+        "id": 0
+      },
+      "phase": [
+        "coupSupport"
+      ],
+      "params": [
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces",
+            "filter": {
+              "condition": {
+                "op": "or",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "category"
+                    },
+                    "right": "city"
+                  },
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "category"
+                    },
+                    "right": "province"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "action",
+          "domain": {
+            "query": "enums",
+            "values": [
+              "removeTerror",
+              "shiftSupport"
+            ]
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 0
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "<",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$zone",
+                            "marker": "coupPacifySpaceUsage"
+                          },
+                          "right": "used"
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 4
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "targetSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "markerState",
+                                "space": "$zone",
+                                "marker": "coupPacifySpaceUsage"
+                              },
+                              "right": "used"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              }
+            ]
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "US",
+                        "ARVN"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "right": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "NVA",
+                        "VC"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "ARVN"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "police"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "US"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "troops"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">=",
+            "left": {
+              "ref": "gvar",
+              "var": "arvnResources"
+            },
+            "right": {
+              "op": "+",
+              "left": {
+                "ref": "gvar",
+                "var": "totalEcon"
+              },
+              "right": {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "globalMarkerState",
+                      "marker": "activeLeader"
+                    },
+                    "right": "ky"
+                  },
+                  "then": 4,
+                  "else": 3
+                }
+              }
+            }
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "action"
+                    },
+                    "right": "removeTerror"
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "terror"
+                                  },
+                                  "right": "terror"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "action"
+                    },
+                    "right": "shiftSupport"
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition"
+                                  },
+                                  "right": "activeSupport"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "coupSupportShiftCount"
+                                  },
+                                  "right": "two"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "arvnResources",
+            "delta": {
+              "op": "*",
+              "left": 1,
+              "right": {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "globalMarkerState",
+                      "marker": "activeLeader"
+                    },
+                    "right": "ky"
+                  },
+                  "then": -4,
+                  "else": -3
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "when": {
+              "op": "==",
+              "left": {
+                "ref": "binding",
+                "name": "action"
+              },
+              "right": "removeTerror"
+            },
+            "then": [
+              {
+                "setMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "terror",
+                  "state": "none"
+                }
+              }
+            ],
+            "else": [
+              {
+                "shiftMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "supportOpposition",
+                  "delta": 1
+                }
+              },
+              {
+                "shiftMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "coupSupportShiftCount",
+                  "delta": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "setMarker": {
+            "space": {
+              "zoneExpr": {
+                "ref": "binding",
+                "name": "targetSpace"
+              }
+            },
+            "marker": "coupPacifySpaceUsage",
+            "state": "used"
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupPacifyARVN",
+      "actor": "active",
+      "executor": {
+        "id": 1
+      },
+      "phase": [
+        "coupSupport"
+      ],
+      "params": [
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces",
+            "filter": {
+              "condition": {
+                "op": "or",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "category"
+                    },
+                    "right": "city"
+                  },
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "category"
+                    },
+                    "right": "province"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "action",
+          "domain": {
+            "query": "enums",
+            "values": [
+              "removeTerror",
+              "shiftSupport"
+            ]
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 1
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "<",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$zone",
+                            "marker": "coupPacifySpaceUsage"
+                          },
+                          "right": "used"
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 4
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "targetSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "markerState",
+                                "space": "$zone",
+                                "marker": "coupPacifySpaceUsage"
+                              },
+                              "right": "used"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              }
+            ]
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "US",
+                        "ARVN"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "right": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "NVA",
+                        "VC"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "ARVN"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "police"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "ARVN"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "troops"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">=",
+            "left": {
+              "ref": "gvar",
+              "var": "arvnResources"
+            },
+            "right": {
+              "if": {
+                "when": {
+                  "op": "==",
+                  "left": {
+                    "ref": "globalMarkerState",
+                    "marker": "activeLeader"
+                  },
+                  "right": "ky"
+                },
+                "then": 4,
+                "else": 3
+              }
+            }
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "action"
+                    },
+                    "right": "removeTerror"
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "terror"
+                                  },
+                                  "right": "terror"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "action"
+                    },
+                    "right": "shiftSupport"
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition"
+                                  },
+                                  "right": "activeSupport"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "coupSupportShiftCount"
+                                  },
+                                  "right": "two"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "arvnResources",
+            "delta": {
+              "op": "*",
+              "left": 1,
+              "right": {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "globalMarkerState",
+                      "marker": "activeLeader"
+                    },
+                    "right": "ky"
+                  },
+                  "then": -4,
+                  "else": -3
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "when": {
+              "op": "==",
+              "left": {
+                "ref": "binding",
+                "name": "action"
+              },
+              "right": "removeTerror"
+            },
+            "then": [
+              {
+                "setMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "terror",
+                  "state": "none"
+                }
+              }
+            ],
+            "else": [
+              {
+                "shiftMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "supportOpposition",
+                  "delta": 1
+                }
+              },
+              {
+                "shiftMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "coupSupportShiftCount",
+                  "delta": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "setMarker": {
+            "space": {
+              "zoneExpr": {
+                "ref": "binding",
+                "name": "targetSpace"
+              }
+            },
+            "marker": "coupPacifySpaceUsage",
+            "state": "used"
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupAgitateVC",
+      "actor": "active",
+      "executor": {
+        "id": 3
+      },
+      "phase": [
+        "coupSupport"
+      ],
+      "params": [
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces",
+            "filter": {
+              "condition": {
+                "op": "or",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "category"
+                    },
+                    "right": "city"
+                  },
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "zoneProp",
+                      "zone": "$zone",
+                      "prop": "category"
+                    },
+                    "right": "province"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "action",
+          "domain": {
+            "query": "enums",
+            "values": [
+              "removeTerror",
+              "shiftOpposition"
+            ]
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 3
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "<",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$zone",
+                            "marker": "coupAgitateSpaceUsage"
+                          },
+                          "right": "used"
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 4
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "targetSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "markerState",
+                                "space": "$zone",
+                                "marker": "coupAgitateSpaceUsage"
+                              },
+                              "right": "used"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              }
+            ]
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "VC"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": "<=",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "US",
+                        "ARVN"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "right": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "NVA",
+                        "VC"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "op": ">=",
+            "left": {
+              "ref": "gvar",
+              "var": "vcResources"
+            },
+            "right": 1
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "action"
+                    },
+                    "right": "removeTerror"
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "terror"
+                                  },
+                                  "right": "terror"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "action"
+                    },
+                    "right": "shiftOpposition"
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition"
+                                  },
+                                  "right": "activeOpposition"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "!=",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "coupSupportShiftCount"
+                                  },
+                                  "right": "two"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "vcResources",
+            "delta": -1
+          }
+        },
+        {
+          "if": {
+            "when": {
+              "op": "==",
+              "left": {
+                "ref": "binding",
+                "name": "action"
+              },
+              "right": "removeTerror"
+            },
+            "then": [
+              {
+                "setMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "terror",
+                  "state": "none"
+                }
+              }
+            ],
+            "else": [
+              {
+                "shiftMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "supportOpposition",
+                  "delta": -1
+                }
+              },
+              {
+                "shiftMarker": {
+                  "space": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "marker": "coupSupportShiftCount",
+                  "delta": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "setMarker": {
+            "space": {
+              "zoneExpr": {
+                "ref": "binding",
+                "name": "targetSpace"
+              }
+            },
+            "marker": "coupAgitateSpaceUsage",
+            "state": "used"
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupArvnRedeployMandatory",
+      "actor": "active",
+      "executor": {
+        "id": 1
+      },
+      "phase": [
+        "coupRedeploy"
+      ],
+      "params": [
+        {
+          "name": "sourceSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        },
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 1
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "ARVN"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "troops"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "sourceSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "loc"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "sourceSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "province"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              }
+            ]
+          },
+          {
+            "op": "==",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "in",
+                      "value": [
+                        "US",
+                        "ARVN"
+                      ]
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "base"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "city"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  {
+                    "op": "<=",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInZone",
+                          "zone": {
+                            "zoneExpr": {
+                              "ref": "binding",
+                              "name": "targetSpace"
+                            }
+                          },
+                          "filter": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "NVA"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInZone",
+                          "zone": {
+                            "zoneExpr": {
+                              "ref": "binding",
+                              "name": "targetSpace"
+                            }
+                          },
+                          "filter": [
+                            {
+                              "prop": "faction",
+                              "op": "in",
+                              "value": [
+                                "US",
+                                "ARVN",
+                                "VC"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "tokensInZone",
+                      "zone": {
+                        "zoneExpr": {
+                          "ref": "binding",
+                          "name": "targetSpace"
+                        }
+                      },
+                      "filter": [
+                        {
+                          "prop": "faction",
+                          "op": "in",
+                          "value": [
+                            "US",
+                            "ARVN"
+                          ]
+                        },
+                        {
+                          "prop": "type",
+                          "op": "eq",
+                          "value": "base"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "right": 0
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "targetSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": "saigon:none"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$movedTroop",
+            "over": {
+              "query": "tokensInZone",
+              "zone": {
+                "zoneExpr": {
+                  "ref": "binding",
+                  "name": "sourceSpace"
+                }
+              },
+              "filter": [
+                {
+                  "prop": "faction",
+                  "op": "eq",
+                  "value": "ARVN"
+                },
+                {
+                  "prop": "type",
+                  "op": "eq",
+                  "value": "troops"
+                }
+              ]
+            },
+            "effects": [
+              {
+                "moveToken": {
+                  "token": "$movedTroop",
+                  "from": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "to": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  }
+                }
+              }
+            ],
+            "limit": 1
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupArvnRedeployOptionalTroops",
+      "actor": "active",
+      "executor": {
+        "id": 1
+      },
+      "phase": [
+        "coupRedeploy"
+      ],
+      "params": [
+        {
+          "name": "sourceSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        },
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 1
+          },
+          {
+            "op": "==",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "or",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "loc"
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "province"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "==",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "in",
+                                    "value": [
+                                      "US",
+                                      "ARVN"
+                                    ]
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "base"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": 0
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "ARVN"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "troops"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "ARVN"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "troops"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "id"
+                                  },
+                                  "right": {
+                                    "ref": "binding",
+                                    "name": "targetSpace"
+                                  }
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "city"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  {
+                    "op": "<=",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInZone",
+                          "zone": {
+                            "zoneExpr": {
+                              "ref": "binding",
+                              "name": "targetSpace"
+                            }
+                          },
+                          "filter": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "NVA"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "tokensInZone",
+                          "zone": {
+                            "zoneExpr": {
+                              "ref": "binding",
+                              "name": "targetSpace"
+                            }
+                          },
+                          "filter": [
+                            {
+                              "prop": "faction",
+                              "op": "in",
+                              "value": [
+                                "US",
+                                "ARVN",
+                                "VC"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "tokensInZone",
+                      "zone": {
+                        "zoneExpr": {
+                          "ref": "binding",
+                          "name": "targetSpace"
+                        }
+                      },
+                      "filter": [
+                        {
+                          "prop": "faction",
+                          "op": "in",
+                          "value": [
+                            "US",
+                            "ARVN"
+                          ]
+                        },
+                        {
+                          "prop": "type",
+                          "op": "eq",
+                          "value": "base"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "right": 0
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "targetSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": "saigon:none"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$movedTroop",
+            "over": {
+              "query": "tokensInZone",
+              "zone": {
+                "zoneExpr": {
+                  "ref": "binding",
+                  "name": "sourceSpace"
+                }
+              },
+              "filter": [
+                {
+                  "prop": "faction",
+                  "op": "eq",
+                  "value": "ARVN"
+                },
+                {
+                  "prop": "type",
+                  "op": "eq",
+                  "value": "troops"
+                }
+              ]
+            },
+            "effects": [
+              {
+                "moveToken": {
+                  "token": "$movedTroop",
+                  "from": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "to": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  }
+                }
+              }
+            ],
+            "limit": 1
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupArvnRedeployPolice",
+      "actor": "active",
+      "executor": {
+        "id": 1
+      },
+      "phase": [
+        "coupRedeploy"
+      ],
+      "params": [
+        {
+          "name": "sourceSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        },
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 1
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "ARVN"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "police"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "id"
+                          },
+                          "right": {
+                            "ref": "binding",
+                            "name": "targetSpace"
+                          }
+                        },
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "country"
+                          },
+                          "right": "southVietnam"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": "or",
+            "args": [
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "mapSpaces",
+                      "filter": {
+                        "condition": {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "id"
+                              },
+                              "right": {
+                                "ref": "binding",
+                                "name": "targetSpace"
+                              }
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "loc"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": 0
+              },
+              {
+                "op": ">",
+                "left": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "tokensInZone",
+                      "zone": {
+                        "zoneExpr": {
+                          "ref": "binding",
+                          "name": "targetSpace"
+                        }
+                      },
+                      "filter": [
+                        {
+                          "prop": "faction",
+                          "op": "in",
+                          "value": [
+                            "US",
+                            "ARVN"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                "right": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "tokensInZone",
+                      "zone": {
+                        "zoneExpr": {
+                          "ref": "binding",
+                          "name": "targetSpace"
+                        }
+                      },
+                      "filter": [
+                        {
+                          "prop": "faction",
+                          "op": "in",
+                          "value": [
+                            "NVA",
+                            "VC"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$movedPolice",
+            "over": {
+              "query": "tokensInZone",
+              "zone": {
+                "zoneExpr": {
+                  "ref": "binding",
+                  "name": "sourceSpace"
+                }
+              },
+              "filter": [
+                {
+                  "prop": "faction",
+                  "op": "eq",
+                  "value": "ARVN"
+                },
+                {
+                  "prop": "type",
+                  "op": "eq",
+                  "value": "police"
+                }
+              ]
+            },
+            "effects": [
+              {
+                "moveToken": {
+                  "token": "$movedPolice",
+                  "from": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "to": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  }
+                }
+              }
+            ],
+            "limit": 1
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupNvaRedeployTroops",
+      "actor": "active",
+      "executor": {
+        "id": 2
+      },
+      "phase": [
+        "coupRedeploy"
+      ],
+      "params": [
+        {
+          "name": "sourceSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        },
+        {
+          "name": "targetSpace",
+          "domain": {
+            "query": "mapSpaces"
+          }
+        }
+      ],
+      "pre": {
+        "op": "and",
+        "args": [
+          {
+            "op": "==",
+            "left": {
+              "ref": "activePlayer"
+            },
+            "right": 2
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "NVA"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "troops"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          },
+          {
+            "op": ">",
+            "left": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  },
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "NVA"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "base"
+                    }
+                  ]
+                }
+              }
+            },
+            "right": 0
+          }
+        ]
+      },
+      "cost": [],
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$movedTroop",
+            "over": {
+              "query": "tokensInZone",
+              "zone": {
+                "zoneExpr": {
+                  "ref": "binding",
+                  "name": "sourceSpace"
+                }
+              },
+              "filter": [
+                {
+                  "prop": "faction",
+                  "op": "eq",
+                  "value": "NVA"
+                },
+                {
+                  "prop": "type",
+                  "op": "eq",
+                  "value": "troops"
+                }
+              ]
+            },
+            "effects": [
+              {
+                "moveToken": {
+                  "token": "$movedTroop",
+                  "from": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "sourceSpace"
+                    }
+                  },
+                  "to": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "targetSpace"
+                    }
+                  }
+                }
+              }
+            ],
+            "limit": 1
+          }
+        }
+      ],
+      "limits": []
+    },
+    {
+      "id": "coupRedeployPass",
+      "actor": "active",
+      "executor": "actor",
+      "phase": [
+        "coupRedeploy"
+      ],
+      "params": [],
+      "pre": null,
+      "cost": [],
+      "effects": [],
+      "limits": [
+        {
+          "scope": "phase",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "coupCommitmentPass",
+      "actor": "active",
+      "executor": "actor",
+      "phase": [
+        "coupCommitment"
+      ],
+      "params": [],
+      "pre": null,
+      "cost": [],
+      "effects": [],
+      "limits": [
+        {
+          "scope": "phase",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "coupCommitmentResolve",
+      "actor": "active",
+      "executor": {
+        "id": 0
+      },
+      "phase": [
+        "coupCommitment"
+      ],
+      "params": [],
+      "pre": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 0
+      },
+      "cost": [],
+      "effects": [
+        {
+          "let": {
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__usTroopCasualties",
+            "value": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInZone",
+                  "zone": "casualties-US:none",
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "US"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "troops"
+                    }
+                  ]
+                }
+              }
+            },
+            "in": [
+              {
+                "removeByPriority": {
+                  "budget": {
+                    "op": "floorDiv",
+                    "left": {
+                      "ref": "binding",
+                      "name": "$__macro_coup_process_commitment_actions_13__effects_0__usTroopCasualties"
+                    },
+                    "right": 3
+                  },
+                  "groups": [
+                    {
+                      "bind": "$__macro_coup_process_commitment_actions_13__effects_0__casualtyTroop",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "casualties-US:none",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      },
+                      "to": {
+                        "zoneExpr": "out-of-play-US:none"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "moveAll": {
+            "from": "casualties-US:none",
+            "to": "out-of-play-US:none",
+            "filter": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "==",
+                  "left": {
+                    "ref": "tokenProp",
+                    "token": "$token",
+                    "prop": "faction"
+                  },
+                  "right": "US"
+                },
+                {
+                  "op": "==",
+                  "left": {
+                    "ref": "tokenProp",
+                    "token": "$token",
+                    "prop": "type"
+                  },
+                  "right": "base"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "moveAll": {
+            "from": "casualties-US:none",
+            "to": "available-US:none"
+          }
+        },
+        {
+          "chooseN": {
+            "internalDecisionId": "decision:doc.actions.13.effects.3.chooseN",
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopsFromAvailable",
+            "options": {
+              "query": "tokensInZone",
+              "zone": "available-US:none",
+              "filter": [
+                {
+                  "prop": "faction",
+                  "op": "eq",
+                  "value": "US"
+                },
+                {
+                  "prop": "type",
+                  "op": "eq",
+                  "value": "troops"
+                }
+              ]
+            },
+            "max": 10,
+            "min": 0
+          }
+        },
+        {
+          "forEach": {
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromAvailable",
+            "macroOrigin": {
+              "macroId": "coup-process-commitment",
+              "stem": "movingTroopFromAvailable"
+            },
+            "over": {
+              "query": "binding",
+              "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopsFromAvailable"
+            },
+            "effects": [
+              {
+                "chooseOne": {
+                  "internalDecisionId": "decision:doc.actions.13.effects.4.forEach.effects.0.chooseOne",
+                  "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopDestFromAvailable",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "category"
+                            },
+                            "right": "loc"
+                          },
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "id"
+                            },
+                            "right": "saigon:none"
+                          },
+                          {
+                            "op": "and",
+                            "args": [
+                              {
+                                "op": "or",
+                                "args": [
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "category"
+                                    },
+                                    "right": "province"
+                                  },
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "category"
+                                    },
+                                    "right": "city"
+                                  }
+                                ]
+                              },
+                              {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "US",
+                                            "ARVN"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                "right": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "NVA",
+                                            "VC"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "moveToken": {
+                  "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromAvailable",
+                  "from": {
+                    "zoneExpr": {
+                      "ref": "tokenZone",
+                      "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromAvailable"
+                    }
+                  },
+                  "to": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopDestFromAvailable"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "let": {
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__troopsMovedFromAvailable",
+            "value": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "binding",
+                  "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopsFromAvailable"
+                }
+              }
+            },
+            "in": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.actions.13.effects.5.let.in.0.chooseN",
+                  "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopsFromMap",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "spaceFilter": {
+                      "condition": {
+                        "op": "==",
+                        "left": {
+                          "ref": "zoneProp",
+                          "zone": "$zone",
+                          "prop": "country"
+                        },
+                        "right": "southVietnam"
+                      }
+                    },
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "US"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "troops"
+                      }
+                    ]
+                  },
+                  "max": {
+                    "op": "-",
+                    "left": 10,
+                    "right": {
+                      "ref": "binding",
+                      "name": "$__macro_coup_process_commitment_actions_13__effects_0__troopsMovedFromAvailable"
+                    }
+                  },
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromMap",
+                  "macroOrigin": {
+                    "macroId": "coup-process-commitment",
+                    "stem": "movingTroopFromMap"
+                  },
+                  "over": {
+                    "query": "binding",
+                    "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopsFromMap"
+                  },
+                  "effects": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.actions.13.effects.5.let.in.1.forEach.effects.0.chooseOne",
+                        "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopMapMoveMode",
+                        "options": {
+                          "query": "enums",
+                          "values": [
+                            "to-available",
+                            "to-map"
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "binding",
+                            "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopMapMoveMode"
+                          },
+                          "right": "to-available"
+                        },
+                        "then": [
+                          {
+                            "moveToken": {
+                              "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromMap",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromMap"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-US:none"
+                              }
+                            }
+                          }
+                        ],
+                        "else": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.actions.13.effects.5.let.in.1.forEach.effects.1.if.else.0.chooseOne",
+                              "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopDestFromMap",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "!=",
+                                        "left": {
+                                          "ref": "zoneProp",
+                                          "zone": "$zone",
+                                          "prop": "id"
+                                        },
+                                        "right": {
+                                          "ref": "tokenZone",
+                                          "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromMap"
+                                        }
+                                      },
+                                      {
+                                        "op": "or",
+                                        "args": [
+                                          {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "zoneProp",
+                                              "zone": "$zone",
+                                              "prop": "category"
+                                            },
+                                            "right": "loc"
+                                          },
+                                          {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "zoneProp",
+                                              "zone": "$zone",
+                                              "prop": "id"
+                                            },
+                                            "right": "saigon:none"
+                                          },
+                                          {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "op": "or",
+                                                "args": [
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "category"
+                                                    },
+                                                    "right": "province"
+                                                  },
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "category"
+                                                    },
+                                                    "right": "city"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "op": ">",
+                                                "left": {
+                                                  "aggregate": {
+                                                    "op": "count",
+                                                    "query": {
+                                                      "query": "tokensInZone",
+                                                      "zone": "$zone",
+                                                      "filter": [
+                                                        {
+                                                          "prop": "faction",
+                                                          "op": "in",
+                                                          "value": [
+                                                            "US",
+                                                            "ARVN"
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "right": {
+                                                  "aggregate": {
+                                                    "op": "count",
+                                                    "query": {
+                                                      "query": "tokensInZone",
+                                                      "zone": "$zone",
+                                                      "filter": [
+                                                        {
+                                                          "prop": "faction",
+                                                          "op": "in",
+                                                          "value": [
+                                                            "NVA",
+                                                            "VC"
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "moveToken": {
+                              "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromMap",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingTroopFromMap"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": {
+                                  "ref": "binding",
+                                  "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitTroopDestFromMap"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chooseN": {
+            "internalDecisionId": "decision:doc.actions.13.effects.6.chooseN",
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitBasesFromAvailable",
+            "options": {
+              "query": "tokensInZone",
+              "zone": "available-US:none",
+              "filter": [
+                {
+                  "prop": "faction",
+                  "op": "eq",
+                  "value": "US"
+                },
+                {
+                  "prop": "type",
+                  "op": "eq",
+                  "value": "base"
+                }
+              ]
+            },
+            "max": 2,
+            "min": 0
+          }
+        },
+        {
+          "forEach": {
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromAvailable",
+            "macroOrigin": {
+              "macroId": "coup-process-commitment",
+              "stem": "movingBaseFromAvailable"
+            },
+            "over": {
+              "query": "binding",
+              "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitBasesFromAvailable"
+            },
+            "effects": [
+              {
+                "chooseOne": {
+                  "internalDecisionId": "decision:doc.actions.13.effects.7.forEach.effects.0.chooseOne",
+                  "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitBaseDestFromAvailable",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "category"
+                            },
+                            "right": "loc"
+                          },
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "id"
+                            },
+                            "right": "saigon:none"
+                          },
+                          {
+                            "op": "and",
+                            "args": [
+                              {
+                                "op": "or",
+                                "args": [
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "category"
+                                    },
+                                    "right": "province"
+                                  },
+                                  {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "zoneProp",
+                                      "zone": "$zone",
+                                      "prop": "category"
+                                    },
+                                    "right": "city"
+                                  }
+                                ]
+                              },
+                              {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "US",
+                                            "ARVN"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                "right": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "in",
+                                          "value": [
+                                            "NVA",
+                                            "VC"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "moveToken": {
+                  "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromAvailable",
+                  "from": {
+                    "zoneExpr": {
+                      "ref": "tokenZone",
+                      "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromAvailable"
+                    }
+                  },
+                  "to": {
+                    "zoneExpr": {
+                      "ref": "binding",
+                      "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitBaseDestFromAvailable"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "let": {
+            "bind": "$__macro_coup_process_commitment_actions_13__effects_0__basesMovedFromAvailable",
+            "value": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "binding",
+                  "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitBasesFromAvailable"
+                }
+              }
+            },
+            "in": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.actions.13.effects.8.let.in.0.chooseN",
+                  "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitBasesFromMap",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "spaceFilter": {
+                      "condition": {
+                        "op": "==",
+                        "left": {
+                          "ref": "zoneProp",
+                          "zone": "$zone",
+                          "prop": "country"
+                        },
+                        "right": "southVietnam"
+                      }
+                    },
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "US"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "base"
+                      }
+                    ]
+                  },
+                  "max": {
+                    "op": "-",
+                    "left": 2,
+                    "right": {
+                      "ref": "binding",
+                      "name": "$__macro_coup_process_commitment_actions_13__effects_0__basesMovedFromAvailable"
+                    }
+                  },
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromMap",
+                  "macroOrigin": {
+                    "macroId": "coup-process-commitment",
+                    "stem": "movingBaseFromMap"
+                  },
+                  "over": {
+                    "query": "binding",
+                    "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitBasesFromMap"
+                  },
+                  "effects": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.actions.13.effects.8.let.in.1.forEach.effects.0.chooseOne",
+                        "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitBaseMapMoveMode",
+                        "options": {
+                          "query": "enums",
+                          "values": [
+                            "to-available",
+                            "to-map"
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "binding",
+                            "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitBaseMapMoveMode"
+                          },
+                          "right": "to-available"
+                        },
+                        "then": [
+                          {
+                            "moveToken": {
+                              "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromMap",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromMap"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-US:none"
+                              }
+                            }
+                          }
+                        ],
+                        "else": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.actions.13.effects.8.let.in.1.forEach.effects.1.if.else.0.chooseOne",
+                              "bind": "$__macro_coup_process_commitment_actions_13__effects_0__commitBaseDestFromMap",
+                              "options": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "!=",
+                                        "left": {
+                                          "ref": "zoneProp",
+                                          "zone": "$zone",
+                                          "prop": "id"
+                                        },
+                                        "right": {
+                                          "ref": "tokenZone",
+                                          "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromMap"
+                                        }
+                                      },
+                                      {
+                                        "op": "or",
+                                        "args": [
+                                          {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "zoneProp",
+                                              "zone": "$zone",
+                                              "prop": "category"
+                                            },
+                                            "right": "loc"
+                                          },
+                                          {
+                                            "op": "==",
+                                            "left": {
+                                              "ref": "zoneProp",
+                                              "zone": "$zone",
+                                              "prop": "id"
+                                            },
+                                            "right": "saigon:none"
+                                          },
+                                          {
+                                            "op": "and",
+                                            "args": [
+                                              {
+                                                "op": "or",
+                                                "args": [
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "category"
+                                                    },
+                                                    "right": "province"
+                                                  },
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "category"
+                                                    },
+                                                    "right": "city"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "op": ">",
+                                                "left": {
+                                                  "aggregate": {
+                                                    "op": "count",
+                                                    "query": {
+                                                      "query": "tokensInZone",
+                                                      "zone": "$zone",
+                                                      "filter": [
+                                                        {
+                                                          "prop": "faction",
+                                                          "op": "in",
+                                                          "value": [
+                                                            "US",
+                                                            "ARVN"
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "right": {
+                                                  "aggregate": {
+                                                    "op": "count",
+                                                    "query": {
+                                                      "query": "tokensInZone",
+                                                      "zone": "$zone",
+                                                      "filter": [
+                                                        {
+                                                          "prop": "faction",
+                                                          "op": "in",
+                                                          "value": [
+                                                            "NVA",
+                                                            "VC"
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "moveToken": {
+                              "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromMap",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$__macro_coup_process_commitment_actions_13__effects_0__movingBaseFromMap"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": {
+                                  "ref": "binding",
+                                  "name": "$__macro_coup_process_commitment_actions_13__effects_0__commitBaseDestFromMap"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "limits": [
+        {
+          "scope": "phase",
+          "max": 1
+        }
+      ]
     },
     {
       "id": "pivotalEvent",
@@ -39994,7 +43835,7 @@
       "effects": [
         {
           "let": {
-            "bind": "$usTroopCasualties",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__usTroopCasualties",
             "value": {
               "aggregate": {
                 "op": "count",
@@ -40023,13 +43864,13 @@
                     "op": "floorDiv",
                     "left": {
                       "ref": "binding",
-                      "name": "$usTroopCasualties"
+                      "name": "$__macro_coup_process_commitment_actions_39__effects_0__usTroopCasualties"
                     },
                     "right": 3
                   },
                   "groups": [
                     {
-                      "bind": "$casualtyTroop",
+                      "bind": "$__macro_coup_process_commitment_actions_39__effects_0__casualtyTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "casualties-US:none",
@@ -40093,8 +43934,8 @@
         },
         {
           "chooseN": {
-            "internalDecisionId": "decision:doc.actions.26.effects.3.chooseN",
-            "bind": "$commitTroopsFromAvailable",
+            "internalDecisionId": "decision:doc.actions.39.effects.3.chooseN",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopsFromAvailable",
             "options": {
               "query": "tokensInZone",
               "zone": "available-US:none",
@@ -40117,16 +43958,20 @@
         },
         {
           "forEach": {
-            "bind": "$movingTroopFromAvailable",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromAvailable",
+            "macroOrigin": {
+              "macroId": "coup-process-commitment",
+              "stem": "movingTroopFromAvailable"
+            },
             "over": {
               "query": "binding",
-              "name": "$commitTroopsFromAvailable"
+              "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopsFromAvailable"
             },
             "effects": [
               {
                 "chooseOne": {
-                  "internalDecisionId": "decision:doc.actions.26.effects.4.forEach.effects.0.chooseOne",
-                  "bind": "$commitTroopDestFromAvailable",
+                  "internalDecisionId": "decision:doc.actions.39.effects.4.forEach.effects.0.chooseOne",
+                  "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopDestFromAvailable",
                   "options": {
                     "query": "mapSpaces",
                     "filter": {
@@ -40228,17 +44073,17 @@
               },
               {
                 "moveToken": {
-                  "token": "$movingTroopFromAvailable",
+                  "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromAvailable",
                   "from": {
                     "zoneExpr": {
                       "ref": "tokenZone",
-                      "token": "$movingTroopFromAvailable"
+                      "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromAvailable"
                     }
                   },
                   "to": {
                     "zoneExpr": {
                       "ref": "binding",
-                      "name": "$commitTroopDestFromAvailable"
+                      "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopDestFromAvailable"
                     }
                   }
                 }
@@ -40248,21 +44093,21 @@
         },
         {
           "let": {
-            "bind": "$troopsMovedFromAvailable",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__troopsMovedFromAvailable",
             "value": {
               "aggregate": {
                 "op": "count",
                 "query": {
                   "query": "binding",
-                  "name": "$commitTroopsFromAvailable"
+                  "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopsFromAvailable"
                 }
               }
             },
             "in": [
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.actions.26.effects.5.let.in.0.chooseN",
-                  "bind": "$commitTroopsFromMap",
+                  "internalDecisionId": "decision:doc.actions.39.effects.5.let.in.0.chooseN",
+                  "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopsFromMap",
                   "options": {
                     "query": "tokensInMapSpaces",
                     "spaceFilter": {
@@ -40294,7 +44139,7 @@
                     "left": 10,
                     "right": {
                       "ref": "binding",
-                      "name": "$troopsMovedFromAvailable"
+                      "name": "$__macro_coup_process_commitment_actions_39__effects_0__troopsMovedFromAvailable"
                     }
                   },
                   "min": 0
@@ -40302,16 +44147,20 @@
               },
               {
                 "forEach": {
-                  "bind": "$movingTroopFromMap",
+                  "bind": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromMap",
+                  "macroOrigin": {
+                    "macroId": "coup-process-commitment",
+                    "stem": "movingTroopFromMap"
+                  },
                   "over": {
                     "query": "binding",
-                    "name": "$commitTroopsFromMap"
+                    "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopsFromMap"
                   },
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.actions.26.effects.5.let.in.1.forEach.effects.0.chooseOne",
-                        "bind": "$commitTroopMapMoveMode",
+                        "internalDecisionId": "decision:doc.actions.39.effects.5.let.in.1.forEach.effects.0.chooseOne",
+                        "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopMapMoveMode",
                         "options": {
                           "query": "enums",
                           "values": [
@@ -40327,18 +44176,18 @@
                           "op": "==",
                           "left": {
                             "ref": "binding",
-                            "name": "$commitTroopMapMoveMode"
+                            "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopMapMoveMode"
                           },
                           "right": "to-available"
                         },
                         "then": [
                           {
                             "moveToken": {
-                              "token": "$movingTroopFromMap",
+                              "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromMap",
                               "from": {
                                 "zoneExpr": {
                                   "ref": "tokenZone",
-                                  "token": "$movingTroopFromMap"
+                                  "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromMap"
                                 }
                               },
                               "to": {
@@ -40350,8 +44199,8 @@
                         "else": [
                           {
                             "chooseOne": {
-                              "internalDecisionId": "decision:doc.actions.26.effects.5.let.in.1.forEach.effects.1.if.else.0.chooseOne",
-                              "bind": "$commitTroopDestFromMap",
+                              "internalDecisionId": "decision:doc.actions.39.effects.5.let.in.1.forEach.effects.1.if.else.0.chooseOne",
+                              "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopDestFromMap",
                               "options": {
                                 "query": "mapSpaces",
                                 "filter": {
@@ -40367,7 +44216,7 @@
                                         },
                                         "right": {
                                           "ref": "tokenZone",
-                                          "token": "$movingTroopFromMap"
+                                          "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromMap"
                                         }
                                       },
                                       {
@@ -40470,17 +44319,17 @@
                           },
                           {
                             "moveToken": {
-                              "token": "$movingTroopFromMap",
+                              "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromMap",
                               "from": {
                                 "zoneExpr": {
                                   "ref": "tokenZone",
-                                  "token": "$movingTroopFromMap"
+                                  "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingTroopFromMap"
                                 }
                               },
                               "to": {
                                 "zoneExpr": {
                                   "ref": "binding",
-                                  "name": "$commitTroopDestFromMap"
+                                  "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitTroopDestFromMap"
                                 }
                               }
                             }
@@ -40496,8 +44345,8 @@
         },
         {
           "chooseN": {
-            "internalDecisionId": "decision:doc.actions.26.effects.6.chooseN",
-            "bind": "$commitBasesFromAvailable",
+            "internalDecisionId": "decision:doc.actions.39.effects.6.chooseN",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitBasesFromAvailable",
             "options": {
               "query": "tokensInZone",
               "zone": "available-US:none",
@@ -40520,16 +44369,20 @@
         },
         {
           "forEach": {
-            "bind": "$movingBaseFromAvailable",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromAvailable",
+            "macroOrigin": {
+              "macroId": "coup-process-commitment",
+              "stem": "movingBaseFromAvailable"
+            },
             "over": {
               "query": "binding",
-              "name": "$commitBasesFromAvailable"
+              "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitBasesFromAvailable"
             },
             "effects": [
               {
                 "chooseOne": {
-                  "internalDecisionId": "decision:doc.actions.26.effects.7.forEach.effects.0.chooseOne",
-                  "bind": "$commitBaseDestFromAvailable",
+                  "internalDecisionId": "decision:doc.actions.39.effects.7.forEach.effects.0.chooseOne",
+                  "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitBaseDestFromAvailable",
                   "options": {
                     "query": "mapSpaces",
                     "filter": {
@@ -40631,17 +44484,17 @@
               },
               {
                 "moveToken": {
-                  "token": "$movingBaseFromAvailable",
+                  "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromAvailable",
                   "from": {
                     "zoneExpr": {
                       "ref": "tokenZone",
-                      "token": "$movingBaseFromAvailable"
+                      "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromAvailable"
                     }
                   },
                   "to": {
                     "zoneExpr": {
                       "ref": "binding",
-                      "name": "$commitBaseDestFromAvailable"
+                      "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitBaseDestFromAvailable"
                     }
                   }
                 }
@@ -40651,21 +44504,21 @@
         },
         {
           "let": {
-            "bind": "$basesMovedFromAvailable",
+            "bind": "$__macro_coup_process_commitment_actions_39__effects_0__basesMovedFromAvailable",
             "value": {
               "aggregate": {
                 "op": "count",
                 "query": {
                   "query": "binding",
-                  "name": "$commitBasesFromAvailable"
+                  "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitBasesFromAvailable"
                 }
               }
             },
             "in": [
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.actions.26.effects.8.let.in.0.chooseN",
-                  "bind": "$commitBasesFromMap",
+                  "internalDecisionId": "decision:doc.actions.39.effects.8.let.in.0.chooseN",
+                  "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitBasesFromMap",
                   "options": {
                     "query": "tokensInMapSpaces",
                     "spaceFilter": {
@@ -40697,7 +44550,7 @@
                     "left": 2,
                     "right": {
                       "ref": "binding",
-                      "name": "$basesMovedFromAvailable"
+                      "name": "$__macro_coup_process_commitment_actions_39__effects_0__basesMovedFromAvailable"
                     }
                   },
                   "min": 0
@@ -40705,16 +44558,20 @@
               },
               {
                 "forEach": {
-                  "bind": "$movingBaseFromMap",
+                  "bind": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromMap",
+                  "macroOrigin": {
+                    "macroId": "coup-process-commitment",
+                    "stem": "movingBaseFromMap"
+                  },
                   "over": {
                     "query": "binding",
-                    "name": "$commitBasesFromMap"
+                    "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitBasesFromMap"
                   },
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.actions.26.effects.8.let.in.1.forEach.effects.0.chooseOne",
-                        "bind": "$commitBaseMapMoveMode",
+                        "internalDecisionId": "decision:doc.actions.39.effects.8.let.in.1.forEach.effects.0.chooseOne",
+                        "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitBaseMapMoveMode",
                         "options": {
                           "query": "enums",
                           "values": [
@@ -40730,18 +44587,18 @@
                           "op": "==",
                           "left": {
                             "ref": "binding",
-                            "name": "$commitBaseMapMoveMode"
+                            "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitBaseMapMoveMode"
                           },
                           "right": "to-available"
                         },
                         "then": [
                           {
                             "moveToken": {
-                              "token": "$movingBaseFromMap",
+                              "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromMap",
                               "from": {
                                 "zoneExpr": {
                                   "ref": "tokenZone",
-                                  "token": "$movingBaseFromMap"
+                                  "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromMap"
                                 }
                               },
                               "to": {
@@ -40753,8 +44610,8 @@
                         "else": [
                           {
                             "chooseOne": {
-                              "internalDecisionId": "decision:doc.actions.26.effects.8.let.in.1.forEach.effects.1.if.else.0.chooseOne",
-                              "bind": "$commitBaseDestFromMap",
+                              "internalDecisionId": "decision:doc.actions.39.effects.8.let.in.1.forEach.effects.1.if.else.0.chooseOne",
+                              "bind": "$__macro_coup_process_commitment_actions_39__effects_0__commitBaseDestFromMap",
                               "options": {
                                 "query": "mapSpaces",
                                 "filter": {
@@ -40770,7 +44627,7 @@
                                         },
                                         "right": {
                                           "ref": "tokenZone",
-                                          "token": "$movingBaseFromMap"
+                                          "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromMap"
                                         }
                                       },
                                       {
@@ -40873,17 +44730,17 @@
                           },
                           {
                             "moveToken": {
-                              "token": "$movingBaseFromMap",
+                              "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromMap",
                               "from": {
                                 "zoneExpr": {
                                   "ref": "tokenZone",
-                                  "token": "$movingBaseFromMap"
+                                  "token": "$__macro_coup_process_commitment_actions_39__effects_0__movingBaseFromMap"
                                 }
                               },
                               "to": {
                                 "zoneExpr": {
                                   "ref": "binding",
-                                  "name": "$commitBaseDestFromMap"
+                                  "name": "$__macro_coup_process_commitment_actions_39__effects_0__commitBaseDestFromMap"
                                 }
                               }
                             }
@@ -40921,6 +44778,1001 @@
     }
   ],
   "triggers": [
+    {
+      "id": "on-coup-resources-enter",
+      "event": {
+        "type": "phaseEnter",
+        "phase": "coupResources"
+      },
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$__macro_coup_auto_sabotage_triggers_0__effects_0__loc",
+            "macroOrigin": {
+              "macroId": "coup-auto-sabotage",
+              "stem": "loc"
+            },
+            "over": {
+              "query": "mapSpaces",
+              "filter": {
+                "condition": {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "category"
+                      },
+                      "right": "loc"
+                    },
+                    {
+                      "op": "!=",
+                      "left": {
+                        "ref": "markerState",
+                        "space": "$zone",
+                        "marker": "sabotage"
+                      },
+                      "right": "sabotage"
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "in",
+                                    "value": [
+                                      "NVA",
+                                      "VC"
+                                    ]
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "in",
+                                    "value": [
+                                      "US",
+                                      "ARVN"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "sum",
+                              "query": {
+                                "query": "adjacentZones",
+                                "zone": "$zone"
+                              },
+                              "bind": "$__macro_coup_auto_sabotage_triggers_0__effects_0__adj",
+                              "valueExpr": {
+                                "if": {
+                                  "when": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "==",
+                                        "left": {
+                                          "ref": "zoneProp",
+                                          "zone": "$__macro_coup_auto_sabotage_triggers_0__effects_0__adj",
+                                          "prop": "category"
+                                        },
+                                        "right": "city"
+                                      },
+                                      {
+                                        "op": "<=",
+                                        "left": {
+                                          "aggregate": {
+                                            "op": "count",
+                                            "query": {
+                                              "query": "tokensInZone",
+                                              "zone": "$__macro_coup_auto_sabotage_triggers_0__effects_0__adj",
+                                              "filter": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "US",
+                                                    "ARVN"
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "right": {
+                                          "aggregate": {
+                                            "op": "count",
+                                            "query": {
+                                              "query": "tokensInZone",
+                                              "zone": "$__macro_coup_auto_sabotage_triggers_0__effects_0__adj",
+                                              "filter": [
+                                                {
+                                                  "prop": "faction",
+                                                  "op": "in",
+                                                  "value": [
+                                                    "NVA",
+                                                    "VC"
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "then": 1,
+                                  "else": 0
+                                }
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "effects": [
+              {
+                "if": {
+                  "when": {
+                    "op": "<",
+                    "left": {
+                      "ref": "gvar",
+                      "var": "terrorSabotageMarkersPlaced"
+                    },
+                    "right": 15
+                  },
+                  "then": [
+                    {
+                      "setMarker": {
+                        "space": "$__macro_coup_auto_sabotage_triggers_0__effects_0__loc",
+                        "marker": "sabotage",
+                        "state": "sabotage"
+                      }
+                    },
+                    {
+                      "addVar": {
+                        "scope": "global",
+                        "var": "terrorSabotageMarkersPlaced",
+                        "delta": 1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "when": {
+              "op": ">",
+              "left": {
+                "aggregate": {
+                  "op": "count",
+                  "query": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "laos"
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "cambodia"
+                              }
+                            ]
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "in",
+                                      "value": [
+                                        "US",
+                                        "ARVN"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "right": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "in",
+                                      "value": [
+                                        "NVA",
+                                        "VC"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "right": 0
+            },
+            "then": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "trail",
+                  "delta": -1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "totalEcon",
+            "value": 15
+          }
+        },
+        {
+          "forEach": {
+            "bind": "$__macro_coup_arvn_earnings_triggers_0__effects_2__sabotagedLoc",
+            "macroOrigin": {
+              "macroId": "coup-arvn-earnings",
+              "stem": "sabotagedLoc"
+            },
+            "over": {
+              "query": "mapSpaces",
+              "filter": {
+                "condition": {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "category"
+                      },
+                      "right": "loc"
+                    },
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "markerState",
+                        "space": "$zone",
+                        "marker": "sabotage"
+                      },
+                      "right": "sabotage"
+                    }
+                  ]
+                }
+              }
+            },
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "totalEcon",
+                  "delta": {
+                    "op": "-",
+                    "left": 0,
+                    "right": {
+                      "ref": "zoneProp",
+                      "zone": "$__macro_coup_arvn_earnings_triggers_0__effects_2__sabotagedLoc",
+                      "prop": "econ"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "arvnResources",
+            "delta": {
+              "op": "+",
+              "left": {
+                "ref": "gvar",
+                "var": "aid"
+              },
+              "right": {
+                "ref": "gvar",
+                "var": "totalEcon"
+              }
+            }
+          }
+        },
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "vcResources",
+            "delta": {
+              "aggregate": {
+                "op": "count",
+                "query": {
+                  "query": "tokensInMapSpaces",
+                  "filter": [
+                    {
+                      "prop": "faction",
+                      "op": "eq",
+                      "value": "VC"
+                    },
+                    {
+                      "prop": "type",
+                      "op": "eq",
+                      "value": "base"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "nvaResources",
+            "delta": {
+              "op": "+",
+              "left": {
+                "aggregate": {
+                  "op": "count",
+                  "query": {
+                    "query": "tokensInMapSpaces",
+                    "spaceFilter": {
+                      "condition": {
+                        "op": "or",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "country"
+                            },
+                            "right": "laos"
+                          },
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "country"
+                            },
+                            "right": "cambodia"
+                          }
+                        ]
+                      }
+                    },
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "NVA"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "base"
+                      }
+                    ]
+                  }
+                }
+              },
+              "right": {
+                "op": "*",
+                "left": 2,
+                "right": {
+                  "ref": "gvar",
+                  "var": "trail"
+                }
+              }
+            }
+          }
+        },
+        {
+          "addVar": {
+            "scope": "global",
+            "var": "aid",
+            "delta": {
+              "op": "-",
+              "left": 0,
+              "right": {
+                "op": "*",
+                "left": 3,
+                "right": {
+                  "aggregate": {
+                    "op": "count",
+                    "query": {
+                      "query": "tokensInZone",
+                      "zone": "casualties-US:none"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "on-coup-support-enter",
+      "event": {
+        "type": "phaseEnter",
+        "phase": "coupSupport"
+      },
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$__macro_coup_support_reset_trackers_triggers_1__effects_0__space",
+            "macroOrigin": {
+              "macroId": "coup-support-reset-trackers",
+              "stem": "space"
+            },
+            "over": {
+              "query": "mapSpaces"
+            },
+            "effects": [
+              {
+                "setMarker": {
+                  "space": "$__macro_coup_support_reset_trackers_triggers_1__effects_0__space",
+                  "marker": "coupPacifySpaceUsage",
+                  "state": "open"
+                }
+              },
+              {
+                "setMarker": {
+                  "space": "$__macro_coup_support_reset_trackers_triggers_1__effects_0__space",
+                  "marker": "coupAgitateSpaceUsage",
+                  "state": "open"
+                }
+              },
+              {
+                "setMarker": {
+                  "space": "$__macro_coup_support_reset_trackers_triggers_1__effects_0__space",
+                  "marker": "coupSupportShiftCount",
+                  "state": "zero"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "on-coup-redeploy-enter",
+      "event": {
+        "type": "phaseEnter",
+        "phase": "coupRedeploy"
+      },
+      "effects": [
+        {
+          "forEach": {
+            "bind": "$__macro_coup_laos_cambodia_removal_triggers_2__effects_0__space",
+            "macroOrigin": {
+              "macroId": "coup-laos-cambodia-removal",
+              "stem": "space"
+            },
+            "over": {
+              "query": "mapSpaces",
+              "filter": {
+                "condition": {
+                  "op": "or",
+                  "args": [
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "laos"
+                    },
+                    {
+                      "op": "==",
+                      "left": {
+                        "ref": "zoneProp",
+                        "zone": "$zone",
+                        "prop": "country"
+                      },
+                      "right": "cambodia"
+                    }
+                  ]
+                }
+              }
+            },
+            "effects": [
+              {
+                "moveAll": {
+                  "from": "$__macro_coup_laos_cambodia_removal_triggers_2__effects_0__space",
+                  "to": "out-of-play-US:none",
+                  "filter": {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "==",
+                        "left": {
+                          "ref": "tokenProp",
+                          "token": "$token",
+                          "prop": "faction"
+                        },
+                        "right": "US"
+                      },
+                      {
+                        "op": "==",
+                        "left": {
+                          "ref": "tokenProp",
+                          "token": "$token",
+                          "prop": "type"
+                        },
+                        "right": "troops"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "moveAll": {
+                  "from": "$__macro_coup_laos_cambodia_removal_triggers_2__effects_0__space",
+                  "to": "available-US:none",
+                  "filter": {
+                    "op": "and",
+                    "args": [
+                      {
+                        "op": "==",
+                        "left": {
+                          "ref": "tokenProp",
+                          "token": "$token",
+                          "prop": "faction"
+                        },
+                        "right": "US"
+                      },
+                      {
+                        "op": "!=",
+                        "left": {
+                          "ref": "tokenProp",
+                          "token": "$token",
+                          "prop": "type"
+                        },
+                        "right": "troops"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "moveAll": {
+                  "from": "$__macro_coup_laos_cambodia_removal_triggers_2__effects_0__space",
+                  "to": "available-ARVN:none",
+                  "filter": {
+                    "op": "==",
+                    "left": {
+                      "ref": "tokenProp",
+                      "token": "$token",
+                      "prop": "faction"
+                    },
+                    "right": "ARVN"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "on-coup-reset-enter",
+      "event": {
+        "type": "phaseEnter",
+        "phase": "coupReset"
+      },
+      "effects": [
+        {
+          "if": {
+            "when": {
+              "op": "==",
+              "left": {
+                "ref": "gvar",
+                "var": "trail"
+              },
+              "right": 0
+            },
+            "then": [
+              {
+                "setVar": {
+                  "scope": "global",
+                  "var": "trail",
+                  "value": 1
+                }
+              }
+            ],
+            "else": [
+              {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "gvar",
+                      "var": "trail"
+                    },
+                    "right": 4
+                  },
+                  "then": [
+                    {
+                      "setVar": {
+                        "scope": "global",
+                        "var": "trail",
+                        "value": 3
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "forEach": {
+            "bind": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+            "macroOrigin": {
+              "macroId": "coup-reset-markers",
+              "stem": "space"
+            },
+            "over": {
+              "query": "mapSpaces"
+            },
+            "effects": [
+              {
+                "setMarker": {
+                  "space": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+                  "marker": "terror",
+                  "state": "none"
+                }
+              },
+              {
+                "setMarker": {
+                  "space": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+                  "marker": "sabotage",
+                  "state": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "terrorSabotageMarkersPlaced",
+            "value": 0
+          }
+        },
+        {
+          "forEach": {
+            "bind": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+            "macroOrigin": {
+              "macroId": "coup-reset-markers",
+              "stem": "space"
+            },
+            "over": {
+              "query": "mapSpaces"
+            },
+            "effects": [
+              {
+                "forEach": {
+                  "bind": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                  "macroOrigin": {
+                    "macroId": "coup-reset-markers",
+                    "stem": "token"
+                  },
+                  "over": {
+                    "query": "tokensInZone",
+                    "zone": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "NVA"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "guerrilla"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "setTokenProp": {
+                        "token": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                        "prop": "activity",
+                        "value": "underground"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                  "macroOrigin": {
+                    "macroId": "coup-reset-markers",
+                    "stem": "token"
+                  },
+                  "over": {
+                    "query": "tokensInZone",
+                    "zone": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "VC"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "guerrilla"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "setTokenProp": {
+                        "token": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                        "prop": "activity",
+                        "value": "underground"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                  "macroOrigin": {
+                    "macroId": "coup-reset-markers",
+                    "stem": "token"
+                  },
+                  "over": {
+                    "query": "tokensInZone",
+                    "zone": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "US"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "irregular"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "setTokenProp": {
+                        "token": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                        "prop": "activity",
+                        "value": "underground"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                  "macroOrigin": {
+                    "macroId": "coup-reset-markers",
+                    "stem": "token"
+                  },
+                  "over": {
+                    "query": "tokensInZone",
+                    "zone": "$__macro_coup_reset_markers_triggers_3__effects_0__space",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "ARVN"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "ranger"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "setTokenProp": {
+                        "token": "$__macro_coup_reset_markers_triggers_3__effects_0__token",
+                        "prop": "activity",
+                        "value": "underground"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_wildWeasels",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_adsid",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_rollingThunder",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_medevacUnshaded",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_medevacShaded",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_blowtorchKomer",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_claymores",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_daNang",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_mcnamaraLine",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_oriskany",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_bombingPause",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_559thTransportGrp",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_bodyCount",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_generalLansdale",
+            "value": false
+          }
+        },
+        {
+          "setVar": {
+            "scope": "global",
+            "var": "mom_typhoonKate",
+            "value": false
+          }
+        }
+      ]
+    },
     {
       "id": "mom-adsid-on-trail-change",
       "event": {

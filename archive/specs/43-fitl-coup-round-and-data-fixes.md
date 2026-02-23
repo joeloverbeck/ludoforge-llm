@@ -1,6 +1,6 @@
 # Spec 43: FITL Coup Round Phase Sequence & Data Fixes
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Specs 23-28 (all completed), 90-terminal.md (victory logic)
@@ -550,3 +550,28 @@ For each ticket:
 
 ### Section 6.7 — The Trail
 > Track from 0-4, affects NVA Rally, March, Infiltration, and Earnings.
+
+---
+
+## Outcome
+
+- Completion date: 2026-02-23
+- What was actually changed:
+  - Delivered the coup round phase sequence and runtime gating through production data (`coupPlan`, phase actions, phase-enter automation).
+  - Implemented/verified Rule 6 phases across targeted production integration suites:
+    - victory gating and final-coup ranking
+    - resources (including `totalEcon`/aid/trail/econ calculations)
+    - support, redeploy, commitment, reset
+    - consecutive-coup suppression
+  - Updated scenario `totalEcon` values to 15 and verified them in production data/tests.
+  - Synced runner bootstrap fixtures against current production FITL compilation.
+- Deviations from original plan:
+  - The final architecture uses generic card-driven coup runtime (`consecutiveCoupRounds` and `coupPlan`) instead of spec-draft language around FITL-specific globals like `isCoupRound`.
+  - Verification closeout relied on strong existing production integration coverage rather than adding a redundant monolithic coup E2E test.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test -- --test-name-pattern="FITL coup"` passed (full engine suite passed in this run).
+  - `pnpm -F @ludoforge/runner bootstrap:fixtures` passed.
+  - `pnpm -F @ludoforge/runner bootstrap:fixtures:check` passed.
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

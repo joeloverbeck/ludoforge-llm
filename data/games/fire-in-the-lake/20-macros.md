@@ -1740,10 +1740,303 @@ effectMacros:
                             bind: $m48Cube
                             over: { query: binding, name: $m48PenaltyCube }
                             effects:
-                              - moveToken:
-                                  token: $m48Cube
-                                  from: { param: loc }
-                                  to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
+                            - moveToken:
+                                token: $m48Cube
+                                from: { param: loc }
+                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
+
+  # ── coup-process-commitment ───────────────────────────────────────────────
+  # Rule 6.5: process US casualties and resolve up to 10 troop / 2 base moves.
+  - id: coup-process-commitment
+    params: []
+    exports: []
+    effects:
+      - let:
+          bind: $usTroopCasualties
+          value:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: casualties-US:none
+                filter:
+                  - { prop: faction, eq: US }
+                  - { prop: type, eq: troops }
+          in:
+            - removeByPriority:
+                budget:
+                  op: floorDiv
+                  left: { ref: binding, name: $usTroopCasualties }
+                  right: 3
+                groups:
+                  - bind: $casualtyTroop
+                    over:
+                      query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: out-of-play-US:none
+      - moveAll:
+          from: casualties-US:none
+          to: out-of-play-US:none
+          filter:
+            op: and
+            args:
+              - { op: '==', left: { ref: tokenProp, token: $token, prop: faction }, right: US }
+              - { op: '==', left: { ref: tokenProp, token: $token, prop: type }, right: base }
+      - moveAll:
+          from: casualties-US:none
+          to: available-US:none
+      - chooseN:
+          bind: $commitTroopsFromAvailable
+          options:
+            query: tokensInZone
+            zone: available-US:none
+            filter:
+              - { prop: faction, eq: US }
+              - { prop: type, eq: troops }
+          min: 0
+          max: 10
+      - forEach:
+          bind: $movingTroopFromAvailable
+          over: { query: binding, name: $commitTroopsFromAvailable }
+          effects:
+            - chooseOne:
+                bind: $commitTroopDestFromAvailable
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                      - op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+            - moveToken:
+                token: $movingTroopFromAvailable
+                from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromAvailable } }
+                to: { zoneExpr: { ref: binding, name: $commitTroopDestFromAvailable } }
+      - let:
+          bind: $troopsMovedFromAvailable
+          value: { aggregate: { op: count, query: { query: binding, name: $commitTroopsFromAvailable } } }
+          in:
+            - chooseN:
+                bind: $commitTroopsFromMap
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: '=='
+                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    right: southVietnam
+                  filter:
+                    - { prop: faction, eq: US }
+                    - { prop: type, eq: troops }
+                min: 0
+                max:
+                  op: '-'
+                  left: 10
+                  right: { ref: binding, name: $troopsMovedFromAvailable }
+            - forEach:
+                bind: $movingTroopFromMap
+                over: { query: binding, name: $commitTroopsFromMap }
+                effects:
+                  - chooseOne:
+                      bind: $commitTroopMapMoveMode
+                      options: { query: enums, values: [to-available, to-map] }
+                  - if:
+                      when: { op: '==', left: { ref: binding, name: $commitTroopMapMoveMode }, right: to-available }
+                      then:
+                        - moveToken:
+                            token: $movingTroopFromMap
+                            from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromMap } }
+                            to: { zoneExpr: available-US:none }
+                      else:
+                        - chooseOne:
+                            bind: $commitTroopDestFromMap
+                            options:
+                              query: mapSpaces
+                              filter:
+                                op: and
+                                args:
+                                  - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: tokenZone, token: $movingTroopFromMap } }
+                                  - op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                                      - op: and
+                                        args:
+                                          - op: or
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                          - op: '>'
+                                            left:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                            right:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                        - moveToken:
+                            token: $movingTroopFromMap
+                            from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromMap } }
+                            to: { zoneExpr: { ref: binding, name: $commitTroopDestFromMap } }
+      - chooseN:
+          bind: $commitBasesFromAvailable
+          options:
+            query: tokensInZone
+            zone: available-US:none
+            filter:
+              - { prop: faction, eq: US }
+              - { prop: type, eq: base }
+          min: 0
+          max: 2
+      - forEach:
+          bind: $movingBaseFromAvailable
+          over: { query: binding, name: $commitBasesFromAvailable }
+          effects:
+            - chooseOne:
+                bind: $commitBaseDestFromAvailable
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                      - op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+            - moveToken:
+                token: $movingBaseFromAvailable
+                from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromAvailable } }
+                to: { zoneExpr: { ref: binding, name: $commitBaseDestFromAvailable } }
+      - let:
+          bind: $basesMovedFromAvailable
+          value: { aggregate: { op: count, query: { query: binding, name: $commitBasesFromAvailable } } }
+          in:
+            - chooseN:
+                bind: $commitBasesFromMap
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: '=='
+                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    right: southVietnam
+                  filter:
+                    - { prop: faction, eq: US }
+                    - { prop: type, eq: base }
+                min: 0
+                max:
+                  op: '-'
+                  left: 2
+                  right: { ref: binding, name: $basesMovedFromAvailable }
+            - forEach:
+                bind: $movingBaseFromMap
+                over: { query: binding, name: $commitBasesFromMap }
+                effects:
+                  - chooseOne:
+                      bind: $commitBaseMapMoveMode
+                      options: { query: enums, values: [to-available, to-map] }
+                  - if:
+                      when: { op: '==', left: { ref: binding, name: $commitBaseMapMoveMode }, right: to-available }
+                      then:
+                        - moveToken:
+                            token: $movingBaseFromMap
+                            from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromMap } }
+                            to: { zoneExpr: available-US:none }
+                      else:
+                        - chooseOne:
+                            bind: $commitBaseDestFromMap
+                            options:
+                              query: mapSpaces
+                              filter:
+                                op: and
+                                args:
+                                  - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: tokenZone, token: $movingBaseFromMap } }
+                                  - op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                                      - op: and
+                                        args:
+                                          - op: or
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                          - op: '>'
+                                            left:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                            right:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                        - moveToken:
+                            token: $movingBaseFromMap
+                            from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromMap } }
+                            to: { zoneExpr: { ref: binding, name: $commitBaseDestFromMap } }
 
   # ── coup-laos-cambodia-removal ────────────────────────────────────────────
   # Rule 6.4.1: remove all US/ARVN pieces from Laos/Cambodia.

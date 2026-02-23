@@ -1955,15 +1955,59 @@ effectMacros:
                     query: tokensInZone
                     zone: casualties-US:none
 
+  # ── coup-support-reset-trackers ───────────────────────────────────────────
+  # Rule 6.3 temporary per-space tracking resets on support phase entry.
+  - id: coup-support-reset-trackers
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $space
+          over: { query: mapSpaces }
+          effects:
+            - setMarker: { space: $space, marker: coupPacifySpaceUsage, state: open }
+            - setMarker: { space: $space, marker: coupAgitateSpaceUsage, state: open }
+            - setMarker: { space: $space, marker: coupSupportShiftCount, state: zero }
+
+  # ── coup-support-mark-space-used ──────────────────────────────────────────
+  # Marks a support-phase space usage marker as used if not already used.
+  - id: coup-support-mark-space-used
+    params:
+      - { name: space, type: zoneSelector }
+      - { name: markerId, type: string }
+    exports: []
+    effects:
+      - if:
+          when: { op: '!=', left: { ref: markerState, space: { param: space }, marker: { param: markerId } }, right: used }
+          then:
+            - setMarker: { space: { param: space }, marker: { param: markerId }, state: used }
+
+  # ── coup-support-increment-shift-count ────────────────────────────────────
+  # Increments per-space shift count from zero -> one -> two.
+  - id: coup-support-increment-shift-count
+    params:
+      - { name: space, type: zoneSelector }
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: markerState, space: { param: space }, marker: coupSupportShiftCount }, right: zero }
+          then:
+            - setMarker: { space: { param: space }, marker: coupSupportShiftCount, state: one }
+          else:
+            - if:
+                when: { op: '==', left: { ref: markerState, space: { param: space }, marker: coupSupportShiftCount }, right: one }
+                then:
+                  - setMarker: { space: { param: space }, marker: coupSupportShiftCount, state: two }
+
 conditionMacros:
   # Shared Rule 1.8.1 predicate:
-  # US may spend ARVN Resources only if pre-spend resource exceeds totalEcon + cost.
+  # US may spend ARVN Resources only if post-spend resource does not drop below totalEcon.
   - id: us-joint-op-arvn-spend-eligible
     params:
       - { name: resourceExpr, type: value }
       - { name: costExpr, type: value }
     condition:
-      op: '>'
+      op: '>='
       left: { param: resourceExpr }
       right:
         op: '+'

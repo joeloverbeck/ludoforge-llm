@@ -46,7 +46,7 @@ const readMapLattices = (): {
 describe('FITL production support/opposition marker lattice', () => {
   it('encodes the canonical supportOpposition lattice with LoC and pop-0 neutral constraints', () => {
     const { markerLattices, spaceMarkers } = readMapLattices();
-    assert.equal(markerLattices.length, 3);
+    assert.equal(markerLattices.length, 6);
 
     const supportOpposition = markerLattices.find((lattice) => lattice.id === 'supportOpposition');
     assert.ok(supportOpposition, 'Expected supportOpposition lattice');
@@ -86,6 +86,21 @@ describe('FITL production support/opposition marker lattice', () => {
     const sabotageConstraint = sabotageLattice.constraints.find((constraint) => constraint.category !== undefined);
     assert.deepEqual(sabotageConstraint?.category, ['city', 'province']);
     assert.deepEqual(sabotageConstraint?.allowedStates, ['none']);
+
+    const coupPacifyUsage = markerLattices.find((lattice) => lattice.id === 'coupPacifySpaceUsage');
+    assert.ok(coupPacifyUsage, 'Expected coupPacifySpaceUsage lattice');
+    assert.deepEqual(coupPacifyUsage.states, ['open', 'used']);
+    assert.equal(coupPacifyUsage.defaultState, 'open');
+
+    const coupAgitateUsage = markerLattices.find((lattice) => lattice.id === 'coupAgitateSpaceUsage');
+    assert.ok(coupAgitateUsage, 'Expected coupAgitateSpaceUsage lattice');
+    assert.deepEqual(coupAgitateUsage.states, ['open', 'used']);
+    assert.equal(coupAgitateUsage.defaultState, 'open');
+
+    const coupShiftCount = markerLattices.find((lattice) => lattice.id === 'coupSupportShiftCount');
+    assert.ok(coupShiftCount, 'Expected coupSupportShiftCount lattice');
+    assert.deepEqual(coupShiftCount.states, ['zero', 'one', 'two']);
+    assert.equal(coupShiftCount.defaultState, 'zero');
 
     assert.equal(spaceMarkers === undefined || spaceMarkers.length === 0, true);
   });

@@ -837,6 +837,22 @@ dataAssets:
                 - province
               allowedStates:
                 - none
+        - id: coupPacifySpaceUsage
+          states:
+            - open
+            - used
+          defaultState: open
+        - id: coupAgitateSpaceUsage
+          states:
+            - open
+            - used
+          defaultState: open
+        - id: coupSupportShiftCount
+          states:
+            - zero
+            - one
+            - two
+          defaultState: zero
       stackingConstraints:
         - id: max-2-bases-per-space
           description: No more than 2 Bases of any Factions may occupy a single Province or City

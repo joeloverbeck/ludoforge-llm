@@ -42,6 +42,9 @@ turnOrder:
         usOp: operation
         arvnOp: operation
         coupVictoryCheck: pass
+        coupPacifyUS: operation
+        coupPacifyARVN: operation
+        coupAgitateVC: operation
         coupPacifyPass: pass
         coupAgitatePass: pass
         coupRedeployPass: pass
@@ -111,7 +114,11 @@ actions:
     executor: 'actor'
     phase: [coupSupport]
     params: []
-    pre: null
+    pre:
+      op: or
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
     cost: []
     effects: []
     limits: [{ scope: phase, max: 1 }]
@@ -120,10 +127,437 @@ actions:
     executor: 'actor'
     phase: [coupSupport]
     params: []
-    pre: null
+    pre: { op: '==', left: { ref: activePlayer }, right: 3 }
     cost: []
     effects: []
     limits: [{ scope: phase, max: 1 }]
+  - id: coupPacifyUS
+    actor: active
+    executor: '0'
+    phase: [coupSupport]
+    params:
+      - name: targetSpace
+        domain:
+          query: mapSpaces
+          filter:
+            op: or
+            args:
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+      - name: action
+        domain: { query: enums, values: [removeTerror, shiftSupport] }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 0 }
+        - op: or
+          args:
+            - op: '<'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: '=='
+                      left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }
+                      right: used
+              right: 4
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                        - { op: '==', left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }, right: used }
+              right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+          right:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, eq: police }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, eq: US }
+                  - { prop: type, eq: troops }
+          right: 0
+        - conditionMacro: us-joint-op-arvn-spend-eligible
+          args:
+            resourceExpr: { ref: gvar, var: arvnResources }
+            costExpr:
+              if:
+                when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+                then: 4
+                else: 3
+        - op: or
+          args:
+            - op: and
+              args:
+                - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '==', left: { ref: markerState, space: $zone, marker: terror }, right: terror }
+                  right: 0
+            - op: and
+              args:
+                - { op: '==', left: { ref: binding, name: action }, right: shiftSupport }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                  right: 0
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '!=', left: { ref: markerState, space: $zone, marker: coupSupportShiftCount }, right: two }
+                  right: 0
+    cost: []
+    effects:
+      - macro: rvn-leader-pacification-cost
+        args:
+          stepCountExpr: 1
+      - if:
+          when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+          then:
+            - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: terror, state: none }
+          else:
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
+    limits: []
+  - id: coupPacifyARVN
+    actor: active
+    executor: '1'
+    phase: [coupSupport]
+    params:
+      - name: targetSpace
+        domain:
+          query: mapSpaces
+          filter:
+            op: or
+            args:
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+      - name: action
+        domain: { query: enums, values: [removeTerror, shiftSupport] }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 1 }
+        - op: or
+          args:
+            - op: '<'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: '=='
+                      left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }
+                      right: used
+              right: 4
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                        - { op: '==', left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }, right: used }
+              right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+          right:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, eq: police }
+          right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, eq: troops }
+          right: 0
+        - op: '>='
+          left: { ref: gvar, var: arvnResources }
+          right:
+            if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+              then: 4
+              else: 3
+        - op: or
+          args:
+            - op: and
+              args:
+                - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '==', left: { ref: markerState, space: $zone, marker: terror }, right: terror }
+                  right: 0
+            - op: and
+              args:
+                - { op: '==', left: { ref: binding, name: action }, right: shiftSupport }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                  right: 0
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '!=', left: { ref: markerState, space: $zone, marker: coupSupportShiftCount }, right: two }
+                  right: 0
+    cost: []
+    effects:
+      - macro: rvn-leader-pacification-cost
+        args:
+          stepCountExpr: 1
+      - if:
+          when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+          then:
+            - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: terror, state: none }
+          else:
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
+    limits: []
+  - id: coupAgitateVC
+    actor: active
+    executor: '3'
+    phase: [coupSupport]
+    params:
+      - name: targetSpace
+        domain:
+          query: mapSpaces
+          filter:
+            op: or
+            args:
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+      - name: action
+        domain: { query: enums, values: [removeTerror, shiftOpposition] }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: 3 }
+        - op: or
+          args:
+            - op: '<'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: '=='
+                      left: { ref: markerState, space: $zone, marker: coupAgitateSpaceUsage }
+                      right: used
+              right: 4
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                        - { op: '==', left: { ref: markerState, space: $zone, marker: coupAgitateSpaceUsage }, right: used }
+              right: 0
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, eq: VC }
+          right: 0
+        - op: <=
+          left:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+          right:
+            aggregate:
+              op: count
+              query:
+                query: tokensInZone
+                zone: { zoneExpr: { ref: binding, name: targetSpace } }
+                filter:
+                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+        - op: '>='
+          left: { ref: gvar, var: vcResources }
+          right: 1
+        - op: or
+          args:
+            - op: and
+              args:
+                - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '==', left: { ref: markerState, space: $zone, marker: terror }, right: terror }
+                  right: 0
+            - op: and
+              args:
+                - { op: '==', left: { ref: binding, name: action }, right: shiftOpposition }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
+                  right: 0
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
+                            - { op: '!=', left: { ref: markerState, space: $zone, marker: coupSupportShiftCount }, right: two }
+                  right: 0
+    cost: []
+    effects:
+      - addVar: { scope: global, var: vcResources, delta: -1 }
+      - if:
+          when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
+          then:
+            - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: terror, state: none }
+          else:
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: -1 }
+            - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
+      - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupAgitateSpaceUsage, state: used }
+    limits: []
   - id: coupRedeployPass
     actor: active
     executor: 'actor'
@@ -4330,6 +4764,12 @@ triggers:
       - macro: coup-arvn-earnings
       - macro: coup-insurgent-earnings
       - macro: coup-casualties-aid
+  - id: on-coup-support-enter
+    event:
+      type: phaseEnter
+      phase: coupSupport
+    effects:
+      - macro: coup-support-reset-trackers
   - id: mom-adsid-on-trail-change
     event:
       type: varChanged

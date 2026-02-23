@@ -25,6 +25,7 @@ import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
   isFreeOperationGrantedForMove,
+  resolveTurnFlowActionClassMismatch,
   resolveFreeOperationExecutionPlayer,
 } from './turn-flow-eligibility.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -255,6 +256,15 @@ interface ValidatedMoveContext {
 }
 
 const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMoveContext => {
+  const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
+  if (classMismatch !== null) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
+      actionId: move.actionId,
+      mappedActionClass: classMismatch.mapped,
+      submittedActionClass: classMismatch.submitted,
+    });
+  }
+
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);

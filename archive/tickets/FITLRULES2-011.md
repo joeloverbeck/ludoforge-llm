@@ -1,6 +1,6 @@
 # FITLRULES2-011: Make Turn-Flow Class Resolution Authoritative to GameDef Mapping
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — move legality/apply paths and turn-flow class resolution
@@ -12,9 +12,17 @@ Current turn-flow class resolution still prioritizes `move.actionClass` when pre
 
 ## Assumption Reassessment (2026-02-23)
 
-1. `resolveTurnFlowActionClass` currently returns `move.actionClass` before consulting GameDef map.
-2. Turn-flow legality, interrupt selectors, and free-operation matching all depend on the resolved class.
-3. Mismatch correction: class source of truth must be GameDef mapping; move payload class should not override core semantics.
+### Verified Current Behavior
+
+1. `resolveTurnFlowActionClass` currently returns `move.actionClass` before consulting GameDef map (`packages/engine/src/kernel/turn-flow-eligibility.ts`).
+2. Turn-flow option-matrix gating, interrupt cancellation selectors, and free-operation grant class matching use that resolver (`packages/engine/src/kernel/legal-moves-turn-order.ts`, `packages/engine/src/kernel/turn-flow-eligibility.ts`).
+3. `applyMove`/`validateMove` currently do not explicitly reject `move.actionClass` mismatches against `turnFlow.actionClassByActionId` before executing (`packages/engine/src/kernel/apply-move.ts`).
+
+### Corrected Assumptions
+
+1. GameDef `turnFlow.actionClassByActionId` must be authoritative for turn-flow class semantics.
+2. Caller-provided `move.actionClass` is metadata only unless it matches mapped class; it must not alter legality or apply behavior.
+3. Mismatches must fail deterministically in apply/decision legality paths with explicit reason context.
 
 ## Architecture Check
 
@@ -30,7 +38,7 @@ Refactor turn-flow class resolution so class is derived from `turnFlow.actionCla
 
 ### 2. Enforce mismatch policy
 
-When a move includes `actionClass` that conflicts with mapping, fail legality/apply deterministically with explicit diagnostics/reason.
+When a move includes `actionClass` that conflicts with mapping, fail deterministically in validation/apply paths with explicit diagnostics/reason context.
 
 ### 3. Tighten move-input contract handling
 
@@ -42,9 +50,10 @@ Ensure legality and apply paths do not rely on caller-provided class to determin
 - `packages/engine/src/kernel/legal-moves-turn-order.ts` (modify)
 - `packages/engine/src/kernel/legal-moves.ts` (modify)
 - `packages/engine/src/kernel/apply-move.ts` (modify)
+- `packages/engine/src/kernel/runtime-reasons.ts` (modify)
 - `packages/engine/test/unit/legal-moves.test.ts` (modify)
 - `packages/engine/test/unit/kernel/legal-moves.test.ts` (modify)
-- `packages/engine/test/unit/terminal.test.ts` (modify)
+- `packages/engine/test/integration/fitl-option-matrix.test.ts` (modify)
 
 ## Out of Scope
 
@@ -71,9 +80,25 @@ Ensure legality and apply paths do not rely on caller-provided class to determin
 
 1. `packages/engine/test/unit/legal-moves.test.ts` — class-mismatch legality cases.
 2. `packages/engine/test/unit/kernel/legal-moves.test.ts` — card-driven option-matrix behavior with conflicting incoming class.
-3. `packages/engine/test/unit/terminal.test.ts` — apply/illegal reason path for mismatched class input.
+3. `packages/engine/test/integration/fitl-option-matrix.test.ts` — apply path rejects class-mismatch submissions in card-driven matrix windows.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-23
+- **What changed**:
+  - Made turn-flow class resolution authoritative to `turnFlow.actionClassByActionId` for card-driven turn order.
+  - Added deterministic mismatch detection between submitted `move.actionClass` and mapped class.
+  - Enforced mismatch rejection in `applyMove` with explicit illegal reason metadata.
+  - Hardened option-matrix legality checks to reject conflicting submitted class overrides.
+  - Added/updated unit and integration tests to lock resolver authority and mismatch rejection behavior.
+- **Deviations from original plan**:
+  - Replaced `packages/engine/test/unit/terminal.test.ts` coverage target with `packages/engine/test/integration/fitl-option-matrix.test.ts` because this behavior belongs to turn-flow/apply legality, not terminal evaluation.
+  - Added `packages/engine/src/kernel/runtime-reasons.ts` updates to provide a dedicated illegal reason for class mismatch.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

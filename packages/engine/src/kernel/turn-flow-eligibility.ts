@@ -42,16 +42,45 @@ const isTurnFlowActionClass = (
   value === 'limitedOperation' ||
   value === 'operationPlusSpecialActivity';
 
-export const resolveTurnFlowActionClass = (
+export type ResolvedTurnFlowActionClass =
+  | 'pass'
+  | 'event'
+  | 'operation'
+  | 'limitedOperation'
+  | 'operationPlusSpecialActivity';
+
+const resolveMappedTurnFlowActionClass = (
   def: GameDef,
   move: Move,
-): 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | null => {
-  if (typeof move.actionClass === 'string' && isTurnFlowActionClass(move.actionClass)) {
-    return move.actionClass;
-  }
+): ResolvedTurnFlowActionClass | null => {
   const actionId = String(move.actionId);
   const mapped = cardDrivenConfig(def)?.turnFlow.actionClassByActionId?.[actionId];
   return typeof mapped === 'string' && isTurnFlowActionClass(mapped) ? mapped : null;
+};
+
+export const resolveTurnFlowActionClassMismatch = (
+  def: GameDef,
+  move: Move,
+): { readonly mapped: ResolvedTurnFlowActionClass; readonly submitted: string } | null => {
+  const mapped = resolveMappedTurnFlowActionClass(def, move);
+  if (mapped === null || move.actionClass === undefined || move.actionClass === mapped) {
+    return null;
+  }
+  return {
+    mapped,
+    submitted: move.actionClass,
+  };
+};
+
+export const resolveTurnFlowActionClass = (
+  def: GameDef,
+  move: Move,
+): ResolvedTurnFlowActionClass | null => {
+  const mapped = resolveMappedTurnFlowActionClass(def, move);
+  if (mapped !== null) {
+    return mapped;
+  }
+  return typeof move.actionClass === 'string' && isTurnFlowActionClass(move.actionClass) ? move.actionClass : null;
 };
 
 const normalizeFirstActionClass = (

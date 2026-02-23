@@ -12,6 +12,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-eligibility.js';
 
 const createDef = (): GameDef =>
   ({
@@ -504,6 +505,38 @@ phase: [asPhaseId('main')],
     };
 
     assert.deepEqual(legalMoves(def, state).map((move) => move.actionId), [asActionId('pass'), asActionId('limitedOperation')]);
+  });
+
+  it('resolves card-driven action class from turnFlow.actionClassByActionId even when move.actionClass conflicts', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-class-authority', players: { min: 3, max: 3 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            actionClassByActionId: {
+              operation: 'operation',
+              limitedOperation: 'limitedOperation',
+              pass: 'pass',
+            },
+            optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const resolved = resolveTurnFlowActionClass(def, {
+      actionId: asActionId('operation'),
+      params: {},
+      actionClass: 'limitedOperation',
+    });
+
+    assert.equal(resolved, 'operation');
   });
 
   it('applies monsoon action restrictions and pivotal override metadata when lookahead is coup', () => {

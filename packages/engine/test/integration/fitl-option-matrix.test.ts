@@ -7,6 +7,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  ILLEGAL_MOVE_REASONS,
   initialState,
   legalMoves,
   type GameDef,
@@ -310,6 +311,33 @@ describe('FITL option matrix integration', () => {
         asActionId('limitedOperation'),
         asActionId('operationPlusSpecialActivity'),
       ],
+    );
+  });
+
+  it('rejects submitted actionClass when it conflicts with mapped class during apply', () => {
+    const def = createDef();
+    const start = initialState(def, 131, 3).state;
+    const firstMove: Move = { actionId: asActionId('operation'), params: {} };
+    const afterFirst = applyMove(def, start, firstMove).state;
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFirst, {
+          actionId: asActionId('operation'),
+          params: {},
+          actionClass: 'limitedOperation',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH);
+        assert.deepEqual(details.metadata, {
+          actionId: asActionId('operation'),
+          mappedActionClass: 'operation',
+          submittedActionClass: 'limitedOperation',
+        });
+        return true;
+      },
     );
   });
 });

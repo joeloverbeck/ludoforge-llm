@@ -15,6 +15,7 @@ import {
   type GameState,
   type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
+import { isMoveAllowedByTurnFlowOptionMatrix } from '../../../src/kernel/legal-moves-turn-order.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -231,6 +232,94 @@ phase: [asPhaseId('main')],
       legalMoves(def, state).map((move) => move.actionId),
       [asActionId('pass'), asActionId('limitedOperation')],
     );
+  });
+
+  it('rejects move.actionClass overrides that conflict with mapped class during option-matrix checks', () => {
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const operationAction: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const limitedOperationAction: ActionDef = {
+      id: asActionId('limitedOperation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [passAction, operationAction, limitedOperationAction],
+      }),
+      metadata: { id: 'legal-moves-option-matrix-class-mismatch', players: { min: 3, max: 3 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            actionClassByActionId: {
+              pass: 'pass',
+              operation: 'operation',
+              limitedOperation: 'limitedOperation',
+            },
+            optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      playerCount: 3,
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1', '2'],
+          eligibility: { '0': true, '1': true, '2': true },
+          currentCard: {
+            firstEligible: '1',
+            secondEligible: '2',
+            actedSeats: ['0'],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'operation',
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    });
+
+    const submittedMove = {
+      actionId: asActionId('operation'),
+      params: {},
+      actionClass: 'limitedOperation',
+    };
+    assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, submittedMove), false);
   });
 
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {

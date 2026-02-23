@@ -9,6 +9,7 @@ import {
   ILLEGAL_MOVE_REASONS,
   initialState,
   legalMoves,
+  type EventCardDef,
   type EventDeckDef,
   type GameDef,
 } from '../../src/kernel/index.js';
@@ -209,6 +210,48 @@ phase: [asPhaseId('main')],
       } as EventDeckDef,
     ],
   }) as unknown as GameDef;
+
+const createClassAwareDedupDef = (): GameDef => {
+  const def = createDef() as unknown as {
+    metadata: { id: string };
+    turnOrder: {
+      type: 'cardDriven';
+      config: { turnFlow: { optionMatrix: Array<{ first: string; second: string[] }>; actionClassByActionId?: Record<string, string> } };
+    };
+    actions: Array<{ id: ReturnType<typeof asActionId>; params: Array<{ name: string; domain?: { query: string; values?: string[] } }> }>;
+    eventDecks: EventDeckDef[];
+  };
+
+  def.metadata.id = 'event-free-op-class-aware-dedup-int';
+  def.turnOrder.config.turnFlow.optionMatrix = [{ first: 'operation', second: ['operation', 'limitedOperation'] }];
+  def.turnOrder.config.turnFlow.actionClassByActionId = {};
+
+  const eventAction = def.actions.find((action) => String(action.id) === 'event');
+  const eventCardParam = eventAction?.params.find((param) => param.name === 'eventCardId');
+  const eventCardValues = eventCardParam?.domain?.values;
+  if (Array.isArray(eventCardValues) && !eventCardValues.includes('card-10')) {
+    eventCardValues.push('card-10');
+  }
+
+  const card10: EventCardDef = {
+    id: 'card-10',
+    title: 'Dual-Class VC Grant',
+    sideMode: 'single',
+    unshaded: {
+      text: 'Grant VC both operation and limited operation free variants.',
+      freeOperationGrants: [
+        { seat: '3', sequence: { chain: 'vc-dual-class', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+        { seat: '3', sequence: { chain: 'vc-dual-class', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
+      ],
+    },
+  };
+  const primaryDeck = def.eventDecks[0];
+  if (primaryDeck !== undefined) {
+    def.eventDecks[0] = { ...primaryDeck, cards: [...primaryDeck.cards, card10] };
+  }
+
+  return def as unknown as GameDef;
+};
 
 const createZoneFilteredDef = (): GameDef =>
   ({
@@ -476,6 +519,27 @@ describe('event free-operation grants integration', () => {
     assert.equal(third.activePlayer, asPlayerId(3));
     const vcMoves = legalMoves(def, third).filter((move) => String(move.actionId) === 'operation');
     assert.equal(vcMoves.some((move) => move.freeOperation === true), true);
+  });
+
+  it('enumerates class-distinct free-operation variants without dedup collision', () => {
+    const def = createClassAwareDedupDef();
+    const start = initialState(def, 27, 4).state;
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-10', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+    const pending = requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [];
+    assert.equal(pending.length, 2);
+    assert.equal(pending.some((grant) => grant.operationClass === 'operation'), true);
+
+    const firstRun = legalMoves(def, third).filter((move) => String(move.actionId) === 'operation' && move.freeOperation === true);
+    const secondRun = legalMoves(def, third).filter((move) => String(move.actionId) === 'operation' && move.freeOperation === true);
+
+    assert.equal(firstRun.length > 0, true);
+    assert.deepEqual(secondRun, firstRun);
   });
 
   it('creates pending free-operation grants from event branch declarations', () => {

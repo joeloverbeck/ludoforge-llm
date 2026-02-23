@@ -5,6 +5,7 @@ import {
   isFreeOperationGrantedForMove,
   resolveTurnFlowActionClass,
 } from './turn-flow-eligibility.js';
+import { toMoveIdentityKey } from './move-identity.js';
 import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 import type { TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
@@ -296,7 +297,7 @@ export function applyPendingFreeOperationVariants(
   }
 
   const variants: Move[] = [...moves];
-  const seen = new Set(moves.map((move) => `${String(move.actionId)}|${JSON.stringify(move.params)}|${move.freeOperation === true}`));
+  const seen = new Set(moves.map((move) => toMoveIdentityKey(def, move)));
   const turnFlowDefaults = cardDrivenConfig(def)?.turnFlow.freeOperationActionIds ?? [];
   const pendingActionIds = pendingGrants
     .filter((grant) => grant.seat === String(state.activePlayer))
@@ -333,7 +334,7 @@ export function applyPendingFreeOperationVariants(
       continue;
     }
 
-    const key = `${String(candidate.actionId)}|${JSON.stringify(candidate.params)}|${candidate.freeOperation === true}`;
+    const key = toMoveIdentityKey(def, candidate);
     if (seen.has(key)) {
       continue;
     }

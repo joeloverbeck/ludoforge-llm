@@ -165,6 +165,37 @@ describe('FITL RVN leader lingering effects', () => {
     );
   });
 
+  it('keeps Khanh Transport legal for destinations reachable via at most one LoC', () => {
+    const def = compileDef();
+    const origin = 'da-nang:none';
+    const nearDestination = 'qui-nhon:none';
+
+    const baseState = clearAllZones(initialState(def, 90031, 2).state);
+    const setup: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        [origin]: [
+          makeToken('transport-arvn-near-t', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const outcome = applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, 'khanh'), {
+      actionId: asActionId('transport'),
+      params: {
+        $transportOrigin: origin,
+        $transportDestination: nearDestination,
+      },
+    });
+
+    assert.equal(
+      outcome.state.zones[nearDestination]?.some((token) => token.id === 'transport-arvn-near-t'),
+      true,
+      'Khanh should still allow Transport along routes that include at most one LoC',
+    );
+  });
+
   it('applies Young Turks +2 Patronage on Govern', () => {
     const def = compileDef();
     const space = 'can-tho:none';

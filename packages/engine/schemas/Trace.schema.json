@@ -790,23 +790,12 @@
                             "minLength": 1
                           },
                           "duration": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "turn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "nextTurn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "round"
-                              },
-                              {
-                                "type": "string",
-                                "const": "cycle"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "turn",
+                              "nextTurn",
+                              "round",
+                              "cycle"
                             ]
                           }
                         },
@@ -2400,23 +2389,12 @@
                             "minLength": 1
                           },
                           "duration": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "turn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "nextTurn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "round"
-                              },
-                              {
-                                "type": "string",
-                                "const": "cycle"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "turn",
+                              "nextTurn",
+                              "round",
+                              "cycle"
                             ]
                           }
                         },
@@ -2447,27 +2425,13 @@
                             "minLength": 1
                           },
                           "operationClass": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "pass"
-                              },
-                              {
-                                "type": "string",
-                                "const": "event"
-                              },
-                              {
-                                "type": "string",
-                                "const": "operation"
-                              },
-                              {
-                                "type": "string",
-                                "const": "limitedOperation"
-                              },
-                              {
-                                "type": "string",
-                                "const": "operationPlusSpecialActivity"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "pass",
+                              "event",
+                              "operation",
+                              "limitedOperation",
+                              "operationPlusSpecialActivity"
                             ]
                           },
                           "actionIds": {
@@ -2740,23 +2704,12 @@
                 "type": "string"
               },
               "duration": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "const": "turn"
-                  },
-                  {
-                    "type": "string",
-                    "const": "nextTurn"
-                  },
-                  {
-                    "type": "string",
-                    "const": "round"
-                  },
-                  {
-                    "type": "string",
-                    "const": "cycle"
-                  }
+                "type": "string",
+                "enum": [
+                  "turn",
+                  "nextTurn",
+                  "round",
+                  "cycle"
                 ]
               },
               "setupEffects": {

@@ -23,7 +23,7 @@ if (mode === 'check') {
 
   if (outOfSync.length > 0) {
     console.error(`Schema artifact(s) out of sync: ${outOfSync.join(', ')}`);
-    console.error('Run: npm run schema:artifacts:generate');
+    console.error('Run: pnpm -F @ludoforge/engine run schema:artifacts');
     process.exit(1);
   }
   process.exit(0);

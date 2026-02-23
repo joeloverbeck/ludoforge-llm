@@ -644,23 +644,12 @@
                                 "minLength": 1
                               },
                               "duration": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "const": "turn"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "const": "nextTurn"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "const": "round"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "const": "cycle"
-                                  }
+                                "type": "string",
+                                "enum": [
+                                  "turn",
+                                  "nextTurn",
+                                  "round",
+                                  "cycle"
                                 ]
                               }
                             },
@@ -677,6 +666,23 @@
                         "overrideWindows"
                       ],
                       "additionalProperties": false
+                    },
+                    "actionClassByActionId": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "enum": [
+                          "pass",
+                          "event",
+                          "operation",
+                          "limitedOperation",
+                          "operationPlusSpecialActivity"
+                        ]
+                      }
                     },
                     "optionMatrix": {
                       "type": "array",
@@ -702,27 +708,13 @@
                           "second": {
                             "type": "array",
                             "items": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "const": "pass"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "event"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "operation"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "limitedOperation"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "operationPlusSpecialActivity"
-                                }
+                              "type": "string",
+                              "enum": [
+                                "pass",
+                                "event",
+                                "operation",
+                                "limitedOperation",
+                                "operationPlusSpecialActivity"
                               ]
                             }
                           }
@@ -769,23 +761,12 @@
                     "durationWindows": {
                       "type": "array",
                       "items": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "const": "turn"
-                          },
-                          {
-                            "type": "string",
-                            "const": "nextTurn"
-                          },
-                          {
-                            "type": "string",
-                            "const": "round"
-                          },
-                          {
-                            "type": "string",
-                            "const": "cycle"
-                          }
+                        "type": "string",
+                        "enum": [
+                          "turn",
+                          "nextTurn",
+                          "round",
+                          "cycle"
                         ]
                       }
                     },
@@ -881,27 +862,13 @@
                                         "minLength": 1
                                       },
                                       "actionClass": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "const": "pass"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "event"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "operation"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "limitedOperation"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "operationPlusSpecialActivity"
-                                          }
+                                        "type": "string",
+                                        "enum": [
+                                          "pass",
+                                          "event",
+                                          "operation",
+                                          "limitedOperation",
+                                          "operationPlusSpecialActivity"
                                         ]
                                       },
                                       "eventCardId": {
@@ -952,27 +919,13 @@
                                         "minLength": 1
                                       },
                                       "actionClass": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "const": "pass"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "event"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "operation"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "limitedOperation"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "const": "operationPlusSpecialActivity"
-                                          }
+                                        "type": "string",
+                                        "enum": [
+                                          "pass",
+                                          "event",
+                                          "operation",
+                                          "limitedOperation",
+                                          "operationPlusSpecialActivity"
                                         ]
                                       },
                                       "eventCardId": {
@@ -1039,6 +992,7 @@
                   "required": [
                     "cardLifecycle",
                     "eligibility",
+                    "actionClassByActionId",
                     "optionMatrix",
                     "passRewards",
                     "durationWindows"
@@ -2237,27 +2191,13 @@
                             "minLength": 1
                           },
                           "operationClass": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "pass"
-                              },
-                              {
-                                "type": "string",
-                                "const": "event"
-                              },
-                              {
-                                "type": "string",
-                                "const": "operation"
-                              },
-                              {
-                                "type": "string",
-                                "const": "limitedOperation"
-                              },
-                              {
-                                "type": "string",
-                                "const": "operationPlusSpecialActivity"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "pass",
+                              "event",
+                              "operation",
+                              "limitedOperation",
+                              "operationPlusSpecialActivity"
                             ]
                           },
                           "actionIds": {
@@ -2406,27 +2346,13 @@
                                   "minLength": 1
                                 },
                                 "operationClass": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "const": "pass"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "event"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "operation"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "limitedOperation"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "operationPlusSpecialActivity"
-                                    }
+                                  "type": "string",
+                                  "enum": [
+                                    "pass",
+                                    "event",
+                                    "operation",
+                                    "limitedOperation",
+                                    "operationPlusSpecialActivity"
                                   ]
                                 },
                                 "actionIds": {
@@ -2590,23 +2516,12 @@
                                   "minLength": 1
                                 },
                                 "duration": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "const": "turn"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "nextTurn"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "round"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "cycle"
-                                    }
+                                  "type": "string",
+                                  "enum": [
+                                    "turn",
+                                    "nextTurn",
+                                    "round",
+                                    "cycle"
                                   ]
                                 },
                                 "setupEffects": {
@@ -2707,23 +2622,12 @@
                             "minLength": 1
                           },
                           "duration": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "turn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "nextTurn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "round"
-                              },
-                              {
-                                "type": "string",
-                                "const": "cycle"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "turn",
+                              "nextTurn",
+                              "round",
+                              "cycle"
                             ]
                           },
                           "setupEffects": {
@@ -2796,27 +2700,13 @@
                             "minLength": 1
                           },
                           "operationClass": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "pass"
-                              },
-                              {
-                                "type": "string",
-                                "const": "event"
-                              },
-                              {
-                                "type": "string",
-                                "const": "operation"
-                              },
-                              {
-                                "type": "string",
-                                "const": "limitedOperation"
-                              },
-                              {
-                                "type": "string",
-                                "const": "operationPlusSpecialActivity"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "pass",
+                              "event",
+                              "operation",
+                              "limitedOperation",
+                              "operationPlusSpecialActivity"
                             ]
                           },
                           "actionIds": {
@@ -2965,27 +2855,13 @@
                                   "minLength": 1
                                 },
                                 "operationClass": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "const": "pass"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "event"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "operation"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "limitedOperation"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "operationPlusSpecialActivity"
-                                    }
+                                  "type": "string",
+                                  "enum": [
+                                    "pass",
+                                    "event",
+                                    "operation",
+                                    "limitedOperation",
+                                    "operationPlusSpecialActivity"
                                   ]
                                 },
                                 "actionIds": {
@@ -3149,23 +3025,12 @@
                                   "minLength": 1
                                 },
                                 "duration": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "const": "turn"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "nextTurn"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "round"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "const": "cycle"
-                                    }
+                                  "type": "string",
+                                  "enum": [
+                                    "turn",
+                                    "nextTurn",
+                                    "round",
+                                    "cycle"
                                   ]
                                 },
                                 "setupEffects": {
@@ -3266,23 +3131,12 @@
                             "minLength": 1
                           },
                           "duration": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "turn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "nextTurn"
-                              },
-                              {
-                                "type": "string",
-                                "const": "round"
-                              },
-                              {
-                                "type": "string",
-                                "const": "cycle"
-                              }
+                            "type": "string",
+                            "enum": [
+                              "turn",
+                              "nextTurn",
+                              "round",
+                              "cycle"
                             ]
                           },
                           "setupEffects": {

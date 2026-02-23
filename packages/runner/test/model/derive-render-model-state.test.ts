@@ -223,6 +223,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
             seats: ['us', 'nva'],
             overrideWindows: [],
           },
+          actionClassByActionId: {},
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn'],

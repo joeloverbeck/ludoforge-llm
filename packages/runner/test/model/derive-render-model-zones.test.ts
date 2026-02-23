@@ -403,6 +403,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
               seats: ['us', 'nva'],
               overrideWindows: [],
             },
+            actionClassByActionId: {},
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn'],

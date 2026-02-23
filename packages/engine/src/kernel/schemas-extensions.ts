@@ -13,13 +13,12 @@ import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   hasTurnFlowInterruptSelectorMatchField,
 } from './turn-flow-interrupt-selector-contract.js';
+import {
+  TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_DURATION_VALUES,
+} from './turn-flow-contract.js';
 
-export const TurnFlowDurationSchema = z.union([
-  z.literal('turn'),
-  z.literal('nextTurn'),
-  z.literal('round'),
-  z.literal('cycle'),
-]);
+export const TurnFlowDurationSchema = z.enum(TURN_FLOW_DURATION_VALUES);
 
 export const EventCardTargetCardinalitySchema = z.union([
   z
@@ -72,13 +71,7 @@ export const EventCardFreeOperationGrantSchema = z
     id: StringSchema.min(1).optional(),
     seat: StringSchema.min(1),
     executeAsSeat: StringSchema.min(1).optional(),
-    operationClass: z.union([
-      z.literal('pass'),
-      z.literal('event'),
-      z.literal('operation'),
-      z.literal('limitedOperation'),
-      z.literal('operationPlusSpecialActivity'),
-    ]),
+    operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
     actionIds: z.array(StringSchema.min(1)).min(1).optional(),
     zoneFilter: ConditionASTSchema.optional(),
     uses: IntegerSchema.min(1).optional(),
@@ -219,13 +212,7 @@ export const EventDeckSchema = z
   })
   .strict();
 
-export const TurnFlowActionClassSchema = z.union([
-  z.literal('pass'),
-  z.literal('event'),
-  z.literal('operation'),
-  z.literal('limitedOperation'),
-  z.literal('operationPlusSpecialActivity'),
-]);
+export const TurnFlowActionClassSchema = z.enum(TURN_FLOW_ACTION_CLASS_VALUES);
 
 export const TurnFlowCardLifecycleSchema = z
   .object({
@@ -332,6 +319,7 @@ export const TurnFlowSchema = z
   .object({
     cardLifecycle: TurnFlowCardLifecycleSchema,
     eligibility: TurnFlowEligibilitySchema,
+    actionClassByActionId: z.record(StringSchema.min(1), TurnFlowActionClassSchema),
     optionMatrix: z.array(TurnFlowOptionMatrixRowSchema),
     passRewards: z.array(TurnFlowPassRewardSchema),
     freeOperationActionIds: z.array(StringSchema.min(1)).optional(),

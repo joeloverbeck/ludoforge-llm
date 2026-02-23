@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
+import { TURN_FLOW_REQUIRED_KEYS } from '../../src/kernel/turn-flow-contract.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const minimalCardDrivenTurnFlow = {
@@ -429,6 +430,40 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ),
       true,
     );
+  });
+
+  it('emits required-field diagnostics for each missing required turnFlow key', () => {
+    for (const requiredKey of TURN_FLOW_REQUIRED_KEYS) {
+      const turnFlow = { ...minimalCardDrivenTurnFlow } as Record<string, unknown>;
+      delete turnFlow[requiredKey];
+
+      const doc = {
+        ...createEmptyGameSpecDoc(),
+        metadata: { id: `turn-flow-required-${requiredKey}`, players: { min: 2, max: 4 } },
+        zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+        turnStructure: { phases: [{ id: 'main' }] },
+        turnOrder: {
+          type: 'cardDriven' as const,
+          config: {
+            turnFlow,
+          },
+        },
+        actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+        triggers: [],
+        terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+      };
+
+      const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+      assert.equal(result.gameDef, null);
+      assert.equal(
+        result.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING'
+            && diagnostic.path === `doc.turnOrder.config.turnFlow.${requiredKey}`,
+        ),
+        true,
+      );
+    }
   });
 
   it('returns blocking diagnostics when turnFlow.actionClassByActionId references unknown actions', () => {

@@ -1,6 +1,20 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import {
+  TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_DURATION_VALUES,
+  TURN_FLOW_FIRST_ACTION_VALUES,
+  TURN_FLOW_OPTIONAL_KEYS,
+  TURN_FLOW_REQUIRED_KEYS,
+} from '../kernel/turn-flow-contract.js';
 import { compareSourceSpans, resolveSpanForDiagnosticPath } from './diagnostic-source-map.js';
 import type { GameSpecSourceMap } from './source-map.js';
+
+export {
+  TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_DURATION_VALUES,
+  TURN_FLOW_FIRST_ACTION_VALUES,
+  TURN_FLOW_REQUIRED_KEYS,
+};
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
@@ -12,7 +26,7 @@ export const ZONE_KEYS = ['id', 'zoneKind', 'owner', 'visibility', 'ordering', '
 export const ACTION_KEYS = ['id', 'actor', 'executor', 'phase', 'capabilities', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
 export const TURN_STRUCTURE_KEYS = ['phases', 'interrupts'] as const;
 export const TURN_ORDER_KEYS = ['type', 'order', 'config'] as const;
-export const TURN_FLOW_KEYS = ['cardLifecycle', 'eligibility', 'actionClassByActionId', 'optionMatrix', 'passRewards', 'freeOperationActionIds', 'durationWindows', 'monsoon', 'pivotal'] as const;
+export const TURN_FLOW_KEYS = [...TURN_FLOW_REQUIRED_KEYS, ...TURN_FLOW_OPTIONAL_KEYS] as const;
 export const TURN_FLOW_CARD_LIFECYCLE_KEYS = ['played', 'lookahead', 'leader'] as const;
 export const TURN_FLOW_ELIGIBILITY_KEYS = ['seats', 'overrideWindows'] as const;
 export const TURN_FLOW_OVERRIDE_WINDOW_KEYS = ['id', 'duration'] as const;
@@ -38,15 +52,6 @@ export const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const
 export const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone', 'scope', 'var', 'player'] as const;
 export const END_CONDITION_KEYS = ['when', 'result'] as const;
 export const TERMINAL_KEYS = ['conditions', 'checkpoints', 'margins', 'ranking', 'scoring'] as const;
-export const TURN_FLOW_DURATION_VALUES: readonly string[] = ['turn', 'nextTurn', 'round', 'cycle'];
-export const TURN_FLOW_ACTION_CLASS_VALUES: readonly string[] = [
-  'pass',
-  'event',
-  'operation',
-  'limitedOperation',
-  'operationPlusSpecialActivity',
-];
-export const TURN_FLOW_FIRST_ACTION_VALUES: readonly string[] = ['event', 'operation', 'operationPlusSpecialActivity'];
 export const TURN_ORDER_TYPE_VALUES: readonly string[] = ['roundRobin', 'fixedOrder', 'cardDriven', 'simultaneous'];
 
 export function validateEnumField(

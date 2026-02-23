@@ -63,6 +63,7 @@ const fullGameDef = {
           seats: ['us', 'arvn', 'nva', 'vc'],
           overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
         },
+        actionClassByActionId: { pass: 'pass' },
         optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
         passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: 3 }],
         durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -545,6 +546,24 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnOrder'));
+  });
+
+  it('fails on missing turnOrder turnFlow actionClassByActionId with actionable nested path', () => {
+    const turnFlow = { ...fullGameDef.turnOrder.config.turnFlow } as Record<string, unknown>;
+    delete turnFlow.actionClassByActionId;
+
+    const result = GameDefSchema.safeParse({
+      ...fullGameDef,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          ...fullGameDef.turnOrder.config,
+          turnFlow,
+        },
+      },
+    });
+
+    assert.equal(result.success, false);
   });
 
   it('fails on invalid actionPipelines atomicity mode with actionable nested path', () => {

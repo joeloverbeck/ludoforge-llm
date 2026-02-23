@@ -2061,6 +2061,7 @@ describe('validateGameDef reference checks', () => {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
             eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2094,6 +2095,7 @@ describe('validateGameDef reference checks', () => {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
             eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2125,6 +2127,7 @@ describe('validateGameDef reference checks', () => {
           turnFlow: {
             cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
             eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

@@ -686,7 +686,7 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
         });
       } else {
         for (const [secondIndex, actionClass] of row.second.entries()) {
-          if (typeof actionClass !== 'string' || !TURN_FLOW_ACTION_CLASS_VALUES.includes(actionClass)) {
+          if (typeof actionClass !== 'string' || !(TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(actionClass)) {
             diagnostics.push({
               code: 'CNL_VALIDATOR_TURN_FLOW_OPTION_MATRIX_SECOND_INVALID',
               path: `${basePath}.second.${secondIndex}`,
@@ -770,7 +770,7 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
     });
   } else {
     for (const [index, duration] of turnFlow.durationWindows.entries()) {
-      if (typeof duration !== 'string' || !TURN_FLOW_DURATION_VALUES.includes(duration)) {
+      if (typeof duration !== 'string' || !(TURN_FLOW_DURATION_VALUES as readonly string[]).includes(duration)) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_TURN_FLOW_DURATION_WINDOWS_INVALID',
           path: `doc.turnOrder.config.turnFlow.durationWindows.${index}`,

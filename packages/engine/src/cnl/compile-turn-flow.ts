@@ -1,6 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { hasTurnFlowInterruptSelectorMatchField } from '../kernel/turn-flow-interrupt-selector-contract.js';
 import type { TurnFlowDef, TurnOrderStrategy } from '../kernel/types.js';
+import {
+  TURN_FLOW_ACTION_CLASS_VALUES,
+  TURN_FLOW_REQUIRED_KEYS,
+} from '../kernel/turn-flow-contract.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { lowerCoupPlan } from './compile-victory.js';
 import { isRecord } from './compile-lowering.js';
@@ -111,13 +115,6 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
 }
 
 function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]): TurnFlowDef | undefined {
-  const TURN_FLOW_ACTION_CLASS_VALUES = [
-    'pass',
-    'event',
-    'operation',
-    'limitedOperation',
-    'operationPlusSpecialActivity',
-  ] as const;
   const isTurnFlowActionClass = (value: unknown): value is TurnFlowDef['optionMatrix'][number]['second'][number] =>
     typeof value === 'string' && (TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(value);
 
@@ -132,67 +129,60 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     return undefined;
   }
 
-  const cardLifecycle = rawTurnFlow.cardLifecycle;
-  if (!isRecord(cardLifecycle)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
-      path: 'doc.turnOrder.config.turnFlow.cardLifecycle',
-      severity: 'error',
+  const requiredFieldSpecs: Readonly<Record<(typeof TURN_FLOW_REQUIRED_KEYS)[number], {
+    readonly valid: (value: unknown) => boolean;
+    readonly message: string;
+    readonly suggestion: string;
+  }>> = {
+    cardLifecycle: {
+      valid: isRecord,
       message: 'turnFlow.cardLifecycle is required and must be an object.',
       suggestion: 'Define cardLifecycle.played, cardLifecycle.lookahead, and cardLifecycle.leader.',
-    });
-  }
-
-  const eligibility = rawTurnFlow.eligibility;
-  if (!isRecord(eligibility)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
-      path: 'doc.turnOrder.config.turnFlow.eligibility',
-      severity: 'error',
+    },
+    eligibility: {
+      valid: isRecord,
       message: 'turnFlow.eligibility is required and must be an object.',
       suggestion: 'Define eligibility.seats and eligibility.overrideWindows.',
-    });
-  }
-
-  if (!Array.isArray(rawTurnFlow.optionMatrix)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
-      path: 'doc.turnOrder.config.turnFlow.optionMatrix',
-      severity: 'error',
-      message: 'turnFlow.optionMatrix is required and must be an array.',
-      suggestion: 'Define optionMatrix rows for first/second eligible action classes.',
-    });
-  }
-
-  if (!Array.isArray(rawTurnFlow.passRewards)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
-      path: 'doc.turnOrder.config.turnFlow.passRewards',
-      severity: 'error',
-      message: 'turnFlow.passRewards is required and must be an array.',
-      suggestion: 'Define pass reward entries keyed by seat class.',
-    });
-  }
-
-  if (!Array.isArray(rawTurnFlow.durationWindows)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
-      path: 'doc.turnOrder.config.turnFlow.durationWindows',
-      severity: 'error',
-      message: 'turnFlow.durationWindows is required and must be an array.',
-      suggestion: 'Declare supported duration windows such as turn/nextTurn/round/cycle.',
-    });
-  }
-
-  if (!isRecord(rawTurnFlow.actionClassByActionId)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
-      path: 'doc.turnOrder.config.turnFlow.actionClassByActionId',
-      severity: 'error',
+    },
+    actionClassByActionId: {
+      valid: isRecord,
       message: 'turnFlow.actionClassByActionId is required and must be an object.',
       suggestion: `Define actionClassByActionId values from: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
+    },
+    optionMatrix: {
+      valid: Array.isArray,
+      message: 'turnFlow.optionMatrix is required and must be an array.',
+      suggestion: 'Define optionMatrix rows for first/second eligible action classes.',
+    },
+    passRewards: {
+      valid: Array.isArray,
+      message: 'turnFlow.passRewards is required and must be an array.',
+      suggestion: 'Define pass reward entries keyed by seat class.',
+    },
+    durationWindows: {
+      valid: Array.isArray,
+      message: 'turnFlow.durationWindows is required and must be an array.',
+      suggestion: 'Declare supported duration windows such as turn/nextTurn/round/cycle.',
+    },
+  };
+
+  for (const key of TURN_FLOW_REQUIRED_KEYS) {
+    const fieldValue = rawTurnFlow[key];
+    const spec = requiredFieldSpecs[key];
+    if (spec.valid(fieldValue)) {
+      continue;
+    }
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: `doc.turnOrder.config.turnFlow.${key}`,
+      severity: 'error',
+      message: spec.message,
+      suggestion: spec.suggestion,
     });
   }
+
+  const cardLifecycle = rawTurnFlow.cardLifecycle;
+  const eligibility = rawTurnFlow.eligibility;
 
   if (
     !isRecord(cardLifecycle) ||

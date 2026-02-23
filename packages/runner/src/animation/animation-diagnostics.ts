@@ -21,11 +21,20 @@ export interface EphemeralCreatedEntry {
   readonly tokenId: string;
   readonly width: number;
   readonly height: number;
+  readonly hasCardContent?: boolean;
+  readonly cardTemplateName?: string;
 }
 
 export interface FaceStateChange {
   readonly oldValue: boolean;
   readonly newValue: boolean;
+}
+
+export interface ArcGeometryDiagnostic {
+  readonly midX: number;
+  readonly midY: number;
+  readonly liftHeight: number;
+  readonly horizontalOffsetApplied: boolean;
 }
 
 export interface TweenLogEntry {
@@ -38,6 +47,8 @@ export interface TweenLogEntry {
   readonly toPosition?: DiagnosticPosition;
   readonly faceState?: FaceStateChange;
   readonly tweenedProperties?: readonly string[];
+  readonly destinationOffset?: DiagnosticPosition;
+  readonly arcGeometry?: ArcGeometryDiagnostic;
 }
 
 export interface FaceControllerCallEntry {

@@ -1890,4 +1890,156 @@ describe('buildTimeline sequencing', () => {
 
     expect(durations).toEqual([0.75, 0.75]);
   });
+
+  it('passes card content spec from resolver to ephemeral factory', () => {
+    const runtime = createRuntimeFixture();
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    const createSpy = vi.spyOn(factory, 'create');
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    const cardContentSpec = {
+      template: { width: 24, height: 34 },
+      fields: { rank: 'A', suit: 'spades' },
+    };
+
+    const resolver = {
+      resolve: vi.fn((tokenId: string) =>
+        tokenId === 'tok:missing' ? cardContentSpec : null,
+      ),
+    };
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:missing',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+    ];
+
+    const refs = createSpriteRefs({
+      tokenContainers: new Map(),
+    });
+
+    buildTimeline(descriptors, createPresetRegistry(), refs, runtime.gsap, {
+      ephemeralContainerFactory: factory,
+      disposalQueue: queue,
+      ephemeralCardContentResolver: resolver,
+    });
+
+    expect(resolver.resolve).toHaveBeenCalledWith('tok:missing');
+    expect(createSpy).toHaveBeenCalledWith('tok:missing', cardContentSpec);
+  });
+
+  it('ephemeral face controller toggles frontContent visibility', () => {
+    const runtime = createRuntimeFixture();
+    const parent = new Container();
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    const cardContentSpec = {
+      template: { width: 24, height: 34 },
+      fields: { rank: 'K', suit: 'hearts' },
+    };
+
+    const resolver = {
+      resolve: vi.fn(() => cardContentSpec),
+    };
+
+    const defs: AnimationPresetDefinition[] = [
+      {
+        id: 'flip-test',
+        defaultDurationSeconds: 0.3,
+        compatibleKinds: ['cardFlip'],
+        createTween: (descriptor, context) => {
+          if (descriptor.kind === 'cardFlip') {
+            const faceController = context.spriteRefs.tokenFaceControllers?.get(
+              descriptor.tokenId,
+            );
+            faceController?.setFaceUp(true);
+          }
+        },
+      },
+    ];
+
+    const factory = createEphemeralContainerFactory(parent);
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:card',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:card',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'flip-test',
+        isTriggered: false,
+      },
+    ];
+
+    const refs = createSpriteRefs({
+      tokenContainers: new Map(),
+    });
+
+    buildTimeline(descriptors, createPresetRegistry(defs), refs, runtime.gsap, {
+      ephemeralContainerFactory: factory,
+      disposalQueue: queue,
+      ephemeralCardContentResolver: resolver,
+    });
+
+    // After the flip preset calls setFaceUp(true), frontContent should be visible
+    const ephemeralContainer = parent.children[0] as Container;
+    const frontContent = ephemeralContainer?.getChildByLabel('frontContent');
+    expect(frontContent).not.toBeNull();
+    expect(frontContent!.visible).toBe(true);
+  });
+
+  it('gracefully handles resolver returning null', () => {
+    const runtime = createRuntimeFixture();
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    const createSpy = vi.spyOn(factory, 'create');
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    const resolver = {
+      resolve: vi.fn(() => null),
+    };
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:unknown',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+    ];
+
+    const refs = createSpriteRefs({
+      tokenContainers: new Map(),
+    });
+
+    buildTimeline(descriptors, createPresetRegistry(), refs, runtime.gsap, {
+      ephemeralContainerFactory: factory,
+      disposalQueue: queue,
+      ephemeralCardContentResolver: resolver,
+    });
+
+    expect(resolver.resolve).toHaveBeenCalledWith('tok:unknown');
+    // create should be called without card content (undefined)
+    expect(createSpy).toHaveBeenCalledWith('tok:unknown', undefined);
+    // No frontContent child
+    const ephemeralContainer = parent.children[0] as Container;
+    expect(ephemeralContainer.getChildByLabel('frontContent')).toBeNull();
+  });
 });

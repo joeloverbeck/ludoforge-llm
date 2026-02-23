@@ -475,7 +475,7 @@ describe('preset-registry', () => {
     expect(logger.logFaceControllerCall).not.toHaveBeenCalled();
   });
 
-  it('arc-tween includes alpha fade-in when target alpha is 0', () => {
+  it('arc-tween sets initial alpha above zero and fades to 1 when target alpha is 0', () => {
     const registry = createPresetRegistry();
     const token = { x: 0, y: 0, alpha: 0, tint: 0xffffff, scale: { x: 1, y: 1 } };
     const timeline = { add: vi.fn() };
@@ -512,11 +512,14 @@ describe('preset-registry', () => {
       { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
     );
 
+    // Alpha should be pre-flashed to 0.3 (above zero) so the card is immediately visible
+    expect(token.alpha).toBe(0.3);
+
     expect(gsap.to).toHaveBeenCalledTimes(2);
 
     const arcCalls = gsap.to.mock.calls as unknown[][];
     const firstCallVars = arcCalls[0]![1] as Record<string, unknown>;
-    // First phase should include alpha: 1 for fade-in
+    // First phase should tween alpha to 1
     expect(firstCallVars['alpha']).toBe(1);
 
     const secondCallVars = arcCalls[1]![1] as Record<string, unknown>;
@@ -936,6 +939,137 @@ describe('preset-registry', () => {
 
     // Only 2 arc phases, no flip
     expect(gsap.to).toHaveBeenCalledTimes(2);
+  });
+
+  it('arc-tween adds horizontal offset for same-column arcs (|dx| < 10)', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 100, y: 0 }],
+            ['zone:b', { x: 100, y: 200 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    const arcCalls = gsap.to.mock.calls as unknown[][];
+    const firstCallVars = arcCalls[0]![1] as Record<string, unknown>;
+    // Mid-point X should be offset by 30 from the center (100) when dx is 0
+    expect(firstCallVars['x']).toBe(100 + 30);
+  });
+
+  it('arc-tween does not add horizontal offset when dx is large enough', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 200, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    const arcCalls = gsap.to.mock.calls as unknown[][];
+    const firstCallVars = arcCalls[0]![1] as Record<string, unknown>;
+    // Mid-point X should be the simple average (100) with no offset
+    expect(firstCallVars['x']).toBe(100);
+  });
+
+  it('arc-tween uses destinationOffset for final position on cardDeal descriptor', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 0, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 200, y: 100 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        destinationOffset: { x: -20, y: 5 },
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      { ...context, durationSeconds: registry.require('arc-tween').defaultDurationSeconds },
+    );
+
+    const arcCalls = gsap.to.mock.calls as unknown[][];
+    const secondCallVars = arcCalls[1]![1] as Record<string, unknown>;
+    // Final position should be zone:b + destinationOffset
+    expect(secondCallVars['x']).toBe(200 - 20);
+    expect(secondCallVars['y']).toBe(100 + 5);
   });
 
   it('zone-pulse emits alpha+tint tween for zoneHighlight', () => {

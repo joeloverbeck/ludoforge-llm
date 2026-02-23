@@ -1,6 +1,6 @@
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 import { TRACE_KIND_DEFAULT_PRESET_IDS } from '../model/effect-trace-kind-config.js';
-import type { FaceControllerCallEntry } from './animation-diagnostics.js';
+import type { ArcGeometryDiagnostic, FaceControllerCallEntry } from './animation-diagnostics.js';
 
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import {
@@ -29,6 +29,8 @@ export interface PresetTweenContext {
   readonly phaseBannerCallback?: (phase: string | null) => void;
   /** Mutable collector for property names tweened by appendTween / appendScaleXTween. */
   readonly tweenedProperties?: string[];
+  /** Mutable slot for arc geometry diagnostics populated by createArcTween. */
+  arcGeometry?: ArcGeometryDiagnostic;
 }
 
 export interface TokenFaceControllerRef {
@@ -302,16 +304,29 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
     return;
   }
 
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
+  const finalTo = descriptor.kind === 'cardDeal' && descriptor.destinationOffset !== undefined
+    ? { x: to.x + descriptor.destinationOffset.x, y: to.y + descriptor.destinationOffset.y }
+    : to;
+
+  const dx = finalTo.x - from.x;
+  const dy = finalTo.y - from.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
   const liftHeight = Math.max(20, distance * 0.3);
 
-  const midX = (from.x + to.x) / 2;
-  const midY = Math.min(from.y, to.y) - liftHeight;
+  let midX = (from.x + finalTo.x) / 2;
+  const horizontalOffsetApplied = Math.abs(dx) < 10;
+  if (horizontalOffsetApplied) {
+    midX += 30;
+  }
+  const midY = Math.min(from.y, finalTo.y) - liftHeight;
   const halfDuration = context.durationSeconds / 2;
 
+  context.arcGeometry = { midX, midY, liftHeight, horizontalOffsetApplied };
+
   const shouldFadeIn = target.alpha === 0;
+  if (shouldFadeIn) {
+    target.alpha = 0.3;
+  }
   target.x = from.x;
   target.y = from.y;
   appendTween(context, target, {
@@ -320,7 +335,7 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
     ...(shouldFadeIn ? { alpha: 1 } : {}),
     ease: ARC_TWEEN_EASE,
   }, halfDuration);
-  appendTween(context, target, { x: to.x, y: to.y, ease: ARC_TWEEN_EASE }, halfDuration);
+  appendTween(context, target, { x: finalTo.x, y: finalTo.y, ease: ARC_TWEEN_EASE }, halfDuration);
 
   if (descriptor.kind === 'cardDeal' && descriptor.destinationRole === 'shared') {
     const faceController = context.spriteRefs.tokenFaceControllers?.get(descriptor.tokenId);

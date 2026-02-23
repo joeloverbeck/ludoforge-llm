@@ -7,9 +7,10 @@ import type {
   AnimationDescriptor,
   AnimationSequencingPolicy,
   CardFlipDescriptor,
+  EphemeralCardContentResolver,
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
-import type { DiagnosticPosition, TweenLogEntry } from './animation-diagnostics.js';
+import type { ArcGeometryDiagnostic, DiagnosticPosition, TweenLogEntry } from './animation-diagnostics.js';
 import type { EphemeralContainerFactory } from './ephemeral-container-factory.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import type { PresetRegistry, PresetTweenContext } from './preset-registry.js';
@@ -42,6 +43,7 @@ interface BuildTimelineSharedOptions {
   readonly initializeTokenVisibility?: boolean;
   readonly phaseBannerCallback?: (phase: string | null) => void;
   readonly logger?: TimelineLogger;
+  readonly ephemeralCardContentResolver?: EphemeralCardContentResolver;
 }
 
 type BuildTimelineEphemeralOptions =
@@ -73,8 +75,9 @@ export function buildTimeline(
     logger,
   };
 
+  const cardContentResolver = options?.ephemeralCardContentResolver;
   const effectiveRefs = factory !== undefined
-    ? provisionEphemeralContainers(descriptors, spriteRefs, factory, logger)
+    ? provisionEphemeralContainers(descriptors, spriteRefs, factory, logger, cardContentResolver)
     : spriteRefs;
 
   const visual = filterVisualDescriptors(descriptors, effectiveRefs, logger);
@@ -201,6 +204,7 @@ function provisionEphemeralContainers(
   spriteRefs: TimelineSpriteRefs,
   factory: EphemeralContainerFactory,
   logger: TimelineLogger,
+  cardContentResolver?: EphemeralCardContentResolver,
 ): TimelineSpriteRefs {
   const ephemeralTokens = new Map<string, Container>();
   const ephemeralFaceControllers = new Map<string, { setFaceUp(faceUp: boolean): void }>();
@@ -216,20 +220,29 @@ function provisionEphemeralContainers(
       !spriteRefs.tokenContainers.has(descriptor.tokenId) &&
       !ephemeralTokens.has(descriptor.tokenId)
     ) {
-      const container = factory.create(descriptor.tokenId);
+      const cardContent = cardContentResolver?.resolve(descriptor.tokenId) ?? undefined;
+      const container = factory.create(descriptor.tokenId, cardContent);
       ephemeralTokens.set(descriptor.tokenId, container);
       logger.logEphemeralCreated({
         tokenId: descriptor.tokenId,
         width: container.width,
         height: container.height,
+        hasCardContent: cardContent !== undefined,
+        ...(cardContent !== undefined && cardContent.template.layout !== undefined
+          ? { cardTemplateName: Object.keys(cardContent.template.layout).join(',') }
+          : {}),
       });
       ephemeralFaceControllers.set(descriptor.tokenId, {
         setFaceUp(faceUp: boolean) {
           const backChild = container.getChildByLabel('back');
           const frontChild = container.getChildByLabel('front');
+          const frontContentChild = container.getChildByLabel('frontContent');
           if (backChild !== null && frontChild !== null) {
             backChild.visible = !faceUp;
             frontChild.visible = faceUp;
+            if (frontContentChild !== null) {
+              frontContentChild.visible = faceUp;
+            }
           }
         },
       });
@@ -349,12 +362,13 @@ function processDescriptor(
     const preset = presetRegistry.requireCompatible(descriptor.preset, descriptor.kind);
     const durationSeconds = durationOverrideSeconds ?? preset.defaultDurationSeconds;
     const tweenProps: string[] = [];
-    preset.createTween(descriptor, {
+    const tweenContext: PresetTweenContext = {
       ...context,
       durationSeconds,
       tweenedProperties: tweenProps,
-    });
-    logger.logTweenCreated(buildTweenLogEntry(descriptor, preset.id, durationSeconds, false, context.spriteRefs, tweenProps));
+    };
+    preset.createTween(descriptor, tweenContext);
+    logger.logTweenCreated(buildTweenLogEntry(descriptor, preset.id, durationSeconds, false, context.spriteRefs, tweenProps, tweenContext.arcGeometry));
   } catch (error) {
     const message = `Animation tween generation failed for descriptor "${descriptor.kind}".`;
     console.warn(message, error);
@@ -369,6 +383,7 @@ function buildTweenLogEntry(
   isTriggeredPulse: boolean,
   spriteRefs: PresetTweenContext['spriteRefs'],
   tweenedProperties: readonly string[],
+  arcGeometry?: ArcGeometryDiagnostic,
 ): TweenLogEntry {
   const tokenId = getDescriptorTokenId(descriptor);
   const fromPosition = getDescriptorFromPosition(descriptor, spriteRefs);
@@ -386,6 +401,10 @@ function buildTweenLogEntry(
       ? { faceState: { oldValue: descriptor.oldValue, newValue: descriptor.newValue } }
       : {}),
     tweenedProperties,
+    ...(descriptor.kind === 'cardDeal' && descriptor.destinationOffset !== undefined
+      ? { destinationOffset: descriptor.destinationOffset }
+      : {}),
+    ...(arcGeometry !== undefined ? { arcGeometry } : {}),
   };
 }
 

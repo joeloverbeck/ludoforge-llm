@@ -5,7 +5,9 @@ import type {
   AnimationDetailLevel,
   AnimationMappingOptions,
   AnimationPresetId,
+  CardDealLayoutContext,
 } from './animation-types.js';
+import { computeFanOffset } from '../layout/fan-offset.js';
 import {
   createPresetRegistry,
   resolveDefaultPresetIdForDescriptorKind,
@@ -223,5 +225,54 @@ export function traceToDescriptors(
     }
   }
 
+  const layoutContext = options?.cardDealLayoutContext;
+  if (layoutContext !== undefined) {
+    return applyCardDealFanOffsets(mapped, layoutContext);
+  }
+
   return mapped;
+}
+
+function applyCardDealFanOffsets(
+  descriptors: readonly AnimationDescriptor[],
+  layoutContext: CardDealLayoutContext,
+): readonly AnimationDescriptor[] {
+  const dealsByZone = new Map<string, number[]>();
+  for (let i = 0; i < descriptors.length; i++) {
+    const d = descriptors[i]!;
+    if (
+      d.kind === 'cardDeal' &&
+      d.destinationRole === 'shared' &&
+      layoutContext.sharedZoneIds.has(d.to)
+    ) {
+      const indices = dealsByZone.get(d.to);
+      if (indices !== undefined) {
+        indices.push(i);
+      } else {
+        dealsByZone.set(d.to, [i]);
+      }
+    }
+  }
+
+  if (dealsByZone.size === 0) {
+    return descriptors;
+  }
+
+  const result = [...descriptors];
+  for (const [zoneId, indices] of dealsByZone) {
+    const existingCount = layoutContext.existingTokenCountByZone.get(zoneId) ?? 0;
+    const totalAfterDeals = existingCount + indices.length;
+
+    for (let dealIndex = 0; dealIndex < indices.length; dealIndex++) {
+      const arrayIndex = indices[dealIndex]!;
+      const fanIndex = existingCount + dealIndex;
+      const offset = computeFanOffset(fanIndex, totalAfterDeals, layoutContext.cardItemWidth);
+      const original = result[arrayIndex]!;
+      if (original.kind === 'cardDeal') {
+        result[arrayIndex] = { ...original, destinationOffset: offset };
+      }
+    }
+  }
+
+  return result;
 }

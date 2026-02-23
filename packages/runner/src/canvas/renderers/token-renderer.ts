@@ -12,6 +12,7 @@ import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { drawCardContent, destroyCardContentPool } from './card-template-renderer.js';
 import { safeDestroyContainer } from './safe-destroy.js';
+import { computeFanOffset } from '../../layout/fan-offset.js';
 
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
@@ -520,7 +521,6 @@ function resolveTokenHitArea(
   }
 }
 
-const FAN_GAP = 4;
 const STACK_OFFSET_X = 2;
 const STACK_OFFSET_Y = 1;
 
@@ -572,12 +572,7 @@ function fanOffset(
   cardTemplate: CardTemplate | null,
 ): { x: number; y: number } {
   const itemWidth = resolveItemWidth(shape, cardTemplate);
-  const spacing = itemWidth + FAN_GAP;
-  const totalWidth = (total - 1) * spacing;
-  return {
-    x: index * spacing - totalWidth / 2,
-    y: 0,
-  };
+  return computeFanOffset(index, total, itemWidth);
 }
 
 function resolveItemWidth(

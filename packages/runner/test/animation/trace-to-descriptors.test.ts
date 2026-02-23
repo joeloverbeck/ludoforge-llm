@@ -781,4 +781,106 @@ describe('traceToDescriptors', () => {
       provenance: traceEntryProvenance('actionEffect'),
     });
   });
+
+  it('adds destinationOffset for cardDeal to shared zone with layout context', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace, {
+      cardContext: CARD_CONTEXT,
+      cardDealLayoutContext: {
+        sharedZoneIds: new Set(['zone:board']),
+        existingTokenCountByZone: new Map([['zone:board', 0]]),
+        cardItemWidth: 24,
+      },
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      kind: 'cardDeal',
+      destinationOffset: { x: 0, y: 0 },
+    });
+  });
+
+  it('omits destinationOffset without layout context', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace, {
+      cardContext: CARD_CONTEXT,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ kind: 'cardDeal' });
+    expect((result[0] as unknown as Record<string, unknown>)['destinationOffset']).toBeUndefined();
+  });
+
+  it('computes progressive fan offsets for 3 flop cards in same batch', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:board',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace, {
+      cardContext: {
+        ...CARD_CONTEXT,
+        tokenTypeByTokenId: new Map([
+          ['tok:card', 'card'],
+        ]),
+      },
+      cardDealLayoutContext: {
+        sharedZoneIds: new Set(['zone:board']),
+        existingTokenCountByZone: new Map([['zone:board', 0]]),
+        cardItemWidth: 24,
+      },
+    });
+
+    expect(result).toHaveLength(3);
+    const offsets = result
+      .filter((d) => d.kind === 'cardDeal')
+      .map((d) => (d as { destinationOffset?: { x: number; y: number } }).destinationOffset);
+
+    // Three cards fanned: first is left, second is center, third is right
+    expect(offsets).toHaveLength(3);
+    expect(offsets[0]!.x).toBeLessThan(0);
+    expect(offsets[1]!.x).toBe(0);
+    expect(offsets[2]!.x).toBeGreaterThan(0);
+    // All y should be 0
+    expect(offsets.every((o) => o!.y === 0)).toBe(true);
+    // Should be symmetric
+    expect(offsets[0]!.x).toBe(-offsets[2]!.x);
+  });
 });

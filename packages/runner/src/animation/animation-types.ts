@@ -1,5 +1,6 @@
 import type { PlayerId, VariableValue } from '@ludoforge/engine/runtime';
 import type { SkippedTraceKind } from '../model/effect-trace-kind-config.js';
+import type { EphemeralCardContentSpec } from './ephemeral-container-factory.js';
 
 export const ANIMATION_PRESET_IDS = [
   'arc-tween',
@@ -33,12 +34,19 @@ export const ANIMATION_PRESET_OVERRIDE_KEYS = [
 ] as const;
 export type AnimationPresetOverrideKey = (typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number];
 
+export interface CardDealLayoutContext {
+  readonly sharedZoneIds: ReadonlySet<string>;
+  readonly existingTokenCountByZone: ReadonlyMap<string, number>;
+  readonly cardItemWidth: number;
+}
+
 export interface AnimationMappingOptions {
   readonly presetOverrides?: ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId>;
   readonly detailLevel?: AnimationDetailLevel;
   readonly cardContext?: CardAnimationMappingContext;
   readonly suppressCreateToken?: boolean;
   readonly phaseBannerPhases?: ReadonlySet<string>;
+  readonly cardDealLayoutContext?: CardDealLayoutContext;
 }
 
 export interface CardAnimationMappingContext {
@@ -72,6 +80,7 @@ export interface CardDealDescriptor extends BaseAnimationDescriptor {
   readonly from: string;
   readonly to: string;
   readonly destinationRole?: 'hand' | 'shared';
+  readonly destinationOffset?: { readonly x: number; readonly y: number };
 }
 
 export interface CardBurnDescriptor extends BaseAnimationDescriptor {
@@ -192,4 +201,8 @@ export type AnimationSequencingMode = 'sequential' | 'parallel' | 'stagger';
 export interface AnimationSequencingPolicy {
   readonly mode: AnimationSequencingMode;
   readonly staggerOffsetSeconds?: number;
+}
+
+export interface EphemeralCardContentResolver {
+  resolve(tokenId: string): EphemeralCardContentSpec | null;
 }

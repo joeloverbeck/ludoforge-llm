@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createEphemeralContainerFactory,
+  type EphemeralCardContentSpec,
   type EphemeralContainerFactoryOptions,
 } from '../../src/animation/ephemeral-container-factory';
 import { createDisposalQueue } from '../../src/canvas/renderers/disposal-queue';
+import * as cardTemplateRenderer from '../../src/canvas/renderers/card-template-renderer';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -144,5 +146,69 @@ describe('createEphemeralContainerFactory', () => {
     expect(() => factory.releaseAll(queue)).not.toThrow();
     queue.flush();
     expect(flushSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates frontContent child with card content when spec provided', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    const drawSpy = vi.spyOn(cardTemplateRenderer, 'drawCardContent').mockImplementation(() => {});
+
+    const spec: EphemeralCardContentSpec = {
+      template: { width: 24, height: 34 },
+      fields: { rank: 'A', suit: 'spades' },
+    };
+
+    const container = factory.create('tok:card', spec);
+
+    const frontContent = container.getChildByLabel('frontContent');
+    expect(frontContent).toBeInstanceOf(Container);
+    expect(drawSpy).toHaveBeenCalledWith(frontContent, spec.template, spec.fields);
+  });
+
+  it('frontContent starts hidden when card content spec provided', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    vi.spyOn(cardTemplateRenderer, 'drawCardContent').mockImplementation(() => {});
+
+    const spec: EphemeralCardContentSpec = {
+      template: { width: 24, height: 34 },
+      fields: { rank: 'K', suit: 'hearts' },
+    };
+
+    const container = factory.create('tok:card', spec);
+
+    const frontContent = container.getChildByLabel('frontContent');
+    expect(frontContent!.visible).toBe(false);
+  });
+
+  it('no frontContent when card content spec omitted (backwards compat)', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+
+    const container = factory.create('tok:plain');
+
+    const frontContent = container.getChildByLabel('frontContent');
+    expect(frontContent).toBeNull();
+  });
+
+  it('releaseAll destroys card content pools for containers with frontContent', () => {
+    const parent = new Container();
+    const factory = createEphemeralContainerFactory(parent);
+    vi.spyOn(cardTemplateRenderer, 'drawCardContent').mockImplementation(() => {});
+    const destroySpy = vi.spyOn(cardTemplateRenderer, 'destroyCardContentPool').mockImplementation(() => {});
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+
+    const spec: EphemeralCardContentSpec = {
+      template: { width: 24, height: 34 },
+      fields: { rank: 'Q', suit: 'diamonds' },
+    };
+
+    factory.create('tok:with-content', spec);
+    factory.create('tok:without-content');
+
+    factory.releaseAll(queue);
+
+    // destroyCardContentPool should be called for the container that had frontContent
+    expect(destroySpy).toHaveBeenCalledTimes(1);
   });
 });

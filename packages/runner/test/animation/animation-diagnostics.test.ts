@@ -2,6 +2,7 @@ import { asPlayerId, type EffectTraceEntry } from '@ludoforge/engine/runtime';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type {
+  ArcGeometryDiagnostic,
   DiagnosticBatch,
   DiagnosticQueueEvent,
   EphemeralCreatedEntry,
@@ -115,5 +116,61 @@ describe('animation-diagnostics types', () => {
     expect(batch.descriptors).toHaveLength(1);
     expect(batch.queueEvent?.event).toBe('enqueue');
     expectTypeOf(batch).toMatchTypeOf<DiagnosticBatch>();
+  });
+
+  it('EphemeralCreatedEntry supports hasCardContent and cardTemplateName', () => {
+    const entry: EphemeralCreatedEntry = {
+      tokenId: 'tok:card',
+      width: 24,
+      height: 34,
+      hasCardContent: true,
+      cardTemplateName: 'rank,suit',
+    };
+
+    expect(entry.hasCardContent).toBe(true);
+    expect(entry.cardTemplateName).toBe('rank,suit');
+
+    const entryWithout: EphemeralCreatedEntry = {
+      tokenId: 'tok:plain',
+      width: 24,
+      height: 34,
+    };
+
+    expect(entryWithout.hasCardContent).toBeUndefined();
+    expect(entryWithout.cardTemplateName).toBeUndefined();
+  });
+
+  it('TweenLogEntry supports destinationOffset and arcGeometry', () => {
+    const arcGeo: ArcGeometryDiagnostic = {
+      midX: 150,
+      midY: -40,
+      liftHeight: 60,
+      horizontalOffsetApplied: true,
+    };
+
+    const tween: TweenLogEntry = {
+      descriptorKind: 'cardDeal',
+      tokenId: 'tok:card',
+      preset: 'arc-tween',
+      durationSeconds: 0.4,
+      isTriggeredPulse: false,
+      destinationOffset: { x: -14, y: 0 },
+      arcGeometry: arcGeo,
+    };
+
+    expect(tween.destinationOffset).toEqual({ x: -14, y: 0 });
+    expect(tween.arcGeometry?.horizontalOffsetApplied).toBe(true);
+    expect(tween.arcGeometry?.liftHeight).toBe(60);
+
+    const tweenWithout: TweenLogEntry = {
+      descriptorKind: 'moveToken',
+      tokenId: 'tok:1',
+      preset: 'arc-tween',
+      durationSeconds: 0.4,
+      isTriggeredPulse: false,
+    };
+
+    expect(tweenWithout.destinationOffset).toBeUndefined();
+    expect(tweenWithout.arcGeometry).toBeUndefined();
   });
 });

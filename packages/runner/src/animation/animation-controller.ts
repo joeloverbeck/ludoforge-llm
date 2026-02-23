@@ -14,6 +14,8 @@ import type {
   AnimationPresetOverrideKey,
   AnimationSequencingPolicy,
   CardAnimationMappingContext,
+  CardDealLayoutContext,
+  EphemeralCardContentResolver,
   VisualAnimationDescriptorKind,
 } from './animation-types.js';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
@@ -126,6 +128,7 @@ export function createAnimationController(
       try {
         const state = options.store.getState();
         const cardContext = buildCardContext(state, options.visualConfigProvider);
+        const cardDealLayoutContext = buildCardDealLayoutContext(state, options.visualConfigProvider, cardContext);
         descriptors = deps.traceToDescriptors(
           trace,
           {
@@ -134,6 +137,7 @@ export function createAnimationController(
             ...(cardContext === undefined ? {} : { cardContext }),
             ...(isSetup ? { suppressCreateToken: true } : {}),
             ...(phaseBannerPhases.size === 0 ? {} : { phaseBannerPhases }),
+            ...(cardDealLayoutContext === undefined ? {} : { cardDealLayoutContext }),
           },
           deps.presetRegistry,
         );
@@ -184,6 +188,11 @@ export function createAnimationController(
           || phaseBannerCallback !== undefined
           || logger !== undefined;
 
+        const ephemeralCardContentResolver = buildEphemeralCardContentResolver(
+          options.store.getState(),
+          options.visualConfigProvider,
+        );
+
         const sharedTimelineOptions = {
           ...(sequencingPolicies.size === 0 ? {} : { sequencingPolicies }),
           ...(timingOverrides.size === 0 ? {} : { durationSecondsByKind: timingOverrides }),
@@ -194,6 +203,7 @@ export function createAnimationController(
             : {}),
           ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
           ...(logger === undefined ? {} : { logger }),
+          ...(ephemeralCardContentResolver === undefined ? {} : { ephemeralCardContentResolver }),
         };
 
         let timelineOptions: Parameters<typeof deps.buildTimeline>[4] | undefined;
@@ -472,6 +482,72 @@ function buildTimingOverrides(
   }
 
   return durations;
+}
+
+function buildCardDealLayoutContext(
+  state: GameStore,
+  visualConfigProvider: VisualConfigProvider,
+  cardContext: CardAnimationMappingContext | undefined,
+): CardDealLayoutContext | undefined {
+  const gameState = state.gameState;
+  if (gameState === null || cardContext === undefined) {
+    return undefined;
+  }
+
+  const sharedZoneIds = cardContext.zoneRoles.shared;
+  if (sharedZoneIds.size === 0) {
+    return undefined;
+  }
+
+  const existingTokenCountByZone = new Map<string, number>();
+  for (const zoneId of sharedZoneIds) {
+    const tokens = gameState.zones[zoneId];
+    existingTokenCountByZone.set(zoneId, tokens?.length ?? 0);
+  }
+
+  const cardDimensions = visualConfigProvider.getDefaultCardDimensions();
+  const cardItemWidth = cardDimensions?.width ?? 24;
+
+  return {
+    sharedZoneIds,
+    existingTokenCountByZone,
+    cardItemWidth,
+  };
+}
+
+function buildEphemeralCardContentResolver(
+  state: GameStore,
+  visualConfigProvider: VisualConfigProvider,
+): EphemeralCardContentResolver | undefined {
+  const gameState = state.gameState;
+  if (gameState === null) {
+    return undefined;
+  }
+
+  const tokenPropsById = new Map<string, { readonly type: string; readonly props: Readonly<Record<string, number | string | boolean>> }>();
+  for (const zoneTokens of Object.values(gameState.zones)) {
+    for (const token of zoneTokens ?? []) {
+      tokenPropsById.set(String(token.id), { type: token.type, props: token.props });
+    }
+  }
+
+  if (tokenPropsById.size === 0) {
+    return undefined;
+  }
+
+  return {
+    resolve(tokenId: string) {
+      const tokenData = tokenPropsById.get(tokenId);
+      if (tokenData === undefined) {
+        return null;
+      }
+      const template = visualConfigProvider.getCardTemplateForTokenType(tokenData.type);
+      if (template === null) {
+        return null;
+      }
+      return { template, fields: tokenData.props };
+    },
+  };
 }
 
 function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): boolean {

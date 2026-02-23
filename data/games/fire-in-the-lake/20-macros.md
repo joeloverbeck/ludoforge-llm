@@ -2332,6 +2332,89 @@ effectMacros:
                 then:
                   - setMarker: { space: { param: space }, marker: coupSupportShiftCount, state: two }
 
+  # ── coup-reset-markers ────────────────────────────────────────────────────
+  # Rule 6.6: normalize trail, clear terror/sabotage, flip guerrillas/SF underground,
+  # clear momentum flags, and reset placed terror/sabotage marker count.
+  - id: coup-reset-markers
+    params: []
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: gvar, var: trail }, right: 0 }
+          then:
+            - setVar: { scope: global, var: trail, value: 1 }
+          else:
+            - if:
+                when: { op: '==', left: { ref: gvar, var: trail }, right: 4 }
+                then:
+                  - setVar: { scope: global, var: trail, value: 3 }
+      - forEach:
+          bind: $space
+          over: { query: mapSpaces }
+          effects:
+            - setMarker: { space: $space, marker: terror, state: none }
+            - setMarker: { space: $space, marker: sabotage, state: none }
+      - setVar: { scope: global, var: terrorSabotageMarkersPlaced, value: 0 }
+      - forEach:
+          bind: $space
+          over: { query: mapSpaces }
+          effects:
+            - forEach:
+                bind: $token
+                over:
+                  query: tokensInZone
+                  zone: $space
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: guerrilla }
+                effects:
+                  - setTokenProp: { token: $token, prop: activity, value: underground }
+            - forEach:
+                bind: $token
+                over:
+                  query: tokensInZone
+                  zone: $space
+                  filter:
+                    - { prop: faction, eq: VC }
+                    - { prop: type, eq: guerrilla }
+                effects:
+                  - setTokenProp: { token: $token, prop: activity, value: underground }
+            - forEach:
+                bind: $token
+                over:
+                  query: tokensInZone
+                  zone: $space
+                  filter:
+                    - { prop: faction, eq: US }
+                    - { prop: type, eq: irregular }
+                effects:
+                  - setTokenProp: { token: $token, prop: activity, value: underground }
+            - forEach:
+                bind: $token
+                over:
+                  query: tokensInZone
+                  zone: $space
+                  filter:
+                    - { prop: faction, eq: ARVN }
+                    - { prop: type, eq: ranger }
+                effects:
+                  - setTokenProp: { token: $token, prop: activity, value: underground }
+      - setVar: { scope: global, var: mom_wildWeasels, value: false }
+      - setVar: { scope: global, var: mom_adsid, value: false }
+      - setVar: { scope: global, var: mom_rollingThunder, value: false }
+      - setVar: { scope: global, var: mom_medevacUnshaded, value: false }
+      - setVar: { scope: global, var: mom_medevacShaded, value: false }
+      - setVar: { scope: global, var: mom_blowtorchKomer, value: false }
+      - setVar: { scope: global, var: mom_claymores, value: false }
+      - setVar: { scope: global, var: mom_daNang, value: false }
+      - setVar: { scope: global, var: mom_mcnamaraLine, value: false }
+      - setVar: { scope: global, var: mom_oriskany, value: false }
+      - setVar: { scope: global, var: mom_bombingPause, value: false }
+      - setVar: { scope: global, var: mom_559thTransportGrp, value: false }
+      - setVar: { scope: global, var: mom_bodyCount, value: false }
+      - setVar: { scope: global, var: mom_generalLansdale, value: false }
+      - setVar: { scope: global, var: mom_typhoonKate, value: false }
+
 conditionMacros:
   # Shared Rule 1.8.1 predicate:
   # US may spend ARVN Resources only if post-spend resource does not drop below totalEcon.

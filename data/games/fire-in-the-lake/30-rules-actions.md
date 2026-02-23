@@ -54,7 +54,6 @@ turnOrder:
         coupAgitatePass: pass
         coupRedeployPass: pass
         coupCommitmentPass: pass
-        coupResetProcess: pass
       optionMatrix:
         - first: operation
           second: [limitedOperation]
@@ -993,15 +992,6 @@ actions:
     cost: []
     effects:
       - macro: coup-process-commitment
-    limits: [{ scope: phase, max: 1 }]
-  - id: coupResetProcess
-    actor: active
-    executor: 'actor'
-    phase: [coupReset]
-    params: []
-    pre: null
-    cost: []
-    effects: []
     limits: [{ scope: phase, max: 1 }]
   - id: pivotalEvent
     actor: active
@@ -4909,6 +4899,12 @@ triggers:
       phase: coupRedeploy
     effects:
       - macro: coup-laos-cambodia-removal
+  - id: on-coup-reset-enter
+    event:
+      type: phaseEnter
+      phase: coupReset
+    effects:
+      - macro: coup-reset-markers
   - id: mom-adsid-on-trail-change
     event:
       type: varChanged

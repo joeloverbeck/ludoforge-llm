@@ -1,240 +1,192 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { advancePhase, asPhaseId, initialState, type EffectAST, type GameDef } from '../../src/kernel/index.js';
+import { advancePhase, applyMove, asActionId, asPhaseId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-interface ResourcesFixtureOptions {
-  readonly sabotageCount: number;
-  readonly aid: number;
-  readonly casualties: number;
-  readonly trail: number;
-  readonly laosControl: boolean;
-  readonly cambodiaControl: boolean;
-}
-
-const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef => {
-  const setup: EffectAST[] = [];
-
-  for (let index = 0; index < options.sabotageCount; index += 1) {
-    setup.push({ createToken: { type: 'sabotage', zone: 'marker_pool:none', props: { isSabotage: true, econ: 0 } } });
-  }
-
-  for (let index = 0; index < options.casualties; index += 1) {
-    setup.push({ createToken: { type: 'us_casualty', zone: 'casualties-US:none', props: { isCasualty: true } } });
-  }
-
-  setup.push(
-    { createToken: { type: 'econ', zone: 'loc_a:none', props: { econ: 2 } } },
-    { createToken: { type: 'econ', zone: 'loc_b:none', props: { econ: 1 } } },
-    { createToken: { type: 'econ', zone: 'loc_c:none', props: { econ: 3 } } },
-  );
-
-  if (options.laosControl) {
-    setup.push({ createToken: { type: 'control', zone: 'laos_coin:none', props: { coin: true } } });
-  }
-  if (options.cambodiaControl) {
-    setup.push({ createToken: { type: 'control', zone: 'cambodia_coin:none', props: { coin: true } } });
-  }
-
-  const resourcesPhaseEffects: EffectAST[] = [
-    {
-      forEach: {
-        bind: '$sabotage',
-        over: { query: 'tokensInZone', zone: 'marker_pool:none' },
-        effects: [
-          {
-            if: {
-              when: { op: '==', left: { ref: 'zoneCount', zone: 'loc_a:none' }, right: 1 },
-              then: [{ moveToken: { token: '$sabotage', from: 'marker_pool:none', to: 'loc_a:none' } }],
-              else: [
-                {
-                  if: {
-                    when: { op: '==', left: { ref: 'zoneCount', zone: 'loc_b:none' }, right: 1 },
-                    then: [{ moveToken: { token: '$sabotage', from: 'marker_pool:none', to: 'loc_b:none' } }],
-                    else: [
-                      {
-                        if: {
-                          when: { op: '==', left: { ref: 'zoneCount', zone: 'loc_c:none' }, right: 1 },
-                          then: [{ moveToken: { token: '$sabotage', from: 'marker_pool:none', to: 'loc_c:none' } }],
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      if: {
-        when: {
-          op: 'and',
-          args: [
-            { op: '>', left: { ref: 'zoneCount', zone: 'laos_coin:none' }, right: 0 },
-            { op: '>', left: { ref: 'zoneCount', zone: 'cambodia_coin:none' }, right: 0 },
-          ],
-        },
-        then: [{ addVar: { scope: 'global', var: 'trail', delta: -1 } }],
-      },
-    },
-    { setVar: { scope: 'global', var: 'totalEcon', value: 0 } },
-    {
-      if: {
-        when: { op: '==', left: { ref: 'zoneCount', zone: 'loc_a:none' }, right: 1 },
-        then: [{ addVar: { scope: 'global', var: 'totalEcon', delta: 2 } }],
-      },
-    },
-    {
-      if: {
-        when: { op: '==', left: { ref: 'zoneCount', zone: 'loc_b:none' }, right: 1 },
-        then: [{ addVar: { scope: 'global', var: 'totalEcon', delta: 1 } }],
-      },
-    },
-    {
-      if: {
-        when: { op: '==', left: { ref: 'zoneCount', zone: 'loc_c:none' }, right: 1 },
-        then: [{ addVar: { scope: 'global', var: 'totalEcon', delta: 3 } }],
-      },
-    },
-    {
-      setVar: {
-        scope: 'global',
-        var: 'arvnResources',
-        value: {
-          op: '+',
-          left: { ref: 'gvar', var: 'aid' },
-          right: { ref: 'gvar', var: 'totalEcon' },
-        },
-      },
-    },
-    { addVar: { scope: 'global', var: 'vcResources', delta: { ref: 'gvar', var: 'totalEcon' } } },
-    { addVar: { scope: 'global', var: 'nvaResources', delta: { ref: 'gvar', var: 'trail' } } },
-    {
-      addVar: {
-        scope: 'global',
-        var: 'aid',
-        delta: {
-          op: '-',
-          left: 0,
-          right: {
-            op: '*',
-            left: 3,
-            right: {
-              aggregate: {
-                op: 'count',
-                query: { query: 'tokensInZone', zone: 'casualties-US:none' },
-              },
-            },
-          },
-        },
-      },
-    },
-  ];
-
-  return {
-    metadata: { id: 'fitl-coup-resources-phase-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
-    constants: {},
-    globalVars: [
-      { name: 'aid', type: 'int', init: options.aid, min: 0, max: 75 },
-      { name: 'trail', type: 'int', init: options.trail, min: 0, max: 4 },
-      { name: 'totalEcon', type: 'int', init: 0, min: 0, max: 15 },
-      { name: 'arvnResources', type: 'int', init: 0, min: 0, max: 75 },
-      { name: 'vcResources', type: 'int', init: 0, min: 0, max: 75 },
-      { name: 'nvaResources', type: 'int', init: 0, min: 0, max: 75 },
-    ],
-    perPlayerVars: [],
-    zones: [
-      { id: 'marker_pool:none', owner: 'none', visibility: 'public', ordering: 'stack' },
-      { id: 'loc_a:none', owner: 'none', visibility: 'public', ordering: 'queue' },
-      { id: 'loc_b:none', owner: 'none', visibility: 'public', ordering: 'queue' },
-      { id: 'loc_c:none', owner: 'none', visibility: 'public', ordering: 'queue' },
-      { id: 'laos_coin:none', owner: 'none', visibility: 'public', ordering: 'queue' },
-      { id: 'cambodia_coin:none', owner: 'none', visibility: 'public', ordering: 'queue' },
-      { id: 'casualties-US:none', owner: 'none', visibility: 'public', ordering: 'set' },
-    ],
-    tokenTypes: [
-      { id: 'sabotage', props: { isSabotage: 'boolean', econ: 'int' } },
-      { id: 'econ', props: { econ: 'int' } },
-      { id: 'control', props: { coin: 'boolean' } },
-      { id: 'us_casualty', props: { isCasualty: 'boolean' } },
-    ],
-    setup,
-    turnStructure: {
-      phases: [{ id: asPhaseId('main') }, { id: asPhaseId('resources') }],
-    },
-    actions: [
-      {
-        id: 'pass',
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
-        params: [],
-        pre: null,
-        cost: [],
-        effects: [],
-        limits: [],
-      },
-    ],
-    triggers: [{ id: 'on_resources_enter', event: { type: 'phaseEnter', phase: asPhaseId('resources') }, effects: resourcesPhaseEffects }],
-    terminal: { conditions: [] },
-  } as unknown as GameDef;
+const compileProductionDef = (): GameDef => {
+  const { parsed, compiled } = compileProductionSpec();
+  assertNoErrors(parsed);
+  assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+  assert.notEqual(compiled.gameDef, null);
+  return structuredClone(compiled.gameDef!);
 };
 
-describe('FITL coup resources phase integration', () => {
-  it('executes deterministic sabotage placement, coupled earnings, and aid floor arithmetic', () => {
-    const def = createResourcesFixtureDef({
-      sabotageCount: 2,
-      aid: 10,
-      casualties: 4,
-      trail: 3,
-      laosControl: true,
-      cambodiaControl: true,
+const withClearedZones = (state: GameState): GameState => ({
+  ...state,
+  zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])),
+});
+
+const piece = (id: string, faction: string, pieceType: string): Token => ({
+  id: asTokenId(id),
+  type: 'piece',
+  props: { faction, type: pieceType },
+});
+
+const card = (id: string, isCoup: boolean): Token => ({
+  id: asTokenId(id),
+  type: 'card',
+  props: { isCoup },
+});
+
+const withCoupRound = (
+  base: GameState,
+  overrides?: {
+    readonly globalVars?: Partial<GameState['globalVars']>;
+    readonly zones?: Partial<GameState['zones']>;
+    readonly markers?: Partial<GameState['markers']>;
+  },
+): GameState => {
+  const globalVars = overrides?.globalVars === undefined
+    ? base.globalVars
+    : ({ ...base.globalVars, ...overrides.globalVars } as GameState['globalVars']);
+  const zones = {
+    ...base.zones,
+    'played:none': [card('played-coup', true)],
+    'lookahead:none': [card('lookahead-event', false)],
+    'deck:none': [card('deck-event', false)],
+    ...(overrides?.zones ?? {}),
+  };
+  const markers = overrides?.markers === undefined
+    ? base.markers
+    : ({ ...base.markers, ...overrides.markers } as GameState['markers']);
+
+  return {
+    ...base,
+    currentPhase: asPhaseId('main'),
+    globalVars,
+    zones,
+    markers,
+  };
+};
+
+const runResources = (def: GameDef, state: GameState): GameState => {
+  const atVictory = advancePhase(def, state);
+  assert.equal(atVictory.currentPhase, asPhaseId('coupVictory'));
+  return applyMove(def, atVictory, { actionId: asActionId('coupVictoryCheck'), params: {} }).state;
+};
+
+describe('FITL coup resources phase (production data)', () => {
+  it('spreads sabotage by Rule 6.2.1 eligibility and respects the 15-marker cap', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8601, 4).state);
+    const state = withCoupRound(base, {
+      globalVars: {
+        ...base.globalVars,
+        terrorSabotageMarkersPlaced: 14,
+        trail: 2,
+      },
+      zones: {
+        'loc-hue-khe-sanh:none': [
+          piece('nva-g-1', 'NVA', 'guerrilla'),
+          piece('vc-g-1', 'VC', 'guerrilla'),
+          piece('us-t-1', 'US', 'troops'),
+        ],
+        'da-nang:none': [piece('vc-g-2', 'VC', 'guerrilla')],
+      },
+      markers: {
+        ...base.markers,
+        'loc-hue-khe-sanh:none': { ...(base.markers['loc-hue-khe-sanh:none'] ?? {}), sabotage: 'none' },
+        'loc-hue-da-nang:none': { ...(base.markers['loc-hue-da-nang:none'] ?? {}), sabotage: 'none' },
+      },
     });
-    const start = initialState(def, 17, 2).state;
 
-    const next = advancePhase(def, start);
+    const next = runResources(def, state);
 
-    assert.equal(next.currentPhase, asPhaseId('resources'));
-    assert.equal(next.zones['marker_pool:none']?.length, 0);
-    assert.equal(next.zones['loc_a:none']?.length, 2);
-    assert.equal(next.zones['loc_b:none']?.length, 2);
-    assert.equal(next.zones['loc_c:none']?.length, 1);
-
-    assert.equal(next.globalVars.trail, 2);
-    assert.equal(next.globalVars.totalEcon, 3);
-    assert.equal(next.globalVars.arvnResources, 13);
-    assert.equal(next.globalVars.vcResources, 3);
-    assert.equal(next.globalVars.nvaResources, 2);
-    assert.equal(next.globalVars.aid, 0);
+    assert.equal(next.globalVars.terrorSabotageMarkersPlaced, 15);
   });
 
-  it('leaves excess sabotage markers in pool once all LoC targets are exhausted and keeps deterministic results', () => {
-    const def = createResourcesFixtureDef({
-      sabotageCount: 4,
-      aid: 8,
-      casualties: 1,
-      trail: 2,
-      laosControl: true,
-      cambodiaControl: false,
+  it('degrades trail when a Laos/Cambodia space is COIN-controlled and no-ops otherwise', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8602, 4).state);
+
+    const coinControlled = withCoupRound(base, {
+      globalVars: { ...base.globalVars, trail: 3 },
+      zones: {
+        'central-laos:none': [piece('us-t-1', 'US', 'troops')],
+      },
+    });
+    const afterDegrade = runResources(def, coinControlled);
+    assert.equal(afterDegrade.globalVars.trail, 2);
+
+    const notControlled = withCoupRound(base, {
+      globalVars: { ...base.globalVars, trail: 3 },
+      zones: {
+        'central-laos:none': [
+          piece('us-t-2', 'US', 'troops'),
+          piece('nva-g-1', 'NVA', 'guerrilla'),
+        ],
+      },
+    });
+    const afterNoDegrade = runResources(def, notControlled);
+    assert.equal(afterNoDegrade.globalVars.trail, 3);
+  });
+
+  it('applies ARVN earnings, insurgent earnings, totalEcon update, and aid casualties reduction', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8603, 4).state);
+    const state = withCoupRound(base, {
+      globalVars: {
+        ...base.globalVars,
+        aid: 20,
+        arvnResources: 5,
+        vcResources: 1,
+        nvaResources: 2,
+        trail: 2,
+        totalEcon: 15,
+        terrorSabotageMarkersPlaced: 15,
+      },
+      zones: {
+        'quang-tri-thua-thien:none': [piece('vc-base-1', 'VC', 'base')],
+        'pleiku-darlac:none': [piece('vc-base-2', 'VC', 'base')],
+        'tay-ninh:none': [piece('vc-base-3', 'VC', 'base')],
+        'central-laos:none': [piece('nva-base-1', 'NVA', 'base')],
+        'northeast-cambodia:none': [piece('nva-base-2', 'NVA', 'base')],
+        'casualties-US:none': [
+          piece('cas-us-1', 'US', 'troops'),
+          piece('cas-us-2', 'US', 'troops'),
+          piece('cas-us-3', 'US', 'base'),
+          piece('cas-us-4', 'US', 'irregular'),
+        ],
+      },
+      markers: {
+        ...base.markers,
+        'loc-saigon-can-tho:none': { ...(base.markers['loc-saigon-can-tho:none'] ?? {}), sabotage: 'sabotage' },
+        'loc-hue-da-nang:none': { ...(base.markers['loc-hue-da-nang:none'] ?? {}), sabotage: 'sabotage' },
+      },
     });
 
-    const runOnce = () => {
-      const start = initialState(def, 23, 2).state;
-      return advancePhase(def, start);
-    };
+    const next = runResources(def, state);
 
-    const first = runOnce();
-    const second = runOnce();
+    assert.equal(next.globalVars.totalEcon, 12);
+    assert.equal(next.globalVars.arvnResources, 37);
+    assert.equal(next.globalVars.vcResources, 4);
+    assert.equal(next.globalVars.nvaResources, 8);
+    assert.equal(next.globalVars.aid, 8);
+  });
 
-    assert.deepEqual(second, first);
-    assert.equal(first.zones['marker_pool:none']?.length, 1);
-    assert.equal(first.zones['loc_a:none']?.length, 2);
-    assert.equal(first.zones['loc_b:none']?.length, 2);
-    assert.equal(first.zones['loc_c:none']?.length, 2);
-    assert.equal(first.globalVars.totalEcon, 0);
-    assert.equal(first.globalVars.trail, 2);
-    assert.equal(first.globalVars.aid, 5);
+  it('clamps ARVN resources to 75 and clamps aid at 0 under high casualties', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8604, 4).state);
+    const casualties = Array.from({ length: 10 }, (_unused, index) => piece(`cas-us-${index}`, 'US', 'troops'));
+    const state = withCoupRound(base, {
+      globalVars: {
+        ...base.globalVars,
+        aid: 10,
+        arvnResources: 70,
+        trail: 1,
+        terrorSabotageMarkersPlaced: 15,
+      },
+      zones: {
+        'casualties-US:none': casualties,
+      },
+    });
+
+    const next = runResources(def, state);
+
+    assert.equal(next.globalVars.totalEcon, 15);
+    assert.equal(next.globalVars.arvnResources, 75);
+    assert.equal(next.globalVars.aid, 0);
   });
 });

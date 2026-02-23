@@ -41,6 +41,12 @@ turnOrder:
         pivotalEvent: event
         usOp: operation
         arvnOp: operation
+        coupVictoryCheck: pass
+        coupPacifyPass: pass
+        coupAgitatePass: pass
+        coupRedeployPass: pass
+        coupCommitmentPass: pass
+        coupResetProcess: pass
       optionMatrix:
         - first: operation
           second: [limitedOperation]
@@ -95,15 +101,6 @@ actions:
     actor: active
     executor: 'actor'
     phase: [coupVictory]
-    params: []
-    pre: null
-    cost: []
-    effects: []
-    limits: [{ scope: phase, max: 1 }]
-  - id: coupResourcesProcess
-    actor: active
-    executor: 'actor'
-    phase: [coupResources]
     params: []
     pre: null
     cost: []
@@ -4323,6 +4320,16 @@ actionPipelines:
 # ══════════════════════════════════════════════════════════════════════════════
 
 triggers:
+  - id: on-coup-resources-enter
+    event:
+      type: phaseEnter
+      phase: coupResources
+    effects:
+      - macro: coup-auto-sabotage
+      - macro: coup-trail-degradation
+      - macro: coup-arvn-earnings
+      - macro: coup-insurgent-earnings
+      - macro: coup-casualties-aid
   - id: mom-adsid-on-trail-change
     event:
       type: varChanged

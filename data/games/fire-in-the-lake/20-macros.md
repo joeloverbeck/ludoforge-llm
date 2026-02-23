@@ -1745,6 +1745,216 @@ effectMacros:
                                   from: { param: loc }
                                   to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
 
+  # ── coup-auto-sabotage ────────────────────────────────────────────────────
+  # Rule 6.2.1: place sabotage on eligible unSabotaged LoCs up to marker cap.
+  - id: coup-auto-sabotage
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $loc
+          over:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                - { op: '!=', left: { ref: markerState, space: $zone, marker: sabotage }, right: sabotage }
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: guerrilla }
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: sum
+                          query: { query: adjacentZones, zone: $zone }
+                          bind: $adj
+                          valueExpr:
+                            if:
+                              when:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: city }
+                                  - op: '<='
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $adj
+                                          filter:
+                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    right:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $adj
+                                          filter:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              then: 1
+                              else: 0
+                      right: 0
+          effects:
+            - if:
+                when: { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                then:
+                  - setMarker: { space: $loc, marker: sabotage, state: sabotage }
+                  - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+
+  # ── coup-trail-degradation ────────────────────────────────────────────────
+  # Rule 6.2.2: if any Laos/Cambodia space is COIN-controlled, degrade trail.
+  - id: coup-trail-degradation
+    params: []
+    exports: []
+    effects:
+      - if:
+          when:
+            op: '>'
+            left:
+              aggregate:
+                op: count
+                query:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: or
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+            right: 0
+          then:
+            - addVar: { scope: global, var: trail, delta: -1 }
+
+  # ── coup-arvn-earnings ────────────────────────────────────────────────────
+  # Rule 6.2.3: compute unSabotaged LoC econ, update totalEcon, credit ARVN.
+  - id: coup-arvn-earnings
+    params: []
+    exports: []
+    effects:
+      - setVar: { scope: global, var: totalEcon, value: 15 }
+      - forEach:
+          bind: $sabotagedLoc
+          over:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                - { op: '==', left: { ref: markerState, space: $zone, marker: sabotage }, right: sabotage }
+          effects:
+            - addVar:
+                scope: global
+                var: totalEcon
+                delta:
+                  op: '-'
+                  left: 0
+                  right: { ref: zoneProp, zone: $sabotagedLoc, prop: econ }
+      - addVar:
+          scope: global
+          var: arvnResources
+          delta:
+            op: '+'
+            left: { ref: gvar, var: aid }
+            right: { ref: gvar, var: totalEcon }
+
+  # ── coup-insurgent-earnings ───────────────────────────────────────────────
+  # Rule 6.2.4: VC base income + NVA Laos/Cambodia base income and trail bonus.
+  - id: coup-insurgent-earnings
+    params: []
+    exports: []
+    effects:
+      - addVar:
+          scope: global
+          var: vcResources
+          delta:
+            aggregate:
+              op: count
+              query:
+                query: tokensInMapSpaces
+                filter:
+                  - { prop: faction, eq: VC }
+                  - { prop: type, eq: base }
+      - addVar:
+          scope: global
+          var: nvaResources
+          delta:
+            op: '+'
+            left:
+              aggregate:
+                op: count
+                query:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: base }
+            right:
+              op: '*'
+              left: 2
+              right: { ref: gvar, var: trail }
+
+  # ── coup-casualties-aid ───────────────────────────────────────────────────
+  # Rule 6.2.5: reduce aid by 3 per US casualty piece.
+  - id: coup-casualties-aid
+    params: []
+    exports: []
+    effects:
+      - addVar:
+          scope: global
+          var: aid
+          delta:
+            op: '-'
+            left: 0
+            right:
+              op: '*'
+              left: 3
+              right:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: casualties-US:none
+
 conditionMacros:
   # Shared Rule 1.8.1 predicate:
   # US may spend ARVN Resources only if pre-spend resource exceeds totalEcon + cost.

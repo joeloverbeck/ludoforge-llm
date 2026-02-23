@@ -34,7 +34,11 @@ terminal:
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
                   bind: $zone
-                  valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+                  valueExpr:
+                    if:
+                      when: { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                      then: { op: '*', left: { ref: zoneProp, zone: $zone, prop: population }, right: 2 }
+                      else: { ref: zoneProp, zone: $zone, prop: population }
               right:
                 aggregate:
                   op: count
@@ -218,7 +222,11 @@ terminal:
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveOpposition }
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
                   bind: $zone
-                  valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+                  valueExpr:
+                    if:
+                      when: { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
+                      then: { op: '*', left: { ref: zoneProp, zone: $zone, prop: population }, right: 2 }
+                      else: { ref: zoneProp, zone: $zone, prop: population }
               right:
                 aggregate:
                   op: count
@@ -262,7 +270,11 @@ terminal:
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
             bind: $zone
-            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+            valueExpr:
+              if:
+                when: { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                then: { op: '*', left: { ref: zoneProp, zone: $zone, prop: population }, right: 2 }
+                else: { ref: zoneProp, zone: $zone, prop: population }
         right:
           aggregate:
             op: count
@@ -395,7 +407,11 @@ terminal:
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveOpposition }
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
             bind: $zone
-            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+            valueExpr:
+              if:
+                when: { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
+                then: { op: '*', left: { ref: zoneProp, zone: $zone, prop: population }, right: 2 }
+                else: { ref: zoneProp, zone: $zone, prop: population }
         right:
           aggregate:
             op: count

@@ -86,6 +86,10 @@ turnOrder:
       eligibility:
         seats: [us, nva]
         overrideWindows: []
+      actionClassByActionId:
+        pass: pass
+        boostSupport: operation
+        markFinalCoup: operation
       optionMatrix: []
       passRewards: []
       durationWindows: [turn, nextTurn, round, cycle]

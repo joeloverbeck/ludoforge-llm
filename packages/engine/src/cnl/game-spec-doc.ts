@@ -241,6 +241,7 @@ export interface GameSpecTurnFlowPivotal {
 export interface GameSpecTurnFlow {
   readonly cardLifecycle: GameSpecTurnFlowCardLifecycle;
   readonly eligibility: GameSpecTurnFlowEligibility;
+  readonly actionClassByActionId: Readonly<Record<string, GameSpecTurnFlowActionClass>>;
   readonly optionMatrix: readonly GameSpecTurnFlowOptionMatrixRow[];
   readonly passRewards: readonly GameSpecTurnFlowPassReward[];
   readonly freeOperationActionIds?: readonly string[];

@@ -48,7 +48,7 @@ export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameSta
     return true;
   }
 
-  const moveClass = resolveTurnFlowActionClass(move);
+  const moveClass = resolveTurnFlowActionClass(def, move);
   if (moveClass === 'pass') {
     return true;
   }
@@ -161,7 +161,7 @@ function moveMatchesSelector(def: GameDef, move: Move, selector: TurnFlowInterru
     return false;
   }
 
-  if (selector.actionClass !== undefined && selector.actionClass !== resolveTurnFlowActionClass(move)) {
+  if (selector.actionClass !== undefined && selector.actionClass !== resolveTurnFlowActionClass(def, move)) {
     return false;
   }
 

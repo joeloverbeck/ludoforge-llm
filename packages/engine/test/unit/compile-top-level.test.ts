@@ -7,6 +7,7 @@ import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 const minimalCardDrivenTurnFlow = {
   cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
   eligibility: { seats: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
+  actionClassByActionId: { pass: 'pass' } as const,
   optionMatrix: [],
   passRewards: [],
   durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
@@ -305,6 +306,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               seats: ['us', 'arvn', 'nva', 'vc'],
               overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' as const }],
             },
+            actionClassByActionId: { pass: 'pass' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
             passRewards: [
               { seatClass: 'coin', resource: 'arvnResources', amount: 3 },
@@ -419,6 +421,51 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ),
       true,
     );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING' &&
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId',
+      ),
+      true,
+    );
+  });
+
+  it('returns blocking diagnostics when turnFlow.actionClassByActionId references unknown actions', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-action-class-xref-invalid', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['us'], overrideWindows: [] },
+            actionClassByActionId: { unknownAction: 'operation' as const, pass: 'pass' as const },
+            optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_ACTION_MISSING' &&
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.unknownAction',
+      ),
+      true,
+    );
   });
 
   it('returns blocking diagnostics for unresolved turnFlow ordering metadata', () => {
@@ -436,6 +483,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               seats: ['us', 'arvn', 'us'],
               overrideWindows: [],
             },
+            actionClassByActionId: { pass: 'pass' as const, pivotalA: 'event' as const, pivotalB: 'event' as const },
             optionMatrix: [
               { first: 'event' as const, second: ['operation'] as const },
               { first: 'event' as const, second: ['operationPlusSpecialActivity'] as const },
@@ -892,6 +940,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               seats: ['us', 'arvn', 'nva', 'vc'],
               overrideWindows: [],
             },
+            actionClassByActionId: { pass: 'pass' as const, pivotalA: 'event' as const, pivotalB: 'event' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,

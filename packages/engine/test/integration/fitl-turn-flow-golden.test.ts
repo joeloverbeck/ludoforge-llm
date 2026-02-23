@@ -62,6 +62,15 @@ const createDef = (): GameDef =>
             seats: ['0', '1', '2', '3'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
+          actionClassByActionId: {
+            pass: 'pass',
+            event: 'event',
+            operation: 'operation',
+            operationPlusSpecialActivity: 'operationPlusSpecialActivity',
+            sweep: 'operation',
+            airLift: 'operationPlusSpecialActivity',
+            pivotalEvent: 'event',
+          },
           optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
           passRewards: [
             { seatClass: '0', resource: 'res0', amount: 1 },

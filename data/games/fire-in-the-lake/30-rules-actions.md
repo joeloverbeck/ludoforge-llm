@@ -29,6 +29,11 @@ turnOrder:
             duration: turn
           - id: vc-special-window
             duration: turn
+      actionClassByActionId:
+        pass: pass
+        event: event
+        usOp: operation
+        arvnOp: operation
       optionMatrix:
         - first: operation
           second: [limitedOperation]

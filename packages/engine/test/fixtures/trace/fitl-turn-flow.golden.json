@@ -3,40 +3,47 @@
   "initialLegalMoves": [
     {
       "actionId": "pass",
-      "params": {}
+      "params": {},
+      "actionClass": "pass"
     },
     {
       "actionId": "event",
       "params": {
         "eventCardId": "card-overrides",
         "side": "unshaded"
-      }
+      },
+      "actionClass": "event"
     },
     {
       "actionId": "operation",
-      "params": {}
+      "params": {},
+      "actionClass": "operation"
     },
     {
       "actionId": "operationPlusSpecialActivity",
-      "params": {}
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
     },
     {
       "actionId": "airLift",
       "params": {
         "spaces": 1
-      }
+      },
+      "actionClass": "operationPlusSpecialActivity"
     },
     {
       "actionId": "airLift",
       "params": {
         "spaces": 2
-      }
+      },
+      "actionClass": "operationPlusSpecialActivity"
     },
     {
       "actionId": "pivotalEvent",
       "params": {
         "override": "monsoonPivotalAllowed"
-      }
+      },
+      "actionClass": "event"
     }
   ],
   "steps": [

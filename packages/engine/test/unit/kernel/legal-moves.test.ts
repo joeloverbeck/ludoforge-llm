@@ -193,6 +193,11 @@ phase: [asPhaseId('main')],
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            actionClassByActionId: {
+              pass: 'pass',
+              operation: 'operation',
+              limitedOperation: 'limitedOperation',
+            },
             optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

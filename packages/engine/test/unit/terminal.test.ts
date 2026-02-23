@@ -182,6 +182,7 @@ describe('terminalResult', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -247,6 +248,7 @@ describe('terminalResult', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

@@ -111,6 +111,18 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   }
 
   if (cardDrivenTurnFlow !== null) {
+    for (const [actionId, mappedClass] of Object.entries(cardDrivenTurnFlow.actionClassByActionId)) {
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_TURN_FLOW_ACTION_CLASS_ACTION_MISSING',
+        `doc.turnOrder.config.turnFlow.actionClassByActionId.${actionId}`,
+        actionId,
+        actionTargets,
+        `turnFlow.actionClassByActionId maps unknown action "${actionId}" to class "${mappedClass}".`,
+        'Use one of the declared action ids.',
+      );
+    }
+
     for (const [actionIndex, actionId] of (cardDrivenTurnFlow.freeOperationActionIds ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,

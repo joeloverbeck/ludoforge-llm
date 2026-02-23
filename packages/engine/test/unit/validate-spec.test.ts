@@ -759,6 +759,7 @@ describe('validateGameSpec structural rules', () => {
               seats: ['us', 'arvn', 'nva', 'vc'],
               overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
             },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
             passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: 3 }],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -782,6 +783,7 @@ describe('validateGameSpec structural rules', () => {
               seats: ['us', ''],
               overrideWindows: [{ id: 'window-a', duration: 'season' }],
             },
+            actionClassByActionId: { pass: 'pass' },
             optionMatrix: [{ first: 'event', second: ['operation', 'invalid'] }],
             passRewards: [{ seatClass: 'coin', resource: 'arvnResources', amount: '3' }],
             durationWindows: ['cycle', 'epoch'],
@@ -804,6 +806,37 @@ describe('validateGameSpec structural rules', () => {
     );
     assert.equal(
       diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.durationWindows.1'),
+      true,
+    );
+  });
+
+  it('reports malformed turnFlow.actionClassByActionId entries with explicit nested paths', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              seats: ['us', 'arvn'],
+              overrideWindows: [],
+            },
+            actionClassByActionId: { pass: 'pass', train: 'invalidClass' },
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.train' &&
+          diagnostic.code === 'CNL_VALIDATOR_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+      ),
       true,
     );
   });

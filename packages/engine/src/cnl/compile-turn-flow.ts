@@ -111,13 +111,23 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
 }
 
 function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]): TurnFlowDef | undefined {
+  const TURN_FLOW_ACTION_CLASS_VALUES = [
+    'pass',
+    'event',
+    'operation',
+    'limitedOperation',
+    'operationPlusSpecialActivity',
+  ] as const;
+  const isTurnFlowActionClass = (value: unknown): value is TurnFlowDef['optionMatrix'][number]['second'][number] =>
+    typeof value === 'string' && (TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(value);
+
   if (!isRecord(rawTurnFlow)) {
     diagnostics.push({
       code: 'CNL_COMPILER_TURN_FLOW_INVALID',
       path: 'doc.turnOrder.config.turnFlow',
       severity: 'error',
       message: 'cardDriven turnFlow must be an object when declared.',
-      suggestion: 'Provide turnFlow.cardLifecycle, eligibility, optionMatrix, passRewards, and durationWindows.',
+      suggestion: 'Provide turnFlow.cardLifecycle, eligibility, actionClassByActionId, optionMatrix, passRewards, and durationWindows.',
     });
     return undefined;
   }
@@ -174,6 +184,16 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     });
   }
 
+  if (!isRecord(rawTurnFlow.actionClassByActionId)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: 'doc.turnOrder.config.turnFlow.actionClassByActionId',
+      severity: 'error',
+      message: 'turnFlow.actionClassByActionId is required and must be an object.',
+      suggestion: `Define actionClassByActionId values from: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
+    });
+  }
+
   if (
     !isRecord(cardLifecycle) ||
     typeof cardLifecycle.played !== 'string' ||
@@ -182,6 +202,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     !isRecord(eligibility) ||
     !Array.isArray(eligibility.seats) ||
     !Array.isArray(eligibility.overrideWindows) ||
+    !isRecord(rawTurnFlow.actionClassByActionId) ||
     !Array.isArray(rawTurnFlow.optionMatrix) ||
     !Array.isArray(rawTurnFlow.passRewards) ||
     (rawTurnFlow.freeOperationActionIds !== undefined && !Array.isArray(rawTurnFlow.freeOperationActionIds)) ||
@@ -201,6 +222,26 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         severity: 'error',
         message: 'turnFlow.freeOperationActionIds entries must be non-empty strings.',
         suggestion: 'Replace invalid entry with an action id string.',
+      });
+    }
+  }
+  for (const [actionId, actionClass] of Object.entries(rawTurnFlow.actionClassByActionId)) {
+    if (actionId.trim() === '') {
+      diagnostics.push({
+        code: 'CNL_COMPILER_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+        path: 'doc.turnOrder.config.turnFlow.actionClassByActionId',
+        severity: 'error',
+        message: 'turnFlow.actionClassByActionId keys must be non-empty action ids.',
+        suggestion: 'Replace empty keys with declared action ids.',
+      });
+    }
+    if (!isTurnFlowActionClass(actionClass)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+        path: `doc.turnOrder.config.turnFlow.actionClassByActionId.${actionId}`,
+        severity: 'error',
+        message: 'turnFlow.actionClassByActionId contains an invalid action class.',
+        suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
       });
     }
   }

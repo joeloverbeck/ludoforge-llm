@@ -50,6 +50,12 @@ const createDef = (): GameDef =>
             seats: ['0', '1', '2', '3'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
+          actionClassByActionId: {
+            pass: 'pass',
+            event: 'event',
+            operation: 'operation',
+            operationPlusSpecialActivity: 'operationPlusSpecialActivity',
+          },
           optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -222,6 +228,12 @@ const createEventTraceDef = (): GameDef =>
           eligibility: {
             seats: ['0', '1', '2', '3'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
+          },
+          actionClassByActionId: {
+            pass: 'pass',
+            event: 'event',
+            operation: 'operation',
+            operationPlusSpecialActivity: 'operationPlusSpecialActivity',
           },
           optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
           passRewards: [],

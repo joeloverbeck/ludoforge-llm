@@ -76,7 +76,7 @@ const tryPushOptionMatrixFilteredMove = (
 ): boolean => {
   const constrainedClasses = resolveConstrainedSecondEligibleActionClasses(def, state);
   const variants: Move[] = [];
-  const baseClass = resolveTurnFlowActionClass(move);
+  const baseClass = resolveTurnFlowActionClass(def, move);
   if (constrainedClasses !== null && String(action.id) !== 'pass' && !isCardEventAction(action) && baseClass === null) {
     for (const actionClass of constrainedClasses) {
       if (actionClass === 'event' || actionClass === 'pass') {
@@ -88,7 +88,14 @@ const tryPushOptionMatrixFilteredMove = (
       });
     }
   } else {
-    variants.push(move);
+    variants.push(
+      baseClass !== null && move.actionClass === undefined
+        ? {
+            ...move,
+            actionClass: baseClass,
+          }
+        : move,
+    );
   }
 
   for (const variant of variants) {

@@ -33,6 +33,13 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+          actionClassByActionId: {
+            pass: 'pass',
+            event: 'event',
+            operation: 'operation',
+            limitedOperation: 'limitedOperation',
+            operationPlusSpecialActivity: 'operationPlusSpecialActivity',
+          },
           optionMatrix: [
             { first: 'event', second: ['operation', 'operationPlusSpecialActivity'] },
             { first: 'operation', second: ['limitedOperation'] },

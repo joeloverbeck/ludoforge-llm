@@ -523,7 +523,7 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
       path: 'doc.turnOrder.config.turnFlow',
       severity: 'error',
       message: 'turnOrder.config.turnFlow must be an object.',
-      suggestion: 'Provide turnFlow.cardLifecycle, eligibility, optionMatrix, passRewards, and durationWindows.',
+      suggestion: 'Provide turnFlow.cardLifecycle, eligibility, actionClassByActionId, optionMatrix, passRewards, and durationWindows.',
     });
     return;
   }
@@ -617,6 +617,37 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
           diagnostics,
           'override window',
         );
+      }
+    }
+  }
+
+  if (!isRecord(turnFlow.actionClassByActionId)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+      path: 'doc.turnOrder.config.turnFlow.actionClassByActionId',
+      severity: 'error',
+      message: 'turnFlow.actionClassByActionId must be an object mapping action ids to action classes.',
+      suggestion: `Set actionClassByActionId to entries with values from: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
+    });
+  } else {
+    for (const [actionId, actionClass] of Object.entries(turnFlow.actionClassByActionId)) {
+      if (actionId.trim() === '') {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+          path: 'doc.turnOrder.config.turnFlow.actionClassByActionId',
+          severity: 'error',
+          message: 'actionClassByActionId keys must be non-empty action ids.',
+          suggestion: 'Replace empty keys with declared action ids.',
+        });
+      }
+      if (typeof actionClass !== 'string' || !TURN_FLOW_ACTION_CLASS_VALUES.includes(actionClass)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+          path: `doc.turnOrder.config.turnFlow.actionClassByActionId.${actionId}`,
+          severity: 'error',
+          message: 'actionClassByActionId contains an invalid action class.',
+          suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
+        });
       }
     }
   }

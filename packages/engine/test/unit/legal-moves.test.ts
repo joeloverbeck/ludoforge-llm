@@ -307,6 +307,13 @@ describe('legalMoves', () => {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            actionClassByActionId: {
+              pass: 'pass',
+              event: 'event',
+              operation: 'operation',
+              limitedOperation: 'limitedOperation',
+              operationPlusSpecialActivity: 'operationPlusSpecialActivity',
+            },
             optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -412,6 +419,12 @@ phase: [asPhaseId('main')],
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+            actionClassByActionId: {
+              pass: 'pass',
+              event: 'event',
+              operation: 'operation',
+              limitedOperation: 'limitedOperation',
+            },
             optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

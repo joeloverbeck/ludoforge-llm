@@ -78,6 +78,7 @@ export interface TurnFlowPivotalDef {
 export interface TurnFlowDef {
   readonly cardLifecycle: TurnFlowCardLifecycleDef;
   readonly eligibility: TurnFlowEligibilityDef;
+  readonly actionClassByActionId: Readonly<Record<string, TurnFlowActionClass>>;
   readonly optionMatrix: readonly TurnFlowOptionMatrixRowDef[];
   readonly passRewards: readonly TurnFlowPassRewardDef[];
   readonly freeOperationActionIds?: readonly string[];

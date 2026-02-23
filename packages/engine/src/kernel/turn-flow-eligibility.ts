@@ -42,12 +42,16 @@ const isTurnFlowActionClass = (
   value === 'limitedOperation' ||
   value === 'operationPlusSpecialActivity';
 
-export const resolveTurnFlowActionClass = (move: Move): 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | null => {
+export const resolveTurnFlowActionClass = (
+  def: GameDef,
+  move: Move,
+): 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | null => {
   if (typeof move.actionClass === 'string' && isTurnFlowActionClass(move.actionClass)) {
     return move.actionClass;
   }
   const actionId = String(move.actionId);
-  return isTurnFlowActionClass(actionId) ? actionId : null;
+  const mapped = cardDrivenConfig(def)?.turnFlow.actionClassByActionId?.[actionId];
+  return typeof mapped === 'string' && isTurnFlowActionClass(mapped) ? mapped : null;
 };
 
 const normalizeFirstActionClass = (
@@ -274,16 +278,12 @@ const grantActionIds = (
 ): readonly string[] => grant.actionIds ?? (cardDrivenConfig(def)?.turnFlow.freeOperationActionIds ?? []);
 
 const moveOperationClass = (
+  def: GameDef,
   move: Move,
 ): TurnFlowPendingFreeOperationGrant['operationClass'] => {
-  if (
-    move.actionClass === 'pass' ||
-    move.actionClass === 'event' ||
-    move.actionClass === 'operation' ||
-    move.actionClass === 'limitedOperation' ||
-    move.actionClass === 'operationPlusSpecialActivity'
-  ) {
-    return move.actionClass;
+  const resolved = resolveTurnFlowActionClass(def, move);
+  if (resolved !== null) {
+    return resolved;
   }
   return 'operation';
 };
@@ -310,7 +310,7 @@ const doesGrantApplyToMove = (
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
-  grant.operationClass === moveOperationClass(move) &&
+  grant.operationClass === moveOperationClass(def, move) &&
   grantActionIds(def, grant).includes(String(move.actionId));
 
 const doesGrantAuthorizeMove = (
@@ -643,7 +643,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     nonPassCount += 1;
   }
 
-  const moveClass = resolveTurnFlowActionClass(move);
+  const moveClass = resolveTurnFlowActionClass(def, move);
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
   const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeSeat, runtime.seatOrder);
   const newFreeOpGrants = extractPendingFreeOperationGrants(

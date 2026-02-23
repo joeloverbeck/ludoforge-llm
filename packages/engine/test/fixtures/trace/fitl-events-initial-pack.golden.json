@@ -3,19 +3,23 @@
   "initialLegalMoves": [
     {
       "actionId": "pass",
-      "params": {}
+      "params": {},
+      "actionClass": "pass"
     },
     {
       "actionId": "event",
-      "params": {}
+      "params": {},
+      "actionClass": "event"
     },
     {
       "actionId": "operation",
-      "params": {}
+      "params": {},
+      "actionClass": "operation"
     },
     {
       "actionId": "operationPlusSpecialActivity",
-      "params": {}
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
     }
   ],
   "selectedMove": {

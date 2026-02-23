@@ -40,6 +40,7 @@ function createRichCompilableDoc(): GameSpecDoc {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
+          actionClassByActionId: { act: 'operation' },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
           passRewards: [{ seatClass: 'coin', resource: 'resources', amount: 2 }],
           durationWindows: ['turn' as const],

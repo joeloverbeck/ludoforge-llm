@@ -40,7 +40,7 @@ function createRichCompilableDoc(): GameSpecDoc {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
-          actionClassByActionId: { act: 'operation' },
+          actionClassByActionId: { act: 'operation', pass: 'pass', event: 'event' },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
           passRewards: [{ seatClass: 'coin', resource: 'resources', amount: 2 }],
           durationWindows: ['turn' as const],
@@ -58,6 +58,17 @@ phase: ['main'],
         pre: null,
         cost: [],
         effects: [{ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }],
+        limits: [],
+      },
+      {
+        id: 'pass',
+        actor: 'active',
+        executor: 'actor',
+        phase: ['main'],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
         limits: [],
       },
     ],
@@ -329,6 +340,111 @@ describe('crossValidateSpec', () => {
         (entry) =>
           entry.code === 'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING' &&
           entry.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.0.canceled.actionId',
+      ),
+      true,
+    );
+  });
+
+  it('card-driven specs with a declared pass action require pass -> pass mapping', () => {
+    const sections = compileRichSections();
+    const action = requireValue(sections.actions?.[0]);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      actions: [
+        action,
+        {
+          ...action,
+          id: asActionId('pass'),
+        },
+      ],
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            actionClassByActionId: { act: 'operation' },
+          },
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISSING' &&
+          entry.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.pass',
+      ),
+      true,
+    );
+  });
+
+  it('card-event actions require event action-class mapping', () => {
+    const sections = compileRichSections();
+    const action = requireValue(sections.actions?.[0]);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      actions: [
+        action,
+        {
+          ...action,
+          id: asActionId('playEvent'),
+          capabilities: ['cardEvent'],
+        },
+      ],
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            actionClassByActionId: { act: 'operation', playEvent: 'operation' },
+          },
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH' &&
+          entry.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.playEvent',
+      ),
+      true,
+    );
+  });
+
+  it('pivotal action ids require event action-class mapping', () => {
+    const sections = compileRichSections();
+    const action = requireValue(sections.actions?.[0]);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            pivotal: {
+              actionIds: ['act'],
+            },
+          },
+        },
+      },
+      actions: [action],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH' &&
+          entry.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.act',
       ),
       true,
     );

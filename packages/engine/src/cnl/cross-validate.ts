@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
+import { buildCardDrivenTurnFlowSemanticRequirements } from '../kernel/turn-flow-contract.js';
 import {
   evaluateActionSelectorContracts,
   getActionSelectorContract,
@@ -158,6 +159,48 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           `Pivotal interrupt cancellation canceled selector references unknown action "${rule.canceled.actionId}".`,
           'Use one of the declared action ids.',
         );
+      }
+    }
+
+    if (sections.actions !== null) {
+      const actionIds = new Set(sections.actions.map((action) => String(action.id)));
+      const semanticRequirements = buildCardDrivenTurnFlowSemanticRequirements(
+        sections.actions.map((action) => ({
+          id: String(action.id),
+          ...(action.capabilities === undefined ? {} : { capabilities: action.capabilities }),
+        })),
+        {
+          ...(cardDrivenTurnFlow.pivotal?.actionIds === undefined
+            ? {}
+            : { pivotalActionIds: cardDrivenTurnFlow.pivotal.actionIds }),
+        },
+      );
+
+      for (const requirement of semanticRequirements.classRequirements) {
+        if (!actionIds.has(requirement.actionId)) {
+          continue;
+        }
+        const path = `doc.turnOrder.config.turnFlow.actionClassByActionId.${requirement.actionId}`;
+        const mappedClass = cardDrivenTurnFlow.actionClassByActionId[requirement.actionId];
+        if (mappedClass === undefined) {
+          diagnostics.push({
+            code: 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISSING',
+            path,
+            severity: 'error',
+            message: `turnFlow.actionClassByActionId must include required action "${requirement.actionId}".`,
+            suggestion: `Add "${requirement.actionId}: ${requirement.requiredClass}" to actionClassByActionId.`,
+          });
+          continue;
+        }
+        if (mappedClass !== requirement.requiredClass) {
+          diagnostics.push({
+            code: 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH',
+            path,
+            severity: 'error',
+            message: `turnFlow.actionClassByActionId maps "${requirement.actionId}" to "${mappedClass}" but must be "${requirement.requiredClass}".`,
+            suggestion: `Set "${requirement.actionId}" to "${requirement.requiredClass}" in actionClassByActionId.`,
+          });
+        }
       }
     }
   }

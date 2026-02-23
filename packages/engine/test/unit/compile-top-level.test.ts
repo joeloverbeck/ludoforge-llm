@@ -503,6 +503,136 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('returns blocking diagnostics when declared pass action is not mapped to pass', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-pass-mapping-required', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            actionClassByActionId: {},
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISSING'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.pass',
+      ),
+      true,
+    );
+  });
+
+  it('returns blocking diagnostics when card-event action is not mapped to event', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-event-mapping-required', players: { min: 2, max: 4 } },
+      zones: [
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'discard:none', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            actionClassByActionId: { pass: 'pass' as const, playEvent: 'operation' as const },
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        {
+          id: 'playEvent',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          capabilities: ['cardEvent'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      eventDecks: [
+        {
+          id: 'core',
+          drawZone: 'deck:none',
+          discardZone: 'discard:none',
+          cards: [{ id: 'c1', title: 'C1', sideMode: 'single' as const, unshaded: { effects: [] } }],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.playEvent',
+      ),
+      true,
+    );
+  });
+
+  it('returns blocking diagnostics when pivotal action ids are not mapped to event', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-pivotal-mapping-required', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            actionClassByActionId: { pass: 'pass' as const, pivotalA: 'operation' as const },
+            pivotal: {
+              actionIds: ['pivotalA'],
+            },
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId.pivotalA',
+      ),
+      true,
+    );
+  });
+
   it('returns blocking diagnostics for unresolved turnFlow ordering metadata', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

@@ -21,6 +21,11 @@ export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameSta
     return true;
   }
 
+  const interruptPhases = def.turnStructure.interrupts?.map((phase) => String(phase.id)) ?? [];
+  if (interruptPhases.includes(String(state.currentPhase))) {
+    return true;
+  }
+
   const firstActionClass = runtime.currentCard.firstActionClass;
   if (runtime.currentCard.nonPassCount !== 1 || firstActionClass === null) {
     return true;

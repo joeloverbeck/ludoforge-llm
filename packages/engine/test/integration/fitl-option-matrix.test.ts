@@ -11,6 +11,8 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
@@ -102,6 +104,24 @@ phase: [asPhaseId('main')],
   }) as unknown as GameDef;
 
 describe('FITL option matrix integration', () => {
+  it('compiles production FITL spec with Rule 2.3.4 option matrix rows', () => {
+    const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.deepEqual(validatorDiagnostics, []);
+    const compileErrors = compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+    assert.deepEqual(compileErrors, []);
+    assert.notEqual(compiled.gameDef, null);
+    assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven');
+
+    const turnFlow = compiled.gameDef?.turnOrder?.type === 'cardDriven' ? compiled.gameDef.turnOrder.config.turnFlow : null;
+    assert.notEqual(turnFlow, null);
+    assert.deepEqual(turnFlow?.optionMatrix, [
+      { first: 'operation', second: ['limitedOperation'] },
+      { first: 'operationPlusSpecialActivity', second: ['limitedOperation', 'event'] },
+      { first: 'event', second: ['operation', 'operationPlusSpecialActivity'] },
+    ]);
+  });
+
   it('gates second eligible legal moves after first eligible resolves event', () => {
     const def = createDef();
     const start = initialState(def, 31, 3).state;

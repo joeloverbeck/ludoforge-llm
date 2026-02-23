@@ -9816,7 +9816,28 @@
             }
           ]
         },
-        "optionMatrix": [],
+        "optionMatrix": [
+          {
+            "first": "operation",
+            "second": [
+              "limitedOperation"
+            ]
+          },
+          {
+            "first": "operationPlusSpecialActivity",
+            "second": [
+              "limitedOperation",
+              "event"
+            ]
+          },
+          {
+            "first": "event",
+            "second": [
+              "operation",
+              "operationPlusSpecialActivity"
+            ]
+          }
+        ],
         "passRewards": [],
         "freeOperationActionIds": [
           "train",

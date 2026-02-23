@@ -29,7 +29,13 @@ turnOrder:
             duration: turn
           - id: vc-special-window
             duration: turn
-      optionMatrix: []
+      optionMatrix:
+        - first: operation
+          second: [limitedOperation]
+        - first: operationPlusSpecialActivity
+          second: [limitedOperation, event]
+        - first: event
+          second: [operation, operationPlusSpecialActivity]
       passRewards: []
       freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
       durationWindows: [turn, nextTurn, round, cycle]

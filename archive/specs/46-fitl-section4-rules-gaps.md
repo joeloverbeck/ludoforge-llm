@@ -1,6 +1,6 @@
 # Spec 46: FITL Section 4 Rules Gaps
 
-**Status**: Not started
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs)
@@ -547,3 +547,10 @@ All existing FITL compilation tests must continue to pass after YAML changes:
 
 - Texas Hold'em compilation tests must still pass (engine-agnosticism check)
 - No new kernel or compiler source files created or modified
+
+## Outcome
+
+- Completion date: 2026-02-24
+- What was changed: Implemented all six Section 4 gap fixes defined in this spec (FITLSEC4RULGAP-001 through FITLSEC4RULGAP-006) as data-only updates in FITL game YAML (`30-rules-actions.md`), preserving engine-agnostic behavior.
+- Deviations from original plan: None documented.
+- Verification results: Behavior and compilation/test verification were completed during implementation of this spec; no additional re-verification was performed during this archival step.

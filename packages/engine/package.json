@@ -37,8 +37,8 @@
     "test:e2e": "node --test \"dist/test/e2e/**/*.test.js\"",
     "test:e2e:slow": "RUN_SLOW_E2E=1 node --test \"dist/test/e2e/texas-holdem-tournament.test.js\"",
     "test:e2e:all": "RUN_SLOW_E2E=1 node --test \"dist/test/e2e/**/*.test.js\"",
-    "test": "pnpm run schema:artifacts:check && node --test \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\"",
-    "test:all": "node --test \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
+    "test": "pnpm run schema:artifacts:check && node scripts/run-tests.mjs",
+    "test:all": "node scripts/run-tests.mjs \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
   },
   "dependencies": {
     "yaml": "^2.8.0",

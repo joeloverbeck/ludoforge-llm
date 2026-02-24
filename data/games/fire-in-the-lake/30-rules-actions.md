@@ -4657,11 +4657,7 @@ actionPipelines:
                             left: { ref: zoneProp, zone: $space, prop: population }
                             right: 2
                       - if:
-                          when:
-                            op: and
-                            args:
-                              - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
-                              - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
+                          when: { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
                           then:
                             - shiftMarker: { space: $space, marker: supportOpposition, delta: 1 }
       - stage: tax-telemetry

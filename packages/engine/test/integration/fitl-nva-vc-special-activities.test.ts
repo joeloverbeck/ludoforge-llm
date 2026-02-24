@@ -11,6 +11,7 @@ import {
   type MapPayload,
   type Token,
 } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
@@ -434,6 +435,125 @@ describe('FITL NVA/VC special activities integration', () => {
       1,
     );
     assert.equal(final.markers[provinceSpace]?.supportOpposition, 'passiveSupport', 'Tax should shift province/city one level toward Active Support');
+  });
+
+  it('defines Tax province/city support shift without a population gate', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const taxPipeline = (def.actionPipelines ?? []).find((pipeline) => String(pipeline.actionId) === 'tax');
+    assert.ok(taxPipeline, 'Tax pipeline should exist');
+
+    const resolveStage = taxPipeline!.stages.find((stage) => stage.stage === 'resolve-per-space');
+    assert.ok(resolveStage, 'Tax should include resolve-per-space stage');
+
+    const supportShiftBranches = findDeep(resolveStage!.effects, (node: unknown) => {
+      const candidate = node as { if?: { when?: unknown; then?: unknown[] } };
+      return candidate.if !== undefined &&
+        findDeep(candidate.if.then ?? [], (inner: unknown) => {
+          const innerCandidate = inner as { shiftMarker?: { marker?: unknown } };
+          return innerCandidate.shiftMarker?.marker === 'supportOpposition';
+        }).length > 0;
+    });
+    assert.equal(supportShiftBranches.length, 1, 'Tax resolve should include exactly one support shift branch');
+
+    const supportShiftWhen = (supportShiftBranches[0] as { if: { when: unknown } }).if.when;
+    assert.deepEqual(
+      supportShiftWhen,
+      { op: '!=', left: { ref: 'markerState', space: '$space', marker: 'supportOpposition' }, right: 'activeSupport' },
+      'Tax support shift should only guard against activeSupport',
+    );
+    assert.equal(
+      findDeep(supportShiftWhen, (node: unknown) => {
+        const candidate = node as { ref?: unknown; prop?: unknown };
+        return candidate.ref === 'zoneProp' && candidate.prop === 'population';
+      }).length,
+      0,
+      'Tax support shift guard must not reference population',
+    );
+  });
+
+  it('executes tax support shift for population-0 provinces', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const pop0Province = 'phuoc-long:none';
+    const pop0Values = getMapSpace(pop0Province);
+    assert.equal(pop0Values.population, 0, 'Test setup requires a population-0 province');
+
+    const start = operationInitialState(def, 271, 4);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 3,
+      },
+      zones: {
+        ...start.zones,
+        [pop0Province]: [
+          makeToken('tax-pop0-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        ...start.markers,
+        [pop0Province]: {
+          ...(start.markers[pop0Province] ?? {}),
+          supportOpposition: 'passiveSupport',
+        },
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+      actionId: asActionId('tax'),
+      params: {
+        targetSpaces: [pop0Province],
+      },
+    });
+
+    const final = result.state;
+    assert.equal(final.markers[pop0Province]?.supportOpposition, 'activeSupport');
+    assert.equal(final.globalVars.vcResources, 3, 'Population-0 province should add 0 resources while still shifting support');
+  });
+
+  it('does not shift Tax support beyond active support', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const provinceSpace = 'quang-nam:none';
+    const provinceValues = getMapSpace(provinceSpace);
+
+    const start = operationInitialState(def, 281, 4);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 6,
+      },
+      zones: {
+        ...start.zones,
+        [provinceSpace]: [
+          makeToken('tax-active-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        ...start.markers,
+        [provinceSpace]: {
+          ...(start.markers[provinceSpace] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+      actionId: asActionId('tax'),
+      params: {
+        targetSpaces: [provinceSpace],
+      },
+    });
+
+    const final = result.state;
+    assert.equal(final.markers[provinceSpace]?.supportOpposition, 'activeSupport');
+    assert.equal(final.globalVars.vcResources, 6 + (provinceValues.population * 2));
   });
 
   it('executes subvert remove/replace modes and applies rounded-down patronage penalty', () => {

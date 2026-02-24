@@ -59,7 +59,17 @@ describe('resolveBootstrapConfig', () => {
     const { resolveBootstrapConfig } = await importResolver();
     const resolved = resolveBootstrapConfig('?game=fitl');
     const gameDef = await resolved.resolveGameDef();
-    const zones = gameDef.zones;
+    const allZones = gameDef.zones;
+    const internalZones = allZones.filter((zone) => zone.isInternal === true);
+    const zones = allZones.filter((zone) => zone.isInternal !== true);
+
+    expect(allZones).toHaveLength(63);
+    expect(internalZones).toHaveLength(5);
+    for (const zone of internalZones) {
+      expect(zone.zoneKind).toBe('aux');
+      expect(zone.category ?? 'none').toBe('none');
+      expect((zone.adjacentTo ?? []).length).toBe(0);
+    }
 
     expect(zones).toHaveLength(58);
 

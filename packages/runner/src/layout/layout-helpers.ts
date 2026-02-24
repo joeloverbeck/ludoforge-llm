@@ -16,7 +16,7 @@ export function selectPrimaryLayoutZones(def: GameDef): readonly ZoneDef[] {
     return board;
   }
 
-  return def.zones;
+  return def.zones.filter((zone) => zone.isInternal !== true);
 }
 
 export function centerOnOrigin(positions: Map<string, MutablePosition>): void {

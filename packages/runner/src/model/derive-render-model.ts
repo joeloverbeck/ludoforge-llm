@@ -522,6 +522,9 @@ function deriveZones(
   const visibleTokenIDsByZone = new Map<string, readonly string[]>();
 
   for (const zoneDef of def.zones) {
+    if (zoneDef.isInternal === true) {
+      continue;
+    }
     const zoneID = String(zoneDef.id);
     const ownerID = zoneDef.owner === 'player' ? parseOwnerPlayerId(zoneID, state.playerCount) : null;
     if (zoneDef.owner === 'player' && ownerID === null) {
@@ -723,12 +726,19 @@ function deriveAdjacencies(
   highlightedAdjacencyKeys: ReadonlySet<string>,
 ): readonly RenderAdjacency[] {
   const renderedZoneById = new Map(zones.map((zone) => [zone.id, zone] as const));
-  const zoneDefById = new Map(def.zones.map((zone) => [String(zone.id), zone] as const));
+  const zoneDefById = new Map(
+    def.zones
+      .filter((zone) => zone.isInternal !== true)
+      .map((zone) => [String(zone.id), zone] as const),
+  );
   const renderedZoneIDs = new Set(renderedZoneById.keys());
   const deduped = new Set<string>();
   const adjacencies: RenderAdjacency[] = [];
 
   for (const zoneDef of def.zones) {
+    if (zoneDef.isInternal === true) {
+      continue;
+    }
     const from = String(zoneDef.id);
     if (!renderedZoneIDs.has(from)) {
       continue;
@@ -909,6 +919,9 @@ function deriveHighlightedAdjacencyKeys(
   const highlighted = new Set<string>();
 
   for (const zoneDef of def.zones) {
+    if (zoneDef.isInternal === true) {
+      continue;
+    }
     const from = String(zoneDef.id);
     if (!renderedZoneIDs.has(from) || !selectedZoneIDs.has(from)) {
       continue;

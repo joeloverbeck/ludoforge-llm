@@ -124,6 +124,17 @@ describe('scenario deckComposition runtime setup materialization', () => {
     assert.equal(eventsPoolZoneIds.length > 0, true);
     assert.notEqual(coupsPoolZoneId, undefined);
     assert.notEqual(pileWorkZoneId, undefined);
+    const syntheticZoneIds = new Set<string>([
+      ...eventsPoolZoneIds.map((zoneId) => String(zoneId)),
+      String(coupsPoolZoneId),
+      String(pileWorkZoneId),
+    ]);
+    for (const zone of gameDef.zones) {
+      if (!syntheticZoneIds.has(String(zone.id))) {
+        continue;
+      }
+      assert.equal(zone.isInternal, true, `Expected synthetic scenario zone ${String(zone.id)} to be marked internal`);
+    }
     for (const eventsPoolZoneId of eventsPoolZoneIds) {
       assert.equal((initial.state.zones[String(eventsPoolZoneId)] ?? []).length, 0);
     }

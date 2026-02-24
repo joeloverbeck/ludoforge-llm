@@ -58,6 +58,24 @@ describe('materializeZoneDefs', () => {
     assert.deepEqual(result.value.zones[0]?.adjacentTo, [{ to: 'b:none', direction: 'bidirectional' }]);
   });
 
+  it('preserves explicit isInternal zone metadata', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'work',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'set',
+          isInternal: true,
+        },
+      ],
+      2,
+    );
+
+    assertNoDiagnostics(result);
+    assert.equal(result.value.zones[0]?.isInternal, true);
+  });
+
   it('reports invalid adjacency direction with stable path', () => {
     const result = materializeZoneDefs(
       [

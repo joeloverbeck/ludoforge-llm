@@ -10,7 +10,7 @@ interface PartitionedZones {
 }
 
 export function resolveLayoutMode(def: GameDef, provider: VisualConfigProvider): LayoutMode {
-  const hasAnyAdjacency = def.zones.some(hasAdjacency);
+  const hasAnyAdjacency = def.zones.some((zone) => zone.isInternal !== true && hasAdjacency(zone));
   return provider.getLayoutMode(hasAnyAdjacency);
 }
 
@@ -19,6 +19,9 @@ export function partitionZones(def: GameDef): PartitionedZones {
   const aux: ZoneDef[] = [];
 
   for (const zone of def.zones) {
+    if (zone.isInternal === true) {
+      continue;
+    }
     if (zone.zoneKind === 'board') {
       board.push(zone);
       continue;

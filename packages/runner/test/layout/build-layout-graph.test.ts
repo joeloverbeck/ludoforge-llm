@@ -22,6 +22,16 @@ describe('resolveLayoutMode', () => {
     expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('graph');
   });
 
+  it('ignores internal-zone adjacency when auto-detecting layout mode', () => {
+    const def = makeDef([
+      zone('internal-a', { isInternal: true, adjacentTo: [{ to: 'internal-b' }] }),
+      zone('internal-b', { isInternal: true }),
+      zone('visible-a'),
+    ]);
+
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('table');
+  });
+
   it('auto-detects table when zones have no adjacency', () => {
     const def = makeDef([
       zone('a'),
@@ -87,6 +97,19 @@ describe('partitionZones', () => {
 
     expect(def.zones).toBe(zones);
     expect(ids(def.zones)).toEqual(['a', 'b']);
+  });
+
+  it('excludes internal zones from board/aux partitions', () => {
+    const def = makeDef([
+      zone('board-visible', { zoneKind: 'board' }),
+      zone('aux-visible', { zoneKind: 'aux' }),
+      zone('board-internal', { zoneKind: 'board', isInternal: true }),
+      zone('aux-internal', { zoneKind: 'aux', isInternal: true }),
+    ]);
+
+    const partitioned = partitionZones(def);
+    expect(ids(partitioned.board)).toEqual(['board-visible']);
+    expect(ids(partitioned.aux)).toEqual(['aux-visible']);
   });
 });
 
@@ -200,6 +223,7 @@ function makeDef(
 
 interface ZoneOverrides {
   readonly zoneKind?: ZoneDef['zoneKind'];
+  readonly isInternal?: ZoneDef['isInternal'];
   readonly adjacentTo?: ReadonlyArray<
     string
     | {

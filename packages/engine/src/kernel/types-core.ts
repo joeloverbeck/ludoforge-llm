@@ -84,6 +84,7 @@ export interface ZoneAdjacency {
 export interface ZoneDef {
   readonly id: ZoneId;
   readonly zoneKind?: 'board' | 'aux';
+  readonly isInternal?: boolean;
   readonly ownerPlayerIndex?: number;
   readonly owner: 'none' | 'player';
   readonly visibility: 'public' | 'owner' | 'hidden';

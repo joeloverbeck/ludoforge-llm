@@ -112,6 +112,15 @@ export function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): read
     if (zone.zoneKind !== undefined) {
       validateEnumField(zone, 'zoneKind', ['board', 'aux'], basePath, diagnostics, 'zone');
     }
+    if (zone.isInternal !== undefined && typeof zone.isInternal !== 'boolean') {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_ZONE_INTERNAL_FLAG_INVALID',
+        path: `${basePath}.isInternal`,
+        severity: 'error',
+        message: 'zone.isInternal must be a boolean when provided.',
+        suggestion: 'Set isInternal to true or false.',
+      });
+    }
     if ('layoutRole' in zone) {
       diagnostics.push({
         code: 'CNL_VALIDATOR_ZONE_LAYOUT_ROLE_REMOVED',

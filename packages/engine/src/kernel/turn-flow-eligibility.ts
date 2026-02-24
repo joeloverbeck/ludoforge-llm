@@ -53,7 +53,8 @@ const stripStalePendingCardBoundaryTraceEntries = (state: GameState): GameState 
   if (runtime.pendingCardBoundaryTraceEntries === undefined) {
     return state;
   }
-  const { pendingCardBoundaryTraceEntries: _, ...cleanedRuntime } = runtime;
+  const { pendingCardBoundaryTraceEntries, ...cleanedRuntime } = runtime;
+  void pendingCardBoundaryTraceEntries;
   return {
     ...state,
     turnOrderState: {

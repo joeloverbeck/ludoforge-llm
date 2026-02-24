@@ -2447,6 +2447,7 @@
     {
       "id": "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_1:none",
       "zoneKind": "aux",
+      "isInternal": true,
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"
@@ -2454,6 +2455,7 @@
     {
       "id": "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_2:none",
       "zoneKind": "aux",
+      "isInternal": true,
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"
@@ -2461,6 +2463,7 @@
     {
       "id": "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_3:none",
       "zoneKind": "aux",
+      "isInternal": true,
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"
@@ -2468,6 +2471,7 @@
     {
       "id": "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_coups_pool:none",
       "zoneKind": "aux",
+      "isInternal": true,
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"
@@ -2475,6 +2479,7 @@
     {
       "id": "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_pile_work:none",
       "zoneKind": "aux",
+      "isInternal": true,
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"

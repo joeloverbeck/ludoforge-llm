@@ -183,6 +183,9 @@
               }
             ]
           },
+          "isInternal": {
+            "type": "boolean"
+          },
           "ownerPlayerIndex": {
             "type": "integer",
             "minimum": 0,

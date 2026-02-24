@@ -20,7 +20,8 @@ export interface VisualConfigRefError {
 
 export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefValidationContext {
   const edgeCategories = new Set<string>();
-  for (const zone of gameDef.zones) {
+  const presentationZones = gameDef.zones.filter((zone) => zone.isInternal !== true);
+  for (const zone of presentationZones) {
     if (typeof zone.category === 'string' && zone.category.length > 0) {
       edgeCategories.add(zone.category);
     }
@@ -32,7 +33,7 @@ export function buildRefValidationContext(gameDef: GameDef): VisualConfigRefVali
   }
 
   return {
-    zoneIds: new Set(gameDef.zones.map((zone) => String(zone.id))),
+    zoneIds: new Set(presentationZones.map((zone) => String(zone.id))),
     tokenTypeIds: new Set(gameDef.tokenTypes.map((tokenType) => tokenType.id)),
     factionIds: new Set((gameDef.seats ?? []).map((seat) => seat.id)),
     variableNames: new Set([...gameDef.globalVars, ...gameDef.perPlayerVars].map((variable) => variable.name)),

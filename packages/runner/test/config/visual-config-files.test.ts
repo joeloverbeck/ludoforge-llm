@@ -42,6 +42,7 @@ describe('visual-config.yaml files', () => {
   it('FITL visual-config uses canonical runtime ids and expected visual rule chain', () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
     const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake');
+    const internalScenarioDeckZones = fitlGameDef.zones.filter((zone) => zone.isInternal === true);
 
     const boardZoneIds = new Set(
       fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board').map((zone) => zone.id as string),
@@ -52,6 +53,12 @@ describe('visual-config.yaml files', () => {
     expect(overrideKeys.length).toBe(47);
     for (const zoneId of overrideKeys) {
       expect(boardZoneIds.has(zoneId)).toBe(true);
+    }
+    expect(internalScenarioDeckZones.length).toBeGreaterThan(0);
+    for (const zone of internalScenarioDeckZones) {
+      expect(zone.zoneKind).toBe('aux');
+      expect(zone.isInternal).toBe(true);
+      expect(overrideKeys.includes(String(zone.id))).toBe(false);
     }
 
     const layoutRoles = parsed.zones?.layoutRoles ?? {};

@@ -65,6 +65,7 @@ export const ZoneDefSchema = z
   .object({
     id: StringSchema,
     zoneKind: z.union([z.literal('board'), z.literal('aux')]).optional(),
+    isInternal: BooleanSchema.optional(),
     ownerPlayerIndex: IntegerSchema.nonnegative().optional(),
     owner: z.union([z.literal('none'), z.literal('player')]),
     visibility: z.union([z.literal('public'), z.literal('owner'), z.literal('hidden')]),

@@ -118,6 +118,12 @@ describe('validate-visual-config-refs', () => {
           id: 'zone:b',
           adjacentTo: [{ to: 'zone:a', category: 'river' }],
         },
+        {
+          id: 'zone:internal',
+          isInternal: true,
+          category: 'hidden-category',
+          adjacentTo: [{ to: 'zone:a', category: 'hidden-edge' }],
+        },
       ],
       tokenTypes: [{ id: 'tokenA' }],
       seats: [{ id: 'factionA' }],

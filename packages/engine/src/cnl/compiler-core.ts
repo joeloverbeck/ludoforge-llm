@@ -1552,6 +1552,7 @@ function createScenarioDeckSyntheticZone(zoneId: string): ZoneDef {
   return {
     id: asZoneId(zoneId),
     zoneKind: 'aux',
+    isInternal: true,
     owner: 'none',
     visibility: 'hidden',
     ordering: 'set',

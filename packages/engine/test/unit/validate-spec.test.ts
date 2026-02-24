@@ -497,6 +497,30 @@ describe('validateGameSpec structural rules', () => {
     ]);
   });
 
+  it('validates zone isInternal as boolean when provided', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      zones: [
+        {
+          id: 'deck',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+          isInternal: 'true',
+        },
+      ] as unknown as Parameters<typeof validateGameSpec>[0]['zones'],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_ZONE_INTERNAL_FLAG_INVALID'
+          && diagnostic.path === 'doc.zones.0.isInternal',
+      ),
+      true,
+    );
+  });
+
   it('rejects removed metadata visual keys as errors', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

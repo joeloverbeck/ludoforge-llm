@@ -20,6 +20,7 @@ interface CompileFixtureOptions {
     readonly id: string;
     readonly owner: 'none' | 'player';
     readonly zoneKind?: 'board' | 'aux';
+    readonly isInternal?: boolean;
     readonly visibility: 'public' | 'owner' | 'hidden';
     readonly ordering: 'stack' | 'queue' | 'set';
     readonly adjacentTo?: ReadonlyArray<{ readonly to: string; readonly category?: string }>;
@@ -207,6 +208,34 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       visual: { shape: 'rectangle', width: 160, height: 100, color: null },
       metadata: { zoneKind: 'aux' },
     });
+  });
+
+  it('excludes internal zones from rendered zone output', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'public-board',
+          owner: 'none',
+          zoneKind: 'board',
+          visibility: 'public',
+          ordering: 'set',
+        },
+        {
+          id: 'internal-work',
+          owner: 'none',
+          zoneKind: 'aux',
+          isInternal: true,
+          visibility: 'hidden',
+          ordering: 'set',
+        },
+      ],
+    });
+
+    const state = initialState(def, 99, 2).state;
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    expect(model.zones.map((zone) => zone.id)).toEqual(['public-board:none']);
   });
 
   it('does not preserve prior zone references during stabilization when resolved visual changes', () => {

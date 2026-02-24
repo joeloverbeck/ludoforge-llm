@@ -3959,48 +3959,25 @@ actionPipelines:
     stages:
       - stage: select-origin
         effects:
-          - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
-              then:
-                - chooseOne:
-                    bind: $transportOrigin
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, eq: ARVN }
-                                    - { prop: type, op: in, value: [troops, guerrilla] }
-                            right: 0
-              else:
-                - chooseOne:
-                    bind: $transportOrigin
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, eq: ARVN }
-                                    - { prop: type, eq: troops }
-                            right: 0
+          - chooseOne:
+              bind: $transportOrigin
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
+                      right: 0
       - stage: select-destination
         effects:
           - chooseOne:
@@ -4064,44 +4041,23 @@ actionPipelines:
                                     right: 0
       - stage: move-selected-pieces
         effects:
-          - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
-              then:
-                - forEach:
-                    bind: $piece
-                    over:
-                      query: tokensInZone
-                      zone: $transportOrigin
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, op: in, value: [troops, guerrilla] }
-                    limit: 6
-                    effects:
-                      - if:
-                          when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
-                          then:
-                            - moveToken:
-                                token: $piece
-                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                                to: { zoneExpr: { ref: binding, name: $transportDestination } }
-              else:
-                - forEach:
-                    bind: $piece
-                    over:
-                      query: tokensInZone
-                      zone: $transportOrigin
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: troops }
-                    limit: 6
-                    effects:
-                      - if:
-                          when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
-                          then:
-                            - moveToken:
-                                token: $piece
-                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                                to: { zoneExpr: { ref: binding, name: $transportDestination } }
+          - forEach:
+              bind: $piece
+              over:
+                query: tokensInZone
+                zone: $transportOrigin
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, op: in, value: { ref: namedSet, name: ARVNTransportEligibleTypes } }
+              limit: 6
+              effects:
+                - if:
+                    when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
+                    then:
+                      - moveToken:
+                          token: $piece
+                          from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                          to: { zoneExpr: { ref: binding, name: $transportDestination } }
       - stage: flip-rangers-underground
         effects:
           - if:

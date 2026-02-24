@@ -134,7 +134,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     }
   });
 
-  it('applies cap_armoredCavalry shaded to move Rangers (inactive/unshaded remain troop-only)', () => {
+  it('moves Rangers in all cap_armoredCavalry states, with shaded flipping moved Rangers underground', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -169,7 +169,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       );
       assert.equal(
         countTokens(state, destination, (token) => token.props.faction === 'ARVN' && token.type === 'guerrilla'),
-        0,
+        1,
       );
     }
 
@@ -181,7 +181,11 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       countTokens(shaded, destination, (token) => token.props.faction === 'ARVN' && token.type === 'guerrilla'),
       1,
     );
+    const inactiveRanger = (inactive.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-inactive-ranger'));
+    const unshadedRanger = (unshaded.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-unshaded-ranger'));
     const movedRanger = (shaded.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-shaded-ranger'));
+    assert.equal(inactiveRanger?.props.activity, 'active', 'Inactive cap_armoredCavalry should move Rangers without shaded-only flip');
+    assert.equal(unshadedRanger?.props.activity, 'active', 'Unshaded cap_armoredCavalry should move Rangers without shaded-only flip');
     assert.equal(movedRanger?.props.activity, 'underground', 'cap_armoredCavalry shaded should move Rangers and flip them underground');
   });
 

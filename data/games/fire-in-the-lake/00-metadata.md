@@ -16,4 +16,7 @@ metadata:
     Insurgent:
       - NVA
       - VC
+    ARVNTransportEligibleTypes:
+      - troops
+      - guerrilla
 ```

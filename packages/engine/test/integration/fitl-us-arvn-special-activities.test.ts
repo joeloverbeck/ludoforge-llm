@@ -387,7 +387,7 @@ describe('FITL US/ARVN special activities integration', () => {
     );
   });
 
-  it('executes baseline Transport moving ARVN troops only when cap_armoredCavalry is inactive', () => {
+  it('executes baseline Transport moving ARVN troops and Rangers when cap_armoredCavalry is inactive', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -429,7 +429,7 @@ describe('FITL US/ARVN special activities integration', () => {
     );
     const movedRanger = (final.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-arvn-r1'));
     const remoteRanger = (final.zones[remote] ?? []).find((token) => token.id === asTokenId('transport-remote-ranger'));
-    assert.equal(movedRanger, undefined, 'Baseline Transport should not move Rangers without cap_armoredCavalry shaded');
+    assert.notEqual(movedRanger, undefined, 'Baseline Transport should move ARVN Rangers from origin to destination');
     assert.equal(remoteRanger?.props.activity, 'active', 'Baseline Transport should not flip unrelated Rangers');
   });
 

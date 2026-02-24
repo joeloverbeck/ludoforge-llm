@@ -53,6 +53,24 @@ const containsFloorDivOp = (value: unknown): boolean => {
   return false;
 };
 
+const containsSetActivityActive = (value: unknown): boolean => {
+  if (Array.isArray(value)) {
+    return value.some((entry) => containsSetActivityActive(entry));
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Readonly<Record<string, unknown>>;
+    const setTokenProp = record.setTokenProp;
+    if (setTokenProp && typeof setTokenProp === 'object' && !Array.isArray(setTokenProp)) {
+      const setTokenPropRecord = setTokenProp as Readonly<Record<string, unknown>>;
+      if (setTokenPropRecord.prop === 'activity' && setTokenPropRecord.value === 'active') {
+        return true;
+      }
+    }
+    return Object.values(record).some((entry) => containsSetActivityActive(entry));
+  }
+  return false;
+};
+
 const getMapSpace = (spaceId: string): { readonly population: number; readonly econ: number } => {
   const { parsed } = compileProductionSpec();
   const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
@@ -377,6 +395,16 @@ describe('FITL NVA/VC special activities integration', () => {
       true,
       'Subvert patronage penalty should be encoded using floorDiv instead of threshold branching',
     );
+    assert.notEqual(
+      subvertPipeline.legality,
+      null,
+      'Subvert should encode base legality at profile level instead of relying only on selection-stage filtering',
+    );
+    assert.equal(
+      containsSetActivityActive(subvertPipeline),
+      false,
+      'Subvert resolve pipeline should not activate VC guerrillas',
+    );
 
     const removeSpace = 'tay-ninh:none';
     const replaceSpace = 'quang-tin-quang-ngai:none';
@@ -427,13 +455,22 @@ describe('FITL NVA/VC special activities integration', () => {
     assert.equal(countTokens(final, replaceSpace, (token) => token.props.faction === 'ARVN' && token.type === 'police'), 0);
     assert.equal(countTokens(final, replaceSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'), 2, 'Replace-1 should place one VC guerrilla from Available');
     assert.equal(
-      countTokens(final, removeSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      countTokens(final, removeSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'underground'),
       1,
-      'Subvert should activate one underground VC guerrilla in each selected space',
+      'Subvert should keep existing underground VC guerrillas underground',
+    );
+    assert.equal(
+      countTokens(final, replaceSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'underground'),
+      2,
+      'Subvert replacement should not activate VC guerrillas',
+    );
+    assert.equal(
+      countTokens(final, removeSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      0,
     );
     assert.equal(
       countTokens(final, replaceSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
-      1,
+      0,
     );
   });
 

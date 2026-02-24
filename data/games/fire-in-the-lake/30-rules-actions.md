@@ -4664,7 +4664,67 @@ actionPipelines:
   - id: subvert-profile
     actionId: subvert
     accompanyingOps: [rally, march, terror]
-    legality: null
+    legality:
+      op: '>'
+      left:
+        aggregate:
+          op: count
+          query:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: underground }
+                  right: 0
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, op: in, value: [troops, police] }
+                      right: 1
+                    - op: and
+                      args:
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: ARVN }
+                                  - { prop: type, op: in, value: [troops, police] }
+                          right: 0
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: 'available-VC:none'
+                                filter:
+                                  - { prop: faction, eq: VC }
+                                  - { prop: type, eq: guerrilla }
+                          right: 0
+      right: 0
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4699,18 +4759,6 @@ actionPipelines:
                     bind: $space
                     over: { query: binding, name: targetSpaces }
                     effects:
-                      - forEach:
-                          bind: $subvertingGuerrilla
-                          over:
-                            query: tokensInZone
-                            zone: $space
-                            filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
-                              - { prop: activity, eq: underground }
-                          limit: 1
-                          effects:
-                            - setTokenProp: { token: $subvertingGuerrilla, prop: activity, value: active }
                       - let:
                           bind: $arvnCubeCount
                           value:

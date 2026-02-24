@@ -870,11 +870,21 @@ describe('FITL COIN operations integration', () => {
     it('AC1/AC2: compiles with momentum-aware legality and zero-cost top-level fields', () => {
       const profile = getAssaultUsProfile();
       assert.equal(String(profile.actionId), 'assault');
-      assert.deepEqual(profile.legality, {
-        op: '!=',
-        left: { ref: 'gvar', var: 'mom_generalLansdale' },
-        right: true,
-      });
+      assert.equal((profile.legality as any)?.op, 'or');
+      const freeOpBypass = findDeep(profile.legality, (node: any) =>
+        node?.op === '==' &&
+        node?.left?.ref === 'binding' &&
+        node?.left?.name === '__freeOperation' &&
+        node?.right === true,
+      );
+      assert.ok(freeOpBypass.length >= 1, 'Expected __freeOperation legality bypass on assault-us-profile');
+      const lansdaleGuard = findDeep(profile.legality, (node: any) =>
+        node?.op === '!=' &&
+        node?.left?.ref === 'gvar' &&
+        node?.left?.var === 'mom_generalLansdale' &&
+        node?.right === true,
+      );
+      assert.ok(lansdaleGuard.length >= 1, 'Expected mom_generalLansdale legality guard on assault-us-profile');
       assert.equal(profile.costValidation, null);
       assert.deepEqual(profile.costEffects, []);
     });

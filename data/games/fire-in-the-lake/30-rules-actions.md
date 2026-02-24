@@ -2187,7 +2187,11 @@ actionPipelines:
   - id: assault-us-profile
     actionId: assault
     applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
-    legality: { op: '!=', left: { ref: gvar, var: mom_generalLansdale }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_generalLansdale }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -3218,10 +3222,13 @@ actionPipelines:
     actionId: airLift
     accompanyingOps: any
     legality:
-      op: and
+      op: or
       args:
-        - { op: '!=', left: { ref: gvar, var: mom_medevacShaded }, right: true }
-        - { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - op: and
+          args:
+            - { op: '!=', left: { ref: gvar, var: mom_medevacShaded }, right: true }
+            - { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -3324,11 +3331,14 @@ actionPipelines:
     actionId: airStrike
     accompanyingOps: any
     legality:
-      op: and
+      op: or
       args:
-        - { op: '!=', left: { ref: gvar, var: mom_rollingThunder }, right: true }
-        - { op: '!=', left: { ref: gvar, var: mom_daNang }, right: true }
-        - { op: '!=', left: { ref: gvar, var: mom_bombingPause }, right: true }
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - op: and
+          args:
+            - { op: '!=', left: { ref: gvar, var: mom_rollingThunder }, right: true }
+            - { op: '!=', left: { ref: gvar, var: mom_daNang }, right: true }
+            - { op: '!=', left: { ref: gvar, var: mom_bombingPause }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -3788,7 +3798,11 @@ actionPipelines:
   - id: transport-profile
     actionId: transport
     accompanyingOps: any
-    legality: { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4028,7 +4042,11 @@ actionPipelines:
   - id: infiltrate-profile
     actionId: infiltrate
     accompanyingOps: [rally, march]
-    legality: { op: '!=', left: { ref: gvar, var: mom_mcnamaraLine }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_mcnamaraLine }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4321,7 +4339,11 @@ actionPipelines:
   - id: bombard-profile
     actionId: bombard
     accompanyingOps: any
-    legality: { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4460,7 +4482,11 @@ actionPipelines:
       - relation: subset
         operationParam: targetSpaces
         specialActivityParam: targetSpaces
-    legality: { op: '!=', left: { ref: gvar, var: mom_claymores }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_claymores }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4812,7 +4838,11 @@ actionPipelines:
       - relation: subset
         operationParam: targetSpaces
         specialActivityParam: targetSpaces
-    legality: { op: '!=', left: { ref: gvar, var: mom_claymores }, right: true }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_claymores }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}

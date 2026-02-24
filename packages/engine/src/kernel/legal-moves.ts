@@ -15,6 +15,7 @@ import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -362,7 +363,7 @@ export const enumerateLegalMoves = (
       action,
       adjacencyGraph,
       decisionPlayer: state.activePlayer,
-      bindings: {},
+      bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
       runtimeTableIndex,
       skipExecutorCheck: !hasActionPipeline,
       skipPipelineDispatch: !hasActionPipeline,

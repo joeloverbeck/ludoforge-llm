@@ -12,6 +12,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
@@ -32,6 +33,34 @@ const withMom = (state: GameState, vars: Record<string, boolean>): GameState => 
     ...vars,
   },
 });
+
+const withPendingFreeGrant = (
+  state: GameState,
+  actionId: string,
+): GameState => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      ...state.turnOrderState,
+      runtime: {
+        ...state.turnOrderState.runtime,
+        pendingFreeOperationGrants: [
+          ...(state.turnOrderState.runtime.pendingFreeOperationGrants ?? []),
+          {
+            grantId: `test-free-grant-${actionId}`,
+            seat: String(state.activePlayer),
+            operationClass: 'operation',
+            actionIds: [actionId],
+            remainingUses: 1,
+          },
+        ],
+      },
+    },
+  };
+};
 
 const withLookaheadCoup = (def: GameDef, state: GameState, isCoup: boolean): GameState => {
   if (state.turnOrderState.type !== 'cardDriven' || def.turnOrder?.type !== 'cardDriven') {
@@ -65,6 +94,71 @@ const withLookaheadCoup = (def: GameDef, state: GameState, isCoup: boolean): Gam
 };
 
 describe('FITL momentum prohibition preconditions', () => {
+  it('encodes free-operation legality bypass on momentum-blocked profiles (Rule 5.1.2)', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const profiles: ReadonlyArray<{ id: string; momentumVars: readonly string[] }> = [
+      { id: 'assault-us-profile', momentumVars: ['mom_generalLansdale'] },
+      { id: 'air-lift-profile', momentumVars: ['mom_medevacShaded', 'mom_typhoonKate'] },
+      { id: 'air-strike-profile', momentumVars: ['mom_rollingThunder', 'mom_daNang', 'mom_bombingPause'] },
+      { id: 'transport-profile', momentumVars: ['mom_typhoonKate'] },
+      { id: 'infiltrate-profile', momentumVars: ['mom_mcnamaraLine'] },
+      { id: 'bombard-profile', momentumVars: ['mom_typhoonKate'] },
+      { id: 'nva-ambush-profile', momentumVars: ['mom_claymores'] },
+      { id: 'vc-ambush-profile', momentumVars: ['mom_claymores'] },
+    ];
+
+    for (const profileExpectation of profiles) {
+      const profile = def.actionPipelines?.find((candidate) => candidate.id === profileExpectation.id);
+      assert.ok(profile, `Missing expected action pipeline profile: ${profileExpectation.id}`);
+      const freeOpGuards = findDeep(profile.legality, (node: unknown) =>
+        (node as { op?: string; left?: { ref?: string; name?: string }; right?: unknown })?.op === '==' &&
+        (node as { op?: string; left?: { ref?: string; name?: string }; right?: unknown })?.left?.ref === 'binding' &&
+        (node as { op?: string; left?: { ref?: string; name?: string }; right?: unknown })?.left?.name === '__freeOperation' &&
+        (node as { op?: string; left?: { ref?: string; name?: string }; right?: unknown })?.right === true,
+      );
+      assert.ok(freeOpGuards.length >= 1, `${profileExpectation.id} must include __freeOperation legality bypass`);
+
+      for (const momentumVar of profileExpectation.momentumVars) {
+        const momentumRefs = findDeep(profile.legality, (node: unknown) =>
+          (node as { ref?: string; var?: string })?.ref === 'gvar' &&
+          (node as { ref?: string; var?: string })?.var === momentumVar,
+        );
+        assert.ok(momentumRefs.length >= 1, `${profileExpectation.id} should still reference ${momentumVar}`);
+      }
+    }
+  });
+
+  it('keeps Typhoon blocking paid Air Lift but allows granted free Air Lift', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const blocked = withMom(withActivePlayer(initialState(def, 9014, 2).state, 0), { mom_typhoonKate: true });
+
+    const blockedAirLiftMoves = legalMoves(def, blocked).filter((move) => String(move.actionId) === 'airLift');
+    assert.equal(
+      blockedAirLiftMoves.some((move) => move.freeOperation !== true),
+      false,
+      'Typhoon should still block paid/non-free Air Lift',
+    );
+
+    const granted = withPendingFreeGrant(blocked, 'airLift');
+    const grantedAirLiftMoves = legalMoves(def, granted).filter((move) => String(move.actionId) === 'airLift');
+    const freeAirLift = grantedAirLiftMoves.find((move) => move.freeOperation === true);
+    assert.notEqual(freeAirLift, undefined, 'Granted free Air Lift should be legal despite Typhoon');
+    assert.equal(
+      grantedAirLiftMoves.some((move) => move.freeOperation !== true),
+      false,
+      'Grant must not unban paid/non-free Air Lift',
+    );
+
+    const beforeCount = Number(granted.globalVars.airLiftCount ?? 0);
+    const applied = applyMoveWithResolvedDecisionIds(def, granted, freeAirLift!);
+    assert.ok(Number(applied.state.globalVars.airLiftCount ?? 0) > beforeCount, 'Free Air Lift should execute normally');
+  });
+
   it('prohibits Air Strike when any Air Strike momentum is active, but not from unrelated momentum', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);

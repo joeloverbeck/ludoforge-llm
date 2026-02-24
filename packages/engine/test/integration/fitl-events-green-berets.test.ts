@@ -34,6 +34,22 @@ describe('FITL Green Berets event-card production spec', () => {
     for (const branch of greenBerets?.unshaded?.branches ?? []) {
       assert.equal(branch.targets?.[0]?.selector?.query, 'mapSpaces');
       assert.deepEqual(branch.targets?.[0]?.cardinality, { max: 1 });
+
+      // Filter: province without NVA Control (compiler wraps ConditionAST in { condition: ... })
+      const filter = branch.targets?.[0]?.selector?.filter;
+      assert.notEqual(filter, undefined, 'unshaded branch target must have a filter');
+      const condition = filter?.condition as Record<string, unknown> | undefined;
+      assert.notEqual(condition, undefined, 'filter must have a condition');
+      assert.equal(condition?.op, 'and');
+      const args = condition?.args as Record<string, unknown>[];
+      assert.equal(args?.length, 2);
+      // First arg: category == province
+      assert.equal(args?.[0]?.op, '==');
+      assert.deepEqual(args?.[0]?.left, { ref: 'zoneProp', zone: '$zone', prop: 'category' });
+      assert.equal(args?.[0]?.right, 'province');
+      // Second arg: NVA count <= (US+ARVN+VC) count
+      assert.equal(args?.[1]?.op, '<=');
+
       const removeEffect = branch.effects?.find((effect) => 'removeByPriority' in effect);
       assert.notEqual(removeEffect, undefined);
       assert.equal(removeEffect?.removeByPriority.budget, 3);
@@ -47,18 +63,50 @@ describe('FITL Green Berets event-card production spec', () => {
       });
     }
 
-    assert.equal(greenBerets?.shaded?.targets?.[0]?.selector?.query, 'mapSpaces');
-    assert.deepEqual(greenBerets?.shaded?.targets?.[0]?.cardinality, { max: 1 });
-    const shadedRemoveEffect = greenBerets?.shaded?.effects?.find((effect) => 'removeByPriority' in effect);
-    assert.notEqual(shadedRemoveEffect, undefined);
-    assert.equal(shadedRemoveEffect?.removeByPriority.budget, 3);
-    const oppositionEffect = greenBerets?.shaded?.effects?.find((effect) => 'setMarker' in effect);
-    assert.deepEqual(oppositionEffect, {
+    // Shaded: cross-zone selection (no targets, uses if > chooseN > chooseOne > forEach > setMarker)
+    assert.equal(greenBerets?.shaded?.targets, undefined, 'shaded should not have targets');
+    assert.equal(greenBerets?.shaded?.effects?.length, 1, 'shaded should have 1 top-level effect (if)');
+
+    const ifEffect = greenBerets?.shaded?.effects?.[0] as Record<string, Record<string, unknown>> | undefined;
+    assert.notEqual(ifEffect?.if, undefined, 'top-level effect must be an if');
+
+    const thenEffects = ifEffect?.if?.then as Record<string, unknown>[];
+    assert.equal(thenEffects?.length, 4, 'if.then should have 4 effects');
+
+    // chooseN binds $irregularsToRemove
+    const chooseNEffect = thenEffects?.[0] as Record<string, Record<string, unknown>>;
+    assert.equal(chooseNEffect?.chooseN?.bind, '$irregularsToRemove');
+    assert.equal(chooseNEffect?.chooseN?.min, 0);
+    assert.equal(chooseNEffect?.chooseN?.max, 3);
+    assert.equal(
+      (chooseNEffect?.chooseN?.options as Record<string, unknown>)?.query,
+      'tokensInMapSpaces',
+    );
+
+    // chooseOne binds $oppositionProvince
+    const chooseOneEffect = thenEffects?.[1] as Record<string, Record<string, unknown>>;
+    assert.equal(chooseOneEffect?.chooseOne?.bind, '$oppositionProvince');
+    assert.equal(
+      (chooseOneEffect?.chooseOne?.options as Record<string, unknown>)?.query,
+      'mapSpaces',
+    );
+
+    // forEach binds $irregular over $irregularsToRemove
+    const forEachEffect = thenEffects?.[2] as Record<string, Record<string, unknown>>;
+    assert.equal(forEachEffect?.forEach?.bind, '$irregular');
+    assert.deepEqual(forEachEffect?.forEach?.over, { query: 'binding', name: '$irregularsToRemove' });
+
+    // setMarker uses $oppositionProvince with activeOpposition
+    const setMarkerEffect = thenEffects?.[3] as Record<string, Record<string, unknown>>;
+    assert.deepEqual(setMarkerEffect, {
       setMarker: {
-        space: '$sourceProvince',
+        space: '$oppositionProvince',
         marker: 'supportOpposition',
         state: 'activeOpposition',
       },
     });
+
+    // else is empty array
+    assert.deepEqual(ifEffect?.if?.else, []);
   });
 });

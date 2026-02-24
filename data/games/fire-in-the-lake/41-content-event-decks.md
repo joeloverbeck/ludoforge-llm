@@ -556,6 +556,27 @@ eventDecks:
                 - id: $targetProvince
                   selector:
                     query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                        - op: <=
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: eq, value: 'NVA' }
+                          right:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                   cardinality: { max: 1 }
               effects:
                 - removeByPriority:
@@ -580,6 +601,27 @@ eventDecks:
                 - id: $targetProvince
                   selector:
                     query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                        - op: <=
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: eq, value: 'NVA' }
+                          right:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                   cardinality: { max: 1 }
               effects:
                 - removeByPriority:
@@ -600,28 +642,61 @@ eventDecks:
                     state: activeSupport
         shaded:
           text: "Reluctant trainees: Remove any 3 Irregulars to Available and set 1 of their Provinces to Active Opposition."
-          targets:
-            - id: $sourceProvince
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
           effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: irregular
-                    over:
-                      query: tokensInZone
-                      zone: $sourceProvince
-                      filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: available-US:none
-            - setMarker:
-                space: $sourceProvince
-                marker: supportOpposition
-                state: activeOpposition
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInMapSpaces
+                        filter:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
+                  right: 0
+                then:
+                  - chooseN:
+                      bind: $irregularsToRemove
+                      options:
+                        query: tokensInMapSpaces
+                        filter:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
+                      min: 0
+                      max: 3
+                  - chooseOne:
+                      bind: $oppositionProvince
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, eq: US }
+                                      - { prop: type, eq: irregular }
+                              right: 0
+                  - forEach:
+                      bind: $irregular
+                      over: { query: binding, name: $irregularsToRemove }
+                      effects:
+                        - moveToken:
+                            token: $irregular
+                            from: { zoneExpr: { ref: tokenZone, token: $irregular } }
+                            to: { zoneExpr: available-US:none }
+                  - setMarker:
+                      space: $oppositionProvince
+                      marker: supportOpposition
+                      state: activeOpposition
+                else: []
       - id: card-1
         title: Gulf of Tonkin
         sideMode: dual

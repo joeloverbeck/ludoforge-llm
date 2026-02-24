@@ -198,6 +198,20 @@ export const ScenarioDeckCompositionSchema = z
     excludedCardIds: z.array(StringSchema.min(1)).optional(),
     includedCardTags: z.array(StringSchema.min(1)).optional(),
     excludedCardTags: z.array(StringSchema.min(1)).optional(),
+    pileFilters: z
+      .array(
+        z
+          .object({
+            piles: z.array(IntegerSchema.positive()),
+            includedCardIds: z.array(StringSchema.min(1)).optional(),
+            excludedCardIds: z.array(StringSchema.min(1)).optional(),
+            includedCardTags: z.array(StringSchema.min(1)).optional(),
+            excludedCardTags: z.array(StringSchema.min(1)).optional(),
+            metadataEquals: z.record(StringSchema.min(1), z.union([StringSchema, NumberSchema, BooleanSchema])).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
   })
   .strict();
 

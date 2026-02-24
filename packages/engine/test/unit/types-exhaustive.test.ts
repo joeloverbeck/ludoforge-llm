@@ -182,6 +182,7 @@ describe('exhaustive kernel unions', () => {
       excludedCardIds: ['card-130'],
       includedCardTags: ['pivotal'],
       excludedCardTags: ['coup'],
+      pileFilters: [{ piles: [1, 2], metadataEquals: { period: '1965' } }],
     };
 
     const payload: ScenarioPayload = {

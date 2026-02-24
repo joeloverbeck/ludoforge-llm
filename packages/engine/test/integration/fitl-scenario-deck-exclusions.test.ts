@@ -6,7 +6,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL short scenario deck exclusions', () => {
-  it('encodes required pivotal-tag and failed-coup exclusions in short scenario deck composition', () => {
+  it('encodes required pivotal-tag/failed-coup exclusions and pileFilters metadata in short scenario deck composition', () => {
     const { parsed } = compileProductionSpec();
     assertNoErrors(parsed);
 
@@ -24,15 +24,22 @@ describe('FITL short scenario deck exclusions', () => {
     assert.equal(deckComposition?.coupsPerPile, 1);
     assert.deepEqual(deckComposition?.excludedCardTags, ['pivotal']);
     assert.deepEqual(deckComposition?.excludedCardIds, ['card-129']);
+    assert.deepEqual(deckComposition?.pileFilters, [{ piles: [1, 2, 3], metadataEquals: { period: '1965' } }]);
   });
 });
 
 describe('FITL medium/full scenario deck exclusions', () => {
-  it('encodes required pivotal-tag exclusions in medium and full scenario deck compositions', () => {
+  it('encodes required pivotal-tag exclusions and pileFilters mappings in medium and full scenario deck compositions', () => {
     const { parsed } = compileProductionSpec();
     assertNoErrors(parsed);
 
-    const assertScenarioPivotalExclusions = (scenarioId: 'fitl-scenario-medium' | 'fitl-scenario-full'): void => {
+    const assertScenarioDeckComposition = (
+      scenarioId: 'fitl-scenario-medium' | 'fitl-scenario-full',
+      expectedPileFilters: readonly {
+        readonly piles: readonly number[];
+        readonly metadataEquals?: Readonly<Record<string, string | number | boolean>>;
+      }[],
+    ): void => {
       const scenarioAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === scenarioId && asset.kind === 'scenario');
       assert.notEqual(scenarioAsset, undefined, `Expected ${scenarioId} scenario asset`);
 
@@ -41,9 +48,14 @@ describe('FITL medium/full scenario deck exclusions', () => {
       assert.notEqual(deckComposition, undefined, `Expected ${scenarioId} deckComposition`);
       assert.deepEqual(deckComposition?.excludedCardTags, ['pivotal']);
       assert.equal(deckComposition?.excludedCardIds, undefined);
+      assert.deepEqual(deckComposition?.pileFilters, expectedPileFilters);
     };
 
-    assertScenarioPivotalExclusions('fitl-scenario-medium');
-    assertScenarioPivotalExclusions('fitl-scenario-full');
+    assertScenarioDeckComposition('fitl-scenario-medium', [{ piles: [1, 2, 3], metadataEquals: { period: '1968' } }]);
+    assertScenarioDeckComposition('fitl-scenario-full', [
+      { piles: [1], metadataEquals: { period: '1964' } },
+      { piles: [2, 3], metadataEquals: { period: '1965' } },
+      { piles: [4, 5, 6], metadataEquals: { period: '1968' } },
+    ]);
   });
 });

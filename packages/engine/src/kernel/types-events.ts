@@ -138,6 +138,14 @@ export interface ScenarioDeckComposition {
   readonly excludedCardIds?: readonly string[];
   readonly includedCardTags?: readonly string[];
   readonly excludedCardTags?: readonly string[];
+  readonly pileFilters?: readonly {
+    readonly piles: readonly number[];
+    readonly includedCardIds?: readonly string[];
+    readonly excludedCardIds?: readonly string[];
+    readonly includedCardTags?: readonly string[];
+    readonly excludedCardTags?: readonly string[];
+    readonly metadataEquals?: Readonly<Record<string, string | number | boolean>>;
+  }[];
 }
 
 export interface ScenarioPayload {

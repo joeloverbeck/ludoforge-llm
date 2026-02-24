@@ -1092,6 +1092,13 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
+        pileFilters:
+          - piles: [1]
+            metadataEquals: { period: "1964" }
+          - piles: [2, 3]
+            metadataEquals: { period: "1965" }
+          - piles: [4, 5, 6]
+            metadataEquals: { period: "1968" }
       cardPlacements:
         - cardId: card-121
           zoneId: leader:none
@@ -1429,6 +1436,9 @@ dataAssets:
           - pivotal
         excludedCardIds:
           - card-129
+        pileFilters:
+          - piles: [1, 2, 3]
+            metadataEquals: { period: "1965" }
       outOfPlay:
         - pieceTypeId: us-troops
           seat: us
@@ -1794,6 +1804,9 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
+        pileFilters:
+          - piles: [1, 2, 3]
+            metadataEquals: { period: "1968" }
       cardPlacements:
         - cardId: card-121
           zoneId: leader:none

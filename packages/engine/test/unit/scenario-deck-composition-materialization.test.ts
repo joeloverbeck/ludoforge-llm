@@ -116,13 +116,17 @@ describe('scenario deckComposition runtime setup materialization', () => {
       );
     }
 
-    const eventsPoolZoneId = gameDef.zones.find((zone) => String(zone.id).endsWith('_events_pool:none'))?.id;
+    const eventsPoolZoneIds = gameDef.zones
+      .filter((zone) => String(zone.id).includes('_events_pool_') && String(zone.id).endsWith(':none'))
+      .map((zone) => zone.id);
     const coupsPoolZoneId = gameDef.zones.find((zone) => String(zone.id).endsWith('_coups_pool:none'))?.id;
     const pileWorkZoneId = gameDef.zones.find((zone) => String(zone.id).endsWith('_pile_work:none'))?.id;
-    assert.notEqual(eventsPoolZoneId, undefined);
+    assert.equal(eventsPoolZoneIds.length > 0, true);
     assert.notEqual(coupsPoolZoneId, undefined);
     assert.notEqual(pileWorkZoneId, undefined);
-    assert.equal((initial.state.zones[String(eventsPoolZoneId)] ?? []).length, 0);
+    for (const eventsPoolZoneId of eventsPoolZoneIds) {
+      assert.equal((initial.state.zones[String(eventsPoolZoneId)] ?? []).length, 0);
+    }
     assert.equal((initial.state.zones[String(coupsPoolZoneId)] ?? []).length, 0);
     assert.equal((initial.state.zones[String(pileWorkZoneId)] ?? []).length, 0);
   });

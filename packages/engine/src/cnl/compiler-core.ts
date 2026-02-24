@@ -93,6 +93,14 @@ type ScenarioDeckSelection = {
     readonly excludedCardIds?: readonly string[];
     readonly includedCardTags?: readonly string[];
     readonly excludedCardTags?: readonly string[];
+    readonly pileFilters?: readonly {
+      readonly piles: readonly number[];
+      readonly includedCardIds?: readonly string[];
+      readonly excludedCardIds?: readonly string[];
+      readonly includedCardTags?: readonly string[];
+      readonly excludedCardTags?: readonly string[];
+      readonly metadataEquals?: Readonly<Record<string, string | number | boolean>>;
+    }[];
   };
 };
 
@@ -1118,18 +1126,7 @@ function materializePileCoupMixDeck(options: {
 }): ScenarioDeckMaterializationResult {
   const { deckComposition } = options.scenarioDeck;
   const [coupCards, eventCards] = partitionByCoup(options.candidateCards);
-
-  const neededEvents = deckComposition.pileCount * deckComposition.eventsPerPile;
   const neededCoups = deckComposition.pileCount * deckComposition.coupsPerPile;
-  if (eventCards.length < neededEvents) {
-    options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS',
-      path: `${options.deckBasePath}.eventsPerPile`,
-      severity: 'error',
-      message: `Scenario deckComposition requires ${neededEvents} non-coup cards, but ${eventCards.length} are available after filters.`,
-      suggestion: 'Adjust included/excluded filters or pile/event counts.',
-    });
-  }
   if (coupCards.length < neededCoups) {
     options.diagnostics.push({
       code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_COUPS',
@@ -1139,34 +1136,48 @@ function materializePileCoupMixDeck(options: {
       suggestion: 'Adjust included/excluded filters or pile/coup counts.',
     });
   }
-  if (eventCards.length < neededEvents || coupCards.length < neededCoups) {
+  if (coupCards.length < neededCoups) {
     return { effects: [], syntheticZones: [] };
   }
 
   const baseStem = sanitizeScenarioDeckStem(`${options.scenarioDeck.entityId}_${options.eventDeck.id}`);
-  const eventsPoolZoneId = createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_events_pool`);
   const coupsPoolZoneId = createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_coups_pool`);
   const pileWorkZoneId = createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_pile_work`);
+  const pileFilterPlan = resolvePileFilterPlan({
+    deckComposition,
+    deckBasePath: options.deckBasePath,
+    eventCards,
+    diagnostics: options.diagnostics,
+  });
+  if (pileFilterPlan === null) {
+    return { effects: [], syntheticZones: [] };
+  }
+  const eventPools = pileFilterPlan.eventPools.map((pool, index) => ({
+    ...pool,
+    zoneId: createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_events_pool_${index + 1}`),
+  }));
 
   const syntheticZones = [
-    createScenarioDeckSyntheticZone(eventsPoolZoneId),
+    ...eventPools.map((pool) => createScenarioDeckSyntheticZone(pool.zoneId)),
     createScenarioDeckSyntheticZone(coupsPoolZoneId),
     createScenarioDeckSyntheticZone(pileWorkZoneId),
   ];
   const effects: EffectAST[] = [];
 
-  for (const eventCard of eventCards) {
-    effects.push({
-      createToken: {
-        type: options.cardTokenTypeId,
-        zone: eventsPoolZoneId,
-        props: {
-          cardId: eventCard.id,
-          eventDeckId: options.eventDeck.id,
-          isCoup: false,
+  for (const pool of eventPools) {
+    for (const eventCard of pool.cards) {
+      effects.push({
+        createToken: {
+          type: options.cardTokenTypeId,
+          zone: pool.zoneId,
+          props: {
+            cardId: eventCard.id,
+            eventDeckId: options.eventDeck.id,
+            isCoup: false,
+          },
         },
-      },
-    });
+      });
+    }
   }
   for (const coupCard of coupCards) {
     effects.push({
@@ -1182,14 +1193,17 @@ function materializePileCoupMixDeck(options: {
     });
   }
 
-  effects.push({ shuffle: { zone: eventsPoolZoneId } });
+  for (const pool of eventPools) {
+    effects.push({ shuffle: { zone: pool.zoneId } });
+  }
   effects.push({ shuffle: { zone: coupsPoolZoneId } });
 
   for (let pileIndex = deckComposition.pileCount - 1; pileIndex >= 0; pileIndex -= 1) {
+    const eventPoolZoneId = eventPools[pileFilterPlan.perPilePoolIndex[pileIndex]!]!.zoneId;
     if (deckComposition.eventsPerPile > 0) {
       effects.push({
         draw: {
-          from: eventsPoolZoneId,
+          from: eventPoolZoneId,
           to: pileWorkZoneId,
           count: deckComposition.eventsPerPile,
         },
@@ -1217,6 +1231,302 @@ function materializePileCoupMixDeck(options: {
     effects,
     syntheticZones,
   };
+}
+
+function resolvePileFilterPlan(options: {
+  readonly deckComposition: ScenarioDeckSelection['deckComposition'];
+  readonly deckBasePath: string;
+  readonly eventCards: readonly EventDeckDef['cards'][number][];
+  readonly diagnostics: Diagnostic[];
+}): {
+  readonly perPilePoolIndex: readonly number[];
+  readonly eventPools: readonly {
+    readonly cards: readonly EventDeckDef['cards'][number][];
+    readonly piles: readonly number[];
+    readonly path: string;
+  }[];
+} | null {
+  const { deckComposition } = options;
+  const neededEvents = deckComposition.pileCount * deckComposition.eventsPerPile;
+  const pileFilters = deckComposition.pileFilters;
+  if (pileFilters === undefined || pileFilters.length === 0) {
+    if (options.eventCards.length < neededEvents) {
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS',
+        path: `${options.deckBasePath}.eventsPerPile`,
+        severity: 'error',
+        message: `Scenario deckComposition requires ${neededEvents} non-coup cards, but ${options.eventCards.length} are available after filters.`,
+        suggestion: 'Adjust included/excluded filters or pile/event counts.',
+      });
+      return null;
+    }
+    return {
+      perPilePoolIndex: Array.from({ length: deckComposition.pileCount }, () => 0),
+      eventPools: [
+        {
+          cards: options.eventCards,
+          piles: Array.from({ length: deckComposition.pileCount }, (_, index) => index + 1),
+          path: `${options.deckBasePath}.pileFilters`,
+        },
+      ],
+    };
+  }
+
+  const perPilePoolIndex = Array.from({ length: deckComposition.pileCount }, () => -1);
+  const poolCards: Array<{
+    readonly cards: readonly EventDeckDef['cards'][number][];
+    readonly piles: readonly number[];
+    readonly path: string;
+  }> = [];
+  const eventCardsById = new Map(options.eventCards.map((card) => [card.id, card] as const));
+  const knownTags = new Set(options.eventCards.flatMap((card) => card.tags ?? []));
+  const metadataKeySet = new Set(
+    options.eventCards.flatMap((card) => Object.keys(card.metadata ?? {})),
+  );
+  const cardPoolIndexById = new Map<string, number>();
+
+  for (const [filterIndex, pileFilter] of pileFilters.entries()) {
+    const filterPath = `${options.deckBasePath}.pileFilters.${filterIndex}`;
+    const selectedCards = selectCardsForPileFilter({
+      path: filterPath,
+      pileFilter,
+      eventCards: options.eventCards,
+      cardsById: eventCardsById,
+      knownTags,
+      metadataKeySet,
+      diagnostics: options.diagnostics,
+    });
+    const selectorCount =
+      (pileFilter.includedCardIds?.length ?? 0)
+      + (pileFilter.includedCardTags?.length ?? 0)
+      + (Object.keys(pileFilter.metadataEquals ?? {}).length ?? 0);
+    if (selectorCount === 0) {
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_SELECTOR_REQUIRED',
+        path: filterPath,
+        severity: 'error',
+        message: 'Scenario pile filter must declare at least one include selector (includedCardIds, includedCardTags, or metadataEquals).',
+        suggestion: 'Add include selectors so each pile filter defines a specific card cohort.',
+      });
+    }
+
+    for (const pile of pileFilter.piles) {
+      if (pile < 1 || pile > deckComposition.pileCount) {
+        options.diagnostics.push({
+          code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_PILE_OUT_OF_RANGE',
+          path: `${filterPath}.piles`,
+          severity: 'error',
+          message: `Scenario pile filter references pile ${pile}, but pileCount is ${deckComposition.pileCount}.`,
+          suggestion: `Use pile indexes in range [1, ${deckComposition.pileCount}].`,
+        });
+        continue;
+      }
+      const pileIndex = pile - 1;
+      if (perPilePoolIndex[pileIndex] !== -1) {
+        options.diagnostics.push({
+          code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_PILE_DUPLICATE',
+          path: `${filterPath}.piles`,
+          severity: 'error',
+          message: `Scenario pile ${pile} is assigned by more than one pile filter.`,
+          suggestion: 'Assign each pile exactly once across pileFilters.',
+        });
+        continue;
+      }
+      perPilePoolIndex[pileIndex] = filterIndex;
+    }
+
+    for (const selected of selectedCards) {
+      const existingPoolIndex = cardPoolIndexById.get(selected.id);
+      if (existingPoolIndex === undefined) {
+        cardPoolIndexById.set(selected.id, filterIndex);
+        continue;
+      }
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_OVERLAP',
+        path: filterPath,
+        severity: 'error',
+        message: `Card "${selected.id}" is selected by multiple pile filters.`,
+        suggestion: 'Make pile filter selectors disjoint by card id.',
+      });
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_OVERLAP',
+        path: `${options.deckBasePath}.pileFilters.${existingPoolIndex}`,
+        severity: 'error',
+        message: `Card "${selected.id}" is selected by multiple pile filters.`,
+        suggestion: 'Make pile filter selectors disjoint by card id.',
+      });
+    }
+
+    const requiredEventsForFilter = deckComposition.eventsPerPile * pileFilter.piles.length;
+    if (selectedCards.length < requiredEventsForFilter) {
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS',
+        path: `${filterPath}.piles`,
+        severity: 'error',
+        message: `Pile filter requires ${requiredEventsForFilter} non-coup cards across piles [${pileFilter.piles.join(', ')}], but ${selectedCards.length} are available after filters.`,
+        suggestion: 'Adjust pile filters or reduce eventsPerPile/pile coverage for this filter.',
+      });
+    }
+
+    poolCards.push({
+      cards: selectedCards,
+      piles: pileFilter.piles,
+      path: filterPath,
+    });
+  }
+
+  const uncoveredPiles = perPilePoolIndex
+    .map((poolIndex, index) => (poolIndex === -1 ? index + 1 : null))
+    .filter((value): value is number => value !== null);
+  if (uncoveredPiles.length > 0) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_COVERAGE_INCOMPLETE',
+      path: `${options.deckBasePath}.pileFilters`,
+      severity: 'error',
+      message: `Scenario pile filters must assign every pile exactly once; missing piles: [${uncoveredPiles.join(', ')}].`,
+      suggestion: 'Add pileFilters entries so each pile index in [1..pileCount] is covered once.',
+    });
+  }
+
+  if (options.diagnostics.some((diagnostic) => diagnostic.severity === 'error' && diagnostic.path.startsWith(options.deckBasePath))) {
+    return null;
+  }
+
+  return {
+    perPilePoolIndex,
+    eventPools: poolCards,
+  };
+}
+
+function selectCardsForPileFilter(options: {
+  readonly path: string;
+  readonly pileFilter: NonNullable<ScenarioDeckSelection['deckComposition']['pileFilters']>[number];
+  readonly eventCards: readonly EventDeckDef['cards'][number][];
+  readonly cardsById: ReadonlyMap<string, EventDeckDef['cards'][number]>;
+  readonly knownTags: ReadonlySet<string>;
+  readonly metadataKeySet: ReadonlySet<string>;
+  readonly diagnostics: Diagnostic[];
+}): readonly EventDeckDef['cards'][number][] {
+  const includedCardIds = options.pileFilter.includedCardIds ?? [];
+  const excludedCardIds = options.pileFilter.excludedCardIds ?? [];
+  const includedCardTags = options.pileFilter.includedCardTags ?? [];
+  const excludedCardTags = options.pileFilter.excludedCardTags ?? [];
+  const metadataEquals = options.pileFilter.metadataEquals ?? {};
+
+  for (const [index, cardId] of includedCardIds.entries()) {
+    if (options.cardsById.has(cardId)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      path: `${options.path}.includedCardIds.${index}`,
+      severity: 'error',
+      message: `Scenario pile filter includes unknown event card "${cardId}".`,
+      suggestion: 'Use a card id declared in the selected event deck and accepted by deckComposition filters.',
+    });
+  }
+  for (const [index, cardId] of excludedCardIds.entries()) {
+    if (options.cardsById.has(cardId)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      path: `${options.path}.excludedCardIds.${index}`,
+      severity: 'error',
+      message: `Scenario pile filter excludes unknown event card "${cardId}".`,
+      suggestion: 'Use a card id declared in the selected event deck and accepted by deckComposition filters.',
+    });
+  }
+
+  for (const [index, tag] of includedCardTags.entries()) {
+    if (options.knownTags.has(tag)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      path: `${options.path}.includedCardTags.${index}`,
+      severity: 'error',
+      message: `Scenario pile filter includes unknown event tag "${tag}".`,
+      suggestion: 'Use a tag present on at least one event card after deckComposition filters.',
+    });
+  }
+  for (const [index, tag] of excludedCardTags.entries()) {
+    if (options.knownTags.has(tag)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      path: `${options.path}.excludedCardTags.${index}`,
+      severity: 'error',
+      message: `Scenario pile filter excludes unknown event tag "${tag}".`,
+      suggestion: 'Use a tag present on at least one event card after deckComposition filters.',
+    });
+  }
+
+  for (const key of Object.keys(metadataEquals)) {
+    if (options.metadataKeySet.has(key)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_UNKNOWN_METADATA_KEY',
+      path: `${options.path}.metadataEquals.${key}`,
+      severity: 'error',
+      message: `Scenario pile filter references unknown metadata key "${key}".`,
+      suggestion: 'Use a metadata key present on event cards in the selected event deck.',
+    });
+  }
+
+  const includeSelectorsDeclared = includedCardIds.length > 0 || includedCardTags.length > 0 || Object.keys(metadataEquals).length > 0;
+  const includeSelectedIds = new Set<string>();
+  for (const cardId of includedCardIds) {
+    if (options.cardsById.has(cardId)) {
+      includeSelectedIds.add(cardId);
+    }
+  }
+  for (const card of options.eventCards) {
+    if ((card.tags ?? []).some((tag) => includedCardTags.includes(tag)) || cardMatchesMetadataEquals(card, metadataEquals)) {
+      includeSelectedIds.add(card.id);
+    }
+  }
+
+  const excludeSelectedIds = new Set<string>();
+  for (const cardId of excludedCardIds) {
+    if (options.cardsById.has(cardId)) {
+      excludeSelectedIds.add(cardId);
+    }
+  }
+  for (const card of options.eventCards) {
+    if ((card.tags ?? []).some((tag) => excludedCardTags.includes(tag))) {
+      excludeSelectedIds.add(card.id);
+    }
+  }
+
+  const selectedCards = options.eventCards.filter((card) => {
+    const included = includeSelectorsDeclared ? includeSelectedIds.has(card.id) : true;
+    return included && !excludeSelectedIds.has(card.id);
+  });
+
+  return selectedCards;
+}
+
+function cardMatchesMetadataEquals(
+  card: EventDeckDef['cards'][number],
+  metadataEquals: Readonly<Record<string, string | number | boolean>>,
+): boolean {
+  const entries = Object.entries(metadataEquals);
+  if (entries.length === 0) {
+    return false;
+  }
+  if (card.metadata === undefined) {
+    return false;
+  }
+  for (const [key, expected] of entries) {
+    const actual = card.metadata[key];
+    if (actual !== expected) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function sanitizeScenarioDeckStem(raw: string): string {

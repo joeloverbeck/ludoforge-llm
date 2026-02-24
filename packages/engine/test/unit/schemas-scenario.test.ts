@@ -19,6 +19,11 @@ const validScenarioPayload = {
     eventsPerPile: 12,
     coupsPerPile: 1,
     excludedCardTags: ['pivotal'],
+    pileFilters: [
+      { piles: [1], metadataEquals: { period: '1964' } },
+      { piles: [2, 3], metadataEquals: { period: '1965' } },
+      { piles: [4, 5, 6], metadataEquals: { period: '1968' } },
+    ],
   },
 } as const;
 
@@ -42,6 +47,20 @@ describe('scenario payload schema', () => {
   it('accepts scenarios without mapAssetId, pieceCatalogAssetId, scenarioName, and yearRange', () => {
     const result = ScenarioPayloadSchema.safeParse({
       settings: { mode: 'test' },
+    });
+    assert.equal(result.success, true);
+  });
+
+  it('accepts deckComposition with pileFilters omitted', () => {
+    const result = ScenarioPayloadSchema.safeParse({
+      ...validScenarioPayload,
+      deckComposition: {
+        materializationStrategy: 'pile-coup-mix-v1',
+        pileCount: 6,
+        eventsPerPile: 12,
+        coupsPerPile: 1,
+        excludedCardTags: ['pivotal'],
+      },
     });
     assert.equal(result.success, true);
   });

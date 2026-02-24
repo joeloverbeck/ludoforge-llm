@@ -11,9 +11,11 @@ const validScenarioPayload = {
   usPolicy: 'jfk',
   initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'us', count: 2 }],
   deckComposition: {
+    materializationStrategy: 'pile-coup-mix-v1',
     pileCount: 6,
     eventsPerPile: 12,
     coupsPerPile: 1,
+    excludedCardTags: ['pivotal'],
   },
   startingCapabilities: [{ capabilityId: 'arc-light', side: 'unshaded' }],
 } as const;

@@ -1,4 +1,4 @@
-import { initialState, type GameDef, type GameState } from '../../src/kernel/index.js';
+import { createRng, initialState, type GameDef, type GameState } from '../../src/kernel/index.js';
 
 export type IsolatedStateTurnOrderMode = 'preserve' | 'roundRobin';
 
@@ -16,11 +16,15 @@ export const makeIsolatedInitialState = (
   },
 ): GameState => {
   const base = clearAllZones(initialState(def, seed, playerCount).state);
+  const withResetRng: GameState = {
+    ...base,
+    rng: createRng(BigInt(seed)).state,
+  };
   if (options?.turnOrderMode === 'roundRobin') {
     return {
-      ...base,
+      ...withResetRng,
       turnOrderState: { type: 'roundRobin' },
     };
   }
-  return base;
+  return withResetRng;
 };

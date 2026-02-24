@@ -2349,19 +2349,11 @@ eventDecks:
                 when:
                   op: '<'
                   left:
-                    op: '+'
-                    left:
-                      aggregate:
-                        op: count
-                        query:
-                          query: tokensInZone
-                          zone: casualties-US:none
-                    right:
-                      aggregate:
-                        op: count
-                        query:
-                          query: tokensInZone
-                          zone: casualties-ARVN:none
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: casualties-US:none
                   right: 3
                 then:
                   - removeByPriority:
@@ -2383,19 +2375,11 @@ eventDecks:
             - let:
                 bind: $casualtyCount
                 value:
-                  op: '+'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: casualties-US:none
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: casualties-ARVN:none
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: casualties-US:none
                 in:
                   - let:
                       bind: $maxTroopsMoved

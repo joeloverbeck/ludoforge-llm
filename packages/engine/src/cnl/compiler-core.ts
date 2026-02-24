@@ -1,7 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { GameDef, NumericTrackDef, RuntimeTableContract, TokenTypeDef, VariableDef } from '../kernel/types.js';
+import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableContract, TokenTypeDef, VariableDef, ZoneDef } from '../kernel/types.js';
 import type { TypeInferenceContext } from './type-inference.js';
-import { asActionId } from '../kernel/branded.js';
+import { asActionId, asZoneId } from '../kernel/branded.js';
 import { ACTION_CAPABILITY_CARD_EVENT, isCardEventAction } from '../kernel/action-capabilities.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
@@ -71,6 +71,40 @@ export interface CompileResult {
 type MutableCompileSectionResults = {
   -readonly [K in keyof CompileSectionResults]: CompileSectionResults[K];
 };
+
+const SCENARIO_DECK_SYNTHETIC_CARD_TOKEN_TYPE_ID = '__eventCard';
+const SCENARIO_DECK_PILE_COUP_MIX_STRATEGY_ID = 'pile-coup-mix-v1';
+
+type ScenarioDeckSelection = {
+  readonly path: string;
+  readonly entityId: string;
+  readonly eventDeckAssetId?: string;
+  readonly deckComposition: {
+    readonly materializationStrategy: string;
+    readonly pileCount: number;
+    readonly eventsPerPile: number;
+    readonly coupsPerPile: number;
+    readonly includedCardIds?: readonly string[];
+    readonly excludedCardIds?: readonly string[];
+    readonly includedCardTags?: readonly string[];
+    readonly excludedCardTags?: readonly string[];
+  };
+};
+
+type ScenarioDeckMaterializationResult = {
+  readonly effects: readonly EffectAST[];
+  readonly syntheticZones: readonly ZoneDef[];
+};
+
+type ScenarioDeckMaterializationStrategy = (options: {
+  readonly scenarioDeck: ScenarioDeckSelection;
+  readonly deckBasePath: string;
+  readonly eventDeck: EventDeckDef;
+  readonly cardTokenTypeId: string;
+  readonly existingZoneIds: Set<string>;
+  readonly candidateCards: readonly EventDeckDef['cards'][number][];
+  readonly diagnostics: Diagnostic[];
+}) => ScenarioDeckMaterializationResult;
 
 export const DEFAULT_COMPILE_LIMITS: CompileLimits = {
   maxExpandedEffects: 20_000,
@@ -304,8 +338,6 @@ function compileExpandedDoc(
       typeInference,
     ),
   );
-  const mergedSetup = [...derivedFromAssets.scenarioSetupEffects, ...setup.value];
-  sections.setup = setup.failed ? null : mergedSetup;
 
   let turnStructure: GameDef['turnStructure'] | null = null;
   const rawTurnStructure = resolvedTableRefDoc.turnStructure;
@@ -425,6 +457,39 @@ function compileExpandedDoc(
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
   }
+
+  const scenarioDeckTokenType = compileSection(diagnostics, () =>
+    ensureScenarioDeckCardTokenType(tokenTypes.value, derivedFromAssets.selectedScenarioDeckComposition),
+  );
+  tokenTypes = {
+    value: scenarioDeckTokenType.value.tokenTypes,
+    failed: tokenTypes.failed || scenarioDeckTokenType.failed,
+  };
+  if (sections.tokenTypes !== null) {
+    sections.tokenTypes = tokenTypes.value;
+  }
+
+  const scenarioDeckSetup = compileSection(diagnostics, () =>
+    buildScenarioDeckSetupEffects({
+      selectedScenarioDeckComposition: derivedFromAssets.selectedScenarioDeckComposition,
+      eventDecks: sections.eventDecks,
+      existingZones: zones,
+      cardTokenTypeId: scenarioDeckTokenType.value.cardTokenTypeId,
+      diagnostics,
+    }),
+  );
+  const materializedZones =
+    zones === null || scenarioDeckSetup.failed
+      ? zones
+      : [...zones, ...scenarioDeckSetup.value.syntheticZones];
+  if (materializedZones !== null) {
+    zones = materializedZones;
+  }
+  if (sections.zones !== null) {
+    sections.zones = materializedZones;
+  }
+  const mergedSetup = [...derivedFromAssets.scenarioSetupEffects, ...scenarioDeckSetup.value.effects, ...setup.value];
+  sections.setup = setup.failed || scenarioDeckSetup.failed ? null : mergedSetup;
 
   if (actions !== null) {
     const withEventAction = synthesizeCardDrivenEventAction(
@@ -713,6 +778,491 @@ function synthesizeCardDrivenEventAction(
       limits: [],
     },
   ];
+}
+
+function ensureScenarioDeckCardTokenType(
+  tokenTypes: GameDef['tokenTypes'],
+  selectedScenarioDeckComposition: ScenarioDeckSelection | undefined,
+): { readonly tokenTypes: GameDef['tokenTypes']; readonly cardTokenTypeId: string } {
+  if (selectedScenarioDeckComposition === undefined) {
+    return { tokenTypes, cardTokenTypeId: SCENARIO_DECK_SYNTHETIC_CARD_TOKEN_TYPE_ID };
+  }
+
+  const existingCardTokenType = tokenTypes.find(
+    (tokenType) => tokenType.props.isCoup === 'boolean' && tokenType.props.cardId === 'string',
+  );
+  if (existingCardTokenType !== undefined) {
+    return { tokenTypes, cardTokenTypeId: existingCardTokenType.id };
+  }
+
+  const existingTypeIds = new Set(tokenTypes.map((tokenType) => tokenType.id));
+  let cardTokenTypeId = SCENARIO_DECK_SYNTHETIC_CARD_TOKEN_TYPE_ID;
+  let suffix = 2;
+  while (existingTypeIds.has(cardTokenTypeId)) {
+    cardTokenTypeId = `${SCENARIO_DECK_SYNTHETIC_CARD_TOKEN_TYPE_ID}_${suffix}`;
+    suffix += 1;
+  }
+
+  return {
+    tokenTypes: [
+      ...tokenTypes,
+      {
+        id: cardTokenTypeId,
+        props: {
+          cardId: 'string',
+          eventDeckId: 'string',
+          isCoup: 'boolean',
+        },
+      },
+    ],
+    cardTokenTypeId,
+  };
+}
+
+const SCENARIO_DECK_MATERIALIZATION_STRATEGIES: Readonly<Record<string, ScenarioDeckMaterializationStrategy>> = {
+  [SCENARIO_DECK_PILE_COUP_MIX_STRATEGY_ID]: materializePileCoupMixDeck,
+};
+
+function buildScenarioDeckSetupEffects(options: {
+  readonly selectedScenarioDeckComposition: ScenarioDeckSelection | undefined;
+  readonly eventDecks: Exclude<GameDef['eventDecks'], undefined> | null;
+  readonly existingZones: GameDef['zones'] | null;
+  readonly cardTokenTypeId: string;
+  readonly diagnostics: Diagnostic[];
+}): {
+  readonly effects: readonly EffectAST[];
+  readonly syntheticZones: readonly ZoneDef[];
+} {
+  const scenarioDeck = options.selectedScenarioDeckComposition;
+  if (scenarioDeck === undefined) {
+    return { effects: [], syntheticZones: [] };
+  }
+
+  const { deckComposition } = scenarioDeck;
+  const deckBasePath = `${scenarioDeck.path}.deckComposition`;
+  const eventDeck = resolveScenarioEventDeck({
+    eventDeckAssetId: scenarioDeck.eventDeckAssetId,
+    eventDecks: options.eventDecks,
+    diagnostics: options.diagnostics,
+    path: `${scenarioDeck.path}.eventDeckAssetId`,
+    deckBasePath,
+  });
+  if (eventDeck === null) {
+    return { effects: [], syntheticZones: [] };
+  }
+
+  const includedCardIds = deckComposition.includedCardIds ?? [];
+  const excludedCardIds = deckComposition.excludedCardIds ?? [];
+  const includedCardTags = deckComposition.includedCardTags ?? [];
+  const excludedCardTags = deckComposition.excludedCardTags ?? [];
+
+  const duplicateIncluded = findDuplicateEntries(includedCardIds);
+  for (const duplicateId of duplicateIncluded) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_ID',
+      path: `${deckBasePath}.includedCardIds`,
+      severity: 'error',
+      message: `Scenario deckComposition.includedCardIds contains duplicate id "${duplicateId}".`,
+      suggestion: 'List each card id at most once.',
+    });
+  }
+  const duplicateExcluded = findDuplicateEntries(excludedCardIds);
+  for (const duplicateId of duplicateExcluded) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_ID',
+      path: `${deckBasePath}.excludedCardIds`,
+      severity: 'error',
+      message: `Scenario deckComposition.excludedCardIds contains duplicate id "${duplicateId}".`,
+      suggestion: 'List each card id at most once.',
+    });
+  }
+  const duplicateIncludedTags = findDuplicateEntries(includedCardTags);
+  for (const duplicateTag of duplicateIncludedTags) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_TAG',
+      path: `${deckBasePath}.includedCardTags`,
+      severity: 'error',
+      message: `Scenario deckComposition.includedCardTags contains duplicate tag "${duplicateTag}".`,
+      suggestion: 'List each card tag at most once.',
+    });
+  }
+  const duplicateExcludedTags = findDuplicateEntries(excludedCardTags);
+  for (const duplicateTag of duplicateExcludedTags) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_TAG',
+      path: `${deckBasePath}.excludedCardTags`,
+      severity: 'error',
+      message: `Scenario deckComposition.excludedCardTags contains duplicate tag "${duplicateTag}".`,
+      suggestion: 'List each card tag at most once.',
+    });
+  }
+
+  const cardsById = new Map(eventDeck.cards.map((card) => [card.id, card] as const));
+  const knownTags = new Set(eventDeck.cards.flatMap((card) => card.tags ?? []));
+  for (const [index, cardId] of includedCardIds.entries()) {
+    if (cardsById.has(cardId)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      path: `${deckBasePath}.includedCardIds.${index}`,
+      severity: 'error',
+      message: `Scenario includedCardIds references unknown event card "${cardId}" in deck "${eventDeck.id}".`,
+      suggestion: 'Use a card id declared in the selected eventDeck.',
+    });
+  }
+  for (const [index, cardId] of excludedCardIds.entries()) {
+    if (cardsById.has(cardId)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      path: `${deckBasePath}.excludedCardIds.${index}`,
+      severity: 'error',
+      message: `Scenario excludedCardIds references unknown event card "${cardId}" in deck "${eventDeck.id}".`,
+      suggestion: 'Use a card id declared in the selected eventDeck.',
+    });
+  }
+  for (const [index, tag] of includedCardTags.entries()) {
+    if (knownTags.has(tag)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      path: `${deckBasePath}.includedCardTags.${index}`,
+      severity: 'error',
+      message: `Scenario includedCardTags references unknown event card tag "${tag}" in deck "${eventDeck.id}".`,
+      suggestion: 'Use a card tag declared by at least one card in the selected eventDeck.',
+    });
+  }
+  for (const [index, tag] of excludedCardTags.entries()) {
+    if (knownTags.has(tag)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      path: `${deckBasePath}.excludedCardTags.${index}`,
+      severity: 'error',
+      message: `Scenario excludedCardTags references unknown event card tag "${tag}" in deck "${eventDeck.id}".`,
+      suggestion: 'Use a card tag declared by at least one card in the selected eventDeck.',
+    });
+  }
+
+  const excludedIdSet = new Set(excludedCardIds);
+  for (const [index, cardId] of includedCardIds.entries()) {
+    if (!excludedIdSet.has(cardId)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS',
+      path: `${deckBasePath}.includedCardIds.${index}`,
+      severity: 'error',
+      message: `Scenario deckComposition includes and excludes card "${cardId}".`,
+      suggestion: 'A card id may appear in only one of includedCardIds or excludedCardIds.',
+    });
+  }
+  const excludedTagSet = new Set(excludedCardTags);
+  for (const [index, tag] of includedCardTags.entries()) {
+    if (!excludedTagSet.has(tag)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS',
+      path: `${deckBasePath}.includedCardTags.${index}`,
+      severity: 'error',
+      message: `Scenario deckComposition includes and excludes tag "${tag}".`,
+      suggestion: 'A tag may appear in only one of includedCardTags or excludedCardTags.',
+    });
+  }
+
+  const includeSelectorsDeclared = includedCardIds.length > 0 || includedCardTags.length > 0;
+  const includeSelectedIds = new Set<string>();
+  for (const cardId of includedCardIds) {
+    if (cardsById.has(cardId)) {
+      includeSelectedIds.add(cardId);
+    }
+  }
+  for (const card of eventDeck.cards) {
+    if ((card.tags ?? []).some((tag) => includedCardTags.includes(tag))) {
+      includeSelectedIds.add(card.id);
+    }
+  }
+
+  const excludeSelectedIds = new Set<string>();
+  for (const cardId of excludedCardIds) {
+    if (cardsById.has(cardId)) {
+      excludeSelectedIds.add(cardId);
+    }
+  }
+  for (const card of eventDeck.cards) {
+    if ((card.tags ?? []).some((tag) => excludedCardTags.includes(tag))) {
+      excludeSelectedIds.add(card.id);
+    }
+  }
+
+  for (const cardId of includeSelectedIds) {
+    if (!excludeSelectedIds.has(cardId)) {
+      continue;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS',
+      path: deckBasePath,
+      severity: 'error',
+      message: `Scenario deckComposition includes and excludes card "${cardId}".`,
+      suggestion: 'Make include selectors and exclude selectors disjoint for each card.',
+    });
+  }
+
+  const includeSet = includeSelectorsDeclared ? includeSelectedIds : new Set(eventDeck.cards.map((card) => card.id));
+  const candidateCards = eventDeck.cards.filter((card) => includeSet.has(card.id) && !excludeSelectedIds.has(card.id));
+  const strategyId = deckComposition.materializationStrategy;
+  const strategy = SCENARIO_DECK_MATERIALIZATION_STRATEGIES[strategyId];
+  if (strategy === undefined) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_STRATEGY_UNKNOWN',
+      path: `${deckBasePath}.materializationStrategy`,
+      severity: 'error',
+      message: `Unknown scenario deckComposition.materializationStrategy "${strategyId}".`,
+      suggestion: 'Use a registered scenario deck materialization strategy.',
+      alternatives: Object.keys(SCENARIO_DECK_MATERIALIZATION_STRATEGIES),
+    });
+    return { effects: [], syntheticZones: [] };
+  }
+
+  const existingZoneIds = new Set((options.existingZones ?? []).map((zone) => String(zone.id)));
+  return strategy({
+    scenarioDeck,
+    deckBasePath,
+    eventDeck,
+    cardTokenTypeId: options.cardTokenTypeId,
+    existingZoneIds,
+    candidateCards,
+    diagnostics: options.diagnostics,
+  });
+}
+
+function materializePileCoupMixDeck(options: {
+  readonly scenarioDeck: ScenarioDeckSelection;
+  readonly deckBasePath: string;
+  readonly eventDeck: EventDeckDef;
+  readonly cardTokenTypeId: string;
+  readonly existingZoneIds: Set<string>;
+  readonly candidateCards: readonly EventDeckDef['cards'][number][];
+  readonly diagnostics: Diagnostic[];
+}): ScenarioDeckMaterializationResult {
+  const { deckComposition } = options.scenarioDeck;
+  const [coupCards, eventCards] = partitionByCoup(options.candidateCards);
+
+  const neededEvents = deckComposition.pileCount * deckComposition.eventsPerPile;
+  const neededCoups = deckComposition.pileCount * deckComposition.coupsPerPile;
+  if (eventCards.length < neededEvents) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS',
+      path: `${options.deckBasePath}.eventsPerPile`,
+      severity: 'error',
+      message: `Scenario deckComposition requires ${neededEvents} non-coup cards, but ${eventCards.length} are available after filters.`,
+      suggestion: 'Adjust included/excluded filters or pile/event counts.',
+    });
+  }
+  if (coupCards.length < neededCoups) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_COUPS',
+      path: `${options.deckBasePath}.coupsPerPile`,
+      severity: 'error',
+      message: `Scenario deckComposition requires ${neededCoups} coup cards, but ${coupCards.length} are available after filters.`,
+      suggestion: 'Adjust included/excluded filters or pile/coup counts.',
+    });
+  }
+  if (eventCards.length < neededEvents || coupCards.length < neededCoups) {
+    return { effects: [], syntheticZones: [] };
+  }
+
+  const baseStem = sanitizeScenarioDeckStem(`${options.scenarioDeck.entityId}_${options.eventDeck.id}`);
+  const eventsPoolZoneId = createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_events_pool`);
+  const coupsPoolZoneId = createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_coups_pool`);
+  const pileWorkZoneId = createUniqueSyntheticZoneId(options.existingZoneIds, `${baseStem}_pile_work`);
+
+  const syntheticZones = [
+    createScenarioDeckSyntheticZone(eventsPoolZoneId),
+    createScenarioDeckSyntheticZone(coupsPoolZoneId),
+    createScenarioDeckSyntheticZone(pileWorkZoneId),
+  ];
+  const effects: EffectAST[] = [];
+
+  for (const eventCard of eventCards) {
+    effects.push({
+      createToken: {
+        type: options.cardTokenTypeId,
+        zone: eventsPoolZoneId,
+        props: {
+          cardId: eventCard.id,
+          eventDeckId: options.eventDeck.id,
+          isCoup: false,
+        },
+      },
+    });
+  }
+  for (const coupCard of coupCards) {
+    effects.push({
+      createToken: {
+        type: options.cardTokenTypeId,
+        zone: coupsPoolZoneId,
+        props: {
+          cardId: coupCard.id,
+          eventDeckId: options.eventDeck.id,
+          isCoup: true,
+        },
+      },
+    });
+  }
+
+  effects.push({ shuffle: { zone: eventsPoolZoneId } });
+  effects.push({ shuffle: { zone: coupsPoolZoneId } });
+
+  for (let pileIndex = deckComposition.pileCount - 1; pileIndex >= 0; pileIndex -= 1) {
+    if (deckComposition.eventsPerPile > 0) {
+      effects.push({
+        draw: {
+          from: eventsPoolZoneId,
+          to: pileWorkZoneId,
+          count: deckComposition.eventsPerPile,
+        },
+      });
+    }
+    if (deckComposition.coupsPerPile > 0) {
+      effects.push({
+        draw: {
+          from: coupsPoolZoneId,
+          to: pileWorkZoneId,
+          count: deckComposition.coupsPerPile,
+        },
+      });
+    }
+    effects.push({ shuffle: { zone: pileWorkZoneId } });
+    effects.push({
+      moveAll: {
+        from: pileWorkZoneId,
+        to: options.eventDeck.drawZone,
+      },
+    });
+  }
+
+  return {
+    effects,
+    syntheticZones,
+  };
+}
+
+function sanitizeScenarioDeckStem(raw: string): string {
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const stem = normalized.length === 0 ? 'scenario_deck' : normalized;
+  return `__scenario_deck_${stem}`;
+}
+
+function createUniqueSyntheticZoneId(existingZoneIds: Set<string>, preferredBase: string): string {
+  let suffix = 1;
+  let candidateBase = preferredBase;
+  let candidateZoneId = `${candidateBase}:none`;
+  while (existingZoneIds.has(candidateZoneId)) {
+    suffix += 1;
+    candidateBase = `${preferredBase}_${suffix}`;
+    candidateZoneId = `${candidateBase}:none`;
+  }
+  existingZoneIds.add(candidateZoneId);
+  return candidateZoneId;
+}
+
+function createScenarioDeckSyntheticZone(zoneId: string): ZoneDef {
+  return {
+    id: asZoneId(zoneId),
+    zoneKind: 'aux',
+    owner: 'none',
+    visibility: 'hidden',
+    ordering: 'set',
+  };
+}
+
+function resolveScenarioEventDeck(options: {
+  readonly eventDeckAssetId: string | undefined;
+  readonly eventDecks: Exclude<GameDef['eventDecks'], undefined> | null;
+  readonly diagnostics: Diagnostic[];
+  readonly path: string;
+  readonly deckBasePath: string;
+}): EventDeckDef | null {
+  const decks = options.eventDecks ?? [];
+  if (decks.length === 0) {
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_MISSING',
+      path: options.deckBasePath,
+      severity: 'error',
+      message: 'Scenario deckComposition is declared, but no eventDecks are available.',
+      suggestion: 'Declare at least one eventDeck or remove deckComposition.',
+    });
+    return null;
+  }
+
+  if (options.eventDeckAssetId !== undefined) {
+    const matched = decks.find((deck) => deck.id === options.eventDeckAssetId);
+    if (matched !== undefined) {
+      return matched;
+    }
+    options.diagnostics.push({
+      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_UNKNOWN',
+      path: options.path,
+      severity: 'error',
+      message: `Scenario eventDeckAssetId "${options.eventDeckAssetId}" does not match any compiled eventDeck id.`,
+      suggestion: 'Set eventDeckAssetId to an existing eventDeck id.',
+      alternatives: decks.map((deck) => deck.id),
+    });
+    return null;
+  }
+
+  if (decks.length === 1) {
+    return decks[0]!;
+  }
+
+  options.diagnostics.push({
+    code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_AMBIGUOUS',
+    path: options.deckBasePath,
+    severity: 'error',
+    message: `Scenario deckComposition is ambiguous across ${decks.length} eventDecks.`,
+    suggestion: 'Set scenario eventDeckAssetId to select one eventDeck.',
+    alternatives: decks.map((deck) => deck.id),
+  });
+  return null;
+}
+
+function isCoupCard(card: EventDeckDef['cards'][number]): boolean {
+  return card.tags?.includes('coup') === true;
+}
+
+function partitionByCoup(cards: readonly EventDeckDef['cards'][number][]): readonly [
+  readonly EventDeckDef['cards'][number][],
+  readonly EventDeckDef['cards'][number][],
+] {
+  const coups: EventDeckDef['cards'][number][] = [];
+  const events: EventDeckDef['cards'][number][] = [];
+  for (const card of cards) {
+    if (isCoupCard(card)) {
+      coups.push(card);
+    } else {
+      events.push(card);
+    }
+  }
+  return [coups, events];
+}
+
+function findDuplicateEntries(values: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+      continue;
+    }
+    seen.add(value);
+  }
+  return [...duplicates];
 }
 
 function chooseSyntheticActionId(existingActionIds: ReadonlySet<string>, baseId: string): string {

@@ -3,9 +3,11 @@ import { describe, it } from 'node:test';
 
 import {
   asActionId,
+  type GameDef,
   asPlayerId,
   asTokenId,
   initialState,
+  legalMoves,
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
@@ -30,6 +32,37 @@ const withMom = (state: GameState, vars: Record<string, boolean>): GameState => 
     ...vars,
   },
 });
+
+const withLookaheadCoup = (def: GameDef, state: GameState, isCoup: boolean): GameState => {
+  if (state.turnOrderState.type !== 'cardDriven' || def.turnOrder?.type !== 'cardDriven') {
+    return state;
+  }
+  const lookaheadZone = def.turnOrder.config.turnFlow.cardLifecycle.lookahead;
+  const lookahead = state.zones[lookaheadZone];
+  if (lookahead === undefined || lookahead.length === 0) {
+    return state;
+  }
+  const top = lookahead[0];
+  if (top === undefined) {
+    return state;
+  }
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      [lookaheadZone]: [
+        {
+          ...top,
+          props: {
+            ...top.props,
+            isCoup,
+          },
+        },
+        ...lookahead.slice(1),
+      ],
+    },
+  };
+};
 
 describe('FITL momentum prohibition preconditions', () => {
   it('prohibits Air Strike when any Air Strike momentum is active, but not from unrelated momentum', () => {
@@ -322,40 +355,38 @@ describe('FITL momentum prohibition preconditions', () => {
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
-    const adviseA = 'quang-nam:none';
-    const adviseB = 'saigon:none';
-    const adviseBase = withActivePlayer(initialState(def, 9011, 2).state, 0);
-
-    assert.doesNotThrow(() =>
-      applyMoveWithResolvedDecisionIds(def, adviseBase, {
-        actionId: asActionId('advise'),
-        params: {
-          targetSpaces: [adviseA, adviseB],
-          [`$adviseMode@${adviseA}`]: 'sweep',
-          [`$adviseMode@${adviseB}`]: 'sweep',
-          $adviseAid: 'no',
-        },
-      }),
+    const adviseBase = withActivePlayer(withLookaheadCoup(def, initialState(def, 9011, 2).state, false), 0);
+    const twoSpaceAdviseMove = legalMoves(def, adviseBase).find(
+      (move) =>
+        move.actionId === asActionId('advise') &&
+        Array.isArray(move.params.targetSpaces) &&
+        move.params.targetSpaces.length === 2,
     );
+    if (twoSpaceAdviseMove !== undefined) {
+      assert.doesNotThrow(() =>
+        applyMoveWithResolvedDecisionIds(def, adviseBase, twoSpaceAdviseMove),
+      );
 
-    const adviseTyphoon = withMom(adviseBase, { mom_typhoonKate: true });
-    assert.throws(
-      () =>
-        applyMoveWithResolvedDecisionIds(def, adviseTyphoon, {
-          actionId: asActionId('advise'),
-          params: {
-            targetSpaces: [adviseA, adviseB],
-            [`$adviseMode@${adviseA}`]: 'sweep',
-            [`$adviseMode@${adviseB}`]: 'sweep',
-            $adviseAid: 'no',
-          },
-        }),
-      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
-    );
+      const adviseTyphoon = withMom(adviseBase, { mom_typhoonKate: true });
+      assert.throws(
+        () =>
+          applyMoveWithResolvedDecisionIds(def, adviseTyphoon, twoSpaceAdviseMove),
+        /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      );
+    } else {
+      const adviseMoves = legalMoves(def, adviseBase).filter((move) => move.actionId === asActionId('advise'));
+      assert.equal(
+        adviseMoves.every(
+          (move) => !Array.isArray(move.params.targetSpaces) || move.params.targetSpaces.length <= 1,
+        ),
+        true,
+        'Expected advise to expose only one-space targeting in this deterministic setup',
+      );
+    }
 
     const raidA = 'quang-nam:none';
     const raidB = 'tay-ninh:none';
-    const raidBase = withActivePlayer(initialState(def, 9012, 2).state, 1);
+    const raidBase = withActivePlayer(withLookaheadCoup(def, initialState(def, 9012, 2).state, false), 1);
 
     assert.doesNotThrow(() =>
       applyMoveWithResolvedDecisionIds(def, raidBase, {

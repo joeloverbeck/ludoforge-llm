@@ -65,6 +65,12 @@ export function deriveSectionsFromDataAssets(
   readonly spaceMarkers: readonly SpaceMarkerValueDef[] | null;
   readonly stackingConstraints: readonly StackingConstraint[] | null;
   readonly scenarioSetupEffects: readonly EffectAST[];
+  readonly selectedScenarioDeckComposition?: {
+    readonly path: string;
+    readonly entityId: string;
+    readonly eventDeckAssetId?: string;
+    readonly deckComposition: NonNullable<ScenarioPayload['deckComposition']>;
+  };
   readonly runtimeDataAssets: readonly RuntimeDataAsset[];
   readonly tableContracts: readonly RuntimeTableContract[];
   readonly selectedScenarioAssetId?: string;
@@ -283,6 +289,18 @@ export function deriveSectionsFromDataAssets(
     spaceMarkers: selectedMap?.payload.spaceMarkers ?? null,
     stackingConstraints: selectedMap?.payload.stackingConstraints ?? null,
     scenarioSetupEffects,
+    ...(selectedScenario?.payload.deckComposition === undefined
+      ? {}
+      : {
+          selectedScenarioDeckComposition: {
+            path: selectedScenario.path,
+            entityId: selectedScenario.entityId,
+            ...(selectedScenario.payload.eventDeckAssetId === undefined
+              ? {}
+              : { eventDeckAssetId: selectedScenario.payload.eventDeckAssetId }),
+            deckComposition: selectedScenario.payload.deckComposition,
+          },
+        }),
     runtimeDataAssets,
     tableContracts,
     ...(selectedScenario?.entityId === undefined ? {} : { selectedScenarioAssetId: selectedScenario.entityId }),

@@ -174,11 +174,14 @@ describe('exhaustive kernel unions', () => {
     };
 
     const deckComposition: ScenarioDeckComposition = {
+      materializationStrategy: 'pile-coup-mix-v1',
       pileCount: 4,
       eventsPerPile: 13,
       coupsPerPile: 3,
       includedCardIds: ['card-001'],
       excludedCardIds: ['card-130'],
+      includedCardTags: ['pivotal'],
+      excludedCardTags: ['coup'],
     };
 
     const payload: ScenarioPayload = {

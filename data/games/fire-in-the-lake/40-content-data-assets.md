@@ -1084,9 +1084,12 @@ dataAssets:
       startingLeader: duong-van-minh
       leaderStack: []
       deckComposition:
+        materializationStrategy: pile-coup-mix-v1
         pileCount: 6
         eventsPerPile: 12
         coupsPerPile: 1
+        excludedCardTags:
+          - pivotal
       startingEligibility:
         - seat: us
           eligible: true
@@ -1419,9 +1422,14 @@ dataAssets:
       leaderStack:
         - khanh
       deckComposition:
+        materializationStrategy: pile-coup-mix-v1
         pileCount: 3
         eventsPerPile: 8
         coupsPerPile: 1
+        excludedCardTags:
+          - pivotal
+        excludedCardIds:
+          - card-129
       startingCapabilities:
         - capabilityId: aaa
           side: shaded
@@ -1793,9 +1801,12 @@ dataAssets:
         - khanh
         - young-turks
       deckComposition:
+        materializationStrategy: pile-coup-mix-v1
         pileCount: 3
         eventsPerPile: 12
         coupsPerPile: 1
+        excludedCardTags:
+          - pivotal
       startingCapabilities:
         - capabilityId: aaa
           side: shaded

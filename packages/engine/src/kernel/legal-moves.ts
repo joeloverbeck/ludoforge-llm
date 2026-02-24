@@ -300,10 +300,25 @@ function enumerateCurrentEventMoves(
   }
 
   for (const move of baseMoves) {
-    const completion = resolveMoveDecisionSequence(def, state, move, {
-      budgets: enumeration.budgets,
-      onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-    });
+    // Matrix filtering must happen before decision-sequence probing.
+    // Some event branches reference decision bindings in their effects;
+    // probing a move that is matrix-disallowed can raise false runtime errors.
+    if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
+      continue;
+    }
+
+    let completion: ReturnType<typeof resolveMoveDecisionSequence>;
+    try {
+      completion = resolveMoveDecisionSequence(def, state, move, {
+        budgets: enumeration.budgets,
+        onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+      });
+    } catch (error) {
+      if (shouldDeferMissingBinding(error, 'legalMoves.eventDecisionSequence')) {
+        continue;
+      }
+      throw error;
+    }
     if (!completion.complete) {
       continue;
     }

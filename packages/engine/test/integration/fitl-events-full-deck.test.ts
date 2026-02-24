@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -152,5 +153,16 @@ describe('FITL full deck compilation and golden invariants', () => {
     };
 
     assert.deepEqual(actual, expected);
+  });
+
+  it('does not reference non-existent FITL casualty zones in event deck logic', () => {
+    const { parsed } = compileProductionSpec();
+    assertNoErrors(parsed);
+
+    const badZoneRefs = findDeep(parsed.doc.eventDecks ?? [], (node) =>
+      node?.zone === 'casualties-ARVN:none' || node?.zoneExpr === 'casualties-ARVN:none',
+    );
+
+    assert.deepEqual(badZoneRefs, []);
   });
 });

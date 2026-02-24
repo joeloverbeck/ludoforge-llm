@@ -124,11 +124,14 @@ export interface ScenarioPiecePlacement {
 }
 
 export interface ScenarioDeckComposition {
+  readonly materializationStrategy: string;
   readonly pileCount: number;
   readonly eventsPerPile: number;
   readonly coupsPerPile: number;
   readonly includedCardIds?: readonly string[];
   readonly excludedCardIds?: readonly string[];
+  readonly includedCardTags?: readonly string[];
+  readonly excludedCardTags?: readonly string[];
 }
 
 export interface ScenarioPayload {

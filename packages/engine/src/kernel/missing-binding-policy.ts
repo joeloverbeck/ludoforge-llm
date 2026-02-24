@@ -2,6 +2,7 @@ import { isEvalErrorCode } from './eval-error.js';
 
 export type MissingBindingPolicyContext =
   | 'legalMoves.executorDuringParamEnumeration'
+  | 'legalMoves.eventDecisionSequence'
   | 'pipeline.discoveryPredicate';
 
 /**
@@ -17,6 +18,7 @@ export const shouldDeferMissingBinding = (
   }
   switch (context) {
     case 'legalMoves.executorDuringParamEnumeration':
+    case 'legalMoves.eventDecisionSequence':
     case 'pipeline.discoveryPredicate':
       return true;
     default: {
@@ -25,4 +27,3 @@ export const shouldDeferMissingBinding = (
     }
   }
 };
-

@@ -182,11 +182,14 @@ export const ScenarioPiecePlacementSchema = z
 
 export const ScenarioDeckCompositionSchema = z
   .object({
+    materializationStrategy: StringSchema.min(1),
     pileCount: IntegerSchema.positive(),
     eventsPerPile: IntegerSchema.positive(),
     coupsPerPile: IntegerSchema.positive(),
     includedCardIds: z.array(StringSchema.min(1)).optional(),
     excludedCardIds: z.array(StringSchema.min(1)).optional(),
+    includedCardTags: z.array(StringSchema.min(1)).optional(),
+    excludedCardTags: z.array(StringSchema.min(1)).optional(),
   })
   .strict();
 

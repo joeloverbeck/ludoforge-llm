@@ -1530,17 +1530,20 @@ describe('FITL COIN operations integration', () => {
       );
     });
 
-    it('AC4: move-cubes stage uses tokensInAdjacentZones for US cubes', () => {
+    it('AC4: move-cubes stage uses adjacency-or-connected sourcing for US cubes', () => {
       const parsed = parsePatrolProfile();
       const moveCubes = parsed.stages[1];
       assert.equal(moveCubes.stage, 'move-cubes');
 
-      const adjacentQueries = findDeep(moveCubes.effects, (node: any) =>
-        node?.query === 'tokensInAdjacentZones' &&
+      const patrolSourceQueries = findDeep(moveCubes.effects, (node: any) =>
+        node?.query === 'tokensInMapSpaces' &&
         Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US'),
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
+        node?.spaceFilter?.op === 'or' &&
+        node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'adjacent') &&
+        node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'connected'),
       );
-      assert.ok(adjacentQueries.length >= 1, 'Expected tokensInAdjacentZones query for US cubes');
+      assert.ok(patrolSourceQueries.length >= 1, 'Expected adjacency-or-connected Patrol source query for US cubes');
     });
 
     it('AC5: activation stage — 1 guerrilla per US cube (1:1 ratio)', () => {
@@ -1685,17 +1688,20 @@ describe('FITL COIN operations integration', () => {
       assert.deepEqual(profile.costValidation, expected);
     });
 
-    it('AC4: move-cubes stage uses tokensInAdjacentZones for ARVN cubes', () => {
+    it('AC4: move-cubes stage uses adjacency-or-connected sourcing for ARVN cubes', () => {
       const parsed = parsePatrolProfile();
       const moveCubes = parsed.stages[1];
       assert.equal(moveCubes.stage, 'move-cubes');
 
-      const adjacentQueries = findDeep(moveCubes.effects, (node: any) =>
-        node?.query === 'tokensInAdjacentZones' &&
+      const patrolSourceQueries = findDeep(moveCubes.effects, (node: any) =>
+        node?.query === 'tokensInMapSpaces' &&
         Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN'),
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN') &&
+        node?.spaceFilter?.op === 'or' &&
+        node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'adjacent') &&
+        node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'connected'),
       );
-      assert.ok(adjacentQueries.length >= 1, 'Expected tokensInAdjacentZones query for ARVN cubes');
+      assert.ok(patrolSourceQueries.length >= 1, 'Expected adjacency-or-connected Patrol source query for ARVN cubes');
     });
 
     it('AC5: activation stage uses ARVN cube count as guerrilla activation limit', () => {

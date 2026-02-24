@@ -1757,8 +1757,36 @@ actionPipelines:
                 - chooseN:
                     bind: $movingCubes
                     options:
-                      query: tokensInAdjacentZones
-                      zone: $loc
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: or
+                        args:
+                          - op: adjacent
+                            left: $zone
+                            right: $loc
+                          - op: connected
+                            from: $zone
+                            to: $loc
+                            via:
+                              op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: $loc }
+                                - op: and
+                                  args:
+                                    - op: or
+                                      args:
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                    - op: '=='
+                                      left:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $zone
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      right: 0
                       filter:
                         - { prop: faction, eq: 'US' }
                         - { prop: type, op: in, value: ['troops', 'police'] }
@@ -1886,8 +1914,36 @@ actionPipelines:
                 - chooseN:
                     bind: $movingCubes
                     options:
-                      query: tokensInAdjacentZones
-                      zone: $loc
+                      query: tokensInMapSpaces
+                      spaceFilter:
+                        op: or
+                        args:
+                          - op: adjacent
+                            left: $zone
+                            right: $loc
+                          - op: connected
+                            from: $zone
+                            to: $loc
+                            via:
+                              op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: $loc }
+                                - op: and
+                                  args:
+                                    - op: or
+                                      args:
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                    - op: '=='
+                                      left:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $zone
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      right: 0
                       filter:
                         - { prop: faction, eq: 'ARVN' }
                         - { prop: type, op: in, value: ['troops', 'police'] }

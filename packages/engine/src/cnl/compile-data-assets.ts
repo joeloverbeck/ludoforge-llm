@@ -72,6 +72,7 @@ export function deriveSectionsFromDataAssets(
     readonly entityId: string;
     readonly eventDeckAssetId?: string;
     readonly deckComposition: NonNullable<ScenarioPayload['deckComposition']>;
+    readonly cardPlacements?: NonNullable<ScenarioPayload['cardPlacements']>;
   };
   readonly runtimeDataAssets: readonly RuntimeDataAsset[];
   readonly tableContracts: readonly RuntimeTableContract[];
@@ -303,6 +304,9 @@ export function deriveSectionsFromDataAssets(
               ? {}
               : { eventDeckAssetId: selectedScenario.payload.eventDeckAssetId }),
             deckComposition: selectedScenario.payload.deckComposition,
+            ...(selectedScenario.payload.cardPlacements === undefined
+              ? {}
+              : { cardPlacements: selectedScenario.payload.cardPlacements }),
           },
         }),
     runtimeDataAssets,

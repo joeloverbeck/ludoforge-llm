@@ -1092,6 +1092,15 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
+      cardPlacements:
+        - cardId: card-121
+          zoneId: leader:none
+        - cardId: card-122
+          zoneId: leader:none
+        - cardId: card-123
+          zoneId: leader:none
+        - cardId: card-124
+          zoneId: leader:none
       outOfPlay:
         - pieceTypeId: us-bases
           seat: us
@@ -1785,6 +1794,15 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
+      cardPlacements:
+        - cardId: card-121
+          zoneId: leader:none
+        - cardId: card-122
+          zoneId: leader:none
+        - cardId: card-123
+          zoneId: leader:none
+        - cardId: card-124
+          zoneId: leader:none
       outOfPlay:
         - pieceTypeId: us-troops
           seat: us

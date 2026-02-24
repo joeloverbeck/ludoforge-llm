@@ -1,9 +1,9 @@
-# FITLSEC2SCEDEC-004: Enforce Pivotal Event Single-Use via Global Vars
+# FITLSEC2SCEDEC-004: Enforce Pivotal Event Single-Use via Card State
 
 **Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: None — FITL data + vocabulary only
+**Engine Changes**: Yes — generic scenario schema/compiler support for scenario card placement + FITL data updates
 **Deps**: None (Spec 44, Gap 4). Independent of FITLSEC2SCEDEC-001/002/003.
 
 ## Problem
@@ -129,13 +129,14 @@ Replace the empty `effects: []` with conditional `setVar` effects that mark the 
 
 - **Completion date**: 2026-02-24
 - **What changed**:
-  - Added four pivotal single-use boolean global vars in `10-vocabulary.md`.
-  - Updated `pivotalEvent` preconditions in `30-rules-actions.md` to require corresponding used flag = `false`.
-  - Added conditional `setVar` effects in `pivotalEvent` to mark the matching pivotal as used on execution.
-  - Added integration test `packages/engine/test/integration/fitl-pivotal-single-use.test.ts` covering structure + runtime single-use behavior.
+  - Added generic `ScenarioPayload.cardPlacements` schema/type support and compiler materialization into setup card tokens.
+  - Added FITL `cardPlacements` for Medium/Full scenarios to place cards `121-124` into `leader:none` at setup.
+  - Reworked `pivotalEvent` to gate legality by card-token presence in `leader:none` and move the played pivotal token to `played:none`.
+  - Removed FITL-specific `pivotalUsed_*` global-var approach in favor of token-driven lifecycle.
+  - Fixed Tet return logic (`card-96` shaded) to match pivotal token by `cardId` property.
+  - Added integration test `packages/engine/test/integration/fitl-pivotal-single-use.test.ts` covering structural + runtime token-lifecycle behavior.
 - **Deviations from original plan**:
-  - Used canonical DSL forms already present in FITL data: `{ ref: gvar, var: ... }` and `if.when`.
-  - Used boolean vars (`type: boolean`, `init: false`) instead of int-as-boolean flags for stronger type clarity.
+  - Superseded initial flag-based plan with a cleaner token-state architecture to keep game rules data-driven and avoid FITL-specific state flags in vocabulary.
 - **Verification results**:
   - `pnpm -F @ludoforge/engine test` passed.
   - `pnpm -F @ludoforge/engine lint` passed.

@@ -123,6 +123,12 @@ export interface ScenarioPiecePlacement {
   readonly status?: Readonly<Record<string, string>>;
 }
 
+export interface ScenarioCardPlacement {
+  readonly cardId: string;
+  readonly zoneId: string;
+  readonly count?: number;
+}
+
 export interface ScenarioDeckComposition {
   readonly materializationStrategy: string;
   readonly pileCount: number;
@@ -142,6 +148,7 @@ export interface ScenarioPayload {
   readonly yearRange?: string;
   readonly settings?: Readonly<Record<string, unknown>>;
   readonly initialPlacements?: readonly ScenarioPiecePlacement[];
+  readonly cardPlacements?: readonly ScenarioCardPlacement[];
   readonly initializations?: readonly (
     | { readonly trackId: string; readonly value: number }
     | { readonly var: string; readonly value: number | boolean }

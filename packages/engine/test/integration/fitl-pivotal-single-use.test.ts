@@ -78,18 +78,16 @@ const withEligibilityPair = (
 };
 
 describe('FITL pivotal single-use integration', () => {
-  it('compiles pivotal used-flag vocabulary and pivotalEvent wiring', () => {
+  it('compiles pivotal card-state gating and pivotalEvent wiring', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const vars = new Map(def.globalVars.map((variable) => [String(variable.name), variable]));
-    for (const pivotalVar of ['pivotalUsed_card121', 'pivotalUsed_card122', 'pivotalUsed_card123', 'pivotalUsed_card124']) {
-      const variable = vars.get(pivotalVar);
-      assert.notEqual(variable, undefined, `Expected global var ${pivotalVar}`);
-      assert.equal(variable?.type, 'boolean');
-      assert.equal(variable?.init, false);
-    }
+    assert.equal(
+      def.globalVars.some((variable) => String(variable.name).startsWith('pivotalUsed_')),
+      false,
+      'Expected no pivotalUsed_* global vars under token-driven pivotal lifecycle model',
+    );
 
     const pivotalAction = def.actions.find((action) => String(action.id) === 'pivotalEvent');
     assert.notEqual(pivotalAction, undefined, 'Expected pivotalEvent action');
@@ -101,7 +99,20 @@ describe('FITL pivotal single-use integration', () => {
           args: [
             { op: '==', left: { ref: 'activePlayer' }, right: 0 },
             { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
-            { op: '==', left: { ref: 'gvar', var: 'pivotalUsed_card121' }, right: false },
+            {
+              op: '>',
+              left: {
+                aggregate: {
+                  op: 'count',
+                  query: {
+                    query: 'tokensInZone',
+                    zone: 'leader:none',
+                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-121' }],
+                  },
+                },
+              },
+              right: 0,
+            },
           ],
         },
         {
@@ -109,7 +120,20 @@ describe('FITL pivotal single-use integration', () => {
           args: [
             { op: '==', left: { ref: 'activePlayer' }, right: 2 },
             { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-122' },
-            { op: '==', left: { ref: 'gvar', var: 'pivotalUsed_card122' }, right: false },
+            {
+              op: '>',
+              left: {
+                aggregate: {
+                  op: 'count',
+                  query: {
+                    query: 'tokensInZone',
+                    zone: 'leader:none',
+                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-122' }],
+                  },
+                },
+              },
+              right: 0,
+            },
           ],
         },
         {
@@ -117,7 +141,20 @@ describe('FITL pivotal single-use integration', () => {
           args: [
             { op: '==', left: { ref: 'activePlayer' }, right: 1 },
             { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-123' },
-            { op: '==', left: { ref: 'gvar', var: 'pivotalUsed_card123' }, right: false },
+            {
+              op: '>',
+              left: {
+                aggregate: {
+                  op: 'count',
+                  query: {
+                    query: 'tokensInZone',
+                    zone: 'leader:none',
+                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-123' }],
+                  },
+                },
+              },
+              right: 0,
+            },
           ],
         },
         {
@@ -125,7 +162,20 @@ describe('FITL pivotal single-use integration', () => {
           args: [
             { op: '==', left: { ref: 'activePlayer' }, right: 3 },
             { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-124' },
-            { op: '==', left: { ref: 'gvar', var: 'pivotalUsed_card124' }, right: false },
+            {
+              op: '>',
+              left: {
+                aggregate: {
+                  op: 'count',
+                  query: {
+                    query: 'tokensInZone',
+                    zone: 'leader:none',
+                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-124' }],
+                  },
+                },
+              },
+              right: 0,
+            },
           ],
         },
       ],
@@ -134,38 +184,91 @@ describe('FITL pivotal single-use integration', () => {
       {
         if: {
           when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
-          then: [{ setVar: { scope: 'global', var: 'pivotalUsed_card121', value: true } }],
+          then: [
+            {
+              forEach: {
+                bind: '$pivotalCard',
+                over: {
+                  query: 'tokensInZone',
+                  zone: 'leader:none',
+                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-121' }],
+                },
+                limit: 1,
+                effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
+              },
+            },
+          ],
         },
       },
       {
         if: {
           when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-122' },
-          then: [{ setVar: { scope: 'global', var: 'pivotalUsed_card122', value: true } }],
+          then: [
+            {
+              forEach: {
+                bind: '$pivotalCard',
+                over: {
+                  query: 'tokensInZone',
+                  zone: 'leader:none',
+                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-122' }],
+                },
+                limit: 1,
+                effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
+              },
+            },
+          ],
         },
       },
       {
         if: {
           when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-123' },
-          then: [{ setVar: { scope: 'global', var: 'pivotalUsed_card123', value: true } }],
+          then: [
+            {
+              forEach: {
+                bind: '$pivotalCard',
+                over: {
+                  query: 'tokensInZone',
+                  zone: 'leader:none',
+                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-123' }],
+                },
+                limit: 1,
+                effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
+              },
+            },
+          ],
         },
       },
       {
         if: {
           when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-124' },
-          then: [{ setVar: { scope: 'global', var: 'pivotalUsed_card124', value: true } }],
+          then: [
+            {
+              forEach: {
+                bind: '$pivotalCard',
+                over: {
+                  query: 'tokensInZone',
+                  zone: 'leader:none',
+                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-124' }],
+                },
+                limit: 1,
+                effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
+              },
+            },
+          ],
         },
       },
     ]);
   });
 
-  it('initializes all pivotal used flags to false', () => {
+  it('initializes pivotal cards in leader zone for full scenario setup', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const state = initialState(compiled.gameDef!, 11, 4).state;
-    assert.equal(state.globalVars.pivotalUsed_card121, false);
-    assert.equal(state.globalVars.pivotalUsed_card122, false);
-    assert.equal(state.globalVars.pivotalUsed_card123, false);
-    assert.equal(state.globalVars.pivotalUsed_card124, false);
+    const leaderCardIds = new Set((state.zones['leader:none'] ?? []).map((token) => String(token.props.cardId ?? token.id)));
+    assert.equal(leaderCardIds.has('card-121'), true);
+    assert.equal(leaderCardIds.has('card-122'), true);
+    assert.equal(leaderCardIds.has('card-123'), true);
+    assert.equal(leaderCardIds.has('card-124'), true);
   });
 
   it('marks used pivotal and blocks replay when pivotal window reopens', () => {
@@ -189,7 +292,14 @@ describe('FITL pivotal single-use integration', () => {
     assert.notEqual(pivotalMove, undefined, 'Expected pivotal move to be legal before first use');
 
     const afterPivotal = applyMove(def, preActionState, pivotalMove!);
-    assert.equal(afterPivotal.state.globalVars.pivotalUsed_card124, true);
+    assert.equal(
+      (afterPivotal.state.zones['leader:none'] ?? []).some((token) => String(token.props.cardId ?? token.id) === 'card-124'),
+      false,
+    );
+    assert.equal(
+      (afterPivotal.state.zones['played:none'] ?? []).some((token) => String(token.props.cardId ?? token.id) === 'card-124'),
+      true,
+    );
 
     const reopenedPivotalState = withEligibilityPair(afterPivotal.state, {
       activeSeat: '3',

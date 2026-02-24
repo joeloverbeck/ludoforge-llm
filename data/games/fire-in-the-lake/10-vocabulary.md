@@ -348,18 +348,6 @@ globalVars:
     init: 0
     min: 0
     max: 200
-  - name: pivotalUsed_card121
-    type: boolean
-    init: false
-  - name: pivotalUsed_card122
-    type: boolean
-    init: false
-  - name: pivotalUsed_card123
-    type: boolean
-    init: false
-  - name: pivotalUsed_card124
-    type: boolean
-    init: false
 perPlayerVars:
   - name: resources
     type: int

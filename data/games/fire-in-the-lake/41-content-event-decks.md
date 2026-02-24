@@ -3311,7 +3311,7 @@ eventDecks:
                         query: tokensInZone
                         zone: played:none
                         filter:
-                          - { prop: id, eq: card-124 }
+                          - { prop: cardId, eq: card-124 }
                   right: 0
                 then:
                   - forEach:
@@ -3320,7 +3320,7 @@ eventDecks:
                         query: tokensInZone
                         zone: played:none
                         filter:
-                          - { prop: id, eq: card-124 }
+                          - { prop: cardId, eq: card-124 }
                       limit: 1
                       effects:
                         - moveToken:

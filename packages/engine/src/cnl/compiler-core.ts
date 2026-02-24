@@ -79,6 +79,11 @@ type ScenarioDeckSelection = {
   readonly path: string;
   readonly entityId: string;
   readonly eventDeckAssetId?: string;
+  readonly cardPlacements?: readonly {
+    readonly cardId: string;
+    readonly zoneId: string;
+    readonly count?: number;
+  }[];
   readonly deckComposition: {
     readonly materializationStrategy: string;
     readonly pileCount: number;
@@ -1017,6 +1022,7 @@ function buildScenarioDeckSetupEffects(options: {
 
   const includeSet = includeSelectorsDeclared ? includeSelectedIds : new Set(eventDeck.cards.map((card) => card.id));
   const candidateCards = eventDeck.cards.filter((card) => includeSet.has(card.id) && !excludeSelectedIds.has(card.id));
+  const candidateCardIds = new Set(candidateCards.map((card) => card.id));
   const strategyId = deckComposition.materializationStrategy;
   const strategy = SCENARIO_DECK_MATERIALIZATION_STRATEGIES[strategyId];
   if (strategy === undefined) {
@@ -1032,7 +1038,7 @@ function buildScenarioDeckSetupEffects(options: {
   }
 
   const existingZoneIds = new Set((options.existingZones ?? []).map((zone) => String(zone.id)));
-  return strategy({
+  const materialized = strategy({
     scenarioDeck,
     deckBasePath,
     eventDeck,
@@ -1041,6 +1047,64 @@ function buildScenarioDeckSetupEffects(options: {
     candidateCards,
     diagnostics: options.diagnostics,
   });
+
+  const placementZoneIds = new Set([
+    ...(options.existingZones ?? []).map((zone) => String(zone.id)),
+    ...materialized.syntheticZones.map((zone) => String(zone.id)),
+  ]);
+  const placementEffects: EffectAST[] = [];
+  for (const [index, placement] of (scenarioDeck.cardPlacements ?? []).entries()) {
+    const card = cardsById.get(placement.cardId);
+    if (card === undefined) {
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_CARD_PLACEMENT_UNKNOWN_CARD',
+        path: `${scenarioDeck.path}.payload.cardPlacements.${index}.cardId`,
+        severity: 'error',
+        message: `Scenario cardPlacements references unknown event card "${placement.cardId}" in deck "${eventDeck.id}".`,
+        suggestion: 'Use a card id declared in the selected eventDeck.',
+      });
+      continue;
+    }
+    if (candidateCardIds.has(placement.cardId)) {
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_CARD_PLACEMENT_DUPLICATE_CARD_SOURCE',
+        path: `${scenarioDeck.path}.payload.cardPlacements.${index}.cardId`,
+        severity: 'error',
+        message: `Scenario cardPlacements card "${placement.cardId}" is also materialized into the scenario draw deck.`,
+        suggestion: 'Exclude this card from deckComposition filters or remove its cardPlacements entry.',
+      });
+      continue;
+    }
+    if (!placementZoneIds.has(placement.zoneId)) {
+      options.diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_CARD_PLACEMENT_UNKNOWN_ZONE',
+        path: `${scenarioDeck.path}.payload.cardPlacements.${index}.zoneId`,
+        severity: 'error',
+        message: `Scenario cardPlacements references unknown zone "${placement.zoneId}".`,
+        suggestion: 'Use a declared zone id or a scenario synthetic deck zone id.',
+      });
+      continue;
+    }
+    const count = placement.count ?? 1;
+    for (let current = 0; current < count; current += 1) {
+      placementEffects.push({
+        createToken: {
+          type: options.cardTokenTypeId,
+          zone: placement.zoneId,
+          props: {
+            cardId: card.id,
+            eventDeckId: eventDeck.id,
+            isCoup: isCoupCard(card),
+          },
+        },
+      });
+    }
+  }
+
+  return {
+    effects: [...materialized.effects, ...placementEffects],
+    syntheticZones: materialized.syntheticZones,
+  };
 }
 
 function materializePileCoupMixDeck(options: {

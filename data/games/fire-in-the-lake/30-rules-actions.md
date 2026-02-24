@@ -1007,40 +1007,124 @@ actions:
           args:
             - { op: '==', left: { ref: activePlayer }, right: 0 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
-            - { op: '==', left: { ref: gvar, var: pivotalUsed_card121 }, right: false }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: leader:none
+                    filter:
+                      - { prop: cardId, eq: card-121 }
+              right: 0
         - op: and
           args:
             - { op: '==', left: { ref: activePlayer }, right: 2 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
-            - { op: '==', left: { ref: gvar, var: pivotalUsed_card122 }, right: false }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: leader:none
+                    filter:
+                      - { prop: cardId, eq: card-122 }
+              right: 0
         - op: and
           args:
             - { op: '==', left: { ref: activePlayer }, right: 1 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
-            - { op: '==', left: { ref: gvar, var: pivotalUsed_card123 }, right: false }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: leader:none
+                    filter:
+                      - { prop: cardId, eq: card-123 }
+              right: 0
         - op: and
           args:
             - { op: '==', left: { ref: activePlayer }, right: 3 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
-            - { op: '==', left: { ref: gvar, var: pivotalUsed_card124 }, right: false }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInZone
+                    zone: leader:none
+                    filter:
+                      - { prop: cardId, eq: card-124 }
+              right: 0
     cost: []
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card121, value: true }
+            - forEach:
+                bind: $pivotalCard
+                over:
+                  query: tokensInZone
+                  zone: leader:none
+                  filter:
+                    - { prop: cardId, eq: card-121 }
+                limit: 1
+                effects:
+                  - moveToken:
+                      token: $pivotalCard
+                      from: leader:none
+                      to: played:none
       - if:
           when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card122, value: true }
+            - forEach:
+                bind: $pivotalCard
+                over:
+                  query: tokensInZone
+                  zone: leader:none
+                  filter:
+                    - { prop: cardId, eq: card-122 }
+                limit: 1
+                effects:
+                  - moveToken:
+                      token: $pivotalCard
+                      from: leader:none
+                      to: played:none
       - if:
           when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card123, value: true }
+            - forEach:
+                bind: $pivotalCard
+                over:
+                  query: tokensInZone
+                  zone: leader:none
+                  filter:
+                    - { prop: cardId, eq: card-123 }
+                limit: 1
+                effects:
+                  - moveToken:
+                      token: $pivotalCard
+                      from: leader:none
+                      to: played:none
       - if:
           when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card124, value: true }
+            - forEach:
+                bind: $pivotalCard
+                over:
+                  query: tokensInZone
+                  zone: leader:none
+                  filter:
+                    - { prop: cardId, eq: card-124 }
+                limit: 1
+                effects:
+                  - moveToken:
+                      token: $pivotalCard
+                      from: leader:none
+                      to: played:none
     limits: []
   - { id: train, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: patrol, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }

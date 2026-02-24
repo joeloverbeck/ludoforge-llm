@@ -180,6 +180,14 @@ export const ScenarioPiecePlacementSchema = z
   })
   .strict();
 
+export const ScenarioCardPlacementSchema = z
+  .object({
+    cardId: StringSchema.min(1),
+    zoneId: StringSchema.min(1),
+    count: IntegerSchema.positive().optional(),
+  })
+  .strict();
+
 export const ScenarioDeckCompositionSchema = z
   .object({
     materializationStrategy: StringSchema.min(1),
@@ -202,6 +210,7 @@ export const ScenarioPayloadSchema = z
     yearRange: StringSchema.min(1).optional(),
     settings: z.record(StringSchema, z.unknown()).optional(),
     initialPlacements: z.array(ScenarioPiecePlacementSchema).optional(),
+    cardPlacements: z.array(ScenarioCardPlacementSchema).optional(),
     initializations: z
       .array(
         z.union([

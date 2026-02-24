@@ -1,6 +1,10 @@
 import { asPlayerId } from './branded.js';
 import { createCollector } from './execution-collector.js';
-import { resolveEventEligibilityOverrides, resolveEventFreeOperationGrants } from './event-execution.js';
+import {
+  resolveBoundaryDurationsAtTurnEnd,
+  resolveEventEligibilityOverrides,
+  resolveEventFreeOperationGrants,
+} from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
@@ -15,7 +19,6 @@ import type {
   Move,
   TriggerLogEntry,
   TurnFlowDuration,
-  TurnFlowLifecycleTraceEntry,
   TurnFlowPendingEligibilityOverride,
   TurnFlowPendingFreeOperationGrant,
   TurnFlowRuntimeCardState,
@@ -25,6 +28,7 @@ import type {
 interface TurnFlowTransitionResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
+  readonly boundaryDurations?: readonly TurnFlowDuration[];
 }
 
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
@@ -34,35 +38,6 @@ const cardDrivenConfig = (def: GameDef) =>
 
 const cardDrivenRuntime = (state: GameState) =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
-
-/**
- * Strip stale `pendingCardBoundaryTraceEntries` from the state's runtime.
- *
- * When a card boundary runs inside `applyTurnFlowEligibilityAfterMove` and
- * `advanceToDecisionPoint` returns early (because legal moves already exist),
- * the pending trace entries are never consumed by `advancePhase`. They persist
- * through subsequent moves and would cause the next card boundary to hit the
- * early-return path in `applyTurnFlowCardBoundary`, skipping the actual card
- * lifecycle promotion.
- */
-const stripStalePendingCardBoundaryTraceEntries = (state: GameState): GameState => {
-  if (state.turnOrderState.type !== 'cardDriven') {
-    return state;
-  }
-  const runtime = state.turnOrderState.runtime;
-  if (runtime.pendingCardBoundaryTraceEntries === undefined) {
-    return state;
-  }
-  const { pendingCardBoundaryTraceEntries, ...cleanedRuntime } = runtime;
-  void pendingCardBoundaryTraceEntries;
-  return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: cleanedRuntime as TurnFlowRuntimeState,
-    },
-  };
-};
 
 const isTurnFlowActionClass = (
   value: string,
@@ -818,7 +793,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   let nextPendingFreeOperationGrants = pendingFreeOperationGrants;
   let nextSeatOrder = runtime.seatOrder;
   let baseState = rewardState;
-  let cardBoundaryTraceEntries: readonly TurnFlowLifecycleTraceEntry[] | undefined;
+  let boundaryDurations: readonly TurnFlowDuration[] | undefined;
   if (endedReason !== undefined) {
     nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
     nextPendingOverrides = [];
@@ -828,14 +803,10 @@ export const applyTurnFlowEligibilityAfterMove = (
       : new Set<string>();
     const inCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
     if (!inCoupPhase) {
-      // Strip stale pendingCardBoundaryTraceEntries that may persist from a
-      // previous card boundary when advanceToDecisionPoint returned early
-      // (legal moves existed, so advancePhase was never called to consume them).
-      const cleanedRewardState = stripStalePendingCardBoundaryTraceEntries(rewardState);
-      const lifecycle = applyTurnFlowCardBoundary(def, cleanedRewardState);
+      const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
       baseState = lifecycle.state;
       traceEntries.push(...lifecycle.traceEntries);
-      cardBoundaryTraceEntries = lifecycle.traceEntries as readonly TurnFlowLifecycleTraceEntry[];
+      boundaryDurations = resolveBoundaryDurationsAtTurnEnd(lifecycle.traceEntries);
       const cardSeatOrder = resolveCardSeatOrder(def, baseState);
       if (cardSeatOrder !== null) {
         nextSeatOrder = cardSeatOrder;
@@ -875,7 +846,6 @@ export const applyTurnFlowEligibilityAfterMove = (
         eligibility: nextEligibility,
         pendingEligibilityOverrides: nextPendingOverrides,
         currentCard: nextTurn,
-        ...(cardBoundaryTraceEntries !== undefined ? { pendingCardBoundaryTraceEntries: cardBoundaryTraceEntries } : {}),
       }, normalizedPendingFreeOperationGrants),
     },
   };
@@ -883,6 +853,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   return {
     state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible),
     traceEntries,
+    ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
   };
 };
 

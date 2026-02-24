@@ -1,5 +1,6 @@
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectErrorCode } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import { executeEventMove } from './event-execution.js';
@@ -755,8 +756,20 @@ const applyMoveCore = (
 
   const executed = executeMoveAction(def, state, move, options, coreOptions, shared);
   const turnFlowResult = move.freeOperation === true
-    ? { state: consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
+    ? {
+      state: consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move),
+      traceEntries: [] as readonly TriggerLogEntry[],
+      boundaryDurations: undefined,
+    }
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move);
+  const boundaryExpiryResult = applyBoundaryExpiry(
+    def,
+    turnFlowResult.state,
+    turnFlowResult.boundaryDurations,
+    undefined,
+    shared.executionPolicy,
+    shared.collector,
+  );
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const shouldAdvanceToDecisionPoint =
     coreOptions?.skipAdvanceToDecisionPoint !== true
@@ -764,12 +777,12 @@ const applyMoveCore = (
   const progressedState = shouldAdvanceToDecisionPoint
     ? advanceToDecisionPoint(
       def,
-      turnFlowResult.state,
+      boundaryExpiryResult.state,
       lifecycleAndAdvanceLog,
       runtime.executionPolicy,
       runtime.collector,
     )
-    : turnFlowResult.state;
+    : boundaryExpiryResult.state;
 
   const stateWithHash = {
     ...progressedState,
@@ -778,7 +791,12 @@ const applyMoveCore = (
 
   return {
     state: stateWithHash,
-    triggerFirings: [...executed.triggerFirings, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
+    triggerFirings: [
+      ...executed.triggerFirings,
+      ...turnFlowResult.traceEntries,
+      ...boundaryExpiryResult.traceEntries,
+      ...lifecycleAndAdvanceLog,
+    ],
     warnings: runtime.collector.warnings,
     ...(runtime.collector.trace !== null ? { effectTrace: runtime.collector.trace } : {}),
   };

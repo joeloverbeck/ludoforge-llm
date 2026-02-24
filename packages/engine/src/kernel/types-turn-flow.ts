@@ -173,7 +173,6 @@ export interface TurnFlowRuntimeState {
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
-  readonly pendingCardBoundaryTraceEntries?: readonly TurnFlowLifecycleTraceEntry[];
 }
 
 export type TurnOrderRuntimeState =

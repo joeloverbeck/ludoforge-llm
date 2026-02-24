@@ -1,7 +1,17 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPhaseId, asPlayerId, initialState, type GameDef, type Move } from '../../src/kernel/index.js';
+import {
+  applyMove,
+  asActionId,
+  asPhaseId,
+  asPlayerId,
+  asZoneId,
+  initialState,
+  type GameDef,
+  type Move,
+  type GameState,
+} from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
@@ -54,6 +64,59 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [{ addVar: { scope: 'global', var: 'ops', delta: 1 } }],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+  }) as unknown as GameDef;
+
+const createCardLifecycleDef = (): GameDef =>
+  ({
+    metadata: { id: 'fitl-eligibility-pass-chain-lifecycle-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    constants: {},
+    globalVars: [
+      { name: 'aid', type: 'int', init: 0, min: -99, max: 99 },
+    ],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+    ],
+    tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+    setup: [
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+    ],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+          optionMatrix: [],
+          passRewards: [],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('pass'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
         limits: [],
       },
     ],
@@ -116,5 +179,71 @@ describe('FITL eligibility/pass-chain integration', () => {
     assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, '3');
     assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { '0': false, '1': false, '2': true, '3': true });
     assert.deepEqual(requireCardDrivenRuntime(second).currentCard.actedSeats, []);
+  });
+
+  it('promotes cards across successive rightmost-pass boundaries without stale boundary reuse', () => {
+    const def = createCardLifecycleDef();
+    const passMove: Move = { actionId: asActionId('pass'), params: {} };
+    const start = initialState(def, 43, 4).state;
+
+    const initialPlayed = start.zones['played:none']?.[0]?.id ?? null;
+    const initialLookahead = start.zones['lookahead:none']?.[0]?.id ?? null;
+    assert.notEqual(initialPlayed, null);
+    assert.notEqual(initialLookahead, null);
+
+    const afterFirstBoundary = applyMove(
+      def,
+      applyMove(def, applyMove(def, applyMove(def, start, passMove).state, passMove).state, passMove).state,
+      passMove,
+    ).state;
+    const firstBoundaryPlayed = afterFirstBoundary.zones['played:none']?.[0]?.id ?? null;
+    const firstBoundaryLookahead = afterFirstBoundary.zones['lookahead:none']?.[0]?.id ?? null;
+    assert.equal(firstBoundaryPlayed, initialLookahead);
+    assert.notEqual(firstBoundaryLookahead, null);
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(requireCardDrivenRuntime(afterFirstBoundary) as unknown as Record<string, unknown>, 'pendingCardBoundaryTraceEntries'),
+      false,
+    );
+
+    const afterSecondBoundary = applyMove(
+      def,
+      applyMove(def, applyMove(def, applyMove(def, afterFirstBoundary, passMove).state, passMove).state, passMove).state,
+      passMove,
+    ).state;
+    const secondBoundaryPlayed = afterSecondBoundary.zones['played:none']?.[0]?.id ?? null;
+    assert.equal(secondBoundaryPlayed, firstBoundaryLookahead);
+  });
+
+  it('expires turn-duration lasting effects immediately when eligibility resolves a card boundary', () => {
+    const def = createCardLifecycleDef();
+    const passMove: Move = { actionId: asActionId('pass'), params: {} };
+    const start = initialState(def, 71, 4).state;
+    const playedCardId = start.zones['played:none']?.[0]?.id ?? null;
+    assert.notEqual(playedCardId, null);
+
+    const withLasting: GameState = {
+      ...start,
+      globalVars: { ...start.globalVars, aid: 3 },
+      activeLastingEffects: [
+        {
+          id: 'aid-shift',
+          sourceCardId: playedCardId!,
+          side: 'unshaded',
+          duration: 'turn',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          remainingTurnBoundaries: 1,
+        },
+      ],
+    };
+
+    const afterBoundary = applyMove(
+      def,
+      applyMove(def, applyMove(def, applyMove(def, withLasting, passMove).state, passMove).state, passMove).state,
+      passMove,
+    ).state;
+
+    assert.equal(afterBoundary.globalVars.aid, 0);
+    assert.equal(afterBoundary.activeLastingEffects, undefined);
   });
 });

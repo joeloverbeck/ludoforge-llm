@@ -29,8 +29,8 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 
 - **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-28, 30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system)
 - **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX
-- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests), 35-00 (frontend roadmap), 41 (board layout), 42 (visual config & session management)
-- **Active tickets**: FITLRULES2-001 through 006 (FITL rules refinement — data-only YAML changes), KERLEGCHO-001 through 003 (kernel legal-choice hardening), BOARDLAY-001 through 008 (board layout engine — Spec 41)
+- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests), 35-00 (frontend roadmap), 41 (board layout), 42 (visual config & session management), 47 (FITL Section 6 rules gaps)
+- **Active tickets**: FITLRULES2-001 through 006 (FITL rules refinement — data-only YAML changes), KERLEGCHO-001 through 003 (kernel legal-choice hardening), BOARDLAY-001 through 008 (board layout engine — Spec 41), FITLSEC6RULGAP-001 through 003 (FITL Section 6 rules gaps — data-only YAML)
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
 - **Codebase size**: ~245 source files, ~354 test files
 - **Design specs**: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`, `brainstorming/texas-hold-em-rules.md`, `brainstorming/browser-based-game-runner.md`

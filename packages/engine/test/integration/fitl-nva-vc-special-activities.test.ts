@@ -218,13 +218,29 @@ describe('FITL NVA/VC special activities integration', () => {
     assert.equal(nvaBase!.props.tunnel, 'tunneled', 'Replacing a tunneled VC base should transfer tunnel status to NVA base');
   });
 
-  it('executes bombard automatically, routes US losses to casualties, and uses no die roll', () => {
+  it('executes bombard with per-space troop choice, faction-correct routing, and no die roll', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
     const profile = (def.actionPipelines ?? []).find((candidate) => candidate.id === 'bombard-profile');
     assert.ok(profile, 'Expected bombard-profile to exist');
+    const resolveStage = profile!.stages.find((stage) => stage.stage === 'resolve-per-space');
+    assert.ok(resolveStage, 'Expected bombard resolve-per-space stage');
+    const perSpace = resolveStage!.effects.find((effect) => 'forEach' in effect && effect.forEach.bind === '$space');
+    if (!perSpace || !('forEach' in perSpace)) {
+      assert.fail('Expected per-space Bombard forEach');
+    }
+
+    const perSpaceEffects = perSpace.forEach.effects;
+    const routingText = JSON.stringify(perSpaceEffects);
+    assert.ok(routingText.includes('\"bind\":\"$bombardFaction@{$space}\"'));
+    assert.ok(routingText.includes('\"bind\":\"$bombardTroops@{$space}\"'));
+    assert.ok(routingText.includes('\"US\"') && routingText.includes('\"ARVN\"'));
+    assert.ok(routingText.includes('\"query\":\"tokensInZone\"') && routingText.includes('\"prop\":\"type\"') && routingText.includes('\"troops\"'));
+    assert.ok(routingText.includes('\"casualties-US:none\"'), 'US troop removal should route to casualties');
+    assert.ok(routingText.includes('\"available-ARVN:none\"'), 'ARVN troop removal should route to available');
+    assert.equal(routingText.includes('\"removeByPriority\"'), false, 'Bombard should not use removeByPriority');
 
     const hasRollRandom = (effects: readonly EffectAST[]): boolean =>
       effects.some((effect) => {
@@ -250,25 +266,61 @@ describe('FITL NVA/VC special activities integration', () => {
         [space]: [
           makeToken('bomb-us-1', 'troops', 'US', { type: 'troops' }),
           makeToken('bomb-us-2', 'troops', 'US', { type: 'troops' }),
-          makeToken('bomb-us-3', 'troops', 'US', { type: 'troops' }),
           makeToken('bomb-nva-1', 'troops', 'NVA', { type: 'troops' }),
           makeToken('bomb-nva-2', 'troops', 'NVA', { type: 'troops' }),
           makeToken('bomb-nva-3', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('bomb-arvn-1', 'troops', 'ARVN', { type: 'troops' }),
         ],
       },
     };
 
     const casualtiesBefore = modifiedStart.zones['casualties-US:none']?.length ?? 0;
-    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+    const availableArvnBefore = modifiedStart.zones['available-ARVN:none']?.length ?? 0;
+
+    const usResult = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('bombard'),
-      params: { targetSpaces: [space] },
+      params: {
+        targetSpaces: [space],
+        [`$bombardFaction@${space}`]: 'US',
+        [`$bombardTroops@${space}`]: [asTokenId('bomb-us-1')],
+      },
     });
 
-    const final = result.state;
-    assert.equal(final.globalVars.bombardCount, 1);
-    assert.equal(final.globalVars.nvaResources, 7, 'Bombard should have no additional resource cost');
-    assert.equal(countTokens(final, space, (token) => token.props.faction === 'US' && token.type === 'troops'), 2);
-    assert.equal((final.zones['casualties-US:none']?.length ?? 0) - casualtiesBefore, 1, 'Bombard should send removed US troops to casualties');
+    const usFinal = usResult.state;
+    assert.equal(usFinal.globalVars.bombardCount, 1);
+    assert.equal(usFinal.globalVars.nvaResources, 7, 'Bombard should have no additional resource cost');
+    assert.equal(countTokens(usFinal, space, (token) => token.props.faction === 'US' && token.type === 'troops'), 1);
+    assert.equal(
+      (usFinal.zones['casualties-US:none']?.length ?? 0) - casualtiesBefore,
+      1,
+      'Bombard should send selected US troop to casualties',
+    );
+    assert.equal(
+      (usFinal.zones['available-ARVN:none']?.length ?? 0) - availableArvnBefore,
+      0,
+      'Selecting US troop should not add ARVN troops to Available',
+    );
+
+    const arvnResult = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+      actionId: asActionId('bombard'),
+      params: {
+        targetSpaces: [space],
+        [`$bombardFaction@${space}`]: 'ARVN',
+        [`$bombardTroops@${space}`]: [asTokenId('bomb-arvn-1')],
+      },
+    });
+    const arvnFinal = arvnResult.state;
+    assert.equal(countTokens(arvnFinal, space, (token) => token.props.faction === 'ARVN' && token.type === 'troops'), 0);
+    assert.equal(
+      (arvnFinal.zones['available-ARVN:none']?.length ?? 0) - availableArvnBefore,
+      1,
+      'Bombard should send selected ARVN troop to available',
+    );
+    assert.equal(
+      (arvnFinal.zones['casualties-US:none']?.length ?? 0) - casualtiesBefore,
+      0,
+      'Selecting ARVN troop should not add US troops to casualties',
+    );
   });
 
   it('executes NVA ambush with one-guerrilla activation, no attacker losses, and LoC-adjacent targeting', () => {

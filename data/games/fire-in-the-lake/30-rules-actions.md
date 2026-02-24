@@ -4453,27 +4453,100 @@ actionPipelines:
               bind: $space
               over: { query: binding, name: targetSpaces }
               effects:
-                - removeByPriority:
-                    budget: 1
-                    groups:
-                      - bind: $usTroop
-                        over:
+                - let:
+                    bind: $usTroopCount
+                    value:
+                      aggregate:
+                        op: count
+                        query:
                           query: tokensInZone
                           zone: $space
                           filter:
                             - { prop: faction, eq: US }
                             - { prop: type, eq: troops }
-                        to:
-                          zoneExpr: 'casualties-US:none'
-                      - bind: $arvnTroop
-                        over:
-                          query: tokensInZone
-                          zone: $space
-                          filter:
-                            - { prop: faction, eq: ARVN }
-                            - { prop: type, eq: troops }
-                        to:
-                          zoneExpr: 'available-ARVN:none'
+                    in:
+                      - let:
+                          bind: $arvnTroopCount
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  - { prop: faction, eq: ARVN }
+                                  - { prop: type, eq: troops }
+                          in:
+                            - if:
+                                when:
+                                  op: '>'
+                                  left:
+                                    op: '+'
+                                    left: { ref: binding, name: $usTroopCount }
+                                    right: { ref: binding, name: $arvnTroopCount }
+                                  right: 0
+                                then:
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '>', left: { ref: binding, name: $usTroopCount }, right: 0 }
+                                          - { op: '>', left: { ref: binding, name: $arvnTroopCount }, right: 0 }
+                                      then:
+                                        - chooseOne:
+                                            bind: '$bombardFaction@{$space}'
+                                            options: { query: enums, values: [US, ARVN] }
+                                      else:
+                                        - if:
+                                            when: { op: '>', left: { ref: binding, name: $usTroopCount }, right: 0 }
+                                            then:
+                                              - chooseOne:
+                                                  bind: '$bombardFaction@{$space}'
+                                                  options: { query: enums, values: [US] }
+                                            else:
+                                              - chooseOne:
+                                                  bind: '$bombardFaction@{$space}'
+                                                  options: { query: enums, values: [ARVN] }
+                                  - if:
+                                      when: { op: '==', left: { ref: binding, name: '$bombardFaction@{$space}' }, right: US }
+                                      then:
+                                        - chooseN:
+                                            bind: '$bombardTroops@{$space}'
+                                            options:
+                                              query: tokensInZone
+                                              zone: $space
+                                              filter:
+                                                - { prop: faction, eq: US }
+                                                - { prop: type, eq: troops }
+                                            min: 1
+                                            max: 1
+                                        - forEach:
+                                            bind: $bombardTroop
+                                            over: { query: binding, name: '$bombardTroops@{$space}' }
+                                            effects:
+                                              - moveToken:
+                                                  token: $bombardTroop
+                                                  from: { zoneExpr: { ref: tokenZone, token: $bombardTroop } }
+                                                  to: { zoneExpr: 'casualties-US:none' }
+                                      else:
+                                        - chooseN:
+                                            bind: '$bombardTroops@{$space}'
+                                            options:
+                                              query: tokensInZone
+                                              zone: $space
+                                              filter:
+                                                - { prop: faction, eq: ARVN }
+                                                - { prop: type, eq: troops }
+                                            min: 1
+                                            max: 1
+                                        - forEach:
+                                            bind: $bombardTroop
+                                            over: { query: binding, name: '$bombardTroops@{$space}' }
+                                            effects:
+                                              - moveToken:
+                                                  token: $bombardTroop
+                                                  from: { zoneExpr: { ref: tokenZone, token: $bombardTroop } }
+                                                  to: { zoneExpr: 'available-ARVN:none' }
       - stage: bombard-telemetry
         effects:
           - addVar:

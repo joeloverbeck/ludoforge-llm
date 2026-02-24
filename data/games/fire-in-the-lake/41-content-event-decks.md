@@ -713,12 +713,15 @@ eventDecks:
               sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
+          # forEach+chooseOne: each piece independently chooses a city
+          # (distributes across ANY cities, not forced to a single city)
           effects:
             - forEach:
                 bind: $usOutOfPlayPiece
                 over:
                   query: tokensInZone
                   zone: out-of-play-US:none
+                  # faction-only filter: matches troops, bases, AND irregulars
                   filter:
                     - { prop: faction, eq: US }
                 limit: 6

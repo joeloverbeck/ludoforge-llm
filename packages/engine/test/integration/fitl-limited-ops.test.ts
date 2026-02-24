@@ -36,6 +36,7 @@ const OPERATION_PROFILE_IDS = [
   'terror-vc-profile',
 ] as const;
 const LIMOP_SELECTOR_MACRO_IDS = [
+  'insurgent-rally-select-spaces',
   'insurgent-march-select-destinations',
   'insurgent-attack-select-spaces',
   'insurgent-terror-select-spaces',

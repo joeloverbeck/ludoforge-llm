@@ -1791,7 +1791,11 @@ actionPipelines:
                         - { prop: faction, eq: 'US' }
                         - { prop: type, op: in, value: ['troops', 'police'] }
                     min: 0
-                    max: 99
+                    max:
+                      if:
+                        when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                        then: 99
+                        else: { ref: gvar, var: nvaResources }
                 - forEach:
                     bind: $cube
                     over: { query: binding, name: $movingCubes }
@@ -2594,40 +2598,9 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - if:
-              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
-              then:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
-                    min: 0
-                    max: 1
-              else:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
-                    min: 0
-                    max: 99
+          - macro: insurgent-rally-select-spaces
+            args:
+              resourceVar: nvaResources
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -2780,40 +2753,9 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - if:
-              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
-              then:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
-                    min: 0
-                    max: 1
-              else:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
-                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
-                    min: 0
-                    max: 99
+          - macro: insurgent-rally-select-spaces
+            args:
+              resourceVar: vcResources
       - stage: resolve-per-space
         effects:
           - forEach:

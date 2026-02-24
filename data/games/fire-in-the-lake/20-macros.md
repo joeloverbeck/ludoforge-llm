@@ -774,6 +774,56 @@ effectMacros:
                 min: 1
                 max: 99
 
+  # ── insurgent-rally-select-spaces ────────────────────────────────────────
+  # Shared insurgent Rally map-space selector:
+  # - Province/City only
+  # - Excludes Support spaces
+  # - LimOp max=1 with min=0
+  # - Non-LimOp max is paid affordability, bypassed by free operations
+  - id: insurgent-rally-select-spaces
+    params:
+      - { name: resourceVar, type: string }
+    exports: [targetSpaces]
+    effects:
+      - if:
+          when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+          then:
+            - chooseN:
+                bind: targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: or
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                      - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
+                      - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
+                min: 0
+                max: 1
+          else:
+            - chooseN:
+                bind: targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: or
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                      - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
+                      - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
+                min: 0
+                max:
+                  if:
+                    when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                    then: 99
+                    else: { ref: gvar, var: { param: resourceVar } }
+
   # ── insurgent-terror-resolve-space ────────────────────────────────────────
   # Shared insurgent Terror space resolution:
   # - Cost: 1 per Province/City, 0 LoC

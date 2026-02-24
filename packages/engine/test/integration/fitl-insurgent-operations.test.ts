@@ -12,6 +12,8 @@ const ATTACK_SPACE = 'quang-tri-thua-thien:none';
 const LOC_SPACE = 'loc-hue-da-nang:none';
 const RALLY_SPACE = 'quang-nam:none';
 const RALLY_SPACE_2 = 'quang-tin-quang-ngai:none';
+const RALLY_SPACE_3 = 'hue:none';
+const RALLY_SPACE_4 = 'kontum:none';
 const CENTRAL_LAOS = 'central-laos:none';
 const SOUTHERN_LAOS = 'southern-laos:none';
 const NE_CAMBODIA = 'northeast-cambodia:none';
@@ -156,6 +158,27 @@ describe('FITL insurgent operations integration', () => {
         node?.args?.shiftFromSupportOnly === expected.shiftFromSupportOnly,
       );
       assert.ok(resolutionMacros.length >= 1, `${expected.id} should call insurgent-terror-resolve-space macro`);
+    }
+  });
+
+  it('uses shared rally selector macro in both NVA and VC rally profiles', () => {
+    for (const expected of [
+      { id: 'rally-nva-profile', resourceVar: 'nvaResources' },
+      { id: 'rally-vc-profile', resourceVar: 'vcResources' },
+    ]) {
+      const profile = parseProfile(expected.id);
+      const selectSpaces = profile.stages.find((stage: { stage: string }) => stage.stage === 'select-spaces');
+      assert.ok(selectSpaces, `${expected.id} should include select-spaces stage`);
+
+      const selectorMacros = findDeep(selectSpaces.effects, (node) =>
+        node?.macro === 'insurgent-rally-select-spaces' && node?.args?.resourceVar === expected.resourceVar,
+      );
+      assert.ok(selectorMacros.length >= 1, `${expected.id} should call insurgent-rally-select-spaces macro`);
+
+      const inlineSelectorBlocks = findDeep(selectSpaces.effects, (node) =>
+        node?.chooseN?.bind === 'targetSpaces' && node?.chooseN?.options?.query === 'mapSpaces',
+      );
+      assert.equal(inlineSelectorBlocks.length, 0, `${expected.id} should not inline duplicate Rally map-space selector blocks`);
     }
   });
 
@@ -1628,6 +1651,91 @@ describe('FITL insurgent operations integration', () => {
     assert.equal(free.globalVars.nvaResources, 6, 'Free rally should skip per-space NVA resource spend');
   });
 
+  it('caps paid Rally target-space selection by NVA resources and bypasses cap on free operations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = operationInitialState(def, 3031, 4);
+    const nvaPaid = withSupportState(
+      withSupportState(
+        withSupportState(
+          withSupportState(
+            {
+              ...start,
+              activePlayer: asPlayerId(2),
+              globalVars: {
+                ...start.globalVars,
+                nvaResources: 3,
+                trail: 0,
+              },
+            },
+            RALLY_SPACE,
+            'neutral',
+          ),
+          RALLY_SPACE_2,
+          'neutral',
+        ),
+        RALLY_SPACE_3,
+        'neutral',
+      ),
+      RALLY_SPACE_4,
+      'neutral',
+    );
+    const paidFinal = applyMoveWithResolvedDecisionIds(def, nvaPaid, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3], $improveTrail: 'no' },
+    }).state;
+    assert.equal(paidFinal.globalVars.nvaResources, 0, 'Paid NVA Rally should spend 1 resource per selected space');
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, nvaPaid, {
+          actionId: asActionId('rally'),
+          params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3, RALLY_SPACE_4], $improveTrail: 'no' },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid NVA Rally with 3 resources should reject selecting 4 spaces',
+    );
+
+    const nvaFreeBase = {
+      ...nvaPaid,
+      globalVars: {
+        ...nvaPaid.globalVars,
+        nvaResources: 0,
+      },
+    };
+    const nvaFree = addTokenToZone(
+      addTokenToZone(nvaFreeBase, 'available-NVA:none', {
+        id: asTokenId('rally-affordability-nva-free-g1'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      }),
+      'available-NVA:none',
+      {
+        id: asTokenId('rally-affordability-nva-free-g2'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const freeFinal = applyMoveWithResolvedDecisionIds(def, nvaFree, {
+      actionId: asActionId('rally'),
+      freeOperation: true,
+      params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2], $improveTrail: 'no' },
+    }).state;
+    assert.equal(freeFinal.globalVars.nvaResources, 0, 'Free NVA Rally should bypass paid selection cap at 0 resources');
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, nvaFreeBase, {
+          actionId: asActionId('rally'),
+          params: { targetSpaces: [RALLY_SPACE], $improveTrail: 'no' },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid NVA Rally with 0 resources should reject selecting paid spaces',
+    );
+  });
+
   it('supports no-base replacement branch and with-base guerrilla placement limit', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
@@ -1901,6 +2009,77 @@ describe('FITL insurgent operations integration', () => {
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'VC rally LimOp should enforce max one selected space',
     );
+  });
+
+  it('caps paid Rally target-space selection by VC resources and bypasses cap on free operations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = operationInitialState(def, 3081, 4);
+    const vcPaid = withSupportState(
+      withSupportState(
+        withSupportState(
+          {
+            ...start,
+            activePlayer: asPlayerId(3),
+            globalVars: {
+              ...start.globalVars,
+              vcResources: 2,
+            },
+          },
+          RALLY_SPACE,
+          'neutral',
+        ),
+        RALLY_SPACE_2,
+        'neutral',
+      ),
+      RALLY_SPACE_3,
+      'neutral',
+    );
+
+    const paidFinal = applyMoveWithResolvedDecisionIds(def, vcPaid, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla' },
+    }).state;
+    assert.equal(paidFinal.globalVars.vcResources, 0, 'Paid VC Rally should spend 1 resource per selected space');
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, vcPaid, {
+          actionId: asActionId('rally'),
+          params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2, RALLY_SPACE_3], $noBaseChoice: 'place-guerrilla' },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid VC Rally with 2 resources should reject selecting 3 spaces',
+    );
+
+    const vcFreeBase = {
+      ...vcPaid,
+      globalVars: {
+        ...vcPaid.globalVars,
+        vcResources: 0,
+      },
+    };
+    const vcFree = addTokenToZone(
+      addTokenToZone(vcFreeBase, 'available-VC:none', {
+        id: asTokenId('rally-affordability-vc-free-g1'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      }),
+      'available-VC:none',
+      {
+        id: asTokenId('rally-affordability-vc-free-g2'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const freeFinal = applyMoveWithResolvedDecisionIds(def, vcFree, {
+      actionId: asActionId('rally'),
+      freeOperation: true,
+      params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla' },
+    }).state;
+    assert.equal(freeFinal.globalVars.vcResources, 0, 'Free VC Rally should bypass paid selection cap at 0 resources');
   });
 
   it('supports VC rally no-base replacement plus with-base place/flip branches', () => {

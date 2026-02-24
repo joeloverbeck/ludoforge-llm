@@ -1,7 +1,19 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { advancePhase, applyMove, asActionId, asPhaseId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import {
+  advancePhase,
+  applyMove,
+  asActionId,
+  asPhaseId,
+  asTokenId,
+  initialState,
+  legalChoicesDiscover,
+  type GameDef,
+  type GameState,
+  type Move,
+  type Token,
+} from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -61,14 +73,35 @@ const withCoupRound = (
   };
 };
 
-const runResources = (def: GameDef, state: GameState): GameState => {
+const enterCoupResources = (def: GameDef, state: GameState): GameState => {
   const atVictory = advancePhase(def, state);
   assert.equal(atVictory.currentPhase, asPhaseId('coupVictory'));
-  return applyMove(def, atVictory, { actionId: asActionId('coupVictoryCheck'), params: {} }).state;
+  const afterVictory = applyMove(def, atVictory, { actionId: asActionId('coupVictoryCheck'), params: {} }).state;
+  assert.equal(afterVictory.currentPhase, asPhaseId('coupResources'));
+  return afterVictory;
+};
+
+const resolveResources = (def: GameDef, state: GameState, params: Move['params'] = {}): GameState =>
+  applyMove(def, state, { actionId: asActionId('coupResourcesResolve'), params }).state;
+
+const pickPendingChoice = (decisionId: string, selected: readonly string[]): Move['params'] => {
+  return {
+    [decisionId]: selected,
+  };
+};
+
+const resolveResourcesWithDefaultChoice = (def: GameDef, state: GameState): GameState => {
+  const move: Move = { actionId: asActionId('coupResourcesResolve'), params: {} };
+  const pending = legalChoicesDiscover(def, state, move);
+  if (pending.kind !== 'pending') {
+    return resolveResources(def, state);
+  }
+  const selected = pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value));
+  return resolveResources(def, state, pickPendingChoice(pending.decisionId, selected));
 };
 
 describe('FITL coup resources phase (production data)', () => {
-  it('spreads sabotage by Rule 6.2.1 eligibility and respects the 15-marker cap', () => {
+  it('requires VC choice when eligible LoCs exceed remaining sabotage markers and applies only chosen spaces', () => {
     const def = compileProductionDef();
     const base = withClearedZones(initialState(def, 8601, 4).state);
     const state = withCoupRound(base, {
@@ -92,9 +125,66 @@ describe('FITL coup resources phase (production data)', () => {
       },
     });
 
-    const next = runResources(def, state);
+    const atResources = enterCoupResources(def, state);
+    const move: Move = { actionId: asActionId('coupResourcesResolve'), params: {} };
+    const pending = legalChoicesDiscover(def, atResources, move);
+    assert.equal(pending.kind, 'pending');
+    assert.equal(pending.type, 'chooseN');
+    assert.equal(pending.min, 1);
+    assert.equal(pending.max, 1);
+
+    const options = pending.options.map((option) => String(option.value));
+    assert.equal(options.includes('loc-hue-khe-sanh:none'), true);
+    assert.equal(options.includes('loc-hue-da-nang:none'), true);
+
+    const selected = ['loc-hue-da-nang:none'];
+    const next = resolveResources(def, atResources, pickPendingChoice(pending.decisionId, selected));
 
     assert.equal(next.globalVars.terrorSabotageMarkersPlaced, 15);
+    assert.equal(next.markers['loc-hue-da-nang:none']?.sabotage, 'sabotage');
+    assert.equal(next.markers['loc-hue-khe-sanh:none']?.sabotage, 'none');
+    assert.equal(next.currentPhase, asPhaseId('coupSupport'));
+  });
+
+  it('auto-sabotages all eligible LoCs without a choice when markers are sufficient', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8611, 4).state);
+    const locIds = def.zones
+      .filter((zone) => zone.category === 'loc')
+      .map((zone) => String(zone.id));
+    const preSabotagedLocMarkers = Object.fromEntries(
+      locIds.map((locId) => [locId, { ...(base.markers[locId] ?? {}), sabotage: 'sabotage' }]),
+    );
+    const state = withCoupRound(base, {
+      globalVars: {
+        ...base.globalVars,
+        terrorSabotageMarkersPlaced: 13,
+        trail: 2,
+      },
+      zones: {
+        'loc-hue-khe-sanh:none': [
+          piece('nva-g-1', 'NVA', 'guerrilla'),
+          piece('vc-g-1', 'VC', 'guerrilla'),
+          piece('us-t-1', 'US', 'troops'),
+        ],
+        'da-nang:none': [piece('vc-g-2', 'VC', 'guerrilla')],
+      },
+      markers: {
+        ...base.markers,
+        ...preSabotagedLocMarkers,
+        'loc-hue-khe-sanh:none': { ...(base.markers['loc-hue-khe-sanh:none'] ?? {}), sabotage: 'none' },
+        'loc-hue-da-nang:none': { ...(base.markers['loc-hue-da-nang:none'] ?? {}), sabotage: 'none' },
+      },
+    });
+
+    const atResources = enterCoupResources(def, state);
+    const pending = legalChoicesDiscover(def, atResources, { actionId: asActionId('coupResourcesResolve'), params: {} });
+    assert.equal(pending.kind, 'complete');
+
+    const next = resolveResources(def, atResources);
+    assert.equal(next.globalVars.terrorSabotageMarkersPlaced, 15);
+    assert.equal(next.markers['loc-hue-khe-sanh:none']?.sabotage, 'sabotage');
+    assert.equal(next.markers['loc-hue-da-nang:none']?.sabotage, 'sabotage');
   });
 
   it('degrades trail when a Laos/Cambodia space is COIN-controlled and no-ops otherwise', () => {
@@ -107,7 +197,7 @@ describe('FITL coup resources phase (production data)', () => {
         'central-laos:none': [piece('us-t-1', 'US', 'troops')],
       },
     });
-    const afterDegrade = runResources(def, coinControlled);
+    const afterDegrade = resolveResourcesWithDefaultChoice(def, enterCoupResources(def, coinControlled));
     assert.equal(afterDegrade.globalVars.trail, 2);
 
     const notControlled = withCoupRound(base, {
@@ -119,7 +209,7 @@ describe('FITL coup resources phase (production data)', () => {
         ],
       },
     });
-    const afterNoDegrade = runResources(def, notControlled);
+    const afterNoDegrade = resolveResourcesWithDefaultChoice(def, enterCoupResources(def, notControlled));
     assert.equal(afterNoDegrade.globalVars.trail, 3);
   });
 
@@ -157,7 +247,7 @@ describe('FITL coup resources phase (production data)', () => {
       },
     });
 
-    const next = runResources(def, state);
+    const next = resolveResourcesWithDefaultChoice(def, enterCoupResources(def, state));
 
     assert.equal(next.globalVars.totalEcon, 12);
     assert.equal(next.globalVars.arvnResources, 37);
@@ -183,7 +273,7 @@ describe('FITL coup resources phase (production data)', () => {
       },
     });
 
-    const next = runResources(def, state);
+    const next = resolveResourcesWithDefaultChoice(def, enterCoupResources(def, state));
 
     assert.equal(next.globalVars.totalEcon, 15);
     assert.equal(next.globalVars.arvnResources, 75);

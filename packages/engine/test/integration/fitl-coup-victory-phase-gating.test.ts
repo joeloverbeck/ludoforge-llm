@@ -7,9 +7,11 @@ import {
   asPhaseId,
   asTokenId,
   initialState,
+  legalChoicesDiscover,
   terminalResult,
   type GameDef,
   type GameState,
+  type Move,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -68,7 +70,7 @@ describe('FITL coup victory phase gating', () => {
     });
   });
 
-  it('advances from coupVictory through auto-resolved coupResources into coupSupport when no checkpoint is met', () => {
+  it('advances from coupVictory to coupResources, then through support to the next decision point after coupResourcesResolve', () => {
     const def = compileProductionDef();
     const start = withClearedZones(initialState(def, 8102, 4).state);
     const state: GameState = {
@@ -88,10 +90,21 @@ describe('FITL coup victory phase gating', () => {
     };
 
     const applied = applyMove(def, state, { actionId: asActionId('coupVictoryCheck'), params: {} });
+    const resourcesMove: Move = { actionId: asActionId('coupResourcesResolve'), params: {} };
+    const pending = legalChoicesDiscover(def, applied.state, resourcesMove);
+    const afterResources = pending.kind !== 'pending'
+      ? applyMove(def, applied.state, resourcesMove)
+      : applyMove(def, applied.state, {
+          ...resourcesMove,
+          params: {
+            [pending.decisionId]: pending.options.slice(0, pending.max ?? 0).map((option) => String(option.value)),
+          },
+        });
 
     assert.equal(terminalResult(def, applied.state), null);
-    assert.equal(applied.state.currentPhase, asPhaseId('coupSupport'));
-    assert.equal(applied.state.turnCount, state.turnCount);
+    assert.equal(applied.state.currentPhase, asPhaseId('coupResources'));
+    assert.equal(afterResources.state.currentPhase, asPhaseId('coupRedeploy'));
+    assert.equal(afterResources.state.turnCount, state.turnCount);
   });
 
   it('resolves final-coup ranking after coupRedeploy on the last coup round', () => {

@@ -42,6 +42,7 @@ turnOrder:
         usOp: operation
         arvnOp: operation
         coupVictoryCheck: pass
+        coupResourcesResolve: pass
         coupPacifyUS: operation
         coupPacifyARVN: operation
         coupAgitateVC: operation
@@ -112,6 +113,20 @@ actions:
     pre: null
     cost: []
     effects: []
+    limits: [{ scope: phase, max: 1 }]
+  - id: coupResourcesResolve
+    actor: active
+    executor: 'actor'
+    phase: [coupResources]
+    params: []
+    pre: null
+    cost: []
+    effects:
+      - macro: coup-auto-sabotage
+      - macro: coup-trail-degradation
+      - macro: coup-arvn-earnings
+      - macro: coup-insurgent-earnings
+      - macro: coup-casualties-aid
     limits: [{ scope: phase, max: 1 }]
   - id: coupPacifyPass
     actor: active
@@ -5023,16 +5038,6 @@ actionPipelines:
 # ══════════════════════════════════════════════════════════════════════════════
 
 triggers:
-  - id: on-coup-resources-enter
-    event:
-      type: phaseEnter
-      phase: coupResources
-    effects:
-      - macro: coup-auto-sabotage
-      - macro: coup-trail-degradation
-      - macro: coup-arvn-earnings
-      - macro: coup-insurgent-earnings
-      - macro: coup-casualties-aid
   - id: on-coup-support-enter
     event:
       type: phaseEnter

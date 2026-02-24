@@ -2197,73 +2197,227 @@ effectMacros:
     params: []
     exports: []
     effects:
-      - forEach:
-          bind: $loc
-          over:
-            query: mapSpaces
-            filter:
-              op: and
-              args:
-                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                - { op: '!=', left: { ref: markerState, space: $zone, marker: sabotage }, right: sabotage }
-                - op: or
-                  args:
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, eq: guerrilla }
-                      right:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: sum
-                          query: { query: adjacentZones, zone: $zone }
-                          bind: $adj
-                          valueExpr:
-                            if:
-                              when:
-                                op: and
-                                args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: city }
-                                  - op: '<='
-                                    left:
-                                      aggregate:
-                                        op: count
-                                        query:
-                                          query: tokensInZone
-                                          zone: $adj
-                                          filter:
-                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                    right:
-                                      aggregate:
-                                        op: count
-                                        query:
-                                          query: tokensInZone
-                                          zone: $adj
-                                          filter:
-                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              then: 1
-                              else: 0
-                      right: 0
-          effects:
+      - let:
+          bind: $remaining
+          value:
+            op: '-'
+            left: 15
+            right: { ref: gvar, var: terrorSabotageMarkersPlaced }
+          in:
             - if:
-                when: { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                when: { op: '>', left: { ref: binding, name: $remaining }, right: 0 }
                 then:
-                  - setMarker: { space: $loc, marker: sabotage, state: sabotage }
-                  - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                  - let:
+                      bind: $eligibleCount
+                      value:
+                        aggregate:
+                          op: count
+                          query:
+                            query: mapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                - { op: '!=', left: { ref: markerState, space: $zone, marker: sabotage }, right: sabotage }
+                                - op: or
+                                  args:
+                                    - op: '>'
+                                      left:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $zone
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              - { prop: type, eq: guerrilla }
+                                      right:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $zone
+                                            filter:
+                                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    - op: '>'
+                                      left:
+                                        aggregate:
+                                          op: sum
+                                          query: { query: adjacentZones, zone: $zone }
+                                          bind: $adj
+                                          valueExpr:
+                                            if:
+                                              when:
+                                                op: and
+                                                args:
+                                                  - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: city }
+                                                  - op: '<='
+                                                    left:
+                                                      aggregate:
+                                                        op: count
+                                                        query:
+                                                          query: tokensInZone
+                                                          zone: $adj
+                                                          filter:
+                                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                    right:
+                                                      aggregate:
+                                                        op: count
+                                                        query:
+                                                          query: tokensInZone
+                                                          zone: $adj
+                                                          filter:
+                                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              then: 1
+                                              else: 0
+                                      right: 0
+                      in:
+                        - if:
+                            when:
+                              op: '<='
+                              left: { ref: binding, name: $eligibleCount }
+                              right: { ref: binding, name: $remaining }
+                            then:
+                              - forEach:
+                                  bind: $loc
+                                  over:
+                                    query: mapSpaces
+                                    filter:
+                                      op: and
+                                      args:
+                                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                        - { op: '!=', left: { ref: markerState, space: $zone, marker: sabotage }, right: sabotage }
+                                        - op: or
+                                          args:
+                                            - op: '>'
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $zone
+                                                    filter:
+                                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                      - { prop: type, eq: guerrilla }
+                                              right:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $zone
+                                                    filter:
+                                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                            - op: '>'
+                                              left:
+                                                aggregate:
+                                                  op: sum
+                                                  query: { query: adjacentZones, zone: $zone }
+                                                  bind: $adj
+                                                  valueExpr:
+                                                    if:
+                                                      when:
+                                                        op: and
+                                                        args:
+                                                          - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: city }
+                                                          - op: '<='
+                                                            left:
+                                                              aggregate:
+                                                                op: count
+                                                                query:
+                                                                  query: tokensInZone
+                                                                  zone: $adj
+                                                                  filter:
+                                                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                            right:
+                                                              aggregate:
+                                                                op: count
+                                                                query:
+                                                                  query: tokensInZone
+                                                                  zone: $adj
+                                                                  filter:
+                                                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                      then: 1
+                                                      else: 0
+                                              right: 0
+                                  effects:
+                                    - setMarker: { space: $loc, marker: sabotage, state: sabotage }
+                                    - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                            else:
+                              - let:
+                                  bind: $priorActivePlayer
+                                  value: { ref: activePlayer }
+                                  in:
+                                    - setActivePlayer: { player: '3' }
+                                    - chooseN:
+                                        bind: $chosenLocs
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                              - { op: '!=', left: { ref: markerState, space: $zone, marker: sabotage }, right: sabotage }
+                                              - op: or
+                                                args:
+                                                  - op: '>'
+                                                    left:
+                                                      aggregate:
+                                                        op: count
+                                                        query:
+                                                          query: tokensInZone
+                                                          zone: $zone
+                                                          filter:
+                                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                            - { prop: type, eq: guerrilla }
+                                                    right:
+                                                      aggregate:
+                                                        op: count
+                                                        query:
+                                                          query: tokensInZone
+                                                          zone: $zone
+                                                          filter:
+                                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                  - op: '>'
+                                                    left:
+                                                      aggregate:
+                                                        op: sum
+                                                        query: { query: adjacentZones, zone: $zone }
+                                                        bind: $adj
+                                                        valueExpr:
+                                                          if:
+                                                            when:
+                                                              op: and
+                                                              args:
+                                                                - { op: '==', left: { ref: zoneProp, zone: $adj, prop: category }, right: city }
+                                                                - op: '<='
+                                                                  left:
+                                                                    aggregate:
+                                                                      op: count
+                                                                      query:
+                                                                        query: tokensInZone
+                                                                        zone: $adj
+                                                                        filter:
+                                                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                                  right:
+                                                                    aggregate:
+                                                                      op: count
+                                                                      query:
+                                                                        query: tokensInZone
+                                                                        zone: $adj
+                                                                        filter:
+                                                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                            then: 1
+                                                            else: 0
+                                                    right: 0
+                                        min: { ref: binding, name: $remaining }
+                                        max: { ref: binding, name: $remaining }
+                                    - setActivePlayer: { player: { chosen: '$priorActivePlayer' } }
+                                    - forEach:
+                                        bind: $loc
+                                        over: { query: binding, name: $chosenLocs }
+                                        effects:
+                                          - setMarker: { space: $loc, marker: sabotage, state: sabotage }
+                                          - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
 
   # ── coup-trail-degradation ────────────────────────────────────────────────
   # Rule 6.2.2: if any Laos/Cambodia space is COIN-controlled, degrade trail.

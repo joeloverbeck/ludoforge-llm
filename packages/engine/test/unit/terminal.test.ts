@@ -233,6 +233,160 @@ describe('terminalResult', () => {
     });
   });
 
+  it('uses margin ranking to select during-coup winner when margins are defined', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      globalVars: [
+        { name: 'done', type: 'int', init: 0, min: 0, max: 1 },
+        { name: 'mUs', type: 'int', init: 0, min: -99, max: 99 },
+        { name: 'mNva', type: 'int', init: 0, min: -99, max: 99 },
+        { name: 'mArvn', type: 'int', init: 0, min: -99, max: 99 },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+        checkpoints: [
+          {
+            id: 'us-threshold',
+            seat: 'us',
+            timing: 'duringCoup',
+            when: { op: '>', left: { ref: 'gvar', var: 'done' }, right: 0 },
+          },
+        ],
+        margins: [
+          { seat: 'us', value: { ref: 'gvar', var: 'mUs' } },
+          { seat: 'nva', value: { ref: 'gvar', var: 'mNva' } },
+          { seat: 'arvn', value: { ref: 'gvar', var: 'mArvn' } },
+        ],
+        ranking: { order: 'desc', tieBreakOrder: ['us', 'nva', 'arvn'] },
+      },
+    };
+    const state = createBaseState({
+      globalVars: { done: 1, mUs: 3, mNva: 9, mArvn: 4 },
+      playerCount: 3,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['us', 'nva', 'arvn'],
+          eligibility: { us: true, nva: true, arvn: true },
+          currentCard: {
+            firstEligible: 'us',
+            secondEligible: 'nva',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    });
+
+    assert.deepEqual(terminalResult(def, state), {
+      type: 'win',
+      player: asPlayerId(1),
+      victory: {
+        timing: 'duringCoup',
+        checkpointId: 'us-threshold',
+        winnerSeat: 'nva',
+        ranking: [
+          { seat: 'nva', margin: 9, rank: 1, tieBreakKey: 'nva' },
+          { seat: 'arvn', margin: 4, rank: 2, tieBreakKey: 'arvn' },
+          { seat: 'us', margin: 3, rank: 3, tieBreakKey: 'us' },
+        ],
+      },
+    });
+  });
+
+  it('uses tie-break order when during-coup margins are tied', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      globalVars: [
+        { name: 'done', type: 'int', init: 0, min: 0, max: 1 },
+        { name: 'mUs', type: 'int', init: 0, min: -99, max: 99 },
+        { name: 'mNva', type: 'int', init: 0, min: -99, max: 99 },
+        { name: 'mArvn', type: 'int', init: 0, min: -99, max: 99 },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+        checkpoints: [
+          {
+            id: 'us-threshold',
+            seat: 'us',
+            timing: 'duringCoup',
+            when: { op: '>', left: { ref: 'gvar', var: 'done' }, right: 0 },
+          },
+        ],
+        margins: [
+          { seat: 'us', value: { ref: 'gvar', var: 'mUs' } },
+          { seat: 'nva', value: { ref: 'gvar', var: 'mNva' } },
+          { seat: 'arvn', value: { ref: 'gvar', var: 'mArvn' } },
+        ],
+        ranking: { order: 'desc', tieBreakOrder: ['arvn', 'nva', 'us'] },
+      },
+    };
+    const state = createBaseState({
+      globalVars: { done: 1, mUs: 1, mNva: 8, mArvn: 8 },
+      playerCount: 3,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['us', 'nva', 'arvn'],
+          eligibility: { us: true, nva: true, arvn: true },
+          currentCard: {
+            firstEligible: 'us',
+            secondEligible: 'nva',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    });
+
+    assert.deepEqual(terminalResult(def, state), {
+      type: 'win',
+      player: asPlayerId(2),
+      victory: {
+        timing: 'duringCoup',
+        checkpointId: 'us-threshold',
+        winnerSeat: 'arvn',
+        ranking: [
+          { seat: 'arvn', margin: 8, rank: 1, tieBreakKey: 'arvn' },
+          { seat: 'nva', margin: 8, rank: 2, tieBreakKey: 'nva' },
+          { seat: 'us', margin: 1, rank: 3, tieBreakKey: 'us' },
+        ],
+      },
+    });
+  });
+
   it('emits deterministic final-coup margin ranking metadata with configurable tie-break precedence', () => {
     const def: GameDef = {
       ...createBaseDef(),

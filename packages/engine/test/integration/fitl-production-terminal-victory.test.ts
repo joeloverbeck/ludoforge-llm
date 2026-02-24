@@ -25,7 +25,7 @@ describe('FITL production terminal victory', () => {
     assert.equal(def.terminal.margins?.length, 4);
     assert.deepEqual(def.terminal.ranking, {
       order: 'desc',
-      tieBreakOrder: ['2', '3', '1', '0'],
+      tieBreakOrder: ['3', '1', '2', '0'],
     });
   });
 
@@ -35,10 +35,36 @@ describe('FITL production terminal victory', () => {
     assert.equal(terminalResult(def, start), null);
   });
 
-  it('resolves during-coup threshold wins from production terminal formulas', () => {
+  it('does not resolve during-coup victory when score equals threshold', () => {
     const def = compileProductionDef();
     const start = withClearedZones(initialState(def, 7102, 4).state);
     const usReserve = Array.from({ length: 50 }, (_unused, index) => ({
+      id: asTokenId(`us-reserve-${index}`),
+      type: 'piece',
+      props: { faction: 'US', type: 'troops' as const },
+    }));
+    const state: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        patronage: 0,
+      },
+      markers: {},
+      zones: {
+        ...start.zones,
+        'played:none': [{ id: asTokenId('coup-during'), type: 'card', props: { isCoup: true } }],
+        'lookahead:none': [{ id: asTokenId('non-coup-lookahead'), type: 'card', props: { isCoup: false } }],
+        'available-US:none': usReserve,
+      },
+    };
+
+    assert.equal(terminalResult(def, state), null);
+  });
+
+  it('resolves during-coup threshold wins from production terminal formulas when score exceeds threshold', () => {
+    const def = compileProductionDef();
+    const start = withClearedZones(initialState(def, 7103, 4).state);
+    const usReserve = Array.from({ length: 51 }, (_unused, index) => ({
       id: asTokenId(`us-reserve-${index}`),
       type: 'piece',
       props: { faction: 'US', type: 'troops' as const },
@@ -65,13 +91,19 @@ describe('FITL production terminal victory', () => {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
         winnerSeat: '0',
+        ranking: [
+          { seat: '0', margin: 1, rank: 1, tieBreakKey: '0' },
+          { seat: '2', margin: -18, rank: 2, tieBreakKey: '2' },
+          { seat: '3', margin: -35, rank: 3, tieBreakKey: '3' },
+          { seat: '1', margin: -50, rank: 4, tieBreakKey: '1' },
+        ],
       },
     });
   });
 
   it('uses configured final-coup tie-break precedence when margins tie', () => {
     const def = compileProductionDef();
-    const start = withClearedZones(initialState(def, 7103, 4).state);
+    const start = withClearedZones(initialState(def, 7104, 4).state);
     const state: GameState = {
       ...start,
       globalVars: {
@@ -95,10 +127,10 @@ describe('FITL production terminal victory', () => {
         checkpointId: 'final-coup-ranking',
         winnerSeat: '2',
         ranking: [
-          { seat: '2', margin: 0, rank: 1, tieBreakKey: '2' },
-          { seat: '3', margin: 0, rank: 2, tieBreakKey: '3' },
-          { seat: '1', margin: 0, rank: 3, tieBreakKey: '1' },
-          { seat: '0', margin: 0, rank: 4, tieBreakKey: '0' },
+          { seat: '2', margin: -18, rank: 1, tieBreakKey: '2' },
+          { seat: '3', margin: -35, rank: 2, tieBreakKey: '3' },
+          { seat: '1', margin: -50, rank: 3, tieBreakKey: '1' },
+          { seat: '0', margin: -50, rank: 4, tieBreakKey: '0' },
         ],
       },
     });

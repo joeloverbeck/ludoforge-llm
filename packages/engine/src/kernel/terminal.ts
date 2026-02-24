@@ -145,12 +145,15 @@ function evaluateVictory(
     (checkpoint) => checkpoint.timing === 'duringCoup' && evalCondition(checkpoint.when, baseCtx),
   );
   if (duringCheckpoint !== undefined) {
-    const player = resolveSeatPlayer(state, duringCheckpoint.seat);
+    const hasMargins = (def.terminal.margins?.length ?? 0) > 0;
+    const ranking = hasMargins ? finalVictoryRanking(def, adjacencyGraph, runtimeTableIndex, state) : [];
+    const winnerSeat = ranking[0]?.seat ?? duringCheckpoint.seat;
+    const player = resolveSeatPlayer(state, winnerSeat);
     if (player === null) {
       throw kernelRuntimeError(
-        'TERMINAL_CHECKPOINT_SEAT_UNMAPPED',
-        `Victory checkpoint seat "${duringCheckpoint.seat}" cannot be mapped to a player`,
-        { seat: duringCheckpoint.seat, checkpointId: duringCheckpoint.id },
+        'TERMINAL_WINNER_SEAT_UNMAPPED',
+        `Victory winner seat "${winnerSeat}" cannot be mapped to a player`,
+        { winnerSeat, checkpointId: duringCheckpoint.id },
       );
     }
 
@@ -160,7 +163,8 @@ function evaluateVictory(
       victory: {
         timing: 'duringCoup',
         checkpointId: duringCheckpoint.id,
-        winnerSeat: duringCheckpoint.seat,
+        winnerSeat,
+        ...(ranking.length === 0 ? {} : { ranking }),
       },
     };
   }

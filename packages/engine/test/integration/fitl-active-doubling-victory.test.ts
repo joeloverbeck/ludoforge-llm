@@ -162,28 +162,34 @@ describe('FITL active support/opposition doubling in victory calculations', () =
   //   da-nang:none    — city, population 1
   //   kontum:none     — city, population 1
   //
-  // US victory threshold: Total Support + available US pieces >= 50
-  // VC victory threshold: Total Opposition + VC bases on map >= 25
+  // US victory threshold: Total Support + available US pieces > 50
+  // VC victory threshold: Total Opposition + VC bases on map > 35
   // -----------------------------------------------------------------------
 
   describe('US victory checkpoint — active support doubling', () => {
     it('doubles population for active support in the Total Support sum', () => {
       // Saigon (pop 6) as Active Support: contributes 12, not 6.
-      // With 38 available US pieces: 12 + 38 = 50, exactly at threshold.
+      // With 39 available US pieces: 12 + 39 = 51, one above threshold.
       const def = compileProductionDef();
       const state = buildDuringCoupState(
         def,
         8001,
         [['saigon:none', 'activeSupport']],
-        38,
+        39,
       );
       const result = terminalResult(def, state);
-      assert.notEqual(result, null, 'US should win: Active Support(6) x 2 = 12, + 38 pieces = 50');
+      assert.notEqual(result, null, 'US should win: Active Support(6) x 2 = 12, + 39 pieces = 51 > 50');
       assert.equal(result!.type, 'win');
       assert.deepEqual(result!.victory, {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
         winnerSeat: '0',
+        ranking: [
+          { seat: '0', margin: 1, rank: 1, tieBreakKey: '0' },
+          { seat: '2', margin: -18, rank: 2, tieBreakKey: '2' },
+          { seat: '3', margin: -35, rank: 3, tieBreakKey: '3' },
+          { seat: '1', margin: -50, rank: 4, tieBreakKey: '1' },
+        ],
       });
     });
 
@@ -207,7 +213,7 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       // Da Nang (pop 1) Active Support: 1 x 2 = 2
       // Total Support = 12 + 2 + 2 = 16
       // Available US pieces = 34
-      // Grand total = 16 + 34 = 50, exactly at threshold.
+      // Grand total = 16 + 35 = 51, one above threshold.
       const def = compileProductionDef();
       const state = buildDuringCoupState(
         def,
@@ -217,15 +223,21 @@ describe('FITL active support/opposition doubling in victory calculations', () =
           ['hue:none', 'passiveSupport'],
           ['da-nang:none', 'activeSupport'],
         ],
-        34,
+        35,
       );
       const result = terminalResult(def, state);
-      assert.notEqual(result, null, 'US should win: Active(6)x2 + Passive(2)x1 + Active(1)x2 = 16, + 34 pieces = 50');
+      assert.notEqual(result, null, 'US should win: Active(6)x2 + Passive(2)x1 + Active(1)x2 = 16, + 35 pieces = 51 > 50');
       assert.equal(result!.type, 'win');
       assert.deepEqual(result!.victory, {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
         winnerSeat: '0',
+        ranking: [
+          { seat: '0', margin: 1, rank: 1, tieBreakKey: '0' },
+          { seat: '2', margin: -18, rank: 2, tieBreakKey: '2' },
+          { seat: '3', margin: -35, rank: 3, tieBreakKey: '3' },
+          { seat: '1', margin: -50, rank: 4, tieBreakKey: '1' },
+        ],
       });
     });
 
@@ -233,8 +245,8 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       // Saigon (pop 6) Active Support: 6 x 2 = 12
       // Hue (pop 2) Active Support: 2 x 2 = 4
       // Total Support = 16
-      // Available US pieces = 34
-      // Grand total = 50 → should win.
+      // Available US pieces = 35
+      // Grand total = 51 → should win.
       //
       // But if BOTH were Passive instead:
       // Total Support = 6 + 2 = 8
@@ -247,10 +259,10 @@ describe('FITL active support/opposition doubling in victory calculations', () =
           ['saigon:none', 'passiveSupport'],
           ['hue:none', 'passiveSupport'],
         ],
-        34,
+        35,
       );
       assert.equal(terminalResult(def, passiveState), null,
-        'Should NOT win with passive-only support: 6 + 2 + 34 = 42 < 50');
+        'Should NOT win with passive-only support: 6 + 2 + 35 = 43 <= 50');
 
       const activeState = buildDuringCoupState(
         def,
@@ -259,11 +271,11 @@ describe('FITL active support/opposition doubling in victory calculations', () =
           ['saigon:none', 'activeSupport'],
           ['hue:none', 'activeSupport'],
         ],
-        34,
+        35,
       );
       const activeResult = terminalResult(def, activeState);
       assert.notEqual(activeResult, null,
-        'SHOULD win with active support: 12 + 4 + 34 = 50 >= 50');
+        'SHOULD win with active support: 12 + 4 + 35 = 51 > 50');
     });
   });
 
@@ -272,21 +284,20 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       // Saigon (pop 6) as Active Opposition: contributes 12.
       // Hue (pop 2) as Active Opposition: contributes 4.
       // Total Opposition = 16
-      // VC bases on map = 9  →  16 + 9 = 25, exactly at threshold.
+      // VC bases on map = 20  →  16 + 20 = 36, one above threshold.
       const def = compileProductionDef();
       const start = withClearedZones(initialState(def, 8010, 4).state);
 
-      // Place 9 VC bases across map spaces.
-      const baseZones = [
-        'saigon:none', 'hue:none', 'da-nang:none', 'kontum:none', 'qui-nhon:none',
-        'cam-ranh:none', 'an-loc:none', 'can-tho:none', 'quang-tri-thua-thien:none',
-      ];
+      // Place 20 VC bases on map spaces.
+      const baseZones = ['saigon:none', 'hue:none', 'da-nang:none', 'kontum:none'];
+      const vcBaseCount = 20;
       const zonesWithBases = { ...start.zones };
-      for (const zoneId of baseZones) {
+      for (let index = 0; index < vcBaseCount; index += 1) {
+        const zoneId = baseZones[index % baseZones.length]!;
         const existing = zonesWithBases[zoneId] ?? [];
         zonesWithBases[zoneId] = [
           ...existing,
-          { id: asTokenId(`vc-base-${zoneId}`), type: 'base', props: { faction: 'VC', type: 'base' } },
+          { id: asTokenId(`vc-base-${zoneId}-${index}`), type: 'base', props: { faction: 'VC', type: 'base' } },
         ];
       }
 
@@ -305,30 +316,35 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       };
 
       const result = terminalResult(def, state);
-      assert.notEqual(result, null, 'VC should win: Active Opp(6)x2 + Active Opp(2)x2 = 16, + 9 bases = 25');
+      assert.notEqual(result, null, 'VC should win: Active Opp(6)x2 + Active Opp(2)x2 = 16, + 20 bases = 36 > 35');
       assert.equal(result!.type, 'win');
       assert.deepEqual(result!.victory, {
         timing: 'duringCoup',
         checkpointId: 'vc-victory',
         winnerSeat: '3',
+        ranking: [
+          { seat: '3', margin: 1, rank: 1, tieBreakKey: '3' },
+          { seat: '2', margin: -18, rank: 2, tieBreakKey: '2' },
+          { seat: '1', margin: -50, rank: 3, tieBreakKey: '1' },
+          { seat: '0', margin: -50, rank: 4, tieBreakKey: '0' },
+        ],
       });
     });
 
     it('does NOT double population for passive opposition', () => {
-      // Same setup but passive: Saigon(6) + Hue(2) = 8, + 9 bases = 17 < 25.
+      // Same setup but passive: Saigon(6) + Hue(2) = 8, + 20 bases = 28 < 35.
       const def = compileProductionDef();
       const start = withClearedZones(initialState(def, 8011, 4).state);
 
-      const baseZones = [
-        'saigon:none', 'hue:none', 'da-nang:none', 'kontum:none', 'qui-nhon:none',
-        'cam-ranh:none', 'an-loc:none', 'can-tho:none', 'quang-tri-thua-thien:none',
-      ];
+      const baseZones = ['saigon:none', 'hue:none', 'da-nang:none', 'kontum:none'];
+      const vcBaseCount = 20;
       const zonesWithBases = { ...start.zones };
-      for (const zoneId of baseZones) {
+      for (let index = 0; index < vcBaseCount; index += 1) {
+        const zoneId = baseZones[index % baseZones.length]!;
         const existing = zonesWithBases[zoneId] ?? [];
         zonesWithBases[zoneId] = [
           ...existing,
-          { id: asTokenId(`vc-base-${zoneId}`), type: 'base', props: { faction: 'VC', type: 'base' } },
+          { id: asTokenId(`vc-base-${zoneId}-${index}`), type: 'base', props: { faction: 'VC', type: 'base' } },
         ];
       }
 
@@ -347,7 +363,7 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       };
 
       assert.equal(terminalResult(def, state), null,
-        'VC should NOT win: Passive Opp(6)x1 + Passive Opp(2)x1 = 8, + 9 bases = 17 < 25');
+        'VC should NOT win: Passive Opp(6)x1 + Passive Opp(2)x1 = 8, + 20 bases = 28 <= 35');
     });
   });
 
@@ -434,10 +450,10 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       // Kontum (pop 1): Passive Opposition → 0 to US, 1 to VC
       //
       // US Total Support = 12 + 1 = 13
-      // US margin = Total Support + available pieces = 13 + 0 = 13
+      // US margin = Total Support + available pieces - 50 = 13 + 0 - 50 = -37
       //
       // VC Total Opposition = 4 + 1 = 5
-      // VC margin = Total Opposition + VC bases on map = 5 + 2 = 7
+      // VC margin = Total Opposition + VC bases on map - 35 = 5 + 2 - 35 = -28
       const state = buildFinalCoupState(
         def,
         8024,
@@ -456,10 +472,10 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       const usMargin = marginForSeat(ranking, '0');
       const vcMargin = marginForSeat(ranking, '3');
 
-      assert.equal(usMargin, 13,
-        'US margin = Active Support Saigon(6x2=12) + Passive Support Da Nang(1x1=1) + 0 pieces = 13');
-      assert.equal(vcMargin, 7,
-        'VC margin = Active Opp Hue(2x2=4) + Passive Opp Kontum(1x1=1) + 2 VC bases = 7');
+      assert.equal(usMargin, -37,
+        'US margin = Active Support Saigon(6x2=12) + Passive Support Da Nang(1x1=1) + 0 pieces - 50 = -37');
+      assert.equal(vcMargin, -28,
+        'VC margin = Active Opp Hue(2x2=4) + Passive Opp Kontum(1x1=1) + 2 VC bases - 35 = -28');
     });
   });
 
@@ -482,10 +498,10 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       const ranking = assertFinalCoupWin(terminalResult(def, state));
       const usMargin = marginForSeat(ranking, '0');
 
-      // US margin = Active Support Da Nang(1x2=2) + 0 pieces = 2
+      // US margin = Active Support Da Nang(1x2=2) + 0 pieces - 50 = -48
       // Saigon neutral contributes 0 despite pop 6.
-      assert.equal(usMargin, 2,
-        'Neutral Saigon(pop 6) should contribute 0; US margin = Active Da Nang(1x2=2) = 2');
+      assert.equal(usMargin, -48,
+        'Neutral Saigon(pop 6) should contribute 0; US margin = Active Da Nang(1x2=2) - 50 = -48');
     });
   });
 });

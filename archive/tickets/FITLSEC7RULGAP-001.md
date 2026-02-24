@@ -1,10 +1,22 @@
 # FITLSEC7RULGAP-001: Victory Data Fixes
 
-**Status**: TODO
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small-Medium
 **Engine Changes**: No (data + tests only)
 **Deps**: None
+
+## Assumption Reassessment (2026-02-24)
+
+Validated against current `main` code/tests:
+
+1. The six data defects listed below are present in `data/games/fire-in-the-lake/90-terminal.md`.
+2. This ticket remains data-first and does not require kernel/compiler changes.
+3. Test impact is broader than originally scoped:
+   - `packages/engine/test/integration/fitl-production-terminal-victory.test.ts` is affected.
+   - `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts` is also affected (during-coup threshold equality and final-coup tie-break expectations).
+   - `packages/engine/test/integration/fitl-active-doubling-victory.test.ts` is also affected (during-coup equality assumptions and final-coup margin expectations).
+4. `packages/engine/test/integration/fitl-coup-victory.test.ts` is not affected (it uses an inline fixture, not production FITL terminal data).
 
 ## Problem
 
@@ -56,7 +68,8 @@ Line ~425: `tieBreakOrder: ['2', '3', '1', '0']` → `tieBreakOrder: ['3', '1', 
 
 - `data/games/fire-in-the-lake/90-terminal.md` (modify)
 - `packages/engine/test/integration/fitl-production-terminal-victory.test.ts` (modify — update expectations)
-- `packages/engine/test/integration/fitl-coup-victory.test.ts` (check if affected)
+- `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts` (modify — update expectations)
+- `packages/engine/test/integration/fitl-active-doubling-victory.test.ts` (modify — update thresholds/margin expectations)
 
 ## Out of Scope
 
@@ -64,6 +77,7 @@ Line ~425: `tieBreakOrder: ['2', '3', '1', '0']` → `tieBreakOrder: ['3', '1', 
 - Victory formula structure changes (formulas are correct)
 - Compiler changes
 - FinalCoup checkpoint trigger changes
+- `packages/engine/test/integration/fitl-coup-victory.test.ts` (unaffected fixture-driven test)
 
 ## Acceptance Criteria
 
@@ -82,11 +96,35 @@ Line ~425: `tieBreakOrder: ['2', '3', '1', '0']` → `tieBreakOrder: ['3', '1', 
 ### Updated Tests
 
 1. Update `fitl-production-terminal-victory.test.ts` expectations for new tie-break order and margin values
-2. Update during-coup threshold test to use value > threshold (not >=)
-3. Add test verifying value == threshold does NOT trigger victory
+2. Update `fitl-coup-victory-phase-gating.test.ts` expectations for strict `>` thresholds and revised final-coup tie-break order
+3. Update `fitl-active-doubling-victory.test.ts` to:
+   - assert strict `>` behavior at thresholds for US/VC during-coup checks
+   - assert final-coup margins are threshold-relative (`score - threshold`), not raw score
+4. Add/strengthen assertions verifying value == threshold does NOT trigger during-coup victory
 
 ### Commands
 
 1. `pnpm turbo build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-24
+- **What changed**:
+  - Fixed all four during-coup victory operators from `>=` to `>` in `data/games/fire-in-the-lake/90-terminal.md`.
+  - Corrected during-coup thresholds: NVA `18`, VC `35`.
+  - Converted all four final-coup margin formulas to threshold-relative form (`score - threshold`).
+  - Updated final-coup tie-break order to `['3', '1', '2', '0']` (VC > ARVN > NVA > US).
+  - Updated affected integration tests in:
+    - `packages/engine/test/integration/fitl-production-terminal-victory.test.ts`
+    - `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts`
+    - `packages/engine/test/integration/fitl-active-doubling-victory.test.ts`
+- **Deviations from original plan**:
+  - Scope was corrected before implementation: `fitl-coup-victory.test.ts` is unaffected, while `fitl-coup-victory-phase-gating.test.ts` and `fitl-active-doubling-victory.test.ts` required updates.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

@@ -1,6 +1,6 @@
 # FITLSEC7RULGAP-002: DuringCoup Margin Ranking
 
-**Status**: TODO
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small-Medium
 **Engine Changes**: Yes — generic enhancement to `terminal.ts`
@@ -98,3 +98,24 @@ if (duringCheckpoint !== undefined) {
 1. `pnpm turbo build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-24
+- **What changed**:
+  - Updated `packages/engine/src/kernel/terminal.ts` so `duringCoup` winner selection uses terminal margin ranking whenever `terminal.margins` is defined and non-empty.
+  - `duringCoup` victory metadata now includes `ranking` in the same shape as `finalCoup`.
+  - Winner seat resolution for `duringCoup` now comes from `ranking[0].seat` (fallback remains checkpoint seat when margins are absent).
+  - Added/updated tests across unit + integration to verify:
+    - during-coup winner-by-margin behavior,
+    - tie-break handling,
+    - ranking metadata presence for during-coup,
+    - updated FITL/fixture expectations where checkpoint seat no longer implies winner seat.
+- **Deviations from original plan**:
+  - `packages/engine/test/integration/fitl-coup-victory.test.ts` also required updates because the fixture defines margins; during-coup winner changed from checkpoint seat (`us`) to highest margin (`nva`).
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `pnpm -F @ludoforge/engine test` passed (270/270).
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

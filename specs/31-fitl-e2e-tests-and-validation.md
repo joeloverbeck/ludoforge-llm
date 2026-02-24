@@ -15,7 +15,7 @@ End-to-end validation proving the full FITL pipeline works correctly: Game Spec 
 
 ### In Scope
 
-- **Turn 1 E2E test**: Full scenario setup → Burning Bonze card → VC shaded event → NVA pass → ARVN Train+Pacify+Govern → verify all state deltas match tutorial narrative (brainstorming Section 12)
+- **Turn 1 E2E test**: Full scenario setup → Burning Bonze card → VC shaded event → NVA pass → ARVN Train+Pacify+Govern → verify all state deltas match tutorial narrative (see Turn 1 narrative at the end of this spec)
 - **13-card campaign E2E**: All 13 tutorial cards through coup round, verifying end state
 - **Property tests**: Invariant checks over random play (piece conservation, variable bounds, move legality, no crashes)
 - **Golden tests**: Compilation golden (Game Spec → expected GameDef JSON), trace golden (known seed → expected trace)
@@ -29,7 +29,7 @@ End-to-end validation proving the full FITL pipeline works correctly: Game Spec 
 
 ## Key Data
 
-### Turn 1 Expected State Changes (from Section 12)
+### Turn 1 Expected State Changes
 
 After Turn 1 (Burning Bonze):
 
@@ -157,3 +157,64 @@ Create `test/e2e/fitl-determinism.test.ts`:
 
 - **Tutorial turns 2–13**: Only Turn 1 narrative is currently documented in the brainstorming doc. Turns 2–13 expected state must be obtained from the physical FITL rulebook. Until then, the 13-card campaign test verifies structural correctness (no crashes, invariants hold, coup triggers) rather than exact state matching.
 - **Incremental E2E**: As more cards are encoded (Spec 29 phases), additional E2E tests can be added for longer campaigns and different scenarios.
+
+
+## Reference: Tutorial & Card Definitions
+
+### Tutorial Mini-Deck (13 cards, bottom to top)
+
+| Position | Card # | Title | Period |
+|----------|--------|-------|--------|
+| 13 (bottom) | 112 | Colonel Chau | 1964 |
+| 12 | 43 | Economic Aid | 1964 |
+| 11 | 51 | 301st Supply Bn | 1964 |
+| 10 | 17 | Claymores | 1964 |
+| 9 | 75 | Sihanouk | 1964 |
+| 8 | 125 | Coup! — Nguyen Khanh | — |
+| 7 | 101 | Booby Traps | 1964 |
+| 6 | 79 | Henry Cabot Lodge | 1964 |
+| 5 | 97 | Brinks Hotel | 1964 |
+| 4 | 1 | Gulf of Tonkin | 1964 |
+| 3 | 68 | Green Berets | 1964 |
+| 2 | 55 | Trucks | 1964 |
+| 1 (top) | 107 | Burning Bonze | 1964 |
+
+Full scenario setup: Follow "Full: 1964-1972 — Nam" scenario (Section 11). Default RVN Leader: Duong Van Minh (+5 Aid when ARVN Train).
+
+### Turn 1 Narrative: Burning Bonze
+
+Looking across the top of the Burning Bonze card, the faction order (2.3.2) for the turn (from left to right, 2.3) is: VC (blue), NVA (red), ARVN (yellow), and US (green). At the start of any scenario all the factions begin Eligible (2.3.1), so the Viet Cong will have first consideration on this card.
+
+The VC examine the top unshaded portion (pro-COIN) Event of the card, and also the bottom shaded portion (pro-Insurgent) Event. On dual Event cards such as these (5.2), either the top or bottom Event is allowed to be performed on a turn, never both.
+
+The VC initiate play by deciding to execute the shaded Event (5.1), "Shift Saigon 1 level toward Active Opposition. Aid -12." Move the blue VC token from the Eligible box to the 1st Eligible Event portion of the Sequence of Play (SOP) chart located on the map.
+
+The effect of this Event is dramatic to begin the game -- Saigon's Passive Support marker is shifted one level towards Active Opposition, making the space Neutral (1.6.1). This results in the marker's removal because the absence of any such marker in a space indicates that it has no Support or Opposition, and is therefore Neutral (1.6.2). This causes the US's victory marker (Support + Available, 1.9) to drop 6 spaces on the track (6 is the population value of Saigon, 1.3.3) from 38 to 32.
+
+The ARVN faction is also impacted by this Event because Aid (1.8) is lowered by 12. Move the Aid marker on the track from 15 to 3. There is no immediate effect on ARVN resources (which remain at 30), however resources granted to the ARVN via Aid will dwindle accordingly during the next Coup Round (6.2.3).
+
+Events don't cost resources to enact, so the VC player-turn is done.
+
+The NVA is the next listed faction, potentially being 2nd Eligible (2.3.4). Checking the Sequence of Play chart, we see that since the 1st Eligible faction (VC) performed the card's Event, the 2nd Eligible faction may perform Operations (Op) & an accompanying Special Activity.
+
+The NVA see that they will be first up on the next card (Trucks), so the decision whether to go now or to Pass (2.3.3) is at hand. The NVA decide to Pass. Shift their red token from the Eligible box to the Pass box, and then increase NVA resources by +1 to 11. When an Insurgent faction (VC or NVA) Passes, they receive +1 Resource; when a COIN faction (US or ARVN) Passes, the ARVN receive +3 resources (2.3.3).
+
+With the NVA Passing, the ARVN are next in line to be 2nd Eligible. They indicate their intention to act by moving their yellow Eligibility token to the Execute Op & Special Activity box on the Sequence of Play chart.
+
+VC Event, NVA Pass, ARVN Op & Special Activity.
+
+With Saigon now at Neutral (no Support), the ARVN don't want any insurgent Guerrillas to Rally in and thus infest their capital. The ARVN will therefore Train (3.2.1) in Saigon, placing a white pawn in the City. This Operation will cost the ARVN 3 resources, so lower their marker on the track from 30 to 27.
+
+Being a City, the ARVN can place 1-2 Rangers or 1-6 of their cubes, so a choice needs to be made: Rangers or cubes. The ARVN takes 6 of their yellow Troop cubes from Available and places them directly into Saigon.
+
+Since Saigon contains ARVN Troops and Police and is under COIN Control, the ARVN also opts to now conduct a Pacify (6.3.1) action in 1 Train space. Even though permitted by a Training Op, Pacify still needs to be paid for separately.
+
+The ARVN spend 3 Resources by moving the Track token down from 27 to 24 to Pacify one level, and they place a Passive Support marker in Saigon. This returns the US Support + Available (1.9) marker on the track to 38 (+6 spaces, matching the population of Saigon).
+
+For their Special Activity, the ARVN choose Govern (4.3.1). Taking two spaces: An Loc and Can Tho, both population 1 Cities that are COIN-Controlled with Support. This increases Aid by +6, +3 for each City (3 x 1 population) Governed.
+
+ARVN having just Trained, Aid also receives a +5 bonus because of the current RVN leader (Minh), so shift the marker up again from 9 to 14.
+
+Since two Eligible factions (the VC 1st and the ARVN 2nd) have now acted, the turn is over (2.3.6). The US can do nothing (not even Pass), so their Eligibility token remains in place. Shift the VC and ARVN Eligibility tokens to the Ineligible box. The NVA (who Passed) Eligibility token returns to the Eligible box, joining the US token.
+
+Make Trucks the current card for game turn 2.

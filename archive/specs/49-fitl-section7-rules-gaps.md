@@ -1,6 +1,6 @@
 # Spec 49: FITL Section 7 Rules Gaps
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 26 (terminal/victory), Spec 29 (event card encoding)
@@ -17,12 +17,12 @@ Six confirmed gaps: wrong comparison operators, wrong thresholds, missing margin
 
 | # | Gap | Rule | Status | Action |
 |---|-----|------|--------|--------|
-| 1 | Victory checks use `>=`, should use `>` ("exceeds") | 7.2 | TODO | FITLSEC7RULGAP-001 |
-| 2 | NVA threshold is 25, should be 18 | 7.2 | TODO | FITLSEC7RULGAP-001 |
-| 3 | VC threshold is 25, should be 35 | 7.2 | TODO | FITLSEC7RULGAP-001 |
-| 4 | Margins don't subtract thresholds (50, 18, 50, 35) | 7.3 | TODO | FITLSEC7RULGAP-001 |
-| 5 | Tie-break order NVA>VC>ARVN>US, should be VC>ARVN>NVA>US | 7.1 | TODO | FITLSEC7RULGAP-001 |
-| 6 | DuringCoup uses first-match instead of margin ranking | 7.1 | TODO | FITLSEC7RULGAP-002 |
+| 1 | Victory checks use `>=`, should use `>` ("exceeds") | 7.2 | COMPLETED | FITLSEC7RULGAP-001 |
+| 2 | NVA threshold is 25, should be 18 | 7.2 | COMPLETED | FITLSEC7RULGAP-001 |
+| 3 | VC threshold is 25, should be 35 | 7.2 | COMPLETED | FITLSEC7RULGAP-001 |
+| 4 | Margins don't subtract thresholds (50, 18, 50, 35) | 7.3 | COMPLETED | FITLSEC7RULGAP-001 |
+| 5 | Tie-break order NVA>VC>ARVN>US, should be VC>ARVN>NVA>US | 7.1 | COMPLETED | FITLSEC7RULGAP-001 |
+| 6 | DuringCoup uses first-match instead of margin ranking | 7.1 | COMPLETED | FITLSEC7RULGAP-002 |
 
 ## Verified Correct (No Changes Needed)
 
@@ -144,3 +144,19 @@ pnpm turbo build
 pnpm -F @ludoforge/engine test
 pnpm -F @ludoforge/engine test:e2e
 ```
+
+## Outcome
+
+- **Completion date**: 2026-02-24
+- **What was changed**:
+  - Implemented all six Section 7 gap fixes across data and kernel behavior.
+  - `90-terminal.md` now uses strict `>` for during-coup checks, corrected NVA/VC thresholds, threshold-relative margins, and corrected tie-break order.
+  - Kernel `evaluateVictory()` now applies margin ranking for `duringCoup` when margins are defined, with ranking metadata included in victory results.
+  - Unit/integration tests were expanded and updated to lock strict-threshold and during-coup ranking behavior.
+- **Deviations from original plan**:
+  - Test impact was wider than initially listed; additional FITL integration suites were updated.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

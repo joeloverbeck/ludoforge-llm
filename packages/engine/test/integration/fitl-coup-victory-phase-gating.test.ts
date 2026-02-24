@@ -33,7 +33,7 @@ describe('FITL coup victory phase gating', () => {
   it('halts in coupVictory when a during-coup checkpoint is met', () => {
     const def = compileProductionDef();
     const start = withClearedZones(initialState(def, 8101, 4).state);
-    const usReserve = Array.from({ length: 50 }, (_unused, index) => ({
+    const usReserve = Array.from({ length: 51 }, (_unused, index) => ({
       id: asTokenId(`us-reserve-${index}`),
       type: 'piece' as const,
       props: { faction: 'US', type: 'troops' as const },
@@ -66,6 +66,12 @@ describe('FITL coup victory phase gating', () => {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
         winnerSeat: '0',
+        ranking: [
+          { seat: '0', margin: 1, rank: 1, tieBreakKey: '0' },
+          { seat: '2', margin: -18, rank: 2, tieBreakKey: '2' },
+          { seat: '3', margin: -35, rank: 3, tieBreakKey: '3' },
+          { seat: '1', margin: -50, rank: 4, tieBreakKey: '1' },
+        ],
       },
     });
   });
@@ -138,10 +144,10 @@ describe('FITL coup victory phase gating', () => {
         checkpointId: 'final-coup-ranking',
         winnerSeat: '2',
         ranking: [
-          { seat: '2', margin: 0, rank: 1, tieBreakKey: '2' },
-          { seat: '3', margin: 0, rank: 2, tieBreakKey: '3' },
-          { seat: '1', margin: 0, rank: 3, tieBreakKey: '1' },
-          { seat: '0', margin: 0, rank: 4, tieBreakKey: '0' },
+          { seat: '2', margin: -18, rank: 1, tieBreakKey: '2' },
+          { seat: '3', margin: -35, rank: 2, tieBreakKey: '3' },
+          { seat: '1', margin: -50, rank: 3, tieBreakKey: '1' },
+          { seat: '0', margin: -50, rank: 4, tieBreakKey: '0' },
         ],
       },
     });

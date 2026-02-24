@@ -41,11 +41,15 @@ describe('FITL coup victory integration', () => {
     assert.equal(def.terminal.checkpoints?.[0]?.id, 'us-threshold');
     assert.deepEqual(terminal, {
       type: 'win',
-      player: 0,
+      player: 1,
       victory: {
         timing: 'duringCoup',
         checkpointId: 'us-threshold',
-        winnerSeat: 'us',
+        winnerSeat: 'nva',
+        ranking: [
+          { seat: 'nva', margin: 4, rank: 1, tieBreakKey: 'nva' },
+          { seat: 'us', margin: 2, rank: 2, tieBreakKey: 'us' },
+        ],
       },
     });
   });

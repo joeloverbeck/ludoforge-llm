@@ -35,6 +35,34 @@ const cardDrivenConfig = (def: GameDef) =>
 const cardDrivenRuntime = (state: GameState) =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
+/**
+ * Strip stale `pendingCardBoundaryTraceEntries` from the state's runtime.
+ *
+ * When a card boundary runs inside `applyTurnFlowEligibilityAfterMove` and
+ * `advanceToDecisionPoint` returns early (because legal moves already exist),
+ * the pending trace entries are never consumed by `advancePhase`. They persist
+ * through subsequent moves and would cause the next card boundary to hit the
+ * early-return path in `applyTurnFlowCardBoundary`, skipping the actual card
+ * lifecycle promotion.
+ */
+const stripStalePendingCardBoundaryTraceEntries = (state: GameState): GameState => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  const runtime = state.turnOrderState.runtime;
+  if (runtime.pendingCardBoundaryTraceEntries === undefined) {
+    return state;
+  }
+  const { pendingCardBoundaryTraceEntries: _, ...cleanedRuntime } = runtime;
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: cleanedRuntime as TurnFlowRuntimeState,
+    },
+  };
+};
+
 const isTurnFlowActionClass = (
   value: string,
 ): value is 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' =>
@@ -799,7 +827,11 @@ export const applyTurnFlowEligibilityAfterMove = (
       : new Set<string>();
     const inCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
     if (!inCoupPhase) {
-      const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
+      // Strip stale pendingCardBoundaryTraceEntries that may persist from a
+      // previous card boundary when advanceToDecisionPoint returned early
+      // (legal moves existed, so advancePhase was never called to consume them).
+      const cleanedRewardState = stripStalePendingCardBoundaryTraceEntries(rewardState);
+      const lifecycle = applyTurnFlowCardBoundary(def, cleanedRewardState);
       baseState = lifecycle.state;
       traceEntries.push(...lifecycle.traceEntries);
       cardBoundaryTraceEntries = lifecycle.traceEntries as readonly TurnFlowLifecycleTraceEntry[];

@@ -1,23 +1,23 @@
-import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  applyMove,
   asActionId,
   asTokenId,
   assertValidatedGameDef,
   initialState,
   type GameState,
-  type Move,
   type Token,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { initializeTurnFlowEligibilityState } from '../../src/kernel/turn-flow-eligibility.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
-import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import {
+  assertPlaybookSnapshot,
+  replayPlaybookTurn,
+  type PlaybookTurn,
+} from '../helpers/fitl-playbook-harness.js';
 
 // ---------------------------------------------------------------------------
 // Playbook deck order (top to bottom)
@@ -71,10 +71,6 @@ const makeCardToken = (cardId: string, ordinal: number): Token => ({
 });
 
 const engineerPlaybookDeck = (state: GameState): GameState => {
-  // The pile-coup-mix-v1 materialization strategy randomly selects a subset
-  // of event cards, so not all playbook cards may exist as tokens. We create
-  // fresh tokens for the exact 13-card playbook mini-deck and replace all
-  // card zones entirely.
   const startOrdinal = state.nextTokenOrdinal;
   const orderedCards = PLAYBOOK_DECK_IDS.map((cardId, index) =>
     makeCardToken(cardId, startOrdinal + index),
@@ -96,65 +92,175 @@ const engineerPlaybookDeck = (state: GameState): GameState => {
 };
 
 // ---------------------------------------------------------------------------
-// Assertion helpers
+// Turn descriptors
 // ---------------------------------------------------------------------------
 
-const assertGlobalVar = (state: GameState, varName: string, expected: number, label: string): void => {
-  assert.equal(
-    Number(state.globalVars[varName]),
-    expected,
-    `${label}: expected ${varName}=${expected}, got ${Number(state.globalVars[varName])}`,
-  );
+// Turn 1 — Burning Bonze (card-107)
+// Seat order: VC, NVA, US, ARVN → seats [3, 2, 0, 1]
+// Move 1: VC plays shaded Burning Bonze event (shifts Saigon → neutral, aid -12)
+// Move 2: NVA passes (+1 resource)
+// Move 3: ARVN Train+Govern (Op+SA)
+const TURN_1: PlaybookTurn = {
+  label: 'Turn 1 — Burning Bonze',
+  moves: [
+    {
+      kind: 'simple',
+      label: 'VC shaded Burning Bonze',
+      move: {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-107', side: 'shaded' },
+      },
+    },
+    {
+      kind: 'simple',
+      label: 'NVA passes',
+      move: {
+        actionId: asActionId('pass'),
+        params: {},
+      },
+    },
+    {
+      kind: 'resolved',
+      label: 'ARVN Train + Govern',
+      move: {
+        actionId: asActionId('train'),
+        actionClass: 'operationPlusSpecialActivity',
+        params: {
+          targetSpaces: ['saigon:none'],
+          $trainChoice: 'arvn-cubes',
+          $subActionSpaces: ['saigon:none'],
+          $subAction: 'pacify',
+          $pacLevels: 1,
+        },
+        compound: {
+          specialActivity: {
+            actionId: asActionId('govern'),
+            actionClass: 'operationPlusSpecialActivity',
+            params: {
+              targetSpaces: ['an-loc:none', 'can-tho:none'],
+              '$governMode@an-loc:none': 'aid',
+              '$governMode@can-tho:none': 'aid',
+            },
+          },
+          timing: 'after',
+        },
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      aid: 14,
+      arvnResources: 24,
+      nvaResources: 11,
+      vcResources: 5,
+      patronage: 15,
+      trail: 1,
+    },
+    eligibility: { '0': true, '1': false, '2': true, '3': false },
+    activePlayer: 2,
+    currentCard: 'card-55',
+    previewCard: 'card-68',
+    deckSize: 10,
+    seatOrder: ['2', '3', '0', '1'],
+    firstEligible: '2',
+    secondEligible: '0',
+    nonPassCount: 0,
+    zoneTokenCounts: [
+      { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 8 },
+      { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },
+      { zone: 'saigon:none', faction: 'US', type: 'troops', count: 2 },
+      { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
+    ],
+    markers: [
+      { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+    ],
+  },
 };
 
-const countTokensInZone = (
-  state: GameState,
-  zoneId: string,
-  faction: string,
-  type: string,
-): number =>
-  (state.zones[zoneId] ?? []).filter(
-    (token) => String(token.props.faction) === faction && String(token.props.type) === type,
-  ).length;
-
-const assertZoneTokenCount = (
-  state: GameState,
-  zoneId: string,
-  faction: string,
-  type: string,
-  expected: number,
-  label: string,
-): void => {
-  const actual = countTokensInZone(state, zoneId, faction, type);
-  assert.equal(actual, expected, `${label}: expected ${faction} ${type} in ${zoneId} = ${expected}, got ${actual}`);
+// Turn 2 — Trucks (card-55)
+// Seat order: NVA, VC, US, ARVN → seats [2, 3, 0, 1]
+// Move 1: NVA Rally (Op Only) in 4 spaces + trail improvement
+//   - North Vietnam: +2 guerrillas (1 base + trail=1), underground
+//   - Parrot's Beak: +2 guerrillas (1 base + trail=1), underground
+//   - Kien Phong: +1 guerrilla (no base), underground
+//   - Kien Giang: +1 guerrilla (no base), underground
+//   - Cost: 4 resources (1/space) → 11 → 7
+//   - Trail: 1 → 2, cost 2 → resources 7 → 5
+// Move 2: US Sweep (Limited Op) in Quang Tri-Thua Thien
+//   - VC (seat 3) skipped (ineligible from Turn 1)
+//   - 2 sweepers activate 2 underground VC guerrillas
+//   - Cost: 0
+const TURN_2: PlaybookTurn = {
+  label: 'Turn 2 — Trucks',
+  moves: [
+    {
+      kind: 'resolved',
+      label: 'NVA Rally (Op Only)',
+      move: {
+        actionId: asActionId('rally'),
+        actionClass: 'operation',
+        params: {
+          targetSpaces: [
+            'north-vietnam:none',
+            'the-parrots-beak:none',
+            'kien-phong:none',
+            'kien-giang-an-xuyen:none',
+          ],
+          $improveTrail: 'yes',
+        },
+      },
+    },
+    {
+      kind: 'resolved',
+      label: 'US Sweep (Limited Op)',
+      move: {
+        actionId: asActionId('sweep'),
+        actionClass: 'limitedOperation',
+        params: {
+          targetSpaces: ['quang-tri-thua-thien:none'],
+        },
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      nvaResources: 5,
+      trail: 2,
+      aid: 14,
+      arvnResources: 24,
+      vcResources: 5,
+      patronage: 15,
+    },
+    eligibility: { '0': false, '1': true, '2': false, '3': true },
+    activePlayer: 1,
+    currentCard: 'card-68',
+    previewCard: 'card-1',
+    deckSize: 9,
+    seatOrder: ['1', '0', '3', '2'],
+    firstEligible: '1',
+    secondEligible: '3',
+    nonPassCount: 0,
+    zoneTokenCounts: [
+      // NVA Rally placements (all guerrillas underground)
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+      { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+      { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+      { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+      // VC guerrillas in Quang Tri (activated by Sweep)
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 2,
+        props: { activity: 'active' } },
+    ],
+    markers: [
+      { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+    ],
+  },
 };
 
-const assertMarkerState = (
-  state: GameState,
-  spaceId: string,
-  markerId: string,
-  expected: string,
-  label: string,
-): void => {
-  const actual = state.markers[spaceId]?.[markerId];
-  assert.equal(actual, expected, `${label}: expected ${markerId} at ${spaceId} = ${expected}, got ${String(actual)}`);
-};
+// ---------------------------------------------------------------------------
+// Playbook turns in execution order
+// ---------------------------------------------------------------------------
 
-const assertEligibility = (state: GameState, seat: string, expected: boolean, label: string): void => {
-  const runtime = requireCardDrivenRuntime(state);
-  const actual = runtime.eligibility[seat];
-  assert.equal(actual, expected, `${label}: expected seat ${seat} eligibility=${expected}, got ${actual}`);
-};
-
-const assertActivePlayer = (state: GameState, expected: number, label: string): void => {
-  assert.equal(Number(state.activePlayer), expected, `${label}: expected activePlayer=${expected}, got ${Number(state.activePlayer)}`);
-};
-
-const zoneCount = (state: GameState, zoneId: string): number =>
-  (state.zones[zoneId] ?? []).length;
-
-const zoneHasCard = (state: GameState, zoneId: string, cardId: string): boolean =>
-  (state.zones[zoneId] ?? []).some((token) => token.props.cardId === cardId);
+const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2];
 
 // ---------------------------------------------------------------------------
 // Test suite
@@ -170,164 +276,35 @@ describe('FITL playbook golden suite', () => {
   let state = advanceToDecisionPoint(def, engineered);
 
   it('initial state matches Full Game 1964 setup with playbook deck', () => {
-    // Card lifecycle: Burning Bonze current, Trucks preview
-    assert.ok(zoneHasCard(state, 'played:none', 'card-107'), 'Burning Bonze should be in played:none');
-    assert.ok(zoneHasCard(state, 'lookahead:none', 'card-55'), 'Trucks should be in lookahead:none');
-    assert.equal(zoneCount(state, 'deck:none'), 11, 'deck should have 11 remaining cards');
-
-    // All factions eligible
-    assertEligibility(state, '0', true, 'setup US');
-    assertEligibility(state, '1', true, 'setup ARVN');
-    assertEligibility(state, '2', true, 'setup NVA');
-    assertEligibility(state, '3', true, 'setup VC');
-
-    // Active player is VC (seat 3) — first in Burning Bonze seat order
-    assertActivePlayer(state, 3, 'setup');
-
-    // Global variables
-    assertGlobalVar(state, 'aid', 15, 'setup');
-    assertGlobalVar(state, 'arvnResources', 30, 'setup');
-    assertGlobalVar(state, 'nvaResources', 10, 'setup');
-    assertGlobalVar(state, 'vcResources', 5, 'setup');
-    assertGlobalVar(state, 'patronage', 15, 'setup');
-    assertGlobalVar(state, 'trail', 1, 'setup');
-
-    // Saigon setup
-    assertMarkerState(state, 'saigon:none', 'supportOpposition', 'passiveSupport', 'setup Saigon');
-    assertZoneTokenCount(state, 'saigon:none', 'US', 'troops', 2, 'setup Saigon');
-    assertZoneTokenCount(state, 'saigon:none', 'US', 'base', 1, 'setup Saigon');
-    assertZoneTokenCount(state, 'saigon:none', 'ARVN', 'troops', 2, 'setup Saigon');
-    assertZoneTokenCount(state, 'saigon:none', 'ARVN', 'police', 3, 'setup Saigon');
-  });
-
-  // -------------------------------------------------------------------------
-  // Turn 1 Move 1: VC plays shaded Burning Bonze event
-  // -------------------------------------------------------------------------
-
-  it('Move 1: VC shaded Burning Bonze shifts Saigon to neutral and reduces aid', () => {
-    const move: Move = {
-      actionId: asActionId('event'),
-      params: { eventCardId: 'card-107', side: 'shaded' },
-    };
-
-    const result = applyMove(def, state, move);
-    state = result.state;
-
-    // Saigon shifted 1 level toward Active Opposition: passiveSupport -> neutral
-    assertMarkerState(state, 'saigon:none', 'supportOpposition', 'neutral', 'Move 1 Saigon');
-
-    // Aid reduced by 12: 15 -> 3
-    assertGlobalVar(state, 'aid', 3, 'Move 1');
-
-    // Active player advances to NVA (seat 2), next in Burning Bonze seat order
-    assertActivePlayer(state, 2, 'Move 1');
-  });
-
-  // -------------------------------------------------------------------------
-  // Turn 1 Move 2: NVA passes
-  // -------------------------------------------------------------------------
-
-  it('Move 2: NVA passes, gains +1 resource, ARVN becomes active', () => {
-    const move: Move = {
-      actionId: asActionId('pass'),
-      params: {},
-    };
-
-    const result = applyMove(def, state, move);
-    state = result.state;
-
-    // NVA gains +1 insurgent pass reward: 10 -> 11
-    assertGlobalVar(state, 'nvaResources', 11, 'Move 2');
-
-    // Active player advances to ARVN (seat 1)
-    assertActivePlayer(state, 1, 'Move 2');
-  });
-
-  // -------------------------------------------------------------------------
-  // Turn 1 Move 3: ARVN Op & Special Activity (Train + Govern)
-  // -------------------------------------------------------------------------
-
-  it('Move 3: ARVN Train in Saigon with Pacify, then Govern in An Loc + Can Tho', () => {
-    const result = applyMoveWithResolvedDecisionIds(def, state, {
-      actionId: asActionId('train'),
-      actionClass: 'operationPlusSpecialActivity',
-      params: {
-        targetSpaces: ['saigon:none'],
-        $trainChoice: 'arvn-cubes',
-        $subActionSpaces: ['saigon:none'],
-        $subAction: 'pacify',
-        $pacLevels: 1,
+    assertPlaybookSnapshot(state, {
+      globalVars: {
+        aid: 15,
+        arvnResources: 30,
+        nvaResources: 10,
+        vcResources: 5,
+        patronage: 15,
+        trail: 1,
       },
-      compound: {
-        specialActivity: {
-          actionId: asActionId('govern'),
-          actionClass: 'operationPlusSpecialActivity',
-          params: {
-            targetSpaces: ['an-loc:none', 'can-tho:none'],
-            '$governMode@an-loc:none': 'aid',
-            '$governMode@can-tho:none': 'aid',
-          },
-        },
-        timing: 'after',
-      },
+      eligibility: { '0': true, '1': true, '2': true, '3': true },
+      activePlayer: 3,
+      currentCard: 'card-107',
+      previewCard: 'card-55',
+      deckSize: 11,
+      zoneTokenCounts: [
+        { zone: 'saigon:none', faction: 'US', type: 'troops', count: 2 },
+        { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
+        { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 2 },
+        { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },
+      ],
+      markers: [
+        { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+      ],
+    }, 'initial state');
+  });
+
+  for (const turn of PLAYBOOK_TURNS) {
+    it(turn.label, () => {
+      state = replayPlaybookTurn(def, state, turn);
     });
-    state = result.state;
-
-    // ARVN resources: 30 - 3 (train) - 3 (pacify) = 24
-    assertGlobalVar(state, 'arvnResources', 24, 'Move 3');
-
-    // Saigon shifted 1 level toward support: neutral -> passiveSupport
-    assertMarkerState(state, 'saigon:none', 'supportOpposition', 'passiveSupport', 'Move 3 Saigon');
-
-    // Saigon troops: 2 original + 6 placed = 8 ARVN troops, 3 ARVN police unchanged
-    assertZoneTokenCount(state, 'saigon:none', 'ARVN', 'troops', 8, 'Move 3 Saigon');
-    assertZoneTokenCount(state, 'saigon:none', 'ARVN', 'police', 3, 'Move 3 Saigon');
-
-    // Aid: 3 (from Move 1) + 6 (govern) + 5 (Minh leader bonus) = 14
-    assertGlobalVar(state, 'aid', 14, 'Move 3');
-  });
-
-  // -------------------------------------------------------------------------
-  // Turn 1 end-of-turn: eligibility, card lifecycle
-  // -------------------------------------------------------------------------
-
-  it('end of Turn 1: VC and ARVN ineligible, NVA and US eligible, card state reset', () => {
-    // After 2 eligible factions acted (VC 1st, ARVN 2nd), the card-driven flow
-    // ends the card: resets nonPassCount, updates eligibility, transitions card zones,
-    // reads the new card's seat order, and advances active player.
-
-    // VC (seat 3) and ARVN (seat 1) → Ineligible
-    assertEligibility(state, '3', false, 'end-of-turn VC');
-    assertEligibility(state, '1', false, 'end-of-turn ARVN');
-
-    // NVA (seat 2) who passed → Eligible; US (seat 0) who didn't act → Eligible
-    assertEligibility(state, '2', true, 'end-of-turn NVA');
-    assertEligibility(state, '0', true, 'end-of-turn US');
-
-    // Card-driven flow reset: nonPassCount back to 0, new first/second eligible
-    // Trucks seat order: NVA, VC, US, ARVN → eligible: NVA (2), US (0)
-    const runtime = requireCardDrivenRuntime(state);
-    assert.equal(runtime.currentCard.nonPassCount, 0, 'nonPassCount should reset to 0 after card end');
-    assert.equal(runtime.currentCard.firstEligible, '2', 'NVA (seat 2) should be first eligible');
-    assert.equal(runtime.currentCard.secondEligible, '0', 'US (seat 0) should be second eligible');
-
-    // Seat order updated to Trucks card: ["2", "3", "0", "1"] = NVA, VC, US, ARVN
-    assert.deepEqual(
-      runtime.seatOrder,
-      ['2', '3', '0', '1'],
-      'seatOrder should reflect Trucks card order',
-    );
-
-    // Active player advances to NVA (seat 2) — first eligible for Trucks card
-    assertActivePlayer(state, 2, 'end-of-turn');
-
-    // Card zones transitioned: Burning Bonze discarded, Trucks promoted, Green Berets revealed
-    assert.ok(zoneHasCard(state, 'played:none', 'card-55'), 'Trucks should be in played:none');
-    assert.ok(zoneHasCard(state, 'lookahead:none', 'card-68'), 'Green Berets should be in lookahead:none');
-    assert.equal(zoneCount(state, 'deck:none'), 10, 'deck should have 10 remaining cards');
-
-    // US troops and base in Saigon unchanged
-    assertZoneTokenCount(state, 'saigon:none', 'US', 'troops', 2, 'end-of-turn Saigon');
-    assertZoneTokenCount(state, 'saigon:none', 'US', 'base', 1, 'end-of-turn Saigon');
-  });
+  }
 });

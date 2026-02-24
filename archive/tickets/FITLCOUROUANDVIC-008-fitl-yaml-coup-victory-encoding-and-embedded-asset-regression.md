@@ -56,7 +56,7 @@ Encode foundation Coup/victory declarations in FITL `GameSpecDoc` YAML fixtures 
   - Did not require kernel/runtime source changes because coup/victory execution support already existed.
 - Verification results:
   - `npm run build`
-  - `npm run test:unit -- --coverage=false --testPathPattern='(data-assets|no-hardcoded-fitl-audit)'`
+  - `npm run test:unit -- --coverage=false --testPathPatterns='(data-assets|no-hardcoded-fitl-audit)'`
   - `node --test dist/test/integration/fitl-coup-victory.test.js`
   - `node --test dist/test/integration/compile-pipeline.test.js`
   - `node --test dist/test/unit/data-assets.test.js`

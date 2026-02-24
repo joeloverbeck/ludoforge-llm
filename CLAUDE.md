@@ -27,10 +27,10 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 1. **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame. Event card encoding and game definition generation are complete. Remaining work: rules refinement (option matrix, monsoon effects, etc.) and E2E validation.
 2. **Texas Hold'em** — a no-limit poker tournament (2-10 players). Added as a second game to stress-test engine-agnosticism with hidden information, betting, and player elimination. Spec 33 is active.
 
-- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-28, 30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system), 41 (board layout engine), 47 (FITL Section 6 rules gaps)
-- **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX, BOARDLAY, KERLEGCHO, FITLRULES2, FITLSEC6RULGAP
-- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests), 35-00 (frontend roadmap), 42 (visual config & session management), 48 (FITL Section 5 rules gaps)
-- **Active tickets**: ANIMDIAG-008 (animation diagnostics), FITLSEC5RULGAP-001 through 002 (FITL Section 5 rules gaps — engine kernel + tests)
+- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-28, 30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system), 41 (board layout engine), 47 (FITL Section 6 rules gaps), 48 (FITL Section 5 rules gaps)
+- **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX, BOARDLAY, KERLEGCHO, FITLRULES2, FITLSEC6RULGAP, FITLSEC5RULGAP
+- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests), 35-00 (frontend roadmap), 42 (visual config & session management), 49 (FITL Section 7 rules gaps)
+- **Active tickets**: ANIMDIAG-008 (animation diagnostics), FITLSEC7RULGAP-001 through 002 (FITL Section 7 rules gaps — victory data + engine)
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
 - **Codebase size**: ~245 source files, ~354 test files
 - **Design specs**: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`, `brainstorming/texas-hold-em-rules.md`, `brainstorming/browser-based-game-runner.md`
@@ -117,6 +117,7 @@ pnpm -F @ludoforge/runner dev
 ```
 
 **Important**: Use `pnpm turbo ...` as the canonical path so build ordering remains deterministic across packages. Engine tests run against compiled JS in `packages/engine/dist/`. Runner tests use Vitest and run against TypeScript source directly. When running `node --test` directly for engine, run `pnpm turbo build` first. Use `pnpm turbo test --force` to bypass Turbo cache for a guaranteed fresh run.
+**Important**: Do not use Jest-only CLI flags (for example `--testPathPattern` or `--testPathPatterns`) with engine `test:unit`; engine tests run with `node --test`, not Jest.
 
 ## Project Structure
 

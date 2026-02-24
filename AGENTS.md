@@ -38,6 +38,11 @@ Primary workflow commands:
 - `pnpm -F @ludoforge/runner lint`: run runner lint checks.
 - `pnpm -F @ludoforge/runner typecheck`: run runner TypeScript checks.
 
+Important command-shape rule:
+- This repo does not use Jest for engine tests; it uses Node's test runner (`node --test`).
+- Do not pass Jest-only flags such as `--testPathPattern` / `--testPathPatterns` to `test:unit`.
+- For focused engine runs, execute a concrete test file path (for example `node --test packages/engine/dist/test/unit/<file>.test.js`) after `pnpm turbo build`.
+
 Useful repo-navigation commands:
 - `rg --files`: list tracked files quickly.
 - `rg "Spec [0-9]+" specs/`: find spec references.

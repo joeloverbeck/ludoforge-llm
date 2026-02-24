@@ -182,18 +182,11 @@ actions:
                       left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }
                       right: used
               right: 4
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: mapSpaces
-                    filter:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                        - { op: '==', left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }, right: used }
-              right: 0
+            - conditionMacro: fitl-space-marker-state-is
+              args:
+                spaceIdExpr: { ref: binding, name: targetSpace }
+                markerId: coupPacifySpaceUsage
+                markerStateExpr: used
         - op: '>'
           left:
             aggregate:
@@ -246,45 +239,29 @@ actions:
             - op: and
               args:
                 - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '==', left: { ref: markerState, space: $zone, marker: terror }, right: terror }
-                  right: 0
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: terror
+                    markerStateExpr: terror
             - op: and
               args:
                 - { op: '==', left: { ref: binding, name: action }, right: shiftSupport }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
-                  right: 0
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '!=', left: { ref: markerState, space: $zone, marker: coupSupportShiftCount }, right: two }
-                  right: 0
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: terror
+                    markerStateExpr: none
+                - conditionMacro: fitl-space-marker-state-is-not
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: supportOpposition
+                    markerStateExpr: activeSupport
+                - conditionMacro: fitl-space-marker-state-is-not
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: coupSupportShiftCount
+                    markerStateExpr: two
     cost: []
     effects:
       - macro: rvn-leader-pacification-cost
@@ -331,18 +308,11 @@ actions:
                       left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }
                       right: used
               right: 4
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: mapSpaces
-                    filter:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                        - { op: '==', left: { ref: markerState, space: $zone, marker: coupPacifySpaceUsage }, right: used }
-              right: 0
+            - conditionMacro: fitl-space-marker-state-is
+              args:
+                spaceIdExpr: { ref: binding, name: targetSpace }
+                markerId: coupPacifySpaceUsage
+                markerStateExpr: used
         - op: '>'
           left:
             aggregate:
@@ -394,45 +364,29 @@ actions:
             - op: and
               args:
                 - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '==', left: { ref: markerState, space: $zone, marker: terror }, right: terror }
-                  right: 0
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: terror
+                    markerStateExpr: terror
             - op: and
               args:
                 - { op: '==', left: { ref: binding, name: action }, right: shiftSupport }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
-                  right: 0
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '!=', left: { ref: markerState, space: $zone, marker: coupSupportShiftCount }, right: two }
-                  right: 0
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: terror
+                    markerStateExpr: none
+                - conditionMacro: fitl-space-marker-state-is-not
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: supportOpposition
+                    markerStateExpr: activeSupport
+                - conditionMacro: fitl-space-marker-state-is-not
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: coupSupportShiftCount
+                    markerStateExpr: two
     cost: []
     effects:
       - macro: rvn-leader-pacification-cost
@@ -479,18 +433,11 @@ actions:
                       left: { ref: markerState, space: $zone, marker: coupAgitateSpaceUsage }
                       right: used
               right: 4
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: mapSpaces
-                    filter:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                        - { op: '==', left: { ref: markerState, space: $zone, marker: coupAgitateSpaceUsage }, right: used }
-              right: 0
+            - conditionMacro: fitl-space-marker-state-is
+              args:
+                spaceIdExpr: { ref: binding, name: targetSpace }
+                markerId: coupAgitateSpaceUsage
+                markerStateExpr: used
         - op: '>'
           left:
             aggregate:
@@ -526,45 +473,24 @@ actions:
             - op: and
               args:
                 - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '==', left: { ref: markerState, space: $zone, marker: terror }, right: terror }
-                  right: 0
+                - conditionMacro: fitl-space-marker-state-is
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: terror
+                    markerStateExpr: terror
             - op: and
               args:
                 - { op: '==', left: { ref: binding, name: action }, right: shiftOpposition }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
-                  right: 0
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '!=', left: { ref: markerState, space: $zone, marker: coupSupportShiftCount }, right: two }
-                  right: 0
+                - conditionMacro: fitl-space-marker-state-is-not
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: supportOpposition
+                    markerStateExpr: activeOpposition
+                - conditionMacro: fitl-space-marker-state-is-not
+                  args:
+                    spaceIdExpr: { ref: binding, name: targetSpace }
+                    markerId: coupSupportShiftCount
+                    markerStateExpr: two
     cost: []
     effects:
       - addVar: { scope: global, var: vcResources, delta: -1 }

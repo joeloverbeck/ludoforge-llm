@@ -2697,4 +2697,44 @@ conditionMacros:
         left: { ref: gvar, var: totalEcon }
         right: { param: costExpr }
 
+  # Shared marker equality predicate for a specific map space id.
+  - id: fitl-space-marker-state-is
+    params:
+      - { name: spaceIdExpr, type: value }
+      - { name: markerId, type: string }
+      - { name: markerStateExpr, type: value }
+    condition:
+      op: '>'
+      left:
+        aggregate:
+          op: count
+          query:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: spaceIdExpr } }
+                - { op: '==', left: { ref: markerState, space: $zone, marker: { param: markerId } }, right: { param: markerStateExpr } }
+      right: 0
+
+  # Shared marker inequality predicate for a specific map space id.
+  - id: fitl-space-marker-state-is-not
+    params:
+      - { name: spaceIdExpr, type: value }
+      - { name: markerId, type: string }
+      - { name: markerStateExpr, type: value }
+    condition:
+      op: '>'
+      left:
+        aggregate:
+          op: count
+          query:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: spaceIdExpr } }
+                - { op: '!=', left: { ref: markerState, space: $zone, marker: { param: markerId } }, right: { param: markerStateExpr } }
+      right: 0
+
 ```

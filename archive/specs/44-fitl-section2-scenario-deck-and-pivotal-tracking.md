@@ -1,6 +1,6 @@
 # Spec 44: FITL Section 2 — Scenario Deck Exclusions & Pivotal Tracking
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 29 (event card encoding), Spec 43 (coup round)
@@ -438,3 +438,19 @@ Tickets 001–003 can be implemented in parallel. Ticket 004 is independent. Tic
 - [ ] `ScenarioDeckComposition` interface includes `periodFilter`
 - [ ] All 3 scenarios have `periodFilter` with correct pile assignments
 - [ ] `pnpm turbo schema:artifacts` — regenerated without error
+## Outcome
+
+- Completion date: 2026-02-24
+- What was actually changed:
+  - Implemented scenario deck composition fixes for FITL Short/Medium/Full, including pivotal exclusions and leader-box initialization behavior.
+  - Implemented pivotal single-use enforcement via card-token lifecycle and scenario card placements.
+  - Added optional `periodFilter` schema/type contract and FITL scenario data entries (disabled by default) for Period Events representation.
+  - Added/updated engine integration and unit tests covering deck exclusions, leader-box initialization, pivotal lifecycle constraints, and period-filter shape/data assertions.
+- Deviations from original plan:
+  - Work expanded beyond strictly data-only edits in places where generic engine/schema/compiler support was required.
+  - Pivotal single-use used token-state/card-placement modeling rather than per-card FITL boolean flags.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo build` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo lint` passed.

@@ -1,6 +1,6 @@
 # Spec 48: FITL Section 5 Rules Gaps
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs), Spec 29 (event card encoding)
@@ -9,15 +9,22 @@
 
 ## Overview
 
-Gap analysis of FITL Rules Section 5 (Events — execution semantics, overrides, capabilities, momentum, free operations) against the FITL implementation (`data/games/fire-in-the-lake/`) and the engine kernel (`packages/engine/src/kernel/`). All Section 5 rules are correctly implemented except one: **Rule 5.1.2** (event precedence over momentum for free operations).
+Gap analysis of FITL Rules Section 5 (Events — execution semantics, overrides, capabilities, momentum, free operations) against the FITL implementation (`data/games/fire-in-the-lake/`) and the engine kernel (`packages/engine/src/kernel/`).
 
-All changes are **engine kernel code** (not data-only YAML). The gap requires the kernel's free operation enumeration to independently enumerate moves when momentum blocks all base moves for a granted action.
+Final implemented state: Section 5 is fully implemented, including Rule 5.1.2.
+
+Implementation followed a data-first architecture:
+- encode Rule 5.1.2 precedence via FITL legality predicates guarded by `__freeOperation`
+- add/strengthen integration coverage in existing FITL test suites
+- keep the shared kernel generic (no FITL-specific fallback enumeration path)
+
+Legacy planning sections below are retained for historical traceability but are superseded by the completion outcome.
 
 ## Gap Analysis Summary
 
 | # | Gap | Rule | Status | Action |
 |---|-----|------|--------|--------|
-| 1 | Free operations blocked by momentum — no independent enumeration fallback | 5.1.2 | PENDING | FITLSEC5RULGAP-001 (engine) + FITLSEC5RULGAP-002 (tests) |
+| 1 | Free operations blocked by momentum | 5.1.2 | COMPLETED | FITLSEC5RULGAP-001 + FITLSEC5RULGAP-002 (archived) |
 
 ## Verified Correct (No Changes Needed)
 
@@ -171,13 +178,17 @@ Add FITL-specific integration tests confirming Rule 5.1.2 behavior: free operati
 
 ---
 
-## Verification Plan
+## Outcome
 
-After both tickets are implemented:
-
-1. `pnpm turbo build` — full build, no errors
-2. `pnpm turbo test` — all existing tests pass (no regression)
-3. `pnpm turbo typecheck` — no type errors
-4. New Rule 5.1.2 unit tests pass (FITLSEC5RULGAP-001)
-5. New Rule 5.1.2 integration tests pass (FITLSEC5RULGAP-002)
-6. Manual verification: set up a game state with Typhoon Kate active, grant a free Air Lift via MACV, confirm it appears in legal moves and executes successfully
+- **Completion date**: 2026-02-24
+- **What changed vs originally planned**:
+  - The spec originally proposed a kernel fallback path (`skipPipelineDispatch`-based independent enumeration).
+  - Final implementation took a cleaner architecture: encode Rule 5.1.2 directly in FITL data (`__freeOperation` legality guards), keep kernel generic, and expand integration tests.
+  - Ticket outcomes are recorded in archived tickets:
+    - `archive/tickets/FITLSEC5RULGAP-001.md`
+    - `archive/tickets/FITLSEC5RULGAP-002.md`
+- **Verification results**:
+  - `pnpm turbo build` passed
+  - `pnpm -F @ludoforge/engine test` passed
+  - `pnpm turbo typecheck` passed
+  - `pnpm turbo lint` passed

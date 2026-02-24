@@ -37,6 +37,7 @@ const withMom = (state: GameState, vars: Record<string, boolean>): GameState => 
 const withPendingFreeGrant = (
   state: GameState,
   actionId: string,
+  operationClass: 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' = 'operation',
 ): GameState => {
   if (state.turnOrderState.type !== 'cardDriven') {
     return state;
@@ -52,7 +53,7 @@ const withPendingFreeGrant = (
           {
             grantId: `test-free-grant-${actionId}`,
             seat: String(state.activePlayer),
-            operationClass: 'operation',
+            operationClass,
             actionIds: [actionId],
             remainingUses: 1,
           },
@@ -60,6 +61,30 @@ const withPendingFreeGrant = (
       },
     },
   };
+};
+
+const assertMomentumBlockedActionAllowsGrantedFreeVariant = (
+  def: GameDef,
+  blockedState: GameState,
+  actionId: string,
+  operationClass: 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' = 'operation',
+): void => {
+  const blockedMoves = legalMoves(def, blockedState).filter((move) => String(move.actionId) === actionId);
+  assert.equal(
+    blockedMoves.some((move) => move.freeOperation !== true),
+    false,
+    `${actionId} should remain blocked for paid/non-free moves under momentum`,
+  );
+
+  const grantedState = withPendingFreeGrant(blockedState, actionId, operationClass);
+  const grantedMoves = legalMoves(def, grantedState).filter((move) => String(move.actionId) === actionId);
+  const freeMove = grantedMoves.find((move) => move.freeOperation === true);
+  assert.notEqual(freeMove, undefined, `${actionId} should expose a free-operation variant when granted`);
+
+  assert.doesNotThrow(
+    () => applyMoveWithResolvedDecisionIds(def, grantedState, freeMove!),
+    `${actionId} free-operation variant should execute`,
+  );
 };
 
 const withLookaheadCoup = (def: GameDef, state: GameState, isCoup: boolean): GameState => {
@@ -157,6 +182,65 @@ describe('FITL momentum prohibition preconditions', () => {
     const beforeCount = Number(granted.globalVars.airLiftCount ?? 0);
     const applied = applyMoveWithResolvedDecisionIds(def, granted, freeAirLift!);
     assert.ok(Number(applied.state.globalVars.airLiftCount ?? 0) > beforeCount, 'Free Air Lift should execute normally');
+  });
+
+  it('allows granted free variants for other momentum-blocked operations (Air Strike, Transport, US Assault)', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const blockedAirStrike = withMom(
+      withActivePlayer(
+        {
+          ...initialState(def, 9020, 2).state,
+          zones: {
+            ...initialState(def, 9020, 2).state.zones,
+            'quang-nam:none': [
+              makeToken('free-airstrike-us', 'troops', 'US', { type: 'troops' }),
+              makeToken('free-airstrike-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+            ],
+          },
+        },
+        0,
+      ),
+      { mom_rollingThunder: true },
+    );
+    assertMomentumBlockedActionAllowsGrantedFreeVariant(def, blockedAirStrike, 'airStrike');
+
+    const blockedTransport = withMom(
+      withActivePlayer(
+        {
+          ...initialState(def, 9021, 2).state,
+          zones: {
+            ...initialState(def, 9021, 2).state.zones,
+            'da-nang:none': [makeToken('free-transport-arvn', 'troops', 'ARVN', { type: 'troops' })],
+            'loc-hue-da-nang:none': [],
+          },
+        },
+        1,
+      ),
+      { mom_typhoonKate: true },
+    );
+    assertMomentumBlockedActionAllowsGrantedFreeVariant(def, blockedTransport, 'transport');
+
+    const blockedUsAssault = withMom(
+      withActivePlayer(
+        {
+          ...initialState(def, 9022, 2).state,
+          zones: {
+            ...initialState(def, 9022, 2).state.zones,
+            'quang-nam:none': [
+              makeToken('free-assault-us', 'troops', 'US', { type: 'troops' }),
+              makeToken('free-assault-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+            ],
+          },
+        },
+        0,
+      ),
+      { mom_generalLansdale: true },
+    );
+    assertMomentumBlockedActionAllowsGrantedFreeVariant(def, blockedUsAssault, 'assault');
+
   });
 
   it('prohibits Air Strike when any Air Strike momentum is active, but not from unrelated momentum', () => {

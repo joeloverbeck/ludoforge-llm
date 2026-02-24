@@ -18,13 +18,15 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.metadata?.period, '1964');
     assert.deepEqual(card?.metadata?.seatOrder, ['NVA', 'VC', 'US', 'ARVN']);
 
+    // Unshaded: Trail degrades 2 boxes (not 1), NVA selects pieces via chooseN (not removeByPriority)
     const unshadedTrail = card?.unshaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');
-    assert.deepEqual(unshadedTrail, { addVar: { scope: 'global', var: 'trail', delta: -1 } });
-    const unshadedRemoval = card?.unshaded?.effects?.find((effect) => 'removeByPriority' in effect);
-    assert.notEqual(unshadedRemoval, undefined);
+    assert.deepEqual(unshadedTrail, { addVar: { scope: 'global', var: 'trail', delta: -2 } });
+    const unshadedChooseN = card?.unshaded?.effects?.find((effect) => 'chooseN' in effect);
+    assert.notEqual(unshadedChooseN, undefined);
 
-    const shadedResourceGain = card?.shaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'nvaResources');
-    assert.deepEqual(shadedResourceGain, { addVar: { scope: 'global', var: 'nvaResources', delta: 6 } });
+    // Shaded: 2 * Trail to both NVA and VC Resources via let binding, base repositioning via forEach
+    const shadedLet = card?.shaded?.effects?.find((effect) => 'let' in effect);
+    assert.notEqual(shadedLet, undefined);
     const shadedMove = card?.shaded?.effects?.find((effect) => 'forEach' in effect);
     assert.notEqual(shadedMove, undefined);
   });

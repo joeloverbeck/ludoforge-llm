@@ -1682,76 +1682,90 @@ eventDecks:
           seatOrder: ["NVA", "VC", "US", "ARVN"]
           flavorText: "Logistics under pressure."
         unshaded:
-          text: "Trail degrades. Remove NVA pieces in Laos/Cambodia."
-          targets:
-            - id: $trailCountrySpace
-              selector:
-                query: mapSpaces
-                filter:
-                  op: or
-                  args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-              cardinality: { max: 1 }
+          text: "Degrade Trail 2 boxes. NVA selects and removes 4 of its pieces each from Laos and Cambodia."
           effects:
-            - addVar: { scope: global, var: trail, delta: -1 }
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: nvaTroops
-                    over:
-                      query: tokensInZone
-                      zone: $trailCountrySpace
-                      filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: available-NVA:none
-                  - bind: nvaGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: $trailCountrySpace
-                      filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: available-NVA:none
+            # 1. Trail degrades 2 boxes
+            - addVar: { scope: global, var: trail, delta: -2 }
+            # 2. NVA selects up to 4 of its pieces from ALL Laos spaces
+            - chooseN:
+                bind: $nvaLaosPieces
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: '=='
+                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    right: laos
+                  filter:
+                    - { prop: faction, eq: NVA }
+                min: 0
+                max: 4
+            - forEach:
+                bind: $nvaLaosPiece
+                over: { query: binding, name: $nvaLaosPieces }
+                effects:
+                  - moveToken:
+                      token: $nvaLaosPiece
+                      from: { zoneExpr: { ref: tokenZone, token: $nvaLaosPiece } }
+                      to: { zoneExpr: available-NVA:none }
+            # 3. NVA selects up to 4 of its pieces from ALL Cambodia spaces
+            - chooseN:
+                bind: $nvaCambodiaPieces
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: '=='
+                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    right: cambodia
+                  filter:
+                    - { prop: faction, eq: NVA }
+                min: 0
+                max: 4
+            - forEach:
+                bind: $nvaCambodiaPiece
+                over: { query: binding, name: $nvaCambodiaPieces }
+                effects:
+                  - moveToken:
+                      token: $nvaCambodiaPiece
+                      from: { zoneExpr: { ref: tokenZone, token: $nvaCambodiaPiece } }
+                      to: { zoneExpr: available-NVA:none }
         shaded:
-          text: "Resources +6 and reposition an NVA Base from Laos/Cambodia into South Vietnam."
-          targets:
-            - id: $sourceCountrySpace
-              selector:
-                query: mapSpaces
-                filter:
-                  op: or
-                  args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-              cardinality: { max: 1 }
-            - id: $destSouthSpace
-              selector:
-                query: mapSpaces
-                filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: country }
-                  right: southVietnam
-              cardinality: { max: 1 }
+          text: "Add twice Trail value to each NVA and VC Resources. NVA moves its unTunneled Bases anywhere within Laos/Cambodia."
           effects:
-            - addVar: { scope: global, var: nvaResources, delta: 6 }
+            # 1. Add 2 * Trail to both NVA and VC Resources
+            - let:
+                bind: $trailBonus
+                value: { op: '*', left: 2, right: { ref: gvar, var: trail } }
+                in:
+                  - addVar: { scope: global, var: nvaResources, delta: { ref: binding, name: $trailBonus } }
+                  - addVar: { scope: global, var: vcResources, delta: { ref: binding, name: $trailBonus } }
+            # 2. NVA repositions each unTunneled Base within Laos/Cambodia
             - forEach:
                 bind: $nvaBase
                 over:
-                  query: tokensInZone
-                  zone: $sourceCountrySpace
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
                   filter:
                     - { prop: faction, eq: NVA }
                     - { prop: type, eq: base }
-                limit: 1
+                    - { prop: tunnel, eq: untunneled }
                 effects:
+                  - chooseOne:
+                      bind: '$baseDestination@{$nvaBase}'
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: or
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
                   - moveToken:
                       token: $nvaBase
-                      from: { zoneExpr: $sourceCountrySpace }
-                      to: { zoneExpr: $destSouthSpace }
+                      from: { zoneExpr: { ref: tokenZone, token: $nvaBase } }
+                      to: { zoneExpr: { ref: binding, name: '$baseDestination@{$nvaBase}' } }
       - id: card-97
         title: Brinks Hotel
         sideMode: dual

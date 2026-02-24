@@ -798,6 +798,11 @@ dataAssets:
           min: 0
           max: 15
           initial: 0
+        - id: leaderBoxCardCount
+          scope: global
+          min: 0
+          max: 8
+          initial: 0
       markerLattices:
         - id: supportOpposition
           states:
@@ -1080,9 +1085,6 @@ dataAssets:
       pieceCatalogAssetId: fitl-piece-catalog-production
       scenarioName: Full
       yearRange: 1964-1972
-      usPolicy: jfk
-      startingLeader: duong-van-minh
-      leaderStack: []
       deckComposition:
         materializationStrategy: pile-coup-mix-v1
         pileCount: 6
@@ -1090,15 +1092,9 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
-      startingEligibility:
-        - seat: us
-          eligible: true
-        - seat: arvn
-          eligible: true
-        - seat: nva
-          eligible: true
-        - seat: vc
-          eligible: true
+      initialGlobalMarkerValues:
+        - markerId: activeLeader
+          state: minh
       initialTrackValues:
         - trackId: aid
           value: 15
@@ -1417,10 +1413,6 @@ dataAssets:
       pieceCatalogAssetId: fitl-piece-catalog-production
       scenarioName: Short
       yearRange: 1965-1967
-      usPolicy: lbj
-      startingLeader: young-turks
-      leaderStack:
-        - khanh
       deckComposition:
         materializationStrategy: pile-coup-mix-v1
         pileCount: 3
@@ -1430,18 +1422,11 @@ dataAssets:
           - pivotal
         excludedCardIds:
           - card-129
-      startingCapabilities:
-        - capabilityId: aaa
-          side: shaded
-      startingEligibility:
-        - seat: us
-          eligible: true
-        - seat: arvn
-          eligible: true
-        - seat: nva
-          eligible: true
-        - seat: vc
-          eligible: true
+      initialGlobalMarkerValues:
+        - markerId: activeLeader
+          state: youngTurks
+        - markerId: cap_aaa
+          state: shaded
       initialTrackValues:
         - trackId: aid
           value: 15
@@ -1457,6 +1442,8 @@ dataAssets:
           value: 15
         - trackId: arvnResources
           value: 30
+        - trackId: leaderBoxCardCount
+          value: 2
       outOfPlay:
         - pieceTypeId: us-troops
           seat: us
@@ -1795,11 +1782,6 @@ dataAssets:
       pieceCatalogAssetId: fitl-piece-catalog-production
       scenarioName: Medium
       yearRange: 1968-1972
-      usPolicy: lbj
-      startingLeader: ky
-      leaderStack:
-        - khanh
-        - young-turks
       deckComposition:
         materializationStrategy: pile-coup-mix-v1
         pileCount: 3
@@ -1807,28 +1789,21 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
-      startingCapabilities:
-        - capabilityId: aaa
-          side: shaded
-        - capabilityId: main-force-bns
-          side: shaded
-        - capabilityId: sa-2s
-          side: shaded
-        - capabilityId: search-and-destroy
-          side: shaded
-        - capabilityId: arc-light
-          side: unshaded
-        - capabilityId: m-48-patton
-          side: unshaded
-      startingEligibility:
-        - seat: us
-          eligible: true
-        - seat: arvn
-          eligible: true
-        - seat: nva
-          eligible: true
-        - seat: vc
-          eligible: true
+      initialGlobalMarkerValues:
+        - markerId: activeLeader
+          state: ky
+        - markerId: cap_aaa
+          state: shaded
+        - markerId: cap_mainForceBns
+          state: shaded
+        - markerId: cap_sa2s
+          state: shaded
+        - markerId: cap_searchAndDestroy
+          state: shaded
+        - markerId: cap_arcLight
+          state: unshaded
+        - markerId: cap_m48Patton
+          state: unshaded
       initialTrackValues:
         - trackId: aid
           value: 30
@@ -1844,6 +1819,8 @@ dataAssets:
           value: 20
         - trackId: arvnResources
           value: 30
+        - trackId: leaderBoxCardCount
+          value: 3
       outOfPlay:
         - pieceTypeId: us-troops
           seat: us

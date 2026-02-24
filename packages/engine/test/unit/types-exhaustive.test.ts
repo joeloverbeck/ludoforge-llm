@@ -192,18 +192,13 @@ describe('exhaustive kernel unions', () => {
       yearRange: '1964-1967',
       initialPlacements: [placement],
       initialTrackValues: [{ trackId: 'patronage', value: 15 }],
+      initialGlobalVarValues: [{ var: 'leaderBoxCardCount', value: 2 }],
+      initialGlobalMarkerValues: [{ markerId: 'activeLeader', state: 'youngTurks' }],
       initialMarkers: [{ spaceId: 'saigon', markerId: 'support', state: 'activeSupport' }],
       outOfPlay: [{ pieceTypeId: 'base', seat: 'us', count: 1 }],
       deckComposition,
-      startingLeader: 'duong-van-minh',
-      leaderStack: ['duong-van-minh', 'nguyen-cao-ky'],
-      startingCapabilities: [{ capabilityId: 'boeing-vertol', side: 'unshaded' }],
-      startingEligibility: [{ seat: 'us', eligible: true }],
-      usPolicy: 'lbj',
     };
 
-    const policy: NonNullable<ScenarioPayload['usPolicy']> = 'nixon';
-    assert.equal(policy, 'nixon');
     assert.equal(payload.deckComposition?.pileCount, 4);
 
     const readonlyGuard = (scenario: ScenarioPayload): void => {
@@ -213,8 +208,8 @@ describe('exhaustive kernel unions', () => {
     void readonlyGuard;
 
     const deckShapeGuard = (deck: ScenarioDeckComposition): void => {
-      // @ts-expect-error leaderStack belongs on ScenarioPayload, not ScenarioDeckComposition.
-      void deck.leaderStack;
+      // @ts-expect-error initialGlobalVarValues belongs on ScenarioPayload, not ScenarioDeckComposition.
+      void deck.initialGlobalVarValues;
     };
     void deckShapeGuard;
   });

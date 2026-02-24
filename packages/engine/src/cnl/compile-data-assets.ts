@@ -440,6 +440,23 @@ const buildScenarioSetupEffects = ({
 
   const poolBySeat = new Map((scenario.seatPools ?? []).map((pool) => [pool.seat, pool]));
   const effects: EffectAST[] = [];
+  for (const entry of scenario.initialGlobalVarValues ?? []) {
+    effects.push({
+      setVar: {
+        scope: 'global',
+        var: entry.var,
+        value: entry.value,
+      },
+    });
+  }
+  for (const entry of scenario.initialGlobalMarkerValues ?? []) {
+    effects.push({
+      setGlobalMarker: {
+        marker: entry.markerId,
+        state: entry.state,
+      },
+    });
+  }
   const usedByPieceType = new Map<string, number>();
   const pieceTypeSeatById = new Map<string, string>();
   for (const [pieceTypeId, pieceType] of pieceTypesById.entries()) {

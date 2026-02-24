@@ -143,6 +143,8 @@ export interface ScenarioPayload {
   readonly settings?: Readonly<Record<string, unknown>>;
   readonly initialPlacements?: readonly ScenarioPiecePlacement[];
   readonly initialTrackValues?: readonly { readonly trackId: string; readonly value: number }[];
+  readonly initialGlobalVarValues?: readonly { readonly var: string; readonly value: number | boolean }[];
+  readonly initialGlobalMarkerValues?: readonly { readonly markerId: string; readonly state: string }[];
   readonly initialMarkers?: readonly { readonly spaceId: string; readonly markerId: string; readonly state: string }[];
   readonly outOfPlay?: readonly { readonly pieceTypeId: string; readonly seat: string; readonly count: number }[];
   readonly seatPools?: readonly {
@@ -151,9 +153,4 @@ export interface ScenarioPayload {
     readonly outOfPlayZoneId?: string;
   }[];
   readonly deckComposition?: ScenarioDeckComposition;
-  readonly startingLeader?: string;
-  readonly leaderStack?: readonly string[];
-  readonly startingCapabilities?: readonly { readonly capabilityId: string; readonly side: 'unshaded' | 'shaded' }[];
-  readonly startingEligibility?: readonly { readonly seat: string; readonly eligible: boolean }[];
-  readonly usPolicy?: 'jfk' | 'lbj' | 'nixon';
 }

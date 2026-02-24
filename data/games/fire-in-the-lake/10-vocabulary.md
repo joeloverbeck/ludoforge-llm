@@ -348,11 +348,6 @@ globalVars:
     init: 0
     min: 0
     max: 200
-  - name: leaderBoxCardCount
-    type: int
-    init: 0
-    min: 0
-    max: 8
 perPlayerVars:
   - name: resources
     type: int

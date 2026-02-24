@@ -8,8 +8,9 @@ const validScenarioPayload = {
   pieceCatalogAssetId: 'fitl-piece-catalog-production',
   scenarioName: 'Full',
   yearRange: '1964-1972',
-  usPolicy: 'jfk',
   initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'us', count: 2 }],
+  initialGlobalVarValues: [{ var: 'leaderBoxCardCount', value: 0 }],
+  initialGlobalMarkerValues: [{ markerId: 'activeLeader', state: 'minh' }],
   deckComposition: {
     materializationStrategy: 'pile-coup-mix-v1',
     pileCount: 6,
@@ -17,7 +18,6 @@ const validScenarioPayload = {
     coupsPerPile: 1,
     excludedCardTags: ['pivotal'],
   },
-  startingCapabilities: [{ capabilityId: 'arc-light', side: 'unshaded' }],
 } as const;
 
 describe('scenario payload schema', () => {
@@ -44,19 +44,22 @@ describe('scenario payload schema', () => {
     assert.equal(result.success, true);
   });
 
-  it('rejects invalid usPolicy values', () => {
-    const result = ScenarioPayloadSchema.safeParse({ ...validScenarioPayload, usPolicy: 'fdr' });
-    assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path[0] === 'usPolicy'));
-  });
-
-  it('rejects invalid capability side values', () => {
+  it('rejects invalid initialGlobalVarValues value types', () => {
     const result = ScenarioPayloadSchema.safeParse({
       ...validScenarioPayload,
-      startingCapabilities: [{ capabilityId: 'arc-light', side: 'both' }],
+      initialGlobalVarValues: [{ var: 'leaderBoxCardCount', value: 'zero' }],
     });
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path[0] === 'startingCapabilities'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initialGlobalVarValues.0.value'));
+  });
+
+  it('rejects invalid initialGlobalMarkerValues shape', () => {
+    const result = ScenarioPayloadSchema.safeParse({
+      ...validScenarioPayload,
+      initialGlobalMarkerValues: [{ markerId: 'activeLeader' }],
+    });
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initialGlobalMarkerValues.0.state'));
   });
 
   it('rejects negative placement counts', () => {

@@ -33,7 +33,6 @@ interface PieceTypeInfo {
   readonly statusDimensions: readonly string[];
 }
 
-const VALID_US_POLICIES: readonly string[] = ['jfk', 'lbj', 'nixon'];
 const VALIDATOR_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvariantDiagnosticDialect = {
   unknownPieceType: {
     initialPlacementsCode: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_PIECE_INVALID',
@@ -129,7 +128,6 @@ export function validateScenarioCrossReferences(
   validateInitialTrackValues(payload, basePath, trackDefs, diagnostics);
   validateInitialMarkers(payload, basePath, spaceIds, markerLattices, diagnostics);
   emitScenarioProjectionInvariantDiagnostics(payload, basePath, pieceTypeIndex, inventoryIndex, diagnostics);
-  validateUsPolicy(payload, basePath, diagnostics);
 }
 
 function extractMapSpaceIds(mapPayload: Record<string, unknown> | undefined): ReadonlySet<string> {
@@ -342,24 +340,4 @@ function emitScenarioProjectionInvariantDiagnostics(
       conservationPath: basePath,
     }),
   );
-}
-
-function validateUsPolicy(
-  payload: Record<string, unknown>,
-  basePath: string,
-  diagnostics: Diagnostic[],
-): void {
-  if (!('usPolicy' in payload) || payload.usPolicy === undefined || payload.usPolicy === null) {
-    return;
-  }
-
-  if (typeof payload.usPolicy !== 'string' || !VALID_US_POLICIES.includes(payload.usPolicy)) {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID',
-      path: `${basePath}.usPolicy`,
-      severity: 'error',
-      message: `Invalid usPolicy "${String(payload.usPolicy)}". Must be one of: ${VALID_US_POLICIES.join(', ')}.`,
-      suggestion: `Set usPolicy to one of: ${VALID_US_POLICIES.join(', ')}.`,
-    });
-  }
 }

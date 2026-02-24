@@ -265,24 +265,6 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.ok(matches[0]!.message.includes('expected "us"'));
   });
 
-  it('scenario with invalid usPolicy emits CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID', () => {
-    const diagnostics = validateGameSpec(
-      createDocWithScenario({
-        usPolicy: 'fdr',
-      }),
-    );
-
-    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID');
-    assert.equal(matches.length, 1);
-  });
-
-  it('scenario with valid usPolicy emits no usPolicy error', () => {
-    for (const policy of ['jfk', 'lbj', 'nixon']) {
-      const diagnostics = validateGameSpec(createDocWithScenario({ usPolicy: policy }));
-      assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID').length, 0);
-    }
-  });
-
   it('scenario without optional fields produces no cross-reference errors', () => {
     const diagnostics = validateGameSpec(createDocWithScenario({}));
 
@@ -293,6 +275,5 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_INVALID').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED').length, 0);
-    assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID').length, 0);
   });
 });

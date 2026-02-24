@@ -212,6 +212,26 @@ export const ScenarioPayloadSchema = z
           .strict(),
       )
       .optional(),
+    initialGlobalVarValues: z
+      .array(
+        z
+          .object({
+            var: StringSchema.min(1),
+            value: z.union([NumberSchema, BooleanSchema]),
+          })
+          .strict(),
+      )
+      .optional(),
+    initialGlobalMarkerValues: z
+      .array(
+        z
+          .object({
+            markerId: StringSchema.min(1),
+            state: StringSchema.min(1),
+          })
+          .strict(),
+      )
+      .optional(),
     initialMarkers: z
       .array(
         z
@@ -246,29 +266,6 @@ export const ScenarioPayloadSchema = z
       )
       .optional(),
     deckComposition: ScenarioDeckCompositionSchema.optional(),
-    startingLeader: StringSchema.min(1).optional(),
-    leaderStack: z.array(StringSchema.min(1)).optional(),
-    startingCapabilities: z
-      .array(
-        z
-          .object({
-            capabilityId: StringSchema.min(1),
-            side: z.union([z.literal('unshaded'), z.literal('shaded')]),
-          })
-          .strict(),
-      )
-      .optional(),
-    startingEligibility: z
-      .array(
-        z
-          .object({
-            seat: StringSchema.min(1),
-            eligible: BooleanSchema,
-          })
-          .strict(),
-      )
-      .optional(),
-    usPolicy: z.union([z.literal('jfk'), z.literal('lbj'), z.literal('nixon')]).optional(),
   })
   .strict();
 

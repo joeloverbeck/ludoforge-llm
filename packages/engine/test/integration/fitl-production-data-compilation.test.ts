@@ -212,10 +212,20 @@ describe('FITL production data integration compilation', () => {
 
     assert.ok(Array.isArray(mapPayload.tracks), 'Expected tracks array');
     const trackIds = new Set(mapPayload.tracks.map((track) => track.id));
-    assert.equal(trackIds.size, 8);
+    assert.equal(trackIds.size, 9);
     assert.deepEqual(
       trackIds,
-      new Set(['nvaResources', 'vcResources', 'arvnResources', 'aid', 'patronage', 'trail', 'totalEcon', 'terrorSabotageMarkersPlaced']),
+      new Set([
+        'nvaResources',
+        'vcResources',
+        'arvnResources',
+        'aid',
+        'patronage',
+        'trail',
+        'totalEcon',
+        'terrorSabotageMarkersPlaced',
+        'leaderBoxCardCount',
+      ]),
     );
 
     assert.ok(Array.isArray(mapPayload.markerLattices), 'Expected markerLattices array');
@@ -243,6 +253,7 @@ describe('FITL production data integration compilation', () => {
         ['arvnResources', 30],
         ['totalEcon', 15],
         ['terrorSabotageMarkersPlaced', 0],
+        ['leaderBoxCardCount', 0],
       ]),
       'Track globalVars must be initialized from selected scenario initialTrackValues with map defaults for omitted tracks',
     );

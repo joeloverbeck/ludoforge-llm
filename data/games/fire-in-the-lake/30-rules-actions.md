@@ -4060,14 +4060,15 @@ actionPipelines:
                           to: { zoneExpr: { ref: binding, name: $transportDestination } }
       - stage: flip-rangers-underground
         effects:
-          - if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
-              then:
+          - forEach:
+              bind: $space
+              over: { query: mapSpaces }
+              effects:
                 - forEach:
                     bind: $ranger
                     over:
                       query: tokensInZone
-                      zone: $transportDestination
+                      zone: $space
                       filter:
                         - { prop: faction, eq: ARVN }
                         - { prop: type, eq: guerrilla }

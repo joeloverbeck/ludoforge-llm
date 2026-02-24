@@ -109,7 +109,6 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
 
     const checks: Array<{ profileId: string; marker: string; expectedSide: 'unshaded' | 'shaded'; forbiddenSide?: 'unshaded' | 'shaded' }> = [
       { profileId: 'transport-profile', marker: 'cap_armoredCavalry', expectedSide: 'unshaded' },
-      { profileId: 'transport-profile', marker: 'cap_armoredCavalry', expectedSide: 'shaded' },
       { profileId: 'govern-profile', marker: 'cap_mandateOfHeaven', expectedSide: 'unshaded' },
       { profileId: 'govern-profile', marker: 'cap_mandateOfHeaven', expectedSide: 'shaded' },
       { profileId: 'nva-ambush-profile', marker: 'cap_boobyTraps', expectedSide: 'unshaded', forbiddenSide: 'shaded' },
@@ -134,13 +133,30 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     }
   });
 
-  it('moves Rangers in all cap_armoredCavalry states, with shaded flipping moved Rangers underground', () => {
+  it('defines Transport Ranger flip as unconditional and map-wide', () => {
+    const profile = getParsedProfile('transport-profile');
+    const flipStage = (profile.stages ?? []).find((stage: any) => stage.stage === 'flip-rangers-underground');
+    assert.ok(flipStage, 'Expected Transport flip-rangers-underground stage');
+
+    const markerChecksInFlipStage = findDeep(flipStage.effects ?? [], (node: any) =>
+      node?.if?.when !== undefined &&
+      JSON.stringify(node.if.when).includes('"ref":"globalMarkerState"') &&
+      JSON.stringify(node.if.when).includes('"marker":"cap_armoredCavalry"'),
+    );
+    assert.equal(markerChecksInFlipStage.length, 0, 'Ranger flip must not be gated by cap_armoredCavalry side');
+
+    const mapSpaceLoops = findDeep(flipStage.effects ?? [], (node: any) => node?.forEach?.over?.query === 'mapSpaces');
+    assert.ok(mapSpaceLoops.length > 0, 'Ranger flip should iterate across mapSpaces');
+  });
+
+  it('moves and flips Rangers in all cap_armoredCavalry states, including Rangers outside destination', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
     const origin = 'da-nang:none';
     const destination = 'loc-hue-da-nang:none';
+    const remote = 'tay-ninh:none';
 
     const run = (marker: MarkerState, seed: number): GameState => {
       const start = withMarker(initialState(def, seed, 2).state, 'cap_armoredCavalry', marker);
@@ -149,7 +165,12 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
         origin,
         makeToken(`transport-${marker}-ranger`, 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
       );
-      return applyMoveWithResolvedDecisionIds(def, setup, {
+      const setupWithRemoteRanger = addTokenToZone(
+        setup,
+        remote,
+        makeToken(`transport-${marker}-remote-ranger`, 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+      );
+      return applyMoveWithResolvedDecisionIds(def, setupWithRemoteRanger, {
         actionId: asActionId('transport'),
         params: {
           $transportOrigin: origin,
@@ -184,9 +205,15 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const inactiveRanger = (inactive.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-inactive-ranger'));
     const unshadedRanger = (unshaded.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-unshaded-ranger'));
     const movedRanger = (shaded.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-shaded-ranger'));
-    assert.equal(inactiveRanger?.props.activity, 'active', 'Inactive cap_armoredCavalry should move Rangers without shaded-only flip');
-    assert.equal(unshadedRanger?.props.activity, 'active', 'Unshaded cap_armoredCavalry should move Rangers without shaded-only flip');
-    assert.equal(movedRanger?.props.activity, 'underground', 'cap_armoredCavalry shaded should move Rangers and flip them underground');
+    const inactiveRemoteRanger = (inactive.zones[remote] ?? []).find((token) => token.id === asTokenId('transport-inactive-remote-ranger'));
+    const unshadedRemoteRanger = (unshaded.zones[remote] ?? []).find((token) => token.id === asTokenId('transport-unshaded-remote-ranger'));
+    const shadedRemoteRanger = (shaded.zones[remote] ?? []).find((token) => token.id === asTokenId('transport-shaded-remote-ranger'));
+    assert.equal(inactiveRanger?.props.activity, 'underground', 'Inactive cap_armoredCavalry should still flip moved Rangers');
+    assert.equal(unshadedRanger?.props.activity, 'underground', 'Unshaded cap_armoredCavalry should still flip moved Rangers');
+    assert.equal(movedRanger?.props.activity, 'underground', 'Shaded cap_armoredCavalry should flip moved Rangers');
+    assert.equal(inactiveRemoteRanger?.props.activity, 'underground', 'Inactive cap_armoredCavalry should flip remote Rangers');
+    assert.equal(unshadedRemoteRanger?.props.activity, 'underground', 'Unshaded cap_armoredCavalry should flip remote Rangers');
+    assert.equal(shadedRemoteRanger?.props.activity, 'underground', 'Shaded cap_armoredCavalry should flip remote Rangers');
   });
 
   it('applies cap_mandateOfHeaven shaded max-1 Govern selection and unshaded one-space no-shift override', () => {

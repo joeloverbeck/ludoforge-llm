@@ -240,7 +240,6 @@ describe('FITL cross-system modifier smoke', () => {
           actionId: asActionId('airLift'),
           params: {
             spaces: ['saigon:none'],
-            $airLiftDestination: 'saigon:none',
           },
         }),
       /Illegal move/,

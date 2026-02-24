@@ -27,6 +27,8 @@ const countTokens = (
   space: string,
   predicate: (token: Token) => boolean,
 ): number => (state.zones[space] ?? []).filter(predicate).length;
+const findTokenZone = (state: GameState, tokenId: string): string | undefined =>
+  Object.entries(state.zones).find(([, tokens]) => tokens.some((token) => token.id === asTokenId(tokenId)))?.[0];
 
 const supportTrackOrder = ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'] as const;
 const LOOKAHEAD_ZONE = 'lookahead:none';
@@ -77,6 +79,69 @@ describe('FITL US/ARVN special activities integration', () => {
       assert.equal(found!.actionId, expected.actionId);
       assert.deepEqual(found!.windows, expected.windows);
     }
+  });
+
+  it('defines Air Lift as per-piece multi-destination movement with no shared destination binding', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const profile = (def.actionPipelines ?? []).find((candidate) => candidate.id === 'air-lift-profile');
+    assert.ok(profile, 'Expected air-lift-profile to exist');
+
+    const singleDestinationBindings = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as { chooseOne?: { bind?: unknown } };
+      return candidate.chooseOne?.bind === '$airLiftDestination';
+    });
+    assert.equal(singleDestinationBindings.length, 0, 'Air Lift should not use a single shared destination binding');
+
+    const hasUsSelection = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as { chooseN?: { bind?: unknown; options?: { query?: unknown } } };
+      return candidate.chooseN?.bind === '$usLiftTroops' && candidate.chooseN?.options?.query === 'tokensInMapSpaces';
+    });
+    assert.ok(hasUsSelection.length >= 1, 'Air Lift should select moveable US troops from selected spaces');
+
+    const hasCoinSelection = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as { chooseN?: { bind?: unknown; max?: unknown; options?: { query?: unknown } } };
+      return candidate.chooseN?.bind === '$coinLiftPieces' && candidate.chooseN?.options?.query === 'concat' && candidate.chooseN?.max === 4;
+    });
+    assert.ok(hasCoinSelection.length >= 1, 'Air Lift should cap ARVN/Ranger/Irregular movement selection to 4 pieces');
+
+    const hasUsPerPieceDestination = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as { chooseOne?: { bind?: unknown } };
+      return candidate.chooseOne?.bind === '$usLiftDestination@{$usTroop}';
+    });
+    assert.ok(hasUsPerPieceDestination.length >= 1, 'Air Lift should define per-US-piece destination decisions');
+
+    const hasCoinPerPieceDestination = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as { chooseOne?: { bind?: unknown } };
+      return candidate.chooseOne?.bind === '$coinLiftDestination@{$coinLiftPiece}';
+    });
+    assert.ok(hasCoinPerPieceDestination.length >= 1, 'Air Lift should define per-COIN-piece destination decisions');
+
+    const hasNorthVietnamExclusion = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as {
+        chooseN?: {
+          bind?: unknown;
+          options?: {
+            query?: unknown;
+            filter?: {
+              condition?: {
+                op?: unknown;
+                left?: { ref?: unknown; prop?: unknown };
+                right?: unknown;
+              };
+            };
+          };
+        };
+      };
+      return candidate.chooseN?.bind === 'spaces' &&
+        candidate.chooseN?.options?.query === 'mapSpaces' &&
+        candidate.chooseN?.options?.filter?.condition?.op === '!=' &&
+        candidate.chooseN?.options?.filter?.condition?.left?.ref === 'zoneProp' &&
+        candidate.chooseN?.options?.filter?.condition?.left?.prop === 'country' &&
+        candidate.chooseN?.options?.filter?.condition?.right === 'northVietnam';
+    });
+    assert.ok(hasNorthVietnamExclusion.length >= 1, 'Air Lift should keep North Vietnam excluded from selected spaces');
   });
 
   it('executes Advise activate-remove with base-last ordering and optional +6 Aid', () => {
@@ -142,68 +207,81 @@ describe('FITL US/ARVN special activities integration', () => {
     );
   });
 
-  it('executes Air Lift moving all US troops plus at most 4 ARVN/Ranger/Irregular pieces', () => {
+  it('executes Air Lift with per-piece multi-destination movement and a 4-piece ARVN/Ranger/Irregular cap', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const origin = 'da-nang:none';
-    const destination = 'quang-nam:none';
+    const spaceA = 'da-nang:none';
+    const spaceB = 'quang-nam:none';
+    const spaceC = 'saigon:none';
 
     const start = initialState(def, 191, 2).state;
     const modifiedStart: GameState = {
       ...start,
       zones: {
         ...start.zones,
-        [origin]: [
+        [spaceA]: [
           makeToken('lift-us-1', 'troops', 'US', { type: 'troops' }),
           makeToken('lift-us-2', 'troops', 'US', { type: 'troops' }),
-          makeToken('lift-us-3', 'troops', 'US', { type: 'troops' }),
           makeToken('lift-arvn-1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('lift-ranger-1', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('lift-irregular-1', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
+        ],
+        [spaceB]: [
+          makeToken('lift-us-3', 'troops', 'US', { type: 'troops' }),
           makeToken('lift-arvn-2', 'troops', 'ARVN', { type: 'troops' }),
           makeToken('lift-arvn-3', 'troops', 'ARVN', { type: 'troops' }),
-          makeToken('lift-ranger-1', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
           makeToken('lift-ranger-2', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
-          makeToken('lift-irregular-1', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
           makeToken('lift-irregular-2', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
         ],
-        [destination]: [],
+        [spaceC]: [],
       },
     };
-
-    const eligible = (state: GameState, space: string): number =>
-      countTokens(
-        state,
-        space,
-        (token) =>
-          (token.props.faction === 'ARVN' && (token.type === 'troops' || token.type === 'guerrilla')) ||
-          (token.props.faction === 'US' && token.type === 'guerrilla'),
-      );
-
-    const eligibleBefore = eligible(modifiedStart, origin);
-    const usTroopsBefore = countTokens(modifiedStart, origin, (token) => token.props.faction === 'US' && token.type === 'troops');
 
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airLift'),
       params: {
-        spaces: [origin, destination],
-        $airLiftDestination: destination,
+        spaces: [spaceA, spaceB, spaceC],
+        $usLiftTroops: ['lift-us-1', 'lift-us-2', 'lift-us-3'],
+        '$usLiftDestination@lift-us-1': spaceB,
+        '$usLiftDestination@lift-us-2': spaceC,
+        '$usLiftDestination@lift-us-3': spaceA,
+        $coinLiftPieces: ['lift-arvn-1', 'lift-arvn-2', 'lift-ranger-1', 'lift-irregular-1'],
+        '$coinLiftDestination@lift-arvn-1': spaceC,
+        '$coinLiftDestination@lift-arvn-2': spaceA,
+        '$coinLiftDestination@lift-ranger-1': spaceB,
+        '$coinLiftDestination@lift-irregular-1': spaceC,
       },
     });
 
     const final = result.state;
-    const eligibleAfter = eligible(final, origin);
-    const usTroopsAfter = countTokens(final, origin, (token) => token.props.faction === 'US' && token.type === 'troops');
-
     assert.equal(final.globalVars.airLiftCount, 1);
-    assert.equal(usTroopsAfter, 0, 'Air Lift should move all selected US troops');
-    assert.equal(
-      usTroopsBefore,
-      countTokens(final, destination, (token) => token.props.faction === 'US' && token.type === 'troops'),
-      'Air Lift should place moved US troops in the chosen destination',
+    assert.equal(findTokenZone(final, 'lift-us-1'), spaceB);
+    assert.equal(findTokenZone(final, 'lift-us-2'), spaceC);
+    assert.equal(findTokenZone(final, 'lift-us-3'), spaceA);
+    assert.equal(findTokenZone(final, 'lift-arvn-1'), spaceC);
+    assert.equal(findTokenZone(final, 'lift-arvn-2'), spaceA);
+    assert.equal(findTokenZone(final, 'lift-ranger-1'), spaceB);
+    assert.equal(findTokenZone(final, 'lift-irregular-1'), spaceC);
+
+    assert.equal(findTokenZone(final, 'lift-arvn-3'), spaceB, 'Non-selected ARVN troop should remain in place');
+    assert.equal(findTokenZone(final, 'lift-ranger-2'), spaceB, 'Non-selected Ranger should remain in place');
+    assert.equal(findTokenZone(final, 'lift-irregular-2'), spaceB, 'Non-selected Irregular should remain in place');
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+          actionId: asActionId('airLift'),
+          params: {
+            spaces: [spaceA, spaceB, spaceC],
+            $usLiftTroops: [],
+            $coinLiftPieces: ['lift-arvn-1', 'lift-arvn-2', 'lift-arvn-3', 'lift-ranger-1', 'lift-irregular-1'],
+          },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain|cardinality mismatch)/,
+      'Air Lift should reject selecting more than 4 ARVN/Ranger/Irregular pieces',
     );
-    assert.equal(eligibleBefore - eligibleAfter, 4, 'Air Lift should move at most 4 ARVN/Ranger/Irregular pieces total');
-    assert.equal(final.globalVars.airLiftRemaining, 0);
   });
 
   it('executes Air Strike removing up to 6 active enemy pieces, shifting support, and optionally degrading Trail', () => {
@@ -694,7 +772,6 @@ describe('FITL US/ARVN special activities integration', () => {
         actionId: asActionId('airLift'),
         params: {
           spaces: [spaceA, spaceB],
-          $airLiftDestination: spaceB,
         },
       }),
     );
@@ -704,7 +781,6 @@ describe('FITL US/ARVN special activities integration', () => {
           actionId: asActionId('airLift'),
           params: {
             spaces: [spaceA, spaceB, spaceC],
-            $airLiftDestination: spaceB,
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,

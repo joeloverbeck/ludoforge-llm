@@ -1,6 +1,6 @@
 # FITLSEC4RULGAP-004: Air Lift Multi-Destination Redistribution
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: None — data + tests only
@@ -18,15 +18,15 @@ This is the most complex gap because it requires restructuring the profile's mov
 
 1. `data/games/fire-in-the-lake/30-rules-actions.md` lines ~3319-3486 contain the full `air-lift-profile`.
 2. The current flow: `chooseN` spaces → `chooseOne` single destination → move all US Troops there → move up to 4 ARVN pieces there.
-3. The kernel supports `chooseOne` per piece within a `forEach` loop — this pattern is used elsewhere (e.g., Patrol destination selection).
-4. Monsoon 2-space limit is already handled by the space selection `chooseN.max` — this should be preserved.
+3. The kernel supports `chooseOne` per piece within a `forEach` loop, but this must use templated binds (for example `'$pieceDestination@{$piece}'`) so each piece gets an independent decision ID.
+4. Monsoon 2-space limit is enforced in turn-flow `monsoon.restrictedActions` (`airLift` `maxParam` on `spaces`) rather than this profile's `chooseN.max`.
 5. North Vietnam exclusion filter on space selection is already correct — this should be preserved.
-6. The rule text groups "ARVN Troops, Rangers, or Irregulars" under the 4-piece cap. Irregulars are US-faction but the rule bundles them with ARVN pieces for the cap. The implementer must verify faction filtering: Irregulars may need `faction: US, type: guerrilla` rather than `faction: ARVN`.
+6. Irregulars are encoded as US faction guerrillas (`faction: US`, `type: guerrilla`) and must share the same 4-piece cap bucket as ARVN Troops/Rangers per rule text.
 
 ## Architecture Check
 
-1. This is a YAML restructuring of the Air Lift profile's movement stages. The DSL already supports per-piece destination selection via `chooseOne` inside `forEach`.
-2. No new kernel primitives needed — all queries (`mapSpaces`, `tokensInZone`, `chooseOne`, `chooseN`, `moveToken`) already exist.
+1. This is a YAML restructuring of the Air Lift profile's movement stages. The DSL already supports per-piece destination selection via `chooseOne` inside `forEach` with templated bind names.
+2. No new kernel primitives needed — use existing queries/effects (`mapSpaces`, `tokensInMapSpaces`, `concat`, `binding`, `chooseOne`, `chooseN`, `moveToken`).
 3. The restructuring replaces the single-destination pattern with a per-piece-destination pattern, which is more complex but accurately models the rule.
 4. No backwards-compatibility shim introduced.
 
@@ -41,10 +41,10 @@ In `data/games/fire-in-the-lake/30-rules-actions.md`, `air-lift-profile`:
 **Replace movement stages** with per-piece destination selection:
 
 #### US Troops (unlimited):
-For each selected space, for each US Troop in that space, offer `chooseOne` destination from the other selected spaces (include option to not move / stay). Move if destination differs from current zone.
+Gather US Troops from the selected spaces, choose any subset to move (`chooseN` min 0), and for each selected troop choose a destination from the selected spaces (including current space). Move only when destination differs from current zone.
 
-#### ARVN pieces (4-piece cap):
-Gather all eligible ARVN Troops/Rangers/Irregulars across the selected spaces. Present `chooseN` (min 0, max 4) to select which pieces to move. For each selected piece, `chooseOne` destination from the selected spaces. Move if destination differs from current zone.
+#### ARVN + Irregular pieces (4-piece cap):
+Gather ARVN Troops/Rangers plus US Irregulars across selected spaces, choose up to 4 total to move, and for each selected piece choose a destination from the selected spaces. Move only when destination differs from current zone.
 
 **Sketch** (ARVN movement):
 ```yaml
@@ -53,8 +53,24 @@ Gather all eligible ARVN Troops/Rangers/Irregulars across the selected spaces. P
     - chooseN:
         bind: $liftPieces
         options:
-          # Gather ARVN Troops, Rangers, Irregulars from all selected spaces
-          # Implementer must verify exact query for multi-zone token gathering
+          query: concat
+          sources:
+            - query: tokensInMapSpaces
+              spaceFilter:
+                op: in
+                item: { ref: zoneProp, zone: $zone, prop: id }
+                set: { ref: binding, name: spaces }
+              filter:
+                - { prop: faction, eq: ARVN }
+                - { prop: type, op: in, value: [troops, guerrilla] }
+            - query: tokensInMapSpaces
+              spaceFilter:
+                op: in
+                item: { ref: zoneProp, zone: $zone, prop: id }
+                set: { ref: binding, name: spaces }
+              filter:
+                - { prop: faction, eq: US }
+                - { prop: type, eq: guerrilla }
         min: 0
         max: 4
     - forEach:
@@ -73,14 +89,14 @@ Gather all eligible ARVN Troops/Rangers/Irregulars across the selected spaces. P
                     to: { zoneExpr: $pieceDestination }
 ```
 
-### 2. Verify Irregulars faction handling
+### 2. Preserve Irregulars under the 4-piece cap
 
-Check whether Irregulars use `faction: US, type: guerrilla` or some other encoding. The 4-piece cap applies to "ARVN Troops, Rangers, or Irregulars" per the rule text — Irregulars are US-faction but count against this cap. Adjust the filter accordingly.
+Irregulars are US guerrillas in data and must remain included in the same 4-piece Air Lift cap bucket.
 
 ### 3. Preserve existing constraints
 
 - North Vietnam exclusion on space selection: already in the `chooseN` filter — keep as-is.
-- Monsoon 2-space limit: already in `chooseN.max` gated by monsoon condition — keep as-is.
+- Monsoon 2-space limit: already enforced by turn-flow monsoon `maxParam` restriction for `airLift.spaces` — keep as-is.
 
 ### 4. Update tests
 
@@ -96,7 +112,7 @@ Add structural and runtime tests for multi-destination Air Lift.
 - Any kernel/compiler source code.
 - Air Strike profile — correct and unrelated.
 - Advise profile — correct and unrelated.
-- Monsoon detection logic — already correct in space selection.
+- Monsoon detection logic — already correct in turn-flow monsoon restrictions.
 - North Vietnam filtering — already correct in space selection.
 
 ## Acceptance Criteria
@@ -106,7 +122,7 @@ Add structural and runtime tests for multi-destination Air Lift.
 1. Structural test: Air Lift profile has NO single `$airLiftDestination` binding forcing all pieces to one space.
 2. Structural test: Air Lift US Troop movement allows per-piece destination selection from the selected space pool.
 3. Structural test: Air Lift ARVN piece movement allows per-piece destination selection with a 4-piece total cap.
-4. Structural test: Monsoon `chooseN.max: 2` constraint preserved.
+4. Structural/runtime test: Monsoon still caps Air Lift selected spaces at 2.
 5. Structural test: North Vietnam exclusion filter preserved on space selection.
 6. `pnpm turbo build`
 7. `pnpm -F @ludoforge/engine test`
@@ -132,3 +148,21 @@ Add structural and runtime tests for multi-destination Air Lift.
 1. `pnpm turbo build`
 2. `pnpm -F @ludoforge/engine test -- fitl-us-arvn-special-activities.test.ts`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-02-24
+- **What changed (actual)**:
+  - Reworked `air-lift-profile` to remove single shared destination and use per-piece destination decisions with templated binds.
+  - Replaced origin-loop + `airLiftRemaining` bookkeeping with explicit selection of movable US troops (`chooseN`) and explicit capped selection (`max: 4`) of ARVN Troops/Rangers + US Irregulars (`concat` over `tokensInMapSpaces`).
+  - Preserved North Vietnam exclusion in space selection and preserved Monsoon cap behavior via existing turn-flow restriction.
+  - Updated integration tests to validate the new structural shape and runtime multi-destination behavior, including rejection when selecting more than 4 ARVN/Ranger/Irregular pieces.
+  - Updated dependent Air Lift prohibition/modifier tests to remove obsolete `$airLiftDestination` move param.
+- **Deviation vs original plan**:
+  - Clarified and implemented Monsoon cap as a turn-flow concern rather than a profile-level `chooseN.max: 2` concern.
+  - Used `tokensInMapSpaces` + `concat` (supported DSL primitives) instead of the initially sketched `tokensInZones` approach.
+- **Verification**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/integration/fitl-us-arvn-special-activities.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo lint` ✅

@@ -105,7 +105,6 @@ describe('FITL momentum prohibition preconditions', () => {
         actionId: asActionId('airLift'),
         params: {
           spaces: ['saigon:none'],
-          $airLiftDestination: 'saigon:none',
         },
       });
 

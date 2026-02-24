@@ -3340,142 +3340,80 @@ actionPipelines:
                   right: northVietnam
               min: 1
               max: 4
-      - stage: select-destination
-        effects:
-          - chooseOne:
-              bind: $airLiftDestination
-              options: { query: binding, name: spaces }
       - stage: move-us-troops
         effects:
+          - chooseN:
+              bind: $usLiftTroops
+              options:
+                query: tokensInMapSpaces
+                spaceFilter:
+                  op: in
+                  item: { ref: zoneProp, zone: $zone, prop: id }
+                  set: { ref: binding, name: spaces }
+                filter:
+                  - { prop: faction, eq: US }
+                  - { prop: type, eq: troops }
+              min: 0
+              max: 99
           - forEach:
-              bind: $origin
-              over: { query: binding, name: spaces }
+              bind: $usTroop
+              over: { query: binding, name: $usLiftTroops }
               effects:
-                - forEach:
-                    bind: $usTroop
-                    over:
-                      query: tokensInZone
-                      zone: $origin
-                      filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
-                    effects:
-                      - if:
-                          when: { op: '!=', left: { ref: tokenZone, token: $usTroop }, right: { ref: binding, name: $airLiftDestination } }
-                          then:
-                            - moveToken:
-                                token: $usTroop
-                                from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                                to: { zoneExpr: { ref: binding, name: $airLiftDestination } }
+                - chooseOne:
+                    bind: '$usLiftDestination@{$usTroop}'
+                    options: { query: binding, name: spaces }
+                - if:
+                    when:
+                      op: '!='
+                      left: { ref: tokenZone, token: $usTroop }
+                      right: { ref: binding, name: '$usLiftDestination@{$usTroop}' }
+                    then:
+                      - moveToken:
+                          token: $usTroop
+                          from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                          to: { zoneExpr: { ref: binding, name: '$usLiftDestination@{$usTroop}' } }
       - stage: move-coin-lift-pieces
         effects:
-          - setVar: { scope: global, var: airLiftRemaining, value: 4 }
+          - chooseN:
+              bind: $coinLiftPieces
+              options:
+                query: concat
+                sources:
+                  - query: tokensInMapSpaces
+                    spaceFilter:
+                      op: in
+                      item: { ref: zoneProp, zone: $zone, prop: id }
+                      set: { ref: binding, name: spaces }
+                    filter:
+                      - { prop: faction, eq: ARVN }
+                      - { prop: type, op: in, value: [troops, guerrilla] }
+                  - query: tokensInMapSpaces
+                    spaceFilter:
+                      op: in
+                      item: { ref: zoneProp, zone: $zone, prop: id }
+                      set: { ref: binding, name: spaces }
+                    filter:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: guerrilla }
+              min: 0
+              max: 4
           - forEach:
-              bind: $origin
-              over: { query: binding, name: spaces }
+              bind: $coinLiftPiece
+              over: { query: binding, name: $coinLiftPieces }
               effects:
+                - chooseOne:
+                    bind: '$coinLiftDestination@{$coinLiftPiece}'
+                    options: { query: binding, name: spaces }
                 - if:
-                    when: { op: '>', left: { ref: gvar, var: airLiftRemaining }, right: 0 }
+                    when:
+                      op: '!='
+                      left: { ref: tokenZone, token: $coinLiftPiece }
+                      right: { ref: binding, name: '$coinLiftDestination@{$coinLiftPiece}' }
                     then:
-                      - let:
-                          bind: $arvnBefore
-                          value:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $origin
-                                filter:
-                                  - { prop: faction, eq: ARVN }
-                                  - { prop: type, op: in, value: [troops, guerrilla] }
-                          in:
-                            - forEach:
-                                bind: $liftPiece
-                                over:
-                                  query: tokensInZone
-                                  zone: $origin
-                                  filter:
-                                    - { prop: faction, eq: ARVN }
-                                    - { prop: type, op: in, value: [troops, guerrilla] }
-                                limit: { ref: gvar, var: airLiftRemaining }
-                                effects:
-                                  - if:
-                                      when: { op: '!=', left: { ref: tokenZone, token: $liftPiece }, right: { ref: binding, name: $airLiftDestination } }
-                                      then:
-                                        - moveToken:
-                                            token: $liftPiece
-                                            from: { zoneExpr: { ref: tokenZone, token: $liftPiece } }
-                                            to: { zoneExpr: { ref: binding, name: $airLiftDestination } }
-                            - let:
-                                bind: $arvnAfter
-                                value:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $origin
-                                      filter:
-                                        - { prop: faction, eq: ARVN }
-                                        - { prop: type, op: in, value: [troops, guerrilla] }
-                                in:
-                                  - addVar:
-                                      scope: global
-                                      var: airLiftRemaining
-                                      delta:
-                                        op: "-"
-                                        left: { ref: binding, name: $arvnAfter }
-                                        right: { ref: binding, name: $arvnBefore }
-                - if:
-                    when: { op: '>', left: { ref: gvar, var: airLiftRemaining }, right: 0 }
-                    then:
-                      - let:
-                          bind: $irregularBefore
-                          value:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $origin
-                                filter:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: guerrilla }
-                          in:
-                            - forEach:
-                                bind: $liftIrregular
-                                over:
-                                  query: tokensInZone
-                                  zone: $origin
-                                  filter:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: guerrilla }
-                                limit: { ref: gvar, var: airLiftRemaining }
-                                effects:
-                                  - if:
-                                      when: { op: '!=', left: { ref: tokenZone, token: $liftIrregular }, right: { ref: binding, name: $airLiftDestination } }
-                                      then:
-                                        - moveToken:
-                                            token: $liftIrregular
-                                            from: { zoneExpr: { ref: tokenZone, token: $liftIrregular } }
-                                            to: { zoneExpr: { ref: binding, name: $airLiftDestination } }
-                            - let:
-                                bind: $irregularAfter
-                                value:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $origin
-                                      filter:
-                                        - { prop: faction, eq: US }
-                                        - { prop: type, eq: guerrilla }
-                                in:
-                                  - addVar:
-                                      scope: global
-                                      var: airLiftRemaining
-                                      delta:
-                                        op: "-"
-                                        left: { ref: binding, name: $irregularAfter }
-                                        right: { ref: binding, name: $irregularBefore }
+                      - moveToken:
+                          token: $coinLiftPiece
+                          from: { zoneExpr: { ref: tokenZone, token: $coinLiftPiece } }
+                          to: { zoneExpr: { ref: binding, name: '$coinLiftDestination@{$coinLiftPiece}' } }
       - stage: air-lift-telemetry
         effects:
           - addVar:

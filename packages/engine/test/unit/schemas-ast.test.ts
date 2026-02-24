@@ -61,11 +61,13 @@ describe('AST and selector schemas', () => {
     assert.equal(result.success, false);
   });
 
-  it('parses arithmetic ValueExpr operators including integer division variants', () => {
+  it('parses arithmetic ValueExpr operators including integer division and bounds variants', () => {
     const expressions = [
       { op: '/', left: 7, right: 2 },
       { op: 'floorDiv', left: 7, right: 2 },
       { op: 'ceilDiv', left: 7, right: 2 },
+      { op: 'min', left: 7, right: 2 },
+      { op: 'max', left: 7, right: 2 },
     ] as const;
 
     for (const expression of expressions) {

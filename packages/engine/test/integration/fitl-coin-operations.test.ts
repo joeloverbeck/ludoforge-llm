@@ -371,9 +371,23 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpIf.length >= 1, 'Expected LimOp check');
 
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
-      const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) => node?.chooseN?.max === 99);
+      const affordabilityCap = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max?.op === 'floorDiv' &&
+        node?.chooseN?.max?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.left?.var === 'arvnResources' &&
+        node?.chooseN?.max?.right === 3,
+      );
+      const capabilityMinCap = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max?.op === 'min' &&
+        node?.chooseN?.max?.left === 2 &&
+        node?.chooseN?.max?.right?.op === 'floorDiv' &&
+        node?.chooseN?.max?.right?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.right?.left?.var === 'arvnResources' &&
+        node?.chooseN?.max?.right?.right === 3,
+      );
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
-      assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 in full-op branch');
+      assert.ok(affordabilityCap.length >= 1, 'Expected full-op branch affordability max floorDiv(arvnResources, 3)');
+      assert.ok(capabilityMinCap.length >= 1, 'Expected cap_caps shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
 
       const categoryGuards = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '==' &&
@@ -1247,6 +1261,30 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpIf.length >= 1, 'Expected LimOp branch for __actionClass == limitedOperation');
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
+      const bodyCountBypass = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max?.if?.when?.op === '==' &&
+        node?.chooseN?.max?.if?.when?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.if?.when?.left?.var === 'mom_bodyCount' &&
+        node?.chooseN?.max?.if?.when?.right === true &&
+        node?.chooseN?.max?.if?.then === 99,
+      );
+      const affordabilityCap = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
+        node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
+        node?.chooseN?.max?.if?.else?.right === 3,
+      );
+      const capabilityMinCap = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max?.if?.else?.op === 'min' &&
+        node?.chooseN?.max?.if?.else?.left === 2 &&
+        node?.chooseN?.max?.if?.else?.right?.op === 'floorDiv' &&
+        node?.chooseN?.max?.if?.else?.right?.left?.ref === 'gvar' &&
+        node?.chooseN?.max?.if?.else?.right?.left?.var === 'arvnResources' &&
+        node?.chooseN?.max?.if?.else?.right?.right === 3,
+      );
+      assert.ok(bodyCountBypass.length >= 2, 'Expected Body Count max bypass in both capability and non-capability branches');
+      assert.ok(affordabilityCap.length >= 1, 'Expected non-Body-Count affordability max floorDiv(arvnResources, 3)');
+      assert.ok(capabilityMinCap.length >= 1, 'Expected cap_abrams shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
 
       const arvnCubeFilter = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '>' &&

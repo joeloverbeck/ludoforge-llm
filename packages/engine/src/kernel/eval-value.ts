@@ -111,6 +111,16 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
     return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
   }
 
+  if (expr.op === 'min') {
+    const result = Math.min(left, right);
+    return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+  }
+
+  if (expr.op === 'max') {
+    const result = Math.max(left, right);
+    return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+  }
+
   const result = expr.op === '+' ? left + right : expr.op === '-' ? left - right : left * right;
   return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
 }

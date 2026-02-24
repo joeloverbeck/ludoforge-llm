@@ -88,7 +88,7 @@ describe('evalValue', () => {
     assert.equal(evalValue({ ref: 'gvar', var: 'a' }, ctx), 3);
   });
 
-  it('evaluates integer arithmetic (+, -, *, /)', () => {
+  it('evaluates integer arithmetic (+, -, *, /, floorDiv, ceilDiv, min, max)', () => {
     const ctx = makeCtx();
 
     assert.equal(evalValue({ op: '+', left: 3, right: 4 }, ctx), 7);
@@ -102,6 +102,8 @@ describe('evalValue', () => {
     assert.equal(evalValue({ op: 'floorDiv', left: -7, right: 2 }, ctx), -4);
     assert.equal(evalValue({ op: 'ceilDiv', left: 7, right: 2 }, ctx), 4);
     assert.equal(evalValue({ op: 'ceilDiv', left: -7, right: 2 }, ctx), -3);
+    assert.equal(evalValue({ op: 'min', left: 7, right: 2 }, ctx), 2);
+    assert.equal(evalValue({ op: 'max', left: -7, right: 2 }, ctx), 2);
   });
 
   it('throws DIVISION_BY_ZERO for division by zero', () => {

@@ -91,42 +91,90 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     }
   });
 
-  it('caps Sweep space selection to 2 only for cap_caps shaded branch', () => {
+  it('caps Sweep space selection for cap_caps shaded branch (US fixed cap, ARVN min with affordability)', () => {
     const us = getParsedProfile('sweep-us-profile');
     const arvn = getParsedProfile('sweep-arvn-profile');
 
-    for (const profile of [us, arvn]) {
-      const shadedChecks = findDeep(profile.stages, (node: any) =>
-        node?.if?.when?.left?.ref === 'globalMarkerState' &&
-        node?.if?.when?.left?.marker === 'cap_caps' &&
-        node?.if?.when?.right === 'shaded',
-      );
-      assert.ok(shadedChecks.length >= 1);
+    const usShadedChecks = findDeep(us.stages, (node: any) =>
+      node?.if?.when?.left?.ref === 'globalMarkerState' &&
+      node?.if?.when?.left?.marker === 'cap_caps' &&
+      node?.if?.when?.right === 'shaded',
+    );
+    assert.ok(usShadedChecks.length >= 1);
+    const usHasMaxTwo = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 2);
+    const usHasMaxNinetyNine = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 99);
+    assert.ok(usHasMaxTwo.length >= 1, 'Expected US cap_caps shaded branch to set max 2');
+    assert.ok(usHasMaxNinetyNine.length >= 1, 'Expected US cap_caps else branch to preserve max 99');
 
-      const hasMaxTwo = findDeep(shadedChecks[0], (node: any) => node?.chooseN?.max === 2);
-      const hasMaxNinetyNine = findDeep(shadedChecks[0], (node: any) => node?.chooseN?.max === 99);
-      assert.ok(hasMaxTwo.length >= 1, 'Expected cap_caps shaded branch to set max 2');
-      assert.ok(hasMaxNinetyNine.length >= 1, 'Expected cap_caps else branch to preserve max 99');
-    }
+    const arvnShadedChecks = findDeep(arvn.stages, (node: any) =>
+      node?.if?.when?.left?.ref === 'globalMarkerState' &&
+      node?.if?.when?.left?.marker === 'cap_caps' &&
+      node?.if?.when?.right === 'shaded',
+    );
+    assert.ok(arvnShadedChecks.length >= 1);
+    const arvnHasMinCap = findDeep(arvnShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.op === 'min' &&
+      node?.chooseN?.max?.left === 2 &&
+      node?.chooseN?.max?.right?.op === 'floorDiv' &&
+      node?.chooseN?.max?.right?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.right?.left?.var === 'arvnResources' &&
+      node?.chooseN?.max?.right?.right === 3,
+    );
+    const arvnHasAffordabilityElse = findDeep(arvnShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.op === 'floorDiv' &&
+      node?.chooseN?.max?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.left?.var === 'arvnResources' &&
+      node?.chooseN?.max?.right === 3,
+    );
+    assert.ok(arvnHasMinCap.length >= 1, 'Expected ARVN cap_caps shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
+    assert.ok(arvnHasAffordabilityElse.length >= 1, 'Expected ARVN cap_caps else branch to use floorDiv(arvnResources, 3)');
   });
 
-  it('caps Assault space selection to 2 only for cap_abrams shaded branch', () => {
+  it('caps Assault space selection for cap_abrams shaded branch (US fixed cap, ARVN body-count-aware affordability)', () => {
     const us = getParsedProfile('assault-us-profile');
     const arvn = getParsedProfile('assault-arvn-profile');
 
-    for (const profile of [us, arvn]) {
-      const shadedChecks = findDeep(profile.stages, (node: any) =>
-        node?.if?.when?.left?.ref === 'globalMarkerState' &&
-        node?.if?.when?.left?.marker === 'cap_abrams' &&
-        node?.if?.when?.right === 'shaded',
-      );
-      assert.ok(shadedChecks.length >= 1);
+    const usShadedChecks = findDeep(us.stages, (node: any) =>
+      node?.if?.when?.left?.ref === 'globalMarkerState' &&
+      node?.if?.when?.left?.marker === 'cap_abrams' &&
+      node?.if?.when?.right === 'shaded',
+    );
+    assert.ok(usShadedChecks.length >= 1);
+    const usHasMaxTwo = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 2);
+    const usHasMaxNinetyNine = findDeep(usShadedChecks[0], (node: any) => node?.chooseN?.max === 99);
+    assert.ok(usHasMaxTwo.length >= 1, 'Expected US cap_abrams shaded branch to set max 2');
+    assert.ok(usHasMaxNinetyNine.length >= 1, 'Expected US cap_abrams else branch to preserve max 99');
 
-      const hasMaxTwo = findDeep(shadedChecks[0], (node: any) => node?.chooseN?.max === 2);
-      const hasMaxNinetyNine = findDeep(shadedChecks[0], (node: any) => node?.chooseN?.max === 99);
-      assert.ok(hasMaxTwo.length >= 1, 'Expected cap_abrams shaded branch to set max 2');
-      assert.ok(hasMaxNinetyNine.length >= 1, 'Expected cap_abrams else branch to preserve max 99');
-    }
+    const arvnShadedChecks = findDeep(arvn.stages, (node: any) =>
+      node?.if?.when?.left?.ref === 'globalMarkerState' &&
+      node?.if?.when?.left?.marker === 'cap_abrams' &&
+      node?.if?.when?.right === 'shaded',
+    );
+    assert.ok(arvnShadedChecks.length >= 1);
+    const arvnBodyCountBypass = findDeep(arvnShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.if?.when?.op === '==' &&
+      node?.chooseN?.max?.if?.when?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.if?.when?.left?.var === 'mom_bodyCount' &&
+      node?.chooseN?.max?.if?.when?.right === true &&
+      node?.chooseN?.max?.if?.then === 99,
+    );
+    const arvnMinAffordability = findDeep(arvnShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.if?.else?.op === 'min' &&
+      node?.chooseN?.max?.if?.else?.left === 2 &&
+      node?.chooseN?.max?.if?.else?.right?.op === 'floorDiv' &&
+      node?.chooseN?.max?.if?.else?.right?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.if?.else?.right?.left?.var === 'arvnResources' &&
+      node?.chooseN?.max?.if?.else?.right?.right === 3,
+    );
+    const arvnElseAffordability = findDeep(arvnShadedChecks[0], (node: any) =>
+      node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
+      node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
+      node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
+      node?.chooseN?.max?.if?.else?.right === 3,
+    );
+    assert.ok(arvnBodyCountBypass.length >= 2, 'Expected ARVN Body Count max bypass in both cap_abrams branches');
+    assert.ok(arvnMinAffordability.length >= 1, 'Expected ARVN cap_abrams shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
+    assert.ok(arvnElseAffordability.length >= 1, 'Expected ARVN cap_abrams else branch to use floorDiv(arvnResources, 3)');
   });
 
   it('routes M48 unshaded Assault bonus through one shared macro in both US and ARVN profiles', () => {

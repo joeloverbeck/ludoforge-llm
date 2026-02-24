@@ -398,7 +398,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, { op: '/', left: 10, right: 3 });
   });
 
-  it('lowers floorDiv and ceilDiv operators in value node', () => {
+  it('lowers floorDiv/ceilDiv/min/max operators in value node', () => {
     const floorResult = lowerValueNode(
       { op: 'floorDiv', left: 10, right: 3 },
       context,
@@ -409,11 +409,25 @@ describe('compile-conditions lowering', () => {
       context,
       'doc.actions.0.effects.0.addVar.delta',
     );
+    const minResult = lowerValueNode(
+      { op: 'min', left: 10, right: 3 },
+      context,
+      'doc.actions.0.effects.0.addVar.delta',
+    );
+    const maxResult = lowerValueNode(
+      { op: 'max', left: 10, right: 3 },
+      context,
+      'doc.actions.0.effects.0.addVar.delta',
+    );
 
     assertNoDiagnostics(floorResult);
     assertNoDiagnostics(ceilResult);
+    assertNoDiagnostics(minResult);
+    assertNoDiagnostics(maxResult);
     assert.deepEqual(floorResult.value, { op: 'floorDiv', left: 10, right: 3 });
     assert.deepEqual(ceilResult.value, { op: 'ceilDiv', left: 10, right: 3 });
+    assert.deepEqual(minResult.value, { op: 'min', left: 10, right: 3 });
+    assert.deepEqual(maxResult.value, { op: 'max', left: 10, right: 3 });
   });
 
   it('lowers markerState reference with zone canonicalization', () => {

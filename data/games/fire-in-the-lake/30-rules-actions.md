@@ -2211,7 +2211,13 @@ actionPipelines:
                                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
-                          max: 2
+                          max:
+                            op: min
+                            left: 2
+                            right:
+                              op: floorDiv
+                              left: { ref: gvar, var: arvnResources }
+                              right: 3
                     else:
                       - chooseN:
                           bind: targetSpaces
@@ -2226,7 +2232,10 @@ actionPipelines:
                                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
-                          max: 99
+                          max:
+                            op: floorDiv
+                            left: { ref: gvar, var: arvnResources }
+                            right: 3
 
       - stage: resolve-per-space
         effects:
@@ -2480,7 +2489,17 @@ actionPipelines:
                                   left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
                                   right: 0
                           min: 1
-                          max: 2
+                          max:
+                            if:
+                              when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                              then: 99
+                              else:
+                                op: min
+                                left: 2
+                                right:
+                                  op: floorDiv
+                                  left: { ref: gvar, var: arvnResources }
+                                  right: 3
                     else:
                       - chooseN:
                           bind: targetSpaces
@@ -2496,7 +2515,14 @@ actionPipelines:
                                   left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
                                   right: 0
                           min: 1
-                          max: 99
+                          max:
+                            if:
+                              when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                              then: 99
+                              else:
+                                op: floorDiv
+                                left: { ref: gvar, var: arvnResources }
+                                right: 3
       - stage: resolve-per-space
         effects:
           - forEach:

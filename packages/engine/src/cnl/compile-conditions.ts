@@ -250,7 +250,9 @@ export function lowerValueNode(
       source.op === '*' ||
       source.op === '/' ||
       source.op === 'floorDiv' ||
-      source.op === 'ceilDiv')
+      source.op === 'ceilDiv' ||
+      source.op === 'min' ||
+      source.op === 'max')
   ) {
     const left = lowerValueNode(source.left, context, `${path}.left`);
     const right = lowerValueNode(source.right, context, `${path}.right`);
@@ -302,7 +304,7 @@ export function lowerValueNode(
     'boolean',
     'string',
     '{ ref: ... }',
-    '{ op: "+|-|*|/|floorDiv|ceilDiv", left, right }',
+    '{ op: "+|-|*|/|floorDiv|ceilDiv|min|max", left, right }',
     '{ aggregate: { op: "count", query } }',
     '{ aggregate: { op: "sum"|"min"|"max", query, bind, valueExpr } }',
     '{ concat: ValueExpr[] }',
@@ -1129,7 +1131,7 @@ export function lowerNumericValueNode(
     return missingCapability(path, 'numeric value expression', source, [
       'number',
       '{ ref: ... }',
-      '{ op: "+"|"-"|"*"|"/"|"floorDiv"|"ceilDiv", left: <numeric>, right: <numeric> }',
+      '{ op: "+"|"-"|"*"|"/"|"floorDiv"|"ceilDiv"|"min"|"max", left: <numeric>, right: <numeric> }',
       '{ aggregate: { op: "count", query: <OptionsQuery> } }',
       '{ aggregate: { op: "sum"|"min"|"max", query: <OptionsQuery>, bind: string, valueExpr: <NumericValueExpr> } }',
       '{ if: { when: <ConditionAST>, then: <numeric>, else: <numeric> } }',

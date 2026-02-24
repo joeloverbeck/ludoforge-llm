@@ -44,7 +44,7 @@ export type ValueExpr =
   | string
   | Reference
   | {
-      readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv';
+      readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv' | 'min' | 'max';
       readonly left: ValueExpr;
       readonly right: ValueExpr;
     }
@@ -75,7 +75,7 @@ export type NumericValueExpr =
   | number
   | Reference
   | {
-      readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv';
+      readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv' | 'min' | 'max';
       readonly left: NumericValueExpr;
       readonly right: NumericValueExpr;
     }

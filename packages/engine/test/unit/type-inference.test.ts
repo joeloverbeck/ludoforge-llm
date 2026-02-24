@@ -231,6 +231,17 @@ describe('inferValueExprType', () => {
       );
     });
 
+    it('infers number for min/max ops', () => {
+      assert.equal(
+        inferValueExprType({ op: 'min', left: 1, right: 2 }, emptyCtx),
+        'number',
+      );
+      assert.equal(
+        inferValueExprType({ op: 'max', left: 1, right: 2 }, emptyCtx),
+        'number',
+      );
+    });
+
     it('infers number for count aggregate', () => {
       assert.equal(
         inferValueExprType(

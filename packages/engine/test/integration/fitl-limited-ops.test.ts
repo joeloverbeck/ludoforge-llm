@@ -44,6 +44,12 @@ const operationInitialState = (def: GameDef, seed: number, playerCount: number):
   ...initialState(def, seed, playerCount).state,
   turnOrderState: { type: 'roundRobin' },
 });
+const isOperationSelectorMax = (max: unknown): boolean => {
+  if (typeof max === 'number') {
+    return max > 1;
+  }
+  return typeof max === 'object' && max !== null;
+};
 
 const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameState => ({
   ...state,
@@ -73,9 +79,7 @@ describe('FITL limited operation integration', () => {
 
       const hasContract = limOpIfNodes.some((node) => {
         const limOpChoose = findDeep(node.if.then, (inner) => inner?.chooseN?.max === 1);
-        const operationChoose = findDeep(node.if.else ?? [], (inner) =>
-          typeof inner?.chooseN?.max === 'number' && inner.chooseN.max > 1,
-        );
+        const operationChoose = findDeep(node.if.else ?? [], (inner) => isOperationSelectorMax(inner?.chooseN?.max));
         return limOpChoose.length >= 1 && operationChoose.length >= 1;
       });
       assert.ok(hasContract, `Expected ${macroId} to enforce LimOp max=1 and operation max>1`);
@@ -96,9 +100,7 @@ describe('FITL limited operation integration', () => {
       );
       const hasDirectContract = directLimOpNodes.some((node) => {
         const limOpChoose = findDeep(node.if.then, (inner) => inner?.chooseN?.max === 1);
-        const operationChoose = findDeep(node.if.else ?? [], (inner) =>
-          typeof inner?.chooseN?.max === 'number' && inner.chooseN.max > 1,
-        );
+        const operationChoose = findDeep(node.if.else ?? [], (inner) => isOperationSelectorMax(inner?.chooseN?.max));
         return limOpChoose.length >= 1 && operationChoose.length >= 1;
       });
 

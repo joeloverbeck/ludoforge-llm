@@ -6,6 +6,7 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
+  initializeTurnFlowEligibilityState,
   legalMoves,
   type GameDef,
   type GameState,
@@ -31,30 +32,41 @@ const compileDef = (): GameDef => {
 const countTokens = (state: GameState, zoneId: string, faction: string, type: string): number =>
   (state.zones[zoneId] ?? []).filter((token) => token.props.faction === faction && token.props.type === type).length;
 
+const makeCoupState = (def: GameDef, seed: number, zoneOverrides: Record<string, Token[]>): GameState => {
+  const base = initialState(def, seed, 4).state;
+  const cleared: GameState = {
+    ...base,
+    zones: Object.fromEntries(Object.keys(base.zones).map((zoneId) => [zoneId, []])),
+  };
+  const withTurnFlow = initializeTurnFlowEligibilityState(def, cleared);
+  return {
+    ...withTurnFlow,
+    currentPhase: asPhaseId('coupCommitment'),
+    activePlayer: asPlayerId(0),
+    zones: {
+      ...withTurnFlow.zones,
+      ...zoneOverrides,
+    },
+  };
+};
+
 describe('FITL coup commitment phase production wiring', () => {
   it('exposes coupCommitmentResolve and applies Rule 6.5 casualty routing in coupCommitment phase', () => {
     const def = compileDef();
-    const base = initialState(def, 7501, 4).state;
-    const setup: GameState = {
-      ...base,
-      currentPhase: asPhaseId('coupCommitment'),
-      activePlayer: asPlayerId(0),
-      zones: {
-        ...base.zones,
-        'casualties-US:none': [
-          makeToken('us-cas-t-1', 'troops', 'US'),
-          makeToken('us-cas-t-2', 'troops', 'US'),
-          makeToken('us-cas-t-3', 'troops', 'US'),
-          makeToken('us-cas-t-4', 'troops', 'US'),
-          makeToken('us-cas-t-5', 'troops', 'US'),
-          makeToken('us-cas-t-6', 'troops', 'US'),
-          makeToken('us-cas-t-7', 'troops', 'US'),
-          makeToken('us-cas-b-1', 'base', 'US'),
-          makeToken('us-cas-b-2', 'base', 'US'),
-          makeToken('us-cas-i-1', 'irregular', 'US'),
-        ],
-      },
-    };
+    const setup = makeCoupState(def, 7501, {
+      'casualties-US:none': [
+        makeToken('us-cas-t-1', 'troops', 'US'),
+        makeToken('us-cas-t-2', 'troops', 'US'),
+        makeToken('us-cas-t-3', 'troops', 'US'),
+        makeToken('us-cas-t-4', 'troops', 'US'),
+        makeToken('us-cas-t-5', 'troops', 'US'),
+        makeToken('us-cas-t-6', 'troops', 'US'),
+        makeToken('us-cas-t-7', 'troops', 'US'),
+        makeToken('us-cas-b-1', 'base', 'US'),
+        makeToken('us-cas-b-2', 'base', 'US'),
+        makeToken('us-cas-i-1', 'irregular', 'US'),
+      ],
+    });
 
     const outOfPlayTroopsBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'troops');
     const outOfPlayBasesBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'base');
@@ -91,21 +103,13 @@ describe('FITL coup commitment phase production wiring', () => {
 
   it('enforces up-to-10 troops and up-to-2 bases moved from available in a single commitment resolution', () => {
     const def = compileDef();
-    const base = initialState(def, 7502, 4).state;
-
     const availableTroops = Array.from({ length: 12 }, (_unused, index) => makeToken(`us-av-t-${index + 1}`, 'troops', 'US'));
     const availableBases = Array.from({ length: 4 }, (_unused, index) => makeToken(`us-av-b-${index + 1}`, 'base', 'US'));
 
-    const setup: GameState = {
-      ...base,
-      currentPhase: asPhaseId('coupCommitment'),
-      activePlayer: asPlayerId(0),
-      zones: {
-        ...base.zones,
-        'casualties-US:none': [],
-        'available-US:none': [...availableTroops, ...availableBases],
-      },
-    };
+    const setup = makeCoupState(def, 7502, {
+      'casualties-US:none': [],
+      'available-US:none': [...availableTroops, ...availableBases],
+    });
 
     const availableTroopsBefore = countTokens(setup, 'available-US:none', 'US', 'troops');
     const availableBasesBefore = countTokens(setup, 'available-US:none', 'US', 'base');
@@ -162,18 +166,10 @@ describe('FITL coup commitment phase production wiring', () => {
 
   it('rejects invalid commitment destinations outside Rule 6.5 legal destination set', () => {
     const def = compileDef();
-    const base = initialState(def, 7503, 4).state;
-
-    const setup: GameState = {
-      ...base,
-      currentPhase: asPhaseId('coupCommitment'),
-      activePlayer: asPlayerId(0),
-      zones: {
-        ...base.zones,
-        'casualties-US:none': [],
-        'available-US:none': [makeToken('us-av-t-illegal', 'troops', 'US')],
-      },
-    };
+    const setup = makeCoupState(def, 7503, {
+      'casualties-US:none': [],
+      'available-US:none': [makeToken('us-av-t-illegal', 'troops', 'US')],
+    });
 
     const resolveMove = legalMoves(def, setup).find((move) => String(move.actionId) === 'coupCommitmentResolve');
     assert.notEqual(resolveMove, undefined, 'Expected coupCommitmentResolve in coupCommitment phase');

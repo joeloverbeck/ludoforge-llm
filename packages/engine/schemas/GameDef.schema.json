@@ -987,6 +987,21 @@
                         "actionIds"
                       ],
                       "additionalProperties": false
+                    },
+                    "cardSeatOrderMetadataKey": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "cardSeatOrderMapping": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "required": [

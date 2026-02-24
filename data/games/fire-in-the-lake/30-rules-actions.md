@@ -68,6 +68,12 @@ turnOrder:
         - { seat: '2', resource: nvaResources, amount: 1 }
         - { seat: '3', resource: vcResources, amount: 1 }
       freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
+      cardSeatOrderMetadataKey: seatOrder
+      cardSeatOrderMapping:
+        US: '0'
+        ARVN: '1'
+        NVA: '2'
+        VC: '3'
       durationWindows: [turn, nextTurn, round, cycle]
       monsoon:
         restrictedActions:

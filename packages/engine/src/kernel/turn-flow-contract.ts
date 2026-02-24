@@ -9,7 +9,7 @@ export const TURN_FLOW_REQUIRED_KEYS = [
   'durationWindows',
 ] as const;
 
-export const TURN_FLOW_OPTIONAL_KEYS = ['freeOperationActionIds', 'monsoon', 'pivotal'] as const;
+export const TURN_FLOW_OPTIONAL_KEYS = ['freeOperationActionIds', 'monsoon', 'pivotal', 'cardSeatOrderMetadataKey', 'cardSeatOrderMapping'] as const;
 
 export const TURN_FLOW_ACTION_CLASS_VALUES = [
   'pass',

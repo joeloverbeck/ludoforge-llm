@@ -85,6 +85,8 @@ export interface TurnFlowDef {
   readonly durationWindows: readonly TurnFlowDuration[];
   readonly monsoon?: TurnFlowMonsoonDef;
   readonly pivotal?: TurnFlowPivotalDef;
+  readonly cardSeatOrderMetadataKey?: string;
+  readonly cardSeatOrderMapping?: Readonly<Record<string, string>>;
 }
 
 export interface CardDrivenTurnOrderConfig {
@@ -171,6 +173,7 @@ export interface TurnFlowRuntimeState {
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
+  readonly pendingCardBoundaryTraceEntries?: readonly TurnFlowLifecycleTraceEntry[];
 }
 
 export type TurnOrderRuntimeState =

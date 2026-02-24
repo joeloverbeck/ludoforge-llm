@@ -52,6 +52,7 @@ export * from './schemas.js';
 export * from './serde.js';
 export * from './spatial.js';
 export * from './stacking.js';
+export * from './turn-flow-eligibility.js';
 export * from './types.js';
 export * from './validate-gamedef.js';
 export * from './zobrist.js';

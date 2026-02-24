@@ -1,5 +1,6 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
+import { isEffectErrorCode } from './effect-error.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import {
   isDeclaredActionParamValueInDomain,
@@ -79,8 +80,15 @@ const executeDiscoveryEffects = (
       : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
     ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
   };
-  const result = applyEffects(effects, effectCtx);
-  return result.pendingChoice ?? COMPLETE;
+  try {
+    const result = applyEffects(effects, effectCtx);
+    return result.pendingChoice ?? COMPLETE;
+  } catch (error: unknown) {
+    if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
+      return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+    }
+    throw error;
+  }
 };
 
 const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);

@@ -6,6 +6,7 @@ import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
+import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import type {
   ConditionAST,
   EventFreeOperationGrantDef,
@@ -14,6 +15,7 @@ import type {
   Move,
   TriggerLogEntry,
   TurnFlowDuration,
+  TurnFlowLifecycleTraceEntry,
   TurnFlowPendingEligibilityOverride,
   TurnFlowPendingFreeOperationGrant,
   TurnFlowRuntimeCardState,
@@ -483,6 +485,41 @@ const withActiveFromFirstEligible = (state: GameState, firstEligible: string | n
   };
 };
 
+const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[] | null => {
+  const config = cardDrivenConfig(def);
+  if (config === null) {
+    return null;
+  }
+  const metadataKey = config.turnFlow.cardSeatOrderMetadataKey;
+  if (metadataKey === undefined) {
+    return null;
+  }
+  const playedZone = config.turnFlow.cardLifecycle.played;
+  const currentCardToken = state.zones[playedZone]?.[0];
+  if (currentCardToken === undefined) {
+    return null;
+  }
+  const cardId = currentCardToken.props.cardId;
+  if (typeof cardId !== 'string') {
+    return null;
+  }
+  const mapping = config.turnFlow.cardSeatOrderMapping;
+  for (const deck of def.eventDecks ?? []) {
+    const card = deck.cards.find((c) => c.id === cardId);
+    if (card !== undefined) {
+      const rawOrder = card.metadata?.[metadataKey];
+      if (Array.isArray(rawOrder) && rawOrder.every((s): s is string => typeof s === 'string') && rawOrder.length > 0) {
+        const resolved = mapping === undefined
+          ? rawOrder
+          : rawOrder.map((value) => mapping[value] ?? value);
+        const filtered = resolved.filter((seatId) => parseSeatPlayer(seatId, state.playerCount) !== null);
+        return filtered.length > 0 ? filtered : null;
+      }
+    }
+  }
+  return null;
+};
+
 export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameState): GameState => {
   const flow = cardDrivenConfig(def)?.turnFlow;
   if (flow === undefined) {
@@ -490,7 +527,9 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
   }
 
   const seats = flow.eligibility.seats;
-  const seatOrder = normalizeSeatOrder(seats);
+  const defaultSeatOrder = normalizeSeatOrder(seats);
+  const cardSeatOrder = resolveCardSeatOrder(def, state);
+  const seatOrder = cardSeatOrder ?? defaultSeatOrder;
   const eligibility = Object.fromEntries(seatOrder.map((seat) => [seat, true])) as Readonly<Record<string, boolean>>;
   const candidates = computeCandidates(seatOrder, eligibility, new Set());
   const nextState: GameState = {
@@ -748,10 +787,29 @@ export const applyTurnFlowEligibilityAfterMove = (
   let nextEligibility = runtime.eligibility;
   let nextPendingOverrides = pendingOverrides;
   let nextPendingFreeOperationGrants = pendingFreeOperationGrants;
+  let nextSeatOrder = runtime.seatOrder;
+  let baseState = rewardState;
+  let cardBoundaryTraceEntries: readonly TurnFlowLifecycleTraceEntry[] | undefined;
   if (endedReason !== undefined) {
     nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
     nextPendingOverrides = [];
-    const resetCandidates = computeCandidates(runtime.seatOrder, nextEligibility, new Set());
+
+    const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
+      ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => String(p.id)))
+      : new Set<string>();
+    const inCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
+    if (!inCoupPhase) {
+      const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
+      baseState = lifecycle.state;
+      traceEntries.push(...lifecycle.traceEntries);
+      cardBoundaryTraceEntries = lifecycle.traceEntries as readonly TurnFlowLifecycleTraceEntry[];
+      const cardSeatOrder = resolveCardSeatOrder(def, baseState);
+      if (cardSeatOrder !== null) {
+        nextSeatOrder = cardSeatOrder;
+      }
+    }
+
+    const resetCandidates = computeCandidates(nextSeatOrder, nextEligibility, new Set());
     nextTurn = {
       firstEligible: resetCandidates.first,
       secondEligible: resetCandidates.second,
@@ -775,14 +833,16 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPendingFreeOperationGrants);
   const stateWithTurnFlow: GameState = {
-    ...rewardState,
+    ...baseState,
     turnOrderState: {
       type: 'cardDriven',
       runtime: withPendingFreeOperationGrants({
         ...runtime,
+        seatOrder: nextSeatOrder,
         eligibility: nextEligibility,
         pendingEligibilityOverrides: nextPendingOverrides,
         currentCard: nextTurn,
+        ...(cardBoundaryTraceEntries !== undefined ? { pendingCardBoundaryTraceEntries: cardBoundaryTraceEntries } : {}),
       }, normalizedPendingFreeOperationGrants),
     },
   };

@@ -7,6 +7,7 @@ import {
   asPhaseId,
   asTokenId,
   initialState,
+  initializeTurnFlowEligibilityState,
   legalChoicesDiscover,
   terminalResult,
   type GameDef,
@@ -24,15 +25,18 @@ const compileProductionDef = (): GameDef => {
   return compiled.gameDef!;
 };
 
-const withClearedZones = (state: GameState): GameState => ({
-  ...state,
-  zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])),
-});
+const withClearedZones = (def: GameDef, state: GameState): GameState => {
+  const cleared: GameState = {
+    ...state,
+    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])),
+  };
+  return initializeTurnFlowEligibilityState(def, cleared);
+};
 
 describe('FITL coup victory phase gating', () => {
   it('halts in coupVictory when a during-coup checkpoint is met', () => {
     const def = compileProductionDef();
-    const start = withClearedZones(initialState(def, 8101, 4).state);
+    const start = withClearedZones(def, initialState(def,8101, 4).state);
     const usReserve = Array.from({ length: 51 }, (_unused, index) => ({
       id: asTokenId(`us-reserve-${index}`),
       type: 'piece' as const,
@@ -78,7 +82,7 @@ describe('FITL coup victory phase gating', () => {
 
   it('advances from coupVictory to coupResources, then through support to the next decision point after coupResourcesResolve', () => {
     const def = compileProductionDef();
-    const start = withClearedZones(initialState(def, 8102, 4).state);
+    const start = withClearedZones(def, initialState(def,8102, 4).state);
     const state: GameState = {
       ...start,
       currentPhase: asPhaseId('coupVictory'),
@@ -115,7 +119,7 @@ describe('FITL coup victory phase gating', () => {
 
   it('resolves final-coup ranking after coupRedeploy on the last coup round', () => {
     const def = compileProductionDef();
-    const start = withClearedZones(initialState(def, 8103, 4).state);
+    const start = withClearedZones(def, initialState(def,8103, 4).state);
     const state: GameState = {
       ...start,
       currentPhase: asPhaseId('coupRedeploy'),

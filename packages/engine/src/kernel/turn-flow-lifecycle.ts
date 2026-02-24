@@ -191,6 +191,20 @@ export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): Life
 };
 
 export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): LifecycleResult => {
+  const pendingRuntime = cardDrivenRuntime(state);
+  if (pendingRuntime?.pendingCardBoundaryTraceEntries !== undefined) {
+    const stored = pendingRuntime.pendingCardBoundaryTraceEntries;
+    const nextRuntime = { ...pendingRuntime };
+    delete (nextRuntime as { pendingCardBoundaryTraceEntries?: unknown }).pendingCardBoundaryTraceEntries;
+    return {
+      state: {
+        ...state,
+        turnOrderState: { type: 'cardDriven', runtime: nextRuntime },
+      },
+      traceEntries: stored,
+    };
+  }
+
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
     return { state, traceEntries: [] };

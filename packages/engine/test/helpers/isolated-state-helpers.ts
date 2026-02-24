@@ -1,4 +1,10 @@
-import { createRng, initialState, type GameDef, type GameState } from '../../src/kernel/index.js';
+import {
+  createRng,
+  initialState,
+  initializeTurnFlowEligibilityState,
+  type GameDef,
+  type GameState,
+} from '../../src/kernel/index.js';
 
 export type IsolatedStateTurnOrderMode = 'preserve' | 'roundRobin';
 
@@ -26,5 +32,5 @@ export const makeIsolatedInitialState = (
       turnOrderState: { type: 'roundRobin' },
     };
   }
-  return withResetRng;
+  return initializeTurnFlowEligibilityState(def, withResetRng);
 };

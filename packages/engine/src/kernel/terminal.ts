@@ -67,16 +67,16 @@ function scoreRanking(
 }
 
 function resolveSeatPlayer(state: GameState, seat: string): ReturnType<typeof asPlayerId> | null {
+  const numeric = Number(seat);
+  if (Number.isInteger(numeric) && numeric >= 0 && numeric < state.playerCount) {
+    return asPlayerId(numeric);
+  }
+
   const fromOrder = state.turnOrderState.type === 'cardDriven'
     ? state.turnOrderState.runtime.seatOrder.indexOf(seat)
     : -1;
   if (fromOrder >= 0 && fromOrder < state.playerCount) {
     return asPlayerId(fromOrder);
-  }
-
-  const numeric = Number(seat);
-  if (Number.isInteger(numeric) && numeric >= 0 && numeric < state.playerCount) {
-    return asPlayerId(numeric);
   }
 
   return null;

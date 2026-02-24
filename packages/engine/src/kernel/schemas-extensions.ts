@@ -326,6 +326,8 @@ export const TurnFlowSchema = z
     durationWindows: z.array(TurnFlowDurationSchema),
     monsoon: TurnFlowMonsoonSchema.optional(),
     pivotal: TurnFlowPivotalSchema.optional(),
+    cardSeatOrderMetadataKey: StringSchema.min(1).optional(),
+    cardSeatOrderMapping: z.record(StringSchema.min(1), StringSchema.min(1)).optional(),
   })
   .strict();
 

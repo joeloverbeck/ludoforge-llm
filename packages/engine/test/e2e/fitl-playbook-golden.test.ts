@@ -257,11 +257,165 @@ const TURN_2: PlaybookTurn = {
   },
 };
 
+// Turn 3 — Green Berets (card-68)
+// Seat order: ARVN, US, VC, NVA → seats [1, 0, 3, 2]
+// Move 1: ARVN plays unshaded Green Berets event
+//   - Branch: place-irregulars-and-support
+//   - Target: binh-dinh:none (Province without NVA Control)
+//   - Places 3 US Irregulars from available-US:none → binh-dinh:none (underground)
+//   - Sets Binh Dinh to Active Support
+// Move 2: VC Rally + Tax (Op+SA compound)
+//   - Rally in Pleiku (2 guerrillas), Quang Tri (3 guerrillas), Hue (1 guerrilla)
+//   - Cost: 3 resources → vcResources 5 → 2
+//   - Tax in Quang Tin, Quang Duc, Binh Tuy
+//   - Tax flips 1 guerrilla active per space, gains pop×2 resources, shifts 1 level toward support
+//   - Tax resources: (2+1+1)×2 = 8 → vcResources 2 → 10
+//   - Tax shifts: activeOpposition → passiveOpposition in all 3 spaces
+const TURN_3: PlaybookTurn = {
+  label: 'Turn 3 — Green Berets',
+  moves: [
+    {
+      kind: 'resolved',
+      label: 'ARVN unshaded Green Berets (place irregulars in Binh Dinh)',
+      move: {
+        actionId: asActionId('event'),
+        params: {
+          eventCardId: 'card-68',
+          side: 'unshaded',
+          branch: 'place-irregulars-and-support',
+          $targetProvince: 'binh-dinh:none',
+        },
+      },
+      expectedState: {
+        globalVars: {
+          aid: 14,
+          arvnResources: 24,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          // 3 irregulars placed from available-US:none + 1 initial = 4 total
+          { zone: 'binh-dinh:none', faction: 'US', type: 'irregular', count: 4 },
+          { zone: 'available-US:none', faction: 'US', type: 'irregular', count: 0 },
+        ],
+        totalTokenCounts: [
+          { faction: 'US', type: 'irregular', count: 6 },
+        ],
+        markers: [
+          { space: 'binh-dinh:none', marker: 'supportOpposition', expected: 'activeSupport' },
+          { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+        ],
+      },
+    },
+    {
+      kind: 'resolved',
+      label: 'VC Rally + Tax',
+      move: {
+        actionId: asActionId('rally'),
+        actionClass: 'operationPlusSpecialActivity',
+        params: {
+          targetSpaces: ['pleiku-darlac:none', 'quang-tri-thua-thien:none', 'hue:none'],
+          $withBaseChoice: 'place-guerrillas',
+          $noBaseChoice: 'place-guerrilla',
+        },
+        compound: {
+          specialActivity: {
+            actionId: asActionId('tax'),
+            actionClass: 'operationPlusSpecialActivity',
+            params: {
+              targetSpaces: [
+                'quang-tin-quang-ngai:none',
+                'quang-duc-long-khanh:none',
+                'binh-tuy-binh-thuan:none',
+              ],
+            },
+          },
+          timing: 'after',
+        },
+      },
+      expectedOperationState: {
+        globalVars: {
+          nvaResources: 5,
+          trail: 2,
+          vcResources: 2,
+          arvnResources: 24,
+          aid: 14,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 5 },
+          { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
+          { zone: 'quang-tin-quang-ngai:none', faction: 'VC', type: 'guerrilla',
+            count: 0, props: { activity: 'active' } },
+          { zone: 'quang-duc-long-khanh:none', faction: 'VC', type: 'guerrilla',
+            count: 0, props: { activity: 'active' } },
+          { zone: 'binh-tuy-binh-thuan:none', faction: 'VC', type: 'guerrilla',
+            count: 0, props: { activity: 'active' } },
+        ],
+        totalTokenCounts: [
+          { faction: 'VC', type: 'guerrilla', count: 30 },
+        ],
+        markers: [
+          { space: 'quang-tin-quang-ngai:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+          { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+          { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      nvaResources: 5,
+      trail: 2,
+      vcResources: 10,
+      arvnResources: 24,
+      aid: 14,
+      patronage: 15,
+    },
+    eligibility: { '0': true, '1': false, '2': true, '3': false },
+    activePlayer: 0,
+    currentCard: 'card-1',
+    previewCard: 'card-97',
+    deckSize: 8,
+    seatOrder: ['0', '2', '1', '3'],
+    firstEligible: '0',
+    secondEligible: '2',
+    nonPassCount: 0,
+    zoneTokenCounts: [
+      // Green Berets event placements
+      { zone: 'binh-dinh:none', faction: 'US', type: 'irregular', count: 4 },
+      { zone: 'available-US:none', faction: 'US', type: 'irregular', count: 0 },
+      // VC Rally placements (all underground)
+      { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 5 },
+      { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      // Tax flipped guerrillas (1 active per space)
+      { zone: 'quang-tin-quang-ngai:none', faction: 'VC', type: 'guerrilla',
+        count: 1, props: { activity: 'active' } },
+      { zone: 'quang-duc-long-khanh:none', faction: 'VC', type: 'guerrilla',
+        count: 1, props: { activity: 'active' } },
+      { zone: 'binh-tuy-binh-thuan:none', faction: 'VC', type: 'guerrilla',
+        count: 1, props: { activity: 'active' } },
+    ],
+    totalTokenCounts: [
+      { faction: 'US', type: 'irregular', count: 6 },
+      { faction: 'VC', type: 'guerrilla', count: 30 },
+    ],
+    markers: [
+      { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+      { space: 'binh-dinh:none', marker: 'supportOpposition', expected: 'activeSupport' },
+      { space: 'quang-tin-quang-ngai:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+      { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+      { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+    ],
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Playbook turns in execution order
 // ---------------------------------------------------------------------------
 
-const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2];
+const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3];
 
 // ---------------------------------------------------------------------------
 // Test suite

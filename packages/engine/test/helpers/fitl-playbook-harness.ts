@@ -24,6 +24,13 @@ export interface ZoneTokenCountCheck {
   readonly props?: Readonly<Record<string, string>>;
 }
 
+export interface TotalTokenCountCheck {
+  readonly faction: string;
+  readonly type: string;
+  readonly count: number;
+  readonly props?: Readonly<Record<string, string>>;
+}
+
 export interface MarkerCheck {
   readonly space: string;
   readonly marker: string;
@@ -42,6 +49,7 @@ export interface PlaybookStateSnapshot {
   readonly secondEligible?: string;
   readonly nonPassCount?: number;
   readonly zoneTokenCounts?: readonly ZoneTokenCountCheck[];
+  readonly totalTokenCounts?: readonly TotalTokenCountCheck[];
   readonly markers?: readonly MarkerCheck[];
 }
 
@@ -54,12 +62,16 @@ export type PlaybookMove =
       readonly kind: 'simple';
       readonly label: string;
       readonly move: Move;
+      readonly expectedState?: PlaybookStateSnapshot;
+      readonly expectedOperationState?: PlaybookStateSnapshot;
     }
   | {
       readonly kind: 'resolved';
       readonly label: string;
       readonly move: Move;
       readonly options?: ResolveDecisionParamsOptions;
+      readonly expectedState?: PlaybookStateSnapshot;
+      readonly expectedOperationState?: PlaybookStateSnapshot;
     };
 
 // ---------------------------------------------------------------------------
@@ -94,6 +106,23 @@ const countTokensInZone = (
     }
     return true;
   }).length;
+
+const countTokensAcrossZones = (
+  state: GameState,
+  filters: { faction: string; type: string; props?: Readonly<Record<string, string>> },
+): number =>
+  Object.values(state.zones)
+    .flat()
+    .filter((token) => {
+      if (String(token.props.faction) !== filters.faction) return false;
+      if (String(token.props.type) !== filters.type) return false;
+      if (filters.props !== undefined) {
+        for (const [key, value] of Object.entries(filters.props)) {
+          if (String(token.props[key]) !== value) return false;
+        }
+      }
+      return true;
+    }).length;
 
 export const assertPlaybookSnapshot = (
   state: GameState,
@@ -207,6 +236,24 @@ export const assertPlaybookSnapshot = (
     }
   }
 
+  if (expected.totalTokenCounts !== undefined) {
+    for (const check of expected.totalTokenCounts) {
+      const actual = countTokensAcrossZones(state, {
+        faction: check.faction,
+        type: check.type,
+        ...(check.props !== undefined ? { props: check.props } : {}),
+      });
+      const propsDesc = check.props !== undefined
+        ? ` with ${JSON.stringify(check.props)}`
+        : '';
+      assert.equal(
+        actual,
+        check.count,
+        `${label}: expected total ${check.faction} ${check.type}${propsDesc} = ${check.count}, got ${actual}`,
+      );
+    }
+  }
+
   if (expected.markers !== undefined) {
     for (const check of expected.markers) {
       const actual = state.markers[check.space]?.[check.marker];
@@ -230,6 +277,25 @@ export const replayPlaybookTurn = (
 ): GameState => {
   let current = state;
   for (const playMove of turn.moves) {
+    if (playMove.expectedOperationState !== undefined) {
+      if (playMove.kind !== 'resolved' || playMove.move.compound === undefined) {
+        assert.fail(
+          `${playMove.label}: expectedOperationState requires a resolved move with compound specialActivity`,
+        );
+      }
+      const { compound: _compound, ...opOnlyMove } = playMove.move;
+      const opOnlyResult = applyMoveWithResolvedDecisionIds(
+        def,
+        current,
+        opOnlyMove,
+        playMove.options,
+      );
+      assertPlaybookSnapshot(
+        opOnlyResult.state,
+        playMove.expectedOperationState,
+        `${playMove.label} (operation only)`,
+      );
+    }
     if (playMove.kind === 'simple') {
       const result = applyMove(def, current, playMove.move);
       current = result.state;
@@ -241,6 +307,10 @@ export const replayPlaybookTurn = (
         playMove.options,
       );
       current = result.state;
+    }
+    // Per-move intermediate assertion
+    if (playMove.expectedState !== undefined) {
+      assertPlaybookSnapshot(current, playMove.expectedState, playMove.label);
     }
   }
   assertPlaybookSnapshot(current, turn.expectedEndState, turn.label);

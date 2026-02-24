@@ -2737,4 +2737,49 @@ conditionMacros:
                 - { op: '!=', left: { ref: markerState, space: $zone, marker: { param: markerId } }, right: { param: markerStateExpr } }
       right: 0
 
+  # Shared coup support/agitation branch predicate:
+  # action is removeTerror and the target space currently has terror.
+  - id: fitl-coup-support-remove-terror-action-allowed
+    params:
+      - { name: actionExpr, type: value }
+      - { name: targetSpaceExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { param: actionExpr }, right: removeTerror }
+        - conditionMacro: fitl-space-marker-state-is
+          args:
+            spaceIdExpr: { param: targetSpaceExpr }
+            markerId: terror
+            markerStateExpr: terror
+
+  # Shared coup support/agitation shift branch predicate:
+  # action matches, terror is absent, support/opposition is not already at target state,
+  # and per-space support-shift cap has not reached two.
+  - id: fitl-coup-support-shift-action-allowed
+    params:
+      - { name: actionExpr, type: value }
+      - { name: requiredActionExpr, type: value }
+      - { name: targetSpaceExpr, type: value }
+      - { name: blockedSupportStateExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { param: actionExpr }, right: { param: requiredActionExpr } }
+        - conditionMacro: fitl-space-marker-state-is
+          args:
+            spaceIdExpr: { param: targetSpaceExpr }
+            markerId: terror
+            markerStateExpr: none
+        - conditionMacro: fitl-space-marker-state-is-not
+          args:
+            spaceIdExpr: { param: targetSpaceExpr }
+            markerId: supportOpposition
+            markerStateExpr: { param: blockedSupportStateExpr }
+        - conditionMacro: fitl-space-marker-state-is-not
+          args:
+            spaceIdExpr: { param: targetSpaceExpr }
+            markerId: coupSupportShiftCount
+            markerStateExpr: two
+
 ```

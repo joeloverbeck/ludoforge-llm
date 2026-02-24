@@ -15,7 +15,7 @@ import {
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
-import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
+import { advancePhaseBounded, findAllInMove, replayScript } from '../helpers/replay-harness.js';
 
 const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
@@ -174,7 +174,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.activePlayer), 2);
     assert.equal(Number(state.globalVars.pot), 710);
 
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.activePlayer), 3);
     assert.equal(Number(state.globalVars.pot), 1650);
     assert.equal(Number(state.globalVars.currentBet), 940);
@@ -184,7 +184,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.activePlayer), 4);
     assert.equal(state.perPlayerVars['3']?.handActive, false);
 
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.activePlayer), 5);
     assert.equal(Number(state.globalVars.pot), 4940);
     assert.equal(Number(state.globalVars.currentBet), 3340);
@@ -363,7 +363,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.globalVars.pot), 18546);
     assert.equal(Number(state.activePlayer), 5);
 
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.globalVars.pot), 18634);
     assert.equal(Number(state.globalVars.currentBet), 88);
     assert.equal(Number(state.activePlayer), 7);

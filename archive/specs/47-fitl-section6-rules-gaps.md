@@ -1,6 +1,6 @@
 # Spec 47: FITL Section 6 Rules Gaps
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: S
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs), Spec 46 (Section 4 gaps)
@@ -17,9 +17,9 @@ All changes are **data-only YAML** in GameSpecDoc files under `data/games/fire-i
 
 | # | Gap | Rule | Status | Action |
 |---|-----|------|--------|--------|
-| 1 | Sabotage auto-applies without VC player choice when markers insufficient | 6.2.1 | Missing | FITLSEC6RULGAP-001 |
-| 2 | Pacification allows shiftSupport even when Terror is present | 6.3.1 | Missing | FITLSEC6RULGAP-002 |
-| 3 | Agitation allows shiftOpposition even when Terror is present | 6.3.2 | Missing | FITLSEC6RULGAP-003 |
+| 1 | Sabotage auto-applies without VC player choice when markers insufficient | 6.2.1 | Completed | FITLSEC6RULGAP-001 |
+| 2 | Pacification allows shiftSupport even when Terror is present | 6.3.1 | Completed | FITLSEC6RULGAP-002 |
+| 3 | Agitation allows shiftOpposition even when Terror is present | 6.3.2 | Completed | FITLSEC6RULGAP-003 |
 
 ## Verified Correct (No Changes Needed)
 
@@ -424,3 +424,18 @@ All existing FITL compilation tests must continue to pass after YAML changes:
 - Texas Hold'em compilation tests must still pass (engine-agnosticism check)
 - No new kernel or compiler source files created or modified
 - Existing FITL E2E tests pass unchanged
+
+## Outcome
+
+- Completion date: 2026-02-24
+- What was changed:
+  - `FITLSEC6RULGAP-001` implemented the Section 6.2.1 sabotage choice behavior in FITL game data macros.
+  - `FITLSEC6RULGAP-002` added terror prerequisites for pacification `shiftSupport` in US/ARVN coup support actions.
+  - `FITLSEC6RULGAP-003` added terror prerequisites for VC agitation `shiftOpposition` in coup support actions.
+- Deviations from original plan:
+  - Some predicate examples in this spec used inline `mapSpaces`/`markerState` expressions, while final implementations aligned to existing production predicate macros where appropriate.
+- Verification results:
+  - `pnpm turbo build` passed during ticket execution.
+  - `pnpm turbo lint` passed during ticket execution.
+  - `pnpm -F @ludoforge/engine test` passed during ticket execution.
+  - `pnpm -F @ludoforge/engine test:e2e` remains failing due to pre-existing unrelated Texas Hold'em e2e failures.

@@ -61,6 +61,22 @@ export interface BoundedAdvanceResult {
   readonly steps: number;
 }
 
+export const findAllInMove = (def: GameDef, state: GameState): Move => {
+  const moves = legalMoves(def, state);
+  const allInMove = moves.find((m) => String(m.actionId) === 'allIn');
+  if (allInMove !== undefined) return allInMove;
+
+  const raises = moves.filter((m) => String(m.actionId) === 'raise');
+  if (raises.length === 0) {
+    throw new Error(
+      `No allIn or raise move available. Legal: ${moves.map((m) => String(m.actionId)).join(', ')}`,
+    );
+  }
+  return raises.reduce((max, m) =>
+    Number(m.params.raiseAmount) > Number(max.params.raiseAmount) ? m : max,
+  );
+};
+
 const moveKey = (move: Move): string => `${String(move.actionId)} ${canonicalMoveParamsKey(move.params)}`;
 
 const formatKeyVars = (state: GameState, keys: readonly string[] | undefined): string => {

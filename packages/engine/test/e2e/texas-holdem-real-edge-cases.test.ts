@@ -19,7 +19,7 @@ import {
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
-import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
+import { advancePhaseBounded, findAllInMove, replayScript } from '../helpers/replay-harness.js';
 
 const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
@@ -214,7 +214,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.globalVars.pot), 3790);
     assert.equal(Number(state.globalVars.currentBet), 2500);
 
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.globalVars.pot), 21774);
     assert.equal(Number(state.globalVars.currentBet), 17984);
 
@@ -349,7 +349,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     state = applyLoggedMove(def, state, { actionId: 'fold' as Move['actionId'], params: {} });
     state = applyLoggedMove(def, state, { actionId: 'fold' as Move['actionId'], params: {} });
 
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.globalVars.pot), 55078);
     assert.equal(Number(state.globalVars.currentBet), 44221);
 
@@ -481,14 +481,14 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.globalVars.currentBet), 5000);
     assert.equal(Number(state.globalVars.lastRaiseSize), 3000);
 
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.globalVars.currentBet), 5875);
     assert.equal(Number(state.globalVars.lastRaiseSize), 3000);
     assert.equal(state.perPlayerVars['0']?.allIn, true);
 
     state = applyLoggedMove(def, state, { actionId: 'call' as Move['actionId'], params: {} });
     state = applyLoggedMove(def, state, { actionId: 'call' as Move['actionId'], params: {} });
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(Number(state.globalVars.currentBet), 21350);
     assert.equal(Number(state.globalVars.lastRaiseSize), 15475);
     assert.equal(Number(state.globalVars.pot), 49225);

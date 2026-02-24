@@ -14,6 +14,7 @@ import {
   type Agent,
   type GameState,
   type GameTrace,
+  type Move,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
@@ -417,8 +418,16 @@ describe('texas hold\'em tournament e2e', () => {
       const moves = legalMoves(def, state);
       assert.equal(moves.length > 0, true);
 
+      const maxRaise = moves
+        .filter((m) => String(m.actionId) === 'raise')
+        .reduce<Move | undefined>((max, m) =>
+          max === undefined || Number(m.params.raiseAmount) > Number(max.params.raiseAmount) ? m : max,
+          undefined,
+        );
+
       const selected =
         moves.find((move) => move.actionId === 'allIn')
+        ?? maxRaise
         ?? moves.find((move) => move.actionId === 'call')
         ?? moves.find((move) => move.actionId === 'check')
         ?? moves.find((move) => move.actionId === 'fold')

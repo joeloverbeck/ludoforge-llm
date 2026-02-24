@@ -236,32 +236,16 @@ actions:
                 else: 3
         - op: or
           args:
-            - op: and
+            - conditionMacro: fitl-coup-support-remove-terror-action-allowed
               args:
-                - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
-                - conditionMacro: fitl-space-marker-state-is
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: terror
-                    markerStateExpr: terror
-            - op: and
+                actionExpr: { ref: binding, name: action }
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+            - conditionMacro: fitl-coup-support-shift-action-allowed
               args:
-                - { op: '==', left: { ref: binding, name: action }, right: shiftSupport }
-                - conditionMacro: fitl-space-marker-state-is
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: terror
-                    markerStateExpr: none
-                - conditionMacro: fitl-space-marker-state-is-not
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: supportOpposition
-                    markerStateExpr: activeSupport
-                - conditionMacro: fitl-space-marker-state-is-not
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: coupSupportShiftCount
-                    markerStateExpr: two
+                actionExpr: { ref: binding, name: action }
+                requiredActionExpr: shiftSupport
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+                blockedSupportStateExpr: activeSupport
     cost: []
     effects:
       - macro: rvn-leader-pacification-cost
@@ -361,32 +345,16 @@ actions:
               else: 3
         - op: or
           args:
-            - op: and
+            - conditionMacro: fitl-coup-support-remove-terror-action-allowed
               args:
-                - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
-                - conditionMacro: fitl-space-marker-state-is
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: terror
-                    markerStateExpr: terror
-            - op: and
+                actionExpr: { ref: binding, name: action }
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+            - conditionMacro: fitl-coup-support-shift-action-allowed
               args:
-                - { op: '==', left: { ref: binding, name: action }, right: shiftSupport }
-                - conditionMacro: fitl-space-marker-state-is
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: terror
-                    markerStateExpr: none
-                - conditionMacro: fitl-space-marker-state-is-not
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: supportOpposition
-                    markerStateExpr: activeSupport
-                - conditionMacro: fitl-space-marker-state-is-not
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: coupSupportShiftCount
-                    markerStateExpr: two
+                actionExpr: { ref: binding, name: action }
+                requiredActionExpr: shiftSupport
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+                blockedSupportStateExpr: activeSupport
     cost: []
     effects:
       - macro: rvn-leader-pacification-cost
@@ -470,27 +438,16 @@ actions:
           right: 1
         - op: or
           args:
-            - op: and
+            - conditionMacro: fitl-coup-support-remove-terror-action-allowed
               args:
-                - { op: '==', left: { ref: binding, name: action }, right: removeTerror }
-                - conditionMacro: fitl-space-marker-state-is
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: terror
-                    markerStateExpr: terror
-            - op: and
+                actionExpr: { ref: binding, name: action }
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+            - conditionMacro: fitl-coup-support-shift-action-allowed
               args:
-                - { op: '==', left: { ref: binding, name: action }, right: shiftOpposition }
-                - conditionMacro: fitl-space-marker-state-is-not
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: supportOpposition
-                    markerStateExpr: activeOpposition
-                - conditionMacro: fitl-space-marker-state-is-not
-                  args:
-                    spaceIdExpr: { ref: binding, name: targetSpace }
-                    markerId: coupSupportShiftCount
-                    markerStateExpr: two
+                actionExpr: { ref: binding, name: action }
+                requiredActionExpr: shiftOpposition
+                targetSpaceExpr: { ref: binding, name: targetSpace }
+                blockedSupportStateExpr: activeOpposition
     cost: []
     effects:
       - addVar: { scope: global, var: vcResources, delta: -1 }

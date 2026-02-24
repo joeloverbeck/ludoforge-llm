@@ -369,12 +369,12 @@ describe('FITL coup support phase production actions', () => {
     assert.equal(shifted.markers[target]?.supportOpposition, 'passiveSupport');
   });
 
-  it('applies VC agitation with 1-resource cost and enforces 4-space agitation cap', () => {
+  it('requires terror removal before VC can shift opposition in a space', () => {
     const def = compileProductionDef();
     const base = withClearedZones(initialState(def, 8704, 4).state);
     const target = 'quang-tri-thua-thien:none';
 
-    const legalState = withCoupSupportPhase(base, {
+    const terrorPresent = withCoupSupportPhase(base, {
       activePlayer: 3 as GameState['activePlayer'],
       globalVars: {
         ...base.globalVars,
@@ -387,12 +387,45 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
+          terror: 'terror',
           supportOpposition: 'neutral',
         },
       },
     });
 
-    const shifted = applyMove(def, legalState, {
+    assert.throws(() => applyMove(def, terrorPresent, {
+      actionId: asActionId('coupAgitateVC'),
+      params: { targetSpace: target, action: 'shiftOpposition' },
+    }));
+
+    const terrorRemoved = applyMove(def, terrorPresent, {
+      actionId: asActionId('coupAgitateVC'),
+      params: { targetSpace: target, action: 'removeTerror' },
+    }).state;
+
+    assert.equal(terrorRemoved.markers[target]?.terror, 'none');
+    assert.equal(terrorRemoved.globalVars.vcResources, 5);
+
+    const noTerror = withCoupSupportPhase(base, {
+      activePlayer: 3 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        vcResources: 6,
+      },
+      zones: {
+        [target]: [piece('vc-g-ready', 'VC', 'guerrilla')],
+      },
+      markers: {
+        ...base.markers,
+        [target]: {
+          ...(base.markers[target] ?? {}),
+          terror: 'none',
+          supportOpposition: 'neutral',
+        },
+      },
+    });
+
+    const shifted = applyMove(def, noTerror, {
       actionId: asActionId('coupAgitateVC'),
       params: { targetSpace: target, action: 'shiftOpposition' },
     }).state;
@@ -400,7 +433,11 @@ describe('FITL coup support phase production actions', () => {
     assert.equal(shifted.globalVars.vcResources, 5);
     assert.equal(shifted.markers[target]?.supportOpposition, 'passiveOpposition');
     assert.equal(shifted.markers[target]?.coupAgitateSpaceUsage, 'used');
+  });
 
+  it('enforces 4-space agitation cap for VC', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8707, 4).state);
     const blockedBySpaceCap = withCoupSupportPhase(base, {
       activePlayer: 3 as GameState['activePlayer'],
       globalVars: {
@@ -412,7 +449,7 @@ describe('FITL coup support phase production actions', () => {
       },
       markers: {
         ...base.markers,
-        'quang-nam:none': { supportOpposition: 'neutral', coupAgitateSpaceUsage: 'open' },
+        'quang-nam:none': { supportOpposition: 'neutral', terror: 'none', coupAgitateSpaceUsage: 'open' },
         'saigon:none': { coupAgitateSpaceUsage: 'used' },
         'da-nang:none': { coupAgitateSpaceUsage: 'used' },
         'hue:none': { coupAgitateSpaceUsage: 'used' },

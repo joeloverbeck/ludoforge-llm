@@ -16,7 +16,7 @@ import {
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
-import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
+import { advancePhaseBounded, findAllInMove, replayScript } from '../helpers/replay-harness.js';
 
 /* ------------------------------------------------------------------ */
 /*  Shared helpers (same pattern as texas-holdem-real-plays.test.ts)   */
@@ -130,8 +130,6 @@ const fold = (): Move => ({ actionId: 'fold' as Move['actionId'], params: {} });
 const check = (): Move => ({ actionId: 'check' as Move['actionId'], params: {} });
 const call = (): Move => ({ actionId: 'call' as Move['actionId'], params: {} });
 const raise = (amount: number): Move => ({ actionId: 'raise' as Move['actionId'], params: { raiseAmount: amount } });
-const allIn = (): Move => ({ actionId: 'allIn' as Move['actionId'], params: {} });
-
 /* ------------------------------------------------------------------ */
 /*  Tests                                                              */
 /* ------------------------------------------------------------------ */
@@ -420,7 +418,7 @@ describe('texas hold\'em post-flop betting phases e2e', () => {
       state = applyLoggedMove(def, state, raise(900));
       assert.equal(state.currentPhase, 'turn');
       // P0 re-raises all-in (2370 total street bet = remaining stack)
-      state = applyLoggedMove(def, state, allIn());
+      state = applyLoggedMove(def, state, findAllInMove(def, state));
       assert.equal(state.currentPhase, 'turn');
       assert.equal(state.perPlayerVars['0']?.allIn, true);
       // P1 calls
@@ -430,7 +428,7 @@ describe('texas hold\'em post-flop betting phases e2e', () => {
       assert.equal(state.currentPhase, 'turn');
       state = applyLoggedMove(def, state, raise(900));
       assert.equal(state.currentPhase, 'turn');
-      state = applyLoggedMove(def, state, allIn());
+      state = applyLoggedMove(def, state, findAllInMove(def, state));
       assert.equal(state.currentPhase, 'turn');
       state = applyLoggedMove(def, state, call());
     }
@@ -581,7 +579,7 @@ describe('texas hold\'em post-flop betting phases e2e', () => {
       assert.equal(state.currentPhase, 'river');
       state = applyLoggedMove(def, state, raise(1000));
       assert.equal(state.currentPhase, 'river');
-      state = applyLoggedMove(def, state, allIn());
+      state = applyLoggedMove(def, state, findAllInMove(def, state));
       assert.equal(state.currentPhase, 'river');
       state = applyLoggedMove(def, state, fold());
     } else {
@@ -589,7 +587,7 @@ describe('texas hold\'em post-flop betting phases e2e', () => {
       assert.equal(state.currentPhase, 'river');
       state = applyLoggedMove(def, state, raise(1000));
       assert.equal(state.currentPhase, 'river');
-      state = applyLoggedMove(def, state, allIn());
+      state = applyLoggedMove(def, state, findAllInMove(def, state));
       assert.equal(state.currentPhase, 'river');
       state = applyLoggedMove(def, state, fold());
     }
@@ -693,7 +691,7 @@ describe('texas hold\'em post-flop betting phases e2e', () => {
       state = applyLoggedMove(def, state, raise(3032));
       assert.equal(state.currentPhase, 'flop');
       // P1 raises all-in (9397 total street bet)
-      state = applyLoggedMove(def, state, allIn());
+      state = applyLoggedMove(def, state, findAllInMove(def, state));
       assert.equal(state.currentPhase, 'flop');
       // P0 calls all-in (remaining stack)
       state = applyLoggedMove(def, state, call());
@@ -703,7 +701,7 @@ describe('texas hold\'em post-flop betting phases e2e', () => {
       assert.equal(state.currentPhase, 'flop');
       state = applyLoggedMove(def, state, raise(3032));
       assert.equal(state.currentPhase, 'flop');
-      state = applyLoggedMove(def, state, allIn());
+      state = applyLoggedMove(def, state, findAllInMove(def, state));
       assert.equal(state.currentPhase, 'flop');
       state = applyLoggedMove(def, state, call());
     }

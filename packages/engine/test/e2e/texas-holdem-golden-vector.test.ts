@@ -15,7 +15,7 @@ import {
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
-import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
+import { advancePhaseBounded, findAllInMove, replayScript } from '../helpers/replay-harness.js';
 
 // ---------------------------------------------------------------------------
 // Shared helpers (reused pattern from texas-holdem-real-plays.test.ts)
@@ -539,7 +539,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.activePlayer), 1);
 
     // Bob all-in (80 remaining → total bet 90)
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(state.perPlayerVars[1]!.allIn, true);
     assert.equal(Number(state.perPlayerVars[1]!.chipStack), 0);
     assert.equal(Number(state.activePlayer), 2);
@@ -733,7 +733,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.activePlayer), 1);
 
     // Bob all-in for 200 (his remaining chips after antes+blind+call)
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
     assert.equal(state.perPlayerVars[1]!.allIn, true);
     assert.equal(Number(state.activePlayer), 2);
 
@@ -926,7 +926,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.activePlayer), 0);
 
     // Alice all-in for 108 (all remaining chips after BB of 20)
-    state = applyLoggedMove(def, state, { actionId: 'allIn' as Move['actionId'], params: {} });
+    state = applyLoggedMove(def, state, findAllInMove(def, state));
 
     // Alice total bet = 20 (BB) + 108 = 128. Carol total bet = 200.
     // Uncalled portion = 200 - 128 = 72 returned to Carol.

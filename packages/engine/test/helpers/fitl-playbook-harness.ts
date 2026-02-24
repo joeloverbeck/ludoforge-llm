@@ -246,3 +246,15 @@ export const replayPlaybookTurn = (
   assertPlaybookSnapshot(current, turn.expectedEndState, turn.label);
   return current;
 };
+
+export const replayPlaybookTurns = (
+  def: ValidatedGameDef,
+  state: GameState,
+  turns: readonly PlaybookTurn[],
+): GameState => {
+  let current = state;
+  for (const turn of turns) {
+    current = replayPlaybookTurn(def, current, turn);
+  }
+  return current;
+};

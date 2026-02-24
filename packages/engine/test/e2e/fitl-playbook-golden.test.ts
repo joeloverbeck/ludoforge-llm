@@ -16,6 +16,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   assertPlaybookSnapshot,
   replayPlaybookTurn,
+  replayPlaybookTurns,
   type PlaybookTurn,
 } from '../helpers/fitl-playbook-harness.js';
 
@@ -273,10 +274,15 @@ describe('FITL playbook golden suite', () => {
   // Re-initialize turn flow so the kernel reads the engineered first card's seat order.
   // (Deck engineering replaces cards after initialState, making the cached runtime stale.)
   const engineered = initializeTurnFlowEligibilityState(def, withDeck);
-  let state = advanceToDecisionPoint(def, engineered);
+  const baseState = advanceToDecisionPoint(def, engineered);
+
+  const stateBeforeTurn = (turnIndex: number): GameState => {
+    if (turnIndex === 0) return baseState;
+    return replayPlaybookTurns(def, baseState, PLAYBOOK_TURNS.slice(0, turnIndex));
+  };
 
   it('initial state matches Full Game 1964 setup with playbook deck', () => {
-    assertPlaybookSnapshot(state, {
+    assertPlaybookSnapshot(baseState, {
       globalVars: {
         aid: 15,
         arvnResources: 30,
@@ -302,9 +308,10 @@ describe('FITL playbook golden suite', () => {
     }, 'initial state');
   });
 
-  for (const turn of PLAYBOOK_TURNS) {
+  for (const [turnIndex, turn] of PLAYBOOK_TURNS.entries()) {
     it(turn.label, () => {
-      state = replayPlaybookTurn(def, state, turn);
+      const start = stateBeforeTurn(turnIndex);
+      replayPlaybookTurn(def, start, turn);
     });
   }
 });

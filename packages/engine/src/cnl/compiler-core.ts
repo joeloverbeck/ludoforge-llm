@@ -666,7 +666,9 @@ function mergeZoneSections(
 function mergeTrackGlobalVars(
   explicitGlobalVars: GameDef['globalVars'],
   tracks: readonly NumericTrackDef[] | null,
-  scenarioInitialTrackValues: ReadonlyArray<{ readonly trackId: string; readonly value: number }> | null,
+  scenarioInitialTrackValues:
+    | ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>
+    | null,
   diagnostics: Diagnostic[],
 ): GameDef['globalVars'] {
   if (tracks === null || tracks.length === 0) {
@@ -680,14 +682,14 @@ function mergeTrackGlobalVars(
   const trackInitOverrides = new Map<string, number>();
 
   if (scenarioInitialTrackValues !== null) {
-    for (const [index, entry] of scenarioInitialTrackValues.entries()) {
+    for (const entry of scenarioInitialTrackValues) {
       const track = trackById.get(entry.trackId);
       if (track === undefined) {
         diagnostics.push({
           code: 'CNL_TRACK_SCENARIO_INIT_UNKNOWN',
-          path: `doc.dataAssets.scenario.initialTrackValues.${index}.trackId`,
+          path: entry.path,
           severity: 'error',
-          message: `Scenario initialTrackValues references unknown track "${entry.trackId}".`,
+          message: `Scenario initializations references unknown track "${entry.trackId}".`,
           suggestion: 'Declare the track in the selected map payload.tracks array.',
         });
         continue;
@@ -695,7 +697,7 @@ function mergeTrackGlobalVars(
       if (entry.value < track.min || entry.value > track.max) {
         diagnostics.push({
           code: 'CNL_TRACK_SCENARIO_INIT_OUT_OF_BOUNDS',
-          path: `doc.dataAssets.scenario.initialTrackValues.${index}.value`,
+          path: entry.path.replace(/\.trackId$/, '.value'),
           severity: 'error',
           message: `Scenario initial value ${entry.value} for track "${entry.trackId}" is outside [${track.min}, ${track.max}].`,
           suggestion: 'Use a scenario initial value within declared track bounds.',

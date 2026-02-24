@@ -157,10 +157,10 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(matches.length, 1);
   });
 
-  it('scenario with initialTrackValues out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {
+  it('scenario with track initialization out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialTrackValues: [{ trackId: 'aid', value: 100 }],
+        initializations: [{ trackId: 'aid', value: 100 }],
       }),
     );
 
@@ -172,7 +172,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario with unknown trackId emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialTrackValues: [{ trackId: 'unknown-track', value: 5 }],
+        initializations: [{ trackId: 'unknown-track', value: 5 }],
       }),
     );
 
@@ -181,10 +181,62 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.ok(matches[0]!.message.includes('unknown-track'));
   });
 
+  it('scenario with unknown global-var initialization emits CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_INVALID', () => {
+    const diagnostics = validateGameSpec(
+      createDocWithScenario({
+        initializations: [{ var: 'unknown-global-var', value: 1 }],
+      }),
+    );
+
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_INVALID');
+    assert.equal(matches.length, 1);
+    assert.ok(matches[0]!.message.includes('unknown-global-var'));
+  });
+
+  it('scenario with out-of-bounds track-var initialization emits CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_OUT_OF_BOUNDS', () => {
+    const diagnostics = validateGameSpec(
+      createDocWithScenario({
+        initializations: [{ var: 'aid', value: 100 }],
+      }),
+    );
+
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_OUT_OF_BOUNDS');
+    assert.equal(matches.length, 1);
+    assert.ok(matches[0]!.message.includes('aid'));
+  });
+
+  it('scenario with type mismatch global-var initialization emits CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_TYPE_INVALID', () => {
+    const doc = createDocWithScenario({
+      initializations: [{ var: 'isDemoMode', value: 1 }],
+    });
+    doc.globalVars = [{ name: 'isDemoMode', type: 'boolean', init: false }];
+
+    const diagnostics = validateGameSpec(doc);
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_TYPE_INVALID');
+    assert.equal(matches.length, 1);
+    assert.ok(matches[0]!.message.includes('isDemoMode'));
+  });
+
+  it('scenario with invalid global-marker initialization emits CNL_VALIDATOR_SCENARIO_GLOBAL_MARKER_INVALID', () => {
+    const doc = createDocWithScenario({
+      initializations: [
+        { markerId: 'unknown-marker', state: 'active' },
+        { markerId: 'activeLeader', state: 'invalid-state' },
+      ],
+    });
+    doc.globalMarkerLattices = [{ id: 'activeLeader', states: ['minh', 'youngTurks', 'ky'], defaultState: 'minh' }];
+
+    const diagnostics = validateGameSpec(doc);
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_GLOBAL_MARKER_INVALID');
+    assert.equal(matches.length, 2);
+    assert.ok(matches.some((match) => match.message.includes('unknown-marker')));
+    assert.ok(matches.some((match) => match.message.includes('invalid-state')));
+  });
+
   it('scenario with invalid marker state emits CNL_VALIDATOR_SCENARIO_MARKER_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialMarkers: [{ spaceId: 'saigon', markerId: 'support', state: 'allegiance' }],
+        initializations: [{ spaceId: 'saigon', markerId: 'support', state: 'allegiance' }],
       }),
     );
 
@@ -196,7 +248,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario with invalid marker spaceId emits CNL_VALIDATOR_SCENARIO_MARKER_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialMarkers: [{ spaceId: 'hanoi', markerId: 'support', state: 'neutral' }],
+        initializations: [{ spaceId: 'hanoi', markerId: 'support', state: 'neutral' }],
       }),
     );
 
@@ -208,7 +260,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario with unknown markerId emits CNL_VALIDATOR_SCENARIO_MARKER_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialMarkers: [{ spaceId: 'saigon', markerId: 'unknown-lattice', state: 'neutral' }],
+        initializations: [{ spaceId: 'saigon', markerId: 'unknown-lattice', state: 'neutral' }],
       }),
     );
 

@@ -9,8 +9,10 @@ const validScenarioPayload = {
   scenarioName: 'Full',
   yearRange: '1964-1972',
   initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'us', count: 2 }],
-  initialGlobalVarValues: [{ var: 'leaderBoxCardCount', value: 0 }],
-  initialGlobalMarkerValues: [{ markerId: 'activeLeader', state: 'minh' }],
+  initializations: [
+    { var: 'leaderBoxCardCount', value: 0 },
+    { markerId: 'activeLeader', state: 'minh' },
+  ],
   deckComposition: {
     materializationStrategy: 'pile-coup-mix-v1',
     pileCount: 6,
@@ -44,22 +46,22 @@ describe('scenario payload schema', () => {
     assert.equal(result.success, true);
   });
 
-  it('rejects invalid initialGlobalVarValues value types', () => {
+  it('rejects invalid initialization value types', () => {
     const result = ScenarioPayloadSchema.safeParse({
       ...validScenarioPayload,
-      initialGlobalVarValues: [{ var: 'leaderBoxCardCount', value: 'zero' }],
+      initializations: [{ var: 'leaderBoxCardCount', value: 'zero' }],
     });
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initialGlobalVarValues.0.value'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initializations.0'));
   });
 
-  it('rejects invalid initialGlobalMarkerValues shape', () => {
+  it('rejects invalid global marker initialization shape', () => {
     const result = ScenarioPayloadSchema.safeParse({
       ...validScenarioPayload,
-      initialGlobalMarkerValues: [{ markerId: 'activeLeader' }],
+      initializations: [{ markerId: 'activeLeader' }],
     });
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initialGlobalMarkerValues.0.state'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'initializations.0'));
   });
 
   it('rejects negative placement counts', () => {

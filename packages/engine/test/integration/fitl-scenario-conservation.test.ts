@@ -199,10 +199,15 @@ function computeVictoryMarkers(
 ): VictoryMarkers {
   const placements = scenario.initialPlacements ?? [];
   const spacePieceMap = buildSpacePieceMap(placements);
-  const markers = scenario.initialMarkers;
+  const markers = (scenario.initializations ?? [])
+    .filter((entry): entry is { readonly spaceId: string; readonly markerId: string; readonly state: string } => 'spaceId' in entry)
+    .map((entry) => ({ spaceId: entry.spaceId, markerId: entry.markerId, state: entry.state }));
   const outOfPlay = scenario.outOfPlay;
-  const patronage =
-    scenario.initialTrackValues?.find((t) => t.trackId === 'patronage')?.value ?? 0;
+  const patronageInitialization = (scenario.initializations ?? []).find(
+    (entry): entry is { readonly trackId: string; readonly value: number } =>
+      'trackId' in entry && entry.trackId === 'patronage',
+  );
+  const patronage = patronageInitialization?.value ?? 0;
 
   // Total Support: sum of pop * weight for spaces with support (positive weight)
   let totalSupport = 0;

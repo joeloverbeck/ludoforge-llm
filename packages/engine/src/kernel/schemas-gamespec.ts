@@ -202,45 +202,35 @@ export const ScenarioPayloadSchema = z
     yearRange: StringSchema.min(1).optional(),
     settings: z.record(StringSchema, z.unknown()).optional(),
     initialPlacements: z.array(ScenarioPiecePlacementSchema).optional(),
-    initialTrackValues: z
+    initializations: z
       .array(
-        z
-          .object({
-            trackId: StringSchema.min(1),
-            value: NumberSchema,
-          })
-          .strict(),
-      )
-      .optional(),
-    initialGlobalVarValues: z
-      .array(
-        z
-          .object({
-            var: StringSchema.min(1),
-            value: z.union([NumberSchema, BooleanSchema]),
-          })
-          .strict(),
-      )
-      .optional(),
-    initialGlobalMarkerValues: z
-      .array(
-        z
-          .object({
-            markerId: StringSchema.min(1),
-            state: StringSchema.min(1),
-          })
-          .strict(),
-      )
-      .optional(),
-    initialMarkers: z
-      .array(
-        z
-          .object({
-            spaceId: StringSchema.min(1),
-            markerId: StringSchema.min(1),
-            state: StringSchema.min(1),
-          })
-          .strict(),
+        z.union([
+          z
+            .object({
+              trackId: StringSchema.min(1),
+              value: NumberSchema,
+            })
+            .strict(),
+          z
+            .object({
+              var: StringSchema.min(1),
+              value: z.union([NumberSchema, BooleanSchema]),
+            })
+            .strict(),
+          z
+            .object({
+              markerId: StringSchema.min(1),
+              state: StringSchema.min(1),
+            })
+            .strict(),
+          z
+            .object({
+              spaceId: StringSchema.min(1),
+              markerId: StringSchema.min(1),
+              state: StringSchema.min(1),
+            })
+            .strict(),
+        ]),
       )
       .optional(),
     outOfPlay: z

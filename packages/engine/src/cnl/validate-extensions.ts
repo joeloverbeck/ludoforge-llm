@@ -167,6 +167,8 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       reference.path,
       reference.mapAssetId !== undefined ? resolvedMapPayloads.get(reference.mapAssetId) : undefined,
       reference.pieceCatalogAssetId !== undefined ? resolvedPieceCatalogPayloads.get(reference.pieceCatalogAssetId) : undefined,
+      doc.globalVars,
+      doc.globalMarkerLattices,
       diagnostics,
     );
   }

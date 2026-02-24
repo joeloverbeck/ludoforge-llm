@@ -155,9 +155,9 @@ function buildStateFromScenario(
 
 function buildGlobalVars(scenario: ScenarioPayload): Record<string, number> {
   const vars: Record<string, number> = {};
-  if (scenario.initialTrackValues) {
-    for (const tv of scenario.initialTrackValues) {
-      vars[tv.trackId] = tv.value;
+  for (const init of scenario.initializations ?? []) {
+    if ('trackId' in init) {
+      vars[init.trackId] = init.value;
     }
   }
   return vars;
@@ -169,11 +169,9 @@ function buildGlobalVars(scenario: ScenarioPayload): Record<string, number> {
  */
 function buildMarkerStates(scenario: ScenarioPayload): Record<string, string> {
   const result: Record<string, string> = {};
-  if (scenario.initialMarkers) {
-    for (const m of scenario.initialMarkers) {
-      if (m.markerId === 'supportOpposition') {
-        result[m.spaceId] = m.state;
-      }
+  for (const init of scenario.initializations ?? []) {
+    if ('spaceId' in init && init.markerId === 'supportOpposition') {
+      result[init.spaceId] = init.state;
     }
   }
   return result;

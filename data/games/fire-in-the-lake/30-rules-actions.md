@@ -1007,20 +1007,40 @@ actions:
           args:
             - { op: '==', left: { ref: activePlayer }, right: 0 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
+            - { op: '==', left: { ref: gvar, var: pivotalUsed_card121 }, right: false }
         - op: and
           args:
             - { op: '==', left: { ref: activePlayer }, right: 2 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
+            - { op: '==', left: { ref: gvar, var: pivotalUsed_card122 }, right: false }
         - op: and
           args:
             - { op: '==', left: { ref: activePlayer }, right: 1 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
+            - { op: '==', left: { ref: gvar, var: pivotalUsed_card123 }, right: false }
         - op: and
           args:
             - { op: '==', left: { ref: activePlayer }, right: 3 }
             - { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
+            - { op: '==', left: { ref: gvar, var: pivotalUsed_card124 }, right: false }
     cost: []
-    effects: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
+          then:
+            - setVar: { scope: global, var: pivotalUsed_card121, value: true }
+      - if:
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
+          then:
+            - setVar: { scope: global, var: pivotalUsed_card122, value: true }
+      - if:
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
+          then:
+            - setVar: { scope: global, var: pivotalUsed_card123, value: true }
+      - if:
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
+          then:
+            - setVar: { scope: global, var: pivotalUsed_card124, value: true }
     limits: []
   - { id: train, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: patrol, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }

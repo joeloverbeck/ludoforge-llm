@@ -1092,24 +1092,6 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
-      initialGlobalMarkerValues:
-        - markerId: activeLeader
-          state: minh
-      initialTrackValues:
-        - trackId: aid
-          value: 15
-        - trackId: patronage
-          value: 15
-        - trackId: trail
-          value: 1
-        - trackId: totalEcon
-          value: 15
-        - trackId: vcResources
-          value: 5
-        - trackId: nvaResources
-          value: 10
-        - trackId: arvnResources
-          value: 30
       outOfPlay:
         - pieceTypeId: us-bases
           seat: us
@@ -1137,7 +1119,23 @@ dataAssets:
           availableZoneId: available-NVA:none
         - seat: vc
           availableZoneId: available-VC:none
-      initialMarkers:
+      initializations:
+        - markerId: activeLeader
+          state: minh
+        - trackId: aid
+          value: 15
+        - trackId: patronage
+          value: 15
+        - trackId: trail
+          value: 1
+        - trackId: totalEcon
+          value: 15
+        - trackId: vcResources
+          value: 5
+        - trackId: nvaResources
+          value: 10
+        - trackId: arvnResources
+          value: 30
         - spaceId: saigon:none
           markerId: supportOpposition
           state: passiveSupport
@@ -1422,28 +1420,6 @@ dataAssets:
           - pivotal
         excludedCardIds:
           - card-129
-      initialGlobalMarkerValues:
-        - markerId: activeLeader
-          state: youngTurks
-        - markerId: cap_aaa
-          state: shaded
-      initialTrackValues:
-        - trackId: aid
-          value: 15
-        - trackId: patronage
-          value: 18
-        - trackId: trail
-          value: 2
-        - trackId: totalEcon
-          value: 15
-        - trackId: vcResources
-          value: 10
-        - trackId: nvaResources
-          value: 15
-        - trackId: arvnResources
-          value: 30
-        - trackId: leaderBoxCardCount
-          value: 2
       outOfPlay:
         - pieceTypeId: us-troops
           seat: us
@@ -1465,7 +1441,27 @@ dataAssets:
           availableZoneId: available-NVA:none
         - seat: vc
           availableZoneId: available-VC:none
-      initialMarkers:
+      initializations:
+        - markerId: activeLeader
+          state: youngTurks
+        - markerId: cap_aaa
+          state: shaded
+        - trackId: aid
+          value: 15
+        - trackId: patronage
+          value: 18
+        - trackId: trail
+          value: 2
+        - trackId: totalEcon
+          value: 15
+        - trackId: vcResources
+          value: 10
+        - trackId: nvaResources
+          value: 15
+        - trackId: arvnResources
+          value: 30
+        - trackId: leaderBoxCardCount
+          value: 2
         - spaceId: da-nang:none
           markerId: supportOpposition
           state: activeSupport
@@ -1789,38 +1785,6 @@ dataAssets:
         coupsPerPile: 1
         excludedCardTags:
           - pivotal
-      initialGlobalMarkerValues:
-        - markerId: activeLeader
-          state: ky
-        - markerId: cap_aaa
-          state: shaded
-        - markerId: cap_mainForceBns
-          state: shaded
-        - markerId: cap_sa2s
-          state: shaded
-        - markerId: cap_searchAndDestroy
-          state: shaded
-        - markerId: cap_arcLight
-          state: unshaded
-        - markerId: cap_m48Patton
-          state: unshaded
-      initialTrackValues:
-        - trackId: aid
-          value: 30
-        - trackId: patronage
-          value: 15
-        - trackId: trail
-          value: 3
-        - trackId: totalEcon
-          value: 15
-        - trackId: vcResources
-          value: 15
-        - trackId: nvaResources
-          value: 20
-        - trackId: arvnResources
-          value: 30
-        - trackId: leaderBoxCardCount
-          value: 3
       outOfPlay:
         - pieceTypeId: us-troops
           seat: us
@@ -1842,7 +1806,37 @@ dataAssets:
           availableZoneId: available-NVA:none
         - seat: vc
           availableZoneId: available-VC:none
-      initialMarkers:
+      initializations:
+        - markerId: activeLeader
+          state: ky
+        - markerId: cap_aaa
+          state: shaded
+        - markerId: cap_mainForceBns
+          state: shaded
+        - markerId: cap_sa2s
+          state: shaded
+        - markerId: cap_searchAndDestroy
+          state: shaded
+        - markerId: cap_arcLight
+          state: unshaded
+        - markerId: cap_m48Patton
+          state: unshaded
+        - trackId: aid
+          value: 30
+        - trackId: patronage
+          value: 15
+        - trackId: trail
+          value: 3
+        - trackId: totalEcon
+          value: 15
+        - trackId: vcResources
+          value: 15
+        - trackId: nvaResources
+          value: 20
+        - trackId: arvnResources
+          value: 30
+        - trackId: leaderBoxCardCount
+          value: 3
         - spaceId: binh-dinh:none
           markerId: supportOpposition
           state: activeSupport

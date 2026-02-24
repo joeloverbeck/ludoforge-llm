@@ -27,10 +27,42 @@ interface MarkerLatticeDef {
   readonly states: readonly string[];
 }
 
+interface GlobalVarDef {
+  readonly name: string;
+  readonly type: 'int' | 'boolean';
+  readonly min?: number;
+  readonly max?: number;
+}
+
 interface PieceTypeInfo {
   readonly id: string;
   readonly seat: string;
   readonly statusDimensions: readonly string[];
+}
+
+interface TrackInitializationEntry {
+  readonly path: string;
+  readonly trackId: string;
+  readonly value: number;
+}
+
+interface GlobalVarInitializationEntry {
+  readonly path: string;
+  readonly var: string;
+  readonly value: number | boolean;
+}
+
+interface GlobalMarkerInitializationEntry {
+  readonly path: string;
+  readonly markerId: string;
+  readonly state: string;
+}
+
+interface MarkerInitializationEntry {
+  readonly path: string;
+  readonly spaceId: string;
+  readonly markerId: string;
+  readonly state: string;
 }
 
 const VALIDATOR_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvariantDiagnosticDialect = {
@@ -116,17 +148,27 @@ export function validateScenarioCrossReferences(
   basePath: string,
   mapPayload: Record<string, unknown> | undefined,
   pieceCatalogPayload: Record<string, unknown> | undefined,
+  globalVars: readonly unknown[] | null,
+  globalMarkerLattices: readonly unknown[] | null,
   diagnostics: Diagnostic[],
 ): void {
   const spaceIds = extractMapSpaceIds(mapPayload);
   const trackDefs = extractMapTrackDefs(mapPayload);
   const markerLattices = extractMapMarkerLattices(mapPayload);
+  const globalVarDefs = extractGlobalVarDefs(globalVars, trackDefs);
+  const globalMarkerDefs = extractGlobalMarkerLattices(globalMarkerLattices);
+  const trackInitializations = extractTrackInitializations(payload, basePath);
+  const globalVarInitializations = extractGlobalVarInitializations(payload, basePath);
+  const globalMarkerInitializations = extractGlobalMarkerInitializations(payload, basePath);
+  const markerInitializations = extractMarkerInitializations(payload, basePath);
   const pieceTypeIndex = extractPieceTypeIndex(pieceCatalogPayload);
   const inventoryIndex = extractInventoryIndex(pieceCatalogPayload);
 
   validateInitialPlacements(payload, basePath, spaceIds, diagnostics);
-  validateInitialTrackValues(payload, basePath, trackDefs, diagnostics);
-  validateInitialMarkers(payload, basePath, spaceIds, markerLattices, diagnostics);
+  validateInitialTrackValues(trackInitializations, trackDefs, diagnostics);
+  validateInitialGlobalVarValues(globalVarInitializations, globalVarDefs, diagnostics);
+  validateInitialGlobalMarkerValues(globalMarkerInitializations, globalMarkerDefs, diagnostics);
+  validateInitialMarkers(markerInitializations, spaceIds, markerLattices, diagnostics);
   emitScenarioProjectionInvariantDiagnostics(payload, basePath, pieceTypeIndex, inventoryIndex, diagnostics);
 }
 
@@ -168,6 +210,157 @@ function extractMapMarkerLattices(
       const states = lattice.states.filter((s: unknown): s is string => typeof s === 'string');
       result.set(lattice.id, { id: lattice.id, states });
     }
+  }
+  return result;
+}
+
+function extractGlobalVarDefs(
+  globalVars: readonly unknown[] | null,
+  trackDefs: ReadonlyMap<string, TrackDef>,
+): ReadonlyMap<string, GlobalVarDef> {
+  const result = new Map<string, GlobalVarDef>();
+  for (const track of trackDefs.values()) {
+    result.set(track.id, {
+      name: track.id,
+      type: 'int',
+      min: track.min,
+      max: track.max,
+    });
+  }
+
+  if (globalVars === null) {
+    return result;
+  }
+
+  for (const variable of globalVars) {
+    if (!isRecord(variable) || typeof variable.name !== 'string') {
+      continue;
+    }
+    if (variable.type !== 'int' && variable.type !== 'boolean') {
+      continue;
+    }
+
+    result.set(variable.name, {
+      name: variable.name,
+      type: variable.type,
+      ...(isFiniteNumber(variable.min) ? { min: variable.min } : {}),
+      ...(isFiniteNumber(variable.max) ? { max: variable.max } : {}),
+    });
+  }
+  return result;
+}
+
+function extractGlobalMarkerLattices(
+  globalMarkerLattices: readonly unknown[] | null,
+): ReadonlyMap<string, MarkerLatticeDef> {
+  const result = new Map<string, MarkerLatticeDef>();
+  if (globalMarkerLattices === null) {
+    return result;
+  }
+
+  for (const lattice of globalMarkerLattices) {
+    if (!isRecord(lattice) || typeof lattice.id !== 'string' || !Array.isArray(lattice.states)) {
+      continue;
+    }
+    const states = lattice.states.filter((s: unknown): s is string => typeof s === 'string');
+    result.set(lattice.id, { id: lattice.id, states });
+  }
+  return result;
+}
+
+function extractTrackInitializations(
+  payload: Record<string, unknown>,
+  basePath: string,
+): readonly TrackInitializationEntry[] {
+  if (!Array.isArray(payload.initializations)) {
+    return [];
+  }
+
+  const result: TrackInitializationEntry[] = [];
+  for (const [index, entry] of payload.initializations.entries()) {
+    if (!isRecord(entry) || typeof entry.trackId !== 'string' || !isFiniteNumber(entry.value)) {
+      continue;
+    }
+    result.push({
+      path: `${basePath}.initializations.${index}`,
+      trackId: entry.trackId,
+      value: entry.value,
+    });
+  }
+  return result;
+}
+
+function extractGlobalVarInitializations(
+  payload: Record<string, unknown>,
+  basePath: string,
+): readonly GlobalVarInitializationEntry[] {
+  if (!Array.isArray(payload.initializations)) {
+    return [];
+  }
+
+  const result: GlobalVarInitializationEntry[] = [];
+  for (const [index, entry] of payload.initializations.entries()) {
+    if (!isRecord(entry) || typeof entry.var !== 'string') {
+      continue;
+    }
+    if (!isFiniteNumber(entry.value) && typeof entry.value !== 'boolean') {
+      continue;
+    }
+    result.push({
+      path: `${basePath}.initializations.${index}`,
+      var: entry.var,
+      value: entry.value,
+    });
+  }
+  return result;
+}
+
+function extractGlobalMarkerInitializations(
+  payload: Record<string, unknown>,
+  basePath: string,
+): readonly GlobalMarkerInitializationEntry[] {
+  if (!Array.isArray(payload.initializations)) {
+    return [];
+  }
+
+  const result: GlobalMarkerInitializationEntry[] = [];
+  for (const [index, entry] of payload.initializations.entries()) {
+    if (!isRecord(entry) || typeof entry.markerId !== 'string' || typeof entry.state !== 'string' || 'spaceId' in entry) {
+      continue;
+    }
+    result.push({
+      path: `${basePath}.initializations.${index}`,
+      markerId: entry.markerId,
+      state: entry.state,
+    });
+  }
+  return result;
+}
+
+function extractMarkerInitializations(
+  payload: Record<string, unknown>,
+  basePath: string,
+): readonly MarkerInitializationEntry[] {
+  if (!Array.isArray(payload.initializations)) {
+    return [];
+  }
+
+  const result: MarkerInitializationEntry[] = [];
+  for (const [index, entry] of payload.initializations.entries()) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.spaceId !== 'string' ||
+      typeof entry.markerId !== 'string' ||
+      typeof entry.state !== 'string'
+    ) {
+      continue;
+    }
+    result.push({
+      path: `${basePath}.initializations.${index}`,
+      spaceId: entry.spaceId,
+      markerId: entry.markerId,
+      state: entry.state,
+    });
   }
   return result;
 }
@@ -234,35 +427,25 @@ function validateInitialPlacements(
 }
 
 function validateInitialTrackValues(
-  payload: Record<string, unknown>,
-  basePath: string,
+  initializations: readonly TrackInitializationEntry[],
   trackDefs: ReadonlyMap<string, TrackDef>,
   diagnostics: Diagnostic[],
 ): void {
-  if (!Array.isArray(payload.initialTrackValues)) {
-    return;
-  }
-
-  for (const [index, entry] of payload.initialTrackValues.entries()) {
-    if (!isRecord(entry)) {
-      continue;
-    }
-    const entryPath = `${basePath}.initialTrackValues.${index}`;
-
-    if (typeof entry.trackId === 'string' && trackDefs.size > 0) {
+  for (const entry of initializations) {
+    if (trackDefs.size > 0) {
       const trackDef = trackDefs.get(entry.trackId);
       if (trackDef === undefined) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_SCENARIO_TRACK_VALUE_INVALID',
-          path: `${entryPath}.trackId`,
+          path: `${entry.path}.trackId`,
           severity: 'error',
-          message: `Unknown track "${entry.trackId}" in scenario initialTrackValues.`,
+          message: `Unknown track "${entry.trackId}" in scenario initializations.`,
           suggestion: 'Use a track id declared in the referenced map asset.',
         });
-      } else if (isFiniteNumber(entry.value) && (entry.value < trackDef.min || entry.value > trackDef.max)) {
+      } else if (entry.value < trackDef.min || entry.value > trackDef.max) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS',
-          path: `${entryPath}.value`,
+          path: `${entry.path}.value`,
           severity: 'error',
           message: `Track "${entry.trackId}" value ${entry.value} is out of bounds [${trackDef.min}, ${trackDef.max}].`,
           suggestion: `Set value between ${trackDef.min} and ${trackDef.max}.`,
@@ -272,44 +455,136 @@ function validateInitialTrackValues(
   }
 }
 
+function validateInitialGlobalVarValues(
+  initializations: readonly GlobalVarInitializationEntry[],
+  globalVarDefs: ReadonlyMap<string, GlobalVarDef>,
+  diagnostics: Diagnostic[],
+): void {
+  for (const entry of initializations) {
+    if (globalVarDefs.size === 0) {
+      continue;
+    }
+
+    const globalVar = globalVarDefs.get(entry.var);
+    if (globalVar === undefined) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_INVALID',
+        path: `${entry.path}.var`,
+        severity: 'error',
+        message: `Unknown global var "${entry.var}" in scenario initializations.`,
+        suggestion: 'Use a global var declared in doc.globalVars or a track id declared in map payload.tracks.',
+      });
+      continue;
+    }
+
+    if (globalVar.type === 'boolean') {
+      if (typeof entry.value !== 'boolean') {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_TYPE_INVALID',
+          path: `${entry.path}.value`,
+          severity: 'error',
+          message: `Scenario value for boolean global var "${entry.var}" must be true/false.`,
+          suggestion: 'Set value to true or false.',
+        });
+      }
+      continue;
+    }
+
+    if (!isFiniteNumber(entry.value)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_TYPE_INVALID',
+        path: `${entry.path}.value`,
+        severity: 'error',
+        message: `Scenario value for int global var "${entry.var}" must be numeric.`,
+        suggestion: 'Set value to an integer within bounds.',
+      });
+      continue;
+    }
+
+    if (globalVar.min !== undefined && entry.value < globalVar.min) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_OUT_OF_BOUNDS',
+        path: `${entry.path}.value`,
+        severity: 'error',
+        message: `Scenario value ${entry.value} for global var "${entry.var}" is below min ${globalVar.min}.`,
+        suggestion: `Set value >= ${globalVar.min}.`,
+      });
+      continue;
+    }
+    if (globalVar.max !== undefined && entry.value > globalVar.max) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_VAR_OUT_OF_BOUNDS',
+        path: `${entry.path}.value`,
+        severity: 'error',
+        message: `Scenario value ${entry.value} for global var "${entry.var}" is above max ${globalVar.max}.`,
+        suggestion: `Set value <= ${globalVar.max}.`,
+      });
+    }
+  }
+}
+
+function validateInitialGlobalMarkerValues(
+  initializations: readonly GlobalMarkerInitializationEntry[],
+  globalMarkerDefs: ReadonlyMap<string, MarkerLatticeDef>,
+  diagnostics: Diagnostic[],
+): void {
+  for (const entry of initializations) {
+    if (globalMarkerDefs.size === 0) {
+      continue;
+    }
+    const marker = globalMarkerDefs.get(entry.markerId);
+    if (marker === undefined) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_MARKER_INVALID',
+        path: `${entry.path}.markerId`,
+        severity: 'error',
+        message: `Unknown global marker lattice "${entry.markerId}" in scenario initializations.`,
+        suggestion: 'Use a marker id declared in doc.globalMarkerLattices.',
+      });
+      continue;
+    }
+
+    if (typeof entry.state === 'string' && !marker.states.includes(entry.state)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_SCENARIO_GLOBAL_MARKER_INVALID',
+        path: `${entry.path}.state`,
+        severity: 'error',
+        message: `Invalid global marker state "${entry.state}" for marker "${entry.markerId}".`,
+        suggestion: `Use one of: ${marker.states.join(', ')}.`,
+      });
+    }
+  }
+}
+
 function validateInitialMarkers(
-  payload: Record<string, unknown>,
-  basePath: string,
+  initializations: readonly MarkerInitializationEntry[],
   spaceIds: ReadonlySet<string>,
   markerLattices: ReadonlyMap<string, MarkerLatticeDef>,
   diagnostics: Diagnostic[],
 ): void {
-  if (!Array.isArray(payload.initialMarkers)) {
-    return;
-  }
-
-  for (const [index, marker] of payload.initialMarkers.entries()) {
-    if (!isRecord(marker)) {
-      continue;
-    }
-    const markerPath = `${basePath}.initialMarkers.${index}`;
-
-    if (typeof marker.spaceId === 'string' && spaceIds.size > 0 && !spaceIds.has(marker.spaceId)) {
+  for (const marker of initializations) {
+    const markerPath = marker.path;
+    if (spaceIds.size > 0 && !spaceIds.has(marker.spaceId)) {
       diagnostics.push({
         code: 'CNL_VALIDATOR_SCENARIO_MARKER_INVALID',
         path: `${markerPath}.spaceId`,
         severity: 'error',
-        message: `Unknown space "${marker.spaceId}" in scenario initialMarkers.`,
+        message: `Unknown space "${marker.spaceId}" in scenario initializations.`,
         suggestion: 'Use a space id declared in the referenced map asset.',
       });
     }
 
-    if (typeof marker.markerId === 'string' && markerLattices.size > 0) {
+    if (markerLattices.size > 0) {
       const lattice = markerLattices.get(marker.markerId);
       if (lattice === undefined) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_SCENARIO_MARKER_INVALID',
           path: `${markerPath}.markerId`,
           severity: 'error',
-          message: `Unknown marker lattice "${marker.markerId}" in scenario initialMarkers.`,
+          message: `Unknown marker lattice "${marker.markerId}" in scenario initializations.`,
           suggestion: 'Use a marker lattice id declared in the referenced map asset.',
         });
-      } else if (typeof marker.state === 'string' && !lattice.states.includes(marker.state)) {
+      } else if (!lattice.states.includes(marker.state)) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_SCENARIO_MARKER_INVALID',
           path: `${markerPath}.state`,

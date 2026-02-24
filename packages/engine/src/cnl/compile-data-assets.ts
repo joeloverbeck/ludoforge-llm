@@ -60,7 +60,9 @@ export function deriveSectionsFromDataAssets(
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
   readonly seats: readonly SeatDef[] | null;
   readonly tracks: readonly NumericTrackDef[] | null;
-  readonly scenarioInitialTrackValues: ReadonlyArray<{ readonly trackId: string; readonly value: number }> | null;
+  readonly scenarioInitialTrackValues:
+    | ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>
+    | null;
   readonly markerLattices: readonly SpaceMarkerLatticeDef[] | null;
   readonly spaceMarkers: readonly SpaceMarkerValueDef[] | null;
   readonly stackingConstraints: readonly StackingConstraint[] | null;
@@ -109,7 +111,7 @@ export function deriveSectionsFromDataAssets(
     readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
-    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
+    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
     readonly path: string;
     readonly entityId: string;
   }> = [];
@@ -186,7 +188,9 @@ export function deriveSectionsFromDataAssets(
         payload,
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
-        ...(payload.initialTrackValues === undefined ? {} : { initialTrackValues: payload.initialTrackValues }),
+        ...(payload.initializations === undefined
+          ? {}
+          : { initialTrackValues: collectScenarioTrackInitializations(payload.initializations, `${pathPrefix}.payload`) }),
         path: `${pathPrefix}.payload`,
         entityId: validated.asset.id,
       });
@@ -320,7 +324,7 @@ function selectScenarioRef(
     readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
-    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
+    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
     readonly path: string;
     readonly entityId: string;
   }>,
@@ -332,7 +336,7 @@ function selectScenarioRef(
         readonly payload: ScenarioPayload;
         readonly mapAssetId?: string;
         readonly pieceCatalogAssetId?: string;
-        readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
+        readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
         readonly path: string;
         readonly entityId: string;
       }
@@ -394,6 +398,24 @@ const inferRuntimePropSchema = (
     ]),
   );
 
+const collectScenarioTrackInitializations = (
+  initializations: NonNullable<ScenarioPayload['initializations']>,
+  basePath: string,
+): ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }> => {
+  const trackInitializations: Array<{ readonly trackId: string; readonly value: number; readonly path: string }> = [];
+  for (const [index, entry] of initializations.entries()) {
+    if (!('trackId' in entry)) {
+      continue;
+    }
+    trackInitializations.push({
+      trackId: entry.trackId,
+      value: entry.value,
+      path: `${basePath}.initializations.${index}.trackId`,
+    });
+  }
+  return trackInitializations;
+};
+
 interface ScenarioSetupContext {
   readonly selectedScenario:
     | {
@@ -440,22 +462,35 @@ const buildScenarioSetupEffects = ({
 
   const poolBySeat = new Map((scenario.seatPools ?? []).map((pool) => [pool.seat, pool]));
   const effects: EffectAST[] = [];
-  for (const entry of scenario.initialGlobalVarValues ?? []) {
-    effects.push({
-      setVar: {
-        scope: 'global',
-        var: entry.var,
-        value: entry.value,
-      },
-    });
-  }
-  for (const entry of scenario.initialGlobalMarkerValues ?? []) {
-    effects.push({
-      setGlobalMarker: {
-        marker: entry.markerId,
-        state: entry.state,
-      },
-    });
+  for (const entry of scenario.initializations ?? []) {
+    if ('var' in entry) {
+      effects.push({
+        setVar: {
+          scope: 'global',
+          var: entry.var,
+          value: entry.value,
+        },
+      });
+      continue;
+    }
+    if ('spaceId' in entry) {
+      effects.push({
+        setMarker: {
+          space: entry.spaceId,
+          marker: entry.markerId,
+          state: entry.state,
+        },
+      });
+      continue;
+    }
+    if ('markerId' in entry) {
+      effects.push({
+        setGlobalMarker: {
+          marker: entry.markerId,
+          state: entry.state,
+        },
+      });
+    }
   }
   const usedByPieceType = new Map<string, number>();
   const pieceTypeSeatById = new Map<string, string>();

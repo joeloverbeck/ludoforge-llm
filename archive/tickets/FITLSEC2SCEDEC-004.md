@@ -1,9 +1,9 @@
 # FITLSEC2SCEDEC-004: Enforce Pivotal Event Single-Use via Global Vars
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: None — data + vocabulary only
+**Engine Changes**: None — FITL data + vocabulary only
 **Deps**: None (Spec 44, Gap 4). Independent of FITLSEC2SCEDEC-001/002/003.
 
 ## Problem
@@ -15,53 +15,46 @@ The `pivotalEvent` action in `30-rules-actions.md` (line ~996) has empty `effect
 1. `pivotalEvent` action at `30-rules-actions.md:996-1024` — confirmed: `effects: []`, `limits: []`, precondition checks only player-to-card mapping.
 2. No `pivotalUsed_*` global vars exist in `10-vocabulary.md` — confirmed (grep returned no matches).
 3. The precondition (`pre`) field uses `{ ref: activePlayer }` to match player index to card ID (US=0→card-121, ARVN=1→card-123, NVA=2→card-122, VC=3→card-124) — confirmed.
-4. The `{ ref: globalVar, name: ... }` reference pattern is used elsewhere in the game spec for boolean/int flag checks — to be verified during implementation.
+4. Global variable references in FITL action preconditions/effects use `{ ref: gvar, var: ... }` (not `{ ref: globalVar, name: ... }`) — confirmed.
+5. Conditional effects use `if: { when: ..., then: ..., else?: ... }` shape (not `condition`) — confirmed.
 5. Cancellation: if the interrupt system cancels before effects run, the used flag is never set, correctly allowing reuse — this is the current engine behavior.
 
 ## Architecture Check
 
 1. Uses existing vocabulary + precondition + effect mechanisms. No new engine primitives needed.
 2. Game-specific data stays in `data/games/fire-in-the-lake/`. No kernel/compiler/runtime changes.
-3. 4 new `globalVars` with `type: int, init: 0, min: 0, max: 1` serve as boolean flags.
+3. 4 new `globalVars` with `type: boolean, init: false` encode single-use state directly.
 4. No aliasing or shims introduced.
 
 ## What to Change
 
 ### 1. Add 4 pivotal-used globalVars to vocabulary
 
-In `data/games/fire-in-the-lake/10-vocabulary.md`, add to the `globalVars` section (after the existing `leaderBoxCardCount` entry at line ~355):
+In `data/games/fire-in-the-lake/10-vocabulary.md`, add to the `globalVars` section:
 
 ```yaml
   - name: pivotalUsed_card121
-    type: int
-    init: 0
-    min: 0
-    max: 1
+    type: boolean
+    init: false
   - name: pivotalUsed_card122
-    type: int
-    init: 0
-    min: 0
-    max: 1
+    type: boolean
+    init: false
   - name: pivotalUsed_card123
-    type: int
-    init: 0
-    min: 0
-    max: 1
+    type: boolean
+    init: false
   - name: pivotalUsed_card124
-    type: int
-    init: 0
-    min: 0
-    max: 1
+    type: boolean
+    init: false
 ```
 
 ### 2. Add "not already used" precondition to each pivotalEvent branch
 
 In `data/games/fire-in-the-lake/30-rules-actions.md`, extend each `op: and` branch in the `pivotalEvent` action's `pre` field with a third condition checking the corresponding used flag equals 0:
 
-- US branch (player 0, card-121): add `{ op: '==', left: { ref: globalVar, name: pivotalUsed_card121 }, right: 0 }`
-- NVA branch (player 2, card-122): add `{ op: '==', left: { ref: globalVar, name: pivotalUsed_card122 }, right: 0 }`
-- ARVN branch (player 1, card-123): add `{ op: '==', left: { ref: globalVar, name: pivotalUsed_card123 }, right: 0 }`
-- VC branch (player 3, card-124): add `{ op: '==', left: { ref: globalVar, name: pivotalUsed_card124 }, right: 0 }`
+- US branch (player 0, card-121): add `{ op: '==', left: { ref: gvar, var: pivotalUsed_card121 }, right: false }`
+- NVA branch (player 2, card-122): add `{ op: '==', left: { ref: gvar, var: pivotalUsed_card122 }, right: false }`
+- ARVN branch (player 1, card-123): add `{ op: '==', left: { ref: gvar, var: pivotalUsed_card123 }, right: false }`
+- VC branch (player 3, card-124): add `{ op: '==', left: { ref: gvar, var: pivotalUsed_card124 }, right: false }`
 
 ### 3. Add set-used-flag effects to pivotalEvent
 
@@ -70,21 +63,21 @@ Replace the empty `effects: []` with conditional `setVar` effects that mark the 
 ```yaml
     effects:
       - if:
-          condition: { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-121 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card121, value: 1 }
+            - setVar: { scope: global, var: pivotalUsed_card121, value: true }
       - if:
-          condition: { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-122 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card122, value: 1 }
+            - setVar: { scope: global, var: pivotalUsed_card122, value: true }
       - if:
-          condition: { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-123 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card123, value: 1 }
+            - setVar: { scope: global, var: pivotalUsed_card123, value: true }
       - if:
-          condition: { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
+          when: { op: '==', left: { ref: binding, name: eventCardId }, right: card-124 }
           then:
-            - setVar: { scope: global, var: pivotalUsed_card124, value: 1 }
+            - setVar: { scope: global, var: pivotalUsed_card124, value: true }
 ```
 
 ## Files to Touch
@@ -107,10 +100,11 @@ Replace the empty `effects: []` with conditional `setVar` effects that mark the 
 
 1. `pnpm turbo build` — clean compilation
 2. `pnpm turbo test` — all existing tests pass
-3. **New test — vocabulary**: Compile production spec, confirm 4 new globalVars (`pivotalUsed_card121` through `pivotalUsed_card124`) exist with `init: 0`, `min: 0`, `max: 1`.
+3. **New test — vocabulary**: Compile production spec, confirm 4 new boolean globalVars (`pivotalUsed_card121` through `pivotalUsed_card124`) exist with `init: false`.
 4. **New test — precondition**: Compile production spec, find the `pivotalEvent` action definition, and assert each of the 4 `op: and` branches has 3 conditions (player match + card match + used-flag-is-0).
 5. **New test — effects**: Compile production spec, find the `pivotalEvent` action definition, and assert `effects` contains 4 conditional `setVar` entries (one per pivotal card ID).
-6. **New test — behavioral**: After compiling with full scenario, initialize state, verify `pivotalUsed_card121` through `pivotalUsed_card124` are all 0 in initial `state.globalVars`.
+6. **New test — behavioral (initial state)**: After compiling with full scenario, initialize state, verify `pivotalUsed_card121` through `pivotalUsed_card124` are all `false` in initial `state.globalVars`.
+7. **New test — behavioral (single-use)**: Execute `pivotalEvent` once for an eligible seat/card pair, then re-open a pivotal pre-action window and verify the same seat/card is no longer legal due to used-flag gating.
 
 ### Invariants
 
@@ -124,9 +118,27 @@ Replace the empty `effects: []` with conditional `setVar` effects that mark the 
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/fitl-pivotal-single-use.test.ts` — new test file exercising vocabulary, precondition structure, effects structure, and initial state via `compileProductionSpec()`.
+1. `packages/engine/test/integration/fitl-pivotal-single-use.test.ts` — new test file exercising vocabulary, precondition structure, effects structure, initial state, and runtime single-use behavior via `compileProductionSpec()`.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-02-24
+- **What changed**:
+  - Added four pivotal single-use boolean global vars in `10-vocabulary.md`.
+  - Updated `pivotalEvent` preconditions in `30-rules-actions.md` to require corresponding used flag = `false`.
+  - Added conditional `setVar` effects in `pivotalEvent` to mark the matching pivotal as used on execution.
+  - Added integration test `packages/engine/test/integration/fitl-pivotal-single-use.test.ts` covering structure + runtime single-use behavior.
+- **Deviations from original plan**:
+  - Used canonical DSL forms already present in FITL data: `{ ref: gvar, var: ... }` and `if.when`.
+  - Used boolean vars (`type: boolean`, `init: false`) instead of int-as-boolean flags for stronger type clarity.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.
+  - `pnpm turbo build` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo lint` passed.

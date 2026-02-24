@@ -191,10 +191,12 @@ describe('exhaustive kernel unions', () => {
       scenarioName: 'Foundation',
       yearRange: '1964-1967',
       initialPlacements: [placement],
-      initialTrackValues: [{ trackId: 'patronage', value: 15 }],
-      initialGlobalVarValues: [{ var: 'leaderBoxCardCount', value: 2 }],
-      initialGlobalMarkerValues: [{ markerId: 'activeLeader', state: 'youngTurks' }],
-      initialMarkers: [{ spaceId: 'saigon', markerId: 'support', state: 'activeSupport' }],
+      initializations: [
+        { trackId: 'patronage', value: 15 },
+        { var: 'leaderBoxCardCount', value: 2 },
+        { markerId: 'activeLeader', state: 'youngTurks' },
+        { spaceId: 'saigon', markerId: 'support', state: 'activeSupport' },
+      ],
       outOfPlay: [{ pieceTypeId: 'base', seat: 'us', count: 1 }],
       deckComposition,
     };
@@ -208,8 +210,8 @@ describe('exhaustive kernel unions', () => {
     void readonlyGuard;
 
     const deckShapeGuard = (deck: ScenarioDeckComposition): void => {
-      // @ts-expect-error initialGlobalVarValues belongs on ScenarioPayload, not ScenarioDeckComposition.
-      void deck.initialGlobalVarValues;
+      // @ts-expect-error initializations belongs on ScenarioPayload, not ScenarioDeckComposition.
+      void deck.initializations;
     };
     void deckShapeGuard;
   });

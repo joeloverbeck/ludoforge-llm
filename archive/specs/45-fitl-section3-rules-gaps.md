@@ -1,6 +1,6 @@
 # Spec 45: FITL Section 3 Rules Gaps
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs)
@@ -344,3 +344,10 @@ All existing FITL compilation tests must continue to pass after YAML changes:
 
 - Texas Hold'em compilation tests must still pass (engine-agnosticism check)
 - No new kernel or compiler source files created or modified
+
+## Outcome
+
+- Completion date: 2026-02-24
+- What was actually changed: Implemented FITL Section 3 data-only YAML updates for patrol multi-hop cube sourcing and ARVN/NVA/VC operation affordability clamping as defined in FITLSEC3-001, FITLSEC3-002, and FITLSEC3-003.
+- Deviations from original plan: None noted.
+- Verification results: Implementation was marked complete and this spec is now archived per request.

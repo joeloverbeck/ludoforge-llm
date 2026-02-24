@@ -2900,6 +2900,7 @@ actionPipelines:
           - macro: insurgent-march-select-destinations
             args:
               faction: 'NVA'
+              resourceVar: nvaResources
       - stage: resolve-per-destination
         effects:
           - forEach:
@@ -2967,6 +2968,7 @@ actionPipelines:
           - macro: insurgent-march-select-destinations
             args:
               faction: 'VC'
+              resourceVar: vcResources
       - stage: resolve-per-destination
         effects:
           - forEach:
@@ -2998,6 +3000,7 @@ actionPipelines:
           - macro: insurgent-attack-select-spaces
             args:
               faction: 'NVA'
+              resourceVar: nvaResources
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -3089,6 +3092,7 @@ actionPipelines:
           - macro: insurgent-attack-select-spaces
             args:
               faction: 'VC'
+              resourceVar: vcResources
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -3139,6 +3143,7 @@ actionPipelines:
             args:
               faction: 'NVA'
               includeTroops: true
+              resourceVar: nvaResources
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -3166,6 +3171,7 @@ actionPipelines:
             args:
               faction: 'VC'
               includeTroops: false
+              resourceVar: vcResources
       - stage: resolve-per-space
         effects:
           - forEach:

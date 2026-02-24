@@ -86,7 +86,9 @@ describe('FITL insurgent operations integration', () => {
       assert.ok(resolveDestination, `${expected.id} should include resolve-per-destination stage`);
 
       const selectMacroCalls = findDeep(selectDestinations.effects, (node) =>
-        node?.macro === 'insurgent-march-select-destinations' && node?.args?.faction === expected.faction,
+        node?.macro === 'insurgent-march-select-destinations' &&
+        node?.args?.faction === expected.faction &&
+        node?.args?.resourceVar === expected.resourceVar,
       );
       assert.ok(selectMacroCalls.length >= 1, `${expected.id} should call insurgent-march-select-destinations macro`);
 
@@ -102,8 +104,8 @@ describe('FITL insurgent operations integration', () => {
 
   it('uses shared attack selector/removal macros in both NVA and VC attack profiles', () => {
     for (const expected of [
-      { id: 'attack-nva-profile', faction: 'NVA' },
-      { id: 'attack-vc-profile', faction: 'VC' },
+      { id: 'attack-nva-profile', faction: 'NVA', resourceVar: 'nvaResources' },
+      { id: 'attack-vc-profile', faction: 'VC', resourceVar: 'vcResources' },
     ]) {
       const profile = parseProfile(expected.id);
       const selectSpaces = profile.stages.find((stage: { stage: string }) => stage.stage === 'select-spaces');
@@ -112,7 +114,9 @@ describe('FITL insurgent operations integration', () => {
       assert.ok(resolvePerSpace, `${expected.id} should include resolve-per-space stage`);
 
       const selectorMacros = findDeep(selectSpaces.effects, (node) =>
-        node?.macro === 'insurgent-attack-select-spaces' && node?.args?.faction === expected.faction,
+        node?.macro === 'insurgent-attack-select-spaces' &&
+        node?.args?.faction === expected.faction &&
+        node?.args?.resourceVar === expected.resourceVar,
       );
       assert.ok(selectorMacros.length >= 1, `${expected.id} should call insurgent-attack-select-spaces macro`);
 
@@ -142,7 +146,8 @@ describe('FITL insurgent operations integration', () => {
       const selectorMacros = findDeep(selectSpaces.effects, (node) =>
         node?.macro === 'insurgent-terror-select-spaces' &&
         node?.args?.faction === expected.faction &&
-        node?.args?.includeTroops === expected.includeTroops,
+        node?.args?.includeTroops === expected.includeTroops &&
+        node?.args?.resourceVar === expected.resourceVar,
       );
       assert.ok(selectorMacros.length >= 1, `${expected.id} should call insurgent-terror-select-spaces macro`);
 
@@ -688,6 +693,96 @@ describe('FITL insurgent operations integration', () => {
     );
   });
 
+  it('caps paid Terror target selection by resources while preserving LoC/free-operation behavior', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const nvaSetup = addTokenToZone(
+      addTokenToZone(
+        {
+          ...operationInitialState(def, 205, 4),
+          activePlayer: asPlayerId(2),
+          globalVars: {
+            ...operationInitialState(def, 205, 4).globalVars,
+            nvaResources: 0,
+            terrorSabotageMarkersPlaced: 0,
+          },
+        },
+        ATTACK_SPACE,
+        {
+          id: asTokenId('terror-affordability-nva-paid'),
+          type: 'nva-troops',
+          props: { faction: 'NVA', type: 'troops' },
+        },
+      ),
+      LOC_SPACE,
+      {
+        id: asTokenId('terror-affordability-nva-loc'),
+        type: 'nva-troops',
+        props: { faction: 'NVA', type: 'troops' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+          actionId: asActionId('terror'),
+          params: { targetSpaces: [ATTACK_SPACE] },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid NVA Terror with 0 resources should reject Province/City target selection',
+    );
+
+    const nvaLocFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [LOC_SPACE] },
+    }).state;
+    assert.equal(nvaLocFinal.globalVars.nvaResources, 0, 'NVA Terror should allow LoC target selection at 0 resources');
+
+    const nvaFreeFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+      actionId: asActionId('terror'),
+      freeOperation: true,
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+    assert.equal(nvaFreeFinal.globalVars.nvaResources, 0, 'Free-operation NVA Terror should bypass paid selector cap');
+
+    const vcSetup = addTokenToZone(
+      {
+        ...operationInitialState(def, 206, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...operationInitialState(def, 206, 4).globalVars,
+          vcResources: 0,
+          terrorSabotageMarkersPlaced: 0,
+        },
+      },
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-affordability-vc-paid'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, vcSetup, {
+          actionId: asActionId('terror'),
+          params: { targetSpaces: [ATTACK_SPACE] },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid VC Terror with 0 resources should reject Province/City target selection',
+    );
+
+    const vcFreeFinal = applyMoveWithResolvedDecisionIds(def, vcSetup, {
+      actionId: asActionId('terror'),
+      freeOperation: true,
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+    assert.equal(vcFreeFinal.globalVars.vcResources, 0, 'Free-operation VC Terror should bypass paid selector cap');
+  });
+
   it('executes attack through attack-nva-profile when active player is NVA', () => {
     const { compiled } = compileProductionSpec();
 
@@ -1047,6 +1142,88 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(nonFree.globalVars.vcResources, 4, 'Non-free VC March should spend 1 resource for Province/City destination');
     assert.equal(free.globalVars.vcResources, 5, 'Free VC March should skip per-space Province/City spend');
+  });
+
+  it('caps paid March destination selection by resources while preserving LoC/free-operation behavior', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const nvaMover = asTokenId('march-affordability-nva-g');
+    const nvaSetup = addTokenToZone(
+      {
+        ...operationInitialState(def, 127, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...operationInitialState(def, 127, 4).globalVars,
+          nvaResources: 0,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: nvaMover,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+          actionId: asActionId('march'),
+          params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [nvaMover], $movingTroops: [] },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid NVA March with 0 resources should reject Province/City destination selection',
+    );
+
+    const nvaLocFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [LOC_SPACE], $movingGuerrillas: [nvaMover], $movingTroops: [] },
+    }).state;
+    assert.equal(nvaLocFinal.globalVars.nvaResources, 0, 'NVA March should allow LoC destination selection at 0 resources');
+
+    const nvaFreeFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [nvaMover], $movingTroops: [] },
+    }).state;
+    assert.equal(nvaFreeFinal.globalVars.nvaResources, 0, 'Free-operation NVA March should bypass paid selector cap');
+
+    const vcMover = asTokenId('march-affordability-vc-g');
+    const vcSetup = addTokenToZone(
+      {
+        ...operationInitialState(def, 128, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...operationInitialState(def, 128, 4).globalVars,
+          vcResources: 0,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: vcMover,
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, vcSetup, {
+          actionId: asActionId('march'),
+          params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [vcMover], $movingTroops: [] },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid VC March with 0 resources should reject Province/City destination selection',
+    );
+
+    const vcFreeFinal = applyMoveWithResolvedDecisionIds(def, vcSetup, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [vcMover], $movingTroops: [] },
+    }).state;
+    assert.equal(vcFreeFinal.globalVars.vcResources, 0, 'Free-operation VC March should bypass paid selector cap');
   });
 
   it('activates moving VC guerrillas when destination is LoC/support and moving+COIN > 3', () => {
@@ -1533,6 +1710,122 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(nonFree.globalVars.vcResources, 6, 'Non-free VC attack should spend 1 resource per targeted space');
     assert.equal(free.globalVars.vcResources, 7, 'Free VC attack should skip per-space VC resource spend');
+  });
+
+  it('caps paid Attack target selection by resources and bypasses cap on free operations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const nvaSetup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(
+            addTokenToZone(
+              addTokenToZone(
+                {
+                  ...operationInitialState(def, 213, 4),
+                  activePlayer: asPlayerId(2),
+                  globalVars: {
+                    ...operationInitialState(def, 213, 4).globalVars,
+                    nvaResources: 2,
+                  },
+                },
+                ATTACK_SPACE,
+                { id: asTokenId('attack-affordability-nva-t1'), type: 'nva-troops', props: { faction: 'NVA', type: 'troops' } },
+              ),
+              ATTACK_SPACE,
+              { id: asTokenId('attack-affordability-us-t1'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+            ),
+            RALLY_SPACE_2,
+            { id: asTokenId('attack-affordability-nva-t2'), type: 'nva-troops', props: { faction: 'NVA', type: 'troops' } },
+          ),
+          RALLY_SPACE_2,
+          { id: asTokenId('attack-affordability-us-t2'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+        ),
+        RALLY_SPACE_3,
+        { id: asTokenId('attack-affordability-nva-t3'), type: 'nva-troops', props: { faction: 'NVA', type: 'troops' } },
+      ),
+      RALLY_SPACE_3,
+      { id: asTokenId('attack-affordability-us-t3'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+          actionId: asActionId('attack'),
+          params: {
+            targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2, RALLY_SPACE_3],
+            $attackMode: 'troops-attack',
+          },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid NVA Attack with 2 resources should reject selecting 3 paid spaces',
+    );
+
+    const nvaFreeFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: {
+        targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2, RALLY_SPACE_3],
+        $attackMode: 'troops-attack',
+      },
+    }).state;
+    assert.equal(nvaFreeFinal.globalVars.nvaResources, 2, 'Free-operation NVA Attack should bypass paid selector cap');
+
+    const vcSetup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(
+            {
+              ...operationInitialState(def, 214, 4),
+              activePlayer: asPlayerId(3),
+              globalVars: {
+                ...operationInitialState(def, 214, 4).globalVars,
+                vcResources: 1,
+              },
+            },
+            ATTACK_SPACE,
+            {
+              id: asTokenId('attack-affordability-vc-g1'),
+              type: 'vc-guerrillas',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+            },
+          ),
+          ATTACK_SPACE,
+          { id: asTokenId('attack-affordability-vc-us1'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+        ),
+        RALLY_SPACE_2,
+        {
+          id: asTokenId('attack-affordability-vc-g2'),
+          type: 'vc-guerrillas',
+          props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+        },
+      ),
+      RALLY_SPACE_2,
+      { id: asTokenId('attack-affordability-vc-us2'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, vcSetup, {
+          actionId: asActionId('attack'),
+          params: {
+            targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2],
+          },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid VC Attack with 1 resource should reject selecting 2 paid spaces',
+    );
+
+    const vcFreeFinal = applyMoveWithResolvedDecisionIds(def, vcSetup, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: {
+        targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2],
+      },
+    }).state;
+    assert.equal(vcFreeFinal.globalVars.vcResources, 1, 'Free-operation VC Attack should bypass paid selector cap');
   });
 
   it('treats rally as illegal when active player is not an insurgent faction', () => {

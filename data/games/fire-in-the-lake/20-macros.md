@@ -659,6 +659,7 @@ effectMacros:
   - id: insurgent-attack-select-spaces
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+      - { name: resourceVar, type: string }
     exports: [targetSpaces]
     effects:
       - if:
@@ -693,8 +694,20 @@ effectMacros:
                       - op: '>'
                         left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
                         right: 0
-                min: 1
-                max: 99
+                min:
+                  if:
+                    when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                    then: 1
+                    else:
+                      if:
+                        when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                        then: 1
+                        else: 0
+                max:
+                  if:
+                    when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                    then: 99
+                    else: { ref: gvar, var: { param: resourceVar } }
 
   # ── insurgent-terror-select-spaces ────────────────────────────────────────
   # Shared insurgent Terror map-space selector:
@@ -705,6 +718,7 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: includeTroops, type: value }
+      - { name: resourceVar, type: string }
     exports: [targetSpaces]
     effects:
       - if:
@@ -736,9 +750,17 @@ effectMacros:
                                 right: 0
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                          - op: and
+                            args:
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                 min: 1
                 max: 1
           else:
@@ -768,11 +790,27 @@ effectMacros:
                                 right: 0
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                          - op: and
+                            args:
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                 min: 1
-                max: 99
+                max:
+                  if:
+                    when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                    then: 99
+                    else:
+                      if:
+                        when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                        then: { ref: gvar, var: { param: resourceVar } }
+                        else: 99
 
   # ── insurgent-rally-select-spaces ────────────────────────────────────────
   # Shared insurgent Rally map-space selector:
@@ -1071,6 +1109,7 @@ effectMacros:
   - id: insurgent-march-select-destinations
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+      - { name: resourceVar, type: string }
     exports: [targetSpaces]
     effects:
       - if:
@@ -1085,9 +1124,17 @@ effectMacros:
                     args:
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                          - op: and
+                            args:
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                       - op: '>'
                         left:
                           aggregate:
@@ -1111,9 +1158,17 @@ effectMacros:
                     args:
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                          - op: and
+                            args:
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                       - op: '>'
                         left:
                           aggregate:
@@ -1126,7 +1181,15 @@ effectMacros:
                                 - { prop: type, op: in, value: ['guerrilla', 'troops'] }
                         right: 0
                 min: 1
-                max: 99
+                max:
+                  if:
+                    when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                    then: 99
+                    else:
+                      if:
+                        when: { op: '>', left: { ref: gvar, var: { param: resourceVar } }, right: 0 }
+                        then: { ref: gvar, var: { param: resourceVar } }
+                        else: 99
 
   # ── bombard-select-spaces ──────────────────────────────────────────────────
   # Shared Bombard target-space selector with capability-conditioned max spaces.

@@ -371,6 +371,9 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
+    const cityZoneIds = def.zones
+      .filter((zone: ZoneDef) => zone.category === 'city')
+      .map((zone: ZoneDef) => zone.id);
 
     const baseState = clearAllZones(initialState(def, 1302, 2).state);
     const setup: GameState = {
@@ -410,6 +413,15 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       'Expected RandomAgent to complete event decisions before returning move',
     );
     assert.doesNotThrow(() => applyMove(def, setup, selected));
+
+    const resolvedState = applyMove(def, setup, selected).state;
+    const citiesWithUs = cityZoneIds.filter(
+      (zoneId) => countFactionTokens(resolvedState, zoneId, 'US') > 0,
+    );
+    assert.ok(
+      citiesWithUs.length >= 2,
+      `Expected RandomAgent completion to distribute US pieces across at least 2 cities, found: ${citiesWithUs.join(', ')}`,
+    );
   });
 
   it('GreedyAgent completes an event template move that already has base params', () => {

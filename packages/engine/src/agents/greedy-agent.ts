@@ -25,6 +25,12 @@ export class GreedyAgent implements Agent {
     ) {
       throw new RangeError('GreedyAgent maxMovesToEvaluate must be a positive safe integer');
     }
+    if (
+      completionsPerTemplate !== undefined
+      && (!Number.isSafeInteger(completionsPerTemplate) || completionsPerTemplate < 1)
+    ) {
+      throw new RangeError('GreedyAgent completionsPerTemplate must be a positive safe integer');
+    }
     this.maxMovesToEvaluate = maxMovesToEvaluate;
     this.completionsPerTemplate = completionsPerTemplate ?? DEFAULT_COMPLETIONS_PER_TEMPLATE;
   }

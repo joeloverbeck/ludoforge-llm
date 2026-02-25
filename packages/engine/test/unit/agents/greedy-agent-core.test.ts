@@ -117,6 +117,21 @@ describe('GreedyAgent core', () => {
     );
   });
 
+  it('rejects invalid completionsPerTemplate config', () => {
+    const invalidValues = [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1];
+    for (const value of invalidValues) {
+      assert.throws(
+        () => new GreedyAgent({ completionsPerTemplate: value }),
+        /GreedyAgent completionsPerTemplate must be a positive safe integer/,
+      );
+    }
+  });
+
+  it('accepts valid completionsPerTemplate boundary values', () => {
+    assert.doesNotThrow(() => new GreedyAgent({ completionsPerTemplate: 1 }));
+    assert.doesNotThrow(() => new GreedyAgent({ completionsPerTemplate: Number.MAX_SAFE_INTEGER }));
+  });
+
   it('throws descriptive error when legalMoves is empty', () => {
     const def = createDef([]);
     const state = initialState(def, 1, 2).state;

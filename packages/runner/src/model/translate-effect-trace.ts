@@ -384,12 +384,24 @@ function formatFilterOp(op: 'eq' | 'neq' | 'in' | 'notIn'): string {
 }
 
 function formatResourceEndpoint(
-  endpoint: { readonly scope: 'global' | 'perPlayer'; readonly varName: string; readonly player?: number },
+  endpoint: {
+    readonly scope: 'global' | 'perPlayer' | 'zone';
+    readonly varName: string;
+    readonly player?: number;
+    readonly zone?: string;
+  },
   visualConfig: VisualConfigProvider,
   lookup: PlayerLookup,
 ): string {
   if (endpoint.scope === 'global') {
     return 'Global';
+  }
+
+  if (endpoint.scope === 'zone') {
+    if (endpoint.zone === undefined) {
+      return 'Zone';
+    }
+    return resolveZoneName(endpoint.zone, visualConfig);
   }
 
   const playerId = endpoint.player;

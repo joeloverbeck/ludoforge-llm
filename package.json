@@ -12,6 +12,10 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:engine:unit": "pnpm -F @ludoforge/engine test:unit",
+    "test:engine:integration": "pnpm -F @ludoforge/engine test:integration",
+    "test:engine:performance": "pnpm -F @ludoforge/engine test:performance",
+    "test:engine:memory": "pnpm -F @ludoforge/engine test:memory",
     "dev": "turbo dev",
     "schema:artifacts": "turbo schema:artifacts"
   },

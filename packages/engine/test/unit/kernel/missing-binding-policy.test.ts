@@ -20,5 +20,15 @@ describe('shouldDeferMissingBinding()', () => {
   it('does not defer arbitrary non-eval errors', () => {
     assert.equal(shouldDeferMissingBinding(new Error('boom'), 'pipeline.discoveryPredicate'), false);
   });
-});
 
+  it('defers unresolved selector-cardinality only for event decision probing', () => {
+    const selectorCardinality = createEvalError(
+      'SELECTOR_CARDINALITY',
+      'Expected exactly one zone',
+      { selector: '$targetProvince', resolvedCount: 0, resolvedZones: [] },
+    );
+    assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.eventDecisionSequence'), true);
+    assert.equal(shouldDeferMissingBinding(selectorCardinality, 'pipeline.discoveryPredicate'), false);
+    assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.executorDuringParamEnumeration'), false);
+  });
+});

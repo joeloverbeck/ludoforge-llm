@@ -417,6 +417,36 @@ describe('translateEffectTrace', () => {
     expect(entries[1]?.message).toContain('Loc Saigon');
     expect(entries[2]?.message).toContain('Nva Guerrillas');
   });
+
+  it('formats zone-scoped resource transfer endpoints using zone labels', () => {
+    const visualConfig = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        overrides: {
+          alpha: { label: 'Alpha Zone' },
+          beta: { label: 'Beta Zone' },
+        },
+      },
+    });
+
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'zone', varName: 'supply', zone: 'alpha' },
+        to: { scope: 'zone', varName: 'supply', zone: 'beta' },
+        requestedAmount: 3,
+        actualAmount: 2,
+        sourceAvailable: 2,
+        destinationHeadroom: 5,
+        provenance: provenance(),
+      },
+    ];
+
+    const entries = translateEffectTrace(effectTrace, [], visualConfig, gameDefNoFactionsFixture(), 1);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.zoneIds).toEqual(['alpha', 'beta']);
+    expect(entries[0]?.message).toContain('from Alpha Zone to Beta Zone');
+  });
 });
 
 function provenance() {

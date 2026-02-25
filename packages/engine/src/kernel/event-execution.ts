@@ -14,6 +14,7 @@ import type {
   EventEffectTiming,
   EventEligibilityOverrideDef,
   EventFreeOperationGrantDef,
+  EventTargetDef,
   ExecutionCollector,
   GameDef,
   GameState,
@@ -62,6 +63,59 @@ const collectEligibilityOverrides = (context: EventExecutionContext): readonly E
   }
   return overrides;
 };
+
+export const resolveEventTargetDefs = (
+  side: NonNullable<EventCardDef['unshaded']>,
+  branch: EventBranchDef | null,
+): readonly EventTargetDef[] => {
+  const targets: EventTargetDef[] = [];
+  for (const target of side.targets ?? []) {
+    targets.push(target);
+  }
+  for (const target of branch?.targets ?? []) {
+    targets.push(target);
+  }
+  return targets;
+};
+
+const synthesizeEventTargetDecisionId = (target: EventTargetDef, index: number): string =>
+  `decision:eventTarget:${index}:${target.id}`;
+
+export const synthesizeEventTargetEffects = (targets: readonly EventTargetDef[]): readonly EffectAST[] =>
+  targets.map((target, index) => {
+    const internalDecisionId = synthesizeEventTargetDecisionId(target, index);
+    const cardinality = target.cardinality;
+    const shouldUseChooseOne = ('n' in cardinality && cardinality.n === 1)
+      || (!('n' in cardinality) && cardinality.max === 1);
+    if (shouldUseChooseOne) {
+      return {
+        chooseOne: {
+          internalDecisionId,
+          bind: target.id,
+          options: target.selector,
+        },
+      };
+    }
+    if ('n' in cardinality) {
+      return {
+        chooseN: {
+          internalDecisionId,
+          bind: target.id,
+          options: target.selector,
+          n: cardinality.n,
+        },
+      };
+    }
+    return {
+      chooseN: {
+        internalDecisionId,
+        bind: target.id,
+        options: target.selector,
+        ...(cardinality.min === undefined ? {} : { min: cardinality.min }),
+        max: cardinality.max,
+      },
+    };
+  });
 
 const isTurnFlowLifecycleEntry = (
   entry: TriggerLogEntry,
@@ -219,6 +273,15 @@ const resolveEventExecutionContext = (
 const resolveEventEffectTiming = (context: EventExecutionContext): EventEffectTiming =>
   context.branch?.effectTiming ?? context.side.effectTiming ?? 'beforeGrants';
 
+const collectEventEffects = (context: EventExecutionContext): readonly EffectAST[] => {
+  const targetEffects = synthesizeEventTargetEffects(resolveEventTargetDefs(context.side, context.branch));
+  return [
+    ...targetEffects,
+    ...(context.side.effects ?? []),
+    ...(context.branch?.effects ?? []),
+  ];
+};
+
 export const resolveEventEffectList = (
   def: GameDef,
   state: GameState,
@@ -228,10 +291,7 @@ export const resolveEventEffectList = (
   if (context === null) {
     return [];
   }
-  return [
-    ...(context.side.effects ?? []),
-    ...(context.branch?.effects ?? []),
-  ];
+  return collectEventEffects(context);
 };
 
 export const resolveEventEffectTimingForMove = (
@@ -324,10 +384,7 @@ export const executeEventMove = (
     }
   }
 
-  const eventEffects = [
-    ...(context.side.effects ?? []),
-    ...(context.branch?.effects ?? []),
-  ];
+  const eventEffects = collectEventEffects(context);
   const lastingEffects = [
     ...(context.side.lastingEffects ?? []),
     ...(context.branch?.lastingEffects ?? []),

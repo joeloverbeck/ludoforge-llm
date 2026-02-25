@@ -47,6 +47,7 @@ import type {
   MoveParamScalar,
   MoveParamValue,
   Rng,
+  TurnFlowDeferredEventEffectPayload,
   TriggerLogEntry,
   TriggerEvent,
 } from './types.js';
@@ -404,6 +405,7 @@ interface SharedMoveExecutionContext {
 interface MoveActionExecutionResult {
   readonly stateWithRng: GameState;
   readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
 }
 
 interface MoveExecutionRuntime {
@@ -734,6 +736,74 @@ const executeMoveAction = (
       rng: triggerResult.rng.state,
     },
     triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog],
+    ...(lastingActivation.deferredEventEffect === undefined
+      ? {}
+      : { deferredEventEffect: lastingActivation.deferredEventEffect }),
+  };
+};
+
+const applyReleasedDeferredEventEffects = (
+  def: GameDef,
+  state: GameState,
+  releasedDeferredEventEffects: readonly TurnFlowDeferredEventEffectPayload[],
+  shared: SharedMoveExecutionContext,
+): MoveActionExecutionResult => {
+  if (releasedDeferredEventEffects.length === 0) {
+    return { stateWithRng: state, triggerFirings: [] };
+  }
+  let nextState = state;
+  let nextRng: Rng = { state: state.rng };
+  let triggerLog = [] as readonly TriggerLogEntry[];
+  const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
+  for (const deferredEventEffect of releasedDeferredEventEffects) {
+    const effectPlayer = asPlayerId(deferredEventEffect.actorPlayer);
+    const effectResult = applyEffects(deferredEventEffect.effects, {
+      def,
+      adjacencyGraph: shared.adjacencyGraph,
+      runtimeTableIndex: shared.runtimeTableIndex,
+      state: nextState,
+      rng: nextRng,
+      activePlayer: effectPlayer,
+      actorPlayer: effectPlayer,
+      bindings: { ...deferredEventEffect.moveParams },
+      moveParams: deferredEventEffect.moveParams,
+      collector: shared.collector,
+      traceContext: {
+        eventContext: 'actionEffect',
+        actionId: deferredEventEffect.actionId,
+        effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEventEffects`,
+      },
+      effectPath: '',
+      ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
+    });
+    nextState = effectResult.state;
+    nextRng = effectResult.rng;
+    for (const emittedEvent of effectResult.emittedEvents ?? []) {
+      const emittedEventResult = dispatchTriggers(
+        def,
+        nextState,
+        nextRng,
+        emittedEvent,
+        0,
+        maxDepth,
+        triggerLog,
+        shared.adjacencyGraph,
+        shared.runtimeTableIndex,
+        shared.executionPolicy,
+        shared.collector,
+        `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
+      );
+      nextState = emittedEventResult.state;
+      nextRng = emittedEventResult.rng;
+      triggerLog = emittedEventResult.triggerLog;
+    }
+  }
+  return {
+    stateWithRng: {
+      ...nextState,
+      rng: nextRng.state,
+    },
+    triggerFirings: triggerLog,
   };
 };
 
@@ -761,15 +831,25 @@ const applyMoveCore = (
 
   const executed = executeMoveAction(def, state, move, options, coreOptions, shared, cachedRuntime);
   const turnFlowResult = move.freeOperation === true
-    ? {
-      state: consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move),
-      traceEntries: [] as readonly TriggerLogEntry[],
-      boundaryDurations: undefined,
-    }
-    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move);
-  const boundaryExpiryResult = applyBoundaryExpiry(
+    ? (() => {
+      const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move);
+      return {
+        state: consumed.state,
+        traceEntries: [] as readonly TriggerLogEntry[],
+        boundaryDurations: undefined,
+        releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+      };
+    })()
+    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect);
+  const deferredExecution = applyReleasedDeferredEventEffects(
     def,
     turnFlowResult.state,
+    turnFlowResult.releasedDeferredEventEffects ?? [],
+    shared,
+  );
+  const boundaryExpiryResult = applyBoundaryExpiry(
+    def,
+    deferredExecution.stateWithRng,
     turnFlowResult.boundaryDurations,
     undefined,
     shared.executionPolicy,
@@ -800,6 +880,7 @@ const applyMoveCore = (
     triggerFirings: [
       ...executed.triggerFirings,
       ...turnFlowResult.traceEntries,
+      ...deferredExecution.triggerFirings,
       ...boundaryExpiryResult.traceEntries,
       ...lifecycleAndAdvanceLog,
     ],

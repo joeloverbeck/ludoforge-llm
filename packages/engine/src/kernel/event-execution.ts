@@ -11,6 +11,7 @@ import type {
   EffectAST,
   EventBranchDef,
   EventCardDef,
+  EventEffectTiming,
   EventEligibilityOverrideDef,
   EventFreeOperationGrantDef,
   ExecutionCollector,
@@ -21,6 +22,7 @@ import type {
   Token,
   TriggerLogEntry,
   TriggerEvent,
+  TurnFlowDeferredEventEffectPayload,
   TurnFlowDuration,
 } from './types.js';
 
@@ -28,6 +30,7 @@ interface LastingEffectApplyResult {
   readonly state: GameState;
   readonly rng: Rng;
   readonly emittedEvents: readonly TriggerEvent[];
+  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
 }
 
 interface EventExecutionContext {
@@ -213,6 +216,9 @@ const resolveEventExecutionContext = (
   };
 };
 
+const resolveEventEffectTiming = (context: EventExecutionContext): EventEffectTiming =>
+  context.branch?.effectTiming ?? context.side.effectTiming ?? 'beforeGrants';
+
 export const resolveEventEffectList = (
   def: GameDef,
   state: GameState,
@@ -322,7 +328,16 @@ export const executeEventMove = (
   let nextState = state;
   let nextRng = rng;
   const emittedEvents: TriggerEvent[] = [];
-  if (eventEffects.length > 0) {
+  const effectTiming = resolveEventEffectTiming(context);
+  const deferredEventEffect = effectTiming === 'afterGrants' && eventEffects.length > 0
+    ? {
+      effects: eventEffects,
+      moveParams: { ...move.params },
+      actorPlayer: state.activePlayer,
+      actionId,
+    }
+    : undefined;
+  if (deferredEventEffect === undefined && eventEffects.length > 0) {
     const sideAndBranchResult = applyEffectList(
       def,
       nextState,
@@ -372,6 +387,7 @@ export const executeEventMove = (
     state: withActiveLastingEffects(nextState, activeEffects),
     rng: nextRng,
     emittedEvents,
+    ...(deferredEventEffect === undefined ? {} : { deferredEventEffect }),
   };
 };
 

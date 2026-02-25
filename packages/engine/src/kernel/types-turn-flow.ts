@@ -139,6 +139,18 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly sequenceIndex?: number;
 }
 
+export interface TurnFlowDeferredEventEffectPayload {
+  readonly effects: readonly import('./types-ast.js').EffectAST[];
+  readonly moveParams: Readonly<Record<string, import('./types-ast.js').MoveParamValue>>;
+  readonly actorPlayer: number;
+  readonly actionId: string;
+}
+
+export interface TurnFlowPendingDeferredEventEffect extends TurnFlowDeferredEventEffectPayload {
+  readonly deferredId: string;
+  readonly requiredGrantBatchIds: readonly string[];
+}
+
 export interface CompoundActionState {
   readonly operationProfileId: string;
   readonly saTiming: 'before' | 'during' | 'after' | null;
@@ -171,6 +183,7 @@ export interface TurnFlowRuntimeState {
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[];
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
 }

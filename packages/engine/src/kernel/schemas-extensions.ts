@@ -104,6 +104,7 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
   .object({
     id: StringSchema.min(1),
     order: IntegerSchema.min(0).optional(),
+    effectTiming: z.union([z.literal('beforeGrants'), z.literal('afterGrants')]).optional(),
     freeOperationGrants: z.array(EventCardFreeOperationGrantSchema).min(1).optional(),
     eligibilityOverrides: z.array(EventCardEligibilityOverrideSchema).min(1).optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
@@ -130,6 +131,7 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
 export const EventCardSideSchema = z
   .object({
     text: StringSchema.optional(),
+    effectTiming: z.union([z.literal('beforeGrants'), z.literal('afterGrants')]).optional(),
     freeOperationGrants: z.array(EventCardFreeOperationGrantSchema).min(1).optional(),
     eligibilityOverrides: z.array(EventCardEligibilityOverrideSchema).min(1).optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
@@ -481,6 +483,20 @@ export const TurnFlowRuntimeStateSchema = z
             remainingUses: IntegerSchema.min(1),
             sequenceBatchId: StringSchema.min(1).optional(),
             sequenceIndex: IntegerSchema.min(0).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    pendingDeferredEventEffects: z
+      .array(
+        z
+          .object({
+            deferredId: StringSchema.min(1),
+            requiredGrantBatchIds: z.array(StringSchema.min(1)),
+            effects: z.array(EffectASTSchema),
+            moveParams: z.record(StringSchema, z.union([NumberSchema, StringSchema, BooleanSchema, z.array(z.union([NumberSchema, StringSchema, BooleanSchema]))])),
+            actorPlayer: IntegerSchema.min(0),
+            actionId: StringSchema.min(1),
           })
           .strict(),
       )

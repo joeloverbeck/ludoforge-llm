@@ -19,6 +19,8 @@ import type {
   Move,
   TriggerLogEntry,
   TurnFlowDuration,
+  TurnFlowDeferredEventEffectPayload,
+  TurnFlowPendingDeferredEventEffect,
   TurnFlowPendingEligibilityOverride,
   TurnFlowPendingFreeOperationGrant,
   TurnFlowRuntimeCardState,
@@ -29,6 +31,12 @@ interface TurnFlowTransitionResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
   readonly boundaryDurations?: readonly TurnFlowDuration[];
+  readonly releasedDeferredEventEffects?: readonly TurnFlowDeferredEventEffectPayload[];
+}
+
+interface FreeOperationGrantConsumptionResult {
+  readonly state: GameState;
+  readonly releasedDeferredEventEffects: readonly TurnFlowDeferredEventEffectPayload[];
 }
 
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
@@ -445,6 +453,11 @@ const toPendingFreeOperationGrants = (
 ): readonly TurnFlowPendingFreeOperationGrant[] | undefined =>
   grants.length === 0 ? undefined : grants;
 
+const toPendingDeferredEventEffects = (
+  deferred: readonly TurnFlowPendingDeferredEventEffect[],
+): readonly TurnFlowPendingDeferredEventEffect[] | undefined =>
+  deferred.length === 0 ? undefined : deferred;
+
 const withPendingFreeOperationGrants = (
   runtime: TurnFlowRuntimeState,
   grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,
@@ -457,6 +470,79 @@ const withPendingFreeOperationGrants = (
     delete (nextRuntime as { pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[] }).pendingFreeOperationGrants;
   }
   return nextRuntime;
+};
+
+const withPendingDeferredEventEffects = (
+  runtime: TurnFlowRuntimeState,
+  deferred: readonly TurnFlowPendingDeferredEventEffect[] | undefined,
+) => {
+  const nextRuntime = {
+    ...runtime,
+    ...(deferred === undefined ? {} : { pendingDeferredEventEffects: deferred }),
+  };
+  if (deferred === undefined) {
+    delete (nextRuntime as { pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[] }).pendingDeferredEventEffects;
+  }
+  return nextRuntime;
+};
+
+const uniqueBatchIds = (
+  grants: readonly TurnFlowPendingFreeOperationGrant[],
+): readonly string[] => {
+  const ids = new Set<string>();
+  for (const grant of grants) {
+    if (typeof grant.sequenceBatchId === 'string' && grant.sequenceBatchId.length > 0) {
+      ids.add(grant.sequenceBatchId);
+    }
+  }
+  return [...ids];
+};
+
+const makeUniqueDeferredEventEffectId = (
+  deferred: readonly TurnFlowPendingDeferredEventEffect[],
+  baseId: string,
+): string => {
+  const existing = new Set(deferred.map((entry) => entry.deferredId));
+  if (!existing.has(baseId)) {
+    return baseId;
+  }
+  let suffix = 2;
+  let candidate = `${baseId}#${suffix}`;
+  while (existing.has(candidate)) {
+    suffix += 1;
+    candidate = `${baseId}#${suffix}`;
+  }
+  return candidate;
+};
+
+const splitReadyDeferredEventEffects = (
+  deferred: readonly TurnFlowPendingDeferredEventEffect[],
+  pendingGrants: readonly TurnFlowPendingFreeOperationGrant[],
+): {
+  readonly remaining: readonly TurnFlowPendingDeferredEventEffect[];
+  readonly ready: readonly TurnFlowDeferredEventEffectPayload[];
+} => {
+  const pendingBatchIds = new Set(
+    pendingGrants
+      .map((grant) => grant.sequenceBatchId)
+      .filter((value): value is string => typeof value === 'string' && value.length > 0),
+  );
+  const remaining: TurnFlowPendingDeferredEventEffect[] = [];
+  const ready: TurnFlowDeferredEventEffectPayload[] = [];
+  for (const candidate of deferred) {
+    const isReady = candidate.requiredGrantBatchIds.every((batchId) => !pendingBatchIds.has(batchId));
+    if (isReady) {
+      ready.push({
+        effects: candidate.effects,
+        moveParams: candidate.moveParams,
+        actorPlayer: candidate.actorPlayer,
+        actionId: candidate.actionId,
+      });
+      continue;
+    }
+    remaining.push(candidate);
+  }
+  return { remaining, ready };
 };
 
 const computePostCardEligibility = (
@@ -680,6 +766,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  deferredEventEffect?: TurnFlowDeferredEventEffectPayload,
 ): TurnFlowTransitionResult => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
@@ -717,6 +804,7 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const moveClass = resolveTurnFlowActionClass(def, move);
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
+  const existingPendingDeferredEventEffects = runtime.pendingDeferredEventEffects ?? [];
   const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeSeat, runtime.seatOrder);
   const newFreeOpGrants = extractPendingFreeOperationGrants(
     def,
@@ -731,6 +819,25 @@ export const applyTurnFlowEligibilityAfterMove = (
     ...existingPendingFreeOperationGrants,
     ...newFreeOpGrants,
   ];
+  const deferredRequiredBatchIds = uniqueBatchIds(newFreeOpGrants);
+  const deferredEventEffects = deferredEventEffect === undefined
+    ? existingPendingDeferredEventEffects
+    : deferredRequiredBatchIds.length === 0
+      ? existingPendingDeferredEventEffects
+      : [
+        ...existingPendingDeferredEventEffects,
+        {
+          ...deferredEventEffect,
+          deferredId: makeUniqueDeferredEventEffectId(
+            existingPendingDeferredEventEffects,
+            `deferred:${state.turnCount}:${activeSeat}:${String(move.actionId)}`,
+          ),
+          requiredGrantBatchIds: deferredRequiredBatchIds,
+        },
+      ];
+  const releasedDeferredEventEffects = deferredEventEffect !== undefined && deferredRequiredBatchIds.length === 0
+    ? [deferredEventEffect]
+    : [];
   const firstActionClass =
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
@@ -791,6 +898,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   let nextEligibility = runtime.eligibility;
   let nextPendingOverrides = pendingOverrides;
   let nextPendingFreeOperationGrants = pendingFreeOperationGrants;
+  let nextPendingDeferredEventEffects = deferredEventEffects;
   let nextSeatOrder = runtime.seatOrder;
   let baseState = rewardState;
   let boundaryDurations: readonly TurnFlowDuration[] | undefined;
@@ -836,17 +944,21 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPendingFreeOperationGrants);
+  const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(nextPendingDeferredEventEffects);
   const stateWithTurnFlow: GameState = {
     ...baseState,
     turnOrderState: {
       type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants({
-        ...runtime,
-        seatOrder: nextSeatOrder,
-        eligibility: nextEligibility,
-        pendingEligibilityOverrides: nextPendingOverrides,
-        currentCard: nextTurn,
-      }, normalizedPendingFreeOperationGrants),
+      runtime: withPendingDeferredEventEffects(
+        withPendingFreeOperationGrants({
+          ...runtime,
+          seatOrder: nextSeatOrder,
+          eligibility: nextEligibility,
+          pendingEligibilityOverrides: nextPendingOverrides,
+          currentCard: nextTurn,
+        }, normalizedPendingFreeOperationGrants),
+        normalizedPendingDeferredEventEffects,
+      ),
     },
   };
 
@@ -854,6 +966,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible),
     traceEntries,
     ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
+    ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
   };
 };
 
@@ -861,9 +974,9 @@ export const consumeTurnFlowFreeOperationGrant = (
   def: GameDef,
   state: GameState,
   move: Move,
-): GameState => {
+): FreeOperationGrantConsumptionResult => {
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
-    return state;
+    return { state, releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
   const activeSeat = String(state.activePlayer);
@@ -872,7 +985,7 @@ export const consumeTurnFlowFreeOperationGrant = (
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
   );
   if (consumedIndex < 0) {
-    return state;
+    return { state, releasedDeferredEventEffects: [] };
   }
   const consumed = pending[consumedIndex]!;
   const decremented = consumed.remainingUses - 1;
@@ -886,12 +999,20 @@ export const consumeTurnFlowFreeOperationGrant = (
         },
         ...pending.slice(consumedIndex + 1),
       ];
+  const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPending);
+  const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
   return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants(runtime, normalizedPendingFreeOperationGrants),
+    state: {
+      ...state,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: withPendingDeferredEventEffects(
+          withPendingFreeOperationGrants(runtime, normalizedPendingFreeOperationGrants),
+          normalizedPendingDeferredEventEffects,
+        ),
+      },
     },
+    releasedDeferredEventEffects: splitDeferred.ready,
   };
 };

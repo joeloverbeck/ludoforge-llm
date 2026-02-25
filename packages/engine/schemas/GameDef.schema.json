@@ -2171,6 +2171,18 @@
                     "text": {
                       "type": "string"
                     },
+                    "effectTiming": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "beforeGrants"
+                        },
+                        {
+                          "type": "string",
+                          "const": "afterGrants"
+                        }
+                      ]
+                    },
                     "freeOperationGrants": {
                       "minItems": 1,
                       "type": "array",
@@ -2325,6 +2337,18 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "effectTiming": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "beforeGrants"
+                              },
+                              {
+                                "type": "string",
+                                "const": "afterGrants"
+                              }
+                            ]
                           },
                           "freeOperationGrants": {
                             "minItems": 1,
@@ -2680,6 +2704,18 @@
                     "text": {
                       "type": "string"
                     },
+                    "effectTiming": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "beforeGrants"
+                        },
+                        {
+                          "type": "string",
+                          "const": "afterGrants"
+                        }
+                      ]
+                    },
                     "freeOperationGrants": {
                       "minItems": 1,
                       "type": "array",
@@ -2834,6 +2870,18 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "effectTiming": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "beforeGrants"
+                              },
+                              {
+                                "type": "string",
+                                "const": "afterGrants"
+                              }
+                            ]
                           },
                           "freeOperationGrants": {
                             "minItems": 1,

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGameWorker, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
 import { ALT_TEST_DEF, CHOOSE_MIXED_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import * as runtime from '@ludoforge/engine/runtime';
 import { asActionId, type Move } from '@ludoforge/engine/runtime';
 
 const expectWorkerError = (error: unknown, code: WorkerError['code']): WorkerError => {
@@ -87,6 +88,23 @@ describe('createGameWorker', () => {
     const nextStamp = createStampFactory();
     const result = await worker.init(ALT_TEST_DEF, 8, { playerCount: 3 }, nextStamp());
     expect(result.state.playerCount).toBe(3);
+  });
+
+  it('keeps worker uninitialized when init fails during initial state construction', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    vi.spyOn(runtime, 'initialState').mockImplementation(() => {
+      throw new Error('forced init failure');
+    });
+
+    await expect(worker.init(TEST_DEF, 101, undefined, nextStamp())).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'forced init failure',
+    });
+
+    await expect(worker.getState()).rejects.toMatchObject({ code: 'NOT_INITIALIZED' });
+    await expect(worker.legalMoves()).rejects.toMatchObject({ code: 'NOT_INITIALIZED' });
+    expect(await worker.getHistoryLength()).toBe(0);
   });
 
   it('respects init-level trace config', async () => {
@@ -334,6 +352,29 @@ describe('createGameWorker', () => {
     expect(resetWithNewPlayerCount.playerCount).toBe(4);
   });
 
+  it('preserves prior state and history when reset init path fails', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 230, undefined, nextStamp());
+    const firstMove = await worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+    const stateBeforeFailedReset = firstMove.state;
+    const historyBeforeFailedReset = await worker.getHistoryLength();
+    const metadataBeforeFailedReset = await worker.getMetadata();
+
+    vi.spyOn(runtime, 'initialState').mockImplementation(() => {
+      throw new Error('forced reset failure');
+    });
+
+    await expect(worker.reset(undefined, 231, undefined, nextStamp())).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'forced reset failure',
+    });
+
+    expect(await worker.getState()).toEqual(stateBeforeFailedReset);
+    expect(await worker.getHistoryLength()).toBe(historyBeforeFailedReset);
+    expect(await worker.getMetadata()).toEqual(metadataBeforeFailedReset);
+  });
+
   it('loads and initializes a GameDef from URL', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
@@ -362,6 +403,29 @@ describe('createGameWorker', () => {
       code: 'VALIDATION_FAILED',
       message: 'Failed to fetch GameDef: 404 Not Found',
     });
+  });
+
+  it('preserves prior state and history when loadFromUrl init path fails', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 240, undefined, nextStamp());
+    const firstMove = await worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+    const stateBeforeFailedLoad = firstMove.state;
+    const historyBeforeFailedLoad = await worker.getHistoryLength();
+    const metadataBeforeFailedLoad = await worker.getMetadata();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(ALT_TEST_DEF), { status: 200 })));
+    vi.spyOn(runtime, 'initialState').mockImplementation(() => {
+      throw new Error('forced load failure');
+    });
+
+    await expect(worker.loadFromUrl('https://example.com/game-def.json', 241, undefined, nextStamp())).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+      message: 'forced load failure',
+    });
+
+    expect(await worker.getState()).toEqual(stateBeforeFailedLoad);
+    expect(await worker.getHistoryLength()).toBe(historyBeforeFailedLoad);
+    expect(await worker.getMetadata()).toEqual(metadataBeforeFailedLoad);
   });
 
   it('throws VALIDATION_FAILED when URL payload is invalid JSON', async () => {

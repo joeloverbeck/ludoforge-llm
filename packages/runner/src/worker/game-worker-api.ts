@@ -196,14 +196,16 @@ export function createGameWorker(): GameWorkerAPI {
   };
 
   const initState = (nextDef: GameDef, seed: number, options?: BridgeInitOptions): InitResult => {
-    def = nextDef;
-    runtime = createGameDefRuntime(nextDef);
     const traceEnabled = options?.enableTrace ?? true;
-    const result = initialState(nextDef, seed, options?.playerCount, { trace: traceEnabled });
-    state = result.state;
+    const nextRuntime = createGameDefRuntime(nextDef);
+    const nextInit = initialState(nextDef, seed, options?.playerCount, { trace: traceEnabled });
+
+    def = nextDef;
+    runtime = nextRuntime;
+    state = nextInit.state;
     history = [];
     enableTrace = traceEnabled;
-    return { state: result.state, setupTrace: result.setupTrace };
+    return { state: nextInit.state, setupTrace: nextInit.setupTrace };
   };
 
   const api: GameWorkerAPI = {
@@ -352,13 +354,15 @@ export function createGameWorker(): GameWorkerAPI {
       options: BridgeInitOptions | undefined,
       stamp: OperationStamp,
     ): Promise<InitResult> {
-      ensureFreshMutation(stamp);
-      const resolvedDef = nextDef ?? def;
-      if (resolvedDef === null) {
-        throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
-      }
-      const resolvedSeed = seed ?? 0;
-      return initState(resolvedDef, resolvedSeed, options);
+      return withInternalErrorMapping(() => {
+        ensureFreshMutation(stamp);
+        const resolvedDef = nextDef ?? def;
+        if (resolvedDef === null) {
+          throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
+        }
+        const resolvedSeed = seed ?? 0;
+        return initState(resolvedDef, resolvedSeed, options);
+      });
     },
 
     async loadFromUrl(

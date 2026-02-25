@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { MockContainer } = vi.hoisted(() => {
   class MockPoint {
@@ -77,6 +77,14 @@ import {
   safeDestroyDisplayObject,
 } from '../../../src/canvas/renderers/safe-destroy';
 
+function suppressConsoleWarn(): void {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('safeDestroyContainer', () => {
   it('calls destroy() normally when no error occurs', () => {
     const container = new MockContainer() as unknown as Container;
@@ -92,6 +100,7 @@ describe('safeDestroyContainer', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
+    suppressConsoleWarn();
 
     expect(() => safeDestroyContainer(container)).not.toThrow();
   });
@@ -104,6 +113,7 @@ describe('safeDestroyContainer', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
+    suppressConsoleWarn();
     const removeFromParentSpy = vi.spyOn(container, 'removeFromParent');
 
     safeDestroyContainer(container as unknown as Container);
@@ -118,17 +128,15 @@ describe('safeDestroyContainer', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw error;
     });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     safeDestroyContainer(container);
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('destroy() failed'),
       error,
     );
-
-    warnSpy.mockRestore();
   });
 });
 
@@ -150,7 +158,7 @@ describe('safeDestroyDisplayObject', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     safeDestroyDisplayObject(container);
 
@@ -177,7 +185,7 @@ describe('destroy fallback counter', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     safeDestroyContainer(container);
     expect(getDestroyFallbackCount()).toBe(1);
@@ -188,7 +196,6 @@ describe('destroy fallback counter', () => {
     resetDestroyFallbackCount();
     expect(getDestroyFallbackCount()).toBe(0);
 
-    warnSpy.mockRestore();
   });
 
   it('does not increment when destroy() succeeds', () => {
@@ -212,15 +219,13 @@ describe('safeDestroyChildren', () => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
     const secondDestroySpy = vi.spyOn(second, 'destroy');
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     expect(() => safeDestroyChildren(parent as unknown as Container)).not.toThrow();
 
     expect(secondDestroySpy).toHaveBeenCalledTimes(1);
     expect(parent.children).toHaveLength(0);
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-
-    warnSpy.mockRestore();
+    expect(console.warn).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -236,7 +241,7 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     safeDestroyDisplayObject(container as unknown as Container);
 
@@ -250,7 +255,7 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     safeDestroyDisplayObject(container);
 
@@ -265,7 +270,7 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
     });
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    suppressConsoleWarn();
 
     safeDestroyDisplayObject(container as unknown as Container);
 

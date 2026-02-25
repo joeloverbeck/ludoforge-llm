@@ -1950,6 +1950,12 @@ describe('buildTimeline sequencing', () => {
 
     const defs: AnimationPresetDefinition[] = [
       {
+        id: 'arc-tween',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['cardDeal'],
+        createTween: () => {},
+      },
+      {
         id: 'flip-test',
         defaultDurationSeconds: 0.3,
         compatibleKinds: ['cardFlip'],

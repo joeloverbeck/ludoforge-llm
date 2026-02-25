@@ -1343,6 +1343,66 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('requires transferVar.from.zone when source scope is zoneVar', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'zoneVar', var: 'supply' },
+                to: { scope: 'global', var: 'money' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_FROM_ZONE_REQUIRED' &&
+          diag.path === 'actions[0].effects[0].transferVar.from.zone',
+      ),
+    );
+  });
+
+  it('rejects transferVar.to.player when target scope is zoneVar', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'global', var: 'money' },
+                to: { scope: 'zoneVar', zone: 'deck:none', player: 'actor', var: 'supply' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_ZONE_SCOPE_PLAYER_FORBIDDEN' &&
+          diag.path === 'actions[0].effects[0].transferVar.to.player',
+      ),
+    );
+  });
+
   it('reports invalid phase references with alternatives', () => {
     const base = createValidGameDef();
     const def = {

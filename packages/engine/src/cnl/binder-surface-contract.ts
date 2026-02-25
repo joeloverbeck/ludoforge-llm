@@ -70,7 +70,7 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     sequentiallyVisibleBinderPaths: [['actualBind']],
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: [['from', 'player', 'chosen'], ['to', 'player', 'chosen']],
-    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['from', 'zone'], ['to', 'zone']],
   },
   moveToken: {
     declaredBinderPaths: NO_BINDER_PATHS,

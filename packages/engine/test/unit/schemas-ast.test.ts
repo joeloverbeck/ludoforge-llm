@@ -117,6 +117,13 @@ describe('AST and selector schemas', () => {
               actualBind: '$actual',
             },
           },
+          {
+            transferVar: {
+              from: { scope: 'zoneVar', zone: 'board:none', var: 'supply' },
+              to: { scope: 'zoneVar', zone: 'hand:actor', var: 'supply' },
+              amount: 2,
+            },
+          },
         ],
       },
       {

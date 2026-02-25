@@ -407,16 +407,18 @@ effectAstSchemaInternal = z.union([
         .object({
           from: z
             .object({
-              scope: z.union([z.literal('global'), z.literal('pvar')]),
+              scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
               var: StringSchema,
               player: PlayerSelSchema.optional(),
+              zone: ZoneRefSchema.optional(),
             })
             .strict(),
           to: z
             .object({
-              scope: z.union([z.literal('global'), z.literal('pvar')]),
+              scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
               var: StringSchema,
               player: PlayerSelSchema.optional(),
+              zone: ZoneRefSchema.optional(),
             })
             .strict(),
           amount: NumericValueExprSchema,

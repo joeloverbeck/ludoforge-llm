@@ -364,16 +364,16 @@ function lowerTransferVarEffect(
 ): EffectLoweringResult<EffectAST> {
   if (!isRecord(source.from) || !isRecord(source.to) || typeof source.from.var !== 'string' || typeof source.to.var !== 'string') {
     return missingCapability(path, 'transferVar effect', source, [
-      '{ transferVar: { from: { scope: "global" | "pvar", var, player? }, to: { scope: "global" | "pvar", var, player? }, amount, min?, max?, actualBind? } }',
+      '{ transferVar: { from: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, to: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, amount, min?, max?, actualBind? } }',
     ]);
   }
 
   if (
-    (source.from.scope !== 'global' && source.from.scope !== 'pvar') ||
-    (source.to.scope !== 'global' && source.to.scope !== 'pvar')
+    (source.from.scope !== 'global' && source.from.scope !== 'pvar' && source.from.scope !== 'zoneVar') ||
+    (source.to.scope !== 'global' && source.to.scope !== 'pvar' && source.to.scope !== 'zoneVar')
   ) {
     return missingCapability(path, 'transferVar effect', source, [
-      '{ transferVar: { from: { scope: "global" | "pvar", var, player? }, to: { scope: "global" | "pvar", var, player? }, amount } }',
+      '{ transferVar: { from: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, to: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, amount } }',
     ]);
   }
 
@@ -384,6 +384,7 @@ function lowerTransferVarEffect(
   }
 
   let fromPlayer: PlayerSel | undefined;
+  let fromZone: ZoneRef | undefined;
   if (source.from.scope === 'pvar') {
     const loweredFromPlayer = lowerPlayerSelector(source.from.player, scope, `${path}.from.player`);
     diagnostics.push(...loweredFromPlayer.diagnostics);
@@ -391,12 +392,25 @@ function lowerTransferVarEffect(
       return { value: null, diagnostics };
     }
     fromPlayer = loweredFromPlayer.value;
-  } else if (source.from.player !== undefined) {
-    diagnostics.push(...missingCapability(`${path}.from.player`, 'transferVar.from.player for global scope', source.from.player, []).diagnostics);
+  } else if (source.from.scope === 'zoneVar') {
+    const loweredFromZone = lowerZoneSelector(source.from.zone, context, scope, `${path}.from.zone`);
+    diagnostics.push(...loweredFromZone.diagnostics);
+    if (loweredFromZone.value === null) {
+      return { value: null, diagnostics };
+    }
+    fromZone = loweredFromZone.value;
+  }
+  if (source.from.scope !== 'pvar' && source.from.player !== undefined) {
+    diagnostics.push(...missingCapability(`${path}.from.player`, `transferVar.from.player for ${String(source.from.scope)} scope`, source.from.player, []).diagnostics);
+    return { value: null, diagnostics };
+  }
+  if (source.from.scope !== 'zoneVar' && source.from.zone !== undefined) {
+    diagnostics.push(...missingCapability(`${path}.from.zone`, `transferVar.from.zone for ${String(source.from.scope)} scope`, source.from.zone, []).diagnostics);
     return { value: null, diagnostics };
   }
 
   let toPlayer: PlayerSel | undefined;
+  let toZone: ZoneRef | undefined;
   if (source.to.scope === 'pvar') {
     const loweredToPlayer = lowerPlayerSelector(source.to.player, scope, `${path}.to.player`);
     diagnostics.push(...loweredToPlayer.diagnostics);
@@ -404,8 +418,20 @@ function lowerTransferVarEffect(
       return { value: null, diagnostics };
     }
     toPlayer = loweredToPlayer.value;
-  } else if (source.to.player !== undefined) {
-    diagnostics.push(...missingCapability(`${path}.to.player`, 'transferVar.to.player for global scope', source.to.player, []).diagnostics);
+  } else if (source.to.scope === 'zoneVar') {
+    const loweredToZone = lowerZoneSelector(source.to.zone, context, scope, `${path}.to.zone`);
+    diagnostics.push(...loweredToZone.diagnostics);
+    if (loweredToZone.value === null) {
+      return { value: null, diagnostics };
+    }
+    toZone = loweredToZone.value;
+  }
+  if (source.to.scope !== 'pvar' && source.to.player !== undefined) {
+    diagnostics.push(...missingCapability(`${path}.to.player`, `transferVar.to.player for ${String(source.to.scope)} scope`, source.to.player, []).diagnostics);
+    return { value: null, diagnostics };
+  }
+  if (source.to.scope !== 'zoneVar' && source.to.zone !== undefined) {
+    diagnostics.push(...missingCapability(`${path}.to.zone`, `transferVar.to.zone for ${String(source.to.scope)} scope`, source.to.zone, []).diagnostics);
     return { value: null, diagnostics };
   }
 
@@ -441,11 +467,13 @@ function lowerTransferVarEffect(
           scope: source.from.scope,
           var: source.from.var,
           ...(fromPlayer === undefined ? {} : { player: fromPlayer }),
+          ...(fromZone === undefined ? {} : { zone: fromZone }),
         },
         to: {
           scope: source.to.scope,
           var: source.to.var,
           ...(toPlayer === undefined ? {} : { player: toPlayer }),
+          ...(toZone === undefined ? {} : { zone: toZone }),
         },
         amount: amount.value,
         ...(min === undefined ? {} : { min }),

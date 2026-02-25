@@ -329,6 +329,38 @@ describe('json schema artifacts', () => {
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace with zone-scoped resourceTransfer validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          effectTrace: [
+            {
+              kind: 'resourceTransfer',
+              from: { scope: 'zone', zone: 'board:none', varName: 'supply' },
+              to: { scope: 'zone', zone: 'discard:none', varName: 'supply' },
+              requestedAmount: 3,
+              actualAmount: 2,
+              sourceAvailable: 2,
+              destinationHeadroom: 5,
+              provenance: {
+                phase: 'main',
+                eventContext: 'actionEffect',
+                effectPath: 'effects[0]',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
   it('trace with non-hex stateHash fails schema validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);

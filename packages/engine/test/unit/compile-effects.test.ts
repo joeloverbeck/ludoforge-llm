@@ -498,6 +498,33 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers transferVar with zoneVar endpoints and canonical zone selectors', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          transferVar: {
+            from: { scope: 'zoneVar', zone: 'board', var: 'supply' },
+            to: { scope: 'zoneVar', zone: 'hand:$actor', var: 'supply' },
+            amount: 3,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        transferVar: {
+          from: { scope: 'zoneVar', zone: 'board:none', var: 'supply' },
+          to: { scope: 'zoneVar', zone: 'hand:$actor', var: 'supply' },
+          amount: 3,
+        },
+      },
+    ]);
+  });
+
   it('lowers chooseN range cardinality forms deterministically', () => {
     const source = [
       { chooseN: { bind: '$upToTwo', options: { query: 'players' }, max: 2 } },

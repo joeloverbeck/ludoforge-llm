@@ -551,16 +551,18 @@ export const EffectTraceEntrySchema = z.union([
       kind: z.literal('resourceTransfer'),
       from: z
         .object({
-          scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+          scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
           varName: StringSchema,
           player: IntegerSchema.optional(),
+          zone: StringSchema.optional(),
         })
         .strict(),
       to: z
         .object({
-          scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+          scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
           varName: StringSchema,
           player: IntegerSchema.optional(),
+          zone: StringSchema.optional(),
         })
         .strict(),
       requestedAmount: IntegerSchema.min(0),

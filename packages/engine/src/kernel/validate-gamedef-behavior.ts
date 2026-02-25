@@ -1065,134 +1065,140 @@ export const validateEffectAst = (
   }
 
   if ('transferVar' in effect) {
-    if (effect.transferVar.from.scope === 'global') {
-      if (!context.globalVarNames.has(effect.transferVar.from.var)) {
+    const transferEndpoints = [
+      { key: 'from', endpoint: effect.transferVar.from },
+      { key: 'to', endpoint: effect.transferVar.to },
+    ] as const;
+
+    for (const { key, endpoint } of transferEndpoints) {
+      const endpointPath = `${path}.transferVar.${key}`;
+      const playerPath = `${endpointPath}.player`;
+      const zonePath = `${endpointPath}.zone`;
+      const varPath = `${endpointPath}.var`;
+
+      if (endpoint.scope === 'global') {
+        if (!context.globalVarNames.has(endpoint.var)) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'REF_GVAR_MISSING',
+            varPath,
+            `Unknown global variable "${endpoint.var}".`,
+            endpoint.var,
+            context.globalVarCandidates,
+          );
+        }
+        if (context.globalVarTypesByName.get(endpoint.var) === 'boolean') {
+          diagnostics.push({
+            code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
+            path: varPath,
+            severity: 'error',
+            message: `transferVar cannot target boolean variable "${endpoint.var}".`,
+            suggestion: 'Use integer variables for transferVar source and destination.',
+          });
+        }
+        if (endpoint.player !== undefined) {
+          diagnostics.push({
+            code: 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN',
+            path: playerPath,
+            severity: 'error',
+            message: `transferVar.${key}.player must be omitted when transferVar.${key}.scope is "global".`,
+            suggestion: `Remove transferVar.${key}.player or use transferVar.${key}.scope "pvar".`,
+          });
+        }
+        if (endpoint.zone !== undefined) {
+          diagnostics.push({
+            code: 'EFFECT_TRANSFER_VAR_NON_ZONE_SCOPE_ZONE_FORBIDDEN',
+            path: zonePath,
+            severity: 'error',
+            message: `transferVar.${key}.zone must be omitted when transferVar.${key}.scope is "global".`,
+            suggestion: `Remove transferVar.${key}.zone or use transferVar.${key}.scope "zoneVar".`,
+          });
+        }
+        continue;
+      }
+
+      if (endpoint.scope === 'pvar') {
+        if (!context.perPlayerVarNames.has(endpoint.var)) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'REF_PVAR_MISSING',
+            varPath,
+            `Unknown per-player variable "${endpoint.var}".`,
+            endpoint.var,
+            context.perPlayerVarCandidates,
+          );
+        }
+        if (context.perPlayerVarTypesByName.get(endpoint.var) === 'boolean') {
+          diagnostics.push({
+            code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
+            path: varPath,
+            severity: 'error',
+            message: `transferVar cannot target boolean variable "${endpoint.var}".`,
+            suggestion: 'Use integer variables for transferVar source and destination.',
+          });
+        }
+        if (endpoint.player === undefined) {
+          diagnostics.push({
+            code: key === 'from' ? 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED' : 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED',
+            path: playerPath,
+            severity: 'error',
+            message: `transferVar.${key}.player is required when transferVar.${key}.scope is "pvar".`,
+            suggestion: `Provide a player selector for transferVar.${key}.player when targeting a per-player variable.`,
+          });
+        } else {
+          validatePlayerSelector(diagnostics, endpoint.player, playerPath, context);
+        }
+        if (endpoint.zone !== undefined) {
+          diagnostics.push({
+            code: 'EFFECT_TRANSFER_VAR_NON_ZONE_SCOPE_ZONE_FORBIDDEN',
+            path: zonePath,
+            severity: 'error',
+            message: `transferVar.${key}.zone must be omitted when transferVar.${key}.scope is "pvar".`,
+            suggestion: `Remove transferVar.${key}.zone or use transferVar.${key}.scope "zoneVar".`,
+          });
+        }
+        continue;
+      }
+
+      if (!context.zoneVarNames.has(endpoint.var)) {
         pushMissingReferenceDiagnostic(
           diagnostics,
-          'REF_GVAR_MISSING',
-          `${path}.transferVar.from.var`,
-          `Unknown global variable "${effect.transferVar.from.var}".`,
-          effect.transferVar.from.var,
-          context.globalVarCandidates,
+          'REF_ZONEVAR_MISSING',
+          varPath,
+          `Unknown zone variable "${endpoint.var}".`,
+          endpoint.var,
+          context.zoneVarCandidates,
         );
       }
-      if (context.globalVarTypesByName.get(effect.transferVar.from.var) === 'boolean') {
+      if (context.zoneVarTypesByName.get(endpoint.var) === 'boolean') {
         diagnostics.push({
           code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
-          path: `${path}.transferVar.from.var`,
+          path: varPath,
           severity: 'error',
-          message: `transferVar cannot target boolean variable "${effect.transferVar.from.var}".`,
+          message: `transferVar cannot target boolean variable "${endpoint.var}".`,
           suggestion: 'Use integer variables for transferVar source and destination.',
         });
       }
-      if (effect.transferVar.from.player !== undefined) {
+      if (endpoint.zone === undefined) {
         diagnostics.push({
-          code: 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN',
-          path: `${path}.transferVar.from.player`,
+          code: key === 'from' ? 'EFFECT_TRANSFER_VAR_FROM_ZONE_REQUIRED' : 'EFFECT_TRANSFER_VAR_TO_ZONE_REQUIRED',
+          path: zonePath,
           severity: 'error',
-          message: 'transferVar.from.player must be omitted when transferVar.from.scope is "global".',
-          suggestion: 'Remove transferVar.from.player or use transferVar.from.scope "pvar".',
-        });
-      }
-    } else {
-      if (!context.perPlayerVarNames.has(effect.transferVar.from.var)) {
-        pushMissingReferenceDiagnostic(
-          diagnostics,
-          'REF_PVAR_MISSING',
-          `${path}.transferVar.from.var`,
-          `Unknown per-player variable "${effect.transferVar.from.var}".`,
-          effect.transferVar.from.var,
-          context.perPlayerVarCandidates,
-        );
-      }
-      if (context.perPlayerVarTypesByName.get(effect.transferVar.from.var) === 'boolean') {
-        diagnostics.push({
-          code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
-          path: `${path}.transferVar.from.var`,
-          severity: 'error',
-          message: `transferVar cannot target boolean variable "${effect.transferVar.from.var}".`,
-          suggestion: 'Use integer variables for transferVar source and destination.',
-        });
-      }
-      if (effect.transferVar.from.player === undefined) {
-        diagnostics.push({
-          code: 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED',
-          path: `${path}.transferVar.from.player`,
-          severity: 'error',
-          message: 'transferVar.from.player is required when transferVar.from.scope is "pvar".',
-          suggestion: 'Provide a player selector for transferVar.from.player when targeting a per-player variable.',
+          message: `transferVar.${key}.zone is required when transferVar.${key}.scope is "zoneVar".`,
+          suggestion: `Provide a zone selector for transferVar.${key}.zone when targeting a zone variable.`,
         });
       } else {
-        validatePlayerSelector(diagnostics, effect.transferVar.from.player, `${path}.transferVar.from.player`, context);
+        validateZoneRef(diagnostics, endpoint.zone, zonePath, context);
       }
-    }
-
-    if (effect.transferVar.to.scope === 'global' && !context.globalVarNames.has(effect.transferVar.to.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_GVAR_MISSING',
-        `${path}.transferVar.to.var`,
-        `Unknown global variable "${effect.transferVar.to.var}".`,
-        effect.transferVar.to.var,
-        context.globalVarCandidates,
-      );
-    }
-    if (
-      effect.transferVar.to.scope === 'global' &&
-      context.globalVarTypesByName.get(effect.transferVar.to.var) === 'boolean'
-    ) {
-      diagnostics.push({
-        code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
-        path: `${path}.transferVar.to.var`,
-        severity: 'error',
-        message: `transferVar cannot target boolean variable "${effect.transferVar.to.var}".`,
-        suggestion: 'Use integer variables for transferVar source and destination.',
-      });
-    }
-
-    if (effect.transferVar.to.scope === 'pvar' && !context.perPlayerVarNames.has(effect.transferVar.to.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_PVAR_MISSING',
-        `${path}.transferVar.to.var`,
-        `Unknown per-player variable "${effect.transferVar.to.var}".`,
-        effect.transferVar.to.var,
-        context.perPlayerVarCandidates,
-      );
-    }
-    if (
-      effect.transferVar.to.scope === 'pvar' &&
-      context.perPlayerVarTypesByName.get(effect.transferVar.to.var) === 'boolean'
-    ) {
-      diagnostics.push({
-        code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
-        path: `${path}.transferVar.to.var`,
-        severity: 'error',
-        message: `transferVar cannot target boolean variable "${effect.transferVar.to.var}".`,
-        suggestion: 'Use integer variables for transferVar source and destination.',
-      });
-    }
-
-    if (effect.transferVar.to.scope === 'pvar') {
-      if (effect.transferVar.to.player === undefined) {
+      if (endpoint.player !== undefined) {
         diagnostics.push({
-          code: 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED',
-          path: `${path}.transferVar.to.player`,
+          code: 'EFFECT_TRANSFER_VAR_ZONE_SCOPE_PLAYER_FORBIDDEN',
+          path: playerPath,
           severity: 'error',
-          message: 'transferVar.to.player is required when transferVar.to.scope is "pvar".',
-          suggestion: 'Provide a player selector for transferVar.to.player when targeting a per-player variable.',
+          message: `transferVar.${key}.player must be omitted when transferVar.${key}.scope is "zoneVar".`,
+          suggestion: `Remove transferVar.${key}.player or use transferVar.${key}.scope "pvar".`,
         });
-      } else {
-        validatePlayerSelector(diagnostics, effect.transferVar.to.player, `${path}.transferVar.to.player`, context);
       }
-    } else if (effect.transferVar.to.player !== undefined) {
-      diagnostics.push({
-        code: 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN',
-        path: `${path}.transferVar.to.player`,
-        severity: 'error',
-        message: 'transferVar.to.player must be omitted when transferVar.to.scope is "global".',
-        suggestion: 'Remove transferVar.to.player or use transferVar.to.scope "pvar".',
-      });
     }
 
     validateNumericValueExpr(diagnostics, effect.transferVar.amount, `${path}.transferVar.amount`, context);

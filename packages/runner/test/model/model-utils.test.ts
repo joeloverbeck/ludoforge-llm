@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatScopeDisplay, optionalPlayerId } from '../../src/model/model-utils.js';
+import { formatScopeEndpointDisplay, formatScopePrefixDisplay, optionalPlayerId } from '../../src/model/model-utils.js';
 
 describe('model-utils', () => {
   it('returns an empty object for undefined playerId', () => {
@@ -11,11 +11,10 @@ describe('model-utils', () => {
     expect(optionalPlayerId(2)).toEqual({ playerId: 2 });
   });
 
-  it('renders per-player scope for endpoint and prefix contexts', () => {
+  it('renders per-player scope for endpoint and prefix displays', () => {
     expect(
-      formatScopeDisplay({
+      formatScopeEndpointDisplay({
         scope: 'perPlayer',
-        context: 'endpoint',
         playerId: 2,
         zoneId: undefined,
         resolvePlayerName: (playerId) => `Player ${playerId}`,
@@ -24,9 +23,8 @@ describe('model-utils', () => {
     ).toBe('Player 2');
 
     expect(
-      formatScopeDisplay({
+      formatScopePrefixDisplay({
         scope: 'perPlayer',
-        context: 'prefix',
         playerId: 2,
         zoneId: undefined,
         resolvePlayerName: (playerId) => `Player ${playerId}`,
@@ -37,9 +35,8 @@ describe('model-utils', () => {
 
   it('uses fallback labels when scope ids are missing', () => {
     expect(
-      formatScopeDisplay({
+      formatScopeEndpointDisplay({
         scope: 'perPlayer',
-        context: 'endpoint',
         playerId: undefined,
         zoneId: undefined,
         resolvePlayerName: () => 'unused',
@@ -48,9 +45,8 @@ describe('model-utils', () => {
     ).toBe('Per Player');
 
     expect(
-      formatScopeDisplay({
+      formatScopePrefixDisplay({
         scope: 'perPlayer',
-        context: 'prefix',
         playerId: undefined,
         zoneId: undefined,
         resolvePlayerName: () => 'unused',
@@ -59,9 +55,8 @@ describe('model-utils', () => {
     ).toBe('Player: ');
 
     expect(
-      formatScopeDisplay({
+      formatScopeEndpointDisplay({
         scope: 'zone',
-        context: 'endpoint',
         playerId: undefined,
         zoneId: undefined,
         resolvePlayerName: () => 'unused',
@@ -70,9 +65,8 @@ describe('model-utils', () => {
     ).toBe('Zone');
 
     expect(
-      formatScopeDisplay({
+      formatScopePrefixDisplay({
         scope: 'zone',
-        context: 'prefix',
         playerId: undefined,
         zoneId: undefined,
         resolvePlayerName: () => 'unused',
@@ -81,11 +75,10 @@ describe('model-utils', () => {
     ).toBe('Zone: ');
   });
 
-  it('renders global only for endpoint context', () => {
+  it('renders global endpoint and empty global prefix', () => {
     expect(
-      formatScopeDisplay({
+      formatScopeEndpointDisplay({
         scope: 'global',
-        context: 'endpoint',
         playerId: undefined,
         zoneId: undefined,
         resolvePlayerName: () => 'unused',
@@ -94,14 +87,25 @@ describe('model-utils', () => {
     ).toBe('Global');
 
     expect(
-      formatScopeDisplay({
+      formatScopePrefixDisplay({
         scope: 'global',
-        context: 'prefix',
         playerId: undefined,
         zoneId: undefined,
         resolvePlayerName: () => 'unused',
         resolveZoneName: () => 'unused',
       }),
     ).toBe('');
+  });
+
+  it('throws when endpoint scope is missing at runtime', () => {
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: undefined as unknown as 'global',
+        playerId: undefined,
+        zoneId: undefined,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: () => 'unused',
+      }),
+    ).toThrow('Invalid endpoint scope for event-log rendering');
   });
 });

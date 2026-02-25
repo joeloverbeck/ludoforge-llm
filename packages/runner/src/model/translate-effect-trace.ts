@@ -3,7 +3,13 @@ import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { EventLogKind } from './event-log-kind.js';
-import { formatScopeDisplay, optionalPlayerId } from './model-utils.js';
+import {
+  formatScopeEndpointDisplay,
+  formatScopePrefixDisplay,
+  optionalPlayerId,
+  type ScopeEndpointKind,
+  type ScopeKind,
+} from './model-utils.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
 
 export interface EventLogEntry {
@@ -30,12 +36,13 @@ export function translateEffectTrace(
   moveIndex: number,
 ): readonly EventLogEntry[] {
   const lookup = buildPlayerLookup(gameDef);
+  const scopeFormatter = createScopeFormatter(visualConfig, lookup);
 
   const effects = effectTrace.map((entry, entryIndex) =>
-    translateEffectEntry(entry, entryIndex, moveIndex, visualConfig, lookup),
+    translateEffectEntry(entry, entryIndex, moveIndex, visualConfig, lookup, scopeFormatter),
   );
   const triggers = triggerLog.map((entry, entryIndex) =>
-    translateTriggerEntry(entry, entryIndex, moveIndex, visualConfig, lookup),
+    translateTriggerEntry(entry, entryIndex, moveIndex, visualConfig, lookup, scopeFormatter),
   );
 
   return [...effects, ...triggers];
@@ -47,6 +54,7 @@ function translateEffectEntry(
   moveIndex: number,
   visualConfig: VisualConfigProvider,
   lookup: PlayerLookup,
+  scopeFormatter: ScopeFormatter,
 ): EventLogEntry {
   const projection = projectEffectTraceEntry(entry);
   const base = {
@@ -74,8 +82,7 @@ function translateEffectEntry(
         zoneId: entry.scope === 'zone' ? entry.zone : undefined,
         oldValue: entry.oldValue,
         newValue: entry.newValue,
-        visualConfig,
-        lookup,
+        scopeFormatter,
       });
       return {
         ...base,
@@ -90,20 +97,14 @@ function translateEffectEntry(
         kind: 'variable',
         message:
           `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
-          ` from ${formatScopeDisplay({
+          ` from ${scopeFormatter.endpoint({
             scope: entry.from.scope,
-            context: 'endpoint',
             playerId: entry.from.player,
             zoneId: entry.from.zone,
-            resolvePlayerName: (playerId) => resolvePlayerName(playerId, visualConfig, lookup),
-            resolveZoneName: (zoneId) => resolveZoneName(zoneId, visualConfig),
-          })} to ${formatScopeDisplay({
+          })} to ${scopeFormatter.endpoint({
             scope: entry.to.scope,
-            context: 'endpoint',
             playerId: entry.to.player,
             zoneId: entry.to.zone,
-            resolvePlayerName: (playerId) => resolvePlayerName(playerId, visualConfig, lookup),
-            resolveZoneName: (zoneId) => resolveZoneName(zoneId, visualConfig),
           })}.`,
       };
 
@@ -173,6 +174,7 @@ function translateTriggerEntry(
   moveIndex: number,
   visualConfig: VisualConfigProvider,
   lookup: PlayerLookup,
+  scopeFormatter: ScopeFormatter,
 ): EventLogEntry {
   const base = {
     id: `move-${moveIndex}-trigger-${entryIndex}`,
@@ -185,7 +187,7 @@ function translateTriggerEntry(
       return {
         ...base,
         kind: 'trigger',
-        message: `Triggered ${formatIdAsDisplayName(String(entry.triggerId))} on ${formatTriggerEvent(entry.event, visualConfig, lookup)}.`,
+        message: `Triggered ${formatIdAsDisplayName(String(entry.triggerId))} on ${formatTriggerEvent(entry.event, visualConfig, lookup, scopeFormatter)}.`,
         depth: entry.depth,
         zoneIds: projection.zoneIds,
         tokenIds: [],
@@ -198,7 +200,7 @@ function translateTriggerEntry(
       return {
         ...base,
         kind: 'trigger',
-        message: `Trigger processing truncated for ${formatTriggerEvent(entry.event, visualConfig, lookup)}.`,
+        message: `Trigger processing truncated for ${formatTriggerEvent(entry.event, visualConfig, lookup, scopeFormatter)}.`,
         depth: entry.depth,
         zoneIds: projection.zoneIds,
         tokenIds: [],
@@ -407,35 +409,30 @@ function formatFilterOp(op: 'eq' | 'neq' | 'in' | 'notIn'): string {
 }
 
 function formatScopedVariableChangeMessage(input: {
-  readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
+  readonly scope: ScopeKind;
   readonly variable: string;
   readonly playerId: number | undefined;
   readonly zoneId: string | undefined;
   readonly oldValue?: unknown;
   readonly newValue?: unknown;
-  readonly visualConfig: VisualConfigProvider;
-  readonly lookup: PlayerLookup;
+  readonly scopeFormatter: ScopeFormatter;
 }): string {
   return `${formatScopedVariableChangeClause(input)}.`;
 }
 
 function formatScopedVariableChangeClause(input: {
-  readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
+  readonly scope: ScopeKind;
   readonly variable: string;
   readonly playerId: number | undefined;
   readonly zoneId: string | undefined;
   readonly oldValue?: unknown;
   readonly newValue?: unknown;
-  readonly visualConfig: VisualConfigProvider;
-  readonly lookup: PlayerLookup;
+  readonly scopeFormatter: ScopeFormatter;
 }): string {
-  const scopePrefix = formatScopeDisplay({
+  const scopePrefix = input.scopeFormatter.prefix({
     scope: input.scope,
-    context: 'prefix',
     playerId: input.playerId,
     zoneId: input.zoneId === undefined ? undefined : String(input.zoneId),
-    resolvePlayerName: (playerId) => resolvePlayerName(playerId, input.visualConfig, input.lookup),
-    resolveZoneName: (zoneId) => resolveZoneName(zoneId, input.visualConfig),
   });
   const headline = `${scopePrefix}${input.variable} changed`;
   if (input.oldValue === undefined && input.newValue === undefined) {
@@ -461,6 +458,7 @@ function formatTriggerEvent(
   event: TriggerEvent,
   visualConfig: VisualConfigProvider,
   lookup: PlayerLookup,
+  scopeFormatter: ScopeFormatter,
 ): string {
   switch (event.type) {
     case 'phaseEnter':
@@ -487,11 +485,44 @@ function formatTriggerEvent(
         zoneId: event.scope === 'zone' ? event.zone : undefined,
         oldValue: event.oldValue,
         newValue: event.newValue,
-        visualConfig,
-        lookup,
+        scopeFormatter,
       });
     }
   }
+}
+
+interface ScopeFormatter {
+  readonly prefix: (input: {
+    readonly scope: ScopeKind;
+    readonly playerId: number | undefined;
+    readonly zoneId: string | undefined;
+  }) => string;
+  readonly endpoint: (input: {
+    readonly scope: ScopeEndpointKind;
+    readonly playerId: number | undefined;
+    readonly zoneId: string | undefined;
+  }) => string;
+}
+
+function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: PlayerLookup): ScopeFormatter {
+  return {
+    prefix: ({ scope, playerId, zoneId }) =>
+      formatScopePrefixDisplay({
+        scope,
+        playerId,
+        zoneId,
+        resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
+        resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
+      }),
+    endpoint: ({ scope, playerId, zoneId }) =>
+      formatScopeEndpointDisplay({
+        scope,
+        playerId,
+        zoneId,
+        resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
+        resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
+      }),
+  };
 }
 
 function formatValue(value: unknown): string {

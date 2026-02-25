@@ -692,6 +692,24 @@ describe('translateEffectTrace', () => {
       'Triggered On Zone Support Changed on Zone: Support changed from 2 to 3.',
     );
   });
+
+  it('throws on invalid resource-transfer endpoint scope instead of coercing to Global', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: undefined as unknown as 'global', varName: 'pool' },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Invalid endpoint scope for event-log rendering');
+  });
 });
 
 function provenance() {

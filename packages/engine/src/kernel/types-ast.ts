@@ -224,8 +224,18 @@ export type EffectAST =
     }
   | {
       readonly transferVar: {
-        readonly from: { readonly scope: 'global' | 'pvar'; readonly var: string; readonly player?: PlayerSel };
-        readonly to: { readonly scope: 'global' | 'pvar'; readonly var: string; readonly player?: PlayerSel };
+        readonly from: {
+          readonly scope: 'global' | 'pvar' | 'zoneVar';
+          readonly var: string;
+          readonly player?: PlayerSel;
+          readonly zone?: ZoneRef;
+        };
+        readonly to: {
+          readonly scope: 'global' | 'pvar' | 'zoneVar';
+          readonly var: string;
+          readonly player?: PlayerSel;
+          readonly zone?: ZoneRef;
+        };
         readonly amount: NumericValueExpr;
         readonly min?: NumericValueExpr;
         readonly max?: NumericValueExpr;

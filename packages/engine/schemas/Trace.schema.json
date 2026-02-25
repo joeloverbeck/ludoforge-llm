@@ -1771,6 +1771,10 @@
                             {
                               "type": "string",
                               "const": "perPlayer"
+                            },
+                            {
+                              "type": "string",
+                              "const": "zone"
                             }
                           ]
                         },
@@ -1781,6 +1785,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "zone": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -1801,6 +1808,10 @@
                             {
                               "type": "string",
                               "const": "perPlayer"
+                            },
+                            {
+                              "type": "string",
+                              "const": "zone"
                             }
                           ]
                         },
@@ -1811,6 +1822,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "zone": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -2576,7 +2590,7 @@
                           "effects": {
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_edeab2c5"
+                              "$ref": "#/definitions/anon_f6698005"
                             }
                           },
                           "moveParams": {
@@ -2877,13 +2891,13 @@
               "setupEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_edeab2c5"
+                  "$ref": "#/definitions/anon_f6698005"
                 }
               },
               "teardownEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_edeab2c5"
+                  "$ref": "#/definitions/anon_f6698005"
                 }
               },
               "remainingTurnBoundaries": {
@@ -5250,7 +5264,7 @@
         }
       ]
     },
-    "anon_edeab2c5": {
+    "anon_f6698005": {
       "anyOf": [
         {
           "type": "object",
@@ -5611,6 +5625,10 @@
                         {
                           "type": "string",
                           "const": "pvar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "zoneVar"
                         }
                       ]
                     },
@@ -5679,6 +5697,25 @@
                           },
                           "required": [
                             "relative"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "zone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "zoneExpr": {
+                              "$ref": "#/definitions/anon_25c2127f"
+                            }
+                          },
+                          "required": [
+                            "zoneExpr"
                           ],
                           "additionalProperties": false
                         }
@@ -5703,6 +5740,10 @@
                         {
                           "type": "string",
                           "const": "pvar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "zoneVar"
                         }
                       ]
                     },
@@ -5771,6 +5812,25 @@
                           },
                           "required": [
                             "relative"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "zone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "zoneExpr": {
+                              "$ref": "#/definitions/anon_25c2127f"
+                            }
+                          },
+                          "required": [
+                            "zoneExpr"
                           ],
                           "additionalProperties": false
                         }
@@ -6449,13 +6509,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },
@@ -6502,7 +6562,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 },
                 "limit": {
@@ -6518,7 +6578,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },
@@ -6585,7 +6645,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },
@@ -6682,7 +6742,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },
@@ -6713,7 +6773,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },
@@ -6773,7 +6833,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 },
                 "scoreExpr": {
@@ -6788,7 +6848,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },
@@ -6924,7 +6984,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_edeab2c5"
+                    "$ref": "#/definitions/anon_f6698005"
                   }
                 }
               },

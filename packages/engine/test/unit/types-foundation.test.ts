@@ -60,6 +60,7 @@ describe('kernel type foundations', () => {
 
   it('rejects invalid selector-cardinality defer metadata at compile time', () => {
     selectorCardinalityError('ok', {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
       resolvedZones: [],
@@ -67,6 +68,7 @@ describe('kernel type foundations', () => {
     });
 
     const invalidLiteralContext = {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
       resolvedZones: [],
@@ -76,6 +78,7 @@ describe('kernel type foundations', () => {
     selectorCardinalityError('invalid', invalidLiteralContext);
 
     const typedContext: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
       resolvedZones: [],
@@ -84,6 +87,7 @@ describe('kernel type foundations', () => {
     selectorCardinalityError('typed', typedContext);
 
     const widenedContext: Record<string, unknown> = {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
       resolvedZones: [],
@@ -94,14 +98,39 @@ describe('kernel type foundations', () => {
 
     // @ts-expect-error Zone selector cardinality metadata must include resolvedZones.
     selectorCardinalityError('missing zones', {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
     });
 
     // @ts-expect-error Player selector cardinality metadata must include resolvedPlayers when using resolvedCount shape.
     selectorCardinalityError('missing players', {
+      selectorKind: 'player',
       selector: 'all',
       resolvedCount: 2,
+    });
+
+    // @ts-expect-error Player selector cardinality metadata must not include resolvedZones.
+    selectorCardinalityError('player with zone payload', {
+      selectorKind: 'player',
+      selector: 'all',
+      resolvedCount: 2,
+      resolvedZones: [],
+    });
+
+    // @ts-expect-error Zone selector cardinality metadata must not include resolvedPlayers.
+    selectorCardinalityError('zone with player payload', {
+      selectorKind: 'zone',
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedPlayers: [],
+    });
+
+    // @ts-expect-error Selector-cardinality metadata requires explicit selectorKind discriminator.
+    selectorCardinalityError('missing selector kind', {
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
     });
   });
 

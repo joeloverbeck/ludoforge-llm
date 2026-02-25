@@ -25,12 +25,14 @@ describe('eval error classification', () => {
 
   it('classifies selector-cardinality defer classes via typed guard', () => {
     const deferrable = selectorCardinalityError('Expected one', {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
       resolvedZones: [],
       deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
     });
     const nonDeferrable = selectorCardinalityError('Expected one', {
+      selectorKind: 'zone',
       selector: 'hand:all',
       resolvedCount: 2,
       resolvedZones: [asZoneId('hand:0'), asZoneId('hand:1')],
@@ -48,6 +50,7 @@ describe('eval error classification', () => {
 
   it('preserves defer metadata when selector-cardinality context is provided via typed contract', () => {
     const typedContext: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
+      selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
       resolvedZones: [],

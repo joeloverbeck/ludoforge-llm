@@ -30,7 +30,8 @@ export type EvalErrorCode =
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
 
-export type SelectorCardinalityEvalErrorContext = EvalErrorContext & {
+export type SelectorCardinalityPlayerEvalErrorContext = EvalErrorContext & {
+  readonly selectorKind: 'player';
   readonly selector: PlayerSel;
 } & (
   | {
@@ -42,7 +43,8 @@ export type SelectorCardinalityEvalErrorContext = EvalErrorContext & {
     }
 );
 
-type SelectorCardinalityZoneEvalErrorContext = EvalErrorContext & {
+export type SelectorCardinalityZoneEvalErrorContext = EvalErrorContext & {
+  readonly selectorKind: 'zone';
   readonly selector: ZoneSel;
   readonly resolvedCount: number;
   readonly resolvedZones: readonly ZoneId[];
@@ -50,7 +52,7 @@ type SelectorCardinalityZoneEvalErrorContext = EvalErrorContext & {
 };
 
 export type TypedSelectorCardinalityEvalErrorContext =
-  | SelectorCardinalityEvalErrorContext
+  | SelectorCardinalityPlayerEvalErrorContext
   | SelectorCardinalityZoneEvalErrorContext;
 
 export type QueryBoundsExceededEvalErrorContext = EvalErrorContext & {

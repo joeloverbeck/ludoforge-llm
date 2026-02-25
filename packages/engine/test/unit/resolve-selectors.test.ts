@@ -110,12 +110,12 @@ describe('resolvePlayerSel', () => {
       activePlayer: asPlayerId(0),
     });
     assert.throws(() => resolveSinglePlayerSel('allOther', zeroCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+      isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'player',
     );
 
     const manyCtx = makeCtx();
     assert.throws(() => resolveSinglePlayerSel('all', manyCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+      isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'player',
     );
   });
 });
@@ -193,12 +193,14 @@ describe('resolveZoneSel', () => {
     assert.throws(
       () => resolveSingleZoneSel('hand:allOther', zeroCtx),
       (error: unknown) =>
-        isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.deferClass === undefined,
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY') &&
+        error.context?.selectorKind === 'zone' &&
+        error.context?.deferClass === undefined,
     );
 
     const manyCtx = makeCtx();
     assert.throws(() => resolveSingleZoneSel('hand:all', manyCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+      isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'zone',
     );
   });
 
@@ -208,6 +210,7 @@ describe('resolveZoneSel', () => {
       () => resolveSingleZoneSel('$zones', emptyBoundSelectionCtx),
       (error: unknown) =>
         isEvalErrorCode(error, 'SELECTOR_CARDINALITY') &&
+        error.context?.selectorKind === 'zone' &&
         error.context?.deferClass === EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
     );
   });

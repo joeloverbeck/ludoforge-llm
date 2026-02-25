@@ -27,6 +27,7 @@ describe('shouldDeferMissingBinding()', () => {
       'SELECTOR_CARDINALITY',
       'Expected exactly one zone',
       {
+        selectorKind: 'zone',
         selector: 'hand:allOther',
         resolvedCount: 0,
         resolvedZones: [],
@@ -40,6 +41,7 @@ describe('shouldDeferMissingBinding()', () => {
 
   it('does not defer selector-cardinality without structured unresolved-binding metadata', () => {
     const selectorCardinality = createEvalError('SELECTOR_CARDINALITY', 'Expected exactly one zone', {
+      selectorKind: 'zone',
       selector: '$targetProvince',
       resolvedCount: 0,
       resolvedZones: [],

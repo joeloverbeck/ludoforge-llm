@@ -133,6 +133,7 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly Pla
 
   if (players.length === 0) {
     throw selectorCardinalityError('Cannot resolve relative selector with zero players', {
+      selectorKind: 'player',
       selector: sel,
       playerCount: ctx.state.playerCount,
     });
@@ -148,6 +149,7 @@ export function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): Player
   const resolved = resolvePlayerSel(sel, ctx);
   if (resolved.length !== 1) {
     throw selectorCardinalityError('Expected exactly one player from selector', {
+      selectorKind: 'player',
       selector: sel,
       resolvedCount: resolved.length,
       resolvedPlayers: resolved,
@@ -285,6 +287,7 @@ export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
   const resolved = resolveZoneSel(sel, ctx);
   if (resolved.length !== 1) {
     const context: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
+      selectorKind: 'zone',
       selector: sel,
       resolvedCount: resolved.length,
       resolvedZones: resolved,

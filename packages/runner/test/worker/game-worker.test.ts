@@ -31,6 +31,7 @@ describe('createGameWorker', () => {
       () => worker.enumerateLegalMoves(),
       () => worker.legalChoices(LEGAL_TICK_MOVE),
       () => worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
+      () => worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
       () => worker.playSequence([LEGAL_TICK_MOVE], undefined, nextStamp(), undefined),
       () => worker.terminalResult(),
       () => worker.getState(),
@@ -456,49 +457,92 @@ describe('createGameWorker', () => {
     }
   });
 
-  it('completeMove returns completed move for a template with pending decisions', async () => {
+  it('applyTemplateMove returns applied outcome for a template with pending decisions', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
     await worker.init(CHOOSE_ONE_TEST_DEF, 50, undefined, nextStamp());
 
     const templateMove: Move = { actionId: asActionId('pick-one'), params: {} };
-    const completed = await worker.completeMove(templateMove);
+    const outcome = await worker.applyTemplateMove(templateMove, undefined, nextStamp());
 
-    expect(completed).not.toBeNull();
-    expect(completed!.actionId).toBe(templateMove.actionId);
-    expect(Object.keys(completed!.params).length).toBeGreaterThan(0);
+    expect(outcome.outcome).toBe('applied');
+    if (outcome.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(outcome.move.actionId).toBe(templateMove.actionId);
+    expect(Object.keys(outcome.move.params).length).toBeGreaterThan(0);
+    expect(outcome.result.state).toEqual(await worker.getState());
   });
 
-  it('completeMove passes through already-complete moves', async () => {
+  it('applyTemplateMove passes through already-complete legal moves', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
     await worker.init(TEST_DEF, 51, undefined, nextStamp());
 
-    const completed = await worker.completeMove(LEGAL_TICK_MOVE);
+    const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
 
-    expect(completed).not.toBeNull();
-    expect(completed).toEqual(LEGAL_TICK_MOVE);
+    expect(outcome.outcome).toBe('applied');
+    if (outcome.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(outcome.move).toEqual(LEGAL_TICK_MOVE);
+    expect(outcome.result.state).toEqual(await worker.getState());
   });
 
-  it('completeMove fills multiple decisions for a multi-choice action', async () => {
+  it('applyTemplateMove fills multiple decisions for a multi-choice action', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
     await worker.init(CHOOSE_MIXED_TEST_DEF, 52, undefined, nextStamp());
 
     const templateMove: Move = { actionId: asActionId('pick-mixed'), params: {} };
-    const completed = await worker.completeMove(templateMove);
+    const outcome = await worker.applyTemplateMove(templateMove, undefined, nextStamp());
 
-    expect(completed).not.toBeNull();
-    expect(completed!.actionId).toBe(templateMove.actionId);
-    expect(Object.keys(completed!.params).length).toBeGreaterThanOrEqual(2);
+    expect(outcome.outcome).toBe('applied');
+    if (outcome.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(outcome.move.actionId).toBe(templateMove.actionId);
+    expect(Object.keys(outcome.move.params).length).toBeGreaterThanOrEqual(2);
   });
 
-  it('completeMove throws NOT_INITIALIZED when worker is not initialized', async () => {
+  it('applyTemplateMove returns uncompletable outcome when template cannot be completed', async () => {
     const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 53, undefined, nextStamp());
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue(null);
+
+    const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+
+    expect(outcome).toEqual({ outcome: 'uncompletable' });
+    expect(await worker.getHistoryLength()).toBe(0);
+    expect((await worker.getState()).globalVars.tick).toBe(0);
+  });
+
+  it('applyTemplateMove returns illegal outcome and preserves state when apply is illegal', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 54, undefined, nextStamp());
+    const before = await worker.getState();
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ move: ILLEGAL_MOVE } as never);
+
+    const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+
+    expect(outcome.outcome).toBe('illegal');
+    if (outcome.outcome !== 'illegal') {
+      throw new Error('Expected illegal outcome.');
+    }
+    expect(outcome.error.code).toBe('ILLEGAL_MOVE');
+    expect(await worker.getHistoryLength()).toBe(0);
+    expect(await worker.getState()).toEqual(before);
+  });
+
+  it('applyTemplateMove throws NOT_INITIALIZED when worker is not initialized', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
 
     try {
-      await worker.completeMove(LEGAL_TICK_MOVE);
-      throw new Error('Expected completeMove to throw');
+      await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+      throw new Error('Expected applyTemplateMove to throw');
     } catch (error) {
       expectWorkerError(error, 'NOT_INITIALIZED');
     }

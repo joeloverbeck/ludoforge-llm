@@ -724,8 +724,8 @@ export function createGameStore(
           return 'no-legal-moves';
         }
 
-        const completedMove = await bridge.completeMove(aiMove);
-        if (completedMove === null) {
+        const templateMoveResult = await bridge.applyTemplateMove(aiMove, undefined, toOperationStamp(ctx));
+        if (templateMoveResult.outcome === 'uncompletable') {
           const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
           guardSetAndDerive(ctx, {
             legalMoveResult,
@@ -741,7 +741,16 @@ export function createGameStore(
           return 'uncompletable-template';
         }
 
-        const result = await bridge.applyMove(completedMove, undefined, toOperationStamp(ctx));
+        if (templateMoveResult.outcome === 'illegal') {
+          guardSetAndDerive(ctx, {
+            legalMoveResult,
+            error: templateMoveResult.error,
+          });
+          return 'no-op';
+        }
+
+        const completedMove = templateMoveResult.move;
+        const result = templateMoveResult.result;
         const mutationInputs = await deriveMutationInputs(result.state);
         const appliedMovePatch = buildAppliedMoveEventPatch(state, completedMove);
         const lifecycle = assertLifecycleTransition(

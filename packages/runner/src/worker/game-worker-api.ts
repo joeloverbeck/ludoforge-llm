@@ -53,6 +53,26 @@ export interface InitResult {
   readonly setupTrace: readonly EffectTraceEntry[];
 }
 
+export interface ApplyTemplateMoveApplied {
+  readonly outcome: 'applied';
+  readonly move: Move;
+  readonly result: ApplyMoveResult;
+}
+
+export interface ApplyTemplateMoveUncompletable {
+  readonly outcome: 'uncompletable';
+}
+
+export interface ApplyTemplateMoveIllegal {
+  readonly outcome: 'illegal';
+  readonly error: WorkerError;
+}
+
+export type ApplyTemplateMoveResult =
+  | ApplyTemplateMoveApplied
+  | ApplyTemplateMoveUncompletable
+  | ApplyTemplateMoveIllegal;
+
 export interface GameWorkerAPI {
   init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
@@ -63,6 +83,11 @@ export interface GameWorkerAPI {
     options: { readonly trace?: boolean } | undefined,
     stamp: OperationStamp,
   ): Promise<ApplyMoveResult>;
+  applyTemplateMove(
+    templateMove: Move,
+    options: { readonly trace?: boolean } | undefined,
+    stamp: OperationStamp,
+  ): Promise<ApplyTemplateMoveResult>;
   playSequence(
     moves: readonly Move[],
     options: { readonly trace?: boolean } | undefined,
@@ -75,7 +100,6 @@ export interface GameWorkerAPI {
   getHistoryLength(): Promise<number>;
   undo(stamp: OperationStamp): Promise<GameState | null>;
   reset(nextDef: GameDef | undefined, seed: number | undefined, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
-  completeMove(templateMove: Move): Promise<Move | null>;
   loadFromUrl(url: string, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
 }
 
@@ -208,6 +232,26 @@ export function createGameWorker(): GameWorkerAPI {
     return { state: nextInit.state, setupTrace: nextInit.setupTrace };
   };
 
+  const executeAppliedMove = (
+    currentDef: GameDef,
+    currentState: GameState,
+    move: Move,
+    options: { readonly trace?: boolean } | undefined,
+  ): ApplyMoveResult => {
+    history.push(currentState);
+    try {
+      const executionOptions: ExecutionOptions = {
+        trace: options?.trace ?? enableTrace,
+      };
+      const result = applyMove(currentDef, currentState, move, executionOptions);
+      state = result.state;
+      return result;
+    } catch (error) {
+      history.pop();
+      throw error;
+    }
+  };
+
   const api: GameWorkerAPI = {
     async init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult> {
       return withInternalErrorMapping(() => {
@@ -237,20 +281,6 @@ export function createGameWorker(): GameWorkerAPI {
       });
     },
 
-    async completeMove(templateMove: Move): Promise<Move | null> {
-      return withInternalErrorMapping(() => {
-        const current = assertInitialized(def, state);
-        const result = completeTemplateMove(
-          current.def,
-          current.state,
-          templateMove,
-          { state: current.state.rng },
-          runtime ?? undefined,
-        );
-        return result?.move ?? null;
-      });
-    },
-
     async applyMove(
       move: Move,
       options: { readonly trace?: boolean } | undefined,
@@ -258,18 +288,41 @@ export function createGameWorker(): GameWorkerAPI {
     ): Promise<ApplyMoveResult> {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);
-      history.push(current.state);
-      return withIllegalMoveMapping(() => {
+      return withIllegalMoveMapping(() => executeAppliedMove(current.def, current.state, move, options));
+    },
+
+    async applyTemplateMove(
+      templateMove: Move,
+      options: { readonly trace?: boolean } | undefined,
+      stamp: OperationStamp,
+    ): Promise<ApplyTemplateMoveResult> {
+      return withInternalErrorMapping(() => {
+        const current = assertInitialized(def, state);
+        ensureFreshMutation(stamp);
+        const completion = completeTemplateMove(
+          current.def,
+          current.state,
+          templateMove,
+          { state: current.state.rng },
+          runtime ?? undefined,
+        );
+        const completedMove = completion?.move ?? null;
+        if (completedMove === null) {
+          return { outcome: 'uncompletable' };
+        }
+
         try {
-          const executionOptions: ExecutionOptions = {
-            trace: options?.trace ?? enableTrace,
+          const result = executeAppliedMove(current.def, current.state, completedMove, options);
+          return {
+            outcome: 'applied',
+            move: completedMove,
+            result,
           };
-          const result = applyMove(current.def, current.state, move, executionOptions);
-          state = result.state;
-          return result;
         } catch (error) {
-          history.pop();
-          throw error;
+          return {
+            outcome: 'illegal',
+            error: toWorkerError('ILLEGAL_MOVE', error, 'Illegal move.'),
+          };
         }
       });
     },

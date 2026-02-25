@@ -484,11 +484,23 @@ describe('translateEffectTrace', () => {
         },
         depth: 1,
       },
+      {
+        kind: 'truncated',
+        event: {
+          type: 'varChanged',
+          scope: 'zone',
+          var: 'support',
+          zone: 'alpha' as never,
+          oldValue: 1,
+          newValue: 2,
+        },
+        depth: 2,
+      },
     ];
 
     const entries = translateEffectTrace(effectTrace, triggerLog, visualConfig, gameDefNoFactionsFixture(), 5);
 
-    expect(entries).toHaveLength(2);
+    expect(entries).toHaveLength(3);
     expect(entries[0]).toMatchObject({
       kind: 'variable',
       zoneIds: ['alpha'],
@@ -505,7 +517,16 @@ describe('translateEffectTrace', () => {
       depth: 1,
       moveIndex: 5,
     });
-    expect(entries[1]?.message).toContain('on Alpha Zone: Support changed');
+    expect(entries[1]?.message).toBe('Triggered On Support Changed on Alpha Zone: Support changed from 0 to 1.');
+
+    expect(entries[2]).toMatchObject({
+      kind: 'trigger',
+      zoneIds: ['alpha'],
+      tokenIds: [],
+      depth: 2,
+      moveIndex: 5,
+    });
+    expect(entries[2]?.message).toBe('Trigger processing truncated for Alpha Zone: Support changed from 1 to 2.');
   });
 
   it('formats per-player varChanged trigger text using the shared scope prefix renderer', () => {
@@ -534,7 +555,9 @@ describe('translateEffectTrace', () => {
 
     const entries = translateEffectTrace([], triggerLog, visualConfig, gameDefFixture(), 9);
     expect(entries).toHaveLength(1);
-    expect(entries[0]?.message).toContain('on United States: Resources changed');
+    expect(entries[0]?.message).toBe(
+      'Triggered On Resources Changed on United States: Resources changed from 9 to 7.',
+    );
     expect(entries[0]?.playerId).toBe(0);
   });
 });

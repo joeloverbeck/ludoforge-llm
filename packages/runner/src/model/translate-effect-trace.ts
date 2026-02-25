@@ -451,6 +451,19 @@ function formatScopedVariableChangeMessage(input: {
   readonly visualConfig: VisualConfigProvider;
   readonly lookup: PlayerLookup;
 }): string {
+  return `${formatScopedVariableChangeClause(input)}.`;
+}
+
+function formatScopedVariableChangeClause(input: {
+  readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
+  readonly variable: string;
+  readonly playerId: number | undefined;
+  readonly zoneId: string | undefined;
+  readonly oldValue?: unknown;
+  readonly newValue?: unknown;
+  readonly visualConfig: VisualConfigProvider;
+  readonly lookup: PlayerLookup;
+}): string {
   const scopePrefix = formatScopePrefix({
     scope: input.scope,
     playerId: input.playerId,
@@ -462,7 +475,7 @@ function formatScopedVariableChangeMessage(input: {
   if (input.oldValue === undefined && input.newValue === undefined) {
     return headline;
   }
-  return `${headline} from ${formatValue(input.oldValue)} to ${formatValue(input.newValue)}.`;
+  return `${headline} from ${formatValue(input.oldValue)} to ${formatValue(input.newValue)}`;
 }
 
 function formatLifecycleEvent(eventType: string, phase: string | undefined): string {
@@ -501,11 +514,13 @@ function formatTriggerEvent(
         ? 'token entered zone'
         : `token entered ${resolveZoneName(String(event.zone), visualConfig)}`;
     case 'varChanged': {
-      return formatScopedVariableChangeMessage({
+      return formatScopedVariableChangeClause({
         scope: event.scope,
         variable: event.var === undefined ? 'variable' : formatIdAsDisplayName(event.var),
         playerId: projectTriggerEvent(event).playerId,
         zoneId: event.scope === 'zone' ? event.zone : undefined,
+        oldValue: event.oldValue,
+        newValue: event.newValue,
         visualConfig,
         lookup,
       });

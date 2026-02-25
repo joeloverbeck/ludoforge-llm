@@ -395,9 +395,26 @@ export const enumerateLegalMoves = (
     }
 
     const eventAction = isCardEventAction(action);
+    const beforeEventCount = enumeration.moves.length;
     enumerateCurrentEventMoves(action, def, state, enumeration, runtime);
     if (eventAction) {
-      continue;
+      if (enumeration.moves.length > beforeEventCount) {
+        continue;
+      }
+
+      // Card-event actions normally require a resolvable current card context.
+      // Fallback template enumeration is only allowed when no event decks exist
+      // (pure action-class tests), when a pipeline-backed template is needed,
+      // or when the action explicitly binds eventCardId and can be satisfied
+      // without a currently resolved card token.
+      const hasEventDecks = (def.eventDecks?.length ?? 0) > 0;
+      if (hasEventDecks && !hasActionPipeline) {
+        const hasResolvedCurrentCard = resolveCurrentEventCardState(def, state) !== null;
+        const actionDeclaresEventCardId = action.params.some((param) => param.name === 'eventCardId');
+        if (hasResolvedCurrentCard || !actionDeclaresEventCardId) {
+          continue;
+        }
+      }
     }
 
     if (!hasActionPipeline) {

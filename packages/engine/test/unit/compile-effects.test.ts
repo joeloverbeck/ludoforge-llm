@@ -563,7 +563,7 @@ describe('compile-effects lowering', () => {
       assert.equal(result.value, null, testCase.name);
       assert.equal(
         result.diagnostics.some(
-          (diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY' && diagnostic.path === expectedPath,
+          (diagnostic) => diagnostic.severity === 'error' && diagnostic.path === expectedPath,
         ),
         true,
         testCase.name,

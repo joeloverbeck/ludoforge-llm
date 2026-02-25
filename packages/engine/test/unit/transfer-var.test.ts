@@ -389,4 +389,37 @@ describe('transferVar effect', () => {
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-int variable'),
     );
   });
+
+  it('throws EFFECT_RUNTIME when pvar endpoint payload omits player selector', () => {
+    const ctx = makeCtx();
+    const malformed = {
+      transferVar: {
+        from: { scope: 'pvar', var: 'coins' },
+        to: { scope: 'global', var: 'pot' },
+        amount: 1,
+      },
+    } as unknown as EffectAST;
+
+    assert.throws(
+      () => applyEffect(malformed, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('requires player selector'),
+    );
+  });
+
+  it('throws EFFECT_RUNTIME when zoneVar endpoint payload omits zone selector', () => {
+    const ctx = makeCtx();
+    const malformed = {
+      transferVar: {
+        from: { scope: 'zoneVar', var: 'supply' },
+        to: { scope: 'global', var: 'pot' },
+        amount: 1,
+      },
+    } as unknown as EffectAST;
+
+    assert.throws(
+      () => applyEffect(malformed, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('requires zone selector'),
+    );
+  });
 });

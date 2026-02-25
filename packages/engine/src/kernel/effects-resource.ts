@@ -1,6 +1,7 @@
 import { evalValue } from './eval-value.js';
+import { isEvalError } from './eval-error.js';
 import { emitTrace } from './execution-collector.js';
-import { effectRuntimeError } from './effect-error.js';
+import { effectRuntimeError, isEffectRuntimeError } from './effect-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
@@ -165,6 +166,34 @@ type ResolvedEndpoint =
       readonly before: number;
     };
 
+const normalizeEndpointResolutionError = (
+  error: unknown,
+  scope: 'pvar' | 'zoneVar',
+  endpoint: TransferEndpoint,
+): never => {
+  if (isEffectRuntimeError(error)) {
+    throw error;
+  }
+
+  const errorContext =
+    error instanceof Error
+      ? {
+          errorName: error.name,
+          errorMessage: error.message,
+        }
+      : {
+          thrown: String(error),
+        };
+
+  throw effectRuntimeError('resourceRuntimeValidationFailed', `transferVar ${scope} endpoint resolution failed`, {
+    effectType: 'transferVar',
+    scope,
+    endpoint,
+    ...(isEvalError(error) ? { sourceErrorCode: error.code } : {}),
+    ...errorContext,
+  });
+};
+
 const resolveZoneIntVarDef = (ctx: EffectContext, varName: string) => {
   const variableDef = (ctx.def.zoneVars ?? []).find((variable) => variable.name === varName);
   if (variableDef === undefined) {
@@ -229,7 +258,22 @@ const resolveEndpoint = (
   }
 
   if (endpoint.scope === 'pvar') {
-    const player = resolveSinglePlayer(endpoint.player, evalCtx);
+    if (endpoint.player === undefined) {
+      throw effectRuntimeError('resourceRuntimeValidationFailed', 'transferVar pvar endpoint requires player selector', {
+        effectType: 'transferVar',
+        scope: 'pvar',
+        endpoint,
+      });
+    }
+
+    const player = (() => {
+      try {
+        return resolveSinglePlayer(endpoint.player, evalCtx);
+      } catch (error: unknown) {
+        return normalizeEndpointResolutionError(error, 'pvar', endpoint);
+      }
+    })();
+
     const perPlayerVarDef = resolvePerPlayerIntVarDef(ctx, endpoint.var);
     return {
       scope: 'pvar',
@@ -241,7 +285,22 @@ const resolveEndpoint = (
     };
   }
 
-  const zone = resolveZoneRef(endpoint.zone, evalCtx);
+  if (endpoint.zone === undefined) {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', 'transferVar zoneVar endpoint requires zone selector', {
+      effectType: 'transferVar',
+      scope: 'zoneVar',
+      endpoint,
+    });
+  }
+
+  const zone = (() => {
+    try {
+      return resolveZoneRef(endpoint.zone, evalCtx);
+    } catch (error: unknown) {
+      return normalizeEndpointResolutionError(error, 'zoneVar', endpoint);
+    }
+  })();
+
   const zoneVarDef = resolveZoneIntVarDef(ctx, endpoint.var);
   return {
     scope: 'zone',

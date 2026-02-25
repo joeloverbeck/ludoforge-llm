@@ -1,6 +1,6 @@
 # Spec 50 — Event Interactive Choice Protocol
 
-**Status**: DRAFT
+**Status**: ✅ COMPLETED
 **Depends on**: Spec 29 (FITL event card encoding)
 **Affects**: Kernel legal move enumeration, agents, simulator, browser runner
 
@@ -245,3 +245,10 @@ Then: All non-event tests pass without modification
 - **Smarter bot strategies for event choices**: GreedyAgent could evaluate each city option and pick the strategically best one. This is an agent improvement, not a protocol change.
 - **Event choice undo/back**: Allowing a player to revise a previous choice within the same event's forEach loop. This would require partial move rollback support.
 - **New DSL primitives**: The existing `forEach` + `chooseOne` pattern is sufficient. No new AST nodes are needed.
+
+## Outcome
+
+- **Completion date**: 2026-02-25
+- **What changed**: Spec 50 implementation delivered and validated; document archived as completed.
+- **Deviations from original plan**: None recorded.
+- **Verification results**: User confirmed all related tests are passing.

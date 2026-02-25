@@ -12,7 +12,7 @@ export class RandomAgent implements Agent {
     let rng = input.rng;
 
     for (const move of input.legalMoves) {
-      const result = completeTemplateMove(input.def, input.state, move, rng);
+      const result = completeTemplateMove(input.def, input.state, move, rng, input.runtime);
       if (result !== null) {
         completedMoves.push(result.move);
         rng = result.rng;

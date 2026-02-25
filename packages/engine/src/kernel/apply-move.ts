@@ -51,6 +51,7 @@ import type {
   TriggerEvent,
 } from './types.js';
 import { asPlayerId } from './branded.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -94,13 +95,14 @@ const resolveMatchedPipelineForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  cachedRuntime?: GameDefRuntime,
 ): ActionPipelineDef | undefined => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     return undefined;
   }
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const executionPlayer = move.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, move)
     : (() => {
@@ -270,7 +272,7 @@ const validateTurnFlowWindowAccess = (def: GameDef, state: GameState, move: Move
   }
 };
 
-const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMoveContext => {
+const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?: GameDefRuntime): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
@@ -287,7 +289,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
-    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
     if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
         operationActionId: action.id,
@@ -320,8 +322,8 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     });
   }
 
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const preflight = resolveActionApplicabilityPreflight({
     def,
     state,
@@ -455,8 +457,9 @@ const executeMoveAction = (
   options: ExecutionOptions | undefined,
   coreOptions: ApplyMoveCoreOptions | undefined,
   shared: SharedMoveExecutionContext,
+  cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
-  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move);
+  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
   const action = validated?.action ?? findAction(def, move.actionId);
   if (action === undefined) throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
 
@@ -522,7 +525,7 @@ const executeMoveAction = (
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
-    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
     if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
         operationActionId: action.id,
@@ -612,6 +615,7 @@ const executeMoveAction = (
       options,
       shared.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: shared.phaseTransitionBudget },
       shared,
+      cachedRuntime,
     );
     effectState = saResult.stateWithRng;
     effectRng = { state: effectState.rng };
@@ -739,9 +743,10 @@ const applyMoveCore = (
   move: Move,
   options?: ExecutionOptions,
   coreOptions?: ApplyMoveCoreOptions,
+  cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtime = coreOptions?.executionRuntime ?? createMoveExecutionRuntime(options, coreOptions?.phaseTransitionBudget);
   if (coreOptions?.executionRuntime !== undefined) {
     validatedMaxPhaseTransitionsPerMove(options);
@@ -754,7 +759,7 @@ const applyMoveCore = (
     ...(runtime.executionPolicy === undefined ? {} : { executionPolicy: runtime.executionPolicy }),
   };
 
-  const executed = executeMoveAction(def, state, move, options, coreOptions, shared);
+  const executed = executeMoveAction(def, state, move, options, coreOptions, shared, cachedRuntime);
   const turnFlowResult = move.freeOperation === true
     ? {
       state: consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move),
@@ -781,12 +786,13 @@ const applyMoveCore = (
       lifecycleAndAdvanceLog,
       runtime.executionPolicy,
       runtime.collector,
+      cachedRuntime,
     )
     : boundaryExpiryResult.state;
 
   const stateWithHash = {
     ...progressedState,
-    stateHash: computeFullHash(createZobristTable(def), progressedState),
+    stateHash: computeFullHash(cachedRuntime?.zobristTable ?? createZobristTable(def), progressedState),
   };
 
   return {
@@ -853,6 +859,7 @@ const applySimultaneousSubmission = (
   state: GameState,
   move: Move,
   options?: ExecutionOptions,
+  cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
   validatedMaxPhaseTransitionsPerMove(options);
   if (move.compound !== undefined) {
@@ -862,7 +869,7 @@ const applySimultaneousSubmission = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
-  validateMove(def, state, move);
+  validateMove(def, state, move, cachedRuntime);
 
   const currentPlayer = Number(state.activePlayer);
   const submittedBefore = state.turnOrderState.submitted;
@@ -875,7 +882,7 @@ const applySimultaneousSubmission = (
     ...state.turnOrderState.pending,
     [currentPlayer]: submittedMove,
   };
-  const table = createZobristTable(def);
+  const table = cachedRuntime?.zobristTable ?? createZobristTable(def);
   const hasRemainingPlayers = Object.values(submitted).some((value) => value === false);
 
   if (hasRemainingPlayers) {
@@ -937,6 +944,7 @@ const applySimultaneousSubmission = (
         skipAdvanceToDecisionPoint: true,
         executionRuntime: commitRuntime,
       },
+      cachedRuntime,
     );
     committedState = applied.state;
     triggerFirings.push(...applied.triggerFirings);
@@ -954,7 +962,7 @@ const applySimultaneousSubmission = (
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = options?.advanceToDecisionPoint === false
     ? resetState
-    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog, commitRuntime.executionPolicy, commitRuntime.collector);
+    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog, commitRuntime.executionPolicy, commitRuntime.collector, cachedRuntime);
   const finalState = {
     ...progressedState,
     stateHash: computeFullHash(table, progressedState),
@@ -968,9 +976,9 @@ const applySimultaneousSubmission = (
   };
 };
 
-export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions): ApplyMoveResult => {
+export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions, runtime?: GameDefRuntime): ApplyMoveResult => {
   if (def.turnOrder?.type === 'simultaneous') {
-    return applySimultaneousSubmission(def, state, move, options);
+    return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  return applyMoveCore(def, state, move, options);
+  return applyMoveCore(def, state, move, options, undefined, runtime);
 };

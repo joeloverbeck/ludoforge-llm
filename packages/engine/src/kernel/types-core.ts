@@ -900,5 +900,6 @@ export interface Agent {
     readonly playerId: PlayerId;
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
+    readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
   }): { readonly move: Move; readonly rng: Rng };
 }

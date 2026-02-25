@@ -3,6 +3,7 @@ import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from './choice-option-policy.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { nextInt } from './prng.js';
 import type {
   GameState,
@@ -55,9 +56,10 @@ export const completeTemplateMove = (
   state: GameState,
   templateMove: Move,
   rng: Rng,
+  runtime?: GameDefRuntime,
 ): { readonly move: Move; readonly rng: Rng } | null => {
   let current = templateMove;
-  let choices = legalChoicesEvaluate(def, state, current);
+  let choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
   let cursor = rng;
   let iterations = 0;
 
@@ -90,7 +92,7 @@ export const completeTemplateMove = (
 
     cursor = nextRng;
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
-    choices = legalChoicesEvaluate(def, state, current);
+    choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
   }
 
   if (choices.kind === 'illegal') {

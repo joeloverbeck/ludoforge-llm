@@ -24,6 +24,7 @@ import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 
@@ -253,6 +254,7 @@ function enumerateCurrentEventMoves(
   def: GameDef,
   state: GameState,
   enumeration: MoveEnumerationState,
+  runtime?: GameDefRuntime,
 ): void {
   if (enumeration.templateBudgetExceeded) {
     return;
@@ -313,7 +315,7 @@ function enumerateCurrentEventMoves(
         !isMoveDecisionSequenceSatisfiable(def, state, move, {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-        })
+        }, runtime)
       ) {
         continue;
       }
@@ -333,6 +335,7 @@ export const enumerateLegalMoves = (
   def: GameDef,
   state: GameState,
   options?: LegalMoveEnumerationOptions,
+  runtime?: GameDefRuntime,
 ): LegalMoveEnumerationResult => {
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
@@ -349,8 +352,8 @@ export const enumerateLegalMoves = (
     templateBudgetExceeded: false,
     paramExpansionBudgetExceeded: false,
   };
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
 
   for (const action of def.actions) {
     if (enumeration.templateBudgetExceeded) {
@@ -383,7 +386,7 @@ export const enumerateLegalMoves = (
     }
 
     const beforeEventCount = enumeration.moves.length;
-    enumerateCurrentEventMoves(action, def, state, enumeration);
+    enumerateCurrentEventMoves(action, def, state, enumeration, runtime);
     if (enumeration.moves.length > beforeEventCount) {
       continue;
     }
@@ -418,6 +421,7 @@ export const enumerateLegalMoves = (
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
           },
+          runtime,
         )
       ) {
         continue;
@@ -440,4 +444,5 @@ export const legalMoves = (
   def: GameDef,
   state: GameState,
   options?: LegalMoveEnumerationOptions,
-): readonly Move[] => enumerateLegalMoves(def, state, options).moves;
+  runtime?: GameDefRuntime,
+): readonly Move[] => enumerateLegalMoves(def, state, options, runtime).moves;

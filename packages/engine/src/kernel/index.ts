@@ -1,4 +1,5 @@
 export * from './branded.js';
+export * from './gamedef-runtime.js';
 export * from './choice-option-policy.js';
 export * from './choose-n-cardinality.js';
 export * from './initial-state.js';

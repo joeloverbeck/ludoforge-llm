@@ -1,4 +1,5 @@
 import { applyEffects } from './effects.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector, emitTrace } from './execution-collector.js';
@@ -16,9 +17,10 @@ export const dispatchLifecycleEvent = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
   effectPathRoot = 'lifecycle',
+  cachedRuntime?: GameDefRuntime,
 ): GameState => {
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtimeCollector = collector ?? createCollector();
   if (event.type === 'phaseEnter' || event.type === 'phaseExit' || event.type === 'turnStart' || event.type === 'turnEnd') {
     emitTrace(runtimeCollector, {

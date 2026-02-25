@@ -23,6 +23,7 @@ import {
 } from './decision-sequence-satisfiability.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import type {
@@ -518,6 +519,7 @@ export function legalChoicesDiscover(
   state: GameState,
   partialMove: Move,
   options?: LegalChoicesRuntimeOptions,
+  runtime?: GameDefRuntime,
 ): ChoiceRequest {
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
@@ -532,8 +534,8 @@ export function legalChoicesDiscover(
     def,
     state,
     action,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    runtimeTableIndex: buildRuntimeTableIndex(def),
+    adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
   return legalChoicesWithPreparedContext(context, partialMove, false, options);
@@ -544,6 +546,7 @@ export function legalChoicesEvaluate(
   state: GameState,
   partialMove: Move,
   options?: LegalChoicesRuntimeOptions,
+  runtime?: GameDefRuntime,
 ): ChoiceRequest {
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
@@ -558,8 +561,8 @@ export function legalChoicesEvaluate(
     def,
     state,
     action,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    runtimeTableIndex: buildRuntimeTableIndex(def),
+    adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
   return legalChoicesWithPreparedContext(context, partialMove, true, options);

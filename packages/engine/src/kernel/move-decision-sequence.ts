@@ -4,6 +4,7 @@ import {
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   ChoiceIllegalRequest,
@@ -39,6 +40,7 @@ export const resolveMoveDecisionSequence = (
   state: GameState,
   baseMove: Move,
   options?: ResolveMoveDecisionSequenceOptions,
+  runtime?: GameDefRuntime,
 ): ResolveMoveDecisionSequenceResult => {
   const choose = options?.choose ?? defaultChoose;
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
@@ -57,7 +59,7 @@ export const resolveMoveDecisionSequence = (
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },
-    });
+    }, runtime);
     if (deferredPredicatesEvaluated > maxDeferredPredicates) {
       emitWarning({
         code: 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED',
@@ -107,8 +109,9 @@ export const isMoveDecisionSequenceSatisfiable = (
   state: GameState,
   baseMove: Move,
   options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  runtime?: GameDefRuntime,
 ): boolean => {
-  return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options).classification === 'satisfiable';
+  return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
 };
 
 export const classifyMoveDecisionSequenceSatisfiability = (
@@ -116,6 +119,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
   state: GameState,
   baseMove: Move,
   options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult => {
   return classifyDecisionSequenceSatisfiability(
     baseMove,
@@ -124,7 +128,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
         ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
           ? {}
           : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
-      }),
+      }, runtime),
     {
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),

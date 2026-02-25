@@ -471,6 +471,12 @@ export const EffectTraceProvenanceSchema = z
   })
   .strict();
 
+export const EffectTraceResourceEndpointSchema = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global'), varName: StringSchema }).strict(),
+  z.object({ scope: z.literal('perPlayer'), player: IntegerSchema, varName: StringSchema }).strict(),
+  z.object({ scope: z.literal('zone'), zone: StringSchema, varName: StringSchema }).strict(),
+]);
+
 export const EffectTraceEntrySchema = z.union([
   z
     .object({
@@ -549,22 +555,8 @@ export const EffectTraceEntrySchema = z.union([
   z
     .object({
       kind: z.literal('resourceTransfer'),
-      from: z
-        .object({
-          scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
-          varName: StringSchema,
-          player: IntegerSchema.optional(),
-          zone: StringSchema.optional(),
-        })
-        .strict(),
-      to: z
-        .object({
-          scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
-          varName: StringSchema,
-          player: IntegerSchema.optional(),
-          zone: StringSchema.optional(),
-        })
-        .strict(),
+      from: EffectTraceResourceEndpointSchema,
+      to: EffectTraceResourceEndpointSchema,
       requestedAmount: IntegerSchema.min(0),
       actualAmount: IntegerSchema.min(0),
       sourceAvailable: IntegerSchema.min(0),

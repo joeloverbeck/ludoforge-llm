@@ -822,6 +822,56 @@ describe('AST and selector schemas', () => {
     assert.equal(wrongField.success, false);
   });
 
+  it('enforces discriminated transferVar endpoint contracts by scope', () => {
+    const cases: ReadonlyArray<{ readonly name: string; readonly effect: unknown }> = [
+      {
+        name: 'global endpoint cannot include player',
+        effect: {
+          transferVar: {
+            from: { scope: 'global', player: 'actor', var: 'bank' },
+            to: { scope: 'global', var: 'treasury' },
+            amount: 1,
+          },
+        },
+      },
+      {
+        name: 'pvar endpoint requires player',
+        effect: {
+          transferVar: {
+            from: { scope: 'pvar', var: 'vp' },
+            to: { scope: 'global', var: 'bank' },
+            amount: 1,
+          },
+        },
+      },
+      {
+        name: 'zoneVar endpoint requires zone',
+        effect: {
+          transferVar: {
+            from: { scope: 'zoneVar', var: 'supply' },
+            to: { scope: 'global', var: 'bank' },
+            amount: 1,
+          },
+        },
+      },
+      {
+        name: 'zoneVar endpoint cannot include player',
+        effect: {
+          transferVar: {
+            from: { scope: 'zoneVar', zone: 'board:none', player: 'actor', var: 'supply' },
+            to: { scope: 'global', var: 'bank' },
+            amount: 1,
+          },
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const result = EffectASTSchema.safeParse(testCase.effect);
+      assert.equal(result.success, false, testCase.name);
+    }
+  });
+
   it('enforces strict object policy for selector and AST objects', () => {
     assert.equal(OBJECT_STRICTNESS_POLICY, 'strict');
 

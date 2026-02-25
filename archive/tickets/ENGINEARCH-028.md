@@ -1,6 +1,6 @@
 # ENGINEARCH-028: Make transfer/resource endpoints discriminated contracts across AST, runtime types, and schemas
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — AST/runtime types, validators, schemas, resource-transfer execution path
@@ -15,6 +15,7 @@
 1. `transferVar` now supports `zoneVar` endpoints in compiler/runtime, but endpoint contracts remain broad object shapes with optional fields instead of strict discriminated unions.
 2. `resourceTransfer` trace endpoints now include `zone` support, but schema/type shape still permits cross-scope field drift (`player` and `zone` both optional regardless of scope).
 3. **Mismatch + correction**: current behavior is stricter than current contract model; ticket scope must harden the contracts themselves so invalid states are unrepresentable before runtime.
+4. **Mismatch + correction**: `validate-gamedef` unit tests currently assert transfer endpoint shape diagnostics (missing/forbidden `player`/`zone`) that become impossible once endpoint contracts are discriminated. Scope must include updating those tests to assert the new contract boundaries (schema/type-level rejection) while keeping semantic diagnostics (unknown vars / boolean targets) intact.
 
 ## Architecture Check
 
@@ -40,6 +41,10 @@ Refactor type and schema definitions to reuse canonical endpoint contracts inste
 
 Ensure schema validation, compile-time type checks, and runtime paths all agree on the same endpoint invariants with no drift.
 
+### 4. Re-scope behavior-validator responsibilities
+
+`validate-gamedef-behavior` should continue enforcing semantic rules (variable existence/type) but stop carrying responsibility for structural endpoint shape constraints that are now encoded by discriminated contracts.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/types-ast.ts` (modify)
@@ -48,6 +53,8 @@ Ensure schema validation, compile-time type checks, and runtime paths all agree 
 - `packages/engine/src/kernel/schemas-core.ts` (modify)
 - `packages/engine/src/kernel/effects-resource.ts` (modify)
 - `packages/engine/src/kernel/validate-gamedef-behavior.ts` (modify)
+- `packages/engine/src/cnl/compile-effects.ts` (modify; align lowering output/messages with discriminated endpoint contracts)
+- `packages/engine/test/unit/validate-gamedef.test.ts` (modify)
 - `packages/engine/schemas/GameDef.schema.json` (modify via artifacts)
 - `packages/engine/schemas/Trace.schema.json` (modify via artifacts)
 
@@ -63,12 +70,14 @@ Ensure schema validation, compile-time type checks, and runtime paths all agree 
 
 1. AST/schema parsing rejects endpoint payloads that do not match scope-specific required/forbidden fields.
 2. Runtime transfer and trace contracts are structurally aligned with schema artifacts for all endpoint scopes.
+3. Behavior validation still reports semantic transfer errors (unknown var / boolean var) after structural checks move into contracts.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
 
 1. Endpoint contract invalid states are unrepresentable in core type/schema models.
 2. Compiler/runtime/schema endpoint contracts remain in lockstep (no scope-field drift).
+3. Structural endpoint-shape diagnostics are not duplicated in runtime behavior validators once encoded by discriminated unions.
 
 ## Test Plan
 
@@ -77,6 +86,7 @@ Ensure schema validation, compile-time type checks, and runtime paths all agree 
 1. `packages/engine/test/unit/schemas-ast.test.ts` — enforce strict endpoint branch acceptance/rejection by scope.
 2. `packages/engine/test/unit/json-schema.test.ts` — enforce strict serialized trace endpoint contract shape.
 3. `packages/engine/test/unit/transfer-var.test.ts` — ensure runtime behavior matches tightened endpoint contracts.
+4. `packages/engine/test/unit/validate-gamedef.test.ts` — keep semantic transfer diagnostics, remove shape-diagnostic expectations now guaranteed by endpoint contracts.
 
 ### Commands
 
@@ -84,3 +94,23 @@ Ensure schema validation, compile-time type checks, and runtime paths all agree 
 2. `pnpm -F @ludoforge/engine schema:artifacts`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-25
+- **What changed**:
+  - Added discriminated `TransferVarEndpoint` contracts in AST types and schemas.
+  - Added discriminated `EffectTraceResourceEndpoint` contracts in core types and trace schemas.
+  - Refactored `effects-resource` endpoint resolution/trace mapping to consume the strict unions directly.
+  - Updated `validate-gamedef-behavior` so structural transfer endpoint-shape diagnostics are no longer duplicated there; semantic diagnostics remain.
+  - Updated CNL transfer lowering to emit strict endpoint union branches and aligned capability/help text.
+  - Regenerated schema artifacts (`GameDef.schema.json`, `Trace.schema.json`, `EvalReport.schema.json`).
+  - Updated unit tests to cover strict endpoint rejection and validator responsibility boundaries.
+- **Deviations from original plan**:
+  - Included `packages/engine/src/cnl/compile-effects.ts` because transfer lowering output/type contracts needed explicit union-branch construction after contract tightening.
+  - Removed a stale runtime test that asserted structural endpoint-shape failure in `transfer-var.test.ts`; that invariant is now owned by schema/type contracts.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine schema:artifacts` passed.
+  - `pnpm -F @ludoforge/engine test` passed (278/278).
+  - `pnpm -F @ludoforge/engine lint` passed.

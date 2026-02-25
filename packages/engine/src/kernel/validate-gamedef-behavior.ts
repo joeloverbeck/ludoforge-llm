@@ -1072,8 +1072,6 @@ export const validateEffectAst = (
 
     for (const { key, endpoint } of transferEndpoints) {
       const endpointPath = `${path}.transferVar.${key}`;
-      const playerPath = `${endpointPath}.player`;
-      const zonePath = `${endpointPath}.zone`;
       const varPath = `${endpointPath}.var`;
 
       if (endpoint.scope === 'global') {
@@ -1094,24 +1092,6 @@ export const validateEffectAst = (
             severity: 'error',
             message: `transferVar cannot target boolean variable "${endpoint.var}".`,
             suggestion: 'Use integer variables for transferVar source and destination.',
-          });
-        }
-        if (endpoint.player !== undefined) {
-          diagnostics.push({
-            code: 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN',
-            path: playerPath,
-            severity: 'error',
-            message: `transferVar.${key}.player must be omitted when transferVar.${key}.scope is "global".`,
-            suggestion: `Remove transferVar.${key}.player or use transferVar.${key}.scope "pvar".`,
-          });
-        }
-        if (endpoint.zone !== undefined) {
-          diagnostics.push({
-            code: 'EFFECT_TRANSFER_VAR_NON_ZONE_SCOPE_ZONE_FORBIDDEN',
-            path: zonePath,
-            severity: 'error',
-            message: `transferVar.${key}.zone must be omitted when transferVar.${key}.scope is "global".`,
-            suggestion: `Remove transferVar.${key}.zone or use transferVar.${key}.scope "zoneVar".`,
           });
         }
         continue;
@@ -1137,26 +1117,7 @@ export const validateEffectAst = (
             suggestion: 'Use integer variables for transferVar source and destination.',
           });
         }
-        if (endpoint.player === undefined) {
-          diagnostics.push({
-            code: key === 'from' ? 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED' : 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED',
-            path: playerPath,
-            severity: 'error',
-            message: `transferVar.${key}.player is required when transferVar.${key}.scope is "pvar".`,
-            suggestion: `Provide a player selector for transferVar.${key}.player when targeting a per-player variable.`,
-          });
-        } else {
-          validatePlayerSelector(diagnostics, endpoint.player, playerPath, context);
-        }
-        if (endpoint.zone !== undefined) {
-          diagnostics.push({
-            code: 'EFFECT_TRANSFER_VAR_NON_ZONE_SCOPE_ZONE_FORBIDDEN',
-            path: zonePath,
-            severity: 'error',
-            message: `transferVar.${key}.zone must be omitted when transferVar.${key}.scope is "pvar".`,
-            suggestion: `Remove transferVar.${key}.zone or use transferVar.${key}.scope "zoneVar".`,
-          });
-        }
+        validatePlayerSelector(diagnostics, endpoint.player, `${endpointPath}.player`, context);
         continue;
       }
 
@@ -1179,26 +1140,7 @@ export const validateEffectAst = (
           suggestion: 'Use integer variables for transferVar source and destination.',
         });
       }
-      if (endpoint.zone === undefined) {
-        diagnostics.push({
-          code: key === 'from' ? 'EFFECT_TRANSFER_VAR_FROM_ZONE_REQUIRED' : 'EFFECT_TRANSFER_VAR_TO_ZONE_REQUIRED',
-          path: zonePath,
-          severity: 'error',
-          message: `transferVar.${key}.zone is required when transferVar.${key}.scope is "zoneVar".`,
-          suggestion: `Provide a zone selector for transferVar.${key}.zone when targeting a zone variable.`,
-        });
-      } else {
-        validateZoneRef(diagnostics, endpoint.zone, zonePath, context);
-      }
-      if (endpoint.player !== undefined) {
-        diagnostics.push({
-          code: 'EFFECT_TRANSFER_VAR_ZONE_SCOPE_PLAYER_FORBIDDEN',
-          path: playerPath,
-          severity: 'error',
-          message: `transferVar.${key}.player must be omitted when transferVar.${key}.scope is "zoneVar".`,
-          suggestion: `Remove transferVar.${key}.player or use transferVar.${key}.scope "pvar".`,
-        });
-      }
+      validateZoneRef(diagnostics, endpoint.zone, `${endpointPath}.zone`, context);
     }
 
     validateNumericValueExpr(diagnostics, effect.transferVar.amount, `${path}.transferVar.amount`, context);

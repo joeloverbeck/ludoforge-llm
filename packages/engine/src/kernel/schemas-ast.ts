@@ -96,6 +96,12 @@ export const AssetRowPredicateSchema = z
   })
   .strict();
 
+export const TransferVarEndpointSchema = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global'), var: StringSchema }).strict(),
+  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema }).strict(),
+  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema }).strict(),
+]);
+
 optionsQuerySchemaInternal = z.union([
   z
     .object({
@@ -405,22 +411,8 @@ effectAstSchemaInternal = z.union([
     .object({
       transferVar: z
         .object({
-          from: z
-            .object({
-              scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
-              var: StringSchema,
-              player: PlayerSelSchema.optional(),
-              zone: ZoneRefSchema.optional(),
-            })
-            .strict(),
-          to: z
-            .object({
-              scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
-              var: StringSchema,
-              player: PlayerSelSchema.optional(),
-              zone: ZoneRefSchema.optional(),
-            })
-            .strict(),
+          from: TransferVarEndpointSchema,
+          to: TransferVarEndpointSchema,
           amount: NumericValueExprSchema,
           min: NumericValueExprSchema.optional(),
           max: NumericValueExprSchema.optional(),

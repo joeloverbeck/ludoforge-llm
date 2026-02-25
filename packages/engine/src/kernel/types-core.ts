@@ -710,12 +710,21 @@ export interface EffectTraceVarChange {
   readonly provenance: EffectTraceProvenance;
 }
 
-export interface EffectTraceResourceEndpoint {
-  readonly scope: 'global' | 'perPlayer' | 'zone';
-  readonly varName: string;
-  readonly player?: PlayerId;
-  readonly zone?: string;
-}
+export type EffectTraceResourceEndpoint =
+  | {
+      readonly scope: 'global';
+      readonly varName: string;
+    }
+  | {
+      readonly scope: 'perPlayer';
+      readonly player: PlayerId;
+      readonly varName: string;
+    }
+  | {
+      readonly scope: 'zone';
+      readonly zone: string;
+      readonly varName: string;
+    };
 
 export interface EffectTraceResourceTransfer {
   readonly kind: 'resourceTransfer';

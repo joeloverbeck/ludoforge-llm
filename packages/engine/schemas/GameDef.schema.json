@@ -488,7 +488,7 @@
     "setup": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/anon_623b1596"
+        "$ref": "#/definitions/anon_3709cd80"
       }
     },
     "turnStructure": {
@@ -505,13 +505,13 @@
               "onEnter": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_623b1596"
+                  "$ref": "#/definitions/anon_3709cd80"
                 }
               },
               "onExit": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_623b1596"
+                  "$ref": "#/definitions/anon_3709cd80"
                 }
               }
             },
@@ -532,13 +532,13 @@
               "onEnter": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_623b1596"
+                  "$ref": "#/definitions/anon_3709cd80"
                 }
               },
               "onExit": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_623b1596"
+                  "$ref": "#/definitions/anon_3709cd80"
                 }
               }
             },
@@ -1184,7 +1184,7 @@
           "costEffects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_623b1596"
+              "$ref": "#/definitions/anon_3709cd80"
             }
           },
           "targeting": {
@@ -1239,7 +1239,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -1574,13 +1574,13 @@
           "cost": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_623b1596"
+              "$ref": "#/definitions/anon_3709cd80"
             }
           },
           "effects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_623b1596"
+              "$ref": "#/definitions/anon_3709cd80"
             }
           },
           "limits": {
@@ -1811,7 +1811,7 @@
           "effects": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/anon_623b1596"
+              "$ref": "#/definitions/anon_3709cd80"
             }
           }
         },
@@ -2327,7 +2327,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_623b1596"
+                        "$ref": "#/definitions/anon_3709cd80"
                       }
                     },
                     "branches": {
@@ -2494,7 +2494,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_623b1596"
+                              "$ref": "#/definitions/anon_3709cd80"
                             }
                           },
                           "targets": {
@@ -2577,14 +2577,14 @@
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_623b1596"
+                                    "$ref": "#/definitions/anon_3709cd80"
                                   }
                                 },
                                 "teardownEffects": {
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_623b1596"
+                                    "$ref": "#/definitions/anon_3709cd80"
                                   }
                                 }
                               },
@@ -2683,14 +2683,14 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_623b1596"
+                              "$ref": "#/definitions/anon_3709cd80"
                             }
                           },
                           "teardownEffects": {
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_623b1596"
+                              "$ref": "#/definitions/anon_3709cd80"
                             }
                           }
                         },
@@ -2860,7 +2860,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_623b1596"
+                        "$ref": "#/definitions/anon_3709cd80"
                       }
                     },
                     "branches": {
@@ -3027,7 +3027,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_623b1596"
+                              "$ref": "#/definitions/anon_3709cd80"
                             }
                           },
                           "targets": {
@@ -3110,14 +3110,14 @@
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_623b1596"
+                                    "$ref": "#/definitions/anon_3709cd80"
                                   }
                                 },
                                 "teardownEffects": {
                                   "minItems": 1,
                                   "type": "array",
                                   "items": {
-                                    "$ref": "#/definitions/anon_623b1596"
+                                    "$ref": "#/definitions/anon_3709cd80"
                                   }
                                 }
                               },
@@ -3216,14 +3216,14 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_623b1596"
+                              "$ref": "#/definitions/anon_3709cd80"
                             }
                           },
                           "teardownEffects": {
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_623b1596"
+                              "$ref": "#/definitions/anon_3709cd80"
                             }
                           }
                         },
@@ -4201,214 +4201,7 @@
         }
       ]
     },
-    "anon_618b4bc3": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "and"
-            },
-            "args": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/anon_618b4bc3"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "or"
-            },
-            "args": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/anon_618b4bc3"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "not"
-            },
-            "arg": {
-              "$ref": "#/definitions/anon_618b4bc3"
-            }
-          },
-          "required": [
-            "op",
-            "arg"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "=="
-                },
-                {
-                  "type": "string",
-                  "const": "!="
-                },
-                {
-                  "type": "string",
-                  "const": "<"
-                },
-                {
-                  "type": "string",
-                  "const": "<="
-                },
-                {
-                  "type": "string",
-                  "const": ">"
-                },
-                {
-                  "type": "string",
-                  "const": ">="
-                }
-              ]
-            },
-            "left": {
-              "$ref": "#/definitions/anon_25c2127f"
-            },
-            "right": {
-              "$ref": "#/definitions/anon_25c2127f"
-            }
-          },
-          "required": [
-            "op",
-            "left",
-            "right"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "in"
-            },
-            "item": {
-              "$ref": "#/definitions/anon_25c2127f"
-            },
-            "set": {
-              "$ref": "#/definitions/anon_25c2127f"
-            }
-          },
-          "required": [
-            "op",
-            "item",
-            "set"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "adjacent"
-            },
-            "left": {
-              "type": "string"
-            },
-            "right": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "op",
-            "left",
-            "right"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "connected"
-            },
-            "from": {
-              "type": "string"
-            },
-            "to": {
-              "type": "string"
-            },
-            "via": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_618b4bc3"
-                }
-              ]
-            },
-            "maxDepth": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "op",
-            "from",
-            "to"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "zonePropIncludes"
-            },
-            "zone": {
-              "type": "string"
-            },
-            "prop": {
-              "type": "string"
-            },
-            "value": {
-              "$ref": "#/definitions/anon_25c2127f"
-            }
-          },
-          "required": [
-            "op",
-            "zone",
-            "prop",
-            "value"
-          ],
-          "additionalProperties": false
-        }
-      ]
-    },
-    "anon_623b1596": {
+    "anon_3709cd80": {
       "anyOf": [
         {
           "type": "object",
@@ -4734,210 +4527,258 @@
               "type": "object",
               "properties": {
                 "from": {
-                  "type": "object",
-                  "properties": {
-                    "scope": {
-                      "anyOf": [
-                        {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
                           "type": "string",
                           "const": "global"
                         },
-                        {
+                        "var": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "scope",
+                        "var"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
                           "type": "string",
                           "const": "pvar"
                         },
-                        {
+                        "player": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "actor"
+                            },
+                            {
+                              "type": "string",
+                              "const": "active"
+                            },
+                            {
+                              "type": "string",
+                              "const": "all"
+                            },
+                            {
+                              "type": "string",
+                              "const": "allOther"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "id"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "chosen": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "chosen"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "relative": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "left"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "right"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "relative"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "var": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "scope",
+                        "player",
+                        "var"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
                           "type": "string",
                           "const": "zoneVar"
-                        }
-                      ]
-                    },
-                    "var": {
-                      "type": "string"
-                    },
-                    "player": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "actor"
                         },
-                        {
-                          "type": "string",
-                          "const": "active"
-                        },
-                        {
-                          "type": "string",
-                          "const": "all"
-                        },
-                        {
-                          "type": "string",
-                          "const": "allOther"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "id"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "chosen": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "chosen"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "relative": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "const": "left"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "right"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "relative"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "zone": {
-                      "allOf": [
-                        {
+                        "zone": {
                           "$ref": "#/definitions/anon_b96e5b58"
+                        },
+                        "var": {
+                          "type": "string"
                         }
-                      ]
+                      },
+                      "required": [
+                        "scope",
+                        "zone",
+                        "var"
+                      ],
+                      "additionalProperties": false
                     }
-                  },
-                  "required": [
-                    "scope",
-                    "var"
-                  ],
-                  "additionalProperties": false
+                  ]
                 },
                 "to": {
-                  "type": "object",
-                  "properties": {
-                    "scope": {
-                      "anyOf": [
-                        {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
                           "type": "string",
                           "const": "global"
                         },
-                        {
+                        "var": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "scope",
+                        "var"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
                           "type": "string",
                           "const": "pvar"
                         },
-                        {
+                        "player": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "actor"
+                            },
+                            {
+                              "type": "string",
+                              "const": "active"
+                            },
+                            {
+                              "type": "string",
+                              "const": "all"
+                            },
+                            {
+                              "type": "string",
+                              "const": "allOther"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "id"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "chosen": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "chosen"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "relative": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "left"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "right"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "relative"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "var": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "scope",
+                        "player",
+                        "var"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
                           "type": "string",
                           "const": "zoneVar"
-                        }
-                      ]
-                    },
-                    "var": {
-                      "type": "string"
-                    },
-                    "player": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "actor"
                         },
-                        {
-                          "type": "string",
-                          "const": "active"
-                        },
-                        {
-                          "type": "string",
-                          "const": "all"
-                        },
-                        {
-                          "type": "string",
-                          "const": "allOther"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "id"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "chosen": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "chosen"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "relative": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "const": "left"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "right"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "relative"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "zone": {
-                      "allOf": [
-                        {
+                        "zone": {
                           "$ref": "#/definitions/anon_b96e5b58"
+                        },
+                        "var": {
+                          "type": "string"
                         }
-                      ]
+                      },
+                      "required": [
+                        "scope",
+                        "zone",
+                        "var"
+                      ],
+                      "additionalProperties": false
                     }
-                  },
-                  "required": [
-                    "scope",
-                    "var"
-                  ],
-                  "additionalProperties": false
+                  ]
                 },
                 "amount": {
                   "$ref": "#/definitions/anon_d7b45fe2"
@@ -5537,13 +5378,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -5590,7 +5431,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 },
                 "limit": {
@@ -5606,7 +5447,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -5673,7 +5514,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -5770,7 +5611,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -5801,7 +5642,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -5861,7 +5702,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 },
                 "scoreExpr": {
@@ -5876,7 +5717,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -6012,7 +5853,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_623b1596"
+                    "$ref": "#/definitions/anon_3709cd80"
                   }
                 }
               },
@@ -6322,6 +6163,213 @@
           },
           "required": [
             "popInterruptPhase"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "anon_618b4bc3": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "and"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/anon_618b4bc3"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "or"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/anon_618b4bc3"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "not"
+            },
+            "arg": {
+              "$ref": "#/definitions/anon_618b4bc3"
+            }
+          },
+          "required": [
+            "op",
+            "arg"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "=="
+                },
+                {
+                  "type": "string",
+                  "const": "!="
+                },
+                {
+                  "type": "string",
+                  "const": "<"
+                },
+                {
+                  "type": "string",
+                  "const": "<="
+                },
+                {
+                  "type": "string",
+                  "const": ">"
+                },
+                {
+                  "type": "string",
+                  "const": ">="
+                }
+              ]
+            },
+            "left": {
+              "$ref": "#/definitions/anon_25c2127f"
+            },
+            "right": {
+              "$ref": "#/definitions/anon_25c2127f"
+            }
+          },
+          "required": [
+            "op",
+            "left",
+            "right"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "in"
+            },
+            "item": {
+              "$ref": "#/definitions/anon_25c2127f"
+            },
+            "set": {
+              "$ref": "#/definitions/anon_25c2127f"
+            }
+          },
+          "required": [
+            "op",
+            "item",
+            "set"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "adjacent"
+            },
+            "left": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "left",
+            "right"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "connected"
+            },
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "via": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_618b4bc3"
+                }
+              ]
+            },
+            "maxDepth": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "op",
+            "from",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "zonePropIncludes"
+            },
+            "zone": {
+              "type": "string"
+            },
+            "prop": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/anon_25c2127f"
+            }
+          },
+          "required": [
+            "op",
+            "zone",
+            "prop",
+            "value"
           ],
           "additionalProperties": false
         }

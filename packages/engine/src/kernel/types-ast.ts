@@ -198,6 +198,22 @@ export type OptionsQuery =
     }
   | { readonly query: 'binding'; readonly name: string };
 
+export type TransferVarEndpoint =
+  | {
+      readonly scope: 'global';
+      readonly var: string;
+    }
+  | {
+      readonly scope: 'pvar';
+      readonly player: PlayerSel;
+      readonly var: string;
+    }
+  | {
+      readonly scope: 'zoneVar';
+      readonly zone: ZoneRef;
+      readonly var: string;
+    };
+
 export type EffectAST =
   | {
       readonly setVar: {
@@ -224,18 +240,8 @@ export type EffectAST =
     }
   | {
       readonly transferVar: {
-        readonly from: {
-          readonly scope: 'global' | 'pvar' | 'zoneVar';
-          readonly var: string;
-          readonly player?: PlayerSel;
-          readonly zone?: ZoneRef;
-        };
-        readonly to: {
-          readonly scope: 'global' | 'pvar' | 'zoneVar';
-          readonly var: string;
-          readonly player?: PlayerSel;
-          readonly zone?: ZoneRef;
-        };
+        readonly from: TransferVarEndpoint;
+        readonly to: TransferVarEndpoint;
         readonly amount: NumericValueExpr;
         readonly min?: NumericValueExpr;
         readonly max?: NumericValueExpr;

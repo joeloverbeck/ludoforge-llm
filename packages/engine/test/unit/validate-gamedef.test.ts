@@ -1226,68 +1226,11 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('requires transferVar.to.player when targeting per-player variables', () => {
+  it('does not duplicate structural transferVar endpoint diagnostics handled by schema contracts', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
-            {
-              transferVar: {
-                from: { scope: 'pvar', player: 'actor', var: 'vp' },
-                to: { scope: 'pvar', var: 'vp' },
-                amount: 1,
-              },
-            },
-          ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED' &&
-          diag.path === 'actions[0].effects[0].transferVar.to.player',
-      ),
-    );
-  });
-
-  it('requires transferVar.from.player when source is per-player', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
-            {
-              transferVar: {
-                from: { scope: 'pvar', var: 'vp' },
-                to: { scope: 'global', var: 'bank' },
-                amount: 1,
-              },
-            },
-          ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.player',
-      ),
-    );
-  });
-
-  it('rejects transferVar endpoint player when endpoint scope is global', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
+      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
       actions: [
         {
           ...base.actions[0],
@@ -1295,7 +1238,7 @@ describe('validateGameDef reference checks', () => {
             {
               transferVar: {
                 from: { scope: 'global', player: 'actor', var: 'money' },
-                to: { scope: 'global', var: 'money' },
+                to: { scope: 'zoneVar', zone: 'deck:none', player: 'actor', var: 'supply' },
                 amount: 1,
               },
             },
@@ -1305,11 +1248,18 @@ describe('validateGameDef reference checks', () => {
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
-    assert.ok(
+    assert.equal(
       diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.player',
+        (diag) =>
+          diag.code === 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN'
+          || diag.code === 'EFFECT_TRANSFER_VAR_NON_ZONE_SCOPE_ZONE_FORBIDDEN'
+          || diag.code === 'EFFECT_TRANSFER_VAR_FROM_ZONE_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_TO_ZONE_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_ZONE_SCOPE_PLAYER_FORBIDDEN',
       ),
+      false,
     );
   });
 
@@ -1337,68 +1287,8 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.var',
-      ),
-    );
-  });
-
-  it('requires transferVar.from.zone when source scope is zoneVar', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
-            {
-              transferVar: {
-                from: { scope: 'zoneVar', var: 'supply' },
-                to: { scope: 'global', var: 'money' },
-                amount: 1,
-              },
-            },
-          ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_FROM_ZONE_REQUIRED' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.zone',
-      ),
-    );
-  });
-
-  it('rejects transferVar.to.player when target scope is zoneVar', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
-            {
-              transferVar: {
-                from: { scope: 'global', var: 'money' },
-                to: { scope: 'zoneVar', zone: 'deck:none', player: 'actor', var: 'supply' },
-                amount: 1,
-              },
-            },
-          ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_ZONE_SCOPE_PLAYER_FORBIDDEN' &&
-          diag.path === 'actions[0].effects[0].transferVar.to.player',
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].transferVar.from.var',
       ),
     );
   });

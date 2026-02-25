@@ -5,6 +5,7 @@ import type {
   MacroOrigin,
   NumericValueExpr,
   PlayerSel,
+  TransferVarEndpoint,
   TokenFilterPredicate,
   ValueExpr,
   ZoneRef,
@@ -364,7 +365,7 @@ function lowerTransferVarEffect(
 ): EffectLoweringResult<EffectAST> {
   if (!isRecord(source.from) || !isRecord(source.to) || typeof source.from.var !== 'string' || typeof source.to.var !== 'string') {
     return missingCapability(path, 'transferVar effect', source, [
-      '{ transferVar: { from: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, to: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, amount, min?, max?, actualBind? } }',
+      '{ transferVar: { from: { scope: "global", var } | { scope: "pvar", player, var } | { scope: "zoneVar", zone, var }, to: { scope: "global", var } | { scope: "pvar", player, var } | { scope: "zoneVar", zone, var }, amount, min?, max?, actualBind? } }',
     ]);
   }
 
@@ -373,7 +374,7 @@ function lowerTransferVarEffect(
     (source.to.scope !== 'global' && source.to.scope !== 'pvar' && source.to.scope !== 'zoneVar')
   ) {
     return missingCapability(path, 'transferVar effect', source, [
-      '{ transferVar: { from: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, to: { scope: "global" | "pvar" | "zoneVar", var, player?, zone? }, amount } }',
+      '{ transferVar: { from: { scope: "global", var } | { scope: "pvar", player, var } | { scope: "zoneVar", zone, var }, to: { scope: "global", var } | { scope: "pvar", player, var } | { scope: "zoneVar", zone, var }, amount } }',
     ]);
   }
 
@@ -460,21 +461,25 @@ function lowerTransferVarEffect(
     return { value: null, diagnostics };
   }
 
+  const fromEndpoint: TransferVarEndpoint =
+    source.from.scope === 'global'
+      ? { scope: 'global', var: source.from.var }
+      : source.from.scope === 'pvar'
+        ? { scope: 'pvar', player: fromPlayer!, var: source.from.var }
+        : { scope: 'zoneVar', zone: fromZone!, var: source.from.var };
+
+  const toEndpoint: TransferVarEndpoint =
+    source.to.scope === 'global'
+      ? { scope: 'global', var: source.to.var }
+      : source.to.scope === 'pvar'
+        ? { scope: 'pvar', player: toPlayer!, var: source.to.var }
+        : { scope: 'zoneVar', zone: toZone!, var: source.to.var };
+
   return {
     value: {
       transferVar: {
-        from: {
-          scope: source.from.scope,
-          var: source.from.var,
-          ...(fromPlayer === undefined ? {} : { player: fromPlayer }),
-          ...(fromZone === undefined ? {} : { zone: fromZone }),
-        },
-        to: {
-          scope: source.to.scope,
-          var: source.to.var,
-          ...(toPlayer === undefined ? {} : { player: toPlayer }),
-          ...(toZone === undefined ? {} : { zone: toZone }),
-        },
+        from: fromEndpoint,
+        to: toEndpoint,
         amount: amount.value,
         ...(min === undefined ? {} : { min }),
         ...(max === undefined ? {} : { max }),

@@ -357,24 +357,6 @@ describe('transferVar effect', () => {
     assert.equal(afterTotal, beforeTotal);
   });
 
-  it('throws EFFECT_RUNTIME when to.scope is pvar and to.player is missing', () => {
-    const ctx = makeCtx();
-    assert.throws(
-      () =>
-        applyEffect(
-          {
-            transferVar: {
-              from: { scope: 'pvar', player: 'actor', var: 'coins' },
-              to: { scope: 'pvar', var: 'committed' },
-              amount: 1,
-            },
-          },
-          ctx,
-        ),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('to.player is required'),
-    );
-  });
-
   it('throws EFFECT_RUNTIME for boolean variable source or destination', () => {
     const ctx = makeCtx();
     assert.throws(

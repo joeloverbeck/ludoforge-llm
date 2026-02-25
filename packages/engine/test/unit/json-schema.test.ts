@@ -361,6 +361,39 @@ describe('json schema artifacts', () => {
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace rejects invalid resourceTransfer endpoint shape drift', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          effectTrace: [
+            {
+              kind: 'resourceTransfer',
+              from: { scope: 'global', zone: 'board:none', varName: 'supply' },
+              to: { scope: 'perPlayer', varName: 'supply' },
+              requestedAmount: 3,
+              actualAmount: 2,
+              sourceAvailable: 2,
+              destinationHeadroom: 5,
+              provenance: {
+                phase: 'main',
+                eventContext: 'actionEffect',
+                effectPath: 'effects[0]',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), false);
+    assert.ok((validate.errors?.length ?? 0) > 0);
+  });
+
   it('trace with non-hex stateHash fails schema validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);

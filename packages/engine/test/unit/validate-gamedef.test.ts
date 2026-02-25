@@ -554,6 +554,72 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports undefined zoneVar references for setVar and addVar', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            { setVar: { scope: 'zoneVar', zone: 'deck:none', var: 'supply', value: 1 } },
+            { addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'supply', delta: 1 } },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_ZONEVAR_MISSING' && diag.path === 'actions[0].effects[0].setVar.var'),
+    );
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_ZONEVAR_MISSING' && diag.path === 'actions[0].effects[1].addVar.var'),
+    );
+  });
+
+  it('rejects addVar targeting boolean zoneVars', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'locked', delta: 1 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'ADDVAR_BOOLEAN_TARGET_INVALID' && diag.path === 'actions[0].effects[0].addVar.var',
+      ),
+    );
+  });
+
+  it('accepts valid zoneVar setVar and addVar targets', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            { setVar: { scope: 'zoneVar', zone: 'deck:none', var: 'supply', value: 2 } },
+            { addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'supply', delta: 1 } },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_ZONEVAR_MISSING'), false);
+    assert.equal(diagnostics.some((diag) => diag.code === 'ADDVAR_BOOLEAN_TARGET_INVALID'), false);
+  });
+
   it('reports missing runtime data assets for assetRows domains', () => {
     const base = createValidGameDef();
     const def = {

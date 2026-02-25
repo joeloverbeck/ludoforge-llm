@@ -1,6 +1,6 @@
 # ENGINEARCH-032: Restore zoneVar validation parity for setVar/addVar in behavior validator
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — behavior validator diagnostics + unit tests
@@ -12,15 +12,17 @@
 
 ## Assumption Reassessment (2026-02-25)
 
-1. `validate-gamedef-behavior.ts` validates `global` and `pvar` var references for `setVar`/`addVar`, and validates `zoneVar` only for zone selector shape.
-2. `transferVar` validation already enforces `zoneVar` name existence (`REF_ZONEVAR_MISSING`) and boolean-target rejection, so stricter precedent exists in the same validator.
-3. **Mismatch + correction**: after the recent scope-contract hardening, semantic validation parity remains incomplete for `setVar`/`addVar` `zoneVar` branches and must be completed here.
+1. Confirmed: `validate-gamedef-behavior.ts` validates `global` and `pvar` var references for `setVar`/`addVar`, and for `zoneVar` currently validates only the zone selector (`validateZoneRef`) without validating `var` existence.
+2. Confirmed: `addVar` boolean-target rejection currently checks `global` and `pvar` types only; `zoneVar` types are not included in that lookup.
+3. Confirmed: `transferVar` already enforces `zoneVar` name existence (`REF_ZONEVAR_MISSING`) and boolean-target rejection (`EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID`), so stricter precedent exists in the same validator.
+4. **Mismatch + correction**: prior scope listed `validate-gamedef-input.test.ts` as a likely touchpoint, but that suite validates input-boundary error shaping and does not currently cover behavior diagnostics. Scope should focus on behavior validator + `validate-gamedef.test.ts`.
 
 ## Architecture Check
 
 1. Aligning semantic checks across all scoped var operations is cleaner and safer than relying on runtime failures for one branch.
 2. This remains fully game-agnostic kernel validation logic; no game-specific `GameSpecDoc`/`visual-config.yaml` behavior is introduced.
 3. No backwards-compatibility shims: invalid `zoneVar` payloads are rejected earlier and explicitly.
+4. Preferred implementation style is to centralize scope-aware var name/type resolution in validator-local helpers to reduce branch drift and improve long-term extensibility.
 
 ## What to Change
 
@@ -33,6 +35,7 @@ For `addVar` scope `zoneVar`:
 - Validate variable existence against `zoneVarNames` and emit `REF_ZONEVAR_MISSING`.
 - Reject boolean targets with `ADDVAR_BOOLEAN_TARGET_INVALID` parity semantics (or equivalent existing diagnostic strategy).
 - Ensure type lookup is scope-correct (`global` vs `pvar` vs `zoneVar`) instead of treating all non-global as `pvar`.
+- Keep logic DRY by introducing/using a shared scope-aware lookup path (helper) for var existence/type checks where practical.
 
 ### 2. Add validator regression tests
 
@@ -45,7 +48,6 @@ Add/extend unit tests to prove:
 
 - `packages/engine/src/kernel/validate-gamedef-behavior.ts` (modify)
 - `packages/engine/test/unit/validate-gamedef.test.ts` (modify)
-- `packages/engine/test/unit/validate-gamedef-input.test.ts` (modify, if needed)
 
 ## Out of Scope
 
@@ -71,7 +73,6 @@ Add/extend unit tests to prove:
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/validate-gamedef.test.ts` — add `setVar`/`addVar` `zoneVar` missing/boolean diagnostic coverage.
-2. `packages/engine/test/unit/validate-gamedef-input.test.ts` — add compile-input level regression coverage if needed for diagnostic surface.
 
 ### Commands
 
@@ -80,3 +81,23 @@ Add/extend unit tests to prove:
 3. `node --test packages/engine/dist/test/unit/validate-gamedef-input.test.js`
 4. `pnpm -F @ludoforge/engine test:unit`
 5. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-02-25
+- Implemented:
+  - Added scope-aware helper validation in `validate-gamedef-behavior.ts` so `setVar` and `addVar` now enforce `zoneVar` name existence (`REF_ZONEVAR_MISSING`) with parity to existing `global`/`pvar` handling.
+  - Updated `addVar` target-type lookup to be scope-correct across `global` / `pvar` / `zoneVar`, enabling boolean-target rejection for `zoneVar` via existing `ADDVAR_BOOLEAN_TARGET_INVALID`.
+  - Added regression coverage in `validate-gamedef.test.ts` for:
+    - unknown `zoneVar` in `setVar`
+    - unknown `zoneVar` in `addVar`
+    - boolean `zoneVar` target rejection in `addVar`
+    - valid `zoneVar` `setVar`/`addVar` acceptance
+- Additional cleanup discovered during hard test run:
+  - Updated `action-executor-binding.test.ts` and `action-executor-semantics.test.ts` to use canonical `pvar` scope instead of legacy alias-like `perPlayer`, matching strict no-aliasing validation contracts.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
+  - `node --test packages/engine/dist/test/unit/validate-gamedef-input.test.js`
+  - `pnpm -F @ludoforge/engine test:unit`
+  - `pnpm -F @ludoforge/engine lint`

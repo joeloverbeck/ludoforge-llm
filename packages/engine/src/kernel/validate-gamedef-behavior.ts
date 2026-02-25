@@ -977,6 +977,67 @@ const validateZoneRef = (
   validateValueExpr(diagnostics, zoneRef.zoneExpr, `${path}.zoneExpr`, context);
 };
 
+const validateScopedVarReference = (
+  diagnostics: Diagnostic[],
+  scope: 'global' | 'pvar' | 'zoneVar',
+  variable: string,
+  path: string,
+  context: ValidationContext,
+): void => {
+  if (scope === 'global') {
+    if (!context.globalVarNames.has(variable)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GVAR_MISSING',
+        path,
+        `Unknown global variable "${variable}".`,
+        variable,
+        context.globalVarCandidates,
+      );
+    }
+    return;
+  }
+
+  if (scope === 'pvar') {
+    if (!context.perPlayerVarNames.has(variable)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PVAR_MISSING',
+        path,
+        `Unknown per-player variable "${variable}".`,
+        variable,
+        context.perPlayerVarCandidates,
+      );
+    }
+    return;
+  }
+
+  if (!context.zoneVarNames.has(variable)) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'REF_ZONEVAR_MISSING',
+      path,
+      `Unknown zone variable "${variable}".`,
+      variable,
+      context.zoneVarCandidates,
+    );
+  }
+};
+
+const getScopedVarType = (
+  scope: 'global' | 'pvar' | 'zoneVar',
+  variable: string,
+  context: ValidationContext,
+): 'int' | 'boolean' | undefined => {
+  if (scope === 'global') {
+    return context.globalVarTypesByName.get(variable);
+  }
+  if (scope === 'pvar') {
+    return context.perPlayerVarTypesByName.get(variable);
+  }
+  return context.zoneVarTypesByName.get(variable);
+};
+
 export const validateEffectAst = (
   diagnostics: Diagnostic[],
   effect: EffectAST,
@@ -984,27 +1045,7 @@ export const validateEffectAst = (
   context: ValidationContext,
 ): void => {
   if ('setVar' in effect) {
-    if (effect.setVar.scope === 'global' && !context.globalVarNames.has(effect.setVar.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_GVAR_MISSING',
-        `${path}.setVar.var`,
-        `Unknown global variable "${effect.setVar.var}".`,
-        effect.setVar.var,
-        context.globalVarCandidates,
-      );
-    }
-
-    if (effect.setVar.scope === 'pvar' && !context.perPlayerVarNames.has(effect.setVar.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_PVAR_MISSING',
-        `${path}.setVar.var`,
-        `Unknown per-player variable "${effect.setVar.var}".`,
-        effect.setVar.var,
-        context.perPlayerVarCandidates,
-      );
-    }
+    validateScopedVarReference(diagnostics, effect.setVar.scope, effect.setVar.var, `${path}.setVar.var`, context);
 
     if (effect.setVar.scope === 'pvar') {
       validatePlayerSelector(diagnostics, effect.setVar.player, `${path}.setVar.player`, context);
@@ -1024,27 +1065,7 @@ export const validateEffectAst = (
   }
 
   if ('addVar' in effect) {
-    if (effect.addVar.scope === 'global' && !context.globalVarNames.has(effect.addVar.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_GVAR_MISSING',
-        `${path}.addVar.var`,
-        `Unknown global variable "${effect.addVar.var}".`,
-        effect.addVar.var,
-        context.globalVarCandidates,
-      );
-    }
-
-    if (effect.addVar.scope === 'pvar' && !context.perPlayerVarNames.has(effect.addVar.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_PVAR_MISSING',
-        `${path}.addVar.var`,
-        `Unknown per-player variable "${effect.addVar.var}".`,
-        effect.addVar.var,
-        context.perPlayerVarCandidates,
-      );
-    }
+    validateScopedVarReference(diagnostics, effect.addVar.scope, effect.addVar.var, `${path}.addVar.var`, context);
 
     if (effect.addVar.scope === 'pvar') {
       validatePlayerSelector(diagnostics, effect.addVar.player, `${path}.addVar.player`, context);
@@ -1054,10 +1075,7 @@ export const validateEffectAst = (
       validateZoneRef(diagnostics, effect.addVar.zone, `${path}.addVar.zone`, context);
     }
 
-    const varType =
-      effect.addVar.scope === 'global'
-        ? context.globalVarTypesByName.get(effect.addVar.var)
-        : context.perPlayerVarTypesByName.get(effect.addVar.var);
+    const varType = getScopedVarType(effect.addVar.scope, effect.addVar.var, context);
     if (varType === 'boolean') {
       diagnostics.push({
         code: 'ADDVAR_BOOLEAN_TARGET_INVALID',

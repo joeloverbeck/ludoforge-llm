@@ -102,6 +102,33 @@ export function lowerVarDefs(
   return lowered;
 }
 
+export function lowerIntVarDefs(
+  variables: GameSpecDoc['zoneVars'],
+  diagnostics: Diagnostic[],
+  pathPrefix: 'doc.zoneVars',
+): readonly Extract<VariableDef, { readonly type: 'int' }>[] {
+  if (variables === null) {
+    return [];
+  }
+
+  const lowered = lowerVarDefs(variables, diagnostics, pathPrefix);
+  const intOnly: Extract<VariableDef, { readonly type: 'int' }>[] = [];
+  for (const [index, variable] of lowered.entries()) {
+    if (variable.type === 'int') {
+      intOnly.push(variable);
+      continue;
+    }
+    diagnostics.push({
+      code: 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID',
+      path: `${pathPrefix}.${index}.type`,
+      severity: 'error',
+      message: `Cannot lower zoneVars.${index}: only int zoneVars are supported.`,
+      suggestion: 'Use an int zone variable definition (type, init, min, max).',
+    });
+  }
+  return intOnly;
+}
+
 export function lowerGlobalMarkerLattices(
   lattices: GameSpecDoc['globalMarkerLattices'],
   diagnostics: Diagnostic[],

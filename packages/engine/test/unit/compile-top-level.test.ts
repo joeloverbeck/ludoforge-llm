@@ -213,6 +213,73 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('suppresses dependent zoneVar xref diagnostics when zoneVars fail int-only contract', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'skip-zonevar-xref-when-zonevars-fail', players: { min: 2, max: 2 } },
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'tick',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'locked', delta: 1 } }],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(result.sections.zoneVars, null);
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_XREF_ZONEVAR_MISSING'),
+      false,
+    );
+  });
+
+  it('preserves valid int zoneVars references', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'valid-zonevar-reference', players: { min: 2, max: 2 } },
+      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'tick',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'supply', delta: 1 } }],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.zoneVars, [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }]);
+  });
+
   it('compiles varChanged trigger events and enforces variable references', () => {
     const validDoc = {
       ...createEmptyGameSpecDoc(),

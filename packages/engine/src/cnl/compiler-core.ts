@@ -17,6 +17,7 @@ import {
   lowerEndConditions,
   lowerEffectsWithDiagnostics,
   lowerGlobalMarkerLattices,
+  lowerIntVarDefs,
   lowerScoring,
   lowerTokenTypes,
   lowerTriggers,
@@ -208,7 +209,8 @@ export function compileGameSpecToGameDef(
     diagnostics.push(...validated.diagnostics);
     validatedGameDef = validated.gameDef;
   }
-  const normalizedDiagnostics = canonicalizeCompilerReferenceDiagnostics(diagnostics);
+  const gatedDiagnostics = suppressUnavailableSectionDiagnostics(diagnostics, compiled.sections);
+  const normalizedDiagnostics = canonicalizeCompilerReferenceDiagnostics(gatedDiagnostics);
 
   const finalizedDiagnostics = finalizeDiagnostics(normalizedDiagnostics, options?.sourceMap, limits.maxDiagnosticCount);
 
@@ -300,24 +302,9 @@ function compileExpandedDoc(
   sections.perPlayerVars = perPlayerVars.failed ? null : perPlayerVars.value;
 
   const zoneVars = compileSection(diagnostics, () =>
-    lowerVarDefs(resolvedTableRefDoc.zoneVars, diagnostics, 'doc.zoneVars'),
+    lowerIntVarDefs(resolvedTableRefDoc.zoneVars, diagnostics, 'doc.zoneVars'),
   );
-  const loweredZoneVars: NonNullable<GameDef['zoneVars']> = zoneVars.value.filter(
-    (variable, index): variable is Extract<VariableDef, { readonly type: 'int' }> => {
-      if (variable.type === 'int') {
-        return true;
-      }
-      diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID',
-        path: `doc.zoneVars.${index}.type`,
-        severity: 'error',
-        message: `Cannot lower zoneVars.${index}: only int zoneVars are supported.`,
-        suggestion: 'Use an int zone variable definition (type, init, min, max).',
-      });
-      return false;
-    },
-  );
-  sections.zoneVars = zoneVars.failed ? null : loweredZoneVars;
+  sections.zoneVars = zoneVars.failed ? null : zoneVars.value;
 
   let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
   let zones: GameDef['zones'] | null = null;
@@ -550,7 +537,7 @@ function compileExpandedDoc(
     constants: constants.value,
     globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,
-    ...(loweredZoneVars.length > 0 ? { zoneVars: loweredZoneVars } : {}),
+    ...(sections.zoneVars === null || sections.zoneVars.length === 0 ? {} : { zoneVars: sections.zoneVars }),
     zones,
     ...(derivedFromAssets.seats === null ? {} : { seats: derivedFromAssets.seats }),
     ...(derivedFromAssets.tracks === null ? {} : { tracks: derivedFromAssets.tracks }),
@@ -631,6 +618,19 @@ function canonicalizeCompilerReferenceDiagnostics(diagnostics: readonly Diagnost
     });
   }
   return canonicalized;
+}
+
+function suppressUnavailableSectionDiagnostics(
+  diagnostics: readonly Diagnostic[],
+  sections: CompileSectionResults,
+): readonly Diagnostic[] {
+  if (sections.zoneVars !== null) {
+    return diagnostics;
+  }
+
+  return diagnostics.filter(
+    (diagnostic) => diagnostic.code !== 'REF_ZONEVAR_MISSING' && diagnostic.code !== 'CNL_XREF_ZONEVAR_MISSING',
+  );
 }
 
 function normalizeDiagnosticPath(path: string): string {

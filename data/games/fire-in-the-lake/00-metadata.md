@@ -6,7 +6,7 @@ metadata:
   name: Fire in the Lake
   description: A 4-faction COIN-series wargame set in the Vietnam War
   players:
-    min: 2
+    min: 4
     max: 4
   defaultScenarioAssetId: fitl-scenario-full
   namedSets:

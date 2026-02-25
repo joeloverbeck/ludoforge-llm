@@ -126,7 +126,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       .filter((zone: ZoneDef) => zone.category === 'city')
       .map((zone: ZoneDef) => zone.id);
 
-    const baseState = clearAllZones(initialState(def, 2001, 2).state);
+    const baseState = clearAllZones(initialState(def, 2001, 4).state);
     const mixedPieces = [
       ...Array.from({ length: 3 }, (_, i) => makeToken(`us-trp-${i}`, 'troops', 'US')),
       ...Array.from({ length: 2 }, (_, i) => makeToken(`us-bas-${i}`, 'base', 'US')),
@@ -135,6 +135,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -185,10 +186,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       .map((zone: ZoneDef) => zone.id);
     assert.ok(cityZoneIds.length >= 2, 'Need at least 2 city zones for this test');
 
-    const baseState = clearAllZones(initialState(def, 42, 2).state);
+    const baseState = clearAllZones(initialState(def, 42, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -256,10 +258,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       .map((zone: ZoneDef) => zone.id)
       .sort();
 
-    const baseState = clearAllZones(initialState(def, 2401, 2).state);
+    const baseState = clearAllZones(initialState(def, 2401, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -293,10 +296,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id),
     );
 
-    const baseState = clearAllZones(initialState(def, 2402, 2).state);
+    const baseState = clearAllZones(initialState(def, 2402, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -331,7 +335,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       .filter((zone: ZoneDef) => zone.category === 'city')
       .map((zone: ZoneDef) => zone.id);
 
-    const baseState = clearAllZones(initialState(def, 3001, 2).state);
+    const baseState = clearAllZones(initialState(def, 3001, 4).state);
     const fewerPieces = [
       makeToken('us-trp-0', 'troops', 'US'),
       makeToken('us-trp-1', 'troops', 'US'),
@@ -341,6 +345,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -377,10 +382,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       .filter((zone: ZoneDef) => zone.category === 'city')
       .map((zone: ZoneDef) => zone.id);
 
-    const baseState = clearAllZones(initialState(def, 4001, 2).state);
+    const baseState = clearAllZones(initialState(def, 4001, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -412,10 +418,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
-    const baseState = clearAllZones(initialState(def, 2403, 2).state);
+    const baseState = clearAllZones(initialState(def, 2403, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -475,10 +482,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       }
     ).chooseOne.options = { query: 'enums', values: [] };
 
-    const baseState = clearAllZones(initialState(def, 2404, 2).state);
+    const baseState = clearAllZones(initialState(def, 2404, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -498,10 +506,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const cityZoneIds = def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id);
     assert.ok(cityZoneIds.length > 0, 'Expected at least one city zone');
 
-    const baseState = clearAllZones(initialState(def, 1301, 2).state);
+    const baseState = clearAllZones(initialState(def, 1301, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -540,10 +549,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       .filter((zone: ZoneDef) => zone.category === 'city')
       .map((zone: ZoneDef) => zone.id);
 
-    const baseState = clearAllZones(initialState(def, 1302, 2).state);
+    const baseState = clearAllZones(initialState(def, 1302, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
@@ -594,10 +604,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined);
 
-    const baseState = clearAllZones(initialState(def, 1303, 2).state);
+    const baseState = clearAllZones(initialState(def, 1303, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],

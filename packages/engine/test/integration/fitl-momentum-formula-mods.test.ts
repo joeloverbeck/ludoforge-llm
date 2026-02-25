@@ -51,13 +51,13 @@ describe('FITL momentum formula modifiers', () => {
 
     const base = withActivePlayer(
       {
-        ...initialState(def, 9101, 2).state,
+        ...initialState(def, 9101, 4).state,
         globalVars: {
-          ...initialState(def, 9101, 2).state.globalVars,
+          ...initialState(def, 9101, 4).state.globalVars,
           trail: 2,
         },
         zones: {
-          ...initialState(def, 9101, 2).state.zones,
+          ...initialState(def, 9101, 4).state.zones,
           [space]: [
             makeToken('ww-us', 'troops', 'US', { type: 'troops' }),
             makeToken('ww-nva-g1', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
@@ -109,15 +109,23 @@ describe('FITL momentum formula modifiers', () => {
 
     const base = withActivePlayer(
       {
-        ...initialState(def, 9102, 2).state,
+        ...initialState(def, 9102, 4).state,
         globalVars: {
-          ...initialState(def, 9102, 2).state.globalVars,
+          ...initialState(def, 9102, 4).state.globalVars,
           trail: 2,
           nvaResources: 10,
         },
       },
       0,
     );
+
+    const changedBaseline = applyMoveWithResolvedDecisionIds(def, base, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [],
+        $degradeTrail: 'yes',
+      },
+    }).state;
 
     const changed = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_adsid: true }), {
       actionId: asActionId('airStrike'),
@@ -128,7 +136,19 @@ describe('FITL momentum formula modifiers', () => {
     }).state;
 
     assert.equal(changed.globalVars.trail, 1);
-    assert.equal(changed.globalVars.nvaResources, 4, 'ADSID should deduct 6 resources on Trail change');
+    assert.equal(
+      changed.globalVars.nvaResources,
+      Number(changedBaseline.globalVars.nvaResources) - 6,
+      'ADSID should deduct an additional 6 resources when Trail changes',
+    );
+
+    const unchangedBaseline = applyMoveWithResolvedDecisionIds(def, base, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [],
+        $degradeTrail: 'no',
+      },
+    }).state;
 
     const unchanged = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_adsid: true }), {
       actionId: asActionId('airStrike'),
@@ -138,8 +158,12 @@ describe('FITL momentum formula modifiers', () => {
       },
     }).state;
 
-    assert.equal(unchanged.globalVars.trail, 2);
-    assert.equal(unchanged.globalVars.nvaResources, 10, 'ADSID should not trigger when Trail is unchanged');
+    assert.equal(unchanged.globalVars.trail, base.globalVars.trail);
+    assert.equal(
+      unchanged.globalVars.nvaResources,
+      Number(unchangedBaseline.globalVars.nvaResources),
+      'ADSID should not change resources when Trail is unchanged',
+    );
 
     const baseNva = withActivePlayer(
       {
@@ -260,14 +284,14 @@ describe('FITL momentum formula modifiers', () => {
     const assaultSpace = 'quang-tin-quang-ngai:none';
     const assaultState = withActivePlayer(
       {
-        ...initialState(def, 9105, 2).state,
+        ...initialState(def, 9105, 4).state,
         globalVars: {
-          ...initialState(def, 9105, 2).state.globalVars,
+          ...initialState(def, 9105, 4).state.globalVars,
           arvnResources: 0,
           aid: 12,
         },
         zones: {
-          ...initialState(def, 9105, 2).state.zones,
+          ...initialState(def, 9105, 4).state.zones,
           [assaultSpace]: [
             makeToken('bodycount-arvn-assault', 'troops', 'ARVN', { type: 'troops' }),
             makeToken('bodycount-arvn-assault-2', 'troops', 'ARVN', { type: 'troops' }),
@@ -296,13 +320,13 @@ describe('FITL momentum formula modifiers', () => {
 
     const patrolState = withActivePlayer(
       {
-        ...initialState(def, 9106, 2).state,
+        ...initialState(def, 9106, 4).state,
         globalVars: {
-          ...initialState(def, 9106, 2).state.globalVars,
+          ...initialState(def, 9106, 4).state.globalVars,
           arvnResources: 0,
         },
         zones: {
-          ...initialState(def, 9106, 2).state.zones,
+          ...initialState(def, 9106, 4).state.zones,
           [RALLY_SPACE]: [
             makeToken('bodycount-arvn-patrol', 'troops', 'ARVN', { type: 'troops' }),
           ],

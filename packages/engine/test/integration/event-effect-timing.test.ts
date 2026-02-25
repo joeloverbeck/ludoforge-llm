@@ -19,11 +19,14 @@ const createDef = (): GameDef =>
     globalVars: [
       { name: 'afterCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'afterCounterTwo', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'afterNoGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'beforeCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'defaultCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'batchCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'branchCounter', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'branchNoGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'branchSideCounter', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'branchSideNoGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
     ],
     perPlayerVars: [],
     zones: [],
@@ -54,15 +57,24 @@ const createDef = (): GameDef =>
         executor: 'actor',
         phase: [asPhaseId('main')],
         params: [
-          {
-            name: 'eventCardId',
-            domain: {
-              query: 'enums',
-              values: ['card-after', 'card-after-2', 'card-before', 'card-default', 'card-batch', 'card-branch'],
-            },
-          },
+              {
+                name: 'eventCardId',
+                domain: {
+                  query: 'enums',
+                  values: [
+                    'card-after',
+                    'card-after-2',
+                    'card-after-no-grant',
+                    'card-before',
+                    'card-default',
+                    'card-batch',
+                    'card-branch',
+                    'card-branch-no-grant',
+                  ],
+                },
+              },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
-          { name: 'branch', domain: { query: 'enums', values: ['branch-after', 'none'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['branch-after', 'branch-after-no-grant', 'none'] } },
         ],
         pre: null,
         cost: [],
@@ -153,6 +165,15 @@ const createDef = (): GameDef =>
             },
           },
           {
+            id: 'card-after-no-grant',
+            title: 'Deferred timing without grants',
+            sideMode: 'single',
+            unshaded: {
+              effectTiming: 'afterGrants',
+              effects: [{ addVar: { scope: 'global', var: 'afterNoGrantCounter', delta: 1 } }],
+            },
+          },
+          {
             id: 'card-default',
             title: 'Immediate implicit before side effect',
             sideMode: 'single',
@@ -211,6 +232,22 @@ const createDef = (): GameDef =>
                     },
                   ],
                   effects: [{ addVar: { scope: 'global', var: 'branchCounter', delta: 1 } }],
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-branch-no-grant',
+            title: 'Branch timing override without grants',
+            sideMode: 'single',
+            unshaded: {
+              effectTiming: 'beforeGrants',
+              effects: [{ addVar: { scope: 'global', var: 'branchSideNoGrantCounter', delta: 1 } }],
+              branches: [
+                {
+                  id: 'branch-after-no-grant',
+                  effectTiming: 'afterGrants',
+                  effects: [{ addVar: { scope: 'global', var: 'branchNoGrantCounter', delta: 1 } }],
                 },
               ],
             },
@@ -291,6 +328,24 @@ describe('event effect timing integration', () => {
     assert.equal(afterEvent.globalVars.beforeCounter, 1);
   });
 
+  it('releases afterGrants effects immediately when no grants are emitted', () => {
+    const def = createDef();
+    const start = initialState(def, 321, 4).state;
+
+    const afterEventResult = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-after-no-grant', side: 'unshaded', branch: 'none' },
+    });
+    const afterEvent = afterEventResult.state;
+
+    assert.equal(afterEvent.globalVars.afterNoGrantCounter, 1);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants, undefined);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingDeferredEventEffects, undefined);
+
+    const lifecycle = deferredLifecycleEntries(afterEventResult.triggerFirings);
+    assert.deepEqual(lifecycle.map((entry) => entry.stage), ['released', 'executed']);
+  });
+
   it('keeps omitted effectTiming behavior immediate', () => {
     const def = createDef();
     const start = initialState(def, 33, 4).state;
@@ -362,6 +417,25 @@ describe('event effect timing integration', () => {
     }).state;
     assert.equal(afterFreeOp.globalVars.branchSideCounter, 1);
     assert.equal(afterFreeOp.globalVars.branchCounter, 1);
+  });
+
+  it('releases branch-selected afterGrants effects immediately when branch emits no grants', () => {
+    const def = createDef();
+    const start = initialState(def, 351, 4).state;
+
+    const afterEventResult = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-branch-no-grant', side: 'unshaded', branch: 'branch-after-no-grant' },
+    });
+    const afterEvent = afterEventResult.state;
+
+    assert.equal(afterEvent.globalVars.branchSideNoGrantCounter, 1);
+    assert.equal(afterEvent.globalVars.branchNoGrantCounter, 1);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants, undefined);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingDeferredEventEffects, undefined);
+
+    const lifecycle = deferredLifecycleEntries(afterEventResult.triggerFirings);
+    assert.deepEqual(lifecycle.map((entry) => entry.stage), ['released', 'executed']);
   });
 
   it('preserves per-deferred lifecycle ordering across multiple queued deferred payloads', () => {

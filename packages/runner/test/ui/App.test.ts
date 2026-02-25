@@ -350,7 +350,7 @@ describe('App', () => {
         gameMetadata: {
           name: 'Fire in the Lake',
           description: 'test',
-          playerMin: 2,
+          playerMin: 4,
           playerMax: 4,
           factionIds: ['us', 'arvn', 'nva', 'vc'],
         },

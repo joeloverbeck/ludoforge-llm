@@ -52,7 +52,7 @@ describe('FITL RVN leader lingering effects', () => {
     const def = compileDef();
     const space = 'qui-nhon:none';
 
-    const baseState = clearAllZones(initialState(def, 9001, 2).state);
+    const baseState = clearAllZones(initialState(def, 9001, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(1),
@@ -90,7 +90,7 @@ describe('FITL RVN leader lingering effects', () => {
     const def = compileDef();
     const space = 'qui-nhon:none';
 
-    const baseState = clearAllZones(initialState(def, 9002, 2).state);
+    const baseState = clearAllZones(initialState(def, 9002, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
@@ -127,7 +127,7 @@ describe('FITL RVN leader lingering effects', () => {
     const origin = 'da-nang:none';
     const farDestination = 'saigon:none';
 
-    const baseState = clearAllZones(initialState(def, 9003, 2).state);
+    const baseState = clearAllZones(initialState(def, 9003, 4).state);
     const setup: GameState = {
       ...baseState,
       zones: {
@@ -170,7 +170,7 @@ describe('FITL RVN leader lingering effects', () => {
     const origin = 'da-nang:none';
     const nearDestination = 'qui-nhon:none';
 
-    const baseState = clearAllZones(initialState(def, 90031, 2).state);
+    const baseState = clearAllZones(initialState(def, 90031, 4).state);
     const setup: GameState = {
       ...baseState,
       zones: {
@@ -200,7 +200,7 @@ describe('FITL RVN leader lingering effects', () => {
     const def = compileDef();
     const space = 'can-tho:none';
 
-    const baseState = clearAllZones(initialState(def, 9004, 2).state);
+    const baseState = clearAllZones(initialState(def, 9004, 4).state);
     const setup: GameState = {
       ...baseState,
       globalVars: {
@@ -249,7 +249,7 @@ describe('FITL RVN leader lingering effects', () => {
     const space = 'qui-nhon:none';
 
     const runPacify = (leader: LeaderState, withTerror: boolean): GameState => {
-      const baseState = clearAllZones(initialState(def, withTerror ? 9006 : 9005, 2).state);
+      const baseState = clearAllZones(initialState(def, withTerror ? 9006 : 9005, 4).state);
       const setup: GameState = {
         ...baseState,
         activePlayer: asPlayerId(1),

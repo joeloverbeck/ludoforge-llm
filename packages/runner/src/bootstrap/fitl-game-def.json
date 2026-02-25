@@ -2,7 +2,7 @@
   "metadata": {
     "id": "fire-in-the-lake",
     "players": {
-      "min": 2,
+      "min": 4,
       "max": 4
     },
     "name": "Fire in the Lake",

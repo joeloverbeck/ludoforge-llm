@@ -56,7 +56,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const base = withArvnSweepState(makeIsolatedInitialState(def, 2101, 2), 3);
+    const base = withArvnSweepState(makeIsolatedInitialState(def, 2101, 4), 3);
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, base, {
@@ -66,7 +66,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
-    const twoSpace = withArvnSweepState(makeIsolatedInitialState(def, 2102, 2), 6);
+    const twoSpace = withArvnSweepState(makeIsolatedInitialState(def, 2102, 4), 6);
     const twoBefore = Number(twoSpace.globalVars.arvnResources);
     const twoResult = applyMoveWithResolvedDecisionIds(def, twoSpace, {
       actionId: asActionId('sweep'),
@@ -74,7 +74,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     }).state;
     assert.equal(twoResult.globalVars.arvnResources, twoBefore - 6, 'Sweep should spend 3 per selected space (2 spaces)');
 
-    const threeSpace = withArvnSweepState(makeIsolatedInitialState(def, 2103, 2), 9);
+    const threeSpace = withArvnSweepState(makeIsolatedInitialState(def, 2103, 4), 9);
     const threeBefore = Number(threeSpace.globalVars.arvnResources);
     const threeResult = applyMoveWithResolvedDecisionIds(def, threeSpace, {
       actionId: asActionId('sweep'),
@@ -88,7 +88,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const state = withArvnAssaultState(makeIsolatedInitialState(def, 2201, 2), { arvnResources: 6, bodyCount: false });
+    const state = withArvnAssaultState(makeIsolatedInitialState(def, 2201, 4), { arvnResources: 6, bodyCount: false });
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, state, {
@@ -104,7 +104,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const state = withArvnAssaultState(makeIsolatedInitialState(def, 2202, 2), { arvnResources: 0, bodyCount: true });
+    const state = withArvnAssaultState(makeIsolatedInitialState(def, 2202, 4), { arvnResources: 0, bodyCount: true });
     const before = Number(state.globalVars.arvnResources);
     const result = applyMoveWithResolvedDecisionIds(def, state, {
       actionId: asActionId('assault'),
@@ -118,7 +118,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const sweepBase = withArvnSweepState(makeIsolatedInitialState(def, 2301, 2), 3);
+    const sweepBase = withArvnSweepState(makeIsolatedInitialState(def, 2301, 4), 3);
     const sweepCapped = {
       ...sweepBase,
       globalMarkers: {
@@ -136,7 +136,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       'With cap_caps shaded and 3 resources, Sweep should cap at 1 space',
     );
 
-    const assaultCapTwo = withArvnAssaultState(makeIsolatedInitialState(def, 2302, 2), {
+    const assaultCapTwo = withArvnAssaultState(makeIsolatedInitialState(def, 2302, 4), {
       arvnResources: 9,
       bodyCount: false,
       abrams: 'shaded',
@@ -151,7 +151,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       'With cap_abrams shaded and sufficient resources, Assault should still cap at 2 spaces',
     );
 
-    const assaultCapOne = withArvnAssaultState(makeIsolatedInitialState(def, 2303, 2), {
+    const assaultCapOne = withArvnAssaultState(makeIsolatedInitialState(def, 2303, 4), {
       arvnResources: 3,
       bodyCount: false,
       abrams: 'shaded',

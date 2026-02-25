@@ -150,7 +150,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const def = compiled.gameDef!;
     const space = 'quang-nam:none';
 
-    const start = initialState(def, 113, 2).state;
+    const start = initialState(def, 113, 4).state;
     const modifiedStart: GameState = {
       ...start,
       globalVars: {
@@ -216,7 +216,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const spaceB = 'quang-nam:none';
     const spaceC = 'saigon:none';
 
-    const start = initialState(def, 191, 2).state;
+    const start = initialState(def, 191, 4).state;
     const modifiedStart: GameState = {
       ...start,
       zones: {
@@ -323,7 +323,7 @@ describe('FITL US/ARVN special activities integration', () => {
     assert.ok(topGunShadedRollGate.length >= 1, 'Expected rollRandom to be gated by cap_topGun shaded branch');
 
     const space = 'saigon:none';
-    const start = initialState(def, 277, 2).state;
+    const start = initialState(def, 277, 4).state;
     const modifiedStart: GameState = {
       ...start,
       globalVars: {
@@ -398,7 +398,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     const aidSpace = 'qui-nhon:none';
     const patronageSpace = 'can-tho:none';
-    const start = initialState(def, 503, 2).state;
+    const start = initialState(def, 503, 4).state;
     const modifiedStart: GameState = {
       ...start,
       globalVars: {
@@ -451,7 +451,7 @@ describe('FITL US/ARVN special activities integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const state = initialState(def, 509, 2).state;
+    const state = initialState(def, 509, 4).state;
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, state, {
@@ -473,7 +473,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const origin = 'da-nang:none';
     const destination = 'loc-hue-da-nang:none';
     const remote = 'tay-ninh:none';
-    const start = initialState(def, 521, 2).state;
+    const start = initialState(def, 521, 4).state;
     const modifiedStart: GameState = {
       ...start,
       zones: {
@@ -519,7 +519,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     const targetSpace = 'quang-nam:none';
     const adjacentSource = 'da-nang:none';
-    const start = initialState(def, 557, 2).state;
+    const start = initialState(def, 557, 4).state;
     const modifiedStart: GameState = {
       ...start,
       zones: {
@@ -580,7 +580,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.notEqual(compiled.gameDef, null);
 
-    const state = initialState(compiled.gameDef!, 211, 2).state;
+    const state = initialState(compiled.gameDef!, 211, 4).state;
 
     assert.throws(
       () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
@@ -622,7 +622,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
 
-    const state = initialState(compiled.gameDef!, 339, 2).state;
+    const state = initialState(compiled.gameDef!, 339, 4).state;
     const space = 'quang-nam:none';
 
     assert.throws(
@@ -670,7 +670,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     const spaceActivate = 'quang-nam:none';
     const spaceAssault = 'saigon:none';
-    const start = initialState(def, 441, 2).state;
+    const start = initialState(def, 441, 4).state;
     const modifiedStart: GameState = {
       ...start,
       zones: {
@@ -721,7 +721,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const spaceA = 'quang-nam:none';
     const spaceB = 'saigon:none';
 
-    const monsoonState = withMonsoonLookahead(initialState(def, 449, 2).state);
+    const monsoonState = withMonsoonLookahead(initialState(def, 449, 4).state);
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
@@ -756,7 +756,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const spaceB = 'quang-nam:none';
     const spaceC = 'saigon:none';
 
-    const seeded = initialState(def, 457, 2).state;
+    const seeded = initialState(def, 457, 4).state;
     const monsoonState = withMonsoonLookahead({
       ...seeded,
       zones: {
@@ -812,7 +812,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const baselineState = initialState(def, 461, 2).state;
+    const baselineState = initialState(def, 461, 4).state;
     const monsoonState = withMonsoonLookahead(baselineState);
     const baselineMoves = legalMoves(def, baselineState);
     const moves = legalMoves(def, monsoonState);

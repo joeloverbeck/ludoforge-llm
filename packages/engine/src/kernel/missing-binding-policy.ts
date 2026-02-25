@@ -1,4 +1,4 @@
-import { isEvalErrorCode } from './eval-error.js';
+import { EVAL_ERROR_DEFER_CLASS, hasEvalErrorDeferClass, isEvalErrorCode } from './eval-error.js';
 
 export type MissingBindingPolicyContext =
   | 'legalMoves.executorDuringParamEnumeration'
@@ -6,12 +6,7 @@ export type MissingBindingPolicyContext =
   | 'pipeline.discoveryPredicate';
 
 const isDeferrableUnresolvedSelectorCardinality = (error: unknown): boolean => {
-  if (!isEvalErrorCode(error, 'SELECTOR_CARDINALITY')) {
-    return false;
-  }
-  const selector = error.context?.selector;
-  const resolvedCount = error.context?.resolvedCount;
-  return typeof selector === 'string' && selector.startsWith('$') && resolvedCount === 0;
+  return hasEvalErrorDeferClass(error, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY);
 };
 
 /**

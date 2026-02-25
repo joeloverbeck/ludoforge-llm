@@ -7,6 +7,7 @@ import {
   asZoneId,
   asPhaseId,
   asPlayerId,
+  EVAL_ERROR_DEFER_CLASS,
   isEvalErrorCode,
   resolvePlayerSel,
   resolveSinglePlayerSel,
@@ -189,13 +190,25 @@ describe('resolveZoneSel', () => {
       actorPlayer: asPlayerId(0),
       activePlayer: asPlayerId(0),
     });
-    assert.throws(() => resolveSingleZoneSel('hand:allOther', zeroCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+    assert.throws(
+      () => resolveSingleZoneSel('hand:allOther', zeroCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.deferClass === undefined,
     );
 
     const manyCtx = makeCtx();
     assert.throws(() => resolveSingleZoneSel('hand:all', manyCtx), (error: unknown) =>
       isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+    );
+  });
+
+  it('adds unresolved-binding deferral metadata for zero-cardinality direct binding selectors', () => {
+    const emptyBoundSelectionCtx = makeCtx({ bindings: { $zones: [] } });
+    assert.throws(
+      () => resolveSingleZoneSel('$zones', emptyBoundSelectionCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY') &&
+        error.context?.deferClass === EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
     );
   });
 });

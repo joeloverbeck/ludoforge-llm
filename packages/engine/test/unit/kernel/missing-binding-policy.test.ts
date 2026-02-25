@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createEvalError } from '../../../src/kernel/eval-error.js';
+import { createEvalError, EVAL_ERROR_DEFER_CLASS } from '../../../src/kernel/eval-error.js';
 import { shouldDeferMissingBinding } from '../../../src/kernel/missing-binding-policy.js';
 
 describe('shouldDeferMissingBinding()', () => {
@@ -21,14 +21,28 @@ describe('shouldDeferMissingBinding()', () => {
     assert.equal(shouldDeferMissingBinding(new Error('boom'), 'pipeline.discoveryPredicate'), false);
   });
 
-  it('defers unresolved selector-cardinality only for event decision probing', () => {
+  it('defers structured unresolved-binding selector-cardinality only for event decision probing', () => {
     const selectorCardinality = createEvalError(
       'SELECTOR_CARDINALITY',
       'Expected exactly one zone',
-      { selector: '$targetProvince', resolvedCount: 0, resolvedZones: [] },
+      {
+        selector: 'hand:allOther',
+        resolvedCount: 0,
+        resolvedZones: [],
+        deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+      },
     );
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.eventDecisionSequence'), true);
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'pipeline.discoveryPredicate'), false);
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.executorDuringParamEnumeration'), false);
+  });
+
+  it('does not defer selector-cardinality without structured unresolved-binding metadata', () => {
+    const selectorCardinality = createEvalError('SELECTOR_CARDINALITY', 'Expected exactly one zone', {
+      selector: '$targetProvince',
+      resolvedCount: 0,
+      resolvedZones: [],
+    });
+    assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.eventDecisionSequence'), false);
   });
 });

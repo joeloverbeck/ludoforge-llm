@@ -26,7 +26,24 @@ export type EvalErrorCode =
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
 
-function formatMessage(message: string, context?: EvalErrorContext): string {
+export const EVAL_ERROR_DEFER_CLASS = {
+  UNRESOLVED_BINDING_SELECTOR_CARDINALITY: 'unresolvedBindingSelectorCardinality',
+} as const;
+
+export type EvalErrorDeferClass = (typeof EVAL_ERROR_DEFER_CLASS)[keyof typeof EVAL_ERROR_DEFER_CLASS];
+
+export type SelectorCardinalityEvalErrorContext = EvalErrorContext & {
+  readonly deferClass?: EvalErrorDeferClass;
+};
+
+type EvalErrorContextByCode = {
+  readonly SELECTOR_CARDINALITY: SelectorCardinalityEvalErrorContext;
+};
+
+export type EvalErrorContextForCode<C extends EvalErrorCode> =
+  C extends keyof EvalErrorContextByCode ? EvalErrorContextByCode[C] : EvalErrorContext;
+
+function formatMessage<C extends EvalErrorCode>(message: string, context?: EvalErrorContextForCode<C>): string {
   if (context === undefined) {
     return message;
   }
@@ -34,11 +51,11 @@ function formatMessage(message: string, context?: EvalErrorContext): string {
   return `${message} context=${JSON.stringify(context)}`;
 }
 
-export class EvalError extends Error {
-  readonly code: EvalErrorCode;
-  readonly context?: EvalErrorContext;
+export class EvalError<C extends EvalErrorCode = EvalErrorCode> extends Error {
+  readonly code: C;
+  readonly context?: EvalErrorContextForCode<C>;
 
-  constructor(code: EvalErrorCode, message: string, context?: EvalErrorContext) {
+  constructor(code: C, message: string, context?: EvalErrorContextForCode<C>) {
     super(formatMessage(message, context));
     this.name = 'EvalError';
     this.code = code;
@@ -48,63 +65,94 @@ export class EvalError extends Error {
   }
 }
 
-export function createEvalError(
-  code: EvalErrorCode,
+export function createEvalError<C extends EvalErrorCode>(
+  code: C,
   message: string,
-  context?: EvalErrorContext,
-): EvalError {
+  context?: EvalErrorContextForCode<C>,
+): EvalError<C> {
   return new EvalError(code, message, context);
 }
 
-export function missingBindingError(message: string, context?: EvalErrorContext): EvalError {
+export function missingBindingError(
+  message: string,
+  context?: EvalErrorContextForCode<'MISSING_BINDING'>,
+): EvalError<'MISSING_BINDING'> {
   return createEvalError('MISSING_BINDING', message, context);
 }
 
-export function missingVarError(message: string, context?: EvalErrorContext): EvalError {
+export function missingVarError(
+  message: string,
+  context?: EvalErrorContextForCode<'MISSING_VAR'>,
+): EvalError<'MISSING_VAR'> {
   return createEvalError('MISSING_VAR', message, context);
 }
 
-export function typeMismatchError(message: string, context?: EvalErrorContext): EvalError {
+export function typeMismatchError(
+  message: string,
+  context?: EvalErrorContextForCode<'TYPE_MISMATCH'>,
+): EvalError<'TYPE_MISMATCH'> {
   return createEvalError('TYPE_MISMATCH', message, context);
 }
 
-export function selectorCardinalityError(message: string, context?: EvalErrorContext): EvalError {
+export function selectorCardinalityError(
+  message: string,
+  context?: EvalErrorContextForCode<'SELECTOR_CARDINALITY'>,
+): EvalError<'SELECTOR_CARDINALITY'> {
   return createEvalError('SELECTOR_CARDINALITY', message, context);
 }
 
-export function queryBoundsExceededError(message: string, context?: EvalErrorContext): EvalError {
+export function queryBoundsExceededError(
+  message: string,
+  context?: EvalErrorContextForCode<'QUERY_BOUNDS_EXCEEDED'>,
+): EvalError<'QUERY_BOUNDS_EXCEEDED'> {
   return createEvalError('QUERY_BOUNDS_EXCEEDED', message, context);
 }
 
-export function spatialNotImplementedError(message: string, context?: EvalErrorContext): EvalError {
+export function spatialNotImplementedError(
+  message: string,
+  context?: EvalErrorContextForCode<'SPATIAL_NOT_IMPLEMENTED'>,
+): EvalError<'SPATIAL_NOT_IMPLEMENTED'> {
   return createEvalError('SPATIAL_NOT_IMPLEMENTED', message, context);
 }
 
-export function divisionByZeroError(message: string, context?: EvalErrorContext): EvalError {
+export function divisionByZeroError(
+  message: string,
+  context?: EvalErrorContextForCode<'DIVISION_BY_ZERO'>,
+): EvalError<'DIVISION_BY_ZERO'> {
   return createEvalError('DIVISION_BY_ZERO', message, context);
 }
 
-export function zonePropNotFoundError(message: string, context?: EvalErrorContext): EvalError {
+export function zonePropNotFoundError(
+  message: string,
+  context?: EvalErrorContextForCode<'ZONE_PROP_NOT_FOUND'>,
+): EvalError<'ZONE_PROP_NOT_FOUND'> {
   return createEvalError('ZONE_PROP_NOT_FOUND', message, context);
 }
 
 export function dataAssetEvalError(
   code: DataAssetEvalErrorCode,
   message: string,
-  context?: EvalErrorContext,
-): EvalError {
+  context?: EvalErrorContextForCode<DataAssetEvalErrorCode>,
+): EvalError<DataAssetEvalErrorCode> {
   return createEvalError(code, message, context);
 }
 
-export function isEvalError(error: unknown): error is EvalError {
+export function isEvalError(error: unknown): error is EvalError<EvalErrorCode> {
   return error instanceof EvalError;
 }
 
 export function isEvalErrorCode<C extends EvalErrorCode>(
   error: unknown,
   code: C,
-): error is EvalError & { readonly code: C } {
+): error is EvalError<C> {
   return isEvalError(error) && error.code === code;
+}
+
+export function hasEvalErrorDeferClass(
+  error: unknown,
+  deferClass: EvalErrorDeferClass,
+): error is EvalError<'SELECTOR_CARDINALITY'> {
+  return isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.deferClass === deferClass;
 }
 
 export function isRecoverableEvalResolutionError(error: unknown): boolean {

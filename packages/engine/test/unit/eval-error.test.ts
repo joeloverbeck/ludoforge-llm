@@ -2,11 +2,13 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  EVAL_ERROR_DEFER_CLASS,
   EvalError,
   createEvalError,
   dataAssetEvalError,
   divisionByZeroError,
   getMaxQueryResults,
+  hasEvalErrorDeferClass,
   isEvalError,
   isEvalErrorCode,
   isRecoverableEvalResolutionError,
@@ -59,6 +61,27 @@ describe('eval error surface', () => {
     assert.equal(isRecoverableEvalResolutionError(divisionByZeroError('division by zero')), true);
     assert.equal(isRecoverableEvalResolutionError(typeMismatchError('bad type')), false);
     assert.equal(isRecoverableEvalResolutionError(new Error('plain')), false);
+  });
+
+  it('classifies selector-cardinality defer classes via typed guard', () => {
+    const deferrable = selectorCardinalityError('Expected one', {
+      selector: '$zones',
+      resolvedCount: 0,
+      deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+    });
+    const nonDeferrable = selectorCardinalityError('Expected one', {
+      selector: 'hand:all',
+      resolvedCount: 2,
+    });
+
+    assert.equal(
+      hasEvalErrorDeferClass(deferrable, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY),
+      true,
+    );
+    assert.equal(
+      hasEvalErrorDeferClass(nonDeferrable, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY),
+      false,
+    );
   });
 });
 

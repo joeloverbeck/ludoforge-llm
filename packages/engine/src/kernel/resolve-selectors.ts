@@ -1,6 +1,12 @@
 import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import type { EvalContext } from './eval-context.js';
-import { missingBindingError, missingVarError, selectorCardinalityError, typeMismatchError } from './eval-error.js';
+import {
+  EVAL_ERROR_DEFER_CLASS,
+  missingBindingError,
+  missingVarError,
+  selectorCardinalityError,
+  typeMismatchError,
+} from './eval-error.js';
 import type { PlayerSel, ZoneSel } from './types.js';
 
 const OWNER_SPEC_SEPARATOR = ':';
@@ -277,11 +283,16 @@ export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[
 export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
   const resolved = resolveZoneSel(sel, ctx);
   if (resolved.length !== 1) {
-    throw selectorCardinalityError('Expected exactly one zone from selector', {
+    const context: Record<string, unknown> = {
       selector: sel,
       resolvedCount: resolved.length,
       resolvedZones: resolved,
-    });
+    };
+    if (sel.startsWith('$') && resolved.length === 0) {
+      context.deferClass = EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY;
+    }
+
+    throw selectorCardinalityError('Expected exactly one zone from selector', context);
   }
 
   return resolved[0]!;

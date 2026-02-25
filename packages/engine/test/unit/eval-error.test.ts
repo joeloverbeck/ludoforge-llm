@@ -14,9 +14,6 @@ import {
   missingBindingError,
   missingVarError,
   queryBoundsExceededError,
-  selectorCardinalityPlayerCountContext,
-  selectorCardinalityPlayerResolvedContext,
-  selectorCardinalityZoneResolvedContext,
   selectorCardinalityError,
   spatialNotImplementedError,
   typeMismatchError,
@@ -111,7 +108,11 @@ describe('eval context helpers', () => {
   });
 
   it('selector-cardinality helper builders emit canonical context shapes', () => {
-    const playerCountContext = selectorCardinalityPlayerCountContext({ relative: 'left' }, 0);
+    const playerCountContext = {
+      selectorKind: 'player',
+      selector: { relative: 'left' as const },
+      playerCount: 0,
+    };
     assert.deepEqual(playerCountContext, {
       selectorKind: 'player',
       selector: { relative: 'left' },
@@ -119,7 +120,12 @@ describe('eval context helpers', () => {
     });
 
     const resolvedPlayers = [asPlayerId(0), asPlayerId(2)] as const;
-    const playerResolvedContext = selectorCardinalityPlayerResolvedContext('all', resolvedPlayers);
+    const playerResolvedContext = {
+      selectorKind: 'player',
+      selector: 'all' as const,
+      resolvedCount: resolvedPlayers.length,
+      resolvedPlayers,
+    };
     assert.deepEqual(playerResolvedContext, {
       selectorKind: 'player',
       selector: 'all',
@@ -128,7 +134,12 @@ describe('eval context helpers', () => {
     });
 
     const resolvedZones = [asZoneId('hand:0')] as const;
-    const zoneResolvedContextNoDefer = selectorCardinalityZoneResolvedContext('hand:0', resolvedZones);
+    const zoneResolvedContextNoDefer = {
+      selectorKind: 'zone',
+      selector: 'hand:0' as const,
+      resolvedCount: resolvedZones.length,
+      resolvedZones,
+    };
     assert.deepEqual(zoneResolvedContextNoDefer, {
       selectorKind: 'zone',
       selector: 'hand:0',
@@ -137,11 +148,13 @@ describe('eval context helpers', () => {
     });
     assert.equal('deferClass' in zoneResolvedContextNoDefer, false);
 
-    const zoneResolvedContextWithDefer = selectorCardinalityZoneResolvedContext(
-      '$zones',
-      [],
-      'unresolvedBindingSelectorCardinality',
-    );
+    const zoneResolvedContextWithDefer = {
+      selectorKind: 'zone',
+      selector: '$zones' as const,
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality' as const,
+    };
     assert.deepEqual(zoneResolvedContextWithDefer, {
       selectorKind: 'zone',
       selector: '$zones',

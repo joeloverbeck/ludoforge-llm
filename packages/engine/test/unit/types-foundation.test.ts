@@ -16,11 +16,9 @@ import {
   type PlayerId,
   type SelectorCardinalityPlayerCountEvalErrorContext,
   type SelectorCardinalityPlayerResolvedEvalErrorContext,
+  type SelectorCardinalityZoneEvalErrorContext,
   queryBoundsExceededError,
   type ZoneId,
-  selectorCardinalityPlayerCountContext,
-  selectorCardinalityPlayerResolvedContext,
-  selectorCardinalityZoneResolvedContext,
   selectorCardinalityError,
   zonePropNotFoundError,
 } from '../../src/kernel/index.js';
@@ -68,13 +66,25 @@ describe('kernel type foundations', () => {
   });
 
   it('rejects invalid selector-cardinality defer metadata at compile time', () => {
-    const playerCountContext = selectorCardinalityPlayerCountContext({ relative: 'left' }, 0);
-    const playerResolvedContext = selectorCardinalityPlayerResolvedContext('all', [asPlayerId(0)]);
-    selectorCardinalityZoneResolvedContext(
-      '$zones',
-      [asZoneId('hand:0')],
-      EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
-    );
+    const playerCountContext = {
+      selectorKind: 'player',
+      selector: { relative: 'left' as const },
+      playerCount: 0,
+    } satisfies SelectorCardinalityPlayerCountEvalErrorContext;
+    const playerResolvedContext = {
+      selectorKind: 'player',
+      selector: 'all' as const,
+      resolvedCount: 1,
+      resolvedPlayers: [asPlayerId(0)] as const,
+    } satisfies SelectorCardinalityPlayerResolvedEvalErrorContext;
+    const zoneResolvedContext: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
+      selectorKind: 'zone',
+      selector: '$zones' as const,
+      resolvedCount: 1,
+      resolvedZones: [asZoneId('hand:0')] as const,
+      deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+    };
+    selectorCardinalityError('zone', zoneResolvedContext);
 
     const typedPlayerCountContext: SelectorCardinalityPlayerCountEvalErrorContext = playerCountContext;
     const typedPlayerResolvedContext: SelectorCardinalityPlayerResolvedEvalErrorContext =
@@ -90,17 +100,41 @@ describe('kernel type foundations', () => {
     const invalidResolvedAsCount: SelectorCardinalityPlayerCountEvalErrorContext = playerResolvedContext;
     void invalidResolvedAsCount;
 
-    // @ts-expect-error Player count helper must only accept player selectors.
-    selectorCardinalityPlayerCountContext('$zones', 0);
+    const invalidPlayerSelectorContext: SelectorCardinalityPlayerCountEvalErrorContext = {
+      selectorKind: 'player',
+      // @ts-expect-error Player context must only accept player selectors.
+      selector: '$zones',
+      playerCount: 0,
+    };
+    void invalidPlayerSelectorContext;
 
-    // @ts-expect-error Player resolved helper must only accept PlayerId arrays.
-    selectorCardinalityPlayerResolvedContext('all', [asZoneId('hand:0')]);
+    const invalidPlayerResolvedContext: SelectorCardinalityPlayerResolvedEvalErrorContext = {
+      selectorKind: 'player',
+      selector: 'all',
+      resolvedCount: 1,
+      // @ts-expect-error Player resolved context must only accept PlayerId arrays.
+      resolvedPlayers: [asZoneId('hand:0')],
+    };
+    void invalidPlayerResolvedContext;
 
-    // @ts-expect-error Zone resolved helper must only accept ZoneId arrays.
-    selectorCardinalityZoneResolvedContext('$zones', [asPlayerId(0)]);
+    const invalidZoneResolvedContext: SelectorCardinalityZoneEvalErrorContext = {
+      selectorKind: 'zone',
+      selector: '$zones',
+      resolvedCount: 1,
+      // @ts-expect-error Zone selector cardinality metadata must only accept ZoneId arrays.
+      resolvedZones: [asPlayerId(0)],
+    };
+    void invalidZoneResolvedContext;
 
-    // @ts-expect-error Zone resolved helper must reject invalid defer class literals.
-    selectorCardinalityZoneResolvedContext('$zones', [], 'invalidClass');
+    const invalidZoneDeferContext: SelectorCardinalityZoneEvalErrorContext = {
+      selectorKind: 'zone',
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      // @ts-expect-error Zone selector cardinality metadata must reject invalid defer class literals.
+      deferClass: 'invalidClass',
+    };
+    void invalidZoneDeferContext;
 
     selectorCardinalityError('ok', {
       selectorKind: 'zone',
@@ -302,8 +336,8 @@ describe('kernel type foundations', () => {
     });
 
     zonePropNotFoundError('missing zone', {
-      // @ts-expect-error ZONE_PROP_NOT_FOUND zoneId must be branded ZoneId, not plain string.
-      zoneId: 'market',
+      // @ts-expect-error ZONE_PROP_NOT_FOUND zoneId must be branded ZoneId.
+      zoneId: 7,
       reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
     });
 

@@ -157,43 +157,6 @@ export function selectorCardinalityError(
   return createEvalError<'SELECTOR_CARDINALITY'>('SELECTOR_CARDINALITY', message, context);
 }
 
-export function selectorCardinalityPlayerCountContext(
-  selector: PlayerSel,
-  playerCount: number,
-): SelectorCardinalityPlayerCountEvalErrorContext {
-  return {
-    selectorKind: 'player',
-    selector,
-    playerCount,
-  };
-}
-
-export function selectorCardinalityPlayerResolvedContext(
-  selector: PlayerSel,
-  resolvedPlayers: readonly PlayerId[],
-): SelectorCardinalityPlayerResolvedEvalErrorContext {
-  return {
-    selectorKind: 'player',
-    selector,
-    resolvedCount: resolvedPlayers.length,
-    resolvedPlayers,
-  };
-}
-
-export function selectorCardinalityZoneResolvedContext(
-  selector: ZoneSel,
-  resolvedZones: readonly ZoneId[],
-  deferClass?: EvalErrorDeferClass,
-): SelectorCardinalityZoneEvalErrorContext {
-  return {
-    selectorKind: 'zone',
-    selector,
-    resolvedCount: resolvedZones.length,
-    resolvedZones,
-    ...(deferClass === undefined ? {} : { deferClass }),
-  };
-}
-
 export function queryBoundsExceededError<
   T extends EvalErrorContextForCode<'QUERY_BOUNDS_EXCEEDED'> = EvalErrorContextForCode<'QUERY_BOUNDS_EXCEEDED'>,
 >(

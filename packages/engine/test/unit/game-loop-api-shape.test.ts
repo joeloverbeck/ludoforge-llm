@@ -57,6 +57,13 @@ const moveStub: Move = {
 };
 
 describe('game-loop API shape', () => {
+  it('does not expose selector-cardinality context builders on the public kernel API', async () => {
+    const kernel = (await import('../../src/kernel/index.js')) as Record<string, unknown>;
+    assert.equal('selectorCardinalityPlayerCountContext' in kernel, false);
+    assert.equal('selectorCardinalityPlayerResolvedContext' in kernel, false);
+    assert.equal('selectorCardinalityZoneResolvedContext' in kernel, false);
+  });
+
   it('exports Spec 06 entrypoints that are callable', () => {
     assert.equal(typeof initialState, 'function');
     assert.equal(typeof legalMoves, 'function');

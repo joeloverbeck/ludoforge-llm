@@ -3,13 +3,15 @@ import type { EvalContext } from './eval-context.js';
 import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
 import {
   missingBindingError,
-  selectorCardinalityPlayerCountContext,
-  selectorCardinalityPlayerResolvedContext,
-  selectorCardinalityZoneResolvedContext,
   missingVarError,
   selectorCardinalityError,
   typeMismatchError,
 } from './eval-error.js';
+import {
+  selectorCardinalityPlayerCountContext,
+  selectorCardinalityPlayerResolvedContext,
+  selectorCardinalityZoneResolvedContext,
+} from './selector-cardinality-context.js';
 import type { PlayerSel, ZoneSel } from './types.js';
 
 const OWNER_SPEC_SEPARATOR = ':';

@@ -16,6 +16,9 @@ import {
   type PlayerId,
   queryBoundsExceededError,
   type ZoneId,
+  selectorCardinalityPlayerCountContext,
+  selectorCardinalityPlayerResolvedContext,
+  selectorCardinalityZoneResolvedContext,
   selectorCardinalityError,
   zonePropNotFoundError,
 } from '../../src/kernel/index.js';
@@ -63,6 +66,26 @@ describe('kernel type foundations', () => {
   });
 
   it('rejects invalid selector-cardinality defer metadata at compile time', () => {
+    selectorCardinalityPlayerCountContext({ relative: 'left' }, 0);
+    selectorCardinalityPlayerResolvedContext('all', [asPlayerId(0)]);
+    selectorCardinalityZoneResolvedContext(
+      '$zones',
+      [asZoneId('hand:0')],
+      EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+    );
+
+    // @ts-expect-error Player count helper must only accept player selectors.
+    selectorCardinalityPlayerCountContext('$zones', 0);
+
+    // @ts-expect-error Player resolved helper must only accept PlayerId arrays.
+    selectorCardinalityPlayerResolvedContext('all', [asZoneId('hand:0')]);
+
+    // @ts-expect-error Zone resolved helper must only accept ZoneId arrays.
+    selectorCardinalityZoneResolvedContext('$zones', [asPlayerId(0)]);
+
+    // @ts-expect-error Zone resolved helper must reject invalid defer class literals.
+    selectorCardinalityZoneResolvedContext('$zones', [], 'invalidClass');
+
     selectorCardinalityError('ok', {
       selectorKind: 'zone',
       selector: '$zones',

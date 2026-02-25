@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   EvalError,
+  asPlayerId,
   asZoneId,
   createEvalError,
   dataAssetEvalError,
@@ -13,6 +14,9 @@ import {
   missingBindingError,
   missingVarError,
   queryBoundsExceededError,
+  selectorCardinalityPlayerCountContext,
+  selectorCardinalityPlayerResolvedContext,
+  selectorCardinalityZoneResolvedContext,
   selectorCardinalityError,
   spatialNotImplementedError,
   typeMismatchError,
@@ -104,5 +108,46 @@ describe('eval context helpers', () => {
   it('default maxQueryResults resolves to 10_000', () => {
     assert.equal(getMaxQueryResults({}), 10_000);
     assert.equal(getMaxQueryResults({ maxQueryResults: 17 }), 17);
+  });
+
+  it('selector-cardinality helper builders emit canonical context shapes', () => {
+    const playerCountContext = selectorCardinalityPlayerCountContext({ relative: 'left' }, 0);
+    assert.deepEqual(playerCountContext, {
+      selectorKind: 'player',
+      selector: { relative: 'left' },
+      playerCount: 0,
+    });
+
+    const resolvedPlayers = [asPlayerId(0), asPlayerId(2)] as const;
+    const playerResolvedContext = selectorCardinalityPlayerResolvedContext('all', resolvedPlayers);
+    assert.deepEqual(playerResolvedContext, {
+      selectorKind: 'player',
+      selector: 'all',
+      resolvedCount: 2,
+      resolvedPlayers,
+    });
+
+    const resolvedZones = [asZoneId('hand:0')] as const;
+    const zoneResolvedContextNoDefer = selectorCardinalityZoneResolvedContext('hand:0', resolvedZones);
+    assert.deepEqual(zoneResolvedContextNoDefer, {
+      selectorKind: 'zone',
+      selector: 'hand:0',
+      resolvedCount: 1,
+      resolvedZones,
+    });
+    assert.equal('deferClass' in zoneResolvedContextNoDefer, false);
+
+    const zoneResolvedContextWithDefer = selectorCardinalityZoneResolvedContext(
+      '$zones',
+      [],
+      'unresolvedBindingSelectorCardinality',
+    );
+    assert.deepEqual(zoneResolvedContextWithDefer, {
+      selectorKind: 'zone',
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality',
+    });
   });
 });

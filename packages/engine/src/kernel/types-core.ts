@@ -40,6 +40,7 @@ import type {
   VictoryRankingDef,
   VictoryTerminalMetadata,
 } from './types-victory.js';
+import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -699,49 +700,33 @@ export interface EffectTraceConceal {
   readonly provenance: EffectTraceProvenance;
 }
 
-export type EffectTraceVarChange =
-  | {
-      readonly kind: 'varChange';
-      readonly scope: 'global';
-      readonly varName: string;
-      readonly oldValue: VariableValue;
-      readonly newValue: VariableValue;
-      readonly provenance: EffectTraceProvenance;
-    }
-  | {
-      readonly kind: 'varChange';
-      readonly scope: 'perPlayer';
-      readonly player: PlayerId;
-      readonly varName: string;
-      readonly oldValue: VariableValue;
-      readonly newValue: VariableValue;
-      readonly provenance: EffectTraceProvenance;
-    }
-  | {
-      readonly kind: 'varChange';
-      readonly scope: 'zone';
-      readonly zone: string;
-      readonly varName: string;
-      readonly oldValue: VariableValue;
-      readonly newValue: VariableValue;
-      readonly provenance: EffectTraceProvenance;
-    };
+export type EffectTraceVarChange = ScopedVarPayloadContract<
+  'global',
+  'perPlayer',
+  'zone',
+  'varName',
+  'player',
+  'zone',
+  PlayerId,
+  string,
+  {
+    readonly kind: 'varChange';
+    readonly oldValue: VariableValue;
+    readonly newValue: VariableValue;
+    readonly provenance: EffectTraceProvenance;
+  }
+>;
 
-export type EffectTraceResourceEndpoint =
-  | {
-      readonly scope: 'global';
-      readonly varName: string;
-    }
-  | {
-      readonly scope: 'perPlayer';
-      readonly player: PlayerId;
-      readonly varName: string;
-    }
-  | {
-      readonly scope: 'zone';
-      readonly zone: string;
-      readonly varName: string;
-    };
+export type EffectTraceResourceEndpoint = ScopedVarEndpointContract<
+  'global',
+  'perPlayer',
+  'zone',
+  'varName',
+  'player',
+  'zone',
+  PlayerId,
+  string
+>;
 
 export interface EffectTraceResourceTransfer {
   readonly kind: 'resourceTransfer';

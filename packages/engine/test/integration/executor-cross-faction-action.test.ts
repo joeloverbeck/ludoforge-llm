@@ -30,7 +30,7 @@ const buildDef = (): GameDef =>
         params: [],
         pre: null,
         cost: [],
-        effects: [{ addVar: { scope: 'perPlayer', player: 'actor', var: 'influence', delta: 2 } }],
+        effects: [{ addVar: { scope: 'pvar', player: 'actor', var: 'influence', delta: 2 } }],
         limits: [],
       },
     ],

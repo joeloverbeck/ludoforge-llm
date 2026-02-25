@@ -54,6 +54,7 @@ export * from './runtime-table-lookup-plan.js';
 export * from './seat-resolution.js';
 export * from './schema-artifacts.js';
 export * from './schemas.js';
+export * from './scoped-var-contract.js';
 export * from './serde.js';
 export * from './spatial.js';
 export * from './stacking.js';

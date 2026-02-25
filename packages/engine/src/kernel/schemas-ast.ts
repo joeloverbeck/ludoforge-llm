@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CANONICAL_BINDING_IDENTIFIER_MESSAGE, CANONICAL_BINDING_IDENTIFIER_PATTERN } from './binding-identifier-contract.js';
+import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
 
@@ -96,23 +97,53 @@ export const AssetRowPredicateSchema = z
   })
   .strict();
 
-export const TransferVarEndpointSchema = z.discriminatedUnion('scope', [
-  z.object({ scope: z.literal('global'), var: StringSchema }).strict(),
-  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema }).strict(),
-  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema }).strict(),
-]);
+export const TransferVarEndpointSchema = createScopedVarContractSchema({
+  scopes: AST_SCOPED_VAR_SCOPES,
+  fields: {
+    var: 'var',
+    player: 'player',
+    zone: 'zone',
+  },
+  schemas: {
+    var: StringSchema,
+    player: PlayerSelSchema,
+    zone: ZoneRefSchema,
+  },
+});
 
-export const SetVarPayloadSchema = z.discriminatedUnion('scope', [
-  z.object({ scope: z.literal('global'), var: StringSchema, value: ValueExprSchema }).strict(),
-  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema, value: ValueExprSchema }).strict(),
-  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema, value: ValueExprSchema }).strict(),
-]);
+export const SetVarPayloadSchema = createScopedVarContractSchema({
+  scopes: AST_SCOPED_VAR_SCOPES,
+  fields: {
+    var: 'var',
+    player: 'player',
+    zone: 'zone',
+  },
+  schemas: {
+    var: StringSchema,
+    player: PlayerSelSchema,
+    zone: ZoneRefSchema,
+  },
+  commonShape: {
+    value: ValueExprSchema,
+  },
+});
 
-export const AddVarPayloadSchema = z.discriminatedUnion('scope', [
-  z.object({ scope: z.literal('global'), var: StringSchema, delta: NumericValueExprSchema }).strict(),
-  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema, delta: NumericValueExprSchema }).strict(),
-  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema, delta: NumericValueExprSchema }).strict(),
-]);
+export const AddVarPayloadSchema = createScopedVarContractSchema({
+  scopes: AST_SCOPED_VAR_SCOPES,
+  fields: {
+    var: 'var',
+    player: 'player',
+    zone: 'zone',
+  },
+  schemas: {
+    var: StringSchema,
+    player: PlayerSelSchema,
+    zone: ZoneRefSchema,
+  },
+  commonShape: {
+    delta: NumericValueExprSchema,
+  },
+});
 
 optionsQuerySchemaInternal = z.union([
   z

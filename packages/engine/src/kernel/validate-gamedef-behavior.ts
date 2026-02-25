@@ -10,6 +10,7 @@ import type {
   ValueExpr,
   ZoneRef,
 } from './types.js';
+import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import { isCanonicalBindingIdentifier } from './binding-identifier-contract.js';
 import {
@@ -979,7 +980,7 @@ const validateZoneRef = (
 
 const validateScopedVarReference = (
   diagnostics: Diagnostic[],
-  scope: 'global' | 'pvar' | 'zoneVar',
+  scope: AstScopedVarScope,
   variable: string,
   path: string,
   context: ValidationContext,
@@ -1025,7 +1026,7 @@ const validateScopedVarReference = (
 };
 
 const getScopedVarType = (
-  scope: 'global' | 'pvar' | 'zoneVar',
+  scope: AstScopedVarScope,
   variable: string,
   context: ValidationContext,
 ): 'int' | 'boolean' | undefined => {

@@ -1648,10 +1648,6 @@
                     {
                       "type": "object",
                       "properties": {
-                        "kind": {
-                          "type": "string",
-                          "const": "varChange"
-                        },
                         "scope": {
                           "type": "string",
                           "const": "global"
@@ -1659,6 +1655,10 @@
                         "varName": {
                           "type": "string"
                         },
+                        "kind": {
+                          "type": "string",
+                          "const": "varChange"
+                        },
                         "oldValue": {
                           "anyOf": [
                             {
@@ -1725,9 +1725,9 @@
                         }
                       },
                       "required": [
-                        "kind",
                         "scope",
                         "varName",
+                        "kind",
                         "oldValue",
                         "newValue",
                         "provenance"
@@ -1737,21 +1737,21 @@
                     {
                       "type": "object",
                       "properties": {
-                        "kind": {
-                          "type": "string",
-                          "const": "varChange"
-                        },
                         "scope": {
                           "type": "string",
                           "const": "perPlayer"
+                        },
+                        "varName": {
+                          "type": "string"
                         },
                         "player": {
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
                         },
-                        "varName": {
-                          "type": "string"
+                        "kind": {
+                          "type": "string",
+                          "const": "varChange"
                         },
                         "oldValue": {
                           "anyOf": [
@@ -1819,10 +1819,10 @@
                         }
                       },
                       "required": [
-                        "kind",
                         "scope",
-                        "player",
                         "varName",
+                        "player",
+                        "kind",
                         "oldValue",
                         "newValue",
                         "provenance"
@@ -1832,19 +1832,19 @@
                     {
                       "type": "object",
                       "properties": {
-                        "kind": {
-                          "type": "string",
-                          "const": "varChange"
-                        },
                         "scope": {
                           "type": "string",
                           "const": "zone"
                         },
+                        "varName": {
+                          "type": "string"
+                        },
                         "zone": {
                           "type": "string"
                         },
-                        "varName": {
-                          "type": "string"
+                        "kind": {
+                          "type": "string",
+                          "const": "varChange"
                         },
                         "oldValue": {
                           "anyOf": [
@@ -1912,10 +1912,10 @@
                         }
                       },
                       "required": [
-                        "kind",
                         "scope",
-                        "zone",
                         "varName",
+                        "zone",
+                        "kind",
                         "oldValue",
                         "newValue",
                         "provenance"
@@ -1957,19 +1957,19 @@
                               "type": "string",
                               "const": "perPlayer"
                             },
+                            "varName": {
+                              "type": "string"
+                            },
                             "player": {
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
-                            },
-                            "varName": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "scope",
-                            "player",
-                            "varName"
+                            "varName",
+                            "player"
                           ],
                           "additionalProperties": false
                         },
@@ -1980,17 +1980,17 @@
                               "type": "string",
                               "const": "zone"
                             },
-                            "zone": {
+                            "varName": {
                               "type": "string"
                             },
-                            "varName": {
+                            "zone": {
                               "type": "string"
                             }
                           },
                           "required": [
                             "scope",
-                            "zone",
-                            "varName"
+                            "varName",
+                            "zone"
                           ],
                           "additionalProperties": false
                         }
@@ -2022,19 +2022,19 @@
                               "type": "string",
                               "const": "perPlayer"
                             },
+                            "varName": {
+                              "type": "string"
+                            },
                             "player": {
                               "type": "integer",
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
-                            },
-                            "varName": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "scope",
-                            "player",
-                            "varName"
+                            "varName",
+                            "player"
                           ],
                           "additionalProperties": false
                         },
@@ -2045,17 +2045,17 @@
                               "type": "string",
                               "const": "zone"
                             },
-                            "zone": {
+                            "varName": {
                               "type": "string"
                             },
-                            "varName": {
+                            "zone": {
                               "type": "string"
                             }
                           },
                           "required": [
                             "scope",
-                            "zone",
-                            "varName"
+                            "varName",
+                            "zone"
                           ],
                           "additionalProperties": false
                         }
@@ -2818,7 +2818,7 @@
                           "effects": {
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_de6825f7"
+                              "$ref": "#/definitions/anon_db257f07"
                             }
                           },
                           "moveParams": {
@@ -3119,13 +3119,13 @@
               "setupEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_de6825f7"
+                  "$ref": "#/definitions/anon_db257f07"
                 }
               },
               "teardownEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_de6825f7"
+                  "$ref": "#/definitions/anon_db257f07"
                 }
               },
               "remainingTurnBoundaries": {
@@ -5492,7 +5492,7 @@
         }
       ]
     },
-    "anon_de6825f7": {
+    "anon_db257f07": {
       "anyOf": [
         {
           "type": "object",
@@ -5526,6 +5526,9 @@
                     "scope": {
                       "type": "string",
                       "const": "pvar"
+                    },
+                    "var": {
+                      "type": "string"
                     },
                     "player": {
                       "anyOf": [
@@ -5594,17 +5597,14 @@
                         }
                       ]
                     },
-                    "var": {
-                      "type": "string"
-                    },
                     "value": {
                       "$ref": "#/definitions/anon_25c2127f"
                     }
                   },
                   "required": [
                     "scope",
-                    "player",
                     "var",
+                    "player",
                     "value"
                   ],
                   "additionalProperties": false
@@ -5615,6 +5615,9 @@
                     "scope": {
                       "type": "string",
                       "const": "zoneVar"
+                    },
+                    "var": {
+                      "type": "string"
                     },
                     "zone": {
                       "anyOf": [
@@ -5635,17 +5638,14 @@
                         }
                       ]
                     },
-                    "var": {
-                      "type": "string"
-                    },
                     "value": {
                       "$ref": "#/definitions/anon_25c2127f"
                     }
                   },
                   "required": [
                     "scope",
-                    "zone",
                     "var",
+                    "zone",
                     "value"
                   ],
                   "additionalProperties": false
@@ -5776,6 +5776,9 @@
                       "type": "string",
                       "const": "pvar"
                     },
+                    "var": {
+                      "type": "string"
+                    },
                     "player": {
                       "anyOf": [
                         {
@@ -5843,17 +5846,14 @@
                         }
                       ]
                     },
-                    "var": {
-                      "type": "string"
-                    },
                     "delta": {
                       "$ref": "#/definitions/anon_d7b45fe2"
                     }
                   },
                   "required": [
                     "scope",
-                    "player",
                     "var",
+                    "player",
                     "delta"
                   ],
                   "additionalProperties": false
@@ -5864,6 +5864,9 @@
                     "scope": {
                       "type": "string",
                       "const": "zoneVar"
+                    },
+                    "var": {
+                      "type": "string"
                     },
                     "zone": {
                       "anyOf": [
@@ -5884,17 +5887,14 @@
                         }
                       ]
                     },
-                    "var": {
-                      "type": "string"
-                    },
                     "delta": {
                       "$ref": "#/definitions/anon_d7b45fe2"
                     }
                   },
                   "required": [
                     "scope",
-                    "zone",
                     "var",
+                    "zone",
                     "delta"
                   ],
                   "additionalProperties": false
@@ -5939,6 +5939,9 @@
                           "type": "string",
                           "const": "pvar"
                         },
+                        "var": {
+                          "type": "string"
+                        },
                         "player": {
                           "anyOf": [
                             {
@@ -6005,15 +6008,12 @@
                               "additionalProperties": false
                             }
                           ]
-                        },
-                        "var": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "scope",
-                        "player",
-                        "var"
+                        "var",
+                        "player"
                       ],
                       "additionalProperties": false
                     },
@@ -6023,6 +6023,9 @@
                         "scope": {
                           "type": "string",
                           "const": "zoneVar"
+                        },
+                        "var": {
+                          "type": "string"
                         },
                         "zone": {
                           "anyOf": [
@@ -6042,15 +6045,12 @@
                               "additionalProperties": false
                             }
                           ]
-                        },
-                        "var": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "scope",
-                        "zone",
-                        "var"
+                        "var",
+                        "zone"
                       ],
                       "additionalProperties": false
                     }
@@ -6082,6 +6082,9 @@
                           "type": "string",
                           "const": "pvar"
                         },
+                        "var": {
+                          "type": "string"
+                        },
                         "player": {
                           "anyOf": [
                             {
@@ -6148,15 +6151,12 @@
                               "additionalProperties": false
                             }
                           ]
-                        },
-                        "var": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "scope",
-                        "player",
-                        "var"
+                        "var",
+                        "player"
                       ],
                       "additionalProperties": false
                     },
@@ -6166,6 +6166,9 @@
                         "scope": {
                           "type": "string",
                           "const": "zoneVar"
+                        },
+                        "var": {
+                          "type": "string"
                         },
                         "zone": {
                           "anyOf": [
@@ -6185,15 +6188,12 @@
                               "additionalProperties": false
                             }
                           ]
-                        },
-                        "var": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "scope",
-                        "zone",
-                        "var"
+                        "var",
+                        "zone"
                       ],
                       "additionalProperties": false
                     }
@@ -6865,13 +6865,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },
@@ -6918,7 +6918,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 },
                 "limit": {
@@ -6934,7 +6934,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },
@@ -7001,7 +7001,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },
@@ -7098,7 +7098,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },
@@ -7129,7 +7129,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },
@@ -7189,7 +7189,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 },
                 "scoreExpr": {
@@ -7204,7 +7204,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },
@@ -7340,7 +7340,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_de6825f7"
+                    "$ref": "#/definitions/anon_db257f07"
                   }
                 }
               },

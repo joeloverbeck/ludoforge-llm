@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import type { ConditionAST, EffectAST, OptionsQuery, PlayerSel } from '../../src/kernel/index.js';
 
 import {
+  AST_SCOPED_VAR_SCOPES,
   ConditionASTSchema,
   EffectASTSchema,
   OBJECT_STRICTNESS_POLICY,
@@ -830,9 +831,9 @@ describe('AST and selector schemas', () => {
       playerField: 'player',
       zoneField: 'zone',
       scopes: {
-        global: 'global',
-        player: 'pvar',
-        zone: 'zoneVar',
+        global: AST_SCOPED_VAR_SCOPES.global,
+        player: AST_SCOPED_VAR_SCOPES.player,
+        zone: AST_SCOPED_VAR_SCOPES.zone,
       },
       values: {
         globalVar: 'bank',
@@ -860,40 +861,56 @@ describe('AST and selector schemas', () => {
   });
 
   it('enforces setVar scope endpoint matrix', () => {
-    const cases: ReadonlyArray<{ name: string; payload: unknown; valid: boolean }> = [
-      { name: 'global requires only var/value', payload: { scope: 'global', var: 'gold', value: 1 }, valid: true },
-      { name: 'pvar requires player', payload: { scope: 'pvar', player: 'actor', var: 'gold', value: 1 }, valid: true },
-      { name: 'zoneVar requires zone', payload: { scope: 'zoneVar', zone: 'board:none', var: 'gold', value: 1 }, valid: true },
-      { name: 'global forbids player', payload: { scope: 'global', player: 'actor', var: 'gold', value: 1 }, valid: false },
-      { name: 'global forbids zone', payload: { scope: 'global', zone: 'board:none', var: 'gold', value: 1 }, valid: false },
-      { name: 'pvar requires player presence', payload: { scope: 'pvar', var: 'gold', value: 1 }, valid: false },
-      { name: 'pvar forbids zone', payload: { scope: 'pvar', player: 'actor', zone: 'board:none', var: 'gold', value: 1 }, valid: false },
-      { name: 'zoneVar requires zone presence', payload: { scope: 'zoneVar', var: 'gold', value: 1 }, valid: false },
-      { name: 'zoneVar forbids player', payload: { scope: 'zoneVar', player: 'actor', zone: 'board:none', var: 'gold', value: 1 }, valid: false },
-    ];
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: AST_SCOPED_VAR_SCOPES.global,
+        player: AST_SCOPED_VAR_SCOPES.player,
+        zone: AST_SCOPED_VAR_SCOPES.zone,
+      },
+      values: {
+        globalVar: 'gold',
+        playerVar: 'gold',
+        zoneVar: 'gold',
+        player: 'actor',
+        zone: 'board:none',
+      },
+    });
 
     for (const testCase of cases) {
-      const result = EffectASTSchema.safeParse({ setVar: testCase.payload });
-      assert.equal(result.success, testCase.valid, testCase.name);
+      const endpoint = testCase.violation?.endpoint === 'to' ? testCase.to : testCase.from;
+      const result = EffectASTSchema.safeParse({ setVar: { ...endpoint, value: 1 } });
+      assert.equal(result.success, testCase.violation === undefined, testCase.name);
     }
   });
 
   it('enforces addVar scope endpoint matrix', () => {
-    const cases: ReadonlyArray<{ name: string; payload: unknown; valid: boolean }> = [
-      { name: 'global requires only var/delta', payload: { scope: 'global', var: 'gold', delta: 1 }, valid: true },
-      { name: 'pvar requires player', payload: { scope: 'pvar', player: 'actor', var: 'gold', delta: 1 }, valid: true },
-      { name: 'zoneVar requires zone', payload: { scope: 'zoneVar', zone: 'board:none', var: 'gold', delta: 1 }, valid: true },
-      { name: 'global forbids player', payload: { scope: 'global', player: 'actor', var: 'gold', delta: 1 }, valid: false },
-      { name: 'global forbids zone', payload: { scope: 'global', zone: 'board:none', var: 'gold', delta: 1 }, valid: false },
-      { name: 'pvar requires player presence', payload: { scope: 'pvar', var: 'gold', delta: 1 }, valid: false },
-      { name: 'pvar forbids zone', payload: { scope: 'pvar', player: 'actor', zone: 'board:none', var: 'gold', delta: 1 }, valid: false },
-      { name: 'zoneVar requires zone presence', payload: { scope: 'zoneVar', var: 'gold', delta: 1 }, valid: false },
-      { name: 'zoneVar forbids player', payload: { scope: 'zoneVar', player: 'actor', zone: 'board:none', var: 'gold', delta: 1 }, valid: false },
-    ];
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: AST_SCOPED_VAR_SCOPES.global,
+        player: AST_SCOPED_VAR_SCOPES.player,
+        zone: AST_SCOPED_VAR_SCOPES.zone,
+      },
+      values: {
+        globalVar: 'gold',
+        playerVar: 'gold',
+        zoneVar: 'gold',
+        player: 'actor',
+        zone: 'board:none',
+      },
+    });
 
     for (const testCase of cases) {
-      const result = EffectASTSchema.safeParse({ addVar: testCase.payload });
-      assert.equal(result.success, testCase.valid, testCase.name);
+      const endpoint = testCase.violation?.endpoint === 'to' ? testCase.to : testCase.from;
+      const result = EffectASTSchema.safeParse({ addVar: { ...endpoint, delta: 1 } });
+      assert.equal(result.success, testCase.violation === undefined, testCase.name);
     }
   });
 

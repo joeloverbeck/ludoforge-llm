@@ -1,4 +1,5 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
+import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 
 export type PlayerSel =
   | 'actor'
@@ -198,59 +199,40 @@ export type OptionsQuery =
     }
   | { readonly query: 'binding'; readonly name: string };
 
-export type TransferVarEndpoint =
-  | {
-      readonly scope: 'global';
-      readonly var: string;
-    }
-  | {
-      readonly scope: 'pvar';
-      readonly player: PlayerSel;
-      readonly var: string;
-    }
-  | {
-      readonly scope: 'zoneVar';
-      readonly zone: ZoneRef;
-      readonly var: string;
-    };
+export type TransferVarEndpoint = ScopedVarEndpointContract<
+  'global',
+  'pvar',
+  'zoneVar',
+  'var',
+  'player',
+  'zone',
+  PlayerSel,
+  ZoneRef
+>;
 
-export type SetVarPayload =
-  | {
-      readonly scope: 'global';
-      readonly var: string;
-      readonly value: ValueExpr;
-    }
-  | {
-      readonly scope: 'pvar';
-      readonly player: PlayerSel;
-      readonly var: string;
-      readonly value: ValueExpr;
-    }
-  | {
-      readonly scope: 'zoneVar';
-      readonly zone: ZoneRef;
-      readonly var: string;
-      readonly value: ValueExpr;
-    };
+export type SetVarPayload = ScopedVarPayloadContract<
+  'global',
+  'pvar',
+  'zoneVar',
+  'var',
+  'player',
+  'zone',
+  PlayerSel,
+  ZoneRef,
+  { readonly value: ValueExpr }
+>;
 
-export type AddVarPayload =
-  | {
-      readonly scope: 'global';
-      readonly var: string;
-      readonly delta: NumericValueExpr;
-    }
-  | {
-      readonly scope: 'pvar';
-      readonly player: PlayerSel;
-      readonly var: string;
-      readonly delta: NumericValueExpr;
-    }
-  | {
-      readonly scope: 'zoneVar';
-      readonly zone: ZoneRef;
-      readonly var: string;
-      readonly delta: NumericValueExpr;
-    };
+export type AddVarPayload = ScopedVarPayloadContract<
+  'global',
+  'pvar',
+  'zoneVar',
+  'var',
+  'player',
+  'zone',
+  PlayerSel,
+  ZoneRef,
+  { readonly delta: NumericValueExpr }
+>;
 
 export type EffectAST =
   | {

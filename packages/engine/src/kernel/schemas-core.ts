@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DegeneracyFlag } from './diagnostics.js';
+import { TRACE_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 import {
   BooleanSchema,
   ActionExecutorSelSchema,
@@ -471,46 +472,39 @@ export const EffectTraceProvenanceSchema = z
   })
   .strict();
 
-export const EffectTraceResourceEndpointSchema = z.discriminatedUnion('scope', [
-  z.object({ scope: z.literal('global'), varName: StringSchema }).strict(),
-  z.object({ scope: z.literal('perPlayer'), player: IntegerSchema, varName: StringSchema }).strict(),
-  z.object({ scope: z.literal('zone'), zone: StringSchema, varName: StringSchema }).strict(),
-]);
+export const EffectTraceResourceEndpointSchema = createScopedVarContractSchema({
+  scopes: TRACE_SCOPED_VAR_SCOPES,
+  fields: {
+    var: 'varName',
+    player: 'player',
+    zone: 'zone',
+  },
+  schemas: {
+    var: StringSchema,
+    player: IntegerSchema,
+    zone: StringSchema,
+  },
+});
 
-export const EffectTraceVarChangeSchema = z.discriminatedUnion('scope', [
-  z
-    .object({
-      kind: z.literal('varChange'),
-      scope: z.literal('global'),
-      varName: StringSchema,
-      oldValue: z.union([NumberSchema, BooleanSchema]),
-      newValue: z.union([NumberSchema, BooleanSchema]),
-      provenance: EffectTraceProvenanceSchema,
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('varChange'),
-      scope: z.literal('perPlayer'),
-      player: IntegerSchema,
-      varName: StringSchema,
-      oldValue: z.union([NumberSchema, BooleanSchema]),
-      newValue: z.union([NumberSchema, BooleanSchema]),
-      provenance: EffectTraceProvenanceSchema,
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('varChange'),
-      scope: z.literal('zone'),
-      zone: StringSchema,
-      varName: StringSchema,
-      oldValue: z.union([NumberSchema, BooleanSchema]),
-      newValue: z.union([NumberSchema, BooleanSchema]),
-      provenance: EffectTraceProvenanceSchema,
-    })
-    .strict(),
-]);
+export const EffectTraceVarChangeSchema = createScopedVarContractSchema({
+  scopes: TRACE_SCOPED_VAR_SCOPES,
+  fields: {
+    var: 'varName',
+    player: 'player',
+    zone: 'zone',
+  },
+  schemas: {
+    var: StringSchema,
+    player: IntegerSchema,
+    zone: StringSchema,
+  },
+  commonShape: {
+    kind: z.literal('varChange'),
+    oldValue: z.union([NumberSchema, BooleanSchema]),
+    newValue: z.union([NumberSchema, BooleanSchema]),
+    provenance: EffectTraceProvenanceSchema,
+  },
+});
 
 export const EffectTraceEntrySchema = z.union([
   z

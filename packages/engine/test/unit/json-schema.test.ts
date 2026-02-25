@@ -6,6 +6,8 @@ import { describe, it } from 'node:test';
 import { Ajv, type ErrorObject } from 'ajv';
 
 import {
+  AST_SCOPED_VAR_SCOPES,
+  TRACE_SCOPED_VAR_SCOPES,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -396,9 +398,9 @@ describe('json schema artifacts', () => {
       playerField: 'player',
       zoneField: 'zone',
       scopes: {
-        global: 'global',
-        player: 'perPlayer',
-        zone: 'zone',
+        global: TRACE_SCOPED_VAR_SCOPES.global,
+        player: TRACE_SCOPED_VAR_SCOPES.player,
+        zone: TRACE_SCOPED_VAR_SCOPES.zone,
       },
       values: {
         globalVar: 'bank',
@@ -429,6 +431,7 @@ describe('json schema artifacts', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const provenance = { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' } as const;
     const makeSerializedTrace = (entry: unknown) => ({
       ...baseSerializedTrace,
       moves: [
@@ -442,29 +445,29 @@ describe('json schema artifacts', () => {
     const validEntries = [
       {
         kind: 'varChange',
-        scope: 'global',
+        scope: TRACE_SCOPED_VAR_SCOPES.global,
         varName: 'pool',
         oldValue: 1,
         newValue: 2,
-        provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        provenance,
       },
       {
         kind: 'varChange',
-        scope: 'perPlayer',
+        scope: TRACE_SCOPED_VAR_SCOPES.player,
         player: 0,
         varName: 'coins',
         oldValue: 1,
         newValue: 2,
-        provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        provenance,
       },
       {
         kind: 'varChange',
-        scope: 'zone',
+        scope: TRACE_SCOPED_VAR_SCOPES.zone,
         zone: 'board:none',
         varName: 'supply',
         oldValue: 1,
         newValue: 2,
-        provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        provenance,
       },
     ] as const;
 
@@ -472,83 +475,38 @@ describe('json schema artifacts', () => {
       assert.equal(validate(makeSerializedTrace(entry)), true, JSON.stringify(validate.errors, null, 2));
     }
 
-    const invalidEntries: ReadonlyArray<{ name: string; entry: unknown }> = [
-      {
-        name: 'global forbids player',
-        entry: {
-          kind: 'varChange',
-          scope: 'global',
-          player: 0,
-          varName: 'pool',
-          oldValue: 1,
-          newValue: 2,
-          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
-        },
+    const varChangeCases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'varName',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: TRACE_SCOPED_VAR_SCOPES.global,
+        player: TRACE_SCOPED_VAR_SCOPES.player,
+        zone: TRACE_SCOPED_VAR_SCOPES.zone,
       },
-      {
-        name: 'global forbids zone',
-        entry: {
-          kind: 'varChange',
-          scope: 'global',
-          zone: 'board:none',
-          varName: 'pool',
-          oldValue: 1,
-          newValue: 2,
-          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
-        },
+      values: {
+        globalVar: 'pool',
+        playerVar: 'coins',
+        zoneVar: 'supply',
+        player: 0,
+        zone: 'board:none',
       },
-      {
-        name: 'perPlayer requires player',
-        entry: {
-          kind: 'varChange',
-          scope: 'perPlayer',
-          varName: 'coins',
-          oldValue: 1,
-          newValue: 2,
-          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
-        },
-      },
-      {
-        name: 'perPlayer forbids zone',
-        entry: {
-          kind: 'varChange',
-          scope: 'perPlayer',
-          player: 0,
-          zone: 'board:none',
-          varName: 'coins',
-          oldValue: 1,
-          newValue: 2,
-          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
-        },
-      },
-      {
-        name: 'zone requires zone',
-        entry: {
-          kind: 'varChange',
-          scope: 'zone',
-          varName: 'supply',
-          oldValue: 1,
-          newValue: 2,
-          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
-        },
-      },
-      {
-        name: 'zone forbids player',
-        entry: {
-          kind: 'varChange',
-          scope: 'zone',
-          zone: 'board:none',
-          player: 0,
-          varName: 'supply',
-          oldValue: 1,
-          newValue: 2,
-          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
-        },
-      },
-    ];
+    });
 
-    for (const testCase of invalidEntries) {
-      assert.equal(validate(makeSerializedTrace(testCase.entry)), false, testCase.name);
+    for (const testCase of varChangeCases) {
+      if (testCase.violation === undefined) {
+        continue;
+      }
+      const endpoint = testCase.violation.endpoint === 'to' ? testCase.to : testCase.from;
+      const entry = {
+        kind: 'varChange',
+        ...endpoint,
+        oldValue: 1,
+        newValue: 2,
+        provenance,
+      };
+      assert.equal(validate(makeSerializedTrace(entry)), false, testCase.name);
       assert.ok((validate.errors?.length ?? 0) > 0, testCase.name);
     }
   });
@@ -625,9 +583,9 @@ describe('json schema artifacts', () => {
       playerField: 'player',
       zoneField: 'zone',
       scopes: {
-        global: 'global',
-        player: 'pvar',
-        zone: 'zoneVar',
+        global: AST_SCOPED_VAR_SCOPES.global,
+        player: AST_SCOPED_VAR_SCOPES.player,
+        zone: AST_SCOPED_VAR_SCOPES.zone,
       },
       values: {
         globalVar: 'round',

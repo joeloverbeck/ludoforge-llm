@@ -67,13 +67,20 @@ function translateEffectEntry(
       };
 
     case 'varChange': {
-      const scopePrefix = projection.playerId === undefined
-        ? ''
-        : `${resolvePlayerName(projection.playerId, visualConfig, lookup)}: `;
+      const message = formatScopedVariableChangeMessage({
+        scope: entry.scope,
+        variable: formatIdAsDisplayName(entry.varName),
+        playerId: projection.playerId,
+        zoneId: entry.scope === 'zone' ? entry.zone : undefined,
+        oldValue: entry.oldValue,
+        newValue: entry.newValue,
+        visualConfig,
+        lookup,
+      });
       return {
         ...base,
         kind: 'variable',
-        message: `${scopePrefix}${formatIdAsDisplayName(entry.varName)} changed from ${formatValue(entry.oldValue)} to ${formatValue(entry.newValue)}.`,
+        message,
       };
     }
 
@@ -412,6 +419,52 @@ function formatResourceEndpoint(
   return resolvePlayerName(playerId, visualConfig, lookup);
 }
 
+function formatScopePrefix(input: {
+  readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
+  readonly playerId: number | undefined;
+  readonly zoneId: string | undefined;
+  readonly visualConfig: VisualConfigProvider;
+  readonly lookup: PlayerLookup;
+}): string {
+  if (input.scope === 'perPlayer') {
+    const owner = input.playerId === undefined
+      ? 'Player'
+      : resolvePlayerName(input.playerId, input.visualConfig, input.lookup);
+    return `${owner}: `;
+  }
+  if (input.scope === 'zone') {
+    const zoneName = input.zoneId === undefined
+      ? 'Zone'
+      : resolveZoneName(input.zoneId, input.visualConfig);
+    return `${zoneName}: `;
+  }
+  return '';
+}
+
+function formatScopedVariableChangeMessage(input: {
+  readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
+  readonly variable: string;
+  readonly playerId: number | undefined;
+  readonly zoneId: string | undefined;
+  readonly oldValue?: unknown;
+  readonly newValue?: unknown;
+  readonly visualConfig: VisualConfigProvider;
+  readonly lookup: PlayerLookup;
+}): string {
+  const scopePrefix = formatScopePrefix({
+    scope: input.scope,
+    playerId: input.playerId,
+    zoneId: input.zoneId === undefined ? undefined : String(input.zoneId),
+    visualConfig: input.visualConfig,
+    lookup: input.lookup,
+  });
+  const headline = `${scopePrefix}${input.variable} changed`;
+  if (input.oldValue === undefined && input.newValue === undefined) {
+    return headline;
+  }
+  return `${headline} from ${formatValue(input.oldValue)} to ${formatValue(input.newValue)}.`;
+}
+
 function formatLifecycleEvent(eventType: string, phase: string | undefined): string {
   if (eventType === 'phaseEnter') {
     return `Entered ${formatIdAsDisplayName(phase ?? 'phase')}.`;
@@ -448,13 +501,14 @@ function formatTriggerEvent(
         ? 'token entered zone'
         : `token entered ${resolveZoneName(String(event.zone), visualConfig)}`;
     case 'varChanged': {
-      const variable = event.var === undefined ? 'variable' : formatIdAsDisplayName(event.var);
-      if (event.scope !== 'perPlayer') {
-        return `${variable} changed`;
-      }
-      const playerId = projectTriggerEvent(event).playerId;
-      const owner = playerId === undefined ? 'player' : resolvePlayerName(playerId, visualConfig, lookup);
-      return `${variable} changed for ${owner}`;
+      return formatScopedVariableChangeMessage({
+        scope: event.scope,
+        variable: event.var === undefined ? 'variable' : formatIdAsDisplayName(event.var),
+        playerId: projectTriggerEvent(event).playerId,
+        zoneId: event.scope === 'zone' ? event.zone : undefined,
+        visualConfig,
+        lookup,
+      });
     }
   }
 }

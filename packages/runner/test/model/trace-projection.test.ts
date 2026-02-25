@@ -187,6 +187,16 @@ describe('trace-projection', () => {
       newValue: 20,
     };
     expect(projectTriggerEvent(globalVar)).toEqual({ zoneIds: [] });
+
+    const zoneVar: TriggerEvent = {
+      type: 'varChanged',
+      scope: 'zone',
+      var: 'support',
+      zone: 'zone-delta' as never,
+      oldValue: 0,
+      newValue: 1,
+    };
+    expect(projectTriggerEvent(zoneVar)).toEqual({ zoneIds: ['zone-delta'] });
   });
 
   it('detects triggered effect trace entries', () => {

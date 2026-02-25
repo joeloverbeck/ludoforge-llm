@@ -447,6 +447,96 @@ describe('translateEffectTrace', () => {
     expect(entries[0]?.zoneIds).toEqual(['alpha', 'beta']);
     expect(entries[0]?.message).toContain('from Alpha Zone to Beta Zone');
   });
+
+  it('formats zone-scoped var changes with zone labels for effect and trigger logs', () => {
+    const visualConfig = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        overrides: {
+          alpha: { label: 'Alpha Zone' },
+        },
+      },
+    });
+
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'varChange',
+        scope: 'zone',
+        varName: 'support',
+        oldValue: 0,
+        newValue: 1,
+        zone: 'alpha',
+        provenance: provenance(),
+      },
+    ];
+
+    const triggerLog: readonly TriggerLogEntry[] = [
+      {
+        kind: 'fired',
+        triggerId: asTriggerId('on-support-changed'),
+        event: {
+          type: 'varChanged',
+          scope: 'zone',
+          var: 'support',
+          zone: 'alpha' as never,
+          oldValue: 0,
+          newValue: 1,
+        },
+        depth: 1,
+      },
+    ];
+
+    const entries = translateEffectTrace(effectTrace, triggerLog, visualConfig, gameDefNoFactionsFixture(), 5);
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      kind: 'variable',
+      zoneIds: ['alpha'],
+      tokenIds: [],
+      depth: 0,
+      moveIndex: 5,
+    });
+    expect(entries[0]?.message).toBe('Alpha Zone: Support changed from 0 to 1.');
+
+    expect(entries[1]).toMatchObject({
+      kind: 'trigger',
+      zoneIds: ['alpha'],
+      tokenIds: [],
+      depth: 1,
+      moveIndex: 5,
+    });
+    expect(entries[1]?.message).toContain('on Alpha Zone: Support changed');
+  });
+
+  it('formats per-player varChanged trigger text using the shared scope prefix renderer', () => {
+    const visualConfig = new VisualConfigProvider({
+      version: 1,
+      factions: {
+        us: { displayName: 'United States' },
+      },
+    });
+
+    const triggerLog: readonly TriggerLogEntry[] = [
+      {
+        kind: 'fired',
+        triggerId: asTriggerId('on-resources-changed'),
+        event: {
+          type: 'varChanged',
+          scope: 'perPlayer',
+          var: 'resources',
+          player: asPlayerId(0),
+          oldValue: 9,
+          newValue: 7,
+        },
+        depth: 1,
+      },
+    ];
+
+    const entries = translateEffectTrace([], triggerLog, visualConfig, gameDefFixture(), 9);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.message).toContain('on United States: Resources changed');
+    expect(entries[0]?.playerId).toBe(0);
+  });
 });
 
 function provenance() {

@@ -110,6 +110,9 @@ export function projectTriggerEvent(event: TriggerEvent): TriggerEventProjection
       ...optionalPlayerId(toNumberOrUndefined(event.player)),
     };
   }
+  if (event.type === 'varChanged' && event.scope === 'zone' && event.zone !== undefined) {
+    return { zoneIds: [String(event.zone)] };
+  }
 
   return { zoneIds: [] };
 }

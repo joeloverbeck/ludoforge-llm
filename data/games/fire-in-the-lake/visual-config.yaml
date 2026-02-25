@@ -49,16 +49,16 @@ layout:
 
 factions:
   us:
-    color: "#e63946"
+    color: "#808000"
     displayName: United States
   arvn:
-    color: "#457b9d"
+    color: "#ffff00"
     displayName: ARVN
   nva:
-    color: "#2a9d8f"
+    color: "#ff0000"
     displayName: NVA
   vc:
-    color: "#e9c46a"
+    color: "#00bfff"
     displayName: Viet Cong
 
 zones:

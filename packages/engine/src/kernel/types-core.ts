@@ -25,6 +25,7 @@ import type {
   ActionPipelineDef,
 } from './types-operations.js';
 import type {
+  TurnFlowDeferredEventLifecycleTraceEntry,
   SimultaneousCommitTraceEntry,
   SimultaneousSubmissionTraceEntry,
   TurnOrderRuntimeState,
@@ -156,9 +157,10 @@ export type TriggerEvent =
   | { readonly type: 'tokenEntered'; readonly zone?: ZoneId }
   | {
       readonly type: 'varChanged';
-      readonly scope?: 'global' | 'perPlayer';
+      readonly scope?: 'global' | 'perPlayer' | 'zone';
       readonly var?: string;
       readonly player?: PlayerId;
+      readonly zone?: ZoneId;
       readonly oldValue?: VariableValue;
       readonly newValue?: VariableValue;
     };
@@ -244,6 +246,7 @@ export interface GameDef {
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
+  readonly zoneVars?: readonly VariableDef[];
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
   readonly tableContracts?: readonly RuntimeTableContract[];
 }
@@ -477,6 +480,12 @@ export type ZobristFeature =
       readonly slot: number;
       readonly observers: 'all' | readonly PlayerId[];
       readonly filterKey: string;
+    }
+  | {
+      readonly kind: 'zoneVar';
+      readonly zoneId: string;
+      readonly varName: string;
+      readonly value: number;
     };
 
 export interface InterruptPhaseFrame {
@@ -498,6 +507,7 @@ export interface RevealGrant {
 export interface GameState {
   readonly globalVars: Readonly<Record<string, VariableValue>>;
   readonly perPlayerVars: Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
+  readonly zoneVars: Readonly<Record<string, Readonly<Record<string, number>>>>;
   readonly playerCount: number;
   readonly zones: Readonly<Record<string, readonly Token[]>>;
   readonly nextTokenOrdinal: number;
@@ -600,6 +610,7 @@ export type TriggerLogEntry =
   | TriggerTruncated
   | TurnFlowLifecycleTraceEntry
   | TurnFlowEligibilityTraceEntry
+  | TurnFlowDeferredEventLifecycleTraceEntry
   | SimultaneousSubmissionTraceEntry
   | SimultaneousCommitTraceEntry
   | OperationPartialTraceEntry
@@ -690,19 +701,30 @@ export interface EffectTraceConceal {
 
 export interface EffectTraceVarChange {
   readonly kind: 'varChange';
-  readonly scope: 'global' | 'perPlayer';
+  readonly scope: 'global' | 'perPlayer' | 'zone';
   readonly varName: string;
   readonly oldValue: VariableValue;
   readonly newValue: VariableValue;
   readonly player?: PlayerId;
+  readonly zone?: string;
   readonly provenance: EffectTraceProvenance;
 }
 
-export interface EffectTraceResourceEndpoint {
-  readonly scope: 'global' | 'perPlayer';
-  readonly varName: string;
-  readonly player?: PlayerId;
-}
+export type EffectTraceResourceEndpoint =
+  | {
+      readonly scope: 'global';
+      readonly varName: string;
+    }
+  | {
+      readonly scope: 'perPlayer';
+      readonly player: PlayerId;
+      readonly varName: string;
+    }
+  | {
+      readonly scope: 'zone';
+      readonly zone: string;
+      readonly varName: string;
+    };
 
 export interface EffectTraceResourceTransfer {
   readonly kind: 'resourceTransfer';
@@ -900,5 +922,6 @@ export interface Agent {
     readonly playerId: PlayerId;
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
+    readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
   }): { readonly move: Move; readonly rng: Rng };
 }

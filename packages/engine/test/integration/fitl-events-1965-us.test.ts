@@ -36,6 +36,9 @@ describe('FITL 1965 US-first event-card production spec', () => {
       assert.deepEqual(card?.metadata?.seatOrder, expected.seatOrder);
       assert.equal(typeof card?.unshaded?.text, 'string', `${expected.id} must include unshaded text`);
       assert.equal(typeof card?.shaded?.text, 'string', `${expected.id} must include shaded text`);
+      if (expected.id === 'card-6') {
+        assert.equal(card?.unshaded?.effectTiming, 'afterGrants', 'card-6 unshaded must resolve effects after free grants');
+      }
     }
   });
 

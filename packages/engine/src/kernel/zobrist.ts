@@ -67,6 +67,7 @@ const canonicalizeGameDefFingerprint = (def: GameDef): string => {
 
   const globalVars = [...def.globalVars].map(encodeVariableDef).sort();
   const perPlayerVars = [...def.perPlayerVars].map(encodeVariableDef).sort();
+  const zoneVars = [...(def.zoneVars ?? [])].map(encodeVariableDef).sort();
   const phases = [
     ...def.turnStructure.phases.map((phase) => `turn:${String(phase.id)}`),
     ...(def.turnStructure.interrupts ?? []).map((phase) => `interrupt:${String(phase.id)}`),
@@ -79,6 +80,7 @@ const canonicalizeGameDefFingerprint = (def: GameDef): string => {
     `tokenTypes=[${tokenTypes.join(';')}]`,
     `globalVars=[${globalVars.join(';')}]`,
     `perPlayerVars=[${perPlayerVars.join(';')}]`,
+    `zoneVars=[${zoneVars.join(';')}]`,
     `phases=[${phases.join(';')}]`,
     `actions=[${actions.join(';')}]`,
   ].join('\n');
@@ -132,6 +134,8 @@ const encodeFeature = (feature: ZobristFeature): string => {
         `observers=${feature.observers === 'all' ? 'all' : feature.observers.join(',')}`,
         `filter=${feature.filterKey}`,
       ].join('|');
+    case 'zoneVar':
+      return `kind=zoneVar|zoneId=${feature.zoneId}|varName=${feature.varName}|value=${feature.value}`;
   }
 };
 
@@ -208,6 +212,23 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
         varName,
         value: playerVars[varName] ?? 0,
       });
+    }
+  }
+
+  const sortedZoneVarZoneIds = Object.keys(state.zoneVars).sort(compareStrings);
+  for (const zoneId of sortedZoneVarZoneIds) {
+    const zoneVarMap = state.zoneVars[zoneId] ?? {};
+    const sortedZoneVarNames = Object.keys(zoneVarMap).sort(compareStrings);
+    for (const varName of sortedZoneVarNames) {
+      const value = zoneVarMap[varName];
+      if (value !== undefined) {
+        hash ^= zobristKey(table, {
+          kind: 'zoneVar',
+          zoneId,
+          varName,
+          value,
+        });
+      }
     }
   }
 

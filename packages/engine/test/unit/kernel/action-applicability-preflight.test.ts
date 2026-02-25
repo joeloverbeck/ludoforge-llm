@@ -48,6 +48,7 @@ const makeDef = (overrides?: {
 const makeState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
   nextTokenOrdinal: 0,

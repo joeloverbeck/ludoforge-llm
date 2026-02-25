@@ -44,6 +44,7 @@ const makeDef = (): GameDef => ({
 const makeState = (): GameState => ({
   globalVars: { x: 0, sum: 0, count: 0, bonus: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,
@@ -522,6 +523,7 @@ describe('effects control-flow handlers', () => {
     const state: GameState = {
       globalVars: { count: 0, bonus: 0 },
       perPlayerVars: {},
+      zoneVars: {},
       playerCount: 2,
       zones: {
         'space:none': [
@@ -596,6 +598,7 @@ describe('effects control-flow handlers', () => {
     const state: GameState = {
       globalVars: { count: 0 },
       perPlayerVars: {},
+      zoneVars: {},
       playerCount: 2,
       zones: {
         'space:none': [makeToken('t1', 'troops', 'F1')],
@@ -654,6 +657,7 @@ describe('effects control-flow handlers', () => {
     const state: GameState = {
       globalVars: { count: 0, bonus: 0 },
       perPlayerVars: {},
+      zoneVars: {},
       playerCount: 2,
       zones: {
         'space:none': [makeToken('t1', 'troops', 'F1')],

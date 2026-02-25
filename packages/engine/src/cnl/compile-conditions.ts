@@ -67,6 +67,7 @@ const SUPPORTED_REFERENCE_KINDS = [
   'globalMarkerState',
   'tokenZone',
   'zoneProp',
+  'zoneVar',
   'activePlayer',
 ];
 
@@ -1336,6 +1337,19 @@ function lowerReference(
       return {
         value: { ref: 'zoneProp', zone: zonePropZone.value, prop: source.prop },
         diagnostics: zonePropZone.diagnostics,
+      };
+    }
+    case 'zoneVar': {
+      if (typeof source.var !== 'string') {
+        return missingCapability(path, 'zoneVar reference', source, ['{ ref: "zoneVar", zone: <ZoneSel>, var: string }']);
+      }
+      const zoneVarZone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      if (zoneVarZone.value === null) {
+        return { value: null, diagnostics: zoneVarZone.diagnostics };
+      }
+      return {
+        value: { ref: 'zoneVar', zone: zoneVarZone.value, var: source.var },
+        diagnostics: zoneVarZone.diagnostics,
       };
     }
     case 'activePlayer':

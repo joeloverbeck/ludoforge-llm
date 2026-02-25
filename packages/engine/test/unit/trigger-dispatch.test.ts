@@ -17,6 +17,7 @@ import {
 const createState = (overrides: Partial<GameState> = {}): GameState => ({
   globalVars: { enabled: 1, score: 0, enteredB: 0, enteredC: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'a:none': [],

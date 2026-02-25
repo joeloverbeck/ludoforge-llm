@@ -821,16 +821,6 @@ dataAssets:
                 population: 0
               allowedStates:
                 - neutral
-        - id: terror
-          states:
-            - none
-            - terror
-          defaultState: none
-          constraints:
-            - category:
-                - loc
-              allowedStates:
-                - none
         - id: sabotage
           states:
             - none
@@ -2328,4 +2318,13 @@ dataAssets:
           pieceTypeId: nva-guerrillas
           seat: nva
           count: 2
+```
+
+```yaml
+zoneVars:
+  - name: terrorCount
+    type: int
+    init: 0
+    min: 0
+    max: 15
 ```

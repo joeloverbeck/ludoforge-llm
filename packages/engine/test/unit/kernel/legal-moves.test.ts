@@ -14,6 +14,7 @@ import {
   type GameDef,
   type GameState,
   type ActionPipelineDef,
+  type EventCardDef,
 } from '../../../src/kernel/index.js';
 import { isMoveAllowedByTurnFlowOptionMatrix } from '../../../src/kernel/legal-moves-turn-order.js';
 
@@ -46,6 +47,7 @@ const makeBaseDef = (overrides?: {
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'board:none': [],
@@ -62,6 +64,46 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   markers: {},
   ...overrides,
 });
+
+const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: GameState; actionId: ReturnType<typeof asActionId> } => {
+  const actionId = asActionId(`eventAction:${card.id}`);
+  const eventAction: ActionDef = {
+    id: actionId,
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+    capabilities: ['cardEvent'],
+  };
+  const def = {
+    ...makeBaseDef({
+      actions: [eventAction],
+      zones: [
+        { id: asZoneId('draw:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+    }),
+    eventDecks: [
+      {
+        id: 'deck',
+        drawZone: 'draw:none',
+        discardZone: 'discard:none',
+        cards: [card],
+      },
+    ],
+  } as unknown as GameDef;
+  const state = makeBaseState({
+    zones: {
+      'draw:none': [],
+      'discard:none': [{ id: asTokenId(card.id), type: 'card', props: {} }],
+    },
+  });
+  return { def, state, actionId };
+};
 
 describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('supports actions declared across multiple phases', () => {
@@ -1358,5 +1400,109 @@ phase: [asPhaseId('main')],
     assert.equal(firstRun.some((move) => move.actionClass === 'operation'), true);
     assert.equal(firstRun.some((move) => move.actionClass === 'limitedOperation'), true);
     assert.deepEqual(secondRun, firstRun);
+  });
+
+  it('26. preserves event moves when event decision probing hits deferrable missing bindings', () => {
+    const { def, state, actionId } = makeEventLegalMovesFixture({
+      id: 'event-deferrable-binding',
+      title: 'Deferrable event',
+      sideMode: 'single',
+      unshaded: {
+        effects: [
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+              then: [],
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.length, 1);
+    assert.deepEqual(moves[0], {
+      actionId,
+      params: {
+        eventCardId: 'event-deferrable-binding',
+        eventDeckId: 'deck',
+        side: 'unshaded',
+      },
+    });
+  });
+
+  it('27. preserves event moves when event decision satisfiability is unknown', () => {
+    const { def, state, actionId } = makeEventLegalMovesFixture({
+      id: 'event-unknown',
+      title: 'Unknown event',
+      sideMode: 'single',
+      unshaded: {
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: ['a'] },
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
+    assert.deepEqual(result.moves, [
+      {
+        actionId,
+        params: {
+          eventCardId: 'event-unknown',
+          eventDeckId: 'deck',
+          side: 'unshaded',
+        },
+      },
+    ]);
+    assert.equal(
+      result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),
+      true,
+    );
+  });
+
+  it('28. excludes event moves when event decision sequence is unsatisfiable', () => {
+    const { def, state } = makeEventLegalMovesFixture({
+      id: 'event-unsat',
+      title: 'Unsatisfiable event',
+      sideMode: 'single',
+      unshaded: {
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: [] },
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    assert.deepEqual(legalMoves(def, state), []);
+  });
+
+  it('29. does not fall back to generic template enumeration for card-event actions', () => {
+    const { def, actionId } = makeEventLegalMovesFixture({
+      id: 'event-no-current-card',
+      title: 'No current card',
+      sideMode: 'single',
+      unshaded: { effects: [] },
+    });
+    const state = makeBaseState({
+      zones: {
+        'draw:none': [],
+        'discard:none': [],
+      },
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.some((move) => move.actionId === actionId && Object.keys(move.params).length === 0), false);
+    assert.deepEqual(moves, []);
   });
 });

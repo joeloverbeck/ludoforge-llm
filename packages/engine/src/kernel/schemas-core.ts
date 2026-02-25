@@ -19,6 +19,7 @@ import {
   OperationPartialTraceEntrySchema,
   SimultaneousCommitTraceEntrySchema,
   SimultaneousSubmissionTraceEntrySchema,
+  TurnFlowDeferredEventLifecycleTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
   TurnFlowLifecycleTraceEntrySchema,
   TurnFlowDurationSchema,
@@ -169,9 +170,10 @@ export const TriggerEventSchema = z.union([
   z
     .object({
       type: z.literal('varChanged'),
-      scope: z.union([z.literal('global'), z.literal('perPlayer')]).optional(),
+      scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]).optional(),
       var: StringSchema.optional(),
       player: IntegerSchema.optional(),
+      zone: StringSchema.optional(),
       oldValue: z.union([NumberSchema, BooleanSchema]).optional(),
       newValue: z.union([NumberSchema, BooleanSchema]).optional(),
     })
@@ -336,6 +338,7 @@ export const GameDefSchema = z
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
+    zoneVars: z.array(VariableDefSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
   })
@@ -383,6 +386,7 @@ export const GameStateSchema = z
   .object({
     globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
+    zoneVars: z.record(StringSchema, z.record(StringSchema, NumberSchema)),
     playerCount: NumberSchema,
     zones: z.record(StringSchema, z.array(TokenSchema)),
     nextTokenOrdinal: NumberSchema,
@@ -467,6 +471,12 @@ export const EffectTraceProvenanceSchema = z
   })
   .strict();
 
+export const EffectTraceResourceEndpointSchema = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global'), varName: StringSchema }).strict(),
+  z.object({ scope: z.literal('perPlayer'), player: IntegerSchema, varName: StringSchema }).strict(),
+  z.object({ scope: z.literal('zone'), zone: StringSchema, varName: StringSchema }).strict(),
+]);
+
 export const EffectTraceEntrySchema = z.union([
   z
     .object({
@@ -533,31 +543,20 @@ export const EffectTraceEntrySchema = z.union([
   z
     .object({
       kind: z.literal('varChange'),
-      scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+      scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
       varName: StringSchema,
       oldValue: z.union([NumberSchema, BooleanSchema]),
       newValue: z.union([NumberSchema, BooleanSchema]),
       player: IntegerSchema.optional(),
+      zone: StringSchema.optional(),
       provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
     .object({
       kind: z.literal('resourceTransfer'),
-      from: z
-        .object({
-          scope: z.union([z.literal('global'), z.literal('perPlayer')]),
-          varName: StringSchema,
-          player: IntegerSchema.optional(),
-        })
-        .strict(),
-      to: z
-        .object({
-          scope: z.union([z.literal('global'), z.literal('perPlayer')]),
-          varName: StringSchema,
-          player: IntegerSchema.optional(),
-        })
-        .strict(),
+      from: EffectTraceResourceEndpointSchema,
+      to: EffectTraceResourceEndpointSchema,
       requestedAmount: IntegerSchema.min(0),
       actualAmount: IntegerSchema.min(0),
       sourceAvailable: IntegerSchema.min(0),
@@ -618,6 +617,7 @@ export const TriggerLogEntrySchema = z.union([
   TriggerTruncatedSchema,
   TurnFlowLifecycleTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
+  TurnFlowDeferredEventLifecycleTraceEntrySchema,
   SimultaneousSubmissionTraceEntrySchema,
   SimultaneousCommitTraceEntrySchema,
   OperationPartialTraceEntrySchema,
@@ -708,6 +708,7 @@ export const SerializedGameStateSchema = z
   .object({
     globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
+    zoneVars: z.record(StringSchema, z.record(StringSchema, NumberSchema)),
     playerCount: NumberSchema,
     zones: z.record(StringSchema, z.array(TokenSchema)),
     nextTokenOrdinal: NumberSchema,

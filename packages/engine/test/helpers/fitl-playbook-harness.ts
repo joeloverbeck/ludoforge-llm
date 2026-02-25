@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 
 import {
   applyMove,
+  type GameDef,
   type GameState,
   type Move,
   type ValidatedGameDef,
@@ -37,6 +38,12 @@ export interface MarkerCheck {
   readonly expected: string;
 }
 
+export interface ComputedValueCheck {
+  readonly label: string;
+  readonly expected: number;
+  readonly compute: (def: GameDef, state: GameState) => number;
+}
+
 export interface PlaybookStateSnapshot {
   readonly globalVars?: Readonly<Record<string, number>>;
   readonly eligibility?: Readonly<Record<string, boolean>>;
@@ -51,6 +58,7 @@ export interface PlaybookStateSnapshot {
   readonly zoneTokenCounts?: readonly ZoneTokenCountCheck[];
   readonly totalTokenCounts?: readonly TotalTokenCountCheck[];
   readonly markers?: readonly MarkerCheck[];
+  readonly computedValues?: readonly ComputedValueCheck[];
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +136,7 @@ export const assertPlaybookSnapshot = (
   state: GameState,
   expected: PlaybookStateSnapshot,
   label: string,
+  def?: GameDef,
 ): void => {
   if (expected.globalVars !== undefined) {
     for (const [varName, expectedValue] of Object.entries(expected.globalVars)) {
@@ -264,6 +273,20 @@ export const assertPlaybookSnapshot = (
       );
     }
   }
+
+  if (expected.computedValues !== undefined) {
+    if (def === undefined) {
+      assert.fail(`${label}: computedValues checks require a GameDef instance`);
+    }
+    for (const check of expected.computedValues) {
+      const actual = check.compute(def, state);
+      assert.equal(
+        actual,
+        check.expected,
+        `${label}: expected computed ${check.label}=${check.expected}, got ${actual}`,
+      );
+    }
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -295,6 +318,7 @@ export const replayPlaybookTurn = (
         opOnlyResult.state,
         playMove.expectedOperationState,
         `${playMove.label} (operation only)`,
+        def,
       );
     }
     if (playMove.kind === 'simple') {
@@ -311,10 +335,10 @@ export const replayPlaybookTurn = (
     }
     // Per-move intermediate assertion
     if (playMove.expectedState !== undefined) {
-      assertPlaybookSnapshot(current, playMove.expectedState, playMove.label);
+      assertPlaybookSnapshot(current, playMove.expectedState, playMove.label, def);
     }
   }
-  assertPlaybookSnapshot(current, turn.expectedEndState, turn.label);
+  assertPlaybookSnapshot(current, turn.expectedEndState, turn.label, def);
   return current;
 };
 

@@ -21,6 +21,7 @@ afterEach(() => {
 interface MutableRenderModelStore {
   readonly store: StoreApi<GameStore>;
   setWarnings(warnings: NonNullable<GameStore['renderModel']>['moveEnumerationWarnings']): void;
+  setOrchestrationDiagnostic(diagnostic: GameStore['orchestrationDiagnostic']): void;
 }
 
 function createMutableStore(
@@ -29,10 +30,12 @@ function createMutableStore(
   let renderModel = makeRenderModel({
     moveEnumerationWarnings: initialWarnings,
   });
+  let orchestrationDiagnostic: GameStore['orchestrationDiagnostic'] = null;
 
   const store = {
     getState: () => ({
       renderModel,
+      orchestrationDiagnostic,
     }),
   } as unknown as StoreApi<GameStore>;
 
@@ -42,6 +45,9 @@ function createMutableStore(
       renderModel = makeRenderModel({
         moveEnumerationWarnings: warnings,
       });
+    },
+    setOrchestrationDiagnostic: (diagnostic) => {
+      orchestrationDiagnostic = diagnostic;
     },
   };
 }
@@ -140,5 +146,19 @@ describe('WarningsToast', () => {
 
     renderResult.unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('renders orchestration diagnostics as toasts', () => {
+    const warningStore = createMutableStore([]);
+    warningStore.setOrchestrationDiagnostic({
+      sequence: 1,
+      code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
+      message: 'AI selected legal template move "tick" but completion returned null.',
+      details: undefined,
+    });
+    render(createElement(WarningsToast, { store: warningStore.store }));
+
+    expect(screen.getByText('UNCOMPLETABLE_TEMPLATE_MOVE')).toBeTruthy();
+    expect(screen.getByText('AI selected legal template move "tick" but completion returned null.')).toBeTruthy();
   });
 });

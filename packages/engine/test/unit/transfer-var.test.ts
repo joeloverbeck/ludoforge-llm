@@ -28,7 +28,11 @@ const makeDef = (): GameDef => ({
     { name: 'committed', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'locked', type: 'boolean', init: false },
   ],
-  zones: [],
+  zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 50 }],
+  zones: [
+    { id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: 'zone-b:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' },
+  ],
   tokenTypes: [],
   setup: [],
   turnStructure: { phases: [] },
@@ -42,6 +46,10 @@ const makeState = (): GameState => ({
   perPlayerVars: {
     '0': { coins: 10, committed: 1, locked: false },
     '1': { coins: 7, committed: 2, locked: false },
+  },
+  zoneVars: {
+    'zone-a:none': { supply: 9 },
+    'zone-b:none': { supply: 1 },
   },
   playerCount: 2,
   zones: {},
@@ -283,6 +291,41 @@ describe('transferVar effect', () => {
     assert.equal(result.state.globalVars.bank, 2);
   });
 
+  it('supports zoneVar->zoneVar transfers', () => {
+    const ctx = makeCtx();
+    const result = applyEffect(
+      {
+        transferVar: {
+          from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
+          to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
+          amount: 4,
+        },
+      },
+      ctx,
+    );
+
+    assert.equal(result.state.zoneVars['zone-a:none']?.supply, 5);
+    assert.equal(result.state.zoneVars['zone-b:none']?.supply, 5);
+    assert.deepEqual(result.emittedEvents, [
+      {
+        type: 'varChanged',
+        scope: 'zone',
+        zone: 'zone-a:none',
+        var: 'supply',
+        oldValue: 9,
+        newValue: 5,
+      },
+      {
+        type: 'varChanged',
+        scope: 'zone',
+        zone: 'zone-b:none',
+        var: 'supply',
+        oldValue: 1,
+        newValue: 5,
+      },
+    ]);
+  });
+
   it('caps transfer by destination max headroom while preserving conservation', () => {
     const ctx = makeCtx({
       state: {
@@ -312,24 +355,6 @@ describe('transferVar effect', () => {
     const afterTotal =
       Number(result.state.perPlayerVars['0']?.coins ?? 0) + Number(result.state.perPlayerVars['1']?.committed ?? 0);
     assert.equal(afterTotal, beforeTotal);
-  });
-
-  it('throws EFFECT_RUNTIME when to.scope is pvar and to.player is missing', () => {
-    const ctx = makeCtx();
-    assert.throws(
-      () =>
-        applyEffect(
-          {
-            transferVar: {
-              from: { scope: 'pvar', player: 'actor', var: 'coins' },
-              to: { scope: 'pvar', var: 'committed' },
-              amount: 1,
-            },
-          },
-          ctx,
-        ),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('to.player is required'),
-    );
   });
 
   it('throws EFFECT_RUNTIME for boolean variable source or destination', () => {

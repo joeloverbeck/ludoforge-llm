@@ -139,6 +139,23 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly sequenceIndex?: number;
 }
 
+export interface TurnFlowDeferredEventEffectPayload {
+  readonly effects: readonly import('./types-ast.js').EffectAST[];
+  readonly moveParams: Readonly<Record<string, import('./types-ast.js').MoveParamValue>>;
+  readonly actorPlayer: number;
+  readonly actionId: string;
+}
+
+export interface TurnFlowPendingDeferredEventEffect extends TurnFlowDeferredEventEffectPayload {
+  readonly deferredId: string;
+  readonly requiredGrantBatchIds: readonly string[];
+}
+
+export interface TurnFlowReleasedDeferredEventEffect extends TurnFlowDeferredEventEffectPayload {
+  readonly deferredId: string;
+  readonly requiredGrantBatchIds: readonly string[];
+}
+
 export interface CompoundActionState {
   readonly operationProfileId: string;
   readonly saTiming: 'before' | 'during' | 'after' | null;
@@ -171,6 +188,7 @@ export interface TurnFlowRuntimeState {
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[];
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
 }
@@ -241,4 +259,12 @@ export interface TurnFlowEligibilityTraceEntry {
   }[];
   readonly overrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly reason?: 'rightmostPass' | 'twoNonPass';
+}
+
+export interface TurnFlowDeferredEventLifecycleTraceEntry {
+  readonly kind: 'turnFlowDeferredEventLifecycle';
+  readonly stage: 'queued' | 'released' | 'executed';
+  readonly deferredId: string;
+  readonly actionId: string;
+  readonly requiredGrantBatchIds: readonly string[];
 }

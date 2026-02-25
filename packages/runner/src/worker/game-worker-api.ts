@@ -1,6 +1,8 @@
 import {
   applyMove,
   assertValidatedGameDefInput,
+  completeTemplateMove,
+  createGameDefRuntime,
   enumerateLegalMoves,
   initialState,
   legalChoicesEvaluate,
@@ -14,6 +16,7 @@ import type {
   EffectTraceEntry,
   ExecutionOptions,
   GameDef,
+  GameDefRuntime,
   GameState,
   LegalMoveEnumerationOptions,
   LegalMoveEnumerationResult,
@@ -50,6 +53,26 @@ export interface InitResult {
   readonly setupTrace: readonly EffectTraceEntry[];
 }
 
+export interface ApplyTemplateMoveApplied {
+  readonly outcome: 'applied';
+  readonly move: Move;
+  readonly result: ApplyMoveResult;
+}
+
+export interface ApplyTemplateMoveUncompletable {
+  readonly outcome: 'uncompletable';
+}
+
+export interface ApplyTemplateMoveIllegal {
+  readonly outcome: 'illegal';
+  readonly error: WorkerError;
+}
+
+export type ApplyTemplateMoveResult =
+  | ApplyTemplateMoveApplied
+  | ApplyTemplateMoveUncompletable
+  | ApplyTemplateMoveIllegal;
+
 export interface GameWorkerAPI {
   init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
@@ -60,6 +83,11 @@ export interface GameWorkerAPI {
     options: { readonly trace?: boolean } | undefined,
     stamp: OperationStamp,
   ): Promise<ApplyMoveResult>;
+  applyTemplateMove(
+    templateMove: Move,
+    options: { readonly trace?: boolean } | undefined,
+    stamp: OperationStamp,
+  ): Promise<ApplyTemplateMoveResult>;
   playSequence(
     moves: readonly Move[],
     options: { readonly trace?: boolean } | undefined,
@@ -95,7 +123,12 @@ const isWorkerError = (error: unknown): error is WorkerError => {
 
 const toWorkerError = (code: WorkerError['code'], error: unknown, fallbackMessage: string): WorkerError => {
   if (isWorkerError(error)) {
-    return error;
+    const details = Reflect.get(error, 'details');
+    return {
+      code: error.code,
+      message: error.message,
+      ...(details === undefined ? {} : { details }),
+    };
   }
 
   if (error instanceof Error) {
@@ -172,6 +205,7 @@ const withValidationFailureMapping = async <T>(run: () => Promise<T>): Promise<T
 export function createGameWorker(): GameWorkerAPI {
   let def: GameDef | null = null;
   let state: GameState | null = null;
+  let runtime: GameDefRuntime | null = null;
   let history: GameState[] = [];
   let enableTrace = true;
   let latestMutationStamp: OperationStamp | null = null;
@@ -191,13 +225,36 @@ export function createGameWorker(): GameWorkerAPI {
   };
 
   const initState = (nextDef: GameDef, seed: number, options?: BridgeInitOptions): InitResult => {
-    def = nextDef;
     const traceEnabled = options?.enableTrace ?? true;
-    const result = initialState(nextDef, seed, options?.playerCount, { trace: traceEnabled });
-    state = result.state;
+    const nextRuntime = createGameDefRuntime(nextDef);
+    const nextInit = initialState(nextDef, seed, options?.playerCount, { trace: traceEnabled });
+
+    def = nextDef;
+    runtime = nextRuntime;
+    state = nextInit.state;
     history = [];
     enableTrace = traceEnabled;
-    return { state: result.state, setupTrace: result.setupTrace };
+    return { state: nextInit.state, setupTrace: nextInit.setupTrace };
+  };
+
+  const executeAppliedMove = (
+    currentDef: GameDef,
+    currentState: GameState,
+    move: Move,
+    options: { readonly trace?: boolean } | undefined,
+  ): ApplyMoveResult => {
+    history.push(currentState);
+    try {
+      const executionOptions: ExecutionOptions = {
+        trace: options?.trace ?? enableTrace,
+      };
+      const result = applyMove(currentDef, currentState, move, executionOptions);
+      state = result.state;
+      return result;
+    } catch (error) {
+      history.pop();
+      throw error;
+    }
   };
 
   const api: GameWorkerAPI = {
@@ -236,18 +293,41 @@ export function createGameWorker(): GameWorkerAPI {
     ): Promise<ApplyMoveResult> {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);
-      history.push(current.state);
-      return withIllegalMoveMapping(() => {
+      return withIllegalMoveMapping(() => executeAppliedMove(current.def, current.state, move, options));
+    },
+
+    async applyTemplateMove(
+      templateMove: Move,
+      options: { readonly trace?: boolean } | undefined,
+      stamp: OperationStamp,
+    ): Promise<ApplyTemplateMoveResult> {
+      return withInternalErrorMapping(() => {
+        const current = assertInitialized(def, state);
+        ensureFreshMutation(stamp);
+        const completion = completeTemplateMove(
+          current.def,
+          current.state,
+          templateMove,
+          { state: current.state.rng },
+          runtime ?? undefined,
+        );
+        const completedMove = completion?.move ?? null;
+        if (completedMove === null) {
+          return { outcome: 'uncompletable' };
+        }
+
         try {
-          const executionOptions: ExecutionOptions = {
-            trace: options?.trace ?? enableTrace,
+          const result = executeAppliedMove(current.def, current.state, completedMove, options);
+          return {
+            outcome: 'applied',
+            move: completedMove,
+            result,
           };
-          const result = applyMove(current.def, current.state, move, executionOptions);
-          state = result.state;
-          return result;
         } catch (error) {
-          history.pop();
-          throw error;
+          return {
+            outcome: 'illegal',
+            error: toWorkerError('ILLEGAL_MOVE', error, 'Illegal move.'),
+          };
         }
       });
     },
@@ -332,13 +412,15 @@ export function createGameWorker(): GameWorkerAPI {
       options: BridgeInitOptions | undefined,
       stamp: OperationStamp,
     ): Promise<InitResult> {
-      ensureFreshMutation(stamp);
-      const resolvedDef = nextDef ?? def;
-      if (resolvedDef === null) {
-        throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
-      }
-      const resolvedSeed = seed ?? 0;
-      return initState(resolvedDef, resolvedSeed, options);
+      return withInternalErrorMapping(() => {
+        ensureFreshMutation(stamp);
+        const resolvedDef = nextDef ?? def;
+        if (resolvedDef === null) {
+          throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
+        }
+        const resolvedSeed = seed ?? 0;
+        return initState(resolvedDef, resolvedSeed, options);
+      });
     },
 
     async loadFromUrl(

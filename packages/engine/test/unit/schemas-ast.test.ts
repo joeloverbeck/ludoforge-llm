@@ -11,6 +11,7 @@ import {
   ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
+import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const collectIssuePaths = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object') {
@@ -115,6 +116,13 @@ describe('AST and selector schemas', () => {
               min: 1,
               max: 10,
               actualBind: '$actual',
+            },
+          },
+          {
+            transferVar: {
+              from: { scope: 'zoneVar', zone: 'board:none', var: 'supply' },
+              to: { scope: 'zoneVar', zone: 'hand:actor', var: 'supply' },
+              amount: 2,
             },
           },
         ],
@@ -813,6 +821,42 @@ describe('AST and selector schemas', () => {
       includeStartAtDepth: 1,
     });
     assert.equal(wrongField.success, false);
+  });
+
+  it('enforces full transferVar endpoint required/forbidden field matrix by scope', () => {
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'pvar',
+        zone: 'zoneVar',
+      },
+      values: {
+        globalVar: 'bank',
+        playerVar: 'vp',
+        zoneVar: 'supply',
+        player: 'actor',
+        zone: 'board:none',
+      },
+    });
+
+    for (const testCase of cases) {
+      const result = EffectASTSchema.safeParse({
+        transferVar: {
+          from: testCase.from,
+          to: testCase.to,
+          amount: 1,
+        },
+      });
+      if (testCase.violation === undefined) {
+        assert.equal(result.success, true, testCase.name);
+        continue;
+      }
+      assert.equal(result.success, false, testCase.name);
+    }
   });
 
   it('enforces strict object policy for selector and AST objects', () => {

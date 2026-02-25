@@ -7,7 +7,9 @@ import {
   asZoneId,
   asPhaseId,
   asPlayerId,
+  EVAL_ERROR_DEFER_CLASS,
   isEvalErrorCode,
+  resolveMapSpaceId,
   resolvePlayerSel,
   resolveSinglePlayerSel,
   resolveSingleZoneSel,
@@ -40,6 +42,7 @@ const makeDef = (): GameDef => ({
 const makeState = (playerCount: number): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount,
   zones: {
     'deck:none': [],
@@ -108,12 +111,32 @@ describe('resolvePlayerSel', () => {
       activePlayer: asPlayerId(0),
     });
     assert.throws(() => resolveSinglePlayerSel('allOther', zeroCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+      isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'player',
     );
 
     const manyCtx = makeCtx();
     assert.throws(() => resolveSinglePlayerSel('all', manyCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+      isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'player',
+    );
+  });
+
+  it('emits playerCount context for zero-player relative selector cardinality errors', () => {
+    const zeroPlayerCtx = makeCtx({
+      state: makeState(0),
+      actorPlayer: asPlayerId(0),
+      activePlayer: asPlayerId(0),
+    });
+
+    assert.throws(
+      () => resolvePlayerSel({ relative: 'left' }, zeroPlayerCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY')
+        && error.context?.selectorKind === 'player'
+        && typeof error.context?.selector === 'object'
+        && error.context.selector !== null
+        && 'relative' in error.context.selector
+        && error.context.selector.relative === 'left'
+        && error.context?.playerCount === 0,
     );
   });
 });
@@ -169,16 +192,14 @@ describe('resolveZoneSel', () => {
       () => resolveZoneSel('graveyard:actor', ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'MISSING_VAR') &&
-        typeof error.message === 'string' &&
-        error.message.includes('availableZoneIds'),
+        Array.isArray(error.context?.availableZoneIds),
     );
 
     assert.throws(
       () => resolveZoneSel('bench:0', ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'MISSING_VAR') &&
-        typeof error.message === 'string' &&
-        error.message.includes('candidates'),
+        Array.isArray(error.context?.candidates),
     );
   });
 
@@ -188,13 +209,73 @@ describe('resolveZoneSel', () => {
       actorPlayer: asPlayerId(0),
       activePlayer: asPlayerId(0),
     });
-    assert.throws(() => resolveSingleZoneSel('hand:allOther', zeroCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+    assert.throws(
+      () => resolveSingleZoneSel('hand:allOther', zeroCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY') &&
+        error.context?.selectorKind === 'zone' &&
+        error.context?.deferClass === undefined,
     );
 
     const manyCtx = makeCtx();
     assert.throws(() => resolveSingleZoneSel('hand:all', manyCtx), (error: unknown) =>
-      isEvalErrorCode(error, 'SELECTOR_CARDINALITY'),
+      isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'zone',
+    );
+  });
+
+  it('adds unresolved-binding deferral metadata for zero-cardinality direct binding selectors', () => {
+    const emptyBoundSelectionCtx = makeCtx({ bindings: { $zones: [] } });
+    assert.throws(
+      () => resolveSingleZoneSel('$zones', emptyBoundSelectionCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY') &&
+        error.context?.selectorKind === 'zone' &&
+        error.context?.selector === '$zones' &&
+        error.context?.resolvedCount === 0 &&
+        Array.isArray(error.context?.resolvedZones) &&
+        error.context.resolvedZones.length === 0 &&
+        error.context?.deferClass === EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+    );
+  });
+});
+
+describe('resolveMapSpaceId', () => {
+  it('returns literal space ids as ZoneId values', () => {
+    const ctx = makeCtx();
+    assert.equal(resolveMapSpaceId('deck:none', ctx), 'deck:none');
+  });
+
+  it('resolves bound string space ids', () => {
+    const ctx = makeCtx({ bindings: { $space: 'hand:2' } });
+    assert.equal(resolveMapSpaceId('$space', ctx), 'hand:2');
+  });
+
+  it('keeps boundary-local pass-through behavior for unknown space ids', () => {
+    const ctx = makeCtx();
+    assert.equal(resolveMapSpaceId('unknown-space:none', ctx), 'unknown-space:none');
+  });
+
+  it('throws MISSING_BINDING for missing bound space selectors', () => {
+    const ctx = makeCtx({ bindings: {} });
+    assert.throws(
+      () => resolveMapSpaceId('$space', ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'MISSING_BINDING') &&
+        error.context?.selector === '$space' &&
+        error.context?.binding === '$space' &&
+        Array.isArray(error.context?.availableBindings),
+    );
+  });
+
+  it('throws TYPE_MISMATCH for non-string bound space selectors', () => {
+    const ctx = makeCtx({ bindings: { $space: 7 } });
+    assert.throws(
+      () => resolveMapSpaceId('$space', ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH') &&
+        error.context?.selector === '$space' &&
+        error.context?.binding === '$space' &&
+        error.context?.actualType === 'number',
     );
   });
 });

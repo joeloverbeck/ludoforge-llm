@@ -22,6 +22,7 @@ const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join
 const gameStateFixture: GameState = {
   globalVars: { round: 1 },
   perPlayerVars: { '0': { vp: 3 } },
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 12,
@@ -156,6 +157,51 @@ describe('kernel bigint serialization codecs', () => {
     assert.throws(
       () => deserializeTrace(invalidSerializedTrace),
       /Invalid hex bigint at moves\[0\]\.stateHash: 0xFF/,
+    );
+  });
+
+  it('rejects deserialized card-driven state with invalid deferred actorPlayer', () => {
+    const serializedState: SerializedGameState = {
+      ...gameStateFixture,
+      playerCount: 2,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingDeferredEventEffects: [
+            {
+              deferredId: 'deferred-1',
+              requiredGrantBatchIds: [],
+              effects: [],
+              moveParams: {},
+              actorPlayer: 2,
+              actionId: 'action-1',
+            },
+          ],
+        },
+      },
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: ['0x0', '0x2aab'] },
+      stateHash: '0xabcd',
+    };
+
+    assert.throws(
+      () => deserializeGameState(serializedState),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /pendingDeferredEventEffects\[0\]\.actorPlayer out of range/);
+        return true;
+      },
     );
   });
 

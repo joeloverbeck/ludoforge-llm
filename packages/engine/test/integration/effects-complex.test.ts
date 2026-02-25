@@ -48,6 +48,7 @@ const makeDef = (): GameDef => ({
 const makeState = (): GameState => ({
   globalVars: { score: 0, count: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [token('d1', 1), token('d2', 3), token('d3', 2)],

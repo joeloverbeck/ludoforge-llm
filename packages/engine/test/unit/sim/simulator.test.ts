@@ -6,6 +6,7 @@ import {
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
+  asZoneId,
   computeFullHash,
   createZobristTable,
   initialState,
@@ -201,9 +202,20 @@ describe('runGame', () => {
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
       perPlayerVars: [],
-      zones: [],
-      tokenTypes: [],
-      setup: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: {} }],
+      setup: [
+        {
+          createToken: {
+            type: 'card',
+            zone: asZoneId('played:none'),
+            props: { cardId: 'card-1' },
+          },
+        },
+      ],
       turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [
         {
@@ -212,10 +224,7 @@ capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor' as const,
 phase: [asPhaseId('main')],
-          params: [
-            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
-            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
-          ],
+          params: [],
           pre: null,
           cost: [],
           effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
@@ -224,6 +233,22 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'dual',
+              unshaded: { effects: [], branches: [{ id: 'a' }, { id: 'b' }] },
+              shaded: { effects: [], branches: [{ id: 'a' }, { id: 'b' }] },
+            },
+          ],
+        },
+      ],
     } as const);
 
     const sideBranchAgent: Agent = {
@@ -239,6 +264,11 @@ phase: [asPhaseId('main')],
     };
 
     const trace = runGame(def, 31, [sideBranchAgent, sideBranchAgent], 1);
-    assert.deepEqual(trace.moves[0]?.move.params, { side: 'shaded', branch: 'b' });
+    assert.deepEqual(trace.moves[0]?.move.params, {
+      eventCardId: 'card-1',
+      eventDeckId: 'deck-1',
+      side: 'shaded',
+      branch: 'b',
+    });
   });
 });

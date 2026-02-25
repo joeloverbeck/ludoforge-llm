@@ -81,8 +81,8 @@ const runVcMarchWithMainForceBns = (def: GameDef, marker: MarkerState, seed: num
     actionId: asActionId('march'),
     params: {
       targetSpaces: [LOC_SPACE],
-      $movingGuerrillas: [mover1, mover2],
-      $movingTroops: [],
+      [`$movingGuerrillas@${LOC_SPACE}`]: [mover1, mover2],
+      [`$movingTroops@${LOC_SPACE}`]: [],
     },
   }).state;
 };

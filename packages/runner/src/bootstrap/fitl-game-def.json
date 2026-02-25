@@ -2,7 +2,7 @@
   "metadata": {
     "id": "fire-in-the-lake",
     "players": {
-      "min": 2,
+      "min": 4,
       "max": 4
     },
     "name": "Fire in the Lake",
@@ -343,6 +343,15 @@
       "init": 20,
       "min": 0,
       "max": 50
+    }
+  ],
+  "zoneVars": [
+    {
+      "name": "terrorCount",
+      "type": "int",
+      "init": 0,
+      "min": 0,
+      "max": 15
     }
   ],
   "zones": [
@@ -2598,24 +2607,6 @@
       ]
     },
     {
-      "id": "terror",
-      "states": [
-        "none",
-        "terror"
-      ],
-      "defaultState": "none",
-      "constraints": [
-        {
-          "category": [
-            "loc"
-          ],
-          "allowedStates": [
-            "none"
-          ]
-        }
-      ]
-    },
-    {
       "id": "sabotage",
       "states": [
         "none",
@@ -2903,6 +2894,14 @@
         "thieu"
       ],
       "defaultState": "minh"
+    },
+    {
+      "id": "leaderFlipped",
+      "states": [
+        "normal",
+        "flipped"
+      ],
+      "defaultState": "normal"
     }
   ],
   "runtimeDataAssets": [
@@ -4553,24 +4552,6 @@
                 },
                 "allowedStates": [
                   "neutral"
-                ]
-              }
-            ]
-          },
-          {
-            "id": "terror",
-            "states": [
-              "none",
-              "terror"
-            ],
-            "defaultState": "none",
-            "constraints": [
-              {
-                "category": [
-                  "loc"
-                ],
-                "allowedStates": [
-                  "none"
                 ]
               }
             ]
@@ -13418,13 +13399,13 @@
                               {
                                 "if": {
                                   "when": {
-                                    "op": "==",
+                                    "op": ">",
                                     "left": {
-                                      "ref": "markerState",
-                                      "space": "$subSpace",
-                                      "marker": "terror"
+                                      "ref": "zoneVar",
+                                      "zone": "$subSpace",
+                                      "var": "terrorCount"
                                     },
-                                    "right": "terror"
+                                    "right": 0
                                   },
                                   "then": [
                                     {
@@ -13473,10 +13454,11 @@
                                             }
                                           },
                                           {
-                                            "setMarker": {
-                                              "space": "$subSpace",
-                                              "marker": "terror",
-                                              "state": "none"
+                                            "setVar": {
+                                              "scope": "zoneVar",
+                                              "zone": "$subSpace",
+                                              "var": "terrorCount",
+                                              "value": 0
                                             }
                                           }
                                         ]
@@ -14989,13 +14971,13 @@
                         {
                           "if": {
                             "when": {
-                              "op": "==",
+                              "op": ">",
                               "left": {
-                                "ref": "markerState",
-                                "space": "$subSpace",
-                                "marker": "terror"
+                                "ref": "zoneVar",
+                                "zone": "$subSpace",
+                                "var": "terrorCount"
                               },
-                              "right": "terror"
+                              "right": 0
                             },
                             "then": [
                               {
@@ -15023,10 +15005,11 @@
                                 }
                               },
                               {
-                                "setMarker": {
-                                  "space": "$subSpace",
-                                  "marker": "terror",
-                                  "state": "none"
+                                "setVar": {
+                                  "scope": "zoneVar",
+                                  "zone": "$subSpace",
+                                  "var": "terrorCount",
+                                  "value": 0
                                 }
                               }
                             ]
@@ -18659,7 +18642,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.5.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops",
+                      "bind": "$movingTroops@{$space}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$space",
@@ -18685,7 +18668,7 @@
                       "bind": "$troop",
                       "over": {
                         "query": "binding",
-                        "name": "$movingTroops"
+                        "name": "$movingTroops@{$space}"
                       },
                       "effects": [
                         {
@@ -26191,7 +26174,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.chooseN",
-                      "bind": "$movingGuerrillas",
+                      "bind": "$movingGuerrillas@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -26215,7 +26198,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops",
+                      "bind": "$movingTroops@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -26246,7 +26229,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingGuerrillas"
+                              "name": "$movingGuerrillas@{$destSpace}"
                             }
                           }
                         },
@@ -26255,7 +26238,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingTroops"
+                              "name": "$movingTroops@{$destSpace}"
                             }
                           }
                         }
@@ -26364,7 +26347,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingGuerrillas"
+                                    "name": "$movingGuerrillas@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -26391,7 +26374,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingTroops"
+                                    "name": "$movingTroops@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -26529,7 +26512,7 @@
                                                     },
                                                     "over": {
                                                       "query": "binding",
-                                                      "name": "$movingGuerrillas"
+                                                      "name": "$movingGuerrillas@{$destSpace}"
                                                     },
                                                     "effects": [
                                                       {
@@ -26563,7 +26546,7 @@
                                                               "op": "count",
                                                               "query": {
                                                                 "query": "binding",
-                                                                "name": "$movingGuerrillas"
+                                                                "name": "$movingGuerrillas@{$destSpace}"
                                                               }
                                                             }
                                                           },
@@ -26581,7 +26564,7 @@
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$movingGuerrillas"
+                                                            "name": "$movingGuerrillas@{$destSpace}"
                                                           },
                                                           "effects": [
                                                             {
@@ -26732,7 +26715,7 @@
                 "then": [
                   {
                     "forEach": {
-                      "bind": "$chainSpace",
+                      "bind": "$destSpace",
                       "over": {
                         "query": "binding",
                         "name": "chainSpaces"
@@ -26741,10 +26724,10 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.chooseN",
-                            "bind": "$movingGuerrillas",
+                            "bind": "$movingGuerrillas@{$destSpace}",
                             "options": {
                               "query": "tokensInAdjacentZones",
-                              "zone": "$chainSpace",
+                              "zone": "$destSpace",
                               "filter": [
                                 {
                                   "prop": "faction",
@@ -26765,10 +26748,10 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.1.chooseN",
-                            "bind": "$movingTroops",
+                            "bind": "$movingTroops@{$destSpace}",
                             "options": {
                               "query": "tokensInAdjacentZones",
-                              "zone": "$chainSpace",
+                              "zone": "$destSpace",
                               "filter": [
                                 {
                                   "prop": "faction",
@@ -26796,7 +26779,7 @@
                                   "op": "count",
                                   "query": {
                                     "query": "binding",
-                                    "name": "$movingGuerrillas"
+                                    "name": "$movingGuerrillas@{$destSpace}"
                                   }
                                 }
                               },
@@ -26805,7 +26788,7 @@
                                   "op": "count",
                                   "query": {
                                     "query": "binding",
-                                    "name": "$movingTroops"
+                                    "name": "$movingTroops@{$destSpace}"
                                   }
                                 }
                               }
@@ -26847,7 +26830,7 @@
                                                   "op": "==",
                                                   "left": {
                                                     "ref": "zoneProp",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "prop": "country"
                                                   },
                                                   "right": "laos"
@@ -26856,7 +26839,7 @@
                                                   "op": "==",
                                                   "left": {
                                                     "ref": "zoneProp",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "prop": "country"
                                                   },
                                                   "right": "cambodia"
@@ -26884,7 +26867,7 @@
                                                     "op": "!=",
                                                     "left": {
                                                       "ref": "zoneProp",
-                                                      "zone": "$chainSpace",
+                                                      "zone": "$destSpace",
                                                       "prop": "category"
                                                     },
                                                     "right": "loc"
@@ -26914,7 +26897,7 @@
                                         },
                                         "over": {
                                           "query": "binding",
-                                          "name": "$movingGuerrillas"
+                                          "name": "$movingGuerrillas@{$destSpace}"
                                         },
                                         "effects": [
                                           {
@@ -26926,7 +26909,7 @@
                                                   "token": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__piece"
                                                 }
                                               },
-                                              "to": "$chainSpace"
+                                              "to": "$destSpace"
                                             }
                                           }
                                         ]
@@ -26941,7 +26924,7 @@
                                         },
                                         "over": {
                                           "query": "binding",
-                                          "name": "$movingTroops"
+                                          "name": "$movingTroops@{$destSpace}"
                                         },
                                         "effects": [
                                           {
@@ -26953,7 +26936,7 @@
                                                   "token": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__piece"
                                                 }
                                               },
-                                              "to": "$chainSpace"
+                                              "to": "$destSpace"
                                             }
                                           }
                                         ]
@@ -26971,7 +26954,7 @@
                                                   "op": "==",
                                                   "left": {
                                                     "ref": "zoneProp",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "prop": "category"
                                                   },
                                                   "right": "loc"
@@ -26983,7 +26966,7 @@
                                                       "op": "==",
                                                       "left": {
                                                         "ref": "markerState",
-                                                        "space": "$chainSpace",
+                                                        "space": "$destSpace",
                                                         "marker": "supportOpposition"
                                                       },
                                                       "right": "passiveSupport"
@@ -26992,7 +26975,7 @@
                                                       "op": "==",
                                                       "left": {
                                                         "ref": "markerState",
-                                                        "space": "$chainSpace",
+                                                        "space": "$destSpace",
                                                         "marker": "supportOpposition"
                                                       },
                                                       "right": "activeSupport"
@@ -27014,7 +26997,7 @@
                                                   "op": "count",
                                                   "query": {
                                                     "query": "tokensInZone",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "filter": [
                                                       {
                                                         "prop": "faction",
@@ -27079,7 +27062,7 @@
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$movingGuerrillas"
+                                                            "name": "$movingGuerrillas@{$destSpace}"
                                                           },
                                                           "effects": [
                                                             {
@@ -27113,7 +27096,7 @@
                                                                     "op": "count",
                                                                     "query": {
                                                                       "query": "binding",
-                                                                      "name": "$movingGuerrillas"
+                                                                      "name": "$movingGuerrillas@{$destSpace}"
                                                                     }
                                                                   }
                                                                 },
@@ -27131,7 +27114,7 @@
                                                                 },
                                                                 "over": {
                                                                   "query": "binding",
-                                                                  "name": "$movingGuerrillas"
+                                                                  "name": "$movingGuerrillas@{$destSpace}"
                                                                 },
                                                                 "effects": [
                                                                   {
@@ -27488,7 +27471,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.chooseN",
-                      "bind": "$movingGuerrillas",
+                      "bind": "$movingGuerrillas@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -27512,7 +27495,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops",
+                      "bind": "$movingTroops@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -27543,7 +27526,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingGuerrillas"
+                              "name": "$movingGuerrillas@{$destSpace}"
                             }
                           }
                         },
@@ -27552,7 +27535,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingTroops"
+                              "name": "$movingTroops@{$destSpace}"
                             }
                           }
                         }
@@ -27661,7 +27644,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingGuerrillas"
+                                    "name": "$movingGuerrillas@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -27688,7 +27671,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingTroops"
+                                    "name": "$movingTroops@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -27826,7 +27809,7 @@
                                                     },
                                                     "over": {
                                                       "query": "binding",
-                                                      "name": "$movingGuerrillas"
+                                                      "name": "$movingGuerrillas@{$destSpace}"
                                                     },
                                                     "effects": [
                                                       {
@@ -27873,7 +27856,7 @@
                                                               "op": "count",
                                                               "query": {
                                                                 "query": "binding",
-                                                                "name": "$movingGuerrillas"
+                                                                "name": "$movingGuerrillas@{$destSpace}"
                                                               }
                                                             }
                                                           },
@@ -27891,7 +27874,7 @@
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$movingGuerrillas"
+                                                            "name": "$movingGuerrillas@{$destSpace}"
                                                           },
                                                           "effects": [
                                                             {
@@ -29925,13 +29908,13 @@
                               "op": "and",
                               "args": [
                                 {
-                                  "op": "!=",
+                                  "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$space",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$space",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 },
                                 {
                                   "op": "<",
@@ -29945,10 +29928,11 @@
                             },
                             "then": [
                               {
-                                "setMarker": {
-                                  "space": "$space",
-                                  "marker": "terror",
-                                  "state": "terror"
+                                "addVar": {
+                                  "scope": "zoneVar",
+                                  "zone": "$space",
+                                  "var": "terrorCount",
+                                  "delta": 1
                                 }
                               },
                               {
@@ -30582,13 +30566,13 @@
                               "op": "and",
                               "args": [
                                 {
-                                  "op": "!=",
+                                  "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$space",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$space",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 },
                                 {
                                   "op": "<",
@@ -30602,10 +30586,11 @@
                             },
                             "then": [
                               {
-                                "setMarker": {
-                                  "space": "$space",
-                                  "marker": "terror",
-                                  "state": "terror"
+                                "addVar": {
+                                  "scope": "zoneVar",
+                                  "zone": "$space",
+                                  "var": "terrorCount",
+                                  "delta": 1
                                 }
                               },
                               {
@@ -43386,13 +43371,13 @@
                                   }
                                 },
                                 {
-                                  "op": "==",
+                                  "op": ">",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -43441,11 +43426,11 @@
                                 {
                                   "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "none"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -43579,15 +43564,16 @@
             },
             "then": [
               {
-                "setMarker": {
-                  "space": {
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": {
                     "zoneExpr": {
                       "ref": "binding",
                       "name": "targetSpace"
                     }
                   },
-                  "marker": "terror",
-                  "state": "none"
+                  "var": "terrorCount",
+                  "value": 0
                 }
               }
             ],
@@ -43934,13 +43920,13 @@
                                   }
                                 },
                                 {
-                                  "op": "==",
+                                  "op": ">",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -43989,11 +43975,11 @@
                                 {
                                   "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "none"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -44127,15 +44113,16 @@
             },
             "then": [
               {
-                "setMarker": {
-                  "space": {
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": {
                     "zoneExpr": {
                       "ref": "binding",
                       "name": "targetSpace"
                     }
                   },
-                  "marker": "terror",
-                  "state": "none"
+                  "var": "terrorCount",
+                  "value": 0
                 }
               }
             ],
@@ -44434,13 +44421,13 @@
                                   }
                                 },
                                 {
-                                  "op": "==",
+                                  "op": ">",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -44489,11 +44476,11 @@
                                 {
                                   "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "none"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -44610,15 +44597,16 @@
             },
             "then": [
               {
-                "setMarker": {
-                  "space": {
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": {
                     "zoneExpr": {
                       "ref": "binding",
                       "name": "targetSpace"
                     }
                   },
-                  "marker": "terror",
-                  "state": "none"
+                  "var": "terrorCount",
+                  "value": 0
                 }
               }
             ],
@@ -48807,10 +48795,11 @@
             },
             "effects": [
               {
-                "setMarker": {
-                  "space": "$__macro_coup_reset_markers_triggers_2__effects_0__space",
-                  "marker": "terror",
-                  "state": "none"
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": "$__macro_coup_reset_markers_triggers_2__effects_0__space",
+                  "var": "terrorCount",
+                  "value": 0
                 }
               },
               {
@@ -49083,6 +49072,12 @@
             "scope": "global",
             "var": "mom_typhoonKate",
             "value": false
+          }
+        },
+        {
+          "setGlobalMarker": {
+            "marker": "leaderFlipped",
+            "state": "normal"
           }
         }
       ]
@@ -50130,9 +50125,11 @@
           },
           "unshaded": {
             "text": "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities.",
+            "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "2",
+                "executeAsSeat": "0",
                 "sequence": {
                   "chain": "gulf-of-tonkin-us-airstrike",
                   "step": 0
@@ -50145,9 +50142,10 @@
             ],
             "effects": [
               {
-                "forEach": {
-                  "bind": "$usOutOfPlayPiece",
-                  "over": {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.chooseN",
+                  "bind": "$selectedPieces",
+                  "options": {
                     "query": "tokensInZone",
                     "zone": "out-of-play-US:none",
                     "filter": [
@@ -50158,10 +50156,20 @@
                       }
                     ]
                   },
+                  "max": 6
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usOutOfPlayPiece",
+                  "over": {
+                    "query": "binding",
+                    "name": "$selectedPieces"
+                  },
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.forEach.effects.0.chooseOne",
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.1.forEach.effects.0.chooseOne",
                         "bind": "$targetCity@{$usOutOfPlayPiece}",
                         "options": {
                           "query": "mapSpaces",
@@ -50196,8 +50204,7 @@
                         }
                       }
                     }
-                  ],
-                  "limit": 6
+                  ]
                 }
               }
             ]
@@ -50629,6 +50636,7 @@
           },
           "unshaded": {
             "text": "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes.",
+            "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
                 "seat": "0",
@@ -57578,7 +57586,7 @@
             "flavorText": "Saigon shaken."
           },
           "unshaded": {
-            "text": "Aid +10 or transfer Patronage to Aid. Flip RVN leader.",
+            "text": "Aid +10, or 4 Patronage to ARVN Resources. Flip any current RVN leader card: its text is ignored.",
             "branches": [
               {
                 "id": "aid-plus-ten-and-flip-leader",
@@ -57594,7 +57602,7 @@
                   {
                     "if": {
                       "when": {
-                        "op": "==",
+                        "op": "!=",
                         "left": {
                           "ref": "globalMarkerState",
                           "marker": "activeLeader"
@@ -57604,16 +57612,8 @@
                       "then": [
                         {
                           "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "khanh"
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "minh"
+                            "marker": "leaderFlipped",
+                            "state": "flipped"
                           }
                         }
                       ]
@@ -57636,9 +57636,9 @@
                               "ref": "gvar",
                               "var": "patronage"
                             },
-                            "right": 6
+                            "right": 4
                           },
-                          "then": 6,
+                          "then": 4,
                           "else": {
                             "ref": "gvar",
                             "var": "patronage"
@@ -57676,7 +57676,7 @@
                   {
                     "if": {
                       "when": {
-                        "op": "==",
+                        "op": "!=",
                         "left": {
                           "ref": "globalMarkerState",
                           "marker": "activeLeader"
@@ -57686,16 +57686,8 @@
                       "then": [
                         {
                           "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "khanh"
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "minh"
+                            "marker": "leaderFlipped",
+                            "state": "flipped"
                           }
                         }
                       ]
@@ -57706,7 +57698,7 @@
             ]
           },
           "shaded": {
-            "text": "Shift a City 1 level toward Active Opposition and increase terror markers.",
+            "text": "Shift a City that has VC by 2 levels toward Active Opposition and add a Terror marker there.",
             "targets": [
               {
                 "id": "$targetCity",
@@ -57714,13 +57706,38 @@
                   "query": "mapSpaces",
                   "filter": {
                     "condition": {
-                      "op": "==",
-                      "left": {
-                        "ref": "zoneProp",
-                        "zone": "$zone",
-                        "prop": "category"
-                      },
-                      "right": "city"
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "category"
+                          },
+                          "right": "city"
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
                     }
                   }
                 },
@@ -57734,7 +57751,15 @@
                 "shiftMarker": {
                   "space": "$targetCity",
                   "marker": "supportOpposition",
-                  "delta": -1
+                  "delta": -2
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "zoneVar",
+                  "zone": "$targetCity",
+                  "var": "terrorCount",
+                  "delta": 1
                 }
               },
               {

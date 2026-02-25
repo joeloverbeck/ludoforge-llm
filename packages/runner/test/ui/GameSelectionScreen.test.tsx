@@ -54,7 +54,7 @@ describe('GameSelectionScreen', () => {
         gameMetadata: {
           name: 'Fire in the Lake',
           description: 'A 4-faction COIN-series wargame set in the Vietnam War',
-          playerMin: 2,
+          playerMin: 4,
           playerMax: 4,
           factionIds: ['us', 'arvn', 'nva', 'vc'],
         },
@@ -89,7 +89,7 @@ describe('GameSelectionScreen', () => {
     expect(screen.getByText('Fire in the Lake')).toBeTruthy();
     expect(screen.getByText("Texas Hold'em")).toBeTruthy();
     expect(screen.getByText('A 4-faction COIN-series wargame set in the Vietnam War')).toBeTruthy();
-    expect(screen.getByText('Players: 2-4')).toBeTruthy();
+    expect(screen.getByText('Players: 4-4')).toBeTruthy();
     expect(screen.queryByTestId('select-game-default')).toBeNull();
 
     await waitFor(() => {

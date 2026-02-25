@@ -1,6 +1,7 @@
 import { deepStrictEqual } from 'node:assert/strict';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as runtime from '@ludoforge/engine/runtime';
 
 import {
   asActionId,
@@ -182,6 +183,10 @@ const RUNTIME_WARNINGS: readonly RuntimeWarning[] = [
 ];
 
 describe('worker boundary structured clone compatibility', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('round-trips GameDef, GameState, Move, ApplyMoveResult, ChoiceRequest, TerminalResult, and legal move enumeration', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
@@ -189,6 +194,7 @@ describe('worker boundary structured clone compatibility', () => {
     const legalMoveEnumeration = await worker.enumerateLegalMoves();
     const move = legalMoveEnumeration.moves[0] ?? LEGAL_TICK_MOVE;
     const applyMoveResult = await worker.applyMove(move, undefined, nextStamp());
+    const applyTemplateMoveResult = await worker.applyTemplateMove(move, undefined, nextStamp());
     const choiceRequest = await worker.legalChoices(move);
     const terminal = await worker.terminalResult();
 
@@ -196,6 +202,7 @@ describe('worker boundary structured clone compatibility', () => {
     const clonedInitResult = roundTripClone(initResult);
     roundTripClone(move);
     roundTripClone(applyMoveResult);
+    roundTripClone(applyTemplateMoveResult);
     roundTripClone(choiceRequest);
     roundTripClone(terminal);
     roundTripClone(legalMoveEnumeration);
@@ -291,5 +298,25 @@ describe('worker boundary structured clone compatibility', () => {
     };
 
     roundTripClone(sample);
+  });
+
+  it('round-trips applyTemplateMove uncompletable and illegal outcomes', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 42, undefined, nextStamp());
+
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValueOnce(null);
+    const uncompletable = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+    roundTripClone(uncompletable);
+    expect(uncompletable).toEqual({ outcome: 'uncompletable' });
+
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValueOnce({ move: { ...LEGAL_TICK_MOVE, actionId: asActionId('missing-action') } } as never);
+    const illegal = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+    roundTripClone(illegal);
+    expect(illegal.outcome).toBe('illegal');
+    if (illegal.outcome !== 'illegal') {
+      throw new Error('Expected illegal outcome.');
+    }
+    expect(illegal.error.code).toBe('ILLEGAL_MOVE');
   });
 });

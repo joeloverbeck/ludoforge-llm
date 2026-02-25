@@ -64,10 +64,11 @@ describe('FITL commitment targeting rules', () => {
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
 
-    const baseState = clearAllZones(initialState(def, 7302, 2).state);
+    const baseState = clearAllZones(initialState(def, 7302, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
       zones: {
         ...baseState.zones,
         [eventDeck!.discardZone]: [makeToken('card-73', 'card', 'none')],

@@ -11,7 +11,7 @@ import {
   parseGameSpec,
 } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileProductionSpec, readCompilerFixture } from '../helpers/production-spec-helpers.js';
+import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 function requireValue<T>(value: T): NonNullable<T> {
   assert.notEqual(value, undefined);
@@ -241,12 +241,6 @@ describe('crossValidateSpec', () => {
     });
 
     assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_ACTION_PHASE_MISSING'), false);
-  });
-
-  it('FITL production spec produces zero cross-ref diagnostics', () => {
-    const production = compileProductionSpec();
-    const crossRefDiagnostics = production.compiled.diagnostics.filter((diagnostic) => diagnostic.code.startsWith('CNL_XREF_'));
-    assert.deepEqual(crossRefDiagnostics, []);
   });
 
   it('multiple cross-ref errors are sorted deterministically', () => {

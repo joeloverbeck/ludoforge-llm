@@ -11,6 +11,7 @@ const LIST_SECTIONS = [
   'globalMarkerLattices',
   'globalVars',
   'perPlayerVars',
+  'zoneVars',
   'zones',
   'tokenTypes',
   'setup',
@@ -271,6 +272,9 @@ function assignListSection(
       break;
     case 'perPlayerVars':
       mutable.perPlayerVars = value as MutableGameSpecDoc['perPlayerVars'];
+      break;
+    case 'zoneVars':
+      mutable.zoneVars = value as MutableGameSpecDoc['zoneVars'];
       break;
     case 'zones':
       mutable.zones = value as MutableGameSpecDoc['zones'];

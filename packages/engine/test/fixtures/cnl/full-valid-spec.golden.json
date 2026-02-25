@@ -15,6 +15,7 @@
     "globalMarkerLattices": null,
     "globalVars": null,
     "perPlayerVars": null,
+    "zoneVars": null,
     "zones": [
       {
         "id": "deck",

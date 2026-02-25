@@ -708,23 +708,30 @@ eventDecks:
           flavorText: "Escalation trigger."
         unshaded:
           text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
+          effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "0"
+            - seat: "2"
+              executeAsSeat: "0"
               sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
-          # forEach+chooseOne: each piece independently chooses a city
-          # (distributes across ANY cities, not forced to a single city)
           effects:
-            - forEach:
-                bind: $usOutOfPlayPiece
-                over:
+            - chooseN:
+                bind: $selectedPieces
+                max: 6
+                options:
                   query: tokensInZone
                   zone: out-of-play-US:none
                   # faction-only filter: matches troops, bases, AND irregulars
                   filter:
                     - { prop: faction, eq: US }
-                limit: 6
+            # forEach+chooseOne: each selected piece independently chooses a city
+            # (distributes across ANY cities, not forced to a single city)
+            - forEach:
+                bind: $usOutOfPlayPiece
+                over:
+                  query: binding
+                  name: $selectedPieces
                 effects:
                   - chooseOne:
                       bind: '$targetCity@{$usOutOfPlayPiece}'
@@ -901,6 +908,7 @@ eventDecks:
           flavorText: "Robin Olds ambushes MiGs."
         unshaded:
           text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
+          effectTiming: afterGrants
           freeOperationGrants:
             - seat: "0"
               sequence: { chain: aces-us-airstrike, step: 0 }
@@ -1854,18 +1862,19 @@ eventDecks:
           seatOrder: ["VC", "US", "ARVN", "NVA"]
           flavorText: "Saigon shaken."
         unshaded:
-          text: "Aid +10 or transfer Patronage to Aid. Flip RVN leader."
+          text: "Aid +10, or 4 Patronage to ARVN Resources. Flip any current RVN leader card: its text is ignored."
           branches:
             - id: aid-plus-ten-and-flip-leader
               order: 1
               effects:
                 - addVar: { scope: global, var: aid, delta: 10 }
                 - if:
-                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+                    when:
+                      op: '!='
+                      left: { ref: globalMarkerState, marker: activeLeader }
+                      right: minh
                     then:
-                      - setGlobalMarker: { marker: activeLeader, state: khanh }
-                    else:
-                      - setGlobalMarker: { marker: activeLeader, state: minh }
+                      - setGlobalMarker: { marker: leaderFlipped, state: flipped }
             - id: transfer-patronage-to-aid-and-flip-leader
               order: 2
               effects:
@@ -1873,8 +1882,8 @@ eventDecks:
                     bind: $transfer
                     value:
                       if:
-                        when: { op: '>', left: { ref: gvar, var: patronage }, right: 6 }
-                        then: 6
+                        when: { op: '>', left: { ref: gvar, var: patronage }, right: 4 }
+                        then: 4
                         else: { ref: gvar, var: patronage }
                     in:
                       - addVar:
@@ -1889,27 +1898,40 @@ eventDecks:
                           var: aid
                           delta: { ref: binding, name: $transfer }
                 - if:
-                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+                    when:
+                      op: '!='
+                      left: { ref: globalMarkerState, marker: activeLeader }
+                      right: minh
                     then:
-                      - setGlobalMarker: { marker: activeLeader, state: khanh }
-                    else:
-                      - setGlobalMarker: { marker: activeLeader, state: minh }
+                      - setGlobalMarker: { marker: leaderFlipped, state: flipped }
         shaded:
-          text: "Shift a City 1 level toward Active Opposition and increase terror markers."
+          text: "Shift a City that has VC by 2 levels toward Active Opposition and add a Terror marker there."
           targets:
             - id: $targetCity
               selector:
                 query: mapSpaces
                 filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
-                  right: city
+                  op: 'and'
+                  args:
+                    - op: '=='
+                      left: { ref: zoneProp, zone: $zone, prop: category }
+                      right: city
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter: [{ prop: faction, eq: VC }]
+                      right: 0
               cardinality: { max: 1 }
           effects:
             - shiftMarker:
                 space: $targetCity
                 marker: supportOpposition
-                delta: -1
+                delta: -2
+            - addVar: { scope: zoneVar, zone: $targetCity, var: terrorCount, delta: 1 }
             - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
       - id: card-95
         title: Westmoreland

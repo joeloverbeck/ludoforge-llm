@@ -702,7 +702,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
 
-    const state = operationInitialState(compiled.gameDef!, 313, 2);
+    const state = operationInitialState(compiled.gameDef!, 313, 4);
 
     assert.throws(
       () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
@@ -794,8 +794,8 @@ describe('FITL NVA/VC special activities integration', () => {
         actionId: asActionId('march'),
         params: {
           targetSpaces: ['quang-tri-thua-thien:none'],
-          $movingGuerrillas: [],
-          $movingTroops: [],
+          '$movingGuerrillas@quang-tri-thua-thien:none': [],
+          '$movingTroops@quang-tri-thua-thien:none': [],
           chainSpaces: [],
         },
         compound: {

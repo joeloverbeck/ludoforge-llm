@@ -55,6 +55,7 @@ const makeDef = (effects: readonly EffectAST[]): GameDef =>
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'hand:0': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],

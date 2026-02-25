@@ -10,6 +10,7 @@ import {
   buildAdjacencyGraph,
   createCollector,
   createRng,
+  TriggerLogEntrySchema,
   type EffectAST,
   type EffectContext,
   type GameDef,
@@ -61,6 +62,7 @@ const makeState = (): GameState => ({
     '0': { coins: 7 },
     '1': { coins: 4 },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,
@@ -152,5 +154,16 @@ describe('trace semantics contract', () => {
     const second = applyMove(def, makeState(), { actionId, params: {} }, { trace: true });
 
     assert.deepEqual(first.effectTrace, second.effectTrace);
+  });
+
+  it('accepts deferred lifecycle trigger entry shape in trace contracts', () => {
+    const parsed = TriggerLogEntrySchema.safeParse({
+      kind: 'turnFlowDeferredEventLifecycle',
+      stage: 'released',
+      deferredId: 'deferred:1:0:event',
+      actionId: 'event',
+      requiredGrantBatchIds: ['vc-after'],
+    });
+    assert.equal(parsed.success, true);
   });
 });

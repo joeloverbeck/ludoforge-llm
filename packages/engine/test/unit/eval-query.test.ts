@@ -94,6 +94,7 @@ const makeFactionToken = (id: string, faction: string): Token => ({
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 3,
   zones: {
     'deck:none': [makeToken('deck-1'), makeToken('deck-2')],

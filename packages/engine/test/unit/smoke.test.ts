@@ -5,6 +5,9 @@ describe('project smoke test', () => {
   it('imports from kernel module', async () => {
     const mod = await import('../../src/kernel/index.js');
     assert.ok(mod !== undefined);
+    assert.equal('selectorCardinalityPlayerCountContext' in mod, false);
+    assert.equal('selectorCardinalityPlayerResolvedContext' in mod, false);
+    assert.equal('selectorCardinalityZoneResolvedContext' in mod, false);
   });
 
   it('imports from cnl module', async () => {

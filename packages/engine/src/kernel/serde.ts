@@ -5,6 +5,7 @@ import type {
   SerializedGameState,
   SerializedGameTrace,
 } from './types.js';
+import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 
 const HEX_BIGINT_PATTERN = /^0x[0-9a-f]+$/;
 
@@ -34,15 +35,19 @@ export const serializeGameState = (state: GameState): SerializedGameState => ({
   stateHash: toHexBigInt(state.stateHash),
 });
 
-export const deserializeGameState = (state: SerializedGameState): GameState => ({
-  ...state,
-  rng: {
-    algorithm: state.rng.algorithm,
-    version: state.rng.version,
-    state: state.rng.state.map((word, index) => fromHexBigInt(word, `rng.state[${index}]`)),
-  },
-  stateHash: fromHexBigInt(state.stateHash, 'stateHash'),
-});
+export const deserializeGameState = (state: SerializedGameState): GameState => {
+  const deserialized: GameState = {
+    ...state,
+    rng: {
+      algorithm: state.rng.algorithm,
+      version: state.rng.version,
+      state: state.rng.state.map((word, index) => fromHexBigInt(word, `rng.state[${index}]`)),
+    },
+    stateHash: fromHexBigInt(state.stateHash, 'stateHash'),
+  };
+  validateTurnFlowRuntimeStateInvariants(deserialized);
+  return deserialized;
+};
 
 export const serializeTrace = (trace: GameTrace): SerializedGameTrace => ({
   ...trace,

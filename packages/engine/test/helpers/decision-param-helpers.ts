@@ -13,8 +13,7 @@ import {
 const MAX_DECISION_STEPS = 256;
 
 export interface DecisionOverrideRule {
-  readonly match: string | RegExp;
-  readonly target?: 'decisionId' | 'name' | 'either';
+  readonly when: (request: ChoicePendingRequest) => boolean;
   readonly value: MoveParamValue | ((request: ChoicePendingRequest) => MoveParamValue | undefined);
 }
 
@@ -22,20 +21,6 @@ export interface ResolveDecisionParamsOptions {
   readonly overrides?: readonly DecisionOverrideRule[];
   readonly maxDecisionProbeSteps?: number;
 }
-
-const matchesRule = (rule: DecisionOverrideRule, request: ChoicePendingRequest): boolean => {
-  const target = rule.target ?? 'either';
-  const matchText = (value: string): boolean =>
-    typeof rule.match === 'string' ? value.includes(rule.match) : rule.match.test(value);
-
-  if (target === 'decisionId') {
-    return matchText(request.decisionId);
-  }
-  if (target === 'name') {
-    return matchText(request.name);
-  }
-  return matchText(request.decisionId) || matchText(request.name);
-};
 
 const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue | undefined => {
   return pickDeterministicChoiceValue(request);
@@ -55,7 +40,7 @@ const resolveDecisionValue = (
   }
 
   for (const rule of options?.overrides ?? []) {
-    if (!matchesRule(rule, request)) {
+    if (!rule.when(request)) {
       continue;
     }
     const overridden = typeof rule.value === 'function' ? rule.value(request) : rule.value;
@@ -122,14 +107,24 @@ export const applyMoveWithResolvedDecisionIds = (
   const normalized = normalizeDecisionParamsForMoveInternal(def, state, move, false, options);
   const withCompound = normalized.compound === undefined
     ? normalized
-    : {
-      ...normalized,
-      compound: {
-        ...normalized.compound,
-        // Compound legality/constraint diagnostics belong to applyMove's compound-aware validation path.
-        // Preserve unresolved SA decisions here to avoid masking canonical compound errors.
-        specialActivity: normalizeDecisionParamsForMoveInternal(def, state, normalized.compound.specialActivity, true, options),
-      },
-    };
+    : (() => {
+      const { compound, ...operationMove } = normalized;
+      const operationResult = applyMove(def, state, operationMove);
+      return {
+        ...normalized,
+        compound: {
+          ...compound,
+          // Resolve SA choices from post-operation state so legal domains reflect operation outcomes.
+          // Preserve incomplete SA params so applyMove continues to own compound legality diagnostics.
+          specialActivity: normalizeDecisionParamsForMoveInternal(
+            def,
+            operationResult.state,
+            compound.specialActivity,
+            true,
+            options,
+          ),
+        },
+      };
+    })();
   return applyMove(def, state, withCompound);
 };

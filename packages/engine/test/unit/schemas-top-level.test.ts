@@ -121,6 +121,7 @@ phase: ['main'],
 const validGameState = {
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'deck:none': [] },
   nextTokenOrdinal: 0,
@@ -703,6 +704,13 @@ describe('top-level runtime schemas', () => {
         kind: 'operationFree',
         actionId: 'train',
         step: 'costSpendSkipped',
+      },
+      {
+        kind: 'turnFlowDeferredEventLifecycle',
+        stage: 'executed',
+        deferredId: 'deferred:1:0:event',
+        actionId: 'event',
+        requiredGrantBatchIds: ['batch-1'],
       },
     ] as const;
 

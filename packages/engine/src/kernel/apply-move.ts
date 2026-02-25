@@ -3,7 +3,12 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectErrorCode } from './effect-error.js';
 import { applyEffects } from './effects.js';
-import { executeEventMove } from './event-execution.js';
+import {
+  executeEventMove,
+  resolveEventEffectList,
+  resolveEventEffectTimingForMove,
+  resolveEventFreeOperationGrants,
+} from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
@@ -20,7 +25,7 @@ import {
 } from './move-runtime-bindings.js';
 import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
-import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
+import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError, kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
@@ -35,6 +40,8 @@ import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
+import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import type { PhaseTransitionBudget } from './effect-context.js';
 import type {
   ActionDef,
@@ -47,10 +54,13 @@ import type {
   MoveParamScalar,
   MoveParamValue,
   Rng,
+  TurnFlowDeferredEventEffectPayload,
+  TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
   TriggerEvent,
 } from './types.js';
 import { asPlayerId } from './branded.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -94,13 +104,14 @@ const resolveMatchedPipelineForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  cachedRuntime?: GameDefRuntime,
 ): ActionPipelineDef | undefined => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     return undefined;
   }
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const executionPlayer = move.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, move)
     : (() => {
@@ -206,7 +217,12 @@ const violatesCompoundParamConstraints = (
   return null;
 };
 
-const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: Move): void => {
+const validateDecisionSequenceForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: { readonly allowIncomplete?: boolean },
+): void => {
   try {
     const result = resolveMoveDecisionSequence(def, state, move, {
       choose: () => undefined,
@@ -218,6 +234,9 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
         detail: result.illegal.reason,
       });
+    }
+    if (options?.allowIncomplete === true) {
+      return;
     }
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS, {
       nextDecisionId: result.nextDecision?.decisionId,
@@ -242,6 +261,25 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
     }
     throw err;
   }
+};
+
+const shouldDeferIncompleteDecisionValidation = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): boolean => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return false;
+  }
+  const timing = resolveEventEffectTimingForMove(def, state, move);
+  if (timing !== 'afterGrants') {
+    return false;
+  }
+  const effects = resolveEventEffectList(def, state, move);
+  if (effects.length === 0) {
+    return false;
+  }
+  return resolveEventFreeOperationGrants(def, state, move).length > 0;
 };
 
 const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
@@ -270,7 +308,7 @@ const validateTurnFlowWindowAccess = (def: GameDef, state: GameState, move: Move
   }
 };
 
-const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMoveContext => {
+const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?: GameDefRuntime): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
@@ -284,10 +322,11 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
   if (action === undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
+  const allowIncomplete = shouldDeferIncompleteDecisionValidation(def, state, move);
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
-    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
     if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
         operationActionId: action.id,
@@ -320,8 +359,8 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     });
   }
 
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const preflight = resolveActionApplicabilityPreflight({
     def,
     state,
@@ -368,7 +407,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
         ...metadata,
       });
     }
-    validateDecisionSequenceForMove(def, state, move);
+    validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
     validateTurnFlowWindowAccess(def, state, move);
     return {
       action,
@@ -376,7 +415,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     };
   }
   validateDeclaredActionParams(action, preflight.evalCtx, move);
-  validateDecisionSequenceForMove(def, state, move);
+  validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
   validateTurnFlowWindowAccess(def, state, move);
   return {
     action,
@@ -402,6 +441,7 @@ interface SharedMoveExecutionContext {
 interface MoveActionExecutionResult {
   readonly stateWithRng: GameState;
   readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
 }
 
 interface MoveExecutionRuntime {
@@ -455,8 +495,9 @@ const executeMoveAction = (
   options: ExecutionOptions | undefined,
   coreOptions: ApplyMoveCoreOptions | undefined,
   shared: SharedMoveExecutionContext,
+  cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
-  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move);
+  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
   const action = validated?.action ?? findAction(def, move.actionId);
   if (action === undefined) throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
 
@@ -522,7 +563,7 @@ const executeMoveAction = (
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
-    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
     if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
         operationActionId: action.id,
@@ -612,6 +653,7 @@ const executeMoveAction = (
       options,
       shared.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: shared.phaseTransitionBudget },
       shared,
+      cachedRuntime,
     );
     effectState = saResult.stateWithRng;
     effectRng = { state: effectState.rng };
@@ -730,6 +772,85 @@ const executeMoveAction = (
       rng: triggerResult.rng.state,
     },
     triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog],
+    ...(lastingActivation.deferredEventEffect === undefined
+      ? {}
+      : { deferredEventEffect: lastingActivation.deferredEventEffect }),
+  };
+};
+
+const applyReleasedDeferredEventEffects = (
+  def: GameDef,
+  state: GameState,
+  releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[],
+  shared: SharedMoveExecutionContext,
+): MoveActionExecutionResult => {
+  if (releasedDeferredEventEffects.length === 0) {
+    return { stateWithRng: state, triggerFirings: [] };
+  }
+  let nextState = state;
+  let nextRng: Rng = { state: state.rng };
+  let triggerLog = [] as readonly TriggerLogEntry[];
+  const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
+  for (const deferredEventEffect of releasedDeferredEventEffects) {
+    const actorPlayer = deferredEventEffect.actorPlayer;
+    if (!Number.isSafeInteger(actorPlayer) || actorPlayer < 0 || actorPlayer >= nextState.playerCount) {
+      throw kernelRuntimeError(
+        'RUNTIME_CONTRACT_INVALID',
+        `Deferred event effect actorPlayer out of range: actorPlayer=${String(actorPlayer)} playerCount=${nextState.playerCount} actionId=${deferredEventEffect.actionId}`,
+      );
+    }
+    const effectPlayer = asPlayerId(actorPlayer);
+    const effectResult = applyEffects(deferredEventEffect.effects, {
+      def,
+      adjacencyGraph: shared.adjacencyGraph,
+      runtimeTableIndex: shared.runtimeTableIndex,
+      state: nextState,
+      rng: nextRng,
+      activePlayer: effectPlayer,
+      actorPlayer: effectPlayer,
+      bindings: { ...deferredEventEffect.moveParams },
+      moveParams: deferredEventEffect.moveParams,
+      collector: shared.collector,
+      traceContext: {
+        eventContext: 'actionEffect',
+        actionId: deferredEventEffect.actionId,
+        effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEventEffects`,
+      },
+      effectPath: '',
+      ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
+    });
+    nextState = effectResult.state;
+    nextRng = effectResult.rng;
+    for (const emittedEvent of effectResult.emittedEvents ?? []) {
+      const emittedEventResult = dispatchTriggers(
+        def,
+        nextState,
+        nextRng,
+        emittedEvent,
+        0,
+        maxDepth,
+        triggerLog,
+        shared.adjacencyGraph,
+        shared.runtimeTableIndex,
+        shared.executionPolicy,
+        shared.collector,
+        `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
+      );
+      nextState = emittedEventResult.state;
+      nextRng = emittedEventResult.rng;
+      triggerLog = emittedEventResult.triggerLog;
+    }
+    triggerLog = [
+      ...triggerLog,
+      createDeferredLifecycleTraceEntry('executed', deferredEventEffect),
+    ];
+  }
+  return {
+    stateWithRng: {
+      ...nextState,
+      rng: nextRng.state,
+    },
+    triggerFirings: triggerLog,
   };
 };
 
@@ -739,9 +860,11 @@ const applyMoveCore = (
   move: Move,
   options?: ExecutionOptions,
   coreOptions?: ApplyMoveCoreOptions,
+  cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  validateTurnFlowRuntimeStateInvariants(state);
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtime = coreOptions?.executionRuntime ?? createMoveExecutionRuntime(options, coreOptions?.phaseTransitionBudget);
   if (coreOptions?.executionRuntime !== undefined) {
     validatedMaxPhaseTransitionsPerMove(options);
@@ -754,17 +877,27 @@ const applyMoveCore = (
     ...(runtime.executionPolicy === undefined ? {} : { executionPolicy: runtime.executionPolicy }),
   };
 
-  const executed = executeMoveAction(def, state, move, options, coreOptions, shared);
+  const executed = executeMoveAction(def, state, move, options, coreOptions, shared, cachedRuntime);
   const turnFlowResult = move.freeOperation === true
-    ? {
-      state: consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move),
-      traceEntries: [] as readonly TriggerLogEntry[],
-      boundaryDurations: undefined,
-    }
-    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move);
-  const boundaryExpiryResult = applyBoundaryExpiry(
+    ? (() => {
+      const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move);
+      return {
+        state: consumed.state,
+        traceEntries: consumed.traceEntries,
+        boundaryDurations: undefined,
+        releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
+      };
+    })()
+    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect);
+  const deferredExecution = applyReleasedDeferredEventEffects(
     def,
     turnFlowResult.state,
+    turnFlowResult.releasedDeferredEventEffects ?? [],
+    shared,
+  );
+  const boundaryExpiryResult = applyBoundaryExpiry(
+    def,
+    deferredExecution.stateWithRng,
     turnFlowResult.boundaryDurations,
     undefined,
     shared.executionPolicy,
@@ -781,12 +914,13 @@ const applyMoveCore = (
       lifecycleAndAdvanceLog,
       runtime.executionPolicy,
       runtime.collector,
+      cachedRuntime,
     )
     : boundaryExpiryResult.state;
 
   const stateWithHash = {
     ...progressedState,
-    stateHash: computeFullHash(createZobristTable(def), progressedState),
+    stateHash: computeFullHash(cachedRuntime?.zobristTable ?? createZobristTable(def), progressedState),
   };
 
   return {
@@ -794,6 +928,7 @@ const applyMoveCore = (
     triggerFirings: [
       ...executed.triggerFirings,
       ...turnFlowResult.traceEntries,
+      ...deferredExecution.triggerFirings,
       ...boundaryExpiryResult.traceEntries,
       ...lifecycleAndAdvanceLog,
     ],
@@ -853,6 +988,7 @@ const applySimultaneousSubmission = (
   state: GameState,
   move: Move,
   options?: ExecutionOptions,
+  cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
   validatedMaxPhaseTransitionsPerMove(options);
   if (move.compound !== undefined) {
@@ -862,7 +998,7 @@ const applySimultaneousSubmission = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
-  validateMove(def, state, move);
+  validateMove(def, state, move, cachedRuntime);
 
   const currentPlayer = Number(state.activePlayer);
   const submittedBefore = state.turnOrderState.submitted;
@@ -875,7 +1011,7 @@ const applySimultaneousSubmission = (
     ...state.turnOrderState.pending,
     [currentPlayer]: submittedMove,
   };
-  const table = createZobristTable(def);
+  const table = cachedRuntime?.zobristTable ?? createZobristTable(def);
   const hasRemainingPlayers = Object.values(submitted).some((value) => value === false);
 
   if (hasRemainingPlayers) {
@@ -937,6 +1073,7 @@ const applySimultaneousSubmission = (
         skipAdvanceToDecisionPoint: true,
         executionRuntime: commitRuntime,
       },
+      cachedRuntime,
     );
     committedState = applied.state;
     triggerFirings.push(...applied.triggerFirings);
@@ -954,7 +1091,7 @@ const applySimultaneousSubmission = (
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = options?.advanceToDecisionPoint === false
     ? resetState
-    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog, commitRuntime.executionPolicy, commitRuntime.collector);
+    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog, commitRuntime.executionPolicy, commitRuntime.collector, cachedRuntime);
   const finalState = {
     ...progressedState,
     stateHash: computeFullHash(table, progressedState),
@@ -968,9 +1105,9 @@ const applySimultaneousSubmission = (
   };
 };
 
-export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions): ApplyMoveResult => {
+export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions, runtime?: GameDefRuntime): ApplyMoveResult => {
   if (def.turnOrder?.type === 'simultaneous') {
-    return applySimultaneousSubmission(def, state, move, options);
+    return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  return applyMoveCore(def, state, move, options);
+  return applyMoveCore(def, state, move, options, undefined, runtime);
 };

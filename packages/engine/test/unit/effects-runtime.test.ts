@@ -41,6 +41,7 @@ const makeDef = (): GameDef => ({
 const makeState = (): GameState => ({
   globalVars: { x: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'board:none': [],

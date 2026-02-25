@@ -122,21 +122,21 @@ describe('FITL coup commitment phase production wiring', () => {
     const result = applyMoveWithResolvedDecisionIds(def, setup, resolveMove!, {
       overrides: [
         {
-          match: /commitTroopsFromAvailable/,
+          when: (request) => /commitTroopsFromAvailable/.test(request.name),
           value: (request) =>
             request.options
               .slice(0, request.max ?? request.options.length)
               .map((option) => option.value as string),
         },
         {
-          match: /commitBasesFromAvailable/,
+          when: (request) => /commitBasesFromAvailable/.test(request.name),
           value: (request) =>
             request.options
               .slice(0, request.max ?? request.options.length)
               .map((option) => option.value as string),
         },
         {
-          match: /commitTroopDestFromAvailable|commitBaseDestFromAvailable/,
+          when: (request) => /commitTroopDestFromAvailable|commitBaseDestFromAvailable/.test(request.name),
           value: 'saigon:none',
         },
       ],
@@ -179,10 +179,10 @@ describe('FITL coup commitment phase production wiring', () => {
         applyMoveWithResolvedDecisionIds(def, setup, resolveMove!, {
           overrides: [
             {
-              match: /commitTroopsFromAvailable/,
+              when: (request) => /commitTroopsFromAvailable/.test(request.name),
               value: (request) => request.options.slice(0, 1).map((option) => option.value as string),
             },
-            { match: /commitTroopDestFromAvailable/, value: 'casualties-US:none' },
+            { when: (request) => /commitTroopDestFromAvailable/.test(request.name), value: 'casualties-US:none' },
           ],
         }),
       /invalid selection for chooseOne|EFFECT_RUNTIME/,

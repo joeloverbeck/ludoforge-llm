@@ -17,20 +17,19 @@ describe('PreGameConfigScreen', () => {
     renderScreen();
 
     const slider = screen.getByTestId('pre-game-player-count');
-    expect(slider.getAttribute('min')).toBe('2');
+    expect(slider.getAttribute('min')).toBe('4');
     expect(slider.getAttribute('max')).toBe('4');
   });
 
-  it('renders seat rows for current player count and updates when count changes', () => {
+  it('renders seat rows for fixed FITL player count', () => {
     renderScreen();
 
     expect(screen.getByTestId('pre-game-seat-row-0')).toBeTruthy();
     expect(screen.getByTestId('pre-game-seat-row-1')).toBeTruthy();
-    expect(screen.queryByTestId('pre-game-seat-row-2')).toBeNull();
-
-    fireEvent.change(screen.getByTestId('pre-game-player-count'), { target: { value: '4' } });
-
+    expect(screen.getByTestId('pre-game-seat-row-2')).toBeTruthy();
     expect(screen.getByTestId('pre-game-seat-row-3')).toBeTruthy();
+
+    // FITL is fixed at 4 players; slider interaction is unnecessary here.
   });
 
   it('uses faction display names when visual config provides them', () => {
@@ -78,6 +77,8 @@ describe('PreGameConfigScreen', () => {
     expect(onStartGame).toHaveBeenCalledWith(12345, [
       { playerId: 0, type: 'human' },
       { playerId: 1, type: 'ai-greedy' },
+      { playerId: 2, type: 'ai-random' },
+      { playerId: 3, type: 'ai-random' },
     ]);
   });
 
@@ -146,7 +147,7 @@ function renderScreen(
     gameMetadata: {
       name: 'Fire in the Lake',
       description: 'desc',
-      playerMin: 2,
+      playerMin: 4,
       playerMax: 4,
       factionIds: ['us', 'arvn', 'nva', 'vc'],
     },

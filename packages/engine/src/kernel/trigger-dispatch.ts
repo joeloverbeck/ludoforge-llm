@@ -135,7 +135,8 @@ const matchesEvent = (trigger: TriggerDef, event: TriggerEvent): boolean => {
         triggerEvent.type === 'varChanged' &&
         (triggerEvent.scope === undefined || triggerEvent.scope === event.scope) &&
         (triggerEvent.var === undefined || triggerEvent.var === event.var) &&
-        (triggerEvent.player === undefined || triggerEvent.player === event.player)
+        (triggerEvent.player === undefined || triggerEvent.player === event.player) &&
+        (triggerEvent.zone === undefined || triggerEvent.zone === event.zone)
       );
   }
 };
@@ -159,6 +160,7 @@ const createEventBindings = (event: TriggerEvent): Readonly<Record<string, unkno
       $scope: event.scope,
       $var: event.var,
       $player: event.player,
+      $zone: event.zone,
       $oldValue: event.oldValue,
       $newValue: event.newValue,
     };

@@ -562,6 +562,28 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
+  it('computes layout once during init when gameDef already exists in store state', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:deck', 'zone:burn', 'zone:hand:p1']));
+    const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn', 'zone:hand:p1']);
+    store.setState({ gameDef });
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(mockedGetOrComputeLayout).toHaveBeenCalledTimes(1);
+    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef, TEST_VISUAL_CONFIG_PROVIDER);
+
+    runtime.destroy();
+  });
+
   it('routes animation control state to animation controller', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));

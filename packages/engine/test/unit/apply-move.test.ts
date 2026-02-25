@@ -74,6 +74,7 @@ phase: [asPhaseId('main')],
 const createState = (): GameState => ({
   globalVars: { energy: 5, score: 0, triggered: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,
@@ -167,6 +168,115 @@ const createEventDynamicDecisionState = (): GameState => ({
   },
   actionUsage: {},
 });
+
+const createDeferredDecisionEventDef = (withFreeGrant: boolean): GameDef =>
+  ({
+    metadata: { id: withFreeGrant ? 'deferred-decision-with-grant' : 'deferred-decision-no-grant', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    constants: {},
+    globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+    ],
+    tokenTypes: [{ id: 'card', props: {} }],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { seats: ['0', '1'], overrideWindows: [] },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+        capabilities: ['cardEvent'],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: asZoneId('deck:none'),
+        discardZone: asZoneId('played:none'),
+        cards: [
+          {
+            id: 'card-deferred',
+            title: 'Deferred Card',
+            sideMode: 'single',
+            unshaded: {
+              effectTiming: 'afterGrants',
+              ...(withFreeGrant
+                ? {
+                  freeOperationGrants: [{
+                    seat: '0',
+                    sequence: { chain: 'seq', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                  }],
+                }
+                : {}),
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$delta',
+                    bind: '$delta',
+                    options: { query: 'enums', values: [1, 2] },
+                  },
+                },
+                { addVar: { scope: 'global', var: 'resolved', delta: { ref: 'binding', name: '$delta' } } },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }) as unknown as GameDef;
+
+const createDeferredDecisionEventState = (def: GameDef): GameState => {
+  const base = initialState(def, 17, 2).state;
+  return {
+    ...base,
+    activePlayer: asPlayerId(0),
+    zones: {
+      ...base.zones,
+      'deck:none': [],
+      'played:none': [{ id: asTokenId('tok-card-deferred'), type: 'card', props: { cardId: 'card-deferred' } }],
+      'lookahead:none': [],
+      'leader:none': [],
+    },
+  };
+};
 
 describe('applyMove', () => {
   it('applies cost then effects, increments action usage, dispatches actionResolved trigger, and updates hash', () => {
@@ -1512,6 +1622,102 @@ phase: [asPhaseId('main')],
     assert.equal(requireCardDrivenRuntime(secondFree).pendingFreeOperationGrants, undefined);
   });
 
+  it('throws runtime contract error when released deferred actorPlayer is out of range', () => {
+    const def: GameDef = {
+      metadata: { id: 'deferred-actor-player-range', players: { min: 4, max: 4 } },
+      constants: {},
+      globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [{ effects: [] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const start = initialState(def, 77, 4).state;
+    const withGrant = withPendingFreeOperationGrant(start, {
+      actionIds: ['operate'],
+      sequenceBatchId: 'batch-1',
+    });
+    const runtime = requireCardDrivenRuntime(withGrant);
+    const malformedState: GameState = {
+      ...withGrant,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          pendingDeferredEventEffects: [
+            {
+              deferredId: 'deferred-1',
+              requiredGrantBatchIds: ['batch-1'],
+              effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
+              moveParams: {},
+              actorPlayer: withGrant.playerCount,
+              actionId: 'operate',
+            },
+          ],
+        },
+      },
+    };
+
+    assert.throws(
+      () =>
+        applyMove(def, malformedState, {
+          actionId: asActionId('operate'),
+          params: {},
+          freeOperation: true,
+        }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /pendingDeferredEventEffects\[0\]\.actorPlayer out of range/);
+        assert.match(String(details.message), /actorPlayer=4/);
+        assert.match(String(details.message), /playerCount=4/);
+        assert.match(String(details.message), /actionId=operate/);
+        return true;
+      },
+    );
+  });
+
   it('executes stages stage effects normally for free operations', () => {
     const def: GameDef = {
       metadata: { id: 'free-op-stages', players: { min: 2, max: 2 } },
@@ -1754,7 +1960,10 @@ phase: [asPhaseId('main')],
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
       perPlayerVars: [],
-      zones: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }] },
@@ -1765,48 +1974,79 @@ capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
-          params: [
-            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
-            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
-          ],
+          params: [],
           pre: null,
           cost: [],
-          effects: [
-            {
-              if: {
-                when: { op: '==', left: { ref: 'binding', name: 'side' }, right: 'unshaded' },
-                then: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
-                else: [{ addVar: { scope: 'global', var: 'resolved', delta: 20 } }],
-              },
-            },
-            {
-              if: {
-                when: { op: '==', left: { ref: 'binding', name: 'branch' }, right: 'a' },
-                then: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
-                else: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }],
-              },
-            },
-          ],
+          effects: [],
           limits: [],
         },
       ],
       triggers: [],
-      terminal: { conditions: [] },
+      terminal: {
+        conditions: [
+          {
+            when: { op: '>=', left: { ref: 'gvar', var: 'resolved' }, right: 1 },
+            result: { type: 'draw' },
+          },
+        ],
+      },
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'dual',
+              unshaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
+                branches: [
+                  { id: 'a', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] },
+                  { id: 'b', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }] },
+                ],
+              },
+              shaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 20 } }],
+                branches: [
+                  { id: 'a', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] },
+                  { id: 'b', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }] },
+                ],
+              },
+            },
+          ],
+        },
+      ],
     } as unknown as GameDef;
 
     const state: GameState = {
       ...createState(),
       globalVars: { resolved: 0 },
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
       actionUsage: {},
     };
 
     const unshadedA = applyMove(def, state, {
       actionId: asActionId('event'),
-      params: { side: 'unshaded', branch: 'a' },
+      params: {
+        eventCardId: 'card-1',
+        eventDeckId: 'deck-1',
+        side: 'unshaded',
+        branch: 'a',
+      },
     });
     const shadedB = applyMove(def, state, {
       actionId: asActionId('event'),
-      params: { side: 'shaded', branch: 'b' },
+      params: {
+        eventCardId: 'card-1',
+        eventDeckId: 'deck-1',
+        side: 'shaded',
+        branch: 'b',
+      },
     });
 
     assert.equal(unshadedA.state.globalVars.resolved, 11);
@@ -1951,13 +2191,45 @@ phase: [asPhaseId('main')],
       actionUsage: {},
     };
 
-    const result = applyMove(def, state, { actionId: asActionId('event'), params: {} });
+    const result = applyMove(
+      def,
+      state,
+      { actionId: asActionId('event'), params: {} },
+      { advanceToDecisionPoint: false },
+    );
     assert.equal(result.state.globalVars.resolved, 0);
   });
 
   it('rejects incomplete dynamic event-side decision params before effect runtime', () => {
     const def = createEventDynamicDecisionDef();
     const state = createEventDynamicDecisionState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
+        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        return true;
+      },
+    );
+  });
+
+  it('allows incomplete deferred event-side params at event time when afterGrants has pending free-op grants', () => {
+    const def = createDeferredDecisionEventDef(true);
+    const state = createDeferredDecisionEventState(def);
+
+    const result = applyMove(def, state, { actionId: asActionId('event'), params: {} });
+    assert.equal(result.state.globalVars.resolved, 0);
+    const runtime = requireCardDrivenRuntime(result.state);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingDeferredEventEffects?.length, 1);
+  });
+
+  it('keeps incomplete deferred event-side params illegal when afterGrants has no free-op grants', () => {
+    const def = createDeferredDecisionEventDef(false);
+    const state = createDeferredDecisionEventState(def);
 
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),

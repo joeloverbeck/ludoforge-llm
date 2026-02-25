@@ -46,6 +46,7 @@ function makeState(overrides?: Partial<GameState>): GameState {
   return {
     globalVars: { resources: 30 },
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: {
       'quangTri:none': [],

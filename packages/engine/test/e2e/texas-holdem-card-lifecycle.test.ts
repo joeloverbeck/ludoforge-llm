@@ -15,6 +15,8 @@ import { runGame } from '../../src/sim/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
+const RUN_SLOW_E2E = process.env.RUN_SLOW_E2E === '1';
+
 const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
   assertNoErrors(parsed);
@@ -72,118 +74,120 @@ describe('texas hold\'em card lifecycle e2e', () => {
     );
   });
 
-  /**
-   * T5: Run longer games across multiple seeds and verify the deck never
-   * runs empty during a phase that needs drawing.
-   */
-  it('deck never runs empty across a multi-hand game (stress test)', () => {
-    const def = compileTexasDef();
+  if (RUN_SLOW_E2E) {
+    /**
+     * T5: Run longer games across multiple seeds and verify the deck never
+     * runs empty during a phase that needs drawing.
+     */
+    it('[slow] deck never runs empty across a multi-hand game (stress test)', () => {
+      const def = compileTexasDef();
 
-    for (const { playerCount, seed, maxTurns } of [
-      { playerCount: 2, seed: 200, maxTurns: 500 },
-      { playerCount: 2, seed: 201, maxTurns: 500 },
-      { playerCount: 2, seed: 202, maxTurns: 500 },
-      { playerCount: 4, seed: 300, maxTurns: 500 },
-      { playerCount: 6, seed: 400, maxTurns: 500 },
-    ]) {
-      const agents = createRandomAgents(playerCount);
-      const trace = runGame(def, seed, agents, maxTurns, playerCount);
-
-      const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
-      const totalCards = totalTokenCount(trace.finalState);
-
-      assert.equal(
-        totalCards,
-        52,
-        `[seed=${seed}, players=${playerCount}] total cards is ${totalCards}, expected 52`,
-      );
-
-      if (handsPlayed >= 5) {
-        const deckSize = zoneSize(trace.finalState, 'deck:none');
-        const muckSize = zoneSize(trace.finalState, 'muck:none');
-
-        assert.ok(
-          deckSize > 0 || trace.stopReason === 'terminal',
-          `[seed=${seed}, players=${playerCount}] deck is empty after ${handsPlayed} hands — recycling broken (muck=${muckSize})`,
-        );
-      }
-    }
-  });
-
-  /**
-   * T6: Zone-specific conservation — total cards across all zones = 52.
-   */
-  it('card conservation holds across all zones in final state', () => {
-    const def = compileTexasDef();
-
-    for (const seed of [100, 150, 200, 250, 300]) {
-      for (const playerCount of [2, 3, 4, 6]) {
+      for (const { playerCount, seed, maxTurns } of [
+        { playerCount: 2, seed: 200, maxTurns: 500 },
+        { playerCount: 2, seed: 201, maxTurns: 500 },
+        { playerCount: 2, seed: 202, maxTurns: 500 },
+        { playerCount: 4, seed: 300, maxTurns: 500 },
+        { playerCount: 6, seed: 400, maxTurns: 500 },
+      ]) {
         const agents = createRandomAgents(playerCount);
-        const trace = runGame(def, seed, agents, 200, playerCount);
+        const trace = runGame(def, seed, agents, maxTurns, playerCount);
 
-        const deckSize = zoneSize(trace.finalState, 'deck:none');
-        const muckSize = zoneSize(trace.finalState, 'muck:none');
-        const communitySize = zoneSize(trace.finalState, 'community:none');
-        const burnSize = zoneSize(trace.finalState, 'burn:none');
-
-        let handTotal = 0;
-        for (let player = 0; player < playerCount; player += 1) {
-          handTotal += zoneSize(trace.finalState, `hand:${player}`);
-        }
-
-        const total = deckSize + muckSize + communitySize + burnSize + handTotal;
+        const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
+        const totalCards = totalTokenCount(trace.finalState);
 
         assert.equal(
-          total,
+          totalCards,
           52,
-          `[seed=${seed}, players=${playerCount}] card conservation violated: deck=${deckSize} muck=${muckSize} community=${communitySize} burn=${burnSize} hands=${handTotal} total=${total}`,
+          `[seed=${seed}, players=${playerCount}] total cards is ${totalCards}, expected 52`,
         );
+
+        if (handsPlayed >= 5) {
+          const deckSize = zoneSize(trace.finalState, 'deck:none');
+          const muckSize = zoneSize(trace.finalState, 'muck:none');
+
+          assert.ok(
+            deckSize > 0 || trace.stopReason === 'terminal',
+            `[seed=${seed}, players=${playerCount}] deck is empty after ${handsPlayed} hands — recycling broken (muck=${muckSize})`,
+          );
+        }
       }
-    }
-  });
+    });
 
-  /**
-   * T7: Long tournament multi-hand stress test.
-   * Verifies card lifecycle invariants hold across extended play.
-   */
-  it('survives long tournament runs without card lifecycle violations', () => {
-    const def = compileTexasDef();
+    /**
+     * T6: Zone-specific conservation — total cards across all zones = 52.
+     */
+    it('[slow] card conservation holds across all zones in final state', () => {
+      const def = compileTexasDef();
 
-    const configs = [
-      { playerCount: 2, seed: 500, maxTurns: 600 },
-      { playerCount: 4, seed: 501, maxTurns: 600 },
-      { playerCount: 6, seed: 502, maxTurns: 600 },
-    ];
+      for (const seed of [100, 150, 200, 250, 300]) {
+        for (const playerCount of [2, 3, 4, 6]) {
+          const agents = createRandomAgents(playerCount);
+          const trace = runGame(def, seed, agents, 200, playerCount);
 
-    for (const { playerCount, seed, maxTurns } of configs) {
-      const agents = createRandomAgents(playerCount);
-      const trace = runGame(def, seed, agents, maxTurns, playerCount);
+          const deckSize = zoneSize(trace.finalState, 'deck:none');
+          const muckSize = zoneSize(trace.finalState, 'muck:none');
+          const communitySize = zoneSize(trace.finalState, 'community:none');
+          const burnSize = zoneSize(trace.finalState, 'burn:none');
 
-      const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
-      const totalCards = totalTokenCount(trace.finalState);
+          let handTotal = 0;
+          for (let player = 0; player < playerCount; player += 1) {
+            handTotal += zoneSize(trace.finalState, `hand:${player}`);
+          }
 
-      assert.equal(
-        totalCards,
-        52,
-        `[seed=${seed}, players=${playerCount}] total cards ${totalCards} != 52 after ${handsPlayed} hands`,
-      );
+          const total = deckSize + muckSize + communitySize + burnSize + handTotal;
 
-      if (playerCount === 2) {
-        assert.ok(
-          handsPlayed >= 8 || trace.stopReason === 'terminal',
-          `[seed=${seed}] expected >= 8 hands with 2 players over ${maxTurns} turns, got ${handsPlayed} (stop=${trace.stopReason})`,
+          assert.equal(
+            total,
+            52,
+            `[seed=${seed}, players=${playerCount}] card conservation violated: deck=${deckSize} muck=${muckSize} community=${communitySize} burn=${burnSize} hands=${handTotal} total=${total}`,
+          );
+        }
+      }
+    });
+
+    /**
+     * T7: Long tournament multi-hand stress test.
+     * Verifies card lifecycle invariants hold across extended play.
+     */
+    it('[slow] survives long tournament runs without card lifecycle violations', () => {
+      const def = compileTexasDef();
+
+      const configs = [
+        { playerCount: 2, seed: 500, maxTurns: 600 },
+        { playerCount: 4, seed: 501, maxTurns: 600 },
+        { playerCount: 6, seed: 502, maxTurns: 600 },
+      ];
+
+      for (const { playerCount, seed, maxTurns } of configs) {
+        const agents = createRandomAgents(playerCount);
+        const trace = runGame(def, seed, agents, maxTurns, playerCount);
+
+        const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
+        const totalCards = totalTokenCount(trace.finalState);
+
+        assert.equal(
+          totalCards,
+          52,
+          `[seed=${seed}, players=${playerCount}] total cards ${totalCards} != 52 after ${handsPlayed} hands`,
         );
-      }
 
-      const muckSize = zoneSize(trace.finalState, 'muck:none');
-      if (handsPlayed >= 2) {
-        assert.ok(
-          muckSize < 52,
-          `[seed=${seed}, players=${playerCount}] all cards in muck after ${handsPlayed} hands — recycling broken`,
-        );
+        if (playerCount === 2) {
+          assert.ok(
+            handsPlayed >= 8 || trace.stopReason === 'terminal',
+            `[seed=${seed}] expected >= 8 hands with 2 players over ${maxTurns} turns, got ${handsPlayed} (stop=${trace.stopReason})`,
+          );
+        }
+
+        const muckSize = zoneSize(trace.finalState, 'muck:none');
+        if (handsPlayed >= 2) {
+          assert.ok(
+            muckSize < 52,
+            `[seed=${seed}, players=${playerCount}] all cards in muck after ${handsPlayed} hands — recycling broken`,
+          );
+        }
       }
-    }
-  });
+    });
+  }
 
   /**
    * T2: Active players hold exactly 2 cards at decision points during betting phases.

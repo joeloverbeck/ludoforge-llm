@@ -34,6 +34,7 @@ const makeDef = (): GameDef => ({
 const makeState = (): GameState => ({
   globalVars: { a: 3, b: 5 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [],
@@ -238,8 +239,9 @@ describe('evalCondition', () => {
       () => evalCondition({ op: 'zonePropIncludes', zone: 'hue', prop: 'population', value: 2 }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'TYPE_MISMATCH') &&
-        typeof error.message === 'string' &&
-        error.message.includes('zoneProp'),
+        typeof error.context === 'object' &&
+        error.context !== null &&
+        Object.hasOwn(error.context, 'condition'),
     );
   });
 
@@ -247,7 +249,9 @@ describe('evalCondition', () => {
     const ctx = makeCtx();
     assert.throws(
       () => evalCondition({ op: 'zonePropIncludes', zone: 'unknown', prop: 'terrainTags', value: 'highland' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND') &&
+        error.context?.zoneId === 'unknown',
     );
   });
 

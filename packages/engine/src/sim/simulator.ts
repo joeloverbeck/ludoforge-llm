@@ -1,4 +1,4 @@
-import { applyMove, createRng, initialState, legalMoves, terminalResult } from '../kernel/index.js';
+import { applyMove, createGameDefRuntime, createRng, initialState, legalMoves, terminalResult } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
 import type {
   Agent,
@@ -46,6 +46,7 @@ export const runGame = (
   validateSeed(seed);
   validateMaxTurns(maxTurns);
   const validatedDef = assertValidatedGameDef(def);
+  const runtime = createGameDefRuntime(validatedDef);
 
   let state = initialState(validatedDef, seed, playerCount).state;
   if (agents.length !== state.playerCount) {
@@ -60,7 +61,7 @@ export const runGame = (
   let stopReason: SimulationStopReason = 'maxTurns';
 
   while (true) {
-    const terminal = terminalResult(validatedDef, state);
+    const terminal = terminalResult(validatedDef, state, runtime);
     if (terminal !== null) {
       result = terminal;
       stopReason = 'terminal';
@@ -72,7 +73,7 @@ export const runGame = (
       break;
     }
 
-    const legal = legalMoves(validatedDef, state);
+    const legal = legalMoves(validatedDef, state, undefined, runtime);
     if (legal.length === 0) {
       stopReason = 'noLegalMoves';
       break;
@@ -91,11 +92,12 @@ export const runGame = (
       playerId: player,
       legalMoves: legal,
       rng: agentRng,
+      runtime,
     });
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
-    const applied = applyMove(validatedDef, state, selected.move, options);
+    const applied = applyMove(validatedDef, state, selected.move, options, runtime);
     state = applied.state;
 
     moveLogs.push({

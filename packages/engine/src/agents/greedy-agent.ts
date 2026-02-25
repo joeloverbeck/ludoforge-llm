@@ -45,14 +45,14 @@ export class GreedyAgent implements Agent {
     let rng: Rng = input.rng;
 
     for (const move of input.legalMoves) {
-      const choiceState = legalChoicesEvaluate(input.def, input.state, move);
+      const choiceState = legalChoicesEvaluate(input.def, input.state, move, undefined, input.runtime);
       if (choiceState.kind === 'illegal') {
         continue;
       }
 
       const attempts = choiceState.kind === 'pending' ? this.completionsPerTemplate : 1;
       for (let i = 0; i < attempts; i += 1) {
-        const result = completeTemplateMove(input.def, input.state, move, rng);
+        const result = completeTemplateMove(input.def, input.state, move, rng, input.runtime);
         if (result !== null) {
           expandedMoves.push(result.move);
           rng = result.rng;
@@ -79,7 +79,7 @@ export class GreedyAgent implements Agent {
     const tiedBestMoves: Move[] = [];
 
     for (const move of candidates.moves) {
-      const nextState = applyMove(input.def, input.state, move).state;
+      const nextState = applyMove(input.def, input.state, move, undefined, input.runtime).state;
       const score = evaluateState(input.def, nextState, input.playerId);
       if (score > bestScore) {
         bestScore = score;

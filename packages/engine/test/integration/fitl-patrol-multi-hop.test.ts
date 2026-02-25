@@ -42,7 +42,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const base = makeIsolatedInitialState(def, 211, 2);
+    const base = makeIsolatedInitialState(def, 211, 4);
     const cubeId = 'patrol-us-multi-hop-cube';
 
     const state: GameState = {
@@ -70,7 +70,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const base = makeIsolatedInitialState(def, 223, 2);
+    const base = makeIsolatedInitialState(def, 223, 4);
     const cubeId = 'patrol-arvn-multi-hop-cube';
 
     const state: GameState = {
@@ -100,7 +100,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const base = makeIsolatedInitialState(def, 227, 2);
+    const base = makeIsolatedInitialState(def, 227, 4);
     const cubeId = 'patrol-us-adjacent-enemy-source-cube';
 
     const state: GameState = {
@@ -131,7 +131,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const base = makeIsolatedInitialState(def, 229, 2);
+    const base = makeIsolatedInitialState(def, 229, 4);
     const cubeId = 'patrol-us-blocked-chain-cube';
 
     const state: GameState = {

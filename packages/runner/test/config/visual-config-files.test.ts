@@ -76,6 +76,12 @@ describe('visual-config.yaml files', () => {
       color: '#8b7355',
       width: 2,
     });
+    expect(parsed.factions).toMatchObject({
+      us: { color: '#808000', displayName: 'United States' },
+      arvn: { color: '#ffff00', displayName: 'ARVN' },
+      nva: { color: '#ff0000', displayName: 'NVA' },
+      vc: { color: '#00bfff', displayName: 'Viet Cong' },
+    });
 
     const attributeRules = parsed.zones?.attributeRules ?? [];
     expect(attributeRules).toHaveLength(5);

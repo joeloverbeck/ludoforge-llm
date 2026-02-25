@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGameWorker, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
-import { ALT_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import { ALT_TEST_DEF, CHOOSE_MIXED_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import * as runtime from '@ludoforge/engine/runtime';
 import { asActionId, type Move } from '@ludoforge/engine/runtime';
 
 const expectWorkerError = (error: unknown, code: WorkerError['code']): WorkerError => {
@@ -30,6 +31,7 @@ describe('createGameWorker', () => {
       () => worker.enumerateLegalMoves(),
       () => worker.legalChoices(LEGAL_TICK_MOVE),
       () => worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
+      () => worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
       () => worker.playSequence([LEGAL_TICK_MOVE], undefined, nextStamp(), undefined),
       () => worker.terminalResult(),
       () => worker.getState(),
@@ -82,11 +84,48 @@ describe('createGameWorker', () => {
     expect(traced[0]?.effectTrace).toBeDefined();
   });
 
+  it('supports per-call trace override for applyTemplateMove', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 74, undefined, nextStamp());
+
+    const noTrace = await worker.applyTemplateMove(LEGAL_TICK_MOVE, { trace: false }, nextStamp());
+    expect(noTrace.outcome).toBe('applied');
+    if (noTrace.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(noTrace.result.effectTrace).toBeUndefined();
+
+    const traced = await worker.applyTemplateMove(LEGAL_TICK_MOVE, { trace: true }, nextStamp());
+    expect(traced.outcome).toBe('applied');
+    if (traced.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(traced.result.effectTrace).toBeDefined();
+  });
+
   it('supports explicit playerCount on init', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
     const result = await worker.init(ALT_TEST_DEF, 8, { playerCount: 3 }, nextStamp());
     expect(result.state.playerCount).toBe(3);
+  });
+
+  it('keeps worker uninitialized when init fails during initial state construction', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    vi.spyOn(runtime, 'initialState').mockImplementation(() => {
+      throw new Error('forced init failure');
+    });
+
+    await expect(worker.init(TEST_DEF, 101, undefined, nextStamp())).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'forced init failure',
+    });
+
+    await expect(worker.getState()).rejects.toMatchObject({ code: 'NOT_INITIALIZED' });
+    await expect(worker.legalMoves()).rejects.toMatchObject({ code: 'NOT_INITIALIZED' });
+    expect(await worker.getHistoryLength()).toBe(0);
   });
 
   it('respects init-level trace config', async () => {
@@ -334,6 +373,29 @@ describe('createGameWorker', () => {
     expect(resetWithNewPlayerCount.playerCount).toBe(4);
   });
 
+  it('preserves prior state and history when reset init path fails', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 230, undefined, nextStamp());
+    const firstMove = await worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+    const stateBeforeFailedReset = firstMove.state;
+    const historyBeforeFailedReset = await worker.getHistoryLength();
+    const metadataBeforeFailedReset = await worker.getMetadata();
+
+    vi.spyOn(runtime, 'initialState').mockImplementation(() => {
+      throw new Error('forced reset failure');
+    });
+
+    await expect(worker.reset(undefined, 231, undefined, nextStamp())).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'forced reset failure',
+    });
+
+    expect(await worker.getState()).toEqual(stateBeforeFailedReset);
+    expect(await worker.getHistoryLength()).toBe(historyBeforeFailedReset);
+    expect(await worker.getMetadata()).toEqual(metadataBeforeFailedReset);
+  });
+
   it('loads and initializes a GameDef from URL', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
@@ -364,6 +426,29 @@ describe('createGameWorker', () => {
     });
   });
 
+  it('preserves prior state and history when loadFromUrl init path fails', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 240, undefined, nextStamp());
+    const firstMove = await worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+    const stateBeforeFailedLoad = firstMove.state;
+    const historyBeforeFailedLoad = await worker.getHistoryLength();
+    const metadataBeforeFailedLoad = await worker.getMetadata();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(ALT_TEST_DEF), { status: 200 })));
+    vi.spyOn(runtime, 'initialState').mockImplementation(() => {
+      throw new Error('forced load failure');
+    });
+
+    await expect(worker.loadFromUrl('https://example.com/game-def.json', 241, undefined, nextStamp())).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+      message: 'forced load failure',
+    });
+
+    expect(await worker.getState()).toEqual(stateBeforeFailedLoad);
+    expect(await worker.getHistoryLength()).toBe(historyBeforeFailedLoad);
+    expect(await worker.getMetadata()).toEqual(metadataBeforeFailedLoad);
+  });
+
   it('throws VALIDATION_FAILED when URL payload is invalid JSON', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
@@ -389,6 +474,97 @@ describe('createGameWorker', () => {
         source: 'URL https://example.com/invalid-def.json',
         receivedType: 'object',
       });
+    }
+  });
+
+  it('applyTemplateMove returns applied outcome for a template with pending decisions', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_ONE_TEST_DEF, 50, undefined, nextStamp());
+
+    const templateMove: Move = { actionId: asActionId('pick-one'), params: {} };
+    const outcome = await worker.applyTemplateMove(templateMove, undefined, nextStamp());
+
+    expect(outcome.outcome).toBe('applied');
+    if (outcome.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(outcome.move.actionId).toBe(templateMove.actionId);
+    expect(Object.keys(outcome.move.params).length).toBeGreaterThan(0);
+    expect(outcome.result.state).toEqual(await worker.getState());
+  });
+
+  it('applyTemplateMove passes through already-complete legal moves', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 51, undefined, nextStamp());
+
+    const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+
+    expect(outcome.outcome).toBe('applied');
+    if (outcome.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(outcome.move).toEqual(LEGAL_TICK_MOVE);
+    expect(outcome.result.state).toEqual(await worker.getState());
+  });
+
+  it('applyTemplateMove fills multiple decisions for a multi-choice action', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_MIXED_TEST_DEF, 52, undefined, nextStamp());
+
+    const templateMove: Move = { actionId: asActionId('pick-mixed'), params: {} };
+    const outcome = await worker.applyTemplateMove(templateMove, undefined, nextStamp());
+
+    expect(outcome.outcome).toBe('applied');
+    if (outcome.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(outcome.move.actionId).toBe(templateMove.actionId);
+    expect(Object.keys(outcome.move.params).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('applyTemplateMove returns uncompletable outcome when template cannot be completed', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 53, undefined, nextStamp());
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue(null);
+
+    const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+
+    expect(outcome).toEqual({ outcome: 'uncompletable' });
+    expect(await worker.getHistoryLength()).toBe(0);
+    expect((await worker.getState()).globalVars.tick).toBe(0);
+  });
+
+  it('applyTemplateMove returns illegal outcome and preserves state when apply is illegal', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 54, undefined, nextStamp());
+    const before = await worker.getState();
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ move: ILLEGAL_MOVE } as never);
+
+    const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+
+    expect(outcome.outcome).toBe('illegal');
+    if (outcome.outcome !== 'illegal') {
+      throw new Error('Expected illegal outcome.');
+    }
+    expect(outcome.error.code).toBe('ILLEGAL_MOVE');
+    expect(await worker.getHistoryLength()).toBe(0);
+    expect(await worker.getState()).toEqual(before);
+  });
+
+  it('applyTemplateMove throws NOT_INITIALIZED when worker is not initialized', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+
+    try {
+      await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
+      throw new Error('Expected applyTemplateMove to throw');
+    } catch (error) {
+      expectWorkerError(error, 'NOT_INITIALIZED');
     }
   });
 });

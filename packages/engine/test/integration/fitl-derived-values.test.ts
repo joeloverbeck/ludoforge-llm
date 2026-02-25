@@ -139,6 +139,7 @@ function buildStateFromScenario(
   return {
     globalVars: buildGlobalVars(scenario),
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 4,
     zones,
     nextTokenOrdinal: ordinal,

@@ -3,7 +3,7 @@ import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
-import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
+import { classifyMoveDecisionSequenceSatisfiability, isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
@@ -24,7 +24,9 @@ import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
@@ -253,6 +255,7 @@ function enumerateCurrentEventMoves(
   def: GameDef,
   state: GameState,
   enumeration: MoveEnumerationState,
+  runtime?: GameDefRuntime,
 ): void {
   if (enumeration.templateBudgetExceeded) {
     return;
@@ -308,20 +311,27 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
+    let classification: 'satisfiable' | 'unsatisfiable' | 'unknown';
     try {
-      if (
-        !isMoveDecisionSequenceSatisfiable(def, state, move, {
+      classification = classifyMoveDecisionSequenceSatisfiability(
+        def,
+        state,
+        move,
+        {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-        })
-      ) {
-        continue;
-      }
+        },
+        runtime,
+      ).classification;
     } catch (error) {
       if (shouldDeferMissingBinding(error, 'legalMoves.eventDecisionSequence')) {
-        continue;
+        classification = 'unknown';
+      } else {
+        throw error;
       }
-      throw error;
+    }
+    if (classification === 'unsatisfiable') {
+      continue;
     }
     if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {
       return;
@@ -333,7 +343,9 @@ export const enumerateLegalMoves = (
   def: GameDef,
   state: GameState,
   options?: LegalMoveEnumerationOptions,
+  runtime?: GameDefRuntime,
 ): LegalMoveEnumerationResult => {
+  validateTurnFlowRuntimeStateInvariants(state);
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
 
@@ -349,8 +361,8 @@ export const enumerateLegalMoves = (
     templateBudgetExceeded: false,
     paramExpansionBudgetExceeded: false,
   };
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
 
   for (const action of def.actions) {
     if (enumeration.templateBudgetExceeded) {
@@ -382,10 +394,27 @@ export const enumerateLegalMoves = (
       );
     }
 
+    const eventAction = isCardEventAction(action);
     const beforeEventCount = enumeration.moves.length;
-    enumerateCurrentEventMoves(action, def, state, enumeration);
-    if (enumeration.moves.length > beforeEventCount) {
-      continue;
+    enumerateCurrentEventMoves(action, def, state, enumeration, runtime);
+    if (eventAction) {
+      if (enumeration.moves.length > beforeEventCount) {
+        continue;
+      }
+
+      // Card-event actions normally require a resolvable current card context.
+      // Fallback template enumeration is only allowed when no event decks exist
+      // (pure action-class tests), when a pipeline-backed template is needed,
+      // or when the action explicitly binds eventCardId and can be satisfied
+      // without a currently resolved card token.
+      const hasEventDecks = (def.eventDecks?.length ?? 0) > 0;
+      if (hasEventDecks && !hasActionPipeline) {
+        const hasResolvedCurrentCard = resolveCurrentEventCardState(def, state) !== null;
+        const actionDeclaresEventCardId = action.params.some((param) => param.name === 'eventCardId');
+        if (hasResolvedCurrentCard || !actionDeclaresEventCardId) {
+          continue;
+        }
+      }
     }
 
     if (!hasActionPipeline) {
@@ -418,6 +447,7 @@ export const enumerateLegalMoves = (
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
           },
+          runtime,
         )
       ) {
         continue;
@@ -440,4 +470,5 @@ export const legalMoves = (
   def: GameDef,
   state: GameState,
   options?: LegalMoveEnumerationOptions,
-): readonly Move[] => enumerateLegalMoves(def, state, options).moves;
+  runtime?: GameDefRuntime,
+): readonly Move[] => enumerateLegalMoves(def, state, options, runtime).moves;

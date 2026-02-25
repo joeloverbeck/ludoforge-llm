@@ -577,6 +577,95 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.turnOrder).toEqual([asPlayerId(0), asPlayerId(1)]);
   });
 
+  it('maps card-driven runtime seat ids to seat factions and visual display names', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 121, 2).state;
+    const { def: metadataDef, state: metadataState } = withStateMetadata(baseDef, baseState);
+    const baseTurnOrder = metadataDef.turnOrder;
+    if (baseTurnOrder === undefined || baseTurnOrder.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order for mapping test fixture.');
+    }
+
+    const def: GameDef = {
+      ...metadataDef,
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      turnOrder: {
+        ...baseTurnOrder,
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrder.config,
+          turnFlow: {
+            ...baseTurnOrder.config.turnFlow,
+            eligibility: {
+              ...baseTurnOrder.config.turnFlow.eligibility,
+              seats: ['0', '1'],
+            },
+            cardSeatOrderMapping: {
+              US: '0',
+              NVA: '1',
+            },
+          },
+        },
+      },
+    };
+
+    const state: GameState = {
+      ...metadataState,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['1', '0'],
+          eligibility: {
+            '0': true,
+            '1': true,
+          },
+          currentCard: {
+            firstEligible: '1',
+            secondEligible: '0',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          factions: {
+            us: { displayName: 'United States' },
+            nva: { displayName: 'North Vietnam' },
+          },
+        }),
+      }),
+    );
+
+    expect(model.players).toEqual([
+      {
+        id: asPlayerId(0),
+        displayName: 'United States',
+        isHuman: true,
+        isActive: true,
+        isEliminated: false,
+        factionId: 'us',
+      },
+      {
+        id: asPlayerId(1),
+        displayName: 'North Vietnam',
+        isHuman: true,
+        isActive: false,
+        isEliminated: false,
+        factionId: 'nva',
+      },
+    ]);
+    expect(model.turnOrder).toEqual([asPlayerId(1), asPlayerId(0)]);
+  });
+
   it('derives fixed-order turn order from currentIndex', () => {
     const def = compileFixture();
     const baseState = initialState(def, 22, 2).state;

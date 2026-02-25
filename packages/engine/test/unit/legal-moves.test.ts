@@ -120,6 +120,7 @@ phase: [asPhaseId('main')],
 const createState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [],
@@ -241,6 +242,48 @@ describe('legalMoves', () => {
     };
 
     assert.deepEqual(legalMoves(createDef(), state), []);
+  });
+
+  it('throws runtime contract error for invalid pending deferred actorPlayer in card-driven runtime state', () => {
+    const state: GameState = {
+      ...createState(),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingDeferredEventEffects: [
+            {
+              deferredId: 'deferred-invalid',
+              requiredGrantBatchIds: [],
+              effects: [],
+              moveParams: {},
+              actorPlayer: 2,
+              actionId: 'wrongActor',
+            },
+          ],
+        },
+      },
+    };
+
+    assert.throws(
+      () => legalMoves(createDef(), state),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /pendingDeferredEventEffects\[0\]\.actorPlayer out of range/);
+        return true;
+      },
+    );
   });
 
   it('skips actions whose fixed executor is outside current playerCount', () => {
@@ -1048,6 +1091,10 @@ phase: [asPhaseId('main')],
     const def: GameDef = {
       ...createDef(),
       metadata: { id: 'dual-use-event-selection-order', players: { min: 2, max: 2 } },
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
       actions: [
         {
           id: asActionId('event'),
@@ -1055,27 +1102,68 @@ capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
-          params: [
-            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
-            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
-          ],
+          params: [],
           pre: null,
           cost: [],
           effects: [],
           limits: [],
         },
       ],
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'dual',
+              unshaded: { effects: [], branches: [{ id: 'a' }, { id: 'b' }] },
+              shaded: { effects: [], branches: [{ id: 'a' }, { id: 'b' }] },
+            },
+          ],
+        },
+      ],
     } as unknown as GameDef;
 
     const expected: readonly Move[] = [
-      { actionId: asActionId('event'), params: { side: 'unshaded', branch: 'a' } },
-      { actionId: asActionId('event'), params: { side: 'unshaded', branch: 'b' } },
-      { actionId: asActionId('event'), params: { side: 'shaded', branch: 'a' } },
-      { actionId: asActionId('event'), params: { side: 'shaded', branch: 'b' } },
+      {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-1', eventDeckId: 'deck-1', side: 'unshaded', branch: 'a' },
+      },
+      {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-1', eventDeckId: 'deck-1', side: 'unshaded', branch: 'b' },
+      },
+      {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-1', eventDeckId: 'deck-1', side: 'shaded', branch: 'a' },
+      },
+      {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-1', eventDeckId: 'deck-1', side: 'shaded', branch: 'b' },
+      },
     ];
 
-    const activeZero = legalMoves(def, { ...createState(), activePlayer: asPlayerId(0), actionUsage: {} });
-    const activeOne = legalMoves(def, { ...createState(), activePlayer: asPlayerId(1), actionUsage: {} });
+    const activeZero = legalMoves(def, {
+      ...createState(),
+      activePlayer: asPlayerId(0),
+      actionUsage: {},
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
+    });
+    const activeOne = legalMoves(def, {
+      ...createState(),
+      activePlayer: asPlayerId(1),
+      actionUsage: {},
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
+    });
 
     assert.deepEqual(activeZero, expected);
     assert.deepEqual(activeOne, expected);

@@ -4,6 +4,7 @@
     "0": {},
     "1": {}
   },
+  "zoneVars": {},
   "playerCount": 2,
   "zones": {
     "hue:none": [],
@@ -21,7 +22,7 @@
       "0xda3e39cb94b95bf9"
     ]
   },
-  "stateHash": "0xa59ee229e8b7237b",
+  "stateHash": "0xb77a99ddd4e74465",
   "actionUsage": {},
   "markers": {},
   "globalMarkers": {},

@@ -21,6 +21,7 @@ const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): Eva
   state: {
     globalVars,
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: {},
     nextTokenOrdinal: 0,

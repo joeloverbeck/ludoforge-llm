@@ -1,4 +1,5 @@
 import type { Diagnostic } from './diagnostics.js';
+import { normalizeSeatKey } from './seat-resolution.js';
 import type { ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
@@ -79,6 +80,94 @@ export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void 
       });
     }
   });
+};
+
+export const validateCardSeatOrderMapping = (diagnostics: Diagnostic[], def: GameDef): void => {
+  if (def.turnOrder?.type !== 'cardDriven') {
+    return;
+  }
+
+  const turnFlow = def.turnOrder.config.turnFlow;
+  const seatSet = new Set(turnFlow.eligibility.seats);
+  const mapping = turnFlow.cardSeatOrderMapping ?? {};
+
+  const normalizedKeys = new Map<string, string>();
+  const sourceKeyByMappedSeat = new Map<string, string>();
+  for (const [sourceSeatKey, mappedSeat] of Object.entries(mapping)) {
+    const keyPath = `turnOrder.config.turnFlow.cardSeatOrderMapping[${JSON.stringify(sourceSeatKey)}]`;
+
+    if (!seatSet.has(mappedSeat)) {
+      diagnostics.push({
+        code: 'TURN_FLOW_CARD_SEAT_ORDER_MAPPING_TARGET_UNKNOWN_SEAT',
+        path: keyPath,
+        severity: 'error',
+        message: `cardSeatOrderMapping "${sourceSeatKey}" maps to "${mappedSeat}", which is not declared in turnFlow.eligibility.seats.`,
+        suggestion: 'Map each source seat key to one of turnFlow.eligibility.seats.',
+      });
+    }
+
+    const priorSource = sourceKeyByMappedSeat.get(mappedSeat);
+    if (priorSource !== undefined) {
+      diagnostics.push({
+        code: 'TURN_FLOW_CARD_SEAT_ORDER_MAPPING_TARGET_DUPLICATE',
+        path: keyPath,
+        severity: 'error',
+        message: `cardSeatOrderMapping target "${mappedSeat}" is used by both "${priorSource}" and "${sourceSeatKey}".`,
+        suggestion: 'Map each source seat key to a unique target seat.',
+      });
+    } else {
+      sourceKeyByMappedSeat.set(mappedSeat, sourceSeatKey);
+    }
+
+    const normalizedSourceSeatKey = normalizeSeatKey(sourceSeatKey);
+    if (normalizedSourceSeatKey.length === 0) {
+      continue;
+    }
+    const priorNormalizedSource = normalizedKeys.get(normalizedSourceSeatKey);
+    if (priorNormalizedSource !== undefined && priorNormalizedSource !== sourceSeatKey) {
+      diagnostics.push({
+        code: 'TURN_FLOW_CARD_SEAT_ORDER_MAPPING_SOURCE_COLLISION',
+        path: keyPath,
+        severity: 'error',
+        message: `cardSeatOrderMapping key "${sourceSeatKey}" collides with "${priorNormalizedSource}" after normalization.`,
+        suggestion: 'Use unique source seat keys that remain distinct after casing/punctuation normalization.',
+      });
+      continue;
+    }
+    normalizedKeys.set(normalizedSourceSeatKey, sourceSeatKey);
+  }
+
+  const metadataKey = turnFlow.cardSeatOrderMetadataKey;
+  if (metadataKey === undefined || metadataKey.length === 0) {
+    return;
+  }
+
+  for (const [deckIndex, deck] of (def.eventDecks ?? []).entries()) {
+    for (const [cardIndex, card] of deck.cards.entries()) {
+      const metadata = card.metadata;
+      if (typeof metadata !== 'object' || metadata === null) {
+        continue;
+      }
+      const rawSeatOrder = (metadata as Readonly<Record<string, unknown>>)[metadataKey];
+      if (!Array.isArray(rawSeatOrder) || !rawSeatOrder.every((entry): entry is string => typeof entry === 'string')) {
+        continue;
+      }
+
+      for (const [seatIndex, sourceSeat] of rawSeatOrder.entries()) {
+        const mappedSeat = mapping[sourceSeat] ?? sourceSeat;
+        if (seatSet.has(mappedSeat)) {
+          continue;
+        }
+        diagnostics.push({
+          code: 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DROPPED',
+          path: `eventDecks[${deckIndex}].cards[${cardIndex}].metadata.${metadataKey}[${seatIndex}]`,
+          severity: 'warning',
+          message: `Card seat-order value "${sourceSeat}" resolves to "${mappedSeat}", which is not in turnFlow.eligibility.seats and will be dropped at runtime.`,
+          suggestion: 'Add or correct cardSeatOrderMapping, or align card metadata seat-order values with turnFlow.eligibility.seats.',
+        });
+      }
+    }
+  }
 };
 
 export const validateTerminal = (diagnostics: Diagnostic[], def: GameDef, context: ValidationContext): void => {

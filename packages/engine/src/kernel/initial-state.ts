@@ -45,6 +45,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
         Object.fromEntries(validatedDef.perPlayerVars.map((variable) => [variable.name, variable.init])),
       ]),
     ),
+    zoneVars: buildInitialZoneVars(validatedDef),
     playerCount: resolvedPlayerCount,
     zones: Object.fromEntries(validatedDef.zones.map((zone) => [String(zone.id), []])),
     nextTokenOrdinal: 0,
@@ -194,4 +195,21 @@ const buildInitialGlobalMarkers = (
   }
 
   return Object.fromEntries(globalMarkerLattices.map((lattice) => [lattice.id, lattice.defaultState]));
+};
+
+const buildInitialZoneVars = (
+  def: GameDef,
+): Readonly<Record<string, Readonly<Record<string, number>>>> => {
+  const zoneVarDefs = def.zoneVars;
+  if (zoneVarDefs === undefined || zoneVarDefs.length === 0) {
+    return {};
+  }
+
+  const zoneVarInitials = Object.fromEntries(
+    zoneVarDefs.map((variable) => [variable.name, variable.init as number]),
+  );
+
+  return Object.fromEntries(
+    def.zones.map((zone) => [String(zone.id), { ...zoneVarInitials }]),
+  );
 };

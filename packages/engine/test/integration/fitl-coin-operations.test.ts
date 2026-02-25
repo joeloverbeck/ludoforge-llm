@@ -65,7 +65,7 @@ describe('FITL COIN operations integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const start = makeIsolatedInitialState(def, 73, 2);
+    const start = makeIsolatedInitialState(def, 73, 4);
     const space = 'quang-nam:none';
 
     const modifiedStart: GameState = {
@@ -132,7 +132,7 @@ describe('FITL COIN operations integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const start = makeIsolatedInitialState(def, 79, 2);
+    const start = makeIsolatedInitialState(def, 79, 4);
 
     const targetSpace = 'quang-nam:none';
     const sourceSpace = 'da-nang:none';
@@ -450,7 +450,7 @@ describe('FITL COIN operations integration', () => {
     const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
       (request: ChoicePendingRequest) => {
         if (request.name === 'targetSpaces') return [targetSpace];
-        if (request.name === '$movingTroops') return [...movingTroops];
+        if (request.name.startsWith('$movingTroops@')) return [...movingTroops];
         return pickDeterministicDecisionValue(request);
       };
 
@@ -458,7 +458,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 97, 2);
+      const start = operationInitialState(def, 97, 4);
       const sourceSpace = 'saigon:none';
       const targetSpace = 'tay-ninh:none';
       const troopId = 'arvn-sweep-freeop-1';
@@ -507,7 +507,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 101, 2);
+      const start = operationInitialState(def, 101, 4);
       const sourceSpace = 'saigon:none';
       const targetSpace = 'tay-ninh:none';
       const movingTroopIds = ['arvn-sweep-jungle-move-1', 'arvn-sweep-jungle-move-2'];
@@ -997,7 +997,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 91, 2);
+      const start = operationInitialState(def, 91, 4);
       const space = 'quang-nam:none';
 
       const modifiedStart: GameState = {
@@ -1052,7 +1052,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 92, 2);
+      const start = operationInitialState(def, 92, 4);
       const space = 'quang-tin-quang-ngai:none';
 
       const modifiedStart: GameState = {
@@ -1106,7 +1106,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 93, 2);
+      const start = operationInitialState(def, 93, 4);
       const space = 'quang-tin-quang-ngai:none';
 
       const modifiedStart: GameState = {
@@ -1156,7 +1156,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 94, 2);
+      const start = operationInitialState(def, 94, 4);
       const space = 'quang-nam:none';
 
       const modifiedStart: GameState = {
@@ -1352,7 +1352,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 96, 2);
+      const start = operationInitialState(def, 96, 4);
       const space = 'quang-tin-quang-ngai:none';
 
       const modifiedStart: GameState = {
@@ -1402,7 +1402,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = operationInitialState(def, 97, 2);
+      const start = operationInitialState(def, 97, 4);
       const citySpace = 'hue:none';
       const highlandSpace = 'quang-nam:none';
 

@@ -37,6 +37,7 @@ const makeBaseDef = (overrides?: {
 const makeBaseState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
   nextTokenOrdinal: 0,
@@ -55,7 +56,7 @@ const makeMove = (params: Move['params'] = {}): Move => ({
   params,
 });
 
-const makeDefWithNestedTemplatedChoices = (): GameDef => {
+const makeDefWithNestedTemplatedChoices = (decisionIdPrefix = 'decision'): GameDef => {
   const action: ActionDef = {
     id: asActionId('nested-choice-op'),
 actor: 'active',
@@ -85,7 +86,7 @@ phase: [asPhaseId('main')],
               effects: [
                 {
                   chooseOne: {
-                    internalDecisionId: 'decision:$mode@{$region}',
+                    internalDecisionId: `${decisionIdPrefix}:$mode@{$region}`,
                     bind: '$mode@{$region}',
                     options: { query: 'enums', values: ['advance', 'hold'] },
                   },
@@ -185,8 +186,7 @@ describe('decision param helper', () => {
     const resolved = normalizeDecisionParamsForMove(makeDefWithNestedTemplatedChoices(), makeBaseState(), makeMove(), {
       overrides: [
         {
-          match: /^\$mode@/,
-          target: 'name',
+          when: (request) => /^\$mode@/.test(request.name),
           value: 'hold',
         },
       ],
@@ -194,6 +194,30 @@ describe('decision param helper', () => {
 
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@north'], 'hold');
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@south'], 'hold');
+  });
+
+  it('keeps name-based overrides stable across decision-id prefix changes', () => {
+    const runWithPrefix = (prefix: string): readonly string[] => {
+      const resolved = normalizeDecisionParamsForMove(
+        makeDefWithNestedTemplatedChoices(prefix),
+        makeBaseState(),
+        makeMove(),
+        {
+          overrides: [
+            {
+              when: (request) => /^\$mode@/.test(request.name),
+              value: 'hold',
+            },
+          ],
+        },
+      );
+      return Object.entries(resolved.params)
+        .filter(([decisionId]) => decisionId.includes('::$mode@'))
+        .map((entry) => String(entry[1]));
+    };
+
+    assert.deepEqual(runWithPrefix('decision'), ['hold', 'hold']);
+    assert.deepEqual(runWithPrefix('decision:altPath'), ['hold', 'hold']);
   });
 
   it('prefers explicit move params over overrides', () => {
@@ -207,8 +231,7 @@ describe('decision param helper', () => {
       {
         overrides: [
           {
-            match: '$mode@',
-            target: 'name',
+            when: (request) => request.name.includes('$mode@'),
             value: 'advance',
           },
         ],

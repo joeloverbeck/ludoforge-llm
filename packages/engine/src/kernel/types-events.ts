@@ -58,9 +58,12 @@ export interface EventEligibilityOverrideDef {
   readonly windowId: string;
 }
 
+export type EventEffectTiming = 'beforeGrants' | 'afterGrants';
+
 export interface EventBranchDef {
   readonly id: string;
   readonly order?: number;
+  readonly effectTiming?: EventEffectTiming;
   readonly freeOperationGrants?: readonly EventFreeOperationGrantDef[];
   readonly eligibilityOverrides?: readonly EventEligibilityOverrideDef[];
   readonly effects?: readonly EffectAST[];
@@ -70,6 +73,7 @@ export interface EventBranchDef {
 
 export interface EventSideDef {
   readonly text?: string;
+  readonly effectTiming?: EventEffectTiming;
   readonly freeOperationGrants?: readonly EventFreeOperationGrantDef[];
   readonly eligibilityOverrides?: readonly EventEligibilityOverrideDef[];
   readonly effects?: readonly EffectAST[];

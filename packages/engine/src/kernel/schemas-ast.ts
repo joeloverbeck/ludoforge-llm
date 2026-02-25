@@ -51,6 +51,7 @@ export const ReferenceSchema = z.union([
       var: StringSchema,
     })
     .strict(),
+  z.object({ ref: z.literal('zoneVar'), zone: ZoneSelSchema, var: StringSchema }).strict(),
   z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('assetField'), row: StringSchema, tableId: StringSchema, field: StringSchema }).strict(),
@@ -94,6 +95,12 @@ export const AssetRowPredicateSchema = z
     value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
   })
   .strict();
+
+export const TransferVarEndpointSchema = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global'), var: StringSchema }).strict(),
+  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema }).strict(),
+  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema }).strict(),
+]);
 
 optionsQuerySchemaInternal = z.union([
   z
@@ -369,8 +376,9 @@ effectAstSchemaInternal = z.union([
     .object({
       setVar: z
         .object({
-          scope: z.union([z.literal('global'), z.literal('pvar')]),
+          scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
           player: PlayerSelSchema.optional(),
+          zone: ZoneRefSchema.optional(),
           var: StringSchema,
           value: ValueExprSchema,
         })
@@ -390,8 +398,9 @@ effectAstSchemaInternal = z.union([
     .object({
       addVar: z
         .object({
-          scope: z.union([z.literal('global'), z.literal('pvar')]),
+          scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
           player: PlayerSelSchema.optional(),
+          zone: ZoneRefSchema.optional(),
           var: StringSchema,
           delta: NumericValueExprSchema,
         })
@@ -402,20 +411,8 @@ effectAstSchemaInternal = z.union([
     .object({
       transferVar: z
         .object({
-          from: z
-            .object({
-              scope: z.union([z.literal('global'), z.literal('pvar')]),
-              var: StringSchema,
-              player: PlayerSelSchema.optional(),
-            })
-            .strict(),
-          to: z
-            .object({
-              scope: z.union([z.literal('global'), z.literal('pvar')]),
-              var: StringSchema,
-              player: PlayerSelSchema.optional(),
-            })
-            .strict(),
+          from: TransferVarEndpointSchema,
+          to: TransferVarEndpointSchema,
           amount: NumericValueExprSchema,
           min: NumericValueExprSchema.optional(),
           max: NumericValueExprSchema.optional(),

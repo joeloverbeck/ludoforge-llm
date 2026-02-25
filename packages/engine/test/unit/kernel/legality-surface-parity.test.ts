@@ -23,6 +23,7 @@ import { assertLegalitySurfaceParityForMove } from '../../helpers/legality-surfa
 const makeState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: { resources: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
   nextTokenOrdinal: 0,

@@ -56,6 +56,30 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return value;
   }
 
+  if (ref.ref === 'zoneVar') {
+    const zoneId = resolveSingleZoneSel(ref.zone, ctx);
+    const zoneVarMap = ctx.state.zoneVars[String(zoneId)];
+    if (zoneVarMap === undefined) {
+      throw missingVarError(`Zone variable state not found for zone: ${String(zoneId)}`, {
+        reference: ref,
+        zoneId: String(zoneId),
+        availableZones: Object.keys(ctx.state.zoneVars).sort(),
+      });
+    }
+
+    const value = zoneVarMap[ref.var];
+    if (value === undefined) {
+      throw missingVarError(`Zone variable not found: ${ref.var} in zone ${String(zoneId)}`, {
+        reference: ref,
+        zoneId: String(zoneId),
+        var: ref.var,
+        availableZoneVars: Object.keys(zoneVarMap).sort(),
+      });
+    }
+
+    return value;
+  }
+
   if (ref.ref === 'zoneCount') {
     const zoneId = resolveSingleZoneSel(ref.zone, ctx);
     const zoneTokens = ctx.state.zones[String(zoneId)];
@@ -228,6 +252,14 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
 
   if (ref.ref === 'markerState') {
     const spaceId = resolveMapSpaceId(ref.space, ctx);
+    const availableMapSpaceIds = ctx.def.zones.map((zone) => String(zone.id)).sort();
+    if (!availableMapSpaceIds.includes(String(spaceId))) {
+      throw missingVarError(`Unknown map-space id for markerState: ${String(spaceId)}`, {
+        reference: ref,
+        spaceId: String(spaceId),
+        availableMapSpaceIds,
+      });
+    }
     const spaceMarkers = ctx.state.markers[spaceId] ?? {};
 
     const state = spaceMarkers[ref.marker];

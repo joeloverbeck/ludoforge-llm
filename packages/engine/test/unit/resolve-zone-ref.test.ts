@@ -46,6 +46,7 @@ const cube1 = makeToken('cube-1', { faction: 'US' });
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [makeToken('card-1', { vp: 1 })],

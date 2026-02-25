@@ -2,7 +2,12 @@ import type { Diagnostic } from './diagnostics.js';
 import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
 import type { GameDef } from './types.js';
 import { validateConditionAst, validateEffectAst, validateOptionsQuery, validatePostAdjacencyBehavior } from './validate-gamedef-behavior.js';
-import { validateActionPipelines, validateCoupPlan, validateTerminal } from './validate-gamedef-extensions.js';
+import {
+  validateActionPipelines,
+  validateCardSeatOrderMapping,
+  validateCoupPlan,
+  validateTerminal,
+} from './validate-gamedef-extensions.js';
 import {
   buildValidationContext,
   validateDerivedMetrics,
@@ -21,6 +26,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   validateDerivedMetrics(diagnostics, def, context);
 
   validateCoupPlan(diagnostics, def);
+  validateCardSeatOrderMapping(diagnostics, def);
   validateTerminal(diagnostics, def, context);
 
   def.setup.forEach((effect, index) => {

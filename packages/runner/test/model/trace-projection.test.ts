@@ -40,6 +40,22 @@ describe('trace-projection', () => {
       playerId: 2,
     });
 
+    const zoneVar: EffectTraceEntry = {
+      kind: 'varChange',
+      scope: 'zone',
+      varName: 'support',
+      oldValue: 0,
+      newValue: 1,
+      zone: 'zone-delta',
+      provenance: provenance('actionEffect'),
+    };
+    expect(projectEffectTraceEntry(zoneVar)).toEqual({
+      kind: 'varChange',
+      isTriggered: false,
+      zoneIds: ['zone-delta'],
+      tokenIds: [],
+    });
+
     const transfer: EffectTraceEntry = {
       kind: 'resourceTransfer',
       from: { scope: 'global', varName: 'bank' },
@@ -56,6 +72,23 @@ describe('trace-projection', () => {
       zoneIds: [],
       tokenIds: [],
       playerId: 1,
+    });
+
+    const zoneTransfer: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'zone', zone: 'zone-left', varName: 'bank' },
+      to: { scope: 'zone', zone: 'zone-right', varName: 'pool' },
+      requestedAmount: 2,
+      actualAmount: 2,
+      sourceAvailable: 5,
+      destinationHeadroom: 8,
+      provenance: provenance('actionEffect'),
+    };
+    expect(projectEffectTraceEntry(zoneTransfer)).toEqual({
+      kind: 'resourceTransfer',
+      isTriggered: false,
+      zoneIds: ['zone-left', 'zone-right'],
+      tokenIds: [],
     });
 
     const create: EffectTraceEntry = {
@@ -154,6 +187,16 @@ describe('trace-projection', () => {
       newValue: 20,
     };
     expect(projectTriggerEvent(globalVar)).toEqual({ zoneIds: [] });
+
+    const zoneVar: TriggerEvent = {
+      type: 'varChanged',
+      scope: 'zone',
+      var: 'support',
+      zone: 'zone-delta' as never,
+      oldValue: 0,
+      newValue: 1,
+    };
+    expect(projectTriggerEvent(zoneVar)).toEqual({ zoneIds: ['zone-delta'] });
   });
 
   it('detects triggered effect trace entries', () => {

@@ -1,5 +1,7 @@
 export * from './branded.js';
 export * from './choice-option-policy.js';
+export * from './gamedef-runtime.js';
+export * from './move-completion.js';
 export * from './choose-n-cardinality.js';
 export * from './initial-state.js';
 export * from './legal-choices.js';
@@ -44,6 +46,7 @@ export * from './resolve-selectors.js';
 export * from './resolve-zone-ref.js';
 export * from './runtime-table-index.js';
 export * from './runtime-table-lookup-plan.js';
+export * from './seat-resolution.js';
 export * from './schema-artifacts.js';
 export * from './schemas.js';
 export * from './serde.js';

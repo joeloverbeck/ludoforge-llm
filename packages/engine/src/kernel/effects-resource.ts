@@ -2,11 +2,12 @@ import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
+import { resolveZoneRef } from './resolve-zone-ref.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
-import type { PlayerId } from './branded.js';
+import type { PlayerId, ZoneId } from './branded.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, PlayerSel } from './types.js';
+import type { EffectAST, EffectTraceResourceEndpoint, PlayerSel } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
@@ -137,24 +138,82 @@ const withActualBind = (
   };
 };
 
-type TransferEndpoint = {
-  readonly scope: 'global' | 'pvar';
-  readonly var: string;
-  readonly player?: PlayerSel;
+type TransferEndpoint = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar']['from'];
+
+type ResolvedEndpoint =
+  | {
+      readonly scope: 'global';
+      readonly var: string;
+      readonly min: number;
+      readonly max: number;
+      readonly before: number;
+    }
+  | {
+      readonly scope: 'pvar';
+      readonly var: string;
+      readonly player: PlayerId;
+      readonly min: number;
+      readonly max: number;
+      readonly before: number;
+    }
+  | {
+      readonly scope: 'zone';
+      readonly var: string;
+      readonly zone: ZoneId;
+      readonly min: number;
+      readonly max: number;
+      readonly before: number;
+    };
+
+const resolveZoneIntVarDef = (ctx: EffectContext, varName: string) => {
+  const variableDef = (ctx.def.zoneVars ?? []).find((variable) => variable.name === varName);
+  if (variableDef === undefined) {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Unknown zone variable: ${varName}`, {
+      effectType: 'transferVar',
+      scope: 'zoneVar',
+      var: varName,
+      availableZoneVars: (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort(),
+    });
+  }
+  if (variableDef.type !== 'int') {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `transferVar cannot target non-int variable: ${varName}`, {
+      effectType: 'transferVar',
+      scope: 'zoneVar',
+      var: varName,
+      actualType: variableDef.type,
+    });
+  }
+
+  return variableDef;
 };
 
-type ResolvedEndpoint = {
-  readonly scope: 'global' | 'pvar';
-  readonly var: string;
-  readonly player?: PlayerId;
-  readonly min: number;
-  readonly max: number;
-  readonly before: number;
+const readZoneIntValue = (ctx: EffectContext, zoneId: ZoneId, varName: string): number => {
+  const zoneVars = ctx.state.zoneVars[String(zoneId)];
+  if (zoneVars === undefined) {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Zone variable state is missing for zone: ${String(zoneId)}`, {
+      effectType: 'transferVar',
+      scope: 'zoneVar',
+      zone: String(zoneId),
+      availableZones: Object.keys(ctx.state.zoneVars).sort(),
+    });
+  }
+
+  const value = zoneVars[varName];
+  if (typeof value !== 'number') {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Zone variable state is missing: ${varName} in zone ${String(zoneId)}`, {
+      effectType: 'transferVar',
+      scope: 'zoneVar',
+      zone: String(zoneId),
+      var: varName,
+      availableZoneVars: Object.keys(zoneVars).sort(),
+    });
+  }
+
+  return value;
 };
 
 const resolveEndpoint = (
   endpoint: TransferEndpoint,
-  endpointPath: 'from' | 'to',
   evalCtx: EffectContext,
   ctx: EffectContext,
 ): ResolvedEndpoint => {
@@ -169,30 +228,69 @@ const resolveEndpoint = (
     };
   }
 
-  if (endpoint.player === undefined) {
-    throw effectRuntimeError('resourceRuntimeValidationFailed', `transferVar.${endpointPath}.player is required when ${endpointPath}.scope is "pvar"`, {
-      effectType: 'transferVar',
-      scope: endpoint.scope,
-      [endpointPath]: endpoint,
-    });
+  if (endpoint.scope === 'pvar') {
+    const player = resolveSinglePlayer(endpoint.player, evalCtx);
+    const perPlayerVarDef = resolvePerPlayerIntVarDef(ctx, endpoint.var);
+    return {
+      scope: 'pvar',
+      var: endpoint.var,
+      player,
+      min: perPlayerVarDef.min,
+      max: perPlayerVarDef.max,
+      before: readPerPlayerIntValue(ctx, player, endpoint.var),
+    };
   }
 
-  const player = resolveSinglePlayer(endpoint.player, evalCtx);
-  const variableDef = resolvePerPlayerIntVarDef(ctx, endpoint.var);
+  const zone = resolveZoneRef(endpoint.zone, evalCtx);
+  const zoneVarDef = resolveZoneIntVarDef(ctx, endpoint.var);
   return {
-    scope: 'pvar',
+    scope: 'zone',
     var: endpoint.var,
-    player,
-    min: variableDef.min,
-    max: variableDef.max,
-    before: readPerPlayerIntValue(ctx, player, endpoint.var),
+    zone,
+    min: zoneVarDef.min,
+    max: zoneVarDef.max,
+    before: readZoneIntValue(ctx, zone, endpoint.var),
   };
 };
 
-const isSameCell = (from: ResolvedEndpoint, to: ResolvedEndpoint): boolean =>
-  from.scope === to.scope &&
-  from.var === to.var &&
-  (from.scope === 'global' || from.player === to.player);
+const isSameCell = (from: ResolvedEndpoint, to: ResolvedEndpoint): boolean => {
+  if (from.scope !== to.scope || from.var !== to.var) {
+    return false;
+  }
+
+  if (from.scope === 'global') {
+    return true;
+  }
+
+  if (from.scope === 'pvar') {
+    return to.scope === 'pvar' && from.player === to.player;
+  }
+
+  return to.scope === 'zone' && from.zone === to.zone;
+};
+
+const toResourceTransferTraceEndpoint = (endpoint: ResolvedEndpoint): EffectTraceResourceEndpoint => {
+  if (endpoint.scope === 'global') {
+    return {
+      scope: 'global',
+      varName: endpoint.var,
+    };
+  }
+
+  if (endpoint.scope === 'pvar') {
+    return {
+      scope: 'perPlayer',
+      player: endpoint.player,
+      varName: endpoint.var,
+    };
+  }
+
+  return {
+    scope: 'zone',
+    zone: endpoint.zone,
+    varName: endpoint.var,
+  };
+};
 
 const writePerPlayerVar = (
   perPlayerVars: EffectContext['state']['perPlayerVars'],
@@ -209,13 +307,28 @@ const writePerPlayerVar = (
   };
 };
 
+const writeZoneVar = (
+  zoneVars: EffectContext['state']['zoneVars'],
+  zone: ZoneId,
+  varName: string,
+  value: number,
+): EffectContext['state']['zoneVars'] => {
+  return {
+    ...zoneVars,
+    [zone]: {
+      ...(zoneVars[zone] ?? {}),
+      [varName]: value,
+    },
+  };
+};
+
 export const applyTransferVar = (
   effect: Extract<EffectAST, { readonly transferVar: unknown }>,
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const source = resolveEndpoint(effect.transferVar.from, 'from', evalCtx, ctx);
-  const destination = resolveEndpoint(effect.transferVar.to, 'to', evalCtx, ctx);
+  const source = resolveEndpoint(effect.transferVar.from, evalCtx, ctx);
+  const destination = resolveEndpoint(effect.transferVar.to, evalCtx, ctx);
 
   const requestedAmount = expectInteger(evalValue(effect.transferVar.amount, evalCtx), 'transferVar', 'amount');
   const sourceAvailable = Math.max(0, source.before - source.min);
@@ -255,28 +368,8 @@ export const applyTransferVar = (
 
   emitTrace(ctx.collector, {
     kind: 'resourceTransfer',
-    from:
-      source.scope === 'global'
-        ? {
-            scope: 'global',
-            varName: source.var,
-          }
-        : {
-            scope: 'perPlayer',
-            player: source.player!,
-            varName: source.var,
-          },
-    to:
-      destination.scope === 'global'
-        ? {
-            scope: 'global',
-            varName: destination.var,
-          }
-        : {
-            scope: 'perPlayer',
-            player: destination.player!,
-            varName: destination.var,
-          },
+    from: toResourceTransferTraceEndpoint(source),
+    to: toResourceTransferTraceEndpoint(destination),
     requestedAmount,
     actualAmount: actual,
     sourceAvailable,
@@ -294,14 +387,25 @@ export const applyTransferVar = (
       provenance,
     });
   } else {
-    emitVarChangeTraceIfChanged(ctx, {
-      scope: 'perPlayer',
-      player: source.player!,
-      varName: source.var,
-      oldValue: source.before,
-      newValue: sourceAfter,
-      provenance,
-    });
+    if (source.scope === 'pvar') {
+      emitVarChangeTraceIfChanged(ctx, {
+        scope: 'perPlayer',
+        player: source.player,
+        varName: source.var,
+        oldValue: source.before,
+        newValue: sourceAfter,
+        provenance,
+      });
+    } else {
+      emitVarChangeTraceIfChanged(ctx, {
+        scope: 'zone',
+        zone: source.zone,
+        varName: source.var,
+        oldValue: source.before,
+        newValue: sourceAfter,
+        provenance,
+      });
+    }
   }
   if (destination.scope === 'global') {
     emitVarChangeTraceIfChanged(ctx, {
@@ -312,18 +416,30 @@ export const applyTransferVar = (
       provenance,
     });
   } else {
-    emitVarChangeTraceIfChanged(ctx, {
-      scope: 'perPlayer',
-      player: destination.player!,
-      varName: destination.var,
-      oldValue: destination.before,
-      newValue: destinationAfter,
-      provenance,
-    });
+    if (destination.scope === 'pvar') {
+      emitVarChangeTraceIfChanged(ctx, {
+        scope: 'perPlayer',
+        player: destination.player,
+        varName: destination.var,
+        oldValue: destination.before,
+        newValue: destinationAfter,
+        provenance,
+      });
+    } else {
+      emitVarChangeTraceIfChanged(ctx, {
+        scope: 'zone',
+        zone: destination.zone,
+        varName: destination.var,
+        oldValue: destination.before,
+        newValue: destinationAfter,
+        provenance,
+      });
+    }
   }
 
   let nextGlobalVars = ctx.state.globalVars;
   let nextPerPlayerVars = ctx.state.perPlayerVars;
+  let nextZoneVars = ctx.state.zoneVars;
 
   if (source.scope === 'global') {
     nextGlobalVars = {
@@ -331,7 +447,11 @@ export const applyTransferVar = (
       [source.var]: sourceAfter,
     };
   } else {
-    nextPerPlayerVars = writePerPlayerVar(nextPerPlayerVars, source.player!, source.var, sourceAfter);
+    if (source.scope === 'pvar') {
+      nextPerPlayerVars = writePerPlayerVar(nextPerPlayerVars, source.player, source.var, sourceAfter);
+    } else {
+      nextZoneVars = writeZoneVar(nextZoneVars, source.zone, source.var, sourceAfter);
+    }
   }
 
   if (destination.scope === 'global') {
@@ -340,7 +460,11 @@ export const applyTransferVar = (
       [destination.var]: destinationAfter,
     };
   } else {
-    nextPerPlayerVars = writePerPlayerVar(nextPerPlayerVars, destination.player!, destination.var, destinationAfter);
+    if (destination.scope === 'pvar') {
+      nextPerPlayerVars = writePerPlayerVar(nextPerPlayerVars, destination.player, destination.var, destinationAfter);
+    } else {
+      nextZoneVars = writeZoneVar(nextZoneVars, destination.zone, destination.var, destinationAfter);
+    }
   }
 
   return {
@@ -348,6 +472,7 @@ export const applyTransferVar = (
       ...ctx.state,
       globalVars: nextGlobalVars,
       perPlayerVars: nextPerPlayerVars,
+      zoneVars: nextZoneVars,
     },
     rng: ctx.rng,
     emittedEvents: [
@@ -361,8 +486,8 @@ export const applyTransferVar = (
           }
         : {
             type: 'varChanged' as const,
-            scope: 'perPlayer' as const,
-            player: source.player!,
+            scope: source.scope === 'pvar' ? 'perPlayer' as const : 'zone' as const,
+            ...(source.scope === 'pvar' ? { player: source.player } : { zone: source.zone }),
             var: source.var,
             oldValue: source.before,
             newValue: sourceAfter,
@@ -377,8 +502,8 @@ export const applyTransferVar = (
           }
         : {
             type: 'varChanged' as const,
-            scope: 'perPlayer' as const,
-            player: destination.player!,
+            scope: destination.scope === 'pvar' ? 'perPlayer' as const : 'zone' as const,
+            ...(destination.scope === 'pvar' ? { player: destination.player } : { zone: destination.zone }),
             var: destination.var,
             oldValue: destination.before,
             newValue: destinationAfter,

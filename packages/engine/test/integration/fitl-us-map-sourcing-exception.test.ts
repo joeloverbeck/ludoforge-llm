@@ -28,7 +28,7 @@ describe('FITL Rule 1.4.1 US map sourcing exception', () => {
     const sourceSpace = 'quang-nam:none';
     const irregularId = 'us-irregular-map-source-1';
 
-    const baseState = clearAllZones(initialState(def, 9123, 2).state);
+    const baseState = clearAllZones(initialState(def, 9123, 4).state);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
@@ -54,7 +54,7 @@ describe('FITL Rule 1.4.1 US map sourcing exception', () => {
       {
         overrides: [
           {
-            match: /sourceSpaces/,
+            when: (request) => /sourceSpaces/.test(request.name),
             value: [sourceSpace],
           },
         ],

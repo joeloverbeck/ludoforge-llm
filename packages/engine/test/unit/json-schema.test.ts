@@ -14,6 +14,7 @@ import {
   serializeTrace,
 } from '../../src/kernel/index.js';
 import type { GameDef, GameTrace } from '../../src/kernel/index.js';
+import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const readSchema = (filename: string): Record<string, unknown> => {
   const schemaPath = path.join(process.cwd(), 'schemas', filename);
@@ -210,6 +211,13 @@ const validRuntimeTrace: GameTrace = {
           step: 'costSpendSkipped',
         },
         {
+          kind: 'turnFlowDeferredEventLifecycle',
+          stage: 'queued',
+          deferredId: 'deferred:1:0:playCard',
+          actionId: asActionId('playCard'),
+          requiredGrantBatchIds: ['play-card-grant'],
+        },
+        {
           kind: 'simultaneousSubmission',
           player: asPlayerId(0),
           move: { actionId: asActionId('playCard'), params: { amount: 1 } },
@@ -229,6 +237,7 @@ const validRuntimeTrace: GameTrace = {
   finalState: {
     globalVars: {},
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: { 'deck:none': [] },
     nextTokenOrdinal: 0,
@@ -321,6 +330,101 @@ describe('json schema artifacts', () => {
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace with zone-scoped resourceTransfer validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          effectTrace: [
+            {
+              kind: 'resourceTransfer',
+              from: { scope: 'zone', zone: 'board:none', varName: 'supply' },
+              to: { scope: 'zone', zone: 'discard:none', varName: 'supply' },
+              requestedAmount: 3,
+              actualAmount: 2,
+              sourceAvailable: 2,
+              destinationHeadroom: 5,
+              provenance: {
+                phase: 'main',
+                eventContext: 'actionEffect',
+                effectPath: 'effects[0]',
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('serialized trace rejects invalid resourceTransfer endpoint shape drift', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const makeSerializedTrace = (from: unknown, to: unknown) => ({
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          effectTrace: [
+            {
+              kind: 'resourceTransfer',
+              from,
+              to,
+              requestedAmount: 3,
+              actualAmount: 2,
+              sourceAvailable: 2,
+              destinationHeadroom: 5,
+              provenance: {
+                phase: 'main',
+                eventContext: 'actionEffect',
+                effectPath: 'effects[0]',
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'varName',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'perPlayer',
+        zone: 'zone',
+      },
+      values: {
+        globalVar: 'bank',
+        playerVar: 'coins',
+        zoneVar: 'supply',
+        player: 0,
+        zone: 'board:none',
+      },
+    });
+
+    for (const testCase of cases) {
+      if (testCase.violation === undefined) {
+        continue;
+      }
+      const serializedTrace = makeSerializedTrace(testCase.from, testCase.to);
+      assert.equal(validate(serializedTrace), false, testCase.name);
+      assert.ok((validate.errors?.length ?? 0) > 0, testCase.name);
+    }
+
+    const control = makeSerializedTrace(
+      { scope: 'perPlayer', player: 0, varName: 'coins' },
+      { scope: 'zone', zone: 'board:none', varName: 'supply' },
+    );
+    assert.equal(validate(control), true, JSON.stringify(validate.errors, null, 2));
+  });
+
   it('trace with non-hex stateHash fails schema validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);
@@ -372,6 +476,54 @@ describe('json schema artifacts', () => {
     const validate = ajv.compile(gameDefSchema);
 
     assert.equal(validate(fullGameDef), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('game def rejects transferVar endpoint shape drift across both endpoint sides', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+
+    const makeInvalidGameDef = (from: unknown, to: unknown) => ({
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [{ transferVar: { from, to, amount: 1 } }],
+        },
+      ],
+    });
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'pvar',
+        zone: 'zoneVar',
+      },
+      values: {
+        globalVar: 'round',
+        playerVar: 'vp',
+        zoneVar: 'supply',
+        player: 'actor',
+        zone: 'deck:none',
+      },
+    });
+
+    for (const testCase of cases) {
+      if (testCase.violation === undefined) {
+        continue;
+      }
+      const invalid = makeInvalidGameDef(testCase.from, testCase.to);
+      assert.equal(validate(invalid), false, testCase.name);
+      assert.ok((validate.errors?.length ?? 0) > 0, testCase.name);
+    }
+
+    const control = makeInvalidGameDef(
+      { scope: 'pvar', player: 'actor', var: 'vp' },
+      { scope: 'zoneVar', zone: 'deck:none', var: 'supply' },
+    );
+    assert.equal(validate(control), true, JSON.stringify(validate.errors, null, 2));
   });
 
   it('game def with invalid adjacency direction fails GameDef.schema.json validation', () => {
@@ -493,7 +645,7 @@ describe('json schema artifacts', () => {
     assert.ok(
       validate.errors?.some(
         (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
-          error.instancePath === '/moves/0/triggerFirings/7' || error.instancePath === '/moves/0/triggerFirings/8',
+          error.instancePath === '/moves/0/triggerFirings/8' || error.instancePath === '/moves/0/triggerFirings/9',
       ),
       JSON.stringify(validate.errors, null, 2),
     );

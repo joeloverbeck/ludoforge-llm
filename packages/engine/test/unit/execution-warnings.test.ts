@@ -42,6 +42,7 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
   const state: GameState = {
     globalVars: {},
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones,
     nextTokenOrdinal: 100,

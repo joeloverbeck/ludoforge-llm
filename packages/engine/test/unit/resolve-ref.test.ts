@@ -70,6 +70,7 @@ const makeState = (): GameState => ({
     1: { money: 10 },
     2: { money: 4 },
   },
+  zoneVars: {},
   playerCount: 3,
   zones: {
     'deck:none': [makeToken('deck-1', { cost: 3 }), makeToken('deck-2', { cost: 1 })],
@@ -142,14 +143,12 @@ describe('resolveRef', () => {
       () => resolveRef({ ref: 'tokenProp', token: '$missing', prop: 'cost' }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'MISSING_BINDING') &&
-        typeof error.message === 'string' &&
-        error.message.includes('availableBindings'),
+        Array.isArray(error.context?.availableBindings),
     );
 
     assert.throws(() => resolveRef({ ref: 'tokenProp', token: '$card', prop: 'missingProp' }, ctx), (error: unknown) =>
       isEvalErrorCode(error, 'MISSING_VAR') &&
-      typeof error.message === 'string' &&
-      error.message.includes('availableBindings'),
+      Array.isArray(error.context?.availableBindings),
     );
   });
 
@@ -160,8 +159,7 @@ describe('resolveRef', () => {
 
     assert.throws(() => resolveRef({ ref: 'binding', name: '$missing' }, ctx), (error: unknown) =>
       isEvalErrorCode(error, 'MISSING_BINDING') &&
-      typeof error.message === 'string' &&
-      error.message.includes('availableBindings'),
+      Array.isArray(error.context?.availableBindings),
     );
 
     const objectBindingCtx = makeCtx({ bindings: { '$obj': { nested: true } } });
@@ -367,7 +365,9 @@ describe('resolveRef', () => {
     const ctx = makeCtx();
     assert.throws(
       () => resolveRef({ ref: 'zoneProp', zone: 'unknown', prop: 'population' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND') &&
+        error.context?.zoneId === 'unknown',
     );
   });
 
@@ -415,8 +415,9 @@ describe('resolveRef', () => {
       () => resolveRef({ ref: 'zoneProp', zone: 'hue', prop: 'terrainTags' }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'TYPE_MISMATCH') &&
-        typeof error.message === 'string' &&
-        error.message.includes('zonePropIncludes'),
+        typeof error.context === 'object' &&
+        error.context !== null &&
+        Object.hasOwn(error.context, 'reference'),
     );
   });
 
@@ -424,13 +425,13 @@ describe('resolveRef', () => {
     const stateWithMarkers: GameState = {
       ...makeState(),
       markers: {
-        'quang-nam:none': { supportOpposition: 'neutral' },
+        'hand:1': { supportOpposition: 'neutral' },
       },
     };
     const ctx = makeCtx({
       state: stateWithMarkers,
       bindings: {
-        '$space': 'quang-nam:none',
+        '$space': 'hand:1',
       },
     });
 
@@ -444,7 +445,7 @@ describe('resolveRef', () => {
     const stateWithMarkers: GameState = {
       ...makeState(),
       markers: {
-        'quang-nam:none': { supportOpposition: 'neutral' },
+        'hand:1': { supportOpposition: 'neutral' },
       },
     };
     const ctx = makeCtx({ state: stateWithMarkers, bindings: {} });
@@ -459,7 +460,7 @@ describe('resolveRef', () => {
     const ctx = makeCtx({
       def: makeDefWithMarkers(),
       state: makeState(),
-      bindings: { '$space': 'quang-nam:none' },
+      bindings: { '$space': 'deck:none' },
     });
 
     assert.equal(
@@ -471,12 +472,29 @@ describe('resolveRef', () => {
   it('throws MISSING_VAR when marker lattice does not exist', () => {
     const ctx = makeCtx({
       state: makeState(),
-      bindings: { '$space': 'quang-nam:none' },
+      bindings: { '$space': 'deck:none' },
     });
 
     assert.throws(
       () => resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('throws MISSING_VAR for markerState when bound map-space id is unknown', () => {
+    const ctx = makeCtx({
+      def: makeDefWithMarkers(),
+      state: makeState(),
+      bindings: { '$space': 'quang-nam:none' },
+    });
+
+    assert.throws(
+      () => resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'MISSING_VAR') &&
+        error.context?.spaceId === 'quang-nam:none' &&
+        Array.isArray(error.context?.availableMapSpaceIds) &&
+        (error.context?.availableMapSpaceIds as unknown[]).includes('deck:none'),
     );
   });
 

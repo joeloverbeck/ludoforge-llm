@@ -1,6 +1,7 @@
 import {
   type ActiveLastingEffect,
   asPlayerId,
+  buildSeatResolutionIndex,
   matchesAllTokenFilterPredicates,
   type GameDef,
   type GameState,
@@ -9,6 +10,8 @@ import {
   type NumericTrackDef,
   type PlayerId,
   type RevealGrant,
+  resolvePlayerIndexForSeatValue,
+  type SeatResolutionIndex,
   type TerminalResult,
   type Token,
 } from '@ludoforge/engine/runtime';
@@ -71,7 +74,8 @@ export function deriveRenderModel(
     selectionTargets.selectableZoneIDs,
     selectedZoneIDs,
   );
-  const factionByPlayer = deriveFactionByPlayer(state);
+  const seatResolution = buildSeatResolutionIndex(def, state.playerCount);
+  const factionByPlayer = deriveFactionByPlayer(state, seatResolution);
   const tokens = deriveTokens(
     state,
     zones,
@@ -89,7 +93,7 @@ export function deriveRenderModel(
   const interruptStack = state.interruptPhaseStack ?? [];
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId);
   const players = derivePlayers(state, context, factionByPlayer);
-  const turnOrder = deriveTurnOrder(state, factionByPlayer);
+  const turnOrder = deriveTurnOrder(state, seatResolution);
   const choiceUi = deriveChoiceUi(context, zones, tokens, players);
 
   const nextModel: RenderModel = {
@@ -941,9 +945,18 @@ function deriveHighlightedAdjacencyKeys(
   return highlighted;
 }
 
-function deriveFactionByPlayer(state: GameState): ReadonlyMap<PlayerId, string> {
+function deriveFactionByPlayer(state: GameState, seatResolution: SeatResolutionIndex): ReadonlyMap<PlayerId, string> {
   const factionByPlayer = new Map<PlayerId, string>();
-  if (state.turnOrderState.type !== 'cardDriven') {
+
+  for (let index = 0; index < state.playerCount; index += 1) {
+    const seatId = seatResolution.seatIdByPlayerIndex[index];
+    if (typeof seatId !== 'string' || seatId.length === 0) {
+      continue;
+    }
+    factionByPlayer.set(asPlayerId(index), seatId);
+  }
+
+  if (factionByPlayer.size > 0 || state.turnOrderState.type !== 'cardDriven') {
     return factionByPlayer;
   }
 
@@ -968,7 +981,9 @@ function derivePlayers(
     const faction = factionByPlayer.get(playerId) ?? null;
     return {
       id: playerId,
-      displayName: faction === null ? formatIdAsDisplayName(String(index)) : formatIdAsDisplayName(faction),
+      displayName: faction === null
+        ? formatIdAsDisplayName(String(index))
+        : context.visualConfigProvider.getFactionDisplayName(faction) ?? formatIdAsDisplayName(faction),
       isHuman: context.playerSeats.get(playerId) === 'human',
       isActive: playerId === state.activePlayer,
       isEliminated: state.perPlayerVars[index]?.eliminated === true,
@@ -977,7 +992,10 @@ function derivePlayers(
   });
 }
 
-function deriveTurnOrder(state: GameState, factionByPlayer: ReadonlyMap<PlayerId, string>): readonly PlayerId[] {
+function deriveTurnOrder(
+  state: GameState,
+  seatResolution: SeatResolutionIndex,
+): readonly PlayerId[] {
   const allPlayers = Array.from({ length: state.playerCount }, (_unused, index) => asPlayerId(index));
   if (state.turnOrderState.type === 'fixedOrder') {
     const normalizedIndex = normalizeIndex(state.turnOrderState.currentIndex, state.playerCount);
@@ -985,12 +1003,15 @@ function deriveTurnOrder(state: GameState, factionByPlayer: ReadonlyMap<PlayerId
   }
 
   if (state.turnOrderState.type === 'cardDriven') {
-    const byFaction = state.turnOrderState.runtime.seatOrder
-      .map((faction) => findPlayerIdForFaction(factionByPlayer, faction))
+    const bySeatOrder = state.turnOrderState.runtime.seatOrder
+      .map((seat) => {
+        const playerIndex = resolvePlayerIndexForSeatValue(seat, state.playerCount, seatResolution);
+        return playerIndex === null ? null : asPlayerId(playerIndex);
+      })
       .filter((playerId): playerId is PlayerId => playerId !== null);
-    const seen = new Set(byFaction);
+    const seen = new Set(bySeatOrder);
     const remaining = allPlayers.filter((playerId) => !seen.has(playerId));
-    return [...byFaction, ...remaining];
+    return [...bySeatOrder, ...remaining];
   }
 
   return allPlayers;
@@ -1002,18 +1023,6 @@ function normalizeIndex(index: number, playerCount: number): number {
   }
   const normalized = index % playerCount;
   return normalized < 0 ? normalized + playerCount : normalized;
-}
-
-function findPlayerIdForFaction(
-  factionByPlayer: ReadonlyMap<PlayerId, string>,
-  faction: string,
-): PlayerId | null {
-  for (const [playerId, playerFaction] of factionByPlayer.entries()) {
-    if (playerFaction === faction) {
-      return playerId;
-    }
-  }
-  return null;
 }
 
 function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups'] {

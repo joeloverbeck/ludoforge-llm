@@ -53,6 +53,18 @@ export const computeDeltas = (preState: GameState, postState: GameState): readon
     }
   }
 
+  for (const zoneId of sortedUnionKeys(preState.zoneVars, postState.zoneVars)) {
+    const preVars = preState.zoneVars[zoneId] ?? {};
+    const postVars = postState.zoneVars[zoneId] ?? {};
+    for (const name of sortedUnionKeys(preVars, postVars)) {
+      const before = preVars[name];
+      const after = postVars[name];
+      if (!Object.is(before, after)) {
+        deltas.push({ path: `zoneVars.${zoneId}.${name}`, before, after });
+      }
+    }
+  }
+
   for (const zoneId of sortedUnionKeys(preState.zones, postState.zones)) {
     const before = zoneTokenIds(preState, zoneId);
     const after = zoneTokenIds(postState, zoneId);

@@ -209,7 +209,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const def = compiled.gameDef!;
 
     const space = 'saigon:none';
-    const start = initialState(def, 1001, 2).state;
+    const start = initialState(def, 1001, 4).state;
     const modifiedStart: GameState = {
       ...start,
       globalMarkers: {
@@ -252,7 +252,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const def = compiled.gameDef!;
 
     const space = 'saigon:none';
-    const start = initialState(def, 1002, 2).state;
+    const start = initialState(def, 1002, 4).state;
     const modifiedStart: GameState = {
       ...start,
       globalVars: {

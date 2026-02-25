@@ -76,6 +76,7 @@ const choose = (def: GameDef, seed = 5n) => {
 const stateStub: GameState = {
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

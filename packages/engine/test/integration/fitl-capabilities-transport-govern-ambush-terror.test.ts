@@ -159,7 +159,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const remote = 'tay-ninh:none';
 
     const run = (marker: MarkerState, seed: number): GameState => {
-      const start = withMarker(initialState(def, seed, 2).state, 'cap_armoredCavalry', marker);
+      const start = withMarker(initialState(def, seed, 4).state, 'cap_armoredCavalry', marker);
       const setup = addTokenToZone(
         addTokenToZone(start, origin, makeToken(`transport-${marker}-troop`, 'troops', 'ARVN', { type: 'troops' })),
         origin,
@@ -225,7 +225,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const spaceB = 'can-tho:none';
 
     const base = (marker: MarkerState, seed: number): GameState => {
-      const start = withMarker(initialState(def, seed, 2).state, 'cap_mandateOfHeaven', marker);
+      const start = withMarker(initialState(def, seed, 4).state, 'cap_mandateOfHeaven', marker);
       const withSpaceA = addTokenToZone(
         addTokenToZone(
           addTokenToZone(start, spaceA, makeToken(`govern-${marker}-a-arvn-t`, 'troops', 'ARVN', { type: 'troops' })),

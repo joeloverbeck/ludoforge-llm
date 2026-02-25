@@ -8,6 +8,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector } from './execution-collector.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { GameDef, GameState, PlayerScore, TerminalResult, VictoryTerminalRankingEntry } from './types.js';
 
 function buildEvalContext(
@@ -199,9 +200,9 @@ function evaluateVictory(
   };
 }
 
-export const terminalResult = (def: GameDef, state: GameState): TerminalResult | null => {
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+export const terminalResult = (def: GameDef, state: GameState, runtime?: GameDefRuntime): TerminalResult | null => {
+  const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state);
   const victory = evaluateVictory(def, adjacencyGraph, runtimeTableIndex, state);
   if (victory !== null) {

@@ -3,19 +3,21 @@ import { describe, it } from 'node:test';
 
 import {
   EvalError,
+  asPlayerId,
+  asZoneId,
   createEvalError,
   dataAssetEvalError,
   divisionByZeroError,
   getMaxQueryResults,
   isEvalError,
   isEvalErrorCode,
-  isRecoverableEvalResolutionError,
   missingBindingError,
   missingVarError,
   queryBoundsExceededError,
   selectorCardinalityError,
   spatialNotImplementedError,
   typeMismatchError,
+  zonePropNotFoundError,
 } from '../../src/kernel/index.js';
 
 describe('eval error surface', () => {
@@ -32,15 +34,57 @@ describe('eval error surface', () => {
     );
   });
 
-  it('error message includes structured context payload when provided', () => {
+  it('stores structured context separately from message when provided', () => {
     const err = createEvalError('MISSING_BINDING', 'Binding not found', {
       binding: '$x',
       availableBindings: ['$y'],
     });
 
-    assert.match(err.message, /Binding not found/);
-    assert.match(err.message, /"binding":"\$x"/);
-    assert.match(err.message, /"availableBindings":\["\$y"\]/);
+    assert.equal(err.message, 'Binding not found');
+    assert.deepEqual(err.context, {
+      binding: '$x',
+      availableBindings: ['$y'],
+    });
+  });
+
+  it('typed helper constructors preserve structured context payloads', () => {
+    const queryError = queryBoundsExceededError('too many', {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+    });
+    const divisionError = divisionByZeroError('division by zero', {
+      expr: { op: '/', left: 1, right: 0 },
+      left: 1,
+      right: 0,
+    });
+    const zonePropError = zonePropNotFoundError('missing zone prop', {
+      zoneId: asZoneId('market'),
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+      availableZoneIds: [asZoneId('market')],
+      availableProps: ['terrain'],
+    });
+
+    assert.deepEqual(queryError.context, {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+    });
+    assert.deepEqual(divisionError.context, {
+      expr: { op: '/', left: 1, right: 0 },
+      left: 1,
+      right: 0,
+    });
+    assert.deepEqual(zonePropError.context, {
+      zoneId: asZoneId('market'),
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+      availableZoneIds: [asZoneId('market')],
+      availableProps: ['terrain'],
+    });
+
+    assert.equal(queryError.message, 'too many');
+    assert.equal(divisionError.message, 'division by zero');
+    assert.equal(zonePropError.message, 'missing zone prop');
   });
 
   it('guards detect eval errors and specific eval error codes', () => {
@@ -49,16 +93,11 @@ describe('eval error surface', () => {
     assert.equal(isEvalError(err), true);
     assert.equal(isEvalErrorCode(err, 'TYPE_MISMATCH'), true);
     assert.equal(isEvalErrorCode(err, 'MISSING_VAR'), false);
-    assert.equal(isEvalErrorCode(dataAssetEvalError('DATA_ASSET_FIELD_MISSING', 'missing field'), 'DATA_ASSET_FIELD_MISSING'), true);
+    assert.equal(
+      isEvalErrorCode(dataAssetEvalError('DATA_ASSET_FIELD_MISSING', 'missing field'), 'DATA_ASSET_FIELD_MISSING'),
+      true,
+    );
     assert.equal(isEvalError(new Error('plain')), false);
-  });
-
-  it('classifies recoverable eval resolution errors', () => {
-    assert.equal(isRecoverableEvalResolutionError(missingBindingError('missing binding')), true);
-    assert.equal(isRecoverableEvalResolutionError(missingVarError('missing var')), true);
-    assert.equal(isRecoverableEvalResolutionError(divisionByZeroError('division by zero')), true);
-    assert.equal(isRecoverableEvalResolutionError(typeMismatchError('bad type')), false);
-    assert.equal(isRecoverableEvalResolutionError(new Error('plain')), false);
   });
 });
 
@@ -66,5 +105,62 @@ describe('eval context helpers', () => {
   it('default maxQueryResults resolves to 10_000', () => {
     assert.equal(getMaxQueryResults({}), 10_000);
     assert.equal(getMaxQueryResults({ maxQueryResults: 17 }), 17);
+  });
+
+  it('selector-cardinality helper builders emit canonical context shapes', () => {
+    const playerCountContext = {
+      selectorKind: 'player',
+      selector: { relative: 'left' as const },
+      playerCount: 0,
+    };
+    assert.deepEqual(playerCountContext, {
+      selectorKind: 'player',
+      selector: { relative: 'left' },
+      playerCount: 0,
+    });
+
+    const resolvedPlayers = [asPlayerId(0), asPlayerId(2)] as const;
+    const playerResolvedContext = {
+      selectorKind: 'player',
+      selector: 'all' as const,
+      resolvedCount: resolvedPlayers.length,
+      resolvedPlayers,
+    };
+    assert.deepEqual(playerResolvedContext, {
+      selectorKind: 'player',
+      selector: 'all',
+      resolvedCount: 2,
+      resolvedPlayers,
+    });
+
+    const resolvedZones = [asZoneId('hand:0')] as const;
+    const zoneResolvedContextNoDefer = {
+      selectorKind: 'zone',
+      selector: 'hand:0' as const,
+      resolvedCount: resolvedZones.length,
+      resolvedZones,
+    };
+    assert.deepEqual(zoneResolvedContextNoDefer, {
+      selectorKind: 'zone',
+      selector: 'hand:0',
+      resolvedCount: 1,
+      resolvedZones,
+    });
+    assert.equal('deferClass' in zoneResolvedContextNoDefer, false);
+
+    const zoneResolvedContextWithDefer = {
+      selectorKind: 'zone',
+      selector: '$zones' as const,
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality' as const,
+    };
+    assert.deepEqual(zoneResolvedContextWithDefer, {
+      selectorKind: 'zone',
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality',
+    });
   });
 });

@@ -173,27 +173,33 @@ describe('createAiPlaybackController', () => {
     controller.destroy();
   });
 
-  it('calls onError when resolveAiStep returns no-legal-moves', async () => {
-    const store = createAiStore({
-      resolveAiStep: async () => 'no-legal-moves',
+  for (const errorCase of [
+    { outcome: 'no-legal-moves' as const, expectedMessage: 'no legal moves' },
+    { outcome: 'uncompletable-template' as const, expectedMessage: 'could not be completed' },
+    { outcome: 'illegal-template' as const, expectedMessage: 'failed legality validation' },
+  ]) {
+    it(`calls onError when resolveAiStep returns ${errorCase.outcome}`, async () => {
+      const store = createAiStore({
+        resolveAiStep: async () => errorCase.outcome,
+      });
+      const onError = vi.fn();
+
+      const controller = createAiPlaybackController({
+        store: store as unknown as StoreApi<GameStore>,
+        animation: { setDetailLevel: vi.fn(), skipAll: vi.fn() },
+        baseStepDelayMs: 0,
+        onError,
+      });
+
+      controller.start();
+      await flushAsync();
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining(errorCase.expectedMessage));
+
+      controller.destroy();
     });
-    const onError = vi.fn();
-
-    const controller = createAiPlaybackController({
-      store: store as unknown as StoreApi<GameStore>,
-      animation: { setDetailLevel: vi.fn(), skipAll: vi.fn() },
-      baseStepDelayMs: 0,
-      onError,
-    });
-
-    controller.start();
-    await flushAsync();
-
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('no legal moves'));
-
-    controller.destroy();
-  });
+  }
 
   it('retries on no-op then calls onError after max retries exhausted', async () => {
     let calls = 0;

@@ -46,6 +46,7 @@ const makeState = (): GameState => ({
     '0': { hp: 6, mana: 1, ready: false },
     '1': { hp: 8, mana: 4, ready: false },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,
@@ -294,6 +295,7 @@ describe('lattice marker shift via addVar', () => {
   const makeLatticeState = (markerValue: number): GameState => ({
     globalVars: { marker: markerValue },
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: {},
     nextTokenOrdinal: 0,

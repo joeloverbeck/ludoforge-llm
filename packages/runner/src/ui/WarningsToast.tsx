@@ -13,7 +13,8 @@ interface WarningsToastProps {
 interface ActiveToast {
   readonly id: number;
   readonly key: string;
-  readonly warning: RenderWarning;
+  readonly code: string;
+  readonly message: string;
   readonly isDismissing: boolean;
 }
 
@@ -27,9 +28,11 @@ function buildWarningKey(warning: RenderWarning): string {
 
 export function WarningsToast({ store }: WarningsToastProps): ReactElement | null {
   const warnings = useStore(store, (state) => state.renderModel?.moveEnumerationWarnings ?? EMPTY_WARNINGS);
+  const orchestrationDiagnostic = useStore(store, (state) => state.orchestrationDiagnostic);
   const [toasts, setToasts] = useState<readonly ActiveToast[]>([]);
   const nextToastIdRef = useRef(0);
   const previousWarningKeysRef = useRef<ReadonlySet<string>>(new Set());
+  const previousOrchestrationDiagnosticSequenceRef = useRef<number | null>(null);
   const dismissTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const removalTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -60,7 +63,7 @@ export function WarningsToast({ store }: WarningsToastProps): ReactElement | nul
     }
   }, [clearTimer, removeToast]);
 
-  const enqueueToast = useCallback((warning: RenderWarning, key: string) => {
+  const enqueueToast = useCallback((code: string, message: string, key: string) => {
     const id = nextToastIdRef.current;
     nextToastIdRef.current += 1;
 
@@ -69,7 +72,7 @@ export function WarningsToast({ store }: WarningsToastProps): ReactElement | nul
         return current;
       }
 
-      return [{ id, key, warning, isDismissing: false }, ...current];
+      return [{ id, key, code, message, isDismissing: false }, ...current];
     });
 
     const dismissTimer = setTimeout(() => {
@@ -86,12 +89,27 @@ export function WarningsToast({ store }: WarningsToastProps): ReactElement | nul
       const key = buildWarningKey(warning);
       currentWarningKeys.add(key);
       if (!previousWarningKeys.has(key)) {
-        enqueueToast(warning, key);
+        enqueueToast(warning.code, warning.message, key);
       }
     }
 
     previousWarningKeysRef.current = currentWarningKeys;
   }, [warnings, enqueueToast]);
+
+  useEffect(() => {
+    if (orchestrationDiagnostic === null) {
+      return;
+    }
+    if (previousOrchestrationDiagnosticSequenceRef.current === orchestrationDiagnostic.sequence) {
+      return;
+    }
+    previousOrchestrationDiagnosticSequenceRef.current = orchestrationDiagnostic.sequence;
+    enqueueToast(
+      orchestrationDiagnostic.code,
+      orchestrationDiagnostic.message,
+      `orchestration::${orchestrationDiagnostic.sequence}`,
+    );
+  }, [orchestrationDiagnostic, enqueueToast]);
 
   useEffect(() => () => {
     for (const timer of dismissTimersRef.current.values()) {
@@ -124,10 +142,10 @@ export function WarningsToast({ store }: WarningsToastProps): ReactElement | nul
               onClick={() => {
                 startDismiss(toast.id);
               }}
-              aria-label={`Dismiss warning ${toast.warning.code}`}
+              aria-label={`Dismiss warning ${toast.code}`}
             >
-              <span className={styles.code} data-testid="warnings-toast-code">{toast.warning.code}</span>
-              <span className={styles.message} data-testid="warnings-toast-message">{toast.warning.message}</span>
+              <span className={styles.code} data-testid="warnings-toast-code">{toast.code}</span>
+              <span className={styles.message} data-testid="warnings-toast-message">{toast.message}</span>
             </button>
           </li>
         ))}

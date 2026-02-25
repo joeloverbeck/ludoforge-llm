@@ -46,7 +46,7 @@ const readMapLattices = (): {
 describe('FITL production support/opposition marker lattice', () => {
   it('encodes the canonical supportOpposition lattice with LoC and pop-0 neutral constraints', () => {
     const { markerLattices, spaceMarkers } = readMapLattices();
-    assert.equal(markerLattices.length, 6);
+    assert.equal(markerLattices.length, 5);
 
     const supportOpposition = markerLattices.find((lattice) => lattice.id === 'supportOpposition');
     assert.ok(supportOpposition, 'Expected supportOpposition lattice');
@@ -68,15 +68,6 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.notEqual(popZeroConstraint, undefined);
     assert.equal((popZeroConstraint?.attributeEquals as Record<string, unknown> | undefined)?.population, 0);
     assert.deepEqual(popZeroConstraint?.allowedStates, ['neutral']);
-
-    const terrorLattice = markerLattices.find((lattice) => lattice.id === 'terror');
-    assert.ok(terrorLattice, 'Expected terror lattice');
-    assert.deepEqual(terrorLattice.states, ['none', 'terror']);
-    assert.equal(terrorLattice.defaultState, 'none');
-    assert.ok(Array.isArray(terrorLattice.constraints));
-    const terrorLocConstraint = terrorLattice.constraints.find((constraint) => constraint.category !== undefined);
-    assert.deepEqual(terrorLocConstraint?.category, ['loc']);
-    assert.deepEqual(terrorLocConstraint?.allowedStates, ['none']);
 
     const sabotageLattice = markerLattices.find((lattice) => lattice.id === 'sabotage');
     assert.ok(sabotageLattice, 'Expected sabotage lattice');

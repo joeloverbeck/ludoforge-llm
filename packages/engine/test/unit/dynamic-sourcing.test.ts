@@ -64,6 +64,7 @@ const makeDef = (): GameDef => ({
 const makeState = (zones: Record<string, readonly Token[]>): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 4,
   zones,
   nextTokenOrdinal: 100,

@@ -260,7 +260,7 @@ actions:
       - if:
           when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
           then:
-            - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: terror, state: none }
+            - setVar: { scope: zoneVar, zone: { zoneExpr: { ref: binding, name: targetSpace } }, var: terrorCount, value: 0 }
           else:
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
@@ -369,7 +369,7 @@ actions:
       - if:
           when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
           then:
-            - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: terror, state: none }
+            - setVar: { scope: zoneVar, zone: { zoneExpr: { ref: binding, name: targetSpace } }, var: terrorCount, value: 0 }
           else:
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: 1 }
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
@@ -460,7 +460,7 @@ actions:
       - if:
           when: { op: '==', left: { ref: binding, name: action }, right: removeTerror }
           then:
-            - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: terror, state: none }
+            - setVar: { scope: zoneVar, zone: { zoneExpr: { ref: binding, name: targetSpace } }, var: terrorCount, value: 0 }
           else:
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: supportOpposition, delta: -1 }
             - shiftMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupSupportShiftCount, delta: 1 }
@@ -1295,7 +1295,7 @@ actionPipelines:
                           in:
                             # Remove Terror marker first (if present)
                             - if:
-                                when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
+                                when: { op: '>', left: { ref: zoneVar, zone: $subSpace, var: terrorCount }, right: 0 }
                                 then:
                                   - if:
                                       when:
@@ -1308,7 +1308,7 @@ actionPipelines:
                                         - macro: rvn-leader-pacification-cost
                                           args:
                                             stepCountExpr: 1
-                                        - setMarker: { space: $subSpace, marker: terror, state: none }
+                                        - setVar: { scope: zoneVar, zone: $subSpace, var: terrorCount, value: 0 }
                             - if:
                                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
                                 then:
@@ -1547,12 +1547,12 @@ actionPipelines:
                           right: 0
                     then:
                       - if:
-                          when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
+                          when: { op: '>', left: { ref: zoneVar, zone: $subSpace, var: terrorCount }, right: 0 }
                           then:
                             - macro: rvn-leader-pacification-cost
                               args:
                                 stepCountExpr: 1
-                            - setMarker: { space: $subSpace, marker: terror, state: none }
+                            - setVar: { scope: zoneVar, zone: $subSpace, var: terrorCount, value: 0 }
                       - if:
                           when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
                           then:
@@ -2156,7 +2156,7 @@ actionPipelines:
                     then:
                       - addVar: { scope: global, var: arvnResources, delta: -3 }
                 - chooseN:
-                    bind: $movingTroops
+                    bind: '$movingTroops@{$space}'
                     options:
                       query: tokensInAdjacentZones
                       zone: $space
@@ -2167,7 +2167,7 @@ actionPipelines:
                     max: 99
                 - forEach:
                     bind: $troop
-                    over: { query: binding, name: $movingTroops }
+                    over: { query: binding, name: '$movingTroops@{$space}' }
                     effects:
                       - moveToken:
                           token: $troop
@@ -2852,12 +2852,12 @@ actionPipelines:
                   - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - forEach:
-                    bind: $chainSpace
+                    bind: $destSpace
                     over: { query: binding, name: chainSpaces }
                     effects:
                       - macro: insurgent-march-resolve-destination
                         args:
-                          destSpace: $chainSpace
+                          destSpace: $destSpace
                           faction: 'NVA'
                           resourceVar: nvaResources
                           allowTrailCountryFreeCost: true

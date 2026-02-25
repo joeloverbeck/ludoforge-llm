@@ -97,13 +97,22 @@ const setupResetEntryState = (def: GameDef, trail: number): GameState => {
       ...base.markers,
       'loc-hue-khe-sanh:none': {
         ...(base.markers['loc-hue-khe-sanh:none'] ?? {}),
-        terror: 'terror',
         sabotage: 'sabotage',
       },
       'loc-hue-da-nang:none': {
         ...(base.markers['loc-hue-da-nang:none'] ?? {}),
-        terror: 'terror',
         sabotage: 'sabotage',
+      },
+    },
+    zoneVars: {
+      ...base.zoneVars,
+      'loc-hue-khe-sanh:none': {
+        ...(base.zoneVars['loc-hue-khe-sanh:none'] ?? {}),
+        terrorCount: 1,
+      },
+      'loc-hue-da-nang:none': {
+        ...(base.zoneVars['loc-hue-da-nang:none'] ?? {}),
+        terrorCount: 1,
       },
     },
   };
@@ -120,9 +129,9 @@ describe('FITL coup reset phase (production data)', () => {
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.trail, 3);
     assert.equal(atReset.globalVars.terrorSabotageMarkersPlaced, 0);
-    assert.equal(atReset.markers['loc-hue-khe-sanh:none']?.terror, 'none');
+    assert.equal(atReset.zoneVars['loc-hue-khe-sanh:none']?.terrorCount ?? 0, 0);
     assert.equal(atReset.markers['loc-hue-khe-sanh:none']?.sabotage, 'none');
-    assert.equal(atReset.markers['loc-hue-da-nang:none']?.terror, 'none');
+    assert.equal(atReset.zoneVars['loc-hue-da-nang:none']?.terrorCount ?? 0, 0);
     assert.equal(atReset.markers['loc-hue-da-nang:none']?.sabotage, 'none');
 
     for (const zoneId of ['loc-hue-khe-sanh:none', 'loc-hue-da-nang:none', 'da-nang:none']) {

@@ -23,7 +23,105 @@ const loadFixtureGameDef = (fixtureName: string): GameDef => {
   return JSON.parse(readFileSync(fixturePath, 'utf8')) as GameDef;
 };
 
+const withCardDrivenTurnFlow = (
+  base: GameDef,
+  cardSeatOrderMapping: Readonly<Record<string, string>>,
+  seatOrder: readonly string[],
+): GameDef =>
+  ({
+    ...base,
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: {
+            played: 'market:none',
+            lookahead: 'deck:none',
+            leader: 'deck:none',
+          },
+          eligibility: {
+            seats: ['0', '1'],
+            overrideWindows: [],
+          },
+          actionClassByActionId: {
+            playCard: 'event',
+          },
+          optionMatrix: [{ first: 'event', second: ['pass'] }],
+          passRewards: [],
+          durationWindows: ['turn'],
+          cardSeatOrderMetadataKey: 'seatOrder',
+          cardSeatOrderMapping,
+        },
+      },
+    },
+    eventDecks: [
+      {
+        id: 'deck',
+        drawZone: 'deck:none',
+        discardZone: 'market:none',
+        cards: [{ id: 'card-1', metadata: { seatOrder } }],
+      },
+    ],
+  }) as unknown as GameDef;
+
 describe('validateGameDef reference checks', () => {
+  it('validates cardSeatOrderMapping targets against eligibility seats', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(base, { US: '0', NVA: '2' }, ['US', 'NVA']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_MAPPING_TARGET_UNKNOWN_SEAT'
+          && diag.path === 'turnOrder.config.turnFlow.cardSeatOrderMapping["NVA"]',
+      ),
+    );
+  });
+
+  it('requires unique cardSeatOrderMapping targets', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(base, { US: '0', ARVN: '0' }, ['US', 'ARVN']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_MAPPING_TARGET_DUPLICATE'
+          && diag.path === 'turnOrder.config.turnFlow.cardSeatOrderMapping["ARVN"]',
+      ),
+    );
+  });
+
+  it('rejects cardSeatOrderMapping source key normalization collisions', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(base, { US: '0', 'u-s': '1' }, ['US', 'u-s']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_MAPPING_SOURCE_COLLISION'
+          && diag.path === 'turnOrder.config.turnFlow.cardSeatOrderMapping["u-s"]',
+      ),
+    );
+  });
+
+  it('warns when card metadata seat-order entries are unresolved and dropped', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(base, { US: '0' }, ['US', 'NVA']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DROPPED'
+          && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder[1]'
+          && diag.severity === 'warning',
+      ),
+    );
+  });
+
   it('emits deterministic duplicate action diagnostics', () => {
     const base = createValidGameDef();
     const def = {
@@ -1128,68 +1226,11 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('requires transferVar.to.player when targeting per-player variables', () => {
+  it('does not duplicate structural transferVar endpoint diagnostics handled by schema contracts', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
-            {
-              transferVar: {
-                from: { scope: 'pvar', player: 'actor', var: 'vp' },
-                to: { scope: 'pvar', var: 'vp' },
-                amount: 1,
-              },
-            },
-          ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED' &&
-          diag.path === 'actions[0].effects[0].transferVar.to.player',
-      ),
-    );
-  });
-
-  it('requires transferVar.from.player when source is per-player', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
-            {
-              transferVar: {
-                from: { scope: 'pvar', var: 'vp' },
-                to: { scope: 'global', var: 'bank' },
-                amount: 1,
-              },
-            },
-          ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.player',
-      ),
-    );
-  });
-
-  it('rejects transferVar endpoint player when endpoint scope is global', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
+      zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
       actions: [
         {
           ...base.actions[0],
@@ -1197,7 +1238,7 @@ describe('validateGameDef reference checks', () => {
             {
               transferVar: {
                 from: { scope: 'global', player: 'actor', var: 'money' },
-                to: { scope: 'global', var: 'money' },
+                to: { scope: 'zoneVar', zone: 'deck:none', player: 'actor', var: 'supply' },
                 amount: 1,
               },
             },
@@ -1207,11 +1248,18 @@ describe('validateGameDef reference checks', () => {
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
-    assert.ok(
+    assert.equal(
       diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.player',
+        (diag) =>
+          diag.code === 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN'
+          || diag.code === 'EFFECT_TRANSFER_VAR_NON_ZONE_SCOPE_ZONE_FORBIDDEN'
+          || diag.code === 'EFFECT_TRANSFER_VAR_FROM_ZONE_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_TO_ZONE_REQUIRED'
+          || diag.code === 'EFFECT_TRANSFER_VAR_ZONE_SCOPE_PLAYER_FORBIDDEN',
       ),
+      false,
     );
   });
 
@@ -1239,8 +1287,8 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID' &&
-          diag.path === 'actions[0].effects[0].transferVar.from.var',
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].transferVar.from.var',
       ),
     );
   });

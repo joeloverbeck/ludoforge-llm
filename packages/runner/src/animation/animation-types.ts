@@ -122,17 +122,19 @@ export interface CardFlipDescriptor extends BaseAnimationDescriptor {
 
 export interface VarChangeDescriptor extends BaseAnimationDescriptor {
   readonly kind: 'varChange';
-  readonly scope: 'global' | 'perPlayer';
+  readonly scope: 'global' | 'perPlayer' | 'zone';
   readonly varName: string;
   readonly oldValue: VariableValue;
   readonly newValue: VariableValue;
   readonly player?: PlayerId;
+  readonly zone?: string;
 }
 
 export interface ResourceEndpointDescriptor {
-  readonly scope: 'global' | 'perPlayer';
+  readonly scope: 'global' | 'perPlayer' | 'zone';
   readonly varName: string;
   readonly player?: PlayerId;
+  readonly zone?: string;
 }
 
 export interface ResourceTransferDescriptor extends BaseAnimationDescriptor {

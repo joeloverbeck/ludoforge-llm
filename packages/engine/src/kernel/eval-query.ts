@@ -1,5 +1,6 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { isRecoverableEvalResolutionError, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
+import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
+import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';

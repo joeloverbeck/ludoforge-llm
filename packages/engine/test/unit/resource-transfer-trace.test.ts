@@ -23,7 +23,11 @@ const traceDef: GameDef = {
     { name: 'coins', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'committed', type: 'int', init: 0, min: 0, max: 20 },
   ],
-  zones: [],
+  zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 20 }],
+  zones: [
+    { id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: 'zone-b:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' },
+  ],
   tokenTypes: [],
   setup: [],
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
@@ -45,6 +49,10 @@ function makeCtx(args: {
     perPlayerVars: {
       '0': { coins: args.player0Coins, committed: 0 },
       '1': { coins: 0, committed: args.player1Committed ?? 0 },
+    },
+    zoneVars: {
+      'zone-a:none': { supply: 8 },
+      'zone-b:none': { supply: 2 },
     },
     playerCount: 2,
     zones: {},
@@ -184,5 +192,23 @@ describe('resourceTransfer effect trace entries', () => {
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];
     assert.deepEqual(trace, []);
+  });
+
+  it('emits zone endpoints in resourceTransfer trace entries', () => {
+    const ctx = makeCtx({ player0Coins: 0, pool: 0 });
+    const effects: readonly EffectAST[] = [{
+      transferVar: {
+        from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
+        to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
+        amount: 3,
+      },
+    }];
+
+    applyEffects(effects, ctx);
+    const trace = ctx.collector.trace ?? [];
+    const transfer = trace.find((entry) => entry.kind === 'resourceTransfer');
+    assert.ok(transfer);
+    assert.deepEqual(transfer.from, { scope: 'zone', zone: 'zone-a:none', varName: 'supply' });
+    assert.deepEqual(transfer.to, { scope: 'zone', zone: 'zone-b:none', varName: 'supply' });
   });
 });

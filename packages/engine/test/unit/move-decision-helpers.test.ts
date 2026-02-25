@@ -32,6 +32,7 @@ const makeDef = (action: ActionDef): GameDef =>
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
   nextTokenOrdinal: 0,

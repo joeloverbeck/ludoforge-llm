@@ -49,7 +49,7 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: [['player', 'chosen']],
-    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: ZONE_PATH,
   },
   setActivePlayer: {
     declaredBinderPaths: NO_BINDER_PATHS,
@@ -63,14 +63,14 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: [['player', 'chosen']],
-    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: ZONE_PATH,
   },
   transferVar: {
     declaredBinderPaths: [['actualBind']],
     sequentiallyVisibleBinderPaths: [['actualBind']],
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: [['from', 'player', 'chosen'], ['to', 'player', 'chosen']],
-    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['from', 'zone'], ['to', 'zone']],
   },
   moveToken: {
     declaredBinderPaths: NO_BINDER_PATHS,
@@ -339,8 +339,8 @@ export const NON_EFFECT_BINDER_SURFACE_CONTRACT: readonly NonEffectBinderSurface
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   {
-    id: 'ref.zoneCount|zoneProp',
-    matchAll: [{ kind: 'oneOf', key: 'ref', values: ['zoneCount', 'zoneProp'] }],
+    id: 'ref.zoneCount|zoneProp|zoneVar',
+    matchAll: [{ kind: 'oneOf', key: 'ref', values: ['zoneCount', 'zoneProp', 'zoneVar'] }],
     declaredBinderPaths: NO_BINDER_PATHS,
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,

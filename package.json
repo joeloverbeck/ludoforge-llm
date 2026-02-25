@@ -12,6 +12,10 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:engine:unit": "pnpm -F @ludoforge/engine test:unit",
+    "test:engine:integration": "pnpm -F @ludoforge/engine test:integration",
+    "test:engine:performance": "pnpm -F @ludoforge/engine test:performance",
+    "test:engine:memory": "pnpm -F @ludoforge/engine test:memory",
     "dev": "turbo dev",
     "schema:artifacts": "turbo schema:artifacts"
   },
@@ -19,7 +23,7 @@
     "@eslint/js": "^9.34.0",
     "eslint": "^9.34.0",
     "globals": "^16.3.0",
-    "turbo": "^2.8.9",
+    "turbo": "^2.8.10",
     "typescript-eslint": "^8.41.0"
   }
 }

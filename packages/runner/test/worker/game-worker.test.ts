@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGameWorker, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
-import { ALT_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import { ALT_TEST_DEF, CHOOSE_MIXED_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
 import { asActionId, type Move } from '@ludoforge/engine/runtime';
 
 const expectWorkerError = (error: unknown, code: WorkerError['code']): WorkerError => {
@@ -389,6 +389,54 @@ describe('createGameWorker', () => {
         source: 'URL https://example.com/invalid-def.json',
         receivedType: 'object',
       });
+    }
+  });
+
+  it('completeMove returns completed move for a template with pending decisions', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_ONE_TEST_DEF, 50, undefined, nextStamp());
+
+    const templateMove: Move = { actionId: asActionId('pick-one'), params: {} };
+    const completed = await worker.completeMove(templateMove);
+
+    expect(completed).not.toBeNull();
+    expect(completed!.actionId).toBe(templateMove.actionId);
+    expect(Object.keys(completed!.params).length).toBeGreaterThan(0);
+  });
+
+  it('completeMove passes through already-complete moves', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 51, undefined, nextStamp());
+
+    const completed = await worker.completeMove(LEGAL_TICK_MOVE);
+
+    expect(completed).not.toBeNull();
+    expect(completed).toEqual(LEGAL_TICK_MOVE);
+  });
+
+  it('completeMove fills multiple decisions for a multi-choice action', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(CHOOSE_MIXED_TEST_DEF, 52, undefined, nextStamp());
+
+    const templateMove: Move = { actionId: asActionId('pick-mixed'), params: {} };
+    const completed = await worker.completeMove(templateMove);
+
+    expect(completed).not.toBeNull();
+    expect(completed!.actionId).toBe(templateMove.actionId);
+    expect(Object.keys(completed!.params).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('completeMove throws NOT_INITIALIZED when worker is not initialized', async () => {
+    const worker = createGameWorker();
+
+    try {
+      await worker.completeMove(LEGAL_TICK_MOVE);
+      throw new Error('Expected completeMove to throw');
+    } catch (error) {
+      expectWorkerError(error, 'NOT_INITIALIZED');
     }
   });
 });

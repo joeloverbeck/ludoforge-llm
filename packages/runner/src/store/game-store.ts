@@ -682,9 +682,18 @@ export function createGameStore(
           return 'no-legal-moves';
         }
 
-        const result = await bridge.applyMove(aiMove, undefined, toOperationStamp(ctx));
+        const completedMove = await bridge.completeMove(aiMove);
+        if (completedMove === null) {
+          guardSetAndDerive(ctx, {
+            legalMoveResult,
+            error: null,
+          });
+          return 'no-legal-moves';
+        }
+
+        const result = await bridge.applyMove(completedMove, undefined, toOperationStamp(ctx));
         const mutationInputs = await deriveMutationInputs(result.state);
-        const appliedMovePatch = buildAppliedMoveEventPatch(state, aiMove);
+        const appliedMovePatch = buildAppliedMoveEventPatch(state, completedMove);
         const lifecycle = assertLifecycleTransition(
           state.gameLifecycle,
           lifecycleFromTerminal(mutationInputs.terminal),
@@ -704,7 +713,7 @@ export function createGameStore(
         if (!wasApplied) {
           return 'no-op';
         }
-        options?.onMoveApplied?.(aiMove);
+        options?.onMoveApplied?.(completedMove);
         return 'advanced';
       };
 

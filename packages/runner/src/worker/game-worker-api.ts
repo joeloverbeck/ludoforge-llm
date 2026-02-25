@@ -1,6 +1,8 @@
 import {
   applyMove,
   assertValidatedGameDefInput,
+  completeTemplateMove,
+  createGameDefRuntime,
   enumerateLegalMoves,
   initialState,
   legalChoicesEvaluate,
@@ -14,6 +16,7 @@ import type {
   EffectTraceEntry,
   ExecutionOptions,
   GameDef,
+  GameDefRuntime,
   GameState,
   LegalMoveEnumerationOptions,
   LegalMoveEnumerationResult,
@@ -72,6 +75,7 @@ export interface GameWorkerAPI {
   getHistoryLength(): Promise<number>;
   undo(stamp: OperationStamp): Promise<GameState | null>;
   reset(nextDef: GameDef | undefined, seed: number | undefined, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
+  completeMove(templateMove: Move): Promise<Move | null>;
   loadFromUrl(url: string, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
 }
 
@@ -172,6 +176,7 @@ const withValidationFailureMapping = async <T>(run: () => Promise<T>): Promise<T
 export function createGameWorker(): GameWorkerAPI {
   let def: GameDef | null = null;
   let state: GameState | null = null;
+  let runtime: GameDefRuntime | null = null;
   let history: GameState[] = [];
   let enableTrace = true;
   let latestMutationStamp: OperationStamp | null = null;
@@ -192,6 +197,7 @@ export function createGameWorker(): GameWorkerAPI {
 
   const initState = (nextDef: GameDef, seed: number, options?: BridgeInitOptions): InitResult => {
     def = nextDef;
+    runtime = createGameDefRuntime(nextDef);
     const traceEnabled = options?.enableTrace ?? true;
     const result = initialState(nextDef, seed, options?.playerCount, { trace: traceEnabled });
     state = result.state;
@@ -226,6 +232,20 @@ export function createGameWorker(): GameWorkerAPI {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return legalChoicesEvaluate(current.def, current.state, partialMove);
+      });
+    },
+
+    async completeMove(templateMove: Move): Promise<Move | null> {
+      return withInternalErrorMapping(() => {
+        const current = assertInitialized(def, state);
+        const result = completeTemplateMove(
+          current.def,
+          current.state,
+          templateMove,
+          { state: current.state.rng },
+          runtime ?? undefined,
+        );
+        return result?.move ?? null;
       });
     },
 

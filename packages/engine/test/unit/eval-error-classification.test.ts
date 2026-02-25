@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   EVAL_ERROR_DEFER_CLASS,
   EVAL_ERROR_DEFER_CLASSES_BY_CODE,
+  type EvalErrorCodeWithDeferClass,
+  type EvalErrorDeferClassForCode,
   type EvalErrorContextForCode,
   asZoneId,
   divisionByZeroError,
@@ -14,6 +16,41 @@ import {
   selectorCardinalityError,
   typeMismatchError,
 } from '../../src/kernel/index.js';
+
+function assertUnreachable(value: never): never {
+  throw new Error(`Unhandled defer taxonomy code fixture: ${String(value)}`);
+}
+
+function createEvalErrorWithDeferClass(
+  code: EvalErrorCodeWithDeferClass,
+  deferClass: string,
+) {
+  switch (code) {
+    case 'SELECTOR_CARDINALITY':
+      return selectorCardinalityError('Expected one', {
+        selectorKind: 'zone',
+        selector: '$zones',
+        resolvedCount: 0,
+        resolvedZones: [],
+        deferClass: deferClass as EvalErrorDeferClassForCode<'SELECTOR_CARDINALITY'>,
+      } as EvalErrorContextForCode<'SELECTOR_CARDINALITY'>);
+    default:
+      return assertUnreachable(code);
+  }
+}
+
+function hasMappedDeferClass(
+  error: unknown,
+  code: EvalErrorCodeWithDeferClass,
+  deferClass: string,
+): boolean {
+  switch (code) {
+    case 'SELECTOR_CARDINALITY':
+      return hasEvalErrorDeferClass(error, code, deferClass as EvalErrorDeferClassForCode<'SELECTOR_CARDINALITY'>);
+    default:
+      return assertUnreachable(code);
+  }
+}
 
 describe('eval error classification', () => {
   it('classifies recoverable eval resolution errors', () => {
@@ -79,28 +116,26 @@ describe('eval error classification', () => {
   });
 
   it('accepts all defer classes declared by the canonical taxonomy map', () => {
-    for (const deferClass of EVAL_ERROR_DEFER_CLASSES_BY_CODE.SELECTOR_CARDINALITY) {
-      const error = selectorCardinalityError('Expected one', {
-        selectorKind: 'zone',
-        selector: '$zones',
-        resolvedCount: 0,
-        resolvedZones: [],
-        deferClass,
-      });
-      assert.equal(hasEvalErrorDeferClass(error, 'SELECTOR_CARDINALITY', deferClass), true);
+    const entries = Object.entries(EVAL_ERROR_DEFER_CLASSES_BY_CODE) as readonly [
+      EvalErrorCodeWithDeferClass,
+      readonly string[],
+    ][];
+
+    for (const [code, deferClasses] of entries) {
+      for (const deferClass of deferClasses) {
+        const error = createEvalErrorWithDeferClass(code, deferClass);
+        assert.equal(hasMappedDeferClass(error, code, deferClass), true);
+      }
     }
   });
 
-  it('rejects selector-cardinality defer classes not listed in canonical taxonomy map', () => {
+  it('rejects forged defer classes not listed in canonical taxonomy map for each mapped code', () => {
     const forgedUnlistedDeferClass = 'forgedUnlistedDeferClass' as (typeof EVAL_ERROR_DEFER_CLASS)[keyof typeof EVAL_ERROR_DEFER_CLASS];
-    const error = selectorCardinalityError('Expected one', {
-      selectorKind: 'zone',
-      selector: '$zones',
-      resolvedCount: 0,
-      resolvedZones: [],
-      deferClass: forgedUnlistedDeferClass,
-    } as EvalErrorContextForCode<'SELECTOR_CARDINALITY'>);
+    const codes = Object.keys(EVAL_ERROR_DEFER_CLASSES_BY_CODE) as readonly EvalErrorCodeWithDeferClass[];
 
-    assert.equal(hasEvalErrorDeferClass(error, 'SELECTOR_CARDINALITY', forgedUnlistedDeferClass), false);
+    for (const code of codes) {
+      const error = createEvalErrorWithDeferClass(code, forgedUnlistedDeferClass);
+      assert.equal(hasMappedDeferClass(error, code, forgedUnlistedDeferClass), false);
+    }
   });
 });

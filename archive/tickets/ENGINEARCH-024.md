@@ -1,6 +1,6 @@
 # ENGINEARCH-024: Generalize Defer-Taxonomy Parity Tests Across All Mapped Error Codes
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — unit test architecture hardening for classifier/taxonomy parity
@@ -8,14 +8,14 @@
 
 ## Problem
 
-Current parity coverage for defer-class classification is anchored to `SELECTOR_CARDINALITY` only. If additional eval-error codes are added to `EVAL_ERROR_DEFER_CLASSES_BY_CODE`, classifier/map drift could slip in without a failing test because the assertions are not map-wide.
+Current defer-class parity coverage is code-specific and anchored to `SELECTOR_CARDINALITY`. If additional eval-error codes are added to `EVAL_ERROR_DEFER_CLASSES_BY_CODE`, classifier/map drift could slip in without a failing test because assertions are not generated map-wide.
 
 ## Assumption Reassessment (2026-02-25)
 
 1. `EVAL_ERROR_DEFER_CLASSES_BY_CODE` is currently defined in `packages/engine/src/kernel/eval-error-defer-class.ts` and currently contains only `SELECTOR_CARDINALITY`.
 2. `hasEvalErrorDeferClass` now consumes the canonical map in `packages/engine/src/kernel/eval-error-classification.ts`.
-3. Existing parity tests in `packages/engine/test/unit/eval-error-classification.test.ts` still iterate only `EVAL_ERROR_DEFER_CLASSES_BY_CODE.SELECTOR_CARDINALITY`, so they do not automatically cover future mapped codes.
-4. Active tickets `ENGINEARCH-020` through `ENGINEARCH-023` do not cover this map-wide defer-taxonomy parity gap.
+3. Existing parity tests in `packages/engine/test/unit/eval-error-classification.test.ts` include positive/negative checks for `SELECTOR_CARDINALITY`, but they still hardcode that code key, so they do not automatically cover future mapped codes.
+4. `ENGINEARCH-020` through `ENGINEARCH-023` are archived and do not cover this map-wide defer-taxonomy parity gap.
 
 ## Architecture Check
 
@@ -40,7 +40,7 @@ Add a small test fixture/utility pattern in the same test file to construct mini
 ## Files to Touch
 
 - `packages/engine/test/unit/eval-error-classification.test.ts` (modify)
-- `packages/engine/test/unit/eval-error-defer-class.test.ts` (modify, if needed for map-shape guardrails)
+- `packages/engine/test/unit/eval-error-defer-class.test.ts` (modify only if map-shape guardrails remain code-specific after refactor)
 
 ## Out of Scope
 
@@ -74,3 +74,20 @@ Add a small test fixture/utility pattern in the same test file to construct mini
 2. `pnpm -F @ludoforge/engine build`
 3. `node --test packages/engine/dist/test/unit/eval-error-classification.test.js`
 4. `pnpm -F @ludoforge/engine test:unit`
+
+## Outcome
+
+- **Completion date**: 2026-02-25
+- **What actually changed**:
+  - Refactored `packages/engine/test/unit/eval-error-classification.test.ts` to validate defer-class parity by iterating all entries in `EVAL_ERROR_DEFER_CLASSES_BY_CODE` rather than hardcoding `SELECTOR_CARDINALITY`.
+  - Added exhaustive, localized per-code fixtures in that test file so taxonomy map growth forces fixture updates at compile-time/test-time.
+  - Added per-code forged/unlisted defer-class rejection coverage driven by map keys.
+  - Strengthened `packages/engine/test/unit/eval-error-defer-class.test.ts` to validate mapping shape and ensure mapped defer classes come from canonical literals.
+- **Deviations from original plan**:
+  - None in scope; additionally corrected assumption language to reflect that `ENGINEARCH-020` through `ENGINEARCH-023` are archived (not active).
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine typecheck` ✅
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/eval-error-classification.test.js` ✅
+  - `pnpm -F @ludoforge/engine test:unit` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅

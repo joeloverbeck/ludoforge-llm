@@ -1,6 +1,6 @@
 import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move } from '../kernel/types.js';
-import { completeTemplateMove, isTemplateMoveForProfile } from './template-completion.js';
+import { completeTemplateMove } from './template-completion.js';
 
 export class RandomAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
@@ -12,14 +12,10 @@ export class RandomAgent implements Agent {
     let rng = input.rng;
 
     for (const move of input.legalMoves) {
-      if (isTemplateMoveForProfile(input.def, move)) {
-        const result = completeTemplateMove(input.def, input.state, move, rng);
-        if (result !== null) {
-          completedMoves.push(result.move);
-          rng = result.rng;
-        }
-      } else {
-        completedMoves.push(move);
+      const result = completeTemplateMove(input.def, input.state, move, rng);
+      if (result !== null) {
+        completedMoves.push(result.move);
+        rng = result.rng;
       }
     }
 

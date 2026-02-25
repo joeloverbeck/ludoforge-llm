@@ -23,7 +23,7 @@ import {
 
 const phaseId = asPhaseId('main');
 
-const defStub: GameDef = {
+const baseDefStub: GameDef = {
   metadata: { id: 'agents-random', players: { min: 2, max: 2 } },
   constants: {},
   globalVars: [],
@@ -59,8 +59,25 @@ const createMoves = (count: number): readonly Move[] =>
     params: {},
   }));
 
+const createActionDef = (actionId: Move['actionId']): ActionDef => ({
+  id: actionId,
+  actor: 'active',
+  executor: 'actor',
+  phase: [phaseId],
+  params: [],
+  pre: null,
+  cost: [],
+  effects: [],
+  limits: [],
+});
+
+const createDefForMoves = (moves: readonly Move[]): GameDef => ({
+  ...baseDefStub,
+  actions: Array.from(new Set(moves.map((move) => move.actionId))).map((actionId) => createActionDef(actionId)),
+});
+
 const createInput = (legalMoves: readonly Move[], rngSeed = 42n) => ({
-  def: defStub,
+  def: createDefForMoves(legalMoves),
   state: stateStub,
   playerId: asPlayerId(0),
   legalMoves,
@@ -96,7 +113,7 @@ const createDefWithProfile = (
   actions: readonly ActionDef[],
   profiles: readonly ActionPipelineDef[],
 ): GameDef => ({
-  ...defStub,
+  ...baseDefStub,
   actions,
   actionPipelines: profiles,
 });
@@ -157,7 +174,7 @@ describe('RandomAgent', () => {
 
     for (let i = 0; i < 100; i += 1) {
       const result = agent.chooseMove({
-        def: defStub,
+        def: createDefForMoves(legalMoves),
         state: stateStub,
         playerId: asPlayerId(0),
         legalMoves,

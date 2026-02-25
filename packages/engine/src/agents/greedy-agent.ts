@@ -1,9 +1,10 @@
 import { applyMove } from '../kernel/apply-move.js';
+import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
 import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move, Rng } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
-import { completeTemplateMove, isTemplateMoveForProfile } from './template-completion.js';
+import { completeTemplateMove } from './template-completion.js';
 
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
 
@@ -38,19 +39,21 @@ export class GreedyAgent implements Agent {
     let rng: Rng = input.rng;
 
     for (const move of input.legalMoves) {
-      if (isTemplateMoveForProfile(input.def, move)) {
-        for (let i = 0; i < this.completionsPerTemplate; i += 1) {
-          const result = completeTemplateMove(input.def, input.state, move, rng);
-          if (result !== null) {
-            expandedMoves.push(result.move);
-            rng = result.rng;
-          } else {
-            // Template is unplayable, skip all remaining attempts
-            break;
-          }
+      const choiceState = legalChoicesEvaluate(input.def, input.state, move);
+      if (choiceState.kind === 'illegal') {
+        continue;
+      }
+
+      const attempts = choiceState.kind === 'pending' ? this.completionsPerTemplate : 1;
+      for (let i = 0; i < attempts; i += 1) {
+        const result = completeTemplateMove(input.def, input.state, move, rng);
+        if (result !== null) {
+          expandedMoves.push(result.move);
+          rng = result.rng;
+        } else {
+          // Unplayable move under decision completion, skip all remaining attempts.
+          break;
         }
-      } else {
-        expandedMoves.push(move);
       }
     }
 

@@ -3,7 +3,7 @@ import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
-import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
@@ -308,22 +308,22 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
-    let completion: ReturnType<typeof resolveMoveDecisionSequence>;
     try {
-      completion = resolveMoveDecisionSequence(def, state, move, {
-        budgets: enumeration.budgets,
-        onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-      });
+      if (
+        !isMoveDecisionSequenceSatisfiable(def, state, move, {
+          budgets: enumeration.budgets,
+          onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+        })
+      ) {
+        continue;
+      }
     } catch (error) {
       if (shouldDeferMissingBinding(error, 'legalMoves.eventDecisionSequence')) {
         continue;
       }
       throw error;
     }
-    if (!completion.complete) {
-      continue;
-    }
-    if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, completion.move, action)) {
+    if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {
       return;
     }
   }

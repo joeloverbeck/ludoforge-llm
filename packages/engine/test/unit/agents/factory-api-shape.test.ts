@@ -23,7 +23,19 @@ const defStub: GameDef = {
   tokenTypes: [],
   setup: [],
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
-  actions: [],
+  actions: [
+    {
+      id: asActionId('only'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    },
+  ],
   triggers: [],
   terminal: { conditions: [] },
 };

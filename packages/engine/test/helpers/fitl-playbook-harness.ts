@@ -283,7 +283,8 @@ export const replayPlaybookTurn = (
           `${playMove.label}: expectedOperationState requires a resolved move with compound specialActivity`,
         );
       }
-      const { compound: _compound, ...opOnlyMove } = playMove.move;
+      const { compound, ...opOnlyMove } = playMove.move;
+      void compound;
       const opOnlyResult = applyMoveWithResolvedDecisionIds(
         def,
         current,

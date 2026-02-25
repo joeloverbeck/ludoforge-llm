@@ -250,6 +250,63 @@ describe('effects var handlers', () => {
     assert.deepEqual(noOp.emittedEvents, []);
   });
 
+  it('keeps varChanged event payloads in parity with varChange trace entries across setVar/addVar scopes', () => {
+    const zoneDef = {
+      id: 'zone-a:none' as never,
+      owner: 'none' as const,
+      visibility: 'public' as const,
+      ordering: 'stack' as const,
+    };
+    const zoneCtx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [zoneDef],
+        zoneVars: [{ name: 'threat', type: 'int', init: 0, min: 0, max: 10 }],
+      },
+      state: {
+        ...makeState(),
+        zoneVars: { 'zone-a:none': { threat: 4 } },
+      },
+    });
+
+    const cases: readonly { readonly name: string; readonly ctx: EffectContext; readonly effect: EffectAST }[] = [
+      { name: 'setVar global', ctx: makeCtx(), effect: { setVar: { scope: 'global', var: 'score', value: 9 } } },
+      { name: 'setVar pvar', ctx: makeCtx(), effect: { setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } } },
+      { name: 'setVar zoneVar', ctx: zoneCtx, effect: { setVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', value: 7 } } },
+      { name: 'addVar global', ctx: makeCtx(), effect: { addVar: { scope: 'global', var: 'score', delta: 3 } } },
+      { name: 'addVar pvar', ctx: makeCtx(), effect: { addVar: { scope: 'pvar', player: 'actor', var: 'hp', delta: 2 } } },
+      { name: 'addVar zoneVar', ctx: zoneCtx, effect: { addVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', delta: -2 } } },
+    ];
+
+    for (const testCase of cases) {
+      const collector = createCollector({ trace: true });
+      const ctx = { ...testCase.ctx, collector };
+      const result = applyEffect(testCase.effect, ctx);
+      const traceChanges = (collector.trace ?? []).filter((entry) => entry.kind === 'varChange');
+      const emittedVarChanged = (result.emittedEvents ?? []).filter((entry) => entry.type === 'varChanged');
+
+      assert.equal(traceChanges.length, 1, `${testCase.name}: expected single trace varChange`);
+      assert.equal(emittedVarChanged.length, 1, `${testCase.name}: expected single emitted varChanged`);
+
+      const trace = traceChanges[0]!;
+      const event = emittedVarChanged[0]!;
+      const normalizedTrace =
+        trace.scope === 'global'
+          ? { scope: trace.scope, var: trace.varName, oldValue: trace.oldValue, newValue: trace.newValue }
+          : trace.scope === 'perPlayer'
+            ? { scope: trace.scope, player: trace.player, var: trace.varName, oldValue: trace.oldValue, newValue: trace.newValue }
+            : { scope: trace.scope, zone: trace.zone, var: trace.varName, oldValue: trace.oldValue, newValue: trace.newValue };
+      const normalizedEvent =
+        event.scope === 'global'
+          ? { scope: event.scope, var: event.var, oldValue: event.oldValue, newValue: event.newValue }
+          : event.scope === 'perPlayer'
+            ? { scope: event.scope, player: event.player, var: event.var, oldValue: event.oldValue, newValue: event.newValue }
+            : { scope: event.scope, zone: event.zone, var: event.var, oldValue: event.oldValue, newValue: event.newValue };
+
+      assert.deepEqual(normalizedEvent, normalizedTrace, `${testCase.name}: trace/event scope mapping drift`);
+    }
+  });
+
 });
 
 /**

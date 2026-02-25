@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 import type { ConditionAST, EffectAST, OptionsQuery, PlayerSel } from '../../src/kernel/index.js';
 
 import {
-  AST_SCOPED_VAR_SCOPES,
   ConditionASTSchema,
   EffectASTSchema,
   OBJECT_STRICTNESS_POLICY,
@@ -12,6 +11,7 @@ import {
   ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
+import { AST_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const collectIssuePaths = (issue: unknown): string[] => {

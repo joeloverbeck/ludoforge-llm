@@ -2,9 +2,9 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
+import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { PlayerId, ZoneId } from './branded.js';
 import type { EffectAST } from './types.js';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
@@ -68,28 +68,6 @@ const resolvePerPlayerVarDef = (ctx: EffectContext, varName: string, effectType:
   return variableDef;
 };
 
-const globalVarChangedEvent = (varName: string, oldValue: number | boolean, newValue: number | boolean) => ({
-  type: 'varChanged' as const,
-  scope: 'global' as const,
-  var: varName,
-  oldValue,
-  newValue,
-});
-
-const perPlayerVarChangedEvent = (
-  playerId: PlayerId,
-  varName: string,
-  oldValue: number | boolean,
-  newValue: number | boolean,
-) => ({
-  type: 'varChanged' as const,
-  scope: 'perPlayer' as const,
-  player: playerId,
-  var: varName,
-  oldValue,
-  newValue,
-});
-
 const resolveZoneVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
   const variableDef = (ctx.def.zoneVars ?? []).find((variable) => variable.name === varName);
   if (variableDef === undefined) {
@@ -104,19 +82,19 @@ const resolveZoneVarDef = (ctx: EffectContext, varName: string, effectType: 'set
   return variableDef;
 };
 
-const zoneVarChangedEvent = (
-  zoneId: ZoneId,
-  varName: string,
-  oldValue: number,
-  newValue: number,
-) => ({
-  type: 'varChanged' as const,
-  scope: 'zone' as const,
-  zone: zoneId,
-  var: varName,
-  oldValue,
-  newValue,
-});
+const emitVarChangeArtifacts = (
+  ctx: EffectContext,
+  endpoint: RuntimeScopedVarEndpoint,
+  oldValue: number | boolean,
+  newValue: number | boolean,
+) => {
+  const tracePayload = toTraceVarChangePayload(endpoint, oldValue, newValue);
+  if (!emitVarChangeTraceIfChanged(ctx, tracePayload)) {
+    return undefined;
+  }
+
+  return toVarChangedEvent(endpoint, oldValue, newValue);
+};
 
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
   const { scope, var: variableName, value } = effect.setVar;
@@ -158,15 +136,13 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     }
 
     const nextValue = clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max);
-    if (
-      !emitVarChangeTraceIfChanged(ctx, {
-        scope: 'zone',
-        zone: String(resolvedZoneId),
-        varName: variableName,
-        oldValue: currentValue,
-        newValue: nextValue,
-      })
-    ) {
+    const emittedEvent = emitVarChangeArtifacts(
+      ctx,
+      { scope: 'zone', zone: resolvedZoneId, var: variableName },
+      currentValue,
+      nextValue,
+    );
+    if (emittedEvent === undefined) {
       return { state: ctx.state, rng: ctx.rng };
     }
 
@@ -182,7 +158,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
         },
       },
       rng: ctx.rng,
-      emittedEvents: [zoneVarChangedEvent(resolvedZoneId, variableName, currentValue, nextValue)],
+      emittedEvents: [emittedEvent],
     };
   }
 
@@ -202,14 +178,8 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       variableDef.type === 'int'
         ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
         : expectBoolean(evaluatedValue, 'setVar', 'value');
-    if (
-      !emitVarChangeTraceIfChanged(ctx, {
-        scope: 'global',
-        varName: variableName,
-        oldValue: currentValue,
-        newValue: nextValue,
-      })
-    ) {
+    const emittedEvent = emitVarChangeArtifacts(ctx, { scope: 'global', var: variableName }, currentValue, nextValue);
+    if (emittedEvent === undefined) {
       return { state: ctx.state, rng: ctx.rng };
     }
 
@@ -222,7 +192,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
         },
       },
       rng: ctx.rng,
-      emittedEvents: [globalVarChangedEvent(variableName, currentValue, nextValue)],
+      emittedEvents: [emittedEvent],
     };
   }
 
@@ -264,15 +234,13 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     variableDef.type === 'int'
       ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
-  if (
-    !emitVarChangeTraceIfChanged(ctx, {
-      scope: 'perPlayer',
-      player: playerId,
-      varName: variableName,
-      oldValue: currentValue,
-      newValue: nextValue,
-    })
-  ) {
+  const emittedEvent = emitVarChangeArtifacts(
+    ctx,
+    { scope: 'pvar', player: playerId, var: variableName },
+    currentValue,
+    nextValue,
+  );
+  if (emittedEvent === undefined) {
     return { state: ctx.state, rng: ctx.rng };
   }
 
@@ -288,7 +256,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       },
     },
     rng: ctx.rng,
-    emittedEvents: [perPlayerVarChangedEvent(playerId, variableName, currentValue, nextValue)],
+    emittedEvents: [emittedEvent],
   };
 };
 
@@ -332,15 +300,13 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     }
 
     const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-    if (
-      !emitVarChangeTraceIfChanged(ctx, {
-        scope: 'zone',
-        zone: String(resolvedZoneId),
-        varName: variableName,
-        oldValue: currentValue,
-        newValue: nextValue,
-      })
-    ) {
+    const emittedEvent = emitVarChangeArtifacts(
+      ctx,
+      { scope: 'zone', zone: resolvedZoneId, var: variableName },
+      currentValue,
+      nextValue,
+    );
+    if (emittedEvent === undefined) {
       return { state: ctx.state, rng: ctx.rng };
     }
 
@@ -356,7 +322,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
         },
       },
       rng: ctx.rng,
-      emittedEvents: [zoneVarChangedEvent(resolvedZoneId, variableName, currentValue, nextValue)],
+      emittedEvents: [emittedEvent],
     };
   }
 
@@ -381,14 +347,8 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     }
 
     const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-    if (
-      !emitVarChangeTraceIfChanged(ctx, {
-        scope: 'global',
-        varName: variableName,
-        oldValue: currentValue,
-        newValue: nextValue,
-      })
-    ) {
+    const emittedEvent = emitVarChangeArtifacts(ctx, { scope: 'global', var: variableName }, currentValue, nextValue);
+    if (emittedEvent === undefined) {
       return { state: ctx.state, rng: ctx.rng };
     }
 
@@ -401,7 +361,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
         },
       },
       rng: ctx.rng,
-      emittedEvents: [globalVarChangedEvent(variableName, currentValue, nextValue)],
+      emittedEvents: [emittedEvent],
     };
   }
 
@@ -448,15 +408,13 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-  if (
-    !emitVarChangeTraceIfChanged(ctx, {
-      scope: 'perPlayer',
-      player: playerId,
-      varName: variableName,
-      oldValue: currentValue,
-      newValue: nextValue,
-    })
-  ) {
+  const emittedEvent = emitVarChangeArtifacts(
+    ctx,
+    { scope: 'pvar', player: playerId, var: variableName },
+    currentValue,
+    nextValue,
+  );
+  if (emittedEvent === undefined) {
     return { state: ctx.state, rng: ctx.rng };
   }
 
@@ -472,7 +430,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
       },
     },
     rng: ctx.rng,
-    emittedEvents: [perPlayerVarChangedEvent(playerId, variableName, currentValue, nextValue)],
+    emittedEvents: [emittedEvent],
   };
 };
 

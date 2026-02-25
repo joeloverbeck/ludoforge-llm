@@ -422,4 +422,102 @@ describe('transferVar effect', () => {
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('requires zone selector'),
     );
   });
+
+  it('keeps emitted varChanged events in scope-payload parity with varChange trace entries', () => {
+    const cases: readonly { readonly name: string; readonly effect: EffectAST }[] = [
+      {
+        name: 'pvar->global',
+        effect: {
+          transferVar: {
+            from: { scope: 'pvar', player: 'actor', var: 'coins' },
+            to: { scope: 'global', var: 'pot' },
+            amount: 2,
+          },
+        },
+      },
+      {
+        name: 'global->pvar',
+        effect: {
+          transferVar: {
+            from: { scope: 'global', var: 'pot' },
+            to: { scope: 'pvar', player: 'actor', var: 'coins' },
+            amount: 2,
+          },
+        },
+      },
+      {
+        name: 'zoneVar->zoneVar',
+        effect: {
+          transferVar: {
+            from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
+            to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
+            amount: 2,
+          },
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const collector = createCollector({ trace: true });
+      const ctx = makeCtx({ collector });
+      const result = applyEffect(testCase.effect, ctx);
+      const traceChanges = (collector.trace ?? []).filter((entry) => entry.kind === 'varChange');
+      const emittedVarChanged = (result.emittedEvents ?? []).filter((entry) => entry.type === 'varChanged');
+
+      assert.equal(emittedVarChanged.length, traceChanges.length, `${testCase.name}: change count mismatch`);
+      assert.equal(traceChanges.length, 2, `${testCase.name}: expected source + destination changes`);
+
+      const normalizedTrace = traceChanges.map((entry) =>
+        entry.scope === 'global'
+          ? {
+              scope: entry.scope,
+              var: entry.varName,
+              oldValue: entry.oldValue,
+              newValue: entry.newValue,
+            }
+          : entry.scope === 'perPlayer'
+            ? {
+                scope: entry.scope,
+                player: entry.player,
+                var: entry.varName,
+                oldValue: entry.oldValue,
+                newValue: entry.newValue,
+              }
+            : {
+                scope: entry.scope,
+                zone: entry.zone,
+                var: entry.varName,
+                oldValue: entry.oldValue,
+                newValue: entry.newValue,
+              },
+      );
+
+      const normalizedEvents = emittedVarChanged.map((entry) =>
+        entry.scope === 'global'
+          ? {
+              scope: entry.scope,
+              var: entry.var,
+              oldValue: entry.oldValue,
+              newValue: entry.newValue,
+            }
+          : entry.scope === 'perPlayer'
+            ? {
+                scope: entry.scope,
+                player: entry.player,
+                var: entry.var,
+                oldValue: entry.oldValue,
+                newValue: entry.newValue,
+              }
+            : {
+                scope: entry.scope,
+                zone: entry.zone,
+                var: entry.var,
+                oldValue: entry.oldValue,
+                newValue: entry.newValue,
+              },
+      );
+
+      assert.deepEqual(normalizedEvents, normalizedTrace, `${testCase.name}: trace/event scope mapping drift`);
+    }
+  });
 });

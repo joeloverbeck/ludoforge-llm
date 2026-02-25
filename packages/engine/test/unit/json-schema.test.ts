@@ -6,8 +6,6 @@ import { describe, it } from 'node:test';
 import { Ajv, type ErrorObject } from 'ajv';
 
 import {
-  AST_SCOPED_VAR_SCOPES,
-  TRACE_SCOPED_VAR_SCOPES,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -16,6 +14,7 @@ import {
   serializeTrace,
 } from '../../src/kernel/index.js';
 import type { GameDef, GameTrace } from '../../src/kernel/index.js';
+import { AST_SCOPED_VAR_SCOPES, TRACE_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const readSchema = (filename: string): Record<string, unknown> => {

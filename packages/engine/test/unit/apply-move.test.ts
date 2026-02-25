@@ -1512,6 +1512,102 @@ phase: [asPhaseId('main')],
     assert.equal(requireCardDrivenRuntime(secondFree).pendingFreeOperationGrants, undefined);
   });
 
+  it('throws runtime contract error when released deferred actorPlayer is out of range', () => {
+    const def: GameDef = {
+      metadata: { id: 'deferred-actor-player-range', players: { min: 4, max: 4 } },
+      constants: {},
+      globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [{ effects: [] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const start = initialState(def, 77, 4).state;
+    const withGrant = withPendingFreeOperationGrant(start, {
+      actionIds: ['operate'],
+      sequenceBatchId: 'batch-1',
+    });
+    const runtime = requireCardDrivenRuntime(withGrant);
+    const malformedState: GameState = {
+      ...withGrant,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          pendingDeferredEventEffects: [
+            {
+              deferredId: 'deferred-1',
+              requiredGrantBatchIds: ['batch-1'],
+              effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
+              moveParams: {},
+              actorPlayer: withGrant.playerCount,
+              actionId: 'operate',
+            },
+          ],
+        },
+      },
+    };
+
+    assert.throws(
+      () =>
+        applyMove(def, malformedState, {
+          actionId: asActionId('operate'),
+          params: {},
+          freeOperation: true,
+        }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /pendingDeferredEventEffects\[0\]\.actorPlayer out of range/);
+        assert.match(String(details.message), /actorPlayer=4/);
+        assert.match(String(details.message), /playerCount=4/);
+        assert.match(String(details.message), /actionId=operate/);
+        return true;
+      },
+    );
+  });
+
   it('executes stages stage effects normally for free operations', () => {
     const def: GameDef = {
       metadata: { id: 'free-op-stages', players: { min: 2, max: 2 } },

@@ -25,6 +25,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
+import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import type {
   ActionDef,
@@ -521,6 +522,7 @@ export function legalChoicesDiscover(
   options?: LegalChoicesRuntimeOptions,
   runtime?: GameDefRuntime,
 ): ChoiceRequest {
+  validateTurnFlowRuntimeStateInvariants(state);
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
     throw kernelRuntimeError(
@@ -548,6 +550,7 @@ export function legalChoicesEvaluate(
   options?: LegalChoicesRuntimeOptions,
   runtime?: GameDefRuntime,
 ): ChoiceRequest {
+  validateTurnFlowRuntimeStateInvariants(state);
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
     throw kernelRuntimeError(

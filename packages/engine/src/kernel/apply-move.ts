@@ -20,7 +20,7 @@ import {
 } from './move-runtime-bindings.js';
 import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
-import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
+import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError, kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
@@ -35,6 +35,7 @@ import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
+import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import type { PhaseTransitionBudget } from './effect-context.js';
 import type {
   ActionDef,
@@ -756,7 +757,14 @@ const applyReleasedDeferredEventEffects = (
   let triggerLog = [] as readonly TriggerLogEntry[];
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   for (const deferredEventEffect of releasedDeferredEventEffects) {
-    const effectPlayer = asPlayerId(deferredEventEffect.actorPlayer);
+    const actorPlayer = deferredEventEffect.actorPlayer;
+    if (!Number.isSafeInteger(actorPlayer) || actorPlayer < 0 || actorPlayer >= nextState.playerCount) {
+      throw kernelRuntimeError(
+        'RUNTIME_CONTRACT_INVALID',
+        `Deferred event effect actorPlayer out of range: actorPlayer=${String(actorPlayer)} playerCount=${nextState.playerCount} actionId=${deferredEventEffect.actionId}`,
+      );
+    }
+    const effectPlayer = asPlayerId(actorPlayer);
     const effectResult = applyEffects(deferredEventEffect.effects, {
       def,
       adjacencyGraph: shared.adjacencyGraph,
@@ -815,6 +823,7 @@ const applyMoveCore = (
   coreOptions?: ApplyMoveCoreOptions,
   cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
+  validateTurnFlowRuntimeStateInvariants(state);
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtime = coreOptions?.executionRuntime ?? createMoveExecutionRuntime(options, coreOptions?.phaseTransitionBudget);

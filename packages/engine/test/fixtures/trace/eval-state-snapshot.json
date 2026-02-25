@@ -15,11 +15,13 @@
     ],
     "hand:1": []
   },
+  "nextTokenOrdinal": 0,
   "currentPhase": "main",
   "activePlayer": 1,
   "turnCount": 3,
   "rng": { "algorithm": "pcg-dxsm-128", "version": 1, "state": ["0x1", "0x2"] },
   "stateHash": "0x0",
   "actionUsage": {},
+  "turnOrderState": { "type": "roundRobin" },
   "markers": {}
 }

@@ -243,6 +243,48 @@ describe('legalMoves', () => {
     assert.deepEqual(legalMoves(createDef(), state), []);
   });
 
+  it('throws runtime contract error for invalid pending deferred actorPlayer in card-driven runtime state', () => {
+    const state: GameState = {
+      ...createState(),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingDeferredEventEffects: [
+            {
+              deferredId: 'deferred-invalid',
+              requiredGrantBatchIds: [],
+              effects: [],
+              moveParams: {},
+              actorPlayer: 2,
+              actionId: 'wrongActor',
+            },
+          ],
+        },
+      },
+    };
+
+    assert.throws(
+      () => legalMoves(createDef(), state),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /pendingDeferredEventEffects\[0\]\.actorPlayer out of range/);
+        return true;
+      },
+    );
+  });
+
   it('skips actions whose fixed executor is outside current playerCount', () => {
     assert.doesNotThrow(() => legalMoves(createDef(), createState()));
     assert.deepEqual(legalMoves(createDef(), createState()), expectedMoves());

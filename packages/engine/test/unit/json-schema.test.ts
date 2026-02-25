@@ -14,6 +14,7 @@ import {
   serializeTrace,
 } from '../../src/kernel/index.js';
 import type { GameDef, GameTrace } from '../../src/kernel/index.js';
+import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const readSchema = (filename: string): Record<string, unknown> => {
   const schemaPath = path.join(process.cwd(), 'schemas', filename);
@@ -365,7 +366,7 @@ describe('json schema artifacts', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
-    const serializedTrace = {
+    const makeSerializedTrace = (from: unknown, to: unknown) => ({
       ...baseSerializedTrace,
       moves: [
         {
@@ -373,8 +374,8 @@ describe('json schema artifacts', () => {
           effectTrace: [
             {
               kind: 'resourceTransfer',
-              from: { scope: 'global', zone: 'board:none', varName: 'supply' },
-              to: { scope: 'perPlayer', varName: 'supply' },
+              from,
+              to,
               requestedAmount: 3,
               actualAmount: 2,
               sourceAvailable: 2,
@@ -388,10 +389,40 @@ describe('json schema artifacts', () => {
           ],
         },
       ],
-    };
+    });
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'varName',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'perPlayer',
+        zone: 'zone',
+      },
+      values: {
+        globalVar: 'bank',
+        playerVar: 'coins',
+        zoneVar: 'supply',
+        player: 0,
+        zone: 'board:none',
+      },
+    });
 
-    assert.equal(validate(serializedTrace), false);
-    assert.ok((validate.errors?.length ?? 0) > 0);
+    for (const testCase of cases) {
+      if (testCase.violation === undefined) {
+        continue;
+      }
+      const serializedTrace = makeSerializedTrace(testCase.from, testCase.to);
+      assert.equal(validate(serializedTrace), false, testCase.name);
+      assert.ok((validate.errors?.length ?? 0) > 0, testCase.name);
+    }
+
+    const control = makeSerializedTrace(
+      { scope: 'perPlayer', player: 0, varName: 'coins' },
+      { scope: 'zone', zone: 'board:none', varName: 'supply' },
+    );
+    assert.equal(validate(control), true, JSON.stringify(validate.errors, null, 2));
   });
 
   it('trace with non-hex stateHash fails schema validation', () => {
@@ -445,6 +476,54 @@ describe('json schema artifacts', () => {
     const validate = ajv.compile(gameDefSchema);
 
     assert.equal(validate(fullGameDef), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('game def rejects transferVar endpoint shape drift across both endpoint sides', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+
+    const makeInvalidGameDef = (from: unknown, to: unknown) => ({
+      ...fullGameDef,
+      actions: [
+        {
+          ...fullGameDef.actions[0],
+          effects: [{ transferVar: { from, to, amount: 1 } }],
+        },
+      ],
+    });
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'pvar',
+        zone: 'zoneVar',
+      },
+      values: {
+        globalVar: 'round',
+        playerVar: 'vp',
+        zoneVar: 'supply',
+        player: 'actor',
+        zone: 'deck:none',
+      },
+    });
+
+    for (const testCase of cases) {
+      if (testCase.violation === undefined) {
+        continue;
+      }
+      const invalid = makeInvalidGameDef(testCase.from, testCase.to);
+      assert.equal(validate(invalid), false, testCase.name);
+      assert.ok((validate.errors?.length ?? 0) > 0, testCase.name);
+    }
+
+    const control = makeInvalidGameDef(
+      { scope: 'pvar', player: 'actor', var: 'vp' },
+      { scope: 'zoneVar', zone: 'deck:none', var: 'supply' },
+    );
+    assert.equal(validate(control), true, JSON.stringify(validate.errors, null, 2));
   });
 
   it('game def with invalid adjacency direction fails GameDef.schema.json validation', () => {

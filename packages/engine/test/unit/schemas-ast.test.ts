@@ -11,6 +11,7 @@ import {
   ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
+import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const collectIssuePaths = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object') {
@@ -822,52 +823,38 @@ describe('AST and selector schemas', () => {
     assert.equal(wrongField.success, false);
   });
 
-  it('enforces discriminated transferVar endpoint contracts by scope', () => {
-    const cases: ReadonlyArray<{ readonly name: string; readonly effect: unknown }> = [
-      {
-        name: 'global endpoint cannot include player',
-        effect: {
-          transferVar: {
-            from: { scope: 'global', player: 'actor', var: 'bank' },
-            to: { scope: 'global', var: 'treasury' },
-            amount: 1,
-          },
-        },
+  it('enforces full transferVar endpoint required/forbidden field matrix by scope', () => {
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'pvar',
+        zone: 'zoneVar',
       },
-      {
-        name: 'pvar endpoint requires player',
-        effect: {
-          transferVar: {
-            from: { scope: 'pvar', var: 'vp' },
-            to: { scope: 'global', var: 'bank' },
-            amount: 1,
-          },
-        },
+      values: {
+        globalVar: 'bank',
+        playerVar: 'vp',
+        zoneVar: 'supply',
+        player: 'actor',
+        zone: 'board:none',
       },
-      {
-        name: 'zoneVar endpoint requires zone',
-        effect: {
-          transferVar: {
-            from: { scope: 'zoneVar', var: 'supply' },
-            to: { scope: 'global', var: 'bank' },
-            amount: 1,
-          },
-        },
-      },
-      {
-        name: 'zoneVar endpoint cannot include player',
-        effect: {
-          transferVar: {
-            from: { scope: 'zoneVar', zone: 'board:none', player: 'actor', var: 'supply' },
-            to: { scope: 'global', var: 'bank' },
-            amount: 1,
-          },
-        },
-      },
-    ];
+    });
 
     for (const testCase of cases) {
-      const result = EffectASTSchema.safeParse(testCase.effect);
+      const result = EffectASTSchema.safeParse({
+        transferVar: {
+          from: testCase.from,
+          to: testCase.to,
+          amount: 1,
+        },
+      });
+      if (testCase.violation === undefined) {
+        assert.equal(result.success, true, testCase.name);
+        continue;
+      }
       assert.equal(result.success, false, testCase.name);
     }
   });

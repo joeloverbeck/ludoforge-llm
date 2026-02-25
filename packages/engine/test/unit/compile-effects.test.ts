@@ -5,6 +5,7 @@ import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/comp
 import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
+import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const context: EffectLoweringContext = {
   ownershipByBase: {
@@ -523,6 +524,51 @@ describe('compile-effects lowering', () => {
         },
       },
     ]);
+  });
+
+  it('rejects invalid transferVar endpoint field combinations by scope for both endpoints', () => {
+    const basePath = 'doc.actions.0.effects.0.transferVar';
+    const cases = buildDiscriminatedEndpointMatrix({
+      scopeField: 'scope',
+      varField: 'var',
+      playerField: 'player',
+      zoneField: 'zone',
+      scopes: {
+        global: 'global',
+        player: 'pvar',
+        zone: 'zoneVar',
+      },
+      values: {
+        globalVar: 'bank',
+        playerVar: 'coins',
+        zoneVar: 'supply',
+        player: 'actor',
+        zone: 'board',
+      },
+    });
+
+    for (const testCase of cases) {
+      const result = lowerEffectArray(
+        [{ transferVar: { from: testCase.from, to: testCase.to, amount: 1 } }],
+        context,
+        'doc.actions.0.effects',
+      );
+
+      if (testCase.violation === undefined) {
+        assertNoDiagnostics(result);
+        continue;
+      }
+
+      const expectedPath = `${basePath}.${testCase.violation.endpoint}.${testCase.violation.field}`;
+      assert.equal(result.value, null, testCase.name);
+      assert.equal(
+        result.diagnostics.some(
+          (diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY' && diagnostic.path === expectedPath,
+        ),
+        true,
+        testCase.name,
+      );
+    }
   });
 
   it('lowers chooseN range cardinality forms deterministically', () => {

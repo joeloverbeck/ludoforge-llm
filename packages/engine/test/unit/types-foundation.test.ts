@@ -7,8 +7,13 @@ import {
   asTokenId,
   asZoneId,
   type Diagnostic,
+  type EvalErrorContextForCode,
+  divisionByZeroError,
   type PlayerId,
+  queryBoundsExceededError,
   type ZoneId,
+  selectorCardinalityError,
+  zonePropNotFoundError,
 } from '../../src/kernel/index.js';
 
 describe('kernel type foundations', () => {
@@ -51,5 +56,84 @@ describe('kernel type foundations', () => {
     assert.ok(diagnostic.code.length > 0);
     assert.ok(diagnostic.path.length > 0);
     assert.ok(diagnostic.message.length > 0);
+  });
+
+  it('rejects invalid selector-cardinality defer metadata at compile time', () => {
+    selectorCardinalityError('ok', {
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality',
+    });
+
+    const invalidLiteralContext = {
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'invalidClass',
+    };
+    // @ts-expect-error Invalid deferClass literal must not be accepted.
+    selectorCardinalityError('invalid', invalidLiteralContext);
+
+    const typedContext: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality',
+    };
+    selectorCardinalityError('typed', typedContext);
+
+    const widenedContext: Record<string, unknown> = {
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: 'unresolvedBindingSelectorCardinality',
+    };
+    // @ts-expect-error Widened context must not bypass deferClass typing.
+    selectorCardinalityError('widened', widenedContext);
+
+    // @ts-expect-error Zone selector cardinality metadata must include resolvedZones.
+    selectorCardinalityError('missing zones', {
+      selector: '$zones',
+      resolvedCount: 0,
+    });
+
+    // @ts-expect-error Player selector cardinality metadata must include resolvedPlayers when using resolvedCount shape.
+    selectorCardinalityError('missing players', {
+      selector: 'all',
+      resolvedCount: 2,
+    });
+  });
+
+  it('enforces structured context contracts for additional eval error codes', () => {
+    queryBoundsExceededError('too many', {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+    });
+
+    divisionByZeroError('division by zero', {
+      expr: { op: '/', left: 1, right: 0 },
+      left: 1,
+      right: 0,
+    });
+
+    zonePropNotFoundError('missing zone', {
+      zoneId: asZoneId('market'),
+      availableZoneIds: ['market'],
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+    });
+
+    // @ts-expect-error QUERY_BOUNDS_EXCEEDED requires structured context fields.
+    queryBoundsExceededError('too many', { query: { query: 'players' } });
+
+    // @ts-expect-error DIVISION_BY_ZERO requires expr, left, and right.
+    divisionByZeroError('division by zero', { expr: { op: '/', left: 1, right: 0 } });
+
+    // @ts-expect-error ZONE_PROP_NOT_FOUND requires zoneId.
+    zonePropNotFoundError('missing zone', {
+      availableZoneIds: ['market'],
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+    });
   });
 });

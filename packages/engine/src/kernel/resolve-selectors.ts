@@ -2,6 +2,7 @@ import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './
 import type { EvalContext } from './eval-context.js';
 import {
   EVAL_ERROR_DEFER_CLASS,
+  type EvalErrorContextForCode,
   missingBindingError,
   missingVarError,
   selectorCardinalityError,
@@ -283,14 +284,14 @@ export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[
 export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
   const resolved = resolveZoneSel(sel, ctx);
   if (resolved.length !== 1) {
-    const context: Record<string, unknown> = {
+    const context: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
       selector: sel,
       resolvedCount: resolved.length,
       resolvedZones: resolved,
+      ...(sel.startsWith('$') && resolved.length === 0
+        ? { deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY }
+        : {}),
     };
-    if (sel.startsWith('$') && resolved.length === 0) {
-      context.deferClass = EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY;
-    }
 
     throw selectorCardinalityError('Expected exactly one zone from selector', context);
   }

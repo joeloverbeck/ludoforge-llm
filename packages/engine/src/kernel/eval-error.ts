@@ -1,3 +1,6 @@
+import type { PlayerId, ZoneId } from './branded.js';
+import type { ConditionAST, OptionsQuery, PlayerSel, Reference, ValueExpr, ZoneSel } from './types.js';
+
 export type DataAssetEvalErrorCode =
   | 'DATA_ASSET_TABLE_CONTRACT_MISSING'
   | 'DATA_ASSET_RUNTIME_ASSET_MISSING'
@@ -33,11 +36,54 @@ export const EVAL_ERROR_DEFER_CLASS = {
 export type EvalErrorDeferClass = (typeof EVAL_ERROR_DEFER_CLASS)[keyof typeof EVAL_ERROR_DEFER_CLASS];
 
 export type SelectorCardinalityEvalErrorContext = EvalErrorContext & {
+  readonly selector: PlayerSel;
+} & (
+  | {
+      readonly playerCount: number;
+    }
+  | {
+      readonly resolvedCount: number;
+      readonly resolvedPlayers: readonly PlayerId[];
+    }
+);
+
+type SelectorCardinalityZoneEvalErrorContext = EvalErrorContext & {
+  readonly selector: ZoneSel;
+  readonly resolvedCount: number;
+  readonly resolvedZones: readonly ZoneId[];
   readonly deferClass?: EvalErrorDeferClass;
 };
 
+export type TypedSelectorCardinalityEvalErrorContext =
+  | SelectorCardinalityEvalErrorContext
+  | SelectorCardinalityZoneEvalErrorContext;
+
+export type QueryBoundsExceededEvalErrorContext = EvalErrorContext & {
+  readonly query: OptionsQuery;
+  readonly maxQueryResults: number;
+  readonly resultLength: number;
+};
+
+export type DivisionByZeroEvalErrorContext = EvalErrorContext & {
+  readonly expr: ValueExpr;
+  readonly left: number;
+  readonly right: number;
+};
+
+export type ZonePropNotFoundEvalErrorContext = EvalErrorContext & {
+  readonly zoneId: string;
+  readonly prop?: string;
+  readonly availableZoneIds?: readonly string[];
+  readonly availableProps?: readonly string[];
+  readonly reference?: Extract<Reference, { readonly ref: 'zoneProp' }>;
+  readonly condition?: Extract<ConditionAST, { readonly op: 'zonePropIncludes' }>;
+};
+
 type EvalErrorContextByCode = {
-  readonly SELECTOR_CARDINALITY: SelectorCardinalityEvalErrorContext;
+  readonly SELECTOR_CARDINALITY: TypedSelectorCardinalityEvalErrorContext;
+  readonly QUERY_BOUNDS_EXCEEDED: QueryBoundsExceededEvalErrorContext;
+  readonly DIVISION_BY_ZERO: DivisionByZeroEvalErrorContext;
+  readonly ZONE_PROP_NOT_FOUND: ZonePropNotFoundEvalErrorContext;
 };
 
 export type EvalErrorContextForCode<C extends EvalErrorCode> =
@@ -98,7 +144,7 @@ export function selectorCardinalityError(
   message: string,
   context?: EvalErrorContextForCode<'SELECTOR_CARDINALITY'>,
 ): EvalError<'SELECTOR_CARDINALITY'> {
-  return createEvalError('SELECTOR_CARDINALITY', message, context);
+  return createEvalError<'SELECTOR_CARDINALITY'>('SELECTOR_CARDINALITY', message, context);
 }
 
 export function queryBoundsExceededError(

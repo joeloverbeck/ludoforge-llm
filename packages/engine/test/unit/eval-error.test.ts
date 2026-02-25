@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 
 import {
   EVAL_ERROR_DEFER_CLASS,
+  type EvalErrorContextForCode,
   EvalError,
+  asZoneId,
   createEvalError,
   dataAssetEvalError,
   divisionByZeroError,
@@ -67,11 +69,13 @@ describe('eval error surface', () => {
     const deferrable = selectorCardinalityError('Expected one', {
       selector: '$zones',
       resolvedCount: 0,
+      resolvedZones: [],
       deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
     });
     const nonDeferrable = selectorCardinalityError('Expected one', {
       selector: 'hand:all',
       resolvedCount: 2,
+      resolvedZones: [asZoneId('hand:0'), asZoneId('hand:1')],
     });
 
     assert.equal(
@@ -81,6 +85,22 @@ describe('eval error surface', () => {
     assert.equal(
       hasEvalErrorDeferClass(nonDeferrable, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY),
       false,
+    );
+  });
+
+  it('preserves defer metadata when selector-cardinality context is provided via typed contract', () => {
+    const typedContext: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
+      selector: '$zones',
+      resolvedCount: 0,
+      resolvedZones: [],
+      deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+    };
+    const error = selectorCardinalityError('Expected one', typedContext);
+
+    assert.equal(error.context?.deferClass, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY);
+    assert.equal(
+      hasEvalErrorDeferClass(error, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY),
+      true,
     );
   });
 });

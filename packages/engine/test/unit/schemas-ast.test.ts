@@ -860,6 +860,39 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  const validScopedVarEndpoints = [
+    {
+      name: 'global',
+      endpoint: {
+        scope: AST_SCOPED_VAR_SCOPES.global,
+        var: 'gold',
+      },
+    },
+    {
+      name: 'pvar',
+      endpoint: {
+        scope: AST_SCOPED_VAR_SCOPES.player,
+        player: 'actor',
+        var: 'gold',
+      },
+    },
+    {
+      name: 'zoneVar',
+      endpoint: {
+        scope: AST_SCOPED_VAR_SCOPES.zone,
+        zone: 'board:none',
+        var: 'gold',
+      },
+    },
+  ] as const;
+
+  it('accepts setVar valid scoped payloads for global, pvar, and zoneVar', () => {
+    for (const { name, endpoint } of validScopedVarEndpoints) {
+      const result = EffectASTSchema.safeParse({ setVar: { ...endpoint, value: 1 } });
+      assert.equal(result.success, true, name);
+    }
+  });
+
   it('enforces setVar scope endpoint matrix', () => {
     const cases = buildDiscriminatedEndpointMatrix({
       scopeField: 'scope',
@@ -884,6 +917,13 @@ describe('AST and selector schemas', () => {
       const endpoint = testCase.violation?.endpoint === 'to' ? testCase.to : testCase.from;
       const result = EffectASTSchema.safeParse({ setVar: { ...endpoint, value: 1 } });
       assert.equal(result.success, testCase.violation === undefined, testCase.name);
+    }
+  });
+
+  it('accepts addVar valid scoped payloads for global, pvar, and zoneVar', () => {
+    for (const { name, endpoint } of validScopedVarEndpoints) {
+      const result = EffectASTSchema.safeParse({ addVar: { ...endpoint, delta: 1 } });
+      assert.equal(result.success, true, name);
     }
   });
 

@@ -1,6 +1,6 @@
 import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move } from '../kernel/types.js';
-import { completeTemplateMove } from './template-completion.js';
+import { completeTemplateMove } from '../kernel/move-completion.js';
 
 export class RandomAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {

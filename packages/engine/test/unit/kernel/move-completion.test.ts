@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { completeTemplateMove } from '../../../src/agents/template-completion.js';
+import { completeTemplateMove } from '../../../src/kernel/move-completion.js';
 import {
   asActionId,
   asPhaseId,

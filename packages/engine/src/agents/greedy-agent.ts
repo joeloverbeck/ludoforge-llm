@@ -1,10 +1,10 @@
 import { applyMove } from '../kernel/apply-move.js';
 import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
+import { completeTemplateMove } from '../kernel/move-completion.js';
 import { nextInt } from '../kernel/prng.js';
 import type { Agent, Move, Rng } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
-import { completeTemplateMove } from './template-completion.js';
 
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
 

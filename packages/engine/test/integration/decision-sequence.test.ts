@@ -18,7 +18,7 @@ import {
 } from '../../src/kernel/index.js';
 import { RandomAgent } from '../../src/agents/random-agent.js';
 import { GreedyAgent } from '../../src/agents/greedy-agent.js';
-import { completeTemplateMove, isTemplateMoveForProfile } from '../../src/agents/template-completion.js';
+import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 
 // ---------------------------------------------------------------------------
 // Synthetic fixture: 2 players, reserve with 3 tokens, deploy operation + simple action
@@ -423,8 +423,6 @@ describe('decision sequence integration', () => {
     const moves = legalMoves(def, state);
     const simple = findSimpleMove(moves, ACTION_SIMPLE);
     assert.ok(simple !== undefined, 'simpleScore should be in legal moves');
-    assert.ok(!isTemplateMoveForProfile(def, simple), 'simpleScore should NOT be a template move');
-
     // Verify legalChoices reports complete immediately for simple action
     const choices = legalChoicesDiscover(def, state, simple);
     assert.equal(choices.complete, true, 'simple action should have no choices');

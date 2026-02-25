@@ -1,23 +1,19 @@
-import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
+import { legalChoicesEvaluate } from './legal-choices.js';
 import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
-} from '../kernel/choice-option-policy.js';
-import { nextInt } from '../kernel/prng.js';
+} from './choice-option-policy.js';
+import { nextInt } from './prng.js';
 import type {
-  GameDef,
   GameState,
   Move,
   MoveParamScalar,
   MoveParamValue,
   Rng,
-} from '../kernel/types.js';
+  GameDef,
+} from './types.js';
 
 export const MAX_CHOICES = 50;
-
-export const isTemplateMoveForProfile = (def: GameDef, move: Move): boolean =>
-  def.actionPipelines?.some((p) => p.actionId === move.actionId) === true
-  && Object.keys(move.params).length === 0;
 
 const selectFromChooseOne = (
   options: readonly MoveParamValue[],

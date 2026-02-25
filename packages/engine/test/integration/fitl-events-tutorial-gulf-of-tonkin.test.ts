@@ -17,7 +17,7 @@ import {
 } from '../../src/kernel/index.js';
 import { GreedyAgent } from '../../src/agents/greedy-agent.js';
 import { RandomAgent } from '../../src/agents/random-agent.js';
-import { completeTemplateMove } from '../../src/agents/template-completion.js';
+import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';

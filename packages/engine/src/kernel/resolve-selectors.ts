@@ -80,6 +80,19 @@ function listZoneCandidatesByBase(zoneBase: string, ctx: Pick<EvalContext, 'def'
   return listZoneIds(ctx).filter((zoneId) => zoneId.startsWith(prefix));
 }
 
+function resolveBoundZoneBinding(zoneBinding: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): unknown {
+  const boundValue = ctx.bindings[zoneBinding];
+  if (boundValue === undefined) {
+    throw missingBindingError(`Zone binding not found: ${zoneBinding}`, {
+      selector: zoneBinding,
+      binding: zoneBinding,
+      availableBindings: Object.keys(ctx.bindings).sort(),
+    });
+  }
+
+  return boundValue;
+}
+
 export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly PlayerId[] {
   const players = listPlayers(ctx);
 
@@ -160,13 +173,7 @@ export function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): Player
 
 export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[] {
   if (sel.startsWith('$')) {
-    const boundValue = ctx.bindings[sel];
-    if (boundValue === undefined) {
-      throw missingBindingError(`Zone binding not found: ${sel}`, {
-        selector: sel,
-        availableBindings: Object.keys(ctx.bindings).sort(),
-      });
-    }
+    const boundValue = resolveBoundZoneBinding(sel, ctx);
 
     const allZoneIds = listZoneIds(ctx);
     const validateKnownZone = (zoneId: ZoneId): void => {
@@ -302,12 +309,14 @@ export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
 
 export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): ZoneId {
   if (zone.startsWith('$')) {
-    const bound = ctx.bindings[zone];
-    if (bound === undefined) {
-      throw missingBindingError(`Zone binding not found: ${zone}`, { zone, availableBindings: Object.keys(ctx.bindings).sort() });
-    }
+    const bound = resolveBoundZoneBinding(zone, ctx);
     if (typeof bound !== 'string') {
-      throw typeMismatchError(`Zone binding ${zone} must resolve to a string`, { zone, actualType: typeof bound, value: bound });
+      throw typeMismatchError(`Zone binding ${zone} must resolve to a string`, {
+        selector: zone,
+        binding: zone,
+        actualType: typeof bound,
+        value: bound,
+      });
     }
     return asZoneId(bound);
   }

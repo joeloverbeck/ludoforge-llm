@@ -9,6 +9,7 @@ import {
   asPlayerId,
   EVAL_ERROR_DEFER_CLASS,
   isEvalErrorCode,
+  resolveMapSpaceId,
   resolvePlayerSel,
   resolveSinglePlayerSel,
   resolveSingleZoneSel,
@@ -234,6 +235,47 @@ describe('resolveZoneSel', () => {
         Array.isArray(error.context?.resolvedZones) &&
         error.context.resolvedZones.length === 0 &&
         error.context?.deferClass === EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+    );
+  });
+});
+
+describe('resolveMapSpaceId', () => {
+  it('returns literal space ids as ZoneId values', () => {
+    const ctx = makeCtx();
+    assert.equal(resolveMapSpaceId('deck:none', ctx), 'deck:none');
+  });
+
+  it('resolves bound string space ids', () => {
+    const ctx = makeCtx({ bindings: { $space: 'hand:2' } });
+    assert.equal(resolveMapSpaceId('$space', ctx), 'hand:2');
+  });
+
+  it('keeps boundary-local pass-through behavior for unknown space ids', () => {
+    const ctx = makeCtx();
+    assert.equal(resolveMapSpaceId('unknown-space:none', ctx), 'unknown-space:none');
+  });
+
+  it('throws MISSING_BINDING for missing bound space selectors', () => {
+    const ctx = makeCtx({ bindings: {} });
+    assert.throws(
+      () => resolveMapSpaceId('$space', ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'MISSING_BINDING') &&
+        error.context?.selector === '$space' &&
+        error.context?.binding === '$space' &&
+        Array.isArray(error.context?.availableBindings),
+    );
+  });
+
+  it('throws TYPE_MISMATCH for non-string bound space selectors', () => {
+    const ctx = makeCtx({ bindings: { $space: 7 } });
+    assert.throws(
+      () => resolveMapSpaceId('$space', ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH') &&
+        error.context?.selector === '$space' &&
+        error.context?.binding === '$space' &&
+        error.context?.actualType === 'number',
     );
   });
 });

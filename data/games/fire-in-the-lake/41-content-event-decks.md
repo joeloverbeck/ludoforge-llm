@@ -708,23 +708,29 @@ eventDecks:
           flavorText: "Escalation trigger."
         unshaded:
           text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
+          effectTiming: afterGrants
           freeOperationGrants:
             - seat: "0"
               sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
-          # forEach+chooseOne: each piece independently chooses a city
-          # (distributes across ANY cities, not forced to a single city)
           effects:
-            - forEach:
-                bind: $usOutOfPlayPiece
-                over:
+            - chooseN:
+                bind: $selectedPieces
+                max: 6
+                options:
                   query: tokensInZone
                   zone: out-of-play-US:none
                   # faction-only filter: matches troops, bases, AND irregulars
                   filter:
                     - { prop: faction, eq: US }
-                limit: 6
+            # forEach+chooseOne: each selected piece independently chooses a city
+            # (distributes across ANY cities, not forced to a single city)
+            - forEach:
+                bind: $usOutOfPlayPiece
+                over:
+                  query: binding
+                  name: $selectedPieces
                 effects:
                   - chooseOne:
                       bind: '$targetCity@{$usOutOfPlayPiece}'
@@ -901,6 +907,7 @@ eventDecks:
           flavorText: "Robin Olds ambushes MiGs."
         unshaded:
           text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
+          effectTiming: afterGrants
           freeOperationGrants:
             - seat: "0"
               sequence: { chain: aces-us-airstrike, step: 0 }

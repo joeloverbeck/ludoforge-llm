@@ -244,7 +244,25 @@ function translateTriggerEntry(
         zoneIds: [],
         tokenIds: [],
       };
+
+    case 'turnFlowDeferredEventLifecycle':
+      return {
+        ...base,
+        kind: 'lifecycle',
+        message:
+          `Deferred ${formatIdAsDisplayName(entry.actionId)} ${formatIdAsDisplayName(entry.stage)}` +
+          ` (${formatIdAsDisplayName(entry.deferredId)}) after ${entry.requiredGrantBatchIds.length} grant batch(es).`,
+        depth: 0,
+        zoneIds: [],
+        tokenIds: [],
+      };
   }
+
+  return assertNever(entry);
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled trigger log entry: ${JSON.stringify(value)}`);
 }
 
 function buildPlayerLookup(gameDef: GameDef): PlayerLookup {

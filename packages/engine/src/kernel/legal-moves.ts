@@ -3,7 +3,7 @@ import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
-import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
+import { classifyMoveDecisionSequenceSatisfiability, isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
   applyTurnFlowWindowFilters,
@@ -311,20 +311,27 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
+    let classification: 'satisfiable' | 'unsatisfiable' | 'unknown';
     try {
-      if (
-        !isMoveDecisionSequenceSatisfiable(def, state, move, {
+      classification = classifyMoveDecisionSequenceSatisfiability(
+        def,
+        state,
+        move,
+        {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-        }, runtime)
-      ) {
-        continue;
-      }
+        },
+        runtime,
+      ).classification;
     } catch (error) {
       if (shouldDeferMissingBinding(error, 'legalMoves.eventDecisionSequence')) {
-        continue;
+        classification = 'unknown';
+      } else {
+        throw error;
       }
-      throw error;
+    }
+    if (classification === 'unsatisfiable') {
+      continue;
     }
     if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {
       return;
@@ -387,9 +394,9 @@ export const enumerateLegalMoves = (
       );
     }
 
-    const beforeEventCount = enumeration.moves.length;
+    const eventAction = isCardEventAction(action);
     enumerateCurrentEventMoves(action, def, state, enumeration, runtime);
-    if (enumeration.moves.length > beforeEventCount) {
+    if (eventAction) {
       continue;
     }
 

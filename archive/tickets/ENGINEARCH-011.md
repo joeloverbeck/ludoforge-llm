@@ -1,6 +1,6 @@
 # ENGINEARCH-011: Prevent Silent Event Move Drops During Deferrable Decision Probing
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — legal move enumeration + decision satisfiability policy + tests
@@ -14,7 +14,8 @@ Event move probing in legal move enumeration currently catches deferrable decisi
 
 1. `enumerateCurrentEventMoves` currently catches probe errors and drops moves when `shouldDeferMissingBinding(..., 'legalMoves.eventDecisionSequence')` returns true.
 2. `shouldDeferMissingBinding` now also defers a subset of `SELECTOR_CARDINALITY` errors (unresolved binding selectors with zero resolutions) for `legalMoves.eventDecisionSequence`.
-3. Existing tests cover target synthesis and missing-binding policy shape, but do not assert that deferrable probe-time errors preserve legal event move visibility.
+3. `enumerateCurrentEventMoves` uses `isMoveDecisionSequenceSatisfiable` (boolean) rather than explicit classification. This collapses `unknown` and `unsatisfiable` into the same `false` path, which can prune event moves under probe uncertainty.
+4. Existing tests cover decision sequence behavior and missing-binding policy shape, but do not assert event-move visibility under deferrable probe-time errors or `unknown` satisfiability outcomes.
 
 ## Architecture Check
 
@@ -30,7 +31,10 @@ Adjust `enumerateCurrentEventMoves` so deferrable probe-time errors do not silen
 
 ### 2. Consolidate handling around satisfiability outcomes
 
-Use `classifyMoveDecisionSequenceSatisfiability` (or equivalent centralized helper) for event move probing so `satisfiable`/`unsatisfiable`/`unknown` behavior is explicit and consistent.
+Use `classifyMoveDecisionSequenceSatisfiability` for event move probing so `satisfiable`/`unsatisfiable`/`unknown` behavior is explicit and consistent. Treat:
+- `satisfiable` as include
+- `unsatisfiable` as exclude
+- `unknown` as include (probe uncertainty should not hide event moves)
 
 ### 3. Add regression tests for event move visibility
 
@@ -67,7 +71,8 @@ Add tests proving that when probing encounters deferrable binding/cardinality co
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/legal-moves.test.ts` — add regression for deferrable event decision probing.
-2. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — add/extend satisfiability classification coverage for unknown/deferrable paths.
+2. `packages/engine/test/unit/kernel/legal-moves.test.ts` — add regression that event moves remain visible when event decision satisfiability is `unknown`.
+3. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — extend/confirm classification coverage for unknown paths where needed.
 
 ### Commands
 
@@ -76,3 +81,20 @@ Add tests proving that when probing encounters deferrable binding/cardinality co
 3. `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence.test.js`
 4. `pnpm -F @ludoforge/engine test:unit`
 
+## Outcome
+
+- Completion date: 2026-02-25
+- What changed:
+  - Event move probing in `legal-moves` now uses explicit satisfiability classification and keeps event moves for `unknown` outcomes.
+  - Deferrable probe-time errors (`MISSING_BINDING` and scoped unresolved-selector cardinality) no longer silently prune event moves.
+  - Card-event actions no longer fall through to generic non-event template enumeration when event probing yields no moves.
+  - Added/updated event-focused regressions in kernel legal-move tests plus dependent architecture-alignment updates in related unit tests that assumed event params were discovered via generic action param enumeration.
+- Deviations from original plan:
+  - Expanded test updates beyond the two originally targeted files to correct stale event-fixture assumptions in existing `apply-move`, top-level `legal-moves`, and simulator unit tests.
+  - No runtime/compiler architecture broadening beyond the event-move discovery boundary; implementation stayed policy-driven and game-agnostic.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence.test.js` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

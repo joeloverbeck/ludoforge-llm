@@ -1960,7 +1960,10 @@ phase: [asPhaseId('main')],
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
       perPlayerVars: [],
-      zones: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }] },
@@ -1971,48 +1974,79 @@ capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: [asPhaseId('main')],
-          params: [
-            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
-            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
-          ],
+          params: [],
           pre: null,
           cost: [],
-          effects: [
-            {
-              if: {
-                when: { op: '==', left: { ref: 'binding', name: 'side' }, right: 'unshaded' },
-                then: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
-                else: [{ addVar: { scope: 'global', var: 'resolved', delta: 20 } }],
-              },
-            },
-            {
-              if: {
-                when: { op: '==', left: { ref: 'binding', name: 'branch' }, right: 'a' },
-                then: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
-                else: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }],
-              },
-            },
-          ],
+          effects: [],
           limits: [],
         },
       ],
       triggers: [],
-      terminal: { conditions: [] },
+      terminal: {
+        conditions: [
+          {
+            when: { op: '>=', left: { ref: 'gvar', var: 'resolved' }, right: 1 },
+            result: { type: 'draw' },
+          },
+        ],
+      },
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'dual',
+              unshaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
+                branches: [
+                  { id: 'a', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] },
+                  { id: 'b', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }] },
+                ],
+              },
+              shaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 20 } }],
+                branches: [
+                  { id: 'a', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] },
+                  { id: 'b', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }] },
+                ],
+              },
+            },
+          ],
+        },
+      ],
     } as unknown as GameDef;
 
     const state: GameState = {
       ...createState(),
       globalVars: { resolved: 0 },
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
       actionUsage: {},
     };
 
     const unshadedA = applyMove(def, state, {
       actionId: asActionId('event'),
-      params: { side: 'unshaded', branch: 'a' },
+      params: {
+        eventCardId: 'card-1',
+        eventDeckId: 'deck-1',
+        side: 'unshaded',
+        branch: 'a',
+      },
     });
     const shadedB = applyMove(def, state, {
       actionId: asActionId('event'),
-      params: { side: 'shaded', branch: 'b' },
+      params: {
+        eventCardId: 'card-1',
+        eventDeckId: 'deck-1',
+        side: 'shaded',
+        branch: 'b',
+      },
     });
 
     assert.equal(unshadedA.state.globalVars.resolved, 11);

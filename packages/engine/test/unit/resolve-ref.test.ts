@@ -368,7 +368,9 @@ describe('resolveRef', () => {
     const ctx = makeCtx();
     assert.throws(
       () => resolveRef({ ref: 'zoneProp', zone: 'unknown', prop: 'population' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND') &&
+        error.context?.zoneId === 'unknown',
     );
   });
 

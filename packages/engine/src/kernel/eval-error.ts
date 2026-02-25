@@ -68,9 +68,9 @@ export type DivisionByZeroEvalErrorContext = EvalErrorContext & {
 };
 
 export type ZonePropNotFoundEvalErrorContext = EvalErrorContext & {
-  readonly zoneId: string;
+  readonly zoneId: ZoneId;
   readonly prop?: string;
-  readonly availableZoneIds?: readonly string[];
+  readonly availableZoneIds?: readonly ZoneId[];
   readonly availableProps?: readonly string[];
   readonly reference?: Extract<Reference, { readonly ref: 'zoneProp' }>;
   readonly condition?: Extract<ConditionAST, { readonly op: 'zonePropIncludes' }>;

@@ -302,7 +302,7 @@ export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
   return resolved[0]!;
 }
 
-export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): string {
+export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): ZoneId {
   if (zone.startsWith('$')) {
     const bound = ctx.bindings[zone];
     if (bound === undefined) {
@@ -311,7 +311,7 @@ export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<EvalContext, 'binding
     if (typeof bound !== 'string') {
       throw typeMismatchError(`Zone binding ${zone} must resolve to a string`, { zone, actualType: typeof bound, value: bound });
     }
-    return bound;
+    return asZoneId(bound);
   }
-  return zone;
+  return asZoneId(zone);
 }

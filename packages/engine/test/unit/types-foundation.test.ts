@@ -149,7 +149,7 @@ describe('kernel type foundations', () => {
 
     zonePropNotFoundError('missing zone', {
       zoneId: asZoneId('market'),
-      availableZoneIds: ['market'],
+      availableZoneIds: [asZoneId('market')],
       reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
     });
 
@@ -161,7 +161,13 @@ describe('kernel type foundations', () => {
 
     // @ts-expect-error ZONE_PROP_NOT_FOUND requires zoneId.
     zonePropNotFoundError('missing zone', {
-      availableZoneIds: ['market'],
+      availableZoneIds: [asZoneId('market')],
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+    });
+
+    zonePropNotFoundError('missing zone', {
+      // @ts-expect-error ZONE_PROP_NOT_FOUND zoneId must be branded ZoneId, not plain string.
+      zoneId: 'market',
       reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
     });
   });

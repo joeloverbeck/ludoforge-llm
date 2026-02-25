@@ -248,7 +248,9 @@ describe('evalCondition', () => {
     const ctx = makeCtx();
     assert.throws(
       () => evalCondition({ op: 'zonePropIncludes', zone: 'unknown', prop: 'terrainTags', value: 'highland' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND') &&
+        error.context?.zoneId === 'unknown',
     );
   });
 

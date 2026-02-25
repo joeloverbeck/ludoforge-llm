@@ -66,8 +66,8 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
   let cityAssignmentIndex = 0;
   return [
     {
-      match: 'doc.eventDecks.0.cards.17.unshaded.effects.0.chooseN',
-      target: 'decisionId' as const,
+      when: (request: ChoicePendingRequest) =>
+        request.type === 'chooseN' && request.name.includes('$selectedPieces'),
       value: (request: ChoicePendingRequest) =>
         request.options
           .map((option) => option.value)
@@ -75,8 +75,7 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
           .slice(0, 6),
     },
     {
-      match: '$targetCity@',
-      target: 'name' as const,
+      when: (request: ChoicePendingRequest) => request.name.includes('$targetCity@'),
       value: (request: ChoicePendingRequest) => {
         const saigon = request.options.find((option) => option.value === 'saigon:none')?.value;
         const hue = request.options.find((option) => option.value === 'hue:none')?.value;

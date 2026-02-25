@@ -54,7 +54,7 @@ describe('FITL Rule 1.4.1 US map sourcing exception', () => {
       {
         overrides: [
           {
-            match: /sourceSpaces/,
+            when: (request) => /sourceSpaces/.test(request.name),
             value: [sourceSpace],
           },
         ],

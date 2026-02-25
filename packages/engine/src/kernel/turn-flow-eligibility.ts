@@ -8,6 +8,7 @@ import {
 import { evalCondition } from './eval-condition.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { normalizeSeatOrder, parseNumericSeatPlayer } from './seat-resolution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
@@ -110,30 +111,6 @@ const normalizeFirstActionClass = (
     return actionClass;
   }
   return null;
-};
-
-const normalizeSeatOrder = (seats: readonly string[]): readonly string[] => {
-  const seen = new Set<string>();
-  const ordered: string[] = [];
-  for (const seat of seats) {
-    if (seen.has(seat)) {
-      continue;
-    }
-    seen.add(seat);
-    ordered.push(seat);
-  }
-  return ordered;
-};
-
-const parseSeatPlayer = (seat: string, playerCount: number): number | null => {
-  if (!/^\d+$/.test(seat)) {
-    return null;
-  }
-  const parsed = Number(seat);
-  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed >= playerCount) {
-    return null;
-  }
-  return parsed;
 };
 
 const readNumericResource = (vars: Readonly<Record<string, number | boolean>>, name: string): number => {
@@ -569,7 +546,7 @@ const withActiveFromFirstEligible = (state: GameState, firstEligible: string | n
     return state;
   }
 
-  const playerId = parseSeatPlayer(firstEligible, state.playerCount);
+  const playerId = parseNumericSeatPlayer(firstEligible, state.playerCount);
   if (playerId === null) {
     return state;
   }
@@ -607,7 +584,7 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
         const resolved = mapping === undefined
           ? rawOrder
           : rawOrder.map((value) => mapping[value] ?? value);
-        const filtered = resolved.filter((seatId) => parseSeatPlayer(seatId, state.playerCount) !== null);
+        const filtered = resolved.filter((seatId) => parseNumericSeatPlayer(seatId, state.playerCount) !== null);
         return filtered.length > 0 ? filtered : null;
       }
     }
@@ -700,7 +677,7 @@ const parsePlayerId = (
   seat: string,
   playerCount: number,
 ): ReturnType<typeof asPlayerId> | null => {
-  const parsed = parseSeatPlayer(seat, playerCount);
+  const parsed = parseNumericSeatPlayer(seat, playerCount);
   return parsed === null ? null : asPlayerId(parsed);
 };
 

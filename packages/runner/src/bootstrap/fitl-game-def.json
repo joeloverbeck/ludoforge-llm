@@ -345,6 +345,15 @@
       "max": 50
     }
   ],
+  "zoneVars": [
+    {
+      "name": "terrorCount",
+      "type": "int",
+      "init": 0,
+      "min": 0,
+      "max": 15
+    }
+  ],
   "zones": [
     {
       "id": "hue:none",
@@ -2598,24 +2607,6 @@
       ]
     },
     {
-      "id": "terror",
-      "states": [
-        "none",
-        "terror"
-      ],
-      "defaultState": "none",
-      "constraints": [
-        {
-          "category": [
-            "loc"
-          ],
-          "allowedStates": [
-            "none"
-          ]
-        }
-      ]
-    },
-    {
       "id": "sabotage",
       "states": [
         "none",
@@ -2903,6 +2894,14 @@
         "thieu"
       ],
       "defaultState": "minh"
+    },
+    {
+      "id": "leaderFlipped",
+      "states": [
+        "normal",
+        "flipped"
+      ],
+      "defaultState": "normal"
     }
   ],
   "runtimeDataAssets": [
@@ -4553,24 +4552,6 @@
                 },
                 "allowedStates": [
                   "neutral"
-                ]
-              }
-            ]
-          },
-          {
-            "id": "terror",
-            "states": [
-              "none",
-              "terror"
-            ],
-            "defaultState": "none",
-            "constraints": [
-              {
-                "category": [
-                  "loc"
-                ],
-                "allowedStates": [
-                  "none"
                 ]
               }
             ]
@@ -13418,13 +13399,13 @@
                               {
                                 "if": {
                                   "when": {
-                                    "op": "==",
+                                    "op": ">",
                                     "left": {
-                                      "ref": "markerState",
-                                      "space": "$subSpace",
-                                      "marker": "terror"
+                                      "ref": "zoneVar",
+                                      "zone": "$subSpace",
+                                      "var": "terrorCount"
                                     },
-                                    "right": "terror"
+                                    "right": 0
                                   },
                                   "then": [
                                     {
@@ -13473,10 +13454,11 @@
                                             }
                                           },
                                           {
-                                            "setMarker": {
-                                              "space": "$subSpace",
-                                              "marker": "terror",
-                                              "state": "none"
+                                            "setVar": {
+                                              "scope": "zoneVar",
+                                              "zone": "$subSpace",
+                                              "var": "terrorCount",
+                                              "value": 0
                                             }
                                           }
                                         ]
@@ -14989,13 +14971,13 @@
                         {
                           "if": {
                             "when": {
-                              "op": "==",
+                              "op": ">",
                               "left": {
-                                "ref": "markerState",
-                                "space": "$subSpace",
-                                "marker": "terror"
+                                "ref": "zoneVar",
+                                "zone": "$subSpace",
+                                "var": "terrorCount"
                               },
-                              "right": "terror"
+                              "right": 0
                             },
                             "then": [
                               {
@@ -15023,10 +15005,11 @@
                                 }
                               },
                               {
-                                "setMarker": {
-                                  "space": "$subSpace",
-                                  "marker": "terror",
-                                  "state": "none"
+                                "setVar": {
+                                  "scope": "zoneVar",
+                                  "zone": "$subSpace",
+                                  "var": "terrorCount",
+                                  "value": 0
                                 }
                               }
                             ]
@@ -29925,13 +29908,13 @@
                               "op": "and",
                               "args": [
                                 {
-                                  "op": "!=",
+                                  "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$space",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$space",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 },
                                 {
                                   "op": "<",
@@ -29945,10 +29928,11 @@
                             },
                             "then": [
                               {
-                                "setMarker": {
-                                  "space": "$space",
-                                  "marker": "terror",
-                                  "state": "terror"
+                                "addVar": {
+                                  "scope": "zoneVar",
+                                  "zone": "$space",
+                                  "var": "terrorCount",
+                                  "delta": 1
                                 }
                               },
                               {
@@ -30582,13 +30566,13 @@
                               "op": "and",
                               "args": [
                                 {
-                                  "op": "!=",
+                                  "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$space",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$space",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 },
                                 {
                                   "op": "<",
@@ -30602,10 +30586,11 @@
                             },
                             "then": [
                               {
-                                "setMarker": {
-                                  "space": "$space",
-                                  "marker": "terror",
-                                  "state": "terror"
+                                "addVar": {
+                                  "scope": "zoneVar",
+                                  "zone": "$space",
+                                  "var": "terrorCount",
+                                  "delta": 1
                                 }
                               },
                               {
@@ -43386,13 +43371,13 @@
                                   }
                                 },
                                 {
-                                  "op": "==",
+                                  "op": ">",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -43441,11 +43426,11 @@
                                 {
                                   "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "none"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -43579,15 +43564,16 @@
             },
             "then": [
               {
-                "setMarker": {
-                  "space": {
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": {
                     "zoneExpr": {
                       "ref": "binding",
                       "name": "targetSpace"
                     }
                   },
-                  "marker": "terror",
-                  "state": "none"
+                  "var": "terrorCount",
+                  "value": 0
                 }
               }
             ],
@@ -43934,13 +43920,13 @@
                                   }
                                 },
                                 {
-                                  "op": "==",
+                                  "op": ">",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -43989,11 +43975,11 @@
                                 {
                                   "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "none"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -44127,15 +44113,16 @@
             },
             "then": [
               {
-                "setMarker": {
-                  "space": {
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": {
                     "zoneExpr": {
                       "ref": "binding",
                       "name": "targetSpace"
                     }
                   },
-                  "marker": "terror",
-                  "state": "none"
+                  "var": "terrorCount",
+                  "value": 0
                 }
               }
             ],
@@ -44434,13 +44421,13 @@
                                   }
                                 },
                                 {
-                                  "op": "==",
+                                  "op": ">",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "terror"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -44489,11 +44476,11 @@
                                 {
                                   "op": "==",
                                   "left": {
-                                    "ref": "markerState",
-                                    "space": "$zone",
-                                    "marker": "terror"
+                                    "ref": "zoneVar",
+                                    "zone": "$zone",
+                                    "var": "terrorCount"
                                   },
-                                  "right": "none"
+                                  "right": 0
                                 }
                               ]
                             }
@@ -44610,15 +44597,16 @@
             },
             "then": [
               {
-                "setMarker": {
-                  "space": {
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": {
                     "zoneExpr": {
                       "ref": "binding",
                       "name": "targetSpace"
                     }
                   },
-                  "marker": "terror",
-                  "state": "none"
+                  "var": "terrorCount",
+                  "value": 0
                 }
               }
             ],
@@ -48807,10 +48795,11 @@
             },
             "effects": [
               {
-                "setMarker": {
-                  "space": "$__macro_coup_reset_markers_triggers_2__effects_0__space",
-                  "marker": "terror",
-                  "state": "none"
+                "setVar": {
+                  "scope": "zoneVar",
+                  "zone": "$__macro_coup_reset_markers_triggers_2__effects_0__space",
+                  "var": "terrorCount",
+                  "value": 0
                 }
               },
               {
@@ -49083,6 +49072,12 @@
             "scope": "global",
             "var": "mom_typhoonKate",
             "value": false
+          }
+        },
+        {
+          "setGlobalMarker": {
+            "marker": "leaderFlipped",
+            "state": "normal"
           }
         }
       ]
@@ -57591,7 +57586,7 @@
             "flavorText": "Saigon shaken."
           },
           "unshaded": {
-            "text": "Aid +10 or transfer Patronage to Aid. Flip RVN leader.",
+            "text": "Aid +10, or 4 Patronage to ARVN Resources. Flip any current RVN leader card: its text is ignored.",
             "branches": [
               {
                 "id": "aid-plus-ten-and-flip-leader",
@@ -57607,7 +57602,7 @@
                   {
                     "if": {
                       "when": {
-                        "op": "==",
+                        "op": "!=",
                         "left": {
                           "ref": "globalMarkerState",
                           "marker": "activeLeader"
@@ -57617,16 +57612,8 @@
                       "then": [
                         {
                           "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "khanh"
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "minh"
+                            "marker": "leaderFlipped",
+                            "state": "flipped"
                           }
                         }
                       ]
@@ -57649,9 +57636,9 @@
                               "ref": "gvar",
                               "var": "patronage"
                             },
-                            "right": 6
+                            "right": 4
                           },
-                          "then": 6,
+                          "then": 4,
                           "else": {
                             "ref": "gvar",
                             "var": "patronage"
@@ -57689,7 +57676,7 @@
                   {
                     "if": {
                       "when": {
-                        "op": "==",
+                        "op": "!=",
                         "left": {
                           "ref": "globalMarkerState",
                           "marker": "activeLeader"
@@ -57699,16 +57686,8 @@
                       "then": [
                         {
                           "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "khanh"
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "setGlobalMarker": {
-                            "marker": "activeLeader",
-                            "state": "minh"
+                            "marker": "leaderFlipped",
+                            "state": "flipped"
                           }
                         }
                       ]
@@ -57719,7 +57698,7 @@
             ]
           },
           "shaded": {
-            "text": "Shift a City 1 level toward Active Opposition and increase terror markers.",
+            "text": "Shift a City that has VC by 2 levels toward Active Opposition and add a Terror marker there.",
             "targets": [
               {
                 "id": "$targetCity",
@@ -57727,13 +57706,38 @@
                   "query": "mapSpaces",
                   "filter": {
                     "condition": {
-                      "op": "==",
-                      "left": {
-                        "ref": "zoneProp",
-                        "zone": "$zone",
-                        "prop": "category"
-                      },
-                      "right": "city"
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "category"
+                          },
+                          "right": "city"
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
                     }
                   }
                 },
@@ -57747,7 +57751,15 @@
                 "shiftMarker": {
                   "space": "$targetCity",
                   "marker": "supportOpposition",
-                  "delta": -1
+                  "delta": -2
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "zoneVar",
+                  "zone": "$targetCity",
+                  "var": "terrorCount",
+                  "delta": 1
                 }
               },
               {

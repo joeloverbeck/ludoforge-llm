@@ -86,20 +86,12 @@ type EvalErrorContextByCode = {
 export type EvalErrorContextForCode<C extends EvalErrorCode> =
   C extends keyof EvalErrorContextByCode ? EvalErrorContextByCode[C] : EvalErrorContext;
 
-function formatMessage<C extends EvalErrorCode>(message: string, context?: EvalErrorContextForCode<C>): string {
-  if (context === undefined) {
-    return message;
-  }
-
-  return `${message} context=${JSON.stringify(context)}`;
-}
-
 export class EvalError<C extends EvalErrorCode = EvalErrorCode> extends Error {
   readonly code: C;
   readonly context?: EvalErrorContextForCode<C>;
 
   constructor(code: C, message: string, context?: EvalErrorContextForCode<C>) {
-    super(formatMessage(message, context));
+    super(message);
     this.name = 'EvalError';
     this.code = code;
     if (context !== undefined) {

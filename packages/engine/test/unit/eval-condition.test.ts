@@ -239,8 +239,9 @@ describe('evalCondition', () => {
       () => evalCondition({ op: 'zonePropIncludes', zone: 'hue', prop: 'population', value: 2 }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'TYPE_MISMATCH') &&
-        typeof error.message === 'string' &&
-        error.message.includes('zoneProp'),
+        typeof error.context === 'object' &&
+        error.context !== null &&
+        Object.hasOwn(error.context, 'condition'),
     );
   });
 

@@ -3,8 +3,10 @@ import { describe, it } from 'node:test';
 
 import {
   EvalError,
+  asZoneId,
   createEvalError,
   dataAssetEvalError,
+  divisionByZeroError,
   getMaxQueryResults,
   isEvalError,
   isEvalErrorCode,
@@ -14,6 +16,7 @@ import {
   selectorCardinalityError,
   spatialNotImplementedError,
   typeMismatchError,
+  zonePropNotFoundError,
 } from '../../src/kernel/index.js';
 
 describe('eval error surface', () => {
@@ -30,15 +33,57 @@ describe('eval error surface', () => {
     );
   });
 
-  it('error message includes structured context payload when provided', () => {
+  it('stores structured context separately from message when provided', () => {
     const err = createEvalError('MISSING_BINDING', 'Binding not found', {
       binding: '$x',
       availableBindings: ['$y'],
     });
 
-    assert.match(err.message, /Binding not found/);
-    assert.match(err.message, /"binding":"\$x"/);
-    assert.match(err.message, /"availableBindings":\["\$y"\]/);
+    assert.equal(err.message, 'Binding not found');
+    assert.deepEqual(err.context, {
+      binding: '$x',
+      availableBindings: ['$y'],
+    });
+  });
+
+  it('typed helper constructors preserve structured context payloads', () => {
+    const queryError = queryBoundsExceededError('too many', {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+    });
+    const divisionError = divisionByZeroError('division by zero', {
+      expr: { op: '/', left: 1, right: 0 },
+      left: 1,
+      right: 0,
+    });
+    const zonePropError = zonePropNotFoundError('missing zone prop', {
+      zoneId: asZoneId('market'),
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+      availableZoneIds: [asZoneId('market')],
+      availableProps: ['terrain'],
+    });
+
+    assert.deepEqual(queryError.context, {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+    });
+    assert.deepEqual(divisionError.context, {
+      expr: { op: '/', left: 1, right: 0 },
+      left: 1,
+      right: 0,
+    });
+    assert.deepEqual(zonePropError.context, {
+      zoneId: asZoneId('market'),
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+      availableZoneIds: [asZoneId('market')],
+      availableProps: ['terrain'],
+    });
+
+    assert.equal(queryError.message, 'too many');
+    assert.equal(divisionError.message, 'division by zero');
+    assert.equal(zonePropError.message, 'missing zone prop');
   });
 
   it('guards detect eval errors and specific eval error codes', () => {

@@ -171,16 +171,14 @@ describe('resolveZoneSel', () => {
       () => resolveZoneSel('graveyard:actor', ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'MISSING_VAR') &&
-        typeof error.message === 'string' &&
-        error.message.includes('availableZoneIds'),
+        Array.isArray(error.context?.availableZoneIds),
     );
 
     assert.throws(
       () => resolveZoneSel('bench:0', ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'MISSING_VAR') &&
-        typeof error.message === 'string' &&
-        error.message.includes('candidates'),
+        Array.isArray(error.context?.candidates),
     );
   });
 

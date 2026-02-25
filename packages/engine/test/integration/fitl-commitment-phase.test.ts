@@ -5,12 +5,16 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
+  createRng,
   initialState,
+  legalChoicesEvaluate,
   legalMoves,
   type GameDef,
   type GameState,
+  type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -30,6 +34,22 @@ const compileDef = (): GameDef => {
 
 const countTokens = (state: GameState, zoneId: string, faction: string, type: string): number =>
   (state.zones[zoneId] ?? []).filter((token) => token.props.faction === faction && token.props.type === type).length;
+
+const completeIfPending = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seed: bigint,
+): Move => {
+  const probe = legalChoicesEvaluate(def, state, move);
+  if (probe.kind === 'complete') {
+    return move;
+  }
+  assert.equal(probe.kind, 'pending', 'Expected event move to be complete or pending');
+  const completed = completeTemplateMove(def, state, move, createRng(seed));
+  assert.notEqual(completed, null, 'Expected pending event template to be completable');
+  return completed!.move;
+};
 
 describe('FITL commitment phase production wiring', () => {
   it('declares commitment in turnStructure and wires card-73 to request and advance to it', () => {
@@ -91,7 +111,7 @@ describe('FITL commitment phase production wiring', () => {
     const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
     assert.notEqual(unshadedMove, undefined, 'Expected unshaded card-73 event move');
 
-    const result = applyMove(def, setup, unshadedMove!).state;
+    const result = applyMove(def, setup, completeIfPending(def, setup, unshadedMove!, 7301n)).state;
 
     assert.equal(result.currentPhase, 'commitment', 'Expected card-73 to advance into commitment phase');
 

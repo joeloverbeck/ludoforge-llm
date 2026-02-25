@@ -6,7 +6,9 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
+  createRng,
   initialState,
+  legalChoicesEvaluate,
   legalChoicesDiscover,
   legalMoves,
   type GameDef,
@@ -15,6 +17,7 @@ import {
   type Token,
   type ZoneDef,
 } from '../../src/kernel/index.js';
+import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -37,6 +40,22 @@ const isCoinControlled = (state: GameState, zoneId: string): boolean => {
   const coin = tokens.filter((token) => token.props.faction === 'US' || token.props.faction === 'ARVN').length;
   const insurgent = tokens.filter((token) => token.props.faction === 'NVA' || token.props.faction === 'VC').length;
   return coin > insurgent;
+};
+
+const completeIfPending = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seed: bigint,
+): Move => {
+  const probe = legalChoicesEvaluate(def, state, move);
+  if (probe.kind === 'complete') {
+    return move;
+  }
+  assert.equal(probe.kind, 'pending', 'Expected event move to be complete or pending');
+  const completed = completeTemplateMove(def, state, move, createRng(seed));
+  assert.notEqual(completed, null, 'Expected pending event template to be completable');
+  return completed!.move;
 };
 
 describe('FITL commitment targeting rules', () => {
@@ -62,7 +81,7 @@ describe('FITL commitment targeting rules', () => {
     const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
     assert.notEqual(unshadedMove, undefined, 'Expected card-73 unshaded event move');
 
-    const inCommitment = applyMove(def, setup, unshadedMove!).state;
+    const inCommitment = applyMove(def, setup, completeIfPending(def, setup, unshadedMove!, 7302n)).state;
     assert.equal(inCommitment.currentPhase, 'commitment');
 
     const commitmentMove = legalMoves(def, inCommitment).find((move) => String(move.actionId) === 'resolveCommitment');

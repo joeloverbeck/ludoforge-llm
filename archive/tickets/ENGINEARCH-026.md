@@ -1,6 +1,6 @@
 # ENGINEARCH-026: Tighten Selector-Cardinality Builder Return Types to Exact Branch Contracts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — eval-error typing contract hardening + type tests
@@ -14,7 +14,8 @@ Player selector-cardinality builder helpers currently return the broader union t
 
 1. In `packages/engine/src/kernel/eval-error.ts`, `selectorCardinalityPlayerCountContext` and `selectorCardinalityPlayerResolvedContext` each return `SelectorCardinalityPlayerEvalErrorContext`.
 2. Their implementations are branch-specific, so broader return typing is not required for correctness.
-3. Existing tests validate context shape behavior but do not explicitly lock exact helper return-type precision.
+3. Existing tests validate context shape behavior and selector payload constraints but do not explicitly lock exact helper return-type precision.
+4. `SelectorCardinalityZoneEvalErrorContext` is already exported; only the player count/resolved branch contracts still need export promotion.
 
 ## Architecture Check
 
@@ -26,7 +27,7 @@ Player selector-cardinality builder helpers currently return the broader union t
 
 ### 1. Export explicit branch-specific selector-cardinality context types
 
-Promote precise branch types needed for helper signatures and tests (player-count branch, player-resolved branch, zone-resolved branch) to explicit exported contracts.
+Promote precise branch types needed for helper signatures and tests (player-count branch and player-resolved branch) to explicit exported contracts. Keep zone-resolved export as-is.
 
 ### 2. Narrow helper return signatures to exact branch types
 
@@ -73,3 +74,23 @@ Add type-level tests that fail when helper outputs are widened in ways that rein
 3. `node --test packages/engine/dist/test/unit/types-foundation.test.js`
 4. `pnpm -F @ludoforge/engine test:unit`
 
+## Outcome
+
+- **Completion date**: 2026-02-25
+- **What changed**:
+  - Exported explicit player selector-cardinality branch contracts:
+    - `SelectorCardinalityPlayerCountEvalErrorContext`
+    - `SelectorCardinalityPlayerResolvedEvalErrorContext`
+  - Narrowed helper signatures to exact branch return types:
+    - `selectorCardinalityPlayerCountContext` now returns `SelectorCardinalityPlayerCountEvalErrorContext`
+    - `selectorCardinalityPlayerResolvedContext` now returns `SelectorCardinalityPlayerResolvedEvalErrorContext`
+  - Added compile-time regression assertions in `types-foundation.test.ts` to prevent branch-widening and cross-branch assignment leaks.
+  - Updated assumption/scope notes to reflect that `SelectorCardinalityZoneEvalErrorContext` was already exported.
+- **Deviation from original plan**:
+  - Zone-resolved branch export promotion was removed from scope because it was already implemented before this ticket.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine typecheck` passed.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/types-foundation.test.js` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

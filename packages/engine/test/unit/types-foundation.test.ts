@@ -14,6 +14,8 @@ import {
   divisionByZeroError,
   hasEvalErrorDeferClass,
   type PlayerId,
+  type SelectorCardinalityPlayerCountEvalErrorContext,
+  type SelectorCardinalityPlayerResolvedEvalErrorContext,
   queryBoundsExceededError,
   type ZoneId,
   selectorCardinalityPlayerCountContext,
@@ -66,13 +68,27 @@ describe('kernel type foundations', () => {
   });
 
   it('rejects invalid selector-cardinality defer metadata at compile time', () => {
-    selectorCardinalityPlayerCountContext({ relative: 'left' }, 0);
-    selectorCardinalityPlayerResolvedContext('all', [asPlayerId(0)]);
+    const playerCountContext = selectorCardinalityPlayerCountContext({ relative: 'left' }, 0);
+    const playerResolvedContext = selectorCardinalityPlayerResolvedContext('all', [asPlayerId(0)]);
     selectorCardinalityZoneResolvedContext(
       '$zones',
       [asZoneId('hand:0')],
       EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
     );
+
+    const typedPlayerCountContext: SelectorCardinalityPlayerCountEvalErrorContext = playerCountContext;
+    const typedPlayerResolvedContext: SelectorCardinalityPlayerResolvedEvalErrorContext =
+      playerResolvedContext;
+    void typedPlayerCountContext;
+    void typedPlayerResolvedContext;
+
+    // @ts-expect-error Player-count helper output must not widen to resolved-players branch.
+    const invalidCountAsResolved: SelectorCardinalityPlayerResolvedEvalErrorContext = playerCountContext;
+    void invalidCountAsResolved;
+
+    // @ts-expect-error Player-resolved helper output must not widen to player-count branch.
+    const invalidResolvedAsCount: SelectorCardinalityPlayerCountEvalErrorContext = playerResolvedContext;
+    void invalidResolvedAsCount;
 
     // @ts-expect-error Player count helper must only accept player selectors.
     selectorCardinalityPlayerCountContext('$zones', 0);

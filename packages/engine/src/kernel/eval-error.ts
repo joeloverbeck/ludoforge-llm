@@ -30,7 +30,7 @@ export type EvalErrorCode =
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
 
-type SelectorCardinalityPlayerCountEvalErrorContext = {
+export type SelectorCardinalityPlayerCountEvalErrorContext = {
   readonly selectorKind: 'player';
   readonly selector: PlayerSel;
   readonly playerCount: number;
@@ -40,7 +40,7 @@ type SelectorCardinalityPlayerCountEvalErrorContext = {
   readonly deferClass?: never;
 };
 
-type SelectorCardinalityPlayerResolvedEvalErrorContext = {
+export type SelectorCardinalityPlayerResolvedEvalErrorContext = {
   readonly selectorKind: 'player';
   readonly selector: PlayerSel;
   readonly playerCount?: never;
@@ -160,7 +160,7 @@ export function selectorCardinalityError(
 export function selectorCardinalityPlayerCountContext(
   selector: PlayerSel,
   playerCount: number,
-): SelectorCardinalityPlayerEvalErrorContext {
+): SelectorCardinalityPlayerCountEvalErrorContext {
   return {
     selectorKind: 'player',
     selector,
@@ -171,7 +171,7 @@ export function selectorCardinalityPlayerCountContext(
 export function selectorCardinalityPlayerResolvedContext(
   selector: PlayerSel,
   resolvedPlayers: readonly PlayerId[],
-): SelectorCardinalityPlayerEvalErrorContext {
+): SelectorCardinalityPlayerResolvedEvalErrorContext {
   return {
     selectorKind: 'player',
     selector,

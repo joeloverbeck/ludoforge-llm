@@ -78,6 +78,79 @@ export interface ScopedVarContractSchemaConfig<
   readonly zoneShape?: ZodRawShape;
 }
 
+const RESERVED_SCOPE_FIELD = 'scope';
+
+const assertNoDuplicateValues = (label: string, entries: ReadonlyArray<readonly [string, string]>) => {
+  const groups = new Map<string, string[]>();
+  for (const [entryName, entryValue] of entries) {
+    const values = groups.get(entryValue);
+    if (values === undefined) {
+      groups.set(entryValue, [entryName]);
+      continue;
+    }
+    values.push(entryName);
+  }
+
+  for (const [entryValue, names] of groups) {
+    if (names.length < 2) {
+      continue;
+    }
+    throw new Error(`${label} must be unique. Duplicate value "${entryValue}" found in: ${names.join(', ')}`);
+  }
+};
+
+const assertNoReservedFieldCollision = (fieldName: string, value: string) => {
+  if (value === RESERVED_SCOPE_FIELD) {
+    throw new Error(`Field "${fieldName}" cannot use reserved discriminator key "${RESERVED_SCOPE_FIELD}"`);
+  }
+};
+
+const assertNoReservedShapeKeys = (
+  shapeName: string,
+  shape: ZodRawShape | undefined,
+  reservedKeys: ReadonlySet<string>,
+) => {
+  if (shape === undefined) {
+    return;
+  }
+
+  for (const key of Object.keys(shape)) {
+    if (!reservedKeys.has(key)) {
+      continue;
+    }
+    throw new Error(`Shape "${shapeName}" cannot redefine reserved key "${key}"`);
+  }
+};
+
+const assertScopedVarContractConfig = <GlobalScope extends string, PlayerScope extends string, ZoneScope extends string>(
+  config: ScopedVarContractSchemaConfig<GlobalScope, PlayerScope, ZoneScope>,
+) => {
+  assertNoDuplicateValues('Scope literals', [
+    ['scopes.global', config.scopes.global],
+    ['scopes.player', config.scopes.player],
+    ['scopes.zone', config.scopes.zone],
+  ]);
+
+  assertNoReservedFieldCollision('fields.var', config.fields.var);
+  assertNoReservedFieldCollision('fields.player', config.fields.player);
+  assertNoReservedFieldCollision('fields.zone', config.fields.zone);
+
+  assertNoDuplicateValues('Endpoint field names', [
+    ['fields.var', config.fields.var],
+    ['fields.player', config.fields.player],
+    ['fields.zone', config.fields.zone],
+  ]);
+
+  const globalReservedKeys = new Set([RESERVED_SCOPE_FIELD, config.fields.var]);
+  const playerReservedKeys = new Set([RESERVED_SCOPE_FIELD, config.fields.var, config.fields.player]);
+  const zoneReservedKeys = new Set([RESERVED_SCOPE_FIELD, config.fields.var, config.fields.zone]);
+
+  assertNoReservedShapeKeys('commonShape', config.commonShape, new Set([...playerReservedKeys, config.fields.zone]));
+  assertNoReservedShapeKeys('globalShape', config.globalShape, globalReservedKeys);
+  assertNoReservedShapeKeys('playerShape', config.playerShape, playerReservedKeys);
+  assertNoReservedShapeKeys('zoneShape', config.zoneShape, zoneReservedKeys);
+};
+
 const endpointShape = (
   scope: string,
   scopeLiteral: string,
@@ -102,6 +175,8 @@ export const createScopedVarContractSchema = <
 >(
   config: ScopedVarContractSchemaConfig<GlobalScope, PlayerScope, ZoneScope>,
 ) => {
+  assertScopedVarContractConfig(config);
+
   const globalSchema = z
     .object(
       endpointShape(

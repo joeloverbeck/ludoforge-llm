@@ -123,7 +123,12 @@ const isWorkerError = (error: unknown): error is WorkerError => {
 
 const toWorkerError = (code: WorkerError['code'], error: unknown, fallbackMessage: string): WorkerError => {
   if (isWorkerError(error)) {
-    return error;
+    const details = Reflect.get(error, 'details');
+    return {
+      code: error.code,
+      message: error.message,
+      ...(details === undefined ? {} : { details }),
+    };
   }
 
   if (error instanceof Error) {

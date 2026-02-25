@@ -84,6 +84,26 @@ describe('createGameWorker', () => {
     expect(traced[0]?.effectTrace).toBeDefined();
   });
 
+  it('supports per-call trace override for applyTemplateMove', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 74, undefined, nextStamp());
+
+    const noTrace = await worker.applyTemplateMove(LEGAL_TICK_MOVE, { trace: false }, nextStamp());
+    expect(noTrace.outcome).toBe('applied');
+    if (noTrace.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(noTrace.result.effectTrace).toBeUndefined();
+
+    const traced = await worker.applyTemplateMove(LEGAL_TICK_MOVE, { trace: true }, nextStamp());
+    expect(traced.outcome).toBe('applied');
+    if (traced.outcome !== 'applied') {
+      throw new Error('Expected applied outcome.');
+    }
+    expect(traced.result.effectTrace).toBeDefined();
+  });
+
   it('supports explicit playerCount on init', async () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();

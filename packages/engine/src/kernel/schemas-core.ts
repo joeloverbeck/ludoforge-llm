@@ -477,6 +477,41 @@ export const EffectTraceResourceEndpointSchema = z.discriminatedUnion('scope', [
   z.object({ scope: z.literal('zone'), zone: StringSchema, varName: StringSchema }).strict(),
 ]);
 
+export const EffectTraceVarChangeSchema = z.discriminatedUnion('scope', [
+  z
+    .object({
+      kind: z.literal('varChange'),
+      scope: z.literal('global'),
+      varName: StringSchema,
+      oldValue: z.union([NumberSchema, BooleanSchema]),
+      newValue: z.union([NumberSchema, BooleanSchema]),
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('varChange'),
+      scope: z.literal('perPlayer'),
+      player: IntegerSchema,
+      varName: StringSchema,
+      oldValue: z.union([NumberSchema, BooleanSchema]),
+      newValue: z.union([NumberSchema, BooleanSchema]),
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('varChange'),
+      scope: z.literal('zone'),
+      zone: StringSchema,
+      varName: StringSchema,
+      oldValue: z.union([NumberSchema, BooleanSchema]),
+      newValue: z.union([NumberSchema, BooleanSchema]),
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+]);
+
 export const EffectTraceEntrySchema = z.union([
   z
     .object({
@@ -540,18 +575,7 @@ export const EffectTraceEntrySchema = z.union([
       provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
-  z
-    .object({
-      kind: z.literal('varChange'),
-      scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
-      varName: StringSchema,
-      oldValue: z.union([NumberSchema, BooleanSchema]),
-      newValue: z.union([NumberSchema, BooleanSchema]),
-      player: IntegerSchema.optional(),
-      zone: StringSchema.optional(),
-      provenance: EffectTraceProvenanceSchema,
-    })
-    .strict(),
+  EffectTraceVarChangeSchema,
   z
     .object({
       kind: z.literal('resourceTransfer'),

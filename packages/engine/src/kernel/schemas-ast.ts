@@ -102,6 +102,18 @@ export const TransferVarEndpointSchema = z.discriminatedUnion('scope', [
   z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema }).strict(),
 ]);
 
+export const SetVarPayloadSchema = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global'), var: StringSchema, value: ValueExprSchema }).strict(),
+  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema, value: ValueExprSchema }).strict(),
+  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema, value: ValueExprSchema }).strict(),
+]);
+
+export const AddVarPayloadSchema = z.discriminatedUnion('scope', [
+  z.object({ scope: z.literal('global'), var: StringSchema, delta: NumericValueExprSchema }).strict(),
+  z.object({ scope: z.literal('pvar'), player: PlayerSelSchema, var: StringSchema, delta: NumericValueExprSchema }).strict(),
+  z.object({ scope: z.literal('zoneVar'), zone: ZoneRefSchema, var: StringSchema, delta: NumericValueExprSchema }).strict(),
+]);
+
 optionsQuerySchemaInternal = z.union([
   z
     .object({
@@ -374,15 +386,7 @@ conditionAstSchemaInternal = z.union([
 effectAstSchemaInternal = z.union([
   z
     .object({
-      setVar: z
-        .object({
-          scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
-          player: PlayerSelSchema.optional(),
-          zone: ZoneRefSchema.optional(),
-          var: StringSchema,
-          value: ValueExprSchema,
-        })
-        .strict(),
+      setVar: SetVarPayloadSchema,
     })
     .strict(),
   z
@@ -396,15 +400,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
-      addVar: z
-        .object({
-          scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
-          player: PlayerSelSchema.optional(),
-          zone: ZoneRefSchema.optional(),
-          var: StringSchema,
-          delta: NumericValueExprSchema,
-        })
-        .strict(),
+      addVar: AddVarPayloadSchema,
     })
     .strict(),
   z

@@ -425,6 +425,134 @@ describe('json schema artifacts', () => {
     assert.equal(validate(control), true, JSON.stringify(validate.errors, null, 2));
   });
 
+  it('serialized trace rejects invalid varChange endpoint shape drift', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const makeSerializedTrace = (entry: unknown) => ({
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          effectTrace: [entry],
+        },
+      ],
+    });
+
+    const validEntries = [
+      {
+        kind: 'varChange',
+        scope: 'global',
+        varName: 'pool',
+        oldValue: 1,
+        newValue: 2,
+        provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+      },
+      {
+        kind: 'varChange',
+        scope: 'perPlayer',
+        player: 0,
+        varName: 'coins',
+        oldValue: 1,
+        newValue: 2,
+        provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+      },
+      {
+        kind: 'varChange',
+        scope: 'zone',
+        zone: 'board:none',
+        varName: 'supply',
+        oldValue: 1,
+        newValue: 2,
+        provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+      },
+    ] as const;
+
+    for (const entry of validEntries) {
+      assert.equal(validate(makeSerializedTrace(entry)), true, JSON.stringify(validate.errors, null, 2));
+    }
+
+    const invalidEntries: ReadonlyArray<{ name: string; entry: unknown }> = [
+      {
+        name: 'global forbids player',
+        entry: {
+          kind: 'varChange',
+          scope: 'global',
+          player: 0,
+          varName: 'pool',
+          oldValue: 1,
+          newValue: 2,
+          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        },
+      },
+      {
+        name: 'global forbids zone',
+        entry: {
+          kind: 'varChange',
+          scope: 'global',
+          zone: 'board:none',
+          varName: 'pool',
+          oldValue: 1,
+          newValue: 2,
+          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        },
+      },
+      {
+        name: 'perPlayer requires player',
+        entry: {
+          kind: 'varChange',
+          scope: 'perPlayer',
+          varName: 'coins',
+          oldValue: 1,
+          newValue: 2,
+          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        },
+      },
+      {
+        name: 'perPlayer forbids zone',
+        entry: {
+          kind: 'varChange',
+          scope: 'perPlayer',
+          player: 0,
+          zone: 'board:none',
+          varName: 'coins',
+          oldValue: 1,
+          newValue: 2,
+          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        },
+      },
+      {
+        name: 'zone requires zone',
+        entry: {
+          kind: 'varChange',
+          scope: 'zone',
+          varName: 'supply',
+          oldValue: 1,
+          newValue: 2,
+          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        },
+      },
+      {
+        name: 'zone forbids player',
+        entry: {
+          kind: 'varChange',
+          scope: 'zone',
+          zone: 'board:none',
+          player: 0,
+          varName: 'supply',
+          oldValue: 1,
+          newValue: 2,
+          provenance: { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' },
+        },
+      },
+    ];
+
+    for (const testCase of invalidEntries) {
+      assert.equal(validate(makeSerializedTrace(testCase.entry)), false, testCase.name);
+      assert.ok((validate.errors?.length ?? 0) > 0, testCase.name);
+    }
+  });
+
   it('trace with non-hex stateHash fails schema validation', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);

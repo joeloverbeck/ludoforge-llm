@@ -859,6 +859,44 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('enforces setVar scope endpoint matrix', () => {
+    const cases: ReadonlyArray<{ name: string; payload: unknown; valid: boolean }> = [
+      { name: 'global requires only var/value', payload: { scope: 'global', var: 'gold', value: 1 }, valid: true },
+      { name: 'pvar requires player', payload: { scope: 'pvar', player: 'actor', var: 'gold', value: 1 }, valid: true },
+      { name: 'zoneVar requires zone', payload: { scope: 'zoneVar', zone: 'board:none', var: 'gold', value: 1 }, valid: true },
+      { name: 'global forbids player', payload: { scope: 'global', player: 'actor', var: 'gold', value: 1 }, valid: false },
+      { name: 'global forbids zone', payload: { scope: 'global', zone: 'board:none', var: 'gold', value: 1 }, valid: false },
+      { name: 'pvar requires player presence', payload: { scope: 'pvar', var: 'gold', value: 1 }, valid: false },
+      { name: 'pvar forbids zone', payload: { scope: 'pvar', player: 'actor', zone: 'board:none', var: 'gold', value: 1 }, valid: false },
+      { name: 'zoneVar requires zone presence', payload: { scope: 'zoneVar', var: 'gold', value: 1 }, valid: false },
+      { name: 'zoneVar forbids player', payload: { scope: 'zoneVar', player: 'actor', zone: 'board:none', var: 'gold', value: 1 }, valid: false },
+    ];
+
+    for (const testCase of cases) {
+      const result = EffectASTSchema.safeParse({ setVar: testCase.payload });
+      assert.equal(result.success, testCase.valid, testCase.name);
+    }
+  });
+
+  it('enforces addVar scope endpoint matrix', () => {
+    const cases: ReadonlyArray<{ name: string; payload: unknown; valid: boolean }> = [
+      { name: 'global requires only var/delta', payload: { scope: 'global', var: 'gold', delta: 1 }, valid: true },
+      { name: 'pvar requires player', payload: { scope: 'pvar', player: 'actor', var: 'gold', delta: 1 }, valid: true },
+      { name: 'zoneVar requires zone', payload: { scope: 'zoneVar', zone: 'board:none', var: 'gold', delta: 1 }, valid: true },
+      { name: 'global forbids player', payload: { scope: 'global', player: 'actor', var: 'gold', delta: 1 }, valid: false },
+      { name: 'global forbids zone', payload: { scope: 'global', zone: 'board:none', var: 'gold', delta: 1 }, valid: false },
+      { name: 'pvar requires player presence', payload: { scope: 'pvar', var: 'gold', delta: 1 }, valid: false },
+      { name: 'pvar forbids zone', payload: { scope: 'pvar', player: 'actor', zone: 'board:none', var: 'gold', delta: 1 }, valid: false },
+      { name: 'zoneVar requires zone presence', payload: { scope: 'zoneVar', var: 'gold', delta: 1 }, valid: false },
+      { name: 'zoneVar forbids player', payload: { scope: 'zoneVar', player: 'actor', zone: 'board:none', var: 'gold', delta: 1 }, valid: false },
+    ];
+
+    for (const testCase of cases) {
+      const result = EffectASTSchema.safeParse({ addVar: testCase.payload });
+      assert.equal(result.success, testCase.valid, testCase.name);
+    }
+  });
+
   it('enforces strict object policy for selector and AST objects', () => {
     assert.equal(OBJECT_STRICTNESS_POLICY, 'strict');
 

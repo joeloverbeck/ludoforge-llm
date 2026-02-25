@@ -1006,8 +1006,12 @@ export const validateEffectAst = (
       );
     }
 
-    if (effect.setVar.player) {
+    if (effect.setVar.scope === 'pvar') {
       validatePlayerSelector(diagnostics, effect.setVar.player, `${path}.setVar.player`, context);
+    }
+
+    if (effect.setVar.scope === 'zoneVar') {
+      validateZoneRef(diagnostics, effect.setVar.zone, `${path}.setVar.zone`, context);
     }
 
     validateValueExpr(diagnostics, effect.setVar.value, `${path}.setVar.value`, context);
@@ -1042,8 +1046,12 @@ export const validateEffectAst = (
       );
     }
 
-    if (effect.addVar.player) {
+    if (effect.addVar.scope === 'pvar') {
       validatePlayerSelector(diagnostics, effect.addVar.player, `${path}.addVar.player`, context);
+    }
+
+    if (effect.addVar.scope === 'zoneVar') {
+      validateZoneRef(diagnostics, effect.addVar.zone, `${path}.addVar.zone`, context);
     }
 
     const varType =

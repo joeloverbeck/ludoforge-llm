@@ -214,15 +214,47 @@ export type TransferVarEndpoint =
       readonly var: string;
     };
 
+export type SetVarPayload =
+  | {
+      readonly scope: 'global';
+      readonly var: string;
+      readonly value: ValueExpr;
+    }
+  | {
+      readonly scope: 'pvar';
+      readonly player: PlayerSel;
+      readonly var: string;
+      readonly value: ValueExpr;
+    }
+  | {
+      readonly scope: 'zoneVar';
+      readonly zone: ZoneRef;
+      readonly var: string;
+      readonly value: ValueExpr;
+    };
+
+export type AddVarPayload =
+  | {
+      readonly scope: 'global';
+      readonly var: string;
+      readonly delta: NumericValueExpr;
+    }
+  | {
+      readonly scope: 'pvar';
+      readonly player: PlayerSel;
+      readonly var: string;
+      readonly delta: NumericValueExpr;
+    }
+  | {
+      readonly scope: 'zoneVar';
+      readonly zone: ZoneRef;
+      readonly var: string;
+      readonly delta: NumericValueExpr;
+    };
+
 export type EffectAST =
   | {
-      readonly setVar: {
-        readonly scope: 'global' | 'pvar' | 'zoneVar';
-        readonly player?: PlayerSel;
-        readonly zone?: ZoneRef;
-        readonly var: string;
-        readonly value: ValueExpr;
-      };
+      readonly setVar: SetVarPayload;
     }
   | {
       readonly setActivePlayer: {
@@ -230,13 +262,7 @@ export type EffectAST =
       };
     }
   | {
-      readonly addVar: {
-        readonly scope: 'global' | 'pvar' | 'zoneVar';
-        readonly player?: PlayerSel;
-        readonly zone?: ZoneRef;
-        readonly var: string;
-        readonly delta: NumericValueExpr;
-      };
+      readonly addVar: AddVarPayload;
     }
   | {
       readonly transferVar: {

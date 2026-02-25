@@ -699,16 +699,33 @@ export interface EffectTraceConceal {
   readonly provenance: EffectTraceProvenance;
 }
 
-export interface EffectTraceVarChange {
-  readonly kind: 'varChange';
-  readonly scope: 'global' | 'perPlayer' | 'zone';
-  readonly varName: string;
-  readonly oldValue: VariableValue;
-  readonly newValue: VariableValue;
-  readonly player?: PlayerId;
-  readonly zone?: string;
-  readonly provenance: EffectTraceProvenance;
-}
+export type EffectTraceVarChange =
+  | {
+      readonly kind: 'varChange';
+      readonly scope: 'global';
+      readonly varName: string;
+      readonly oldValue: VariableValue;
+      readonly newValue: VariableValue;
+      readonly provenance: EffectTraceProvenance;
+    }
+  | {
+      readonly kind: 'varChange';
+      readonly scope: 'perPlayer';
+      readonly player: PlayerId;
+      readonly varName: string;
+      readonly oldValue: VariableValue;
+      readonly newValue: VariableValue;
+      readonly provenance: EffectTraceProvenance;
+    }
+  | {
+      readonly kind: 'varChange';
+      readonly scope: 'zone';
+      readonly zone: string;
+      readonly varName: string;
+      readonly oldValue: VariableValue;
+      readonly newValue: VariableValue;
+      readonly provenance: EffectTraceProvenance;
+    };
 
 export type EffectTraceResourceEndpoint =
   | {

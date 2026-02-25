@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  EffectRuntimeError,
   applyEffect,
   asPhaseId,
   asPlayerId,
@@ -251,15 +250,6 @@ describe('effects var handlers', () => {
     assert.deepEqual(noOp.emittedEvents, []);
   });
 
-  it('throws EffectRuntimeError when pvar scope omits player selector', () => {
-    const ctx = makeCtx();
-    const effect: EffectAST = { addVar: { scope: 'pvar', var: 'hp', delta: 1 } };
-
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      assert.ok(error instanceof EffectRuntimeError);
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('requires player selector');
-    });
-  });
 });
 
 /**

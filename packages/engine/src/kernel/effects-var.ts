@@ -119,20 +119,12 @@ const zoneVarChangedEvent = (
 });
 
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { scope, var: variableName, player, zone, value } = effect.setVar;
+  const { scope, var: variableName, value } = effect.setVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedValue = evalValue(value, evalCtx);
 
   if (scope === 'zoneVar') {
-    if (zone === undefined) {
-      throw effectRuntimeError('variableRuntimeValidationFailed', 'setVar scope "zoneVar" requires zone selector', {
-        effectType: 'setVar',
-        scope: 'zoneVar',
-        var: variableName,
-      });
-    }
-
-    const resolvedZoneId = resolveZoneRef(zone, evalCtx);
+    const resolvedZoneId = resolveZoneRef(effect.setVar.zone, evalCtx);
     const variableDef = resolveZoneVarDef(ctx, variableName, 'setVar');
     if (variableDef.type !== 'int') {
       throw effectRuntimeError('variableRuntimeValidationFailed', `setVar on zone variable only supports int type: ${variableName}`, {
@@ -234,20 +226,12 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     };
   }
 
-  if (player === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', 'setVar scope "pvar" requires player selector', {
-      effectType: 'setVar',
-      scope: 'pvar',
-      var: variableName,
-    });
-  }
-
-  const resolvedPlayers = resolvePlayerSel(player, evalCtx);
+  const resolvedPlayers = resolvePlayerSel(effect.setVar.player, evalCtx);
   if (resolvedPlayers.length !== 1) {
     throw effectRuntimeError('variableRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
       effectType: 'setVar',
       scope: 'pvar',
-      selector: player,
+      selector: effect.setVar.player,
       resolvedCount: resolvedPlayers.length,
       resolvedPlayers,
     });
@@ -309,20 +293,12 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 };
 
 export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { scope, var: variableName, player, zone, delta } = effect.addVar;
+  const { scope, var: variableName, delta } = effect.addVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
 
   if (scope === 'zoneVar') {
-    if (zone === undefined) {
-      throw effectRuntimeError('variableRuntimeValidationFailed', 'addVar scope "zoneVar" requires zone selector', {
-        effectType: 'addVar',
-        scope: 'zoneVar',
-        var: variableName,
-      });
-    }
-
-    const resolvedZoneId = resolveZoneRef(zone, evalCtx);
+    const resolvedZoneId = resolveZoneRef(effect.addVar.zone, evalCtx);
     const variableDef = resolveZoneVarDef(ctx, variableName, 'addVar');
     if (variableDef.type !== 'int') {
       throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int zone variable: ${variableName}`, {
@@ -429,20 +405,12 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     };
   }
 
-  if (player === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', 'addVar scope "pvar" requires player selector', {
-      effectType: 'addVar',
-      scope: 'pvar',
-      var: variableName,
-    });
-  }
-
-  const resolvedPlayers = resolvePlayerSel(player, evalCtx);
+  const resolvedPlayers = resolvePlayerSel(effect.addVar.player, evalCtx);
   if (resolvedPlayers.length !== 1) {
     throw effectRuntimeError('variableRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
       effectType: 'addVar',
       scope: 'pvar',
-      selector: player,
+      selector: effect.addVar.player,
       resolvedCount: resolvedPlayers.length,
       resolvedPlayers,
     });

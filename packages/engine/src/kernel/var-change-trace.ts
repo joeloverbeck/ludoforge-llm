@@ -38,15 +38,40 @@ export const emitVarChangeTraceIfChanged = (
     return false;
   }
 
+  const provenance = entry.provenance ?? resolveTraceProvenance(ctx);
+  if (entry.scope === 'global') {
+    emitTrace(ctx.collector, {
+      kind: 'varChange',
+      scope: 'global',
+      varName: entry.varName,
+      oldValue: entry.oldValue,
+      newValue: entry.newValue,
+      provenance,
+    });
+    return true;
+  }
+
+  if (entry.scope === 'perPlayer') {
+    emitTrace(ctx.collector, {
+      kind: 'varChange',
+      scope: 'perPlayer',
+      player: entry.player,
+      varName: entry.varName,
+      oldValue: entry.oldValue,
+      newValue: entry.newValue,
+      provenance,
+    });
+    return true;
+  }
+
   emitTrace(ctx.collector, {
     kind: 'varChange',
-    scope: entry.scope,
-    ...(entry.scope === 'perPlayer' ? { player: entry.player } : {}),
-    ...(entry.scope === 'zone' ? { zone: entry.zone } : {}),
+    scope: 'zone',
+    zone: entry.zone,
     varName: entry.varName,
     oldValue: entry.oldValue,
     newValue: entry.newValue,
-    provenance: entry.provenance ?? resolveTraceProvenance(ctx),
+    provenance,
   });
 
   return true;

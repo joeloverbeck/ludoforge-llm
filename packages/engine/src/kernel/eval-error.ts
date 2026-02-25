@@ -30,22 +30,35 @@ export type EvalErrorCode =
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
 
-export type SelectorCardinalityPlayerEvalErrorContext = EvalErrorContext & {
+type SelectorCardinalityPlayerCountEvalErrorContext = {
   readonly selectorKind: 'player';
   readonly selector: PlayerSel;
-} & (
-  | {
-      readonly playerCount: number;
-    }
-  | {
-      readonly resolvedCount: number;
-      readonly resolvedPlayers: readonly PlayerId[];
-    }
-);
+  readonly playerCount: number;
+  readonly resolvedCount?: never;
+  readonly resolvedPlayers?: never;
+  readonly resolvedZones?: never;
+  readonly deferClass?: never;
+};
 
-export type SelectorCardinalityZoneEvalErrorContext = EvalErrorContext & {
+type SelectorCardinalityPlayerResolvedEvalErrorContext = {
+  readonly selectorKind: 'player';
+  readonly selector: PlayerSel;
+  readonly playerCount?: never;
+  readonly resolvedCount: number;
+  readonly resolvedPlayers: readonly PlayerId[];
+  readonly resolvedZones?: never;
+  readonly deferClass?: never;
+};
+
+export type SelectorCardinalityPlayerEvalErrorContext =
+  | SelectorCardinalityPlayerCountEvalErrorContext
+  | SelectorCardinalityPlayerResolvedEvalErrorContext;
+
+export type SelectorCardinalityZoneEvalErrorContext = {
   readonly selectorKind: 'zone';
   readonly selector: ZoneSel;
+  readonly playerCount?: never;
+  readonly resolvedPlayers?: never;
   readonly resolvedCount: number;
   readonly resolvedZones: readonly ZoneId[];
   readonly deferClass?: EvalErrorDeferClass;
@@ -55,19 +68,19 @@ export type TypedSelectorCardinalityEvalErrorContext =
   | SelectorCardinalityPlayerEvalErrorContext
   | SelectorCardinalityZoneEvalErrorContext;
 
-export type QueryBoundsExceededEvalErrorContext = EvalErrorContext & {
+export type QueryBoundsExceededEvalErrorContext = {
   readonly query: OptionsQuery;
   readonly maxQueryResults: number;
   readonly resultLength: number;
 };
 
-export type DivisionByZeroEvalErrorContext = EvalErrorContext & {
+export type DivisionByZeroEvalErrorContext = {
   readonly expr: ValueExpr;
   readonly left: number;
   readonly right: number;
 };
 
-export type ZonePropNotFoundEvalErrorContext = EvalErrorContext & {
+export type ZonePropNotFoundEvalErrorContext = {
   readonly zoneId: ZoneId;
   readonly prop?: string;
   readonly availableZoneIds?: readonly ZoneId[];
@@ -86,6 +99,11 @@ type EvalErrorContextByCode = {
 export type EvalErrorContextForCode<C extends EvalErrorCode> =
   C extends keyof EvalErrorContextByCode ? EvalErrorContextByCode[C] : EvalErrorContext;
 
+export type ExactEvalErrorContext<
+  C extends EvalErrorCode,
+  T extends EvalErrorContextForCode<C>,
+> = T & Readonly<Record<Exclude<keyof T, keyof EvalErrorContextForCode<C>>, never>>;
+
 export class EvalError<C extends EvalErrorCode = EvalErrorCode> extends Error {
   readonly code: C;
   readonly context?: EvalErrorContextForCode<C>;
@@ -100,10 +118,13 @@ export class EvalError<C extends EvalErrorCode = EvalErrorCode> extends Error {
   }
 }
 
-export function createEvalError<C extends EvalErrorCode>(
+export function createEvalError<
+  C extends EvalErrorCode,
+  T extends EvalErrorContextForCode<C> = EvalErrorContextForCode<C>,
+>(
   code: C,
   message: string,
-  context?: EvalErrorContextForCode<C>,
+  context?: ExactEvalErrorContext<C, T>,
 ): EvalError<C> {
   return new EvalError(code, message, context);
 }
@@ -136,9 +157,11 @@ export function selectorCardinalityError(
   return createEvalError<'SELECTOR_CARDINALITY'>('SELECTOR_CARDINALITY', message, context);
 }
 
-export function queryBoundsExceededError(
+export function queryBoundsExceededError<
+  T extends EvalErrorContextForCode<'QUERY_BOUNDS_EXCEEDED'> = EvalErrorContextForCode<'QUERY_BOUNDS_EXCEEDED'>,
+>(
   message: string,
-  context?: EvalErrorContextForCode<'QUERY_BOUNDS_EXCEEDED'>,
+  context?: ExactEvalErrorContext<'QUERY_BOUNDS_EXCEEDED', T>,
 ): EvalError<'QUERY_BOUNDS_EXCEEDED'> {
   return createEvalError('QUERY_BOUNDS_EXCEEDED', message, context);
 }
@@ -150,16 +173,20 @@ export function spatialNotImplementedError(
   return createEvalError('SPATIAL_NOT_IMPLEMENTED', message, context);
 }
 
-export function divisionByZeroError(
+export function divisionByZeroError<
+  T extends EvalErrorContextForCode<'DIVISION_BY_ZERO'> = EvalErrorContextForCode<'DIVISION_BY_ZERO'>,
+>(
   message: string,
-  context?: EvalErrorContextForCode<'DIVISION_BY_ZERO'>,
+  context?: ExactEvalErrorContext<'DIVISION_BY_ZERO', T>,
 ): EvalError<'DIVISION_BY_ZERO'> {
   return createEvalError('DIVISION_BY_ZERO', message, context);
 }
 
-export function zonePropNotFoundError(
+export function zonePropNotFoundError<
+  T extends EvalErrorContextForCode<'ZONE_PROP_NOT_FOUND'> = EvalErrorContextForCode<'ZONE_PROP_NOT_FOUND'>,
+>(
   message: string,
-  context?: EvalErrorContextForCode<'ZONE_PROP_NOT_FOUND'>,
+  context?: ExactEvalErrorContext<'ZONE_PROP_NOT_FOUND', T>,
 ): EvalError<'ZONE_PROP_NOT_FOUND'> {
   return createEvalError('ZONE_PROP_NOT_FOUND', message, context);
 }

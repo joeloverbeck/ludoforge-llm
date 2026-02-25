@@ -114,21 +114,53 @@ describe('kernel type foundations', () => {
       resolvedCount: 2,
     });
 
-    // @ts-expect-error Player selector cardinality metadata must not include resolvedZones.
     selectorCardinalityError('player with zone payload', {
       selectorKind: 'player',
       selector: 'all',
       resolvedCount: 2,
+      // @ts-expect-error Player selector cardinality metadata must not include resolvedZones.
       resolvedZones: [],
     });
 
-    // @ts-expect-error Zone selector cardinality metadata must not include resolvedPlayers.
     selectorCardinalityError('zone with player payload', {
       selectorKind: 'zone',
       selector: '$zones',
       resolvedCount: 0,
+      // @ts-expect-error Zone selector cardinality metadata must not include resolvedPlayers.
       resolvedPlayers: [],
     });
+
+    const widenedMixedPlayerContext: {
+      selectorKind: 'player';
+      selector: 'all';
+      resolvedCount: number;
+      resolvedPlayers: readonly PlayerId[];
+      resolvedZones: readonly ZoneId[];
+    } = {
+      selectorKind: 'player',
+      selector: 'all',
+      resolvedCount: 1,
+      resolvedPlayers: [asPlayerId(0)],
+      resolvedZones: [asZoneId('hand:0')],
+    };
+    // @ts-expect-error Widened player selector-cardinality metadata must not include zone payload.
+    selectorCardinalityError('widened player with zone payload', widenedMixedPlayerContext);
+
+    const widenedMixedZoneContext: {
+      selectorKind: 'zone';
+      selector: '$zones';
+      resolvedCount: number;
+      resolvedZones: readonly ZoneId[];
+      resolvedPlayers: readonly PlayerId[];
+    } = {
+      selectorKind: 'zone',
+      selector: '$zones',
+      resolvedCount: 1,
+      resolvedZones: [asZoneId('hand:0')],
+      resolvedPlayers: [asPlayerId(0)],
+    };
+    // @ts-expect-error Widened zone selector-cardinality metadata must not include player payload.
+    selectorCardinalityError('widened zone with player payload', widenedMixedZoneContext);
 
     // @ts-expect-error Selector-cardinality metadata requires explicit selectorKind discriminator.
     selectorCardinalityError('missing selector kind', {
@@ -188,6 +220,42 @@ describe('kernel type foundations', () => {
     // @ts-expect-error DIVISION_BY_ZERO requires expr, left, and right.
     divisionByZeroError('division by zero', { expr: { op: '/', left: 1, right: 0 } });
 
+    queryBoundsExceededError('too many', {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+      // @ts-expect-error QUERY_BOUNDS_EXCEEDED must reject undeclared literal keys.
+      unexpected: true,
+    });
+
+    const widenedQueryWithUndeclaredKey: {
+      query: { query: 'players' };
+      maxQueryResults: number;
+      resultLength: number;
+      unexpected: boolean;
+    } = {
+      query: { query: 'players' },
+      maxQueryResults: 10,
+      resultLength: 11,
+      unexpected: true,
+    };
+    // @ts-expect-error QUERY_BOUNDS_EXCEEDED must reject widened undeclared keys.
+    queryBoundsExceededError('too many widened', widenedQueryWithUndeclaredKey);
+
+    const widenedDivisionWithUndeclaredKey: {
+      expr: { op: '/'; left: 1; right: 0 };
+      left: number;
+      right: number;
+      extraInfo: string;
+    } = {
+      expr: { op: '/', left: 1, right: 0 },
+      left: 1,
+      right: 0,
+      extraInfo: 'debug',
+    };
+    // @ts-expect-error DIVISION_BY_ZERO must reject widened undeclared keys.
+    divisionByZeroError('division by zero widened', widenedDivisionWithUndeclaredKey);
+
     // @ts-expect-error ZONE_PROP_NOT_FOUND requires zoneId.
     zonePropNotFoundError('missing zone', {
       availableZoneIds: [asZoneId('market')],
@@ -199,5 +267,17 @@ describe('kernel type foundations', () => {
       zoneId: 'market',
       reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
     });
+
+    const widenedZonePropWithUndeclaredKey: {
+      zoneId: ZoneId;
+      reference: { ref: 'zoneProp'; zone: 'market'; prop: 'terrain' };
+      undeclared: number;
+    } = {
+      zoneId: asZoneId('market'),
+      reference: { ref: 'zoneProp', zone: 'market', prop: 'terrain' },
+      undeclared: 1,
+    };
+    // @ts-expect-error ZONE_PROP_NOT_FOUND must reject widened undeclared keys.
+    zonePropNotFoundError('missing zone widened undeclared', widenedZonePropWithUndeclaredKey);
   });
 });

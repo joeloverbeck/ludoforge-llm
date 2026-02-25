@@ -1,6 +1,6 @@
 # ENGINEARCH-021: Centralize Selector-Cardinality Context Construction and Close Test Gaps
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — selector-cardinality context builder helpers + resolver/runtime tests
@@ -8,13 +8,14 @@
 
 ## Problem
 
-Selector-cardinality context payloads are still hand-built at emit sites. Manual construction increases drift risk as contracts evolve, and current tests miss two important guardrails: explicit coverage for the player `playerCount` error path and an explicit regression check for mixed-field context construction attempts.
+Selector-cardinality context payloads are still hand-built at emit sites. Manual construction increases drift risk as contracts evolve, and current tests miss explicit coverage for the player `playerCount` error path (zero-player relative selector).
 
 ## Assumption Reassessment (2026-02-25)
 
 1. Selector-cardinality eval errors are emitted in `packages/engine/src/kernel/resolve-selectors.ts`.
-2. Context payloads are currently assembled inline object literals at throw sites.
+2. Context payloads are currently assembled inline object literals at throw sites in `resolve-selectors.ts`; there is no canonical builder exported from `eval-error.ts` yet.
 3. Existing `resolve-selectors` tests assert `selectorKind` for resolved-count branches, but do not directly lock the zero-player relative-selector `playerCount` branch metadata shape.
+4. `packages/engine/test/unit/types-foundation.test.ts` already contains compile-time regression coverage that rejects mixed player/zone selector-cardinality payload fields; this area is not currently a gap.
 
 ## Architecture Check
 
@@ -36,14 +37,13 @@ Update `resolve-selectors.ts` to use builders for all selector-cardinality throw
 
 Add tests that explicitly verify:
 - zero-player relative selector emits `selectorKind: 'player'` with `playerCount`
-- mixed-branch construction attempts are rejected at compile time via type tests (if not fully covered elsewhere)
+- helper-based zone-cardinality errors preserve defer metadata behavior for unresolved binding zero-cardinality paths
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/eval-error.ts` (modify)
 - `packages/engine/src/kernel/resolve-selectors.ts` (modify)
 - `packages/engine/test/unit/resolve-selectors.test.ts` (modify)
-- `packages/engine/test/unit/types-foundation.test.ts` (modify, if needed)
 
 ## Out of Scope
 
@@ -57,7 +57,8 @@ Add tests that explicitly verify:
 
 1. Selector-cardinality emitters no longer construct ad-hoc payload shapes.
 2. Player zero-cardinality (`playerCount`) path has explicit metadata-shape assertions.
-3. Existing suite: `pnpm -F @ludoforge/engine test:unit`
+3. Unresolved-binding zone defer metadata remains intact through helper-based context construction.
+4. Existing suite: `pnpm -F @ludoforge/engine test:unit`
 
 ### Invariants
 
@@ -68,8 +69,8 @@ Add tests that explicitly verify:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/resolve-selectors.test.ts` — add explicit assertion for zero-player relative selector context shape (`selectorKind: 'player'`, `playerCount`).
-2. `packages/engine/test/unit/types-foundation.test.ts` — extend compile-time regression coverage for improper context construction patterns.
+1. `packages/engine/test/unit/resolve-selectors.test.ts` — added explicit assertion for zero-player relative selector context shape (`selectorKind: 'player'`, `playerCount`).
+2. `packages/engine/test/unit/resolve-selectors.test.ts` — strengthened unresolved-binding zone cardinality assertion to check `selector`, `resolvedCount`, `resolvedZones`, and defer metadata together.
 
 ### Commands
 
@@ -77,3 +78,19 @@ Add tests that explicitly verify:
 2. `pnpm -F @ludoforge/engine build`
 3. `node --test packages/engine/dist/test/unit/resolve-selectors.test.js`
 4. `pnpm -F @ludoforge/engine test:unit`
+
+## Outcome
+
+- **Completion date**: 2026-02-25
+- **What changed**:
+  - Added canonical selector-cardinality context builder helpers in `packages/engine/src/kernel/eval-error.ts` for player-count, player-resolved, and zone-resolved branches.
+  - Migrated all selector-cardinality throw sites in `packages/engine/src/kernel/resolve-selectors.ts` to those helpers.
+  - Expanded `packages/engine/test/unit/resolve-selectors.test.ts` with explicit zero-player relative-selector `playerCount` context coverage and stronger unresolved-binding zone metadata assertions.
+- **Deviation from original plan**:
+  - Did not modify `packages/engine/test/unit/types-foundation.test.ts` because compile-time mixed-field regression coverage was already present and sufficient.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine typecheck` passed.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/resolve-selectors.test.js` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

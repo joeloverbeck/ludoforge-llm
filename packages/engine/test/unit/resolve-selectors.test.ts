@@ -118,6 +118,26 @@ describe('resolvePlayerSel', () => {
       isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.selectorKind === 'player',
     );
   });
+
+  it('emits playerCount context for zero-player relative selector cardinality errors', () => {
+    const zeroPlayerCtx = makeCtx({
+      state: makeState(0),
+      actorPlayer: asPlayerId(0),
+      activePlayer: asPlayerId(0),
+    });
+
+    assert.throws(
+      () => resolvePlayerSel({ relative: 'left' }, zeroPlayerCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SELECTOR_CARDINALITY')
+        && error.context?.selectorKind === 'player'
+        && typeof error.context?.selector === 'object'
+        && error.context.selector !== null
+        && 'relative' in error.context.selector
+        && error.context.selector.relative === 'left'
+        && error.context?.playerCount === 0,
+    );
+  });
 });
 
 describe('resolveZoneSel', () => {
@@ -209,6 +229,10 @@ describe('resolveZoneSel', () => {
       (error: unknown) =>
         isEvalErrorCode(error, 'SELECTOR_CARDINALITY') &&
         error.context?.selectorKind === 'zone' &&
+        error.context?.selector === '$zones' &&
+        error.context?.resolvedCount === 0 &&
+        Array.isArray(error.context?.resolvedZones) &&
+        error.context.resolvedZones.length === 0 &&
         error.context?.deferClass === EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
     );
   });

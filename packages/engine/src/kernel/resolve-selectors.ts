@@ -2,8 +2,10 @@ import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './
 import type { EvalContext } from './eval-context.js';
 import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
 import {
-  type EvalErrorContextForCode,
   missingBindingError,
+  selectorCardinalityPlayerCountContext,
+  selectorCardinalityPlayerResolvedContext,
+  selectorCardinalityZoneResolvedContext,
   missingVarError,
   selectorCardinalityError,
   typeMismatchError,
@@ -132,11 +134,10 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly Pla
   }
 
   if (players.length === 0) {
-    throw selectorCardinalityError('Cannot resolve relative selector with zero players', {
-      selectorKind: 'player',
-      selector: sel,
-      playerCount: ctx.state.playerCount,
-    });
+    throw selectorCardinalityError(
+      'Cannot resolve relative selector with zero players',
+      selectorCardinalityPlayerCountContext(sel, ctx.state.playerCount),
+    );
   }
 
   const actorIndex = Number(ctx.actorPlayer);
@@ -148,12 +149,10 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly Pla
 export function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): PlayerId {
   const resolved = resolvePlayerSel(sel, ctx);
   if (resolved.length !== 1) {
-    throw selectorCardinalityError('Expected exactly one player from selector', {
-      selectorKind: 'player',
-      selector: sel,
-      resolvedCount: resolved.length,
-      resolvedPlayers: resolved,
-    });
+    throw selectorCardinalityError(
+      'Expected exactly one player from selector',
+      selectorCardinalityPlayerResolvedContext(sel, resolved),
+    );
   }
 
   return resolved[0]!;
@@ -286,17 +285,16 @@ export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[
 export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
   const resolved = resolveZoneSel(sel, ctx);
   if (resolved.length !== 1) {
-    const context: EvalErrorContextForCode<'SELECTOR_CARDINALITY'> = {
-      selectorKind: 'zone',
-      selector: sel,
-      resolvedCount: resolved.length,
-      resolvedZones: resolved,
-      ...(sel.startsWith('$') && resolved.length === 0
-        ? { deferClass: EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY }
-        : {}),
-    };
-
-    throw selectorCardinalityError('Expected exactly one zone from selector', context);
+    throw selectorCardinalityError(
+      'Expected exactly one zone from selector',
+      selectorCardinalityZoneResolvedContext(
+        sel,
+        resolved,
+        sel.startsWith('$') && resolved.length === 0
+          ? EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY
+          : undefined,
+      ),
+    );
   }
 
   return resolved[0]!;

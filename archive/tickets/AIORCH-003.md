@@ -1,6 +1,6 @@
 # AIORCH-003: Promote illegal AI template execution to explicit orchestration outcome
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -15,7 +15,9 @@ After adopting atomic AI template execution, `illegal` template results are curr
 1. `packages/runner/src/store/game-store.ts` maps `applyTemplateMove(...).outcome === 'illegal'` to store `error` plus `AiStepOutcome = 'no-op'`.
 2. `packages/runner/src/animation/ai-playback.ts` treats `'no-op'` as retriable and only emits an error after retry exhaustion (`maxNoOpRetries`).
 3. Mismatch: illegal template execution is deterministic for the current attempted move and should not be routed through retry semantics.
-4. Existing playback tests cover `'no-op'`, `'no-legal-moves'`, and `'uncompletable-template'`, but not explicit illegal-template outcome handling.
+4. Existing tests confirm current mismatch:
+   - `packages/runner/test/store/game-store.test.ts` currently expects `'no-op'` for illegal template execution.
+   - `packages/runner/test/animation/ai-playback.test.ts` covers `'no-op'`, `'no-legal-moves'`, and `'uncompletable-template'`, but not explicit illegal-template outcome handling.
 
 ## Architecture Check
 
@@ -27,7 +29,7 @@ After adopting atomic AI template execution, `illegal` template results are curr
 
 ### 1. Add explicit illegal-template AI step outcome
 
-Update `AiStepOutcome` and `resolveSingleAiStep` so worker `illegal` result maps to explicit outcome and deterministic orchestration handling.
+Update `AiStepOutcome` and `resolveSingleAiStep` so worker `illegal` result maps to explicit `'illegal-template'` outcome and deterministic orchestration handling.
 
 ### 2. Update playback error mapping
 
@@ -54,14 +56,14 @@ Add/adjust tests to assert explicit outcome propagation and immediate playback e
 
 ### Tests That Must Pass
 
-1. `resolveAiStep` returns explicit illegal-template outcome when worker atomic execution returns `illegal`.
+1. `resolveAiStep` returns explicit `'illegal-template'` outcome when worker atomic execution returns `illegal`.
 2. Playback emits immediate illegal-template diagnostics and does not consume retry budget intended for transient `'no-op'` outcomes.
 3. Existing suite: `pnpm -F @ludoforge/runner test`
 
 ### Invariants
 
 1. GameDef/runtime/simulation remain game-agnostic and unchanged in behavior.
-2. AI orchestration outcomes remain semantically one-to-one (`no-op`, `no-legal-moves`, `uncompletable-template`, `illegal-template`, etc.) without overloading.
+2. AI orchestration outcomes remain semantically one-to-one (`advanced`, `no-op`, `human-turn`, `terminal`, `no-legal-moves`, `uncompletable-template`, `illegal-template`) without overloading.
 
 ## Test Plan
 
@@ -76,3 +78,20 @@ Add/adjust tests to assert explicit outcome propagation and immediate playback e
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm -F @ludoforge/runner lint`
 4. `pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- **Completion Date**: 2026-02-25
+- **What Changed**:
+  - Added explicit `AiStepOutcome` value `'illegal-template'` in `packages/runner/src/store/game-store.ts`.
+  - Updated AI step resolution to return `'illegal-template'` (instead of `'no-op'`) when `applyTemplateMove` returns `illegal`, while preserving worker error state.
+  - Updated playback orchestration in `packages/runner/src/animation/ai-playback.ts` to treat `'illegal-template'` as immediate error (no no-op retries).
+  - Updated `packages/runner/test/store/game-store.test.ts` to assert `'illegal-template'` for illegal template execution.
+  - Added playback coverage in `packages/runner/test/animation/ai-playback.test.ts` for immediate illegal-template `onError`.
+- **Deviations From Original Plan**:
+  - None. Implementation matched the ticket scope after assumption reassessment.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/runner test -- test/store/game-store.test.ts test/animation/ai-playback.test.ts` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm -F @ludoforge/runner test` passed.

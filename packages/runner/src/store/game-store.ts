@@ -65,7 +65,8 @@ export type AiStepOutcome =
   | 'human-turn'
   | 'terminal'
   | 'no-legal-moves'
-  | 'uncompletable-template';
+  | 'uncompletable-template'
+  | 'illegal-template';
 
 export interface OrchestrationDiagnostic {
   readonly sequence: number;
@@ -746,7 +747,7 @@ export function createGameStore(
             legalMoveResult,
             error: templateMoveResult.error,
           });
-          return 'no-op';
+          return 'illegal-template';
         }
 
         const completedMove = templateMoveResult.move;

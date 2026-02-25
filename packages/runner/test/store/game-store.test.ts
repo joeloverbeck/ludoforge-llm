@@ -1043,7 +1043,7 @@ describe('createGameStore', () => {
     });
   });
 
-  it('resolveAiStep returns no-op and stores worker error when applyTemplateMove returns illegal', async () => {
+  it('resolveAiStep returns illegal-template and stores worker error when applyTemplateMove returns illegal', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 62, 2).state,
@@ -1072,7 +1072,7 @@ describe('createGameStore', () => {
     await store.getState().initGame(def, 62, TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();
 
-    expect(outcome).toBe('no-op');
+    expect(outcome).toBe('illegal-template');
     expect(applyTemplateMove).toHaveBeenCalledTimes(1);
     expect(applyMove).not.toHaveBeenCalled();
     expect(store.getState().gameState).toEqual(aiState);

@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand';
 
-import type { GameStore } from '../store/game-store.js';
+import type { AiStepOutcome, GameStore } from '../store/game-store.js';
 import { resolveAiPlaybackDelayMs } from '../store/ai-move-policy.js';
 import type { AnimationDetailLevel } from './animation-types.js';
 
@@ -37,6 +37,31 @@ export interface AiPlaybackControllerOptions {
   readonly maxDriveMoves?: number;
   readonly onError?: (message: string) => void;
 }
+
+type AiStepPolicy =
+  | { readonly kind: 'continue' }
+  | { readonly kind: 'retry' }
+  | { readonly kind: 'exit' }
+  | { readonly kind: 'error'; readonly message: string };
+
+const AI_STEP_POLICIES: Record<AiStepOutcome, AiStepPolicy> = {
+  advanced: { kind: 'continue' },
+  'no-op': { kind: 'retry' },
+  'human-turn': { kind: 'exit' },
+  terminal: { kind: 'exit' },
+  'no-legal-moves': {
+    kind: 'error',
+    message: 'AI player has no legal moves. This may indicate a game specification issue.',
+  },
+  'uncompletable-template': {
+    kind: 'error',
+    message: 'AI selected a legal template move that could not be completed.',
+  },
+  'illegal-template': {
+    kind: 'error',
+    message: 'AI selected a template move that failed legality validation during execution.',
+  },
+};
 
 export function createAiPlaybackController(options: AiPlaybackControllerOptions): AiPlaybackController {
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
@@ -155,7 +180,9 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
           return;
         }
 
-        if (outcome === 'advanced') {
+        const policy = AI_STEP_POLICIES[outcome];
+
+        if (policy.kind === 'continue') {
           noOpCount = 0;
           moveCount += 1;
 
@@ -171,19 +198,13 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
           continue;
         }
 
-        if (outcome === 'no-legal-moves') {
-          options.onError?.('AI player has no legal moves. This may indicate a game specification issue.');
+        if (policy.kind === 'error') {
+          options.onError?.(policy.message);
           pendingSkip = false;
           return;
         }
 
-        if (outcome === 'uncompletable-template') {
-          options.onError?.('AI selected a legal template move that could not be completed.');
-          pendingSkip = false;
-          return;
-        }
-
-        if (outcome === 'no-op') {
+        if (policy.kind === 'retry') {
           noOpCount += 1;
           if (noOpCount >= maxNoOpRetries) {
             options.onError?.('AI turn stalled after repeated no-op results.');
@@ -194,7 +215,7 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
           continue;
         }
 
-        // 'human-turn', 'terminal', or any other outcome — exit normally
+        // Exit outcomes ('human-turn', 'terminal') end the drive loop normally.
         pendingSkip = false;
         return;
       }

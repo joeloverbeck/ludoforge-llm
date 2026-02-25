@@ -704,6 +704,13 @@ describe('top-level runtime schemas', () => {
         actionId: 'train',
         step: 'costSpendSkipped',
       },
+      {
+        kind: 'turnFlowDeferredEventLifecycle',
+        stage: 'executed',
+        deferredId: 'deferred:1:0:event',
+        actionId: 'event',
+        requiredGrantBatchIds: ['batch-1'],
+      },
     ] as const;
 
     for (const entry of entries) {

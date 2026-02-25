@@ -608,6 +608,16 @@ export const TurnFlowEligibilityTraceEntrySchema = z
   })
   .strict();
 
+export const TurnFlowDeferredEventLifecycleTraceEntrySchema = z
+  .object({
+    kind: z.literal('turnFlowDeferredEventLifecycle'),
+    stage: z.union([z.literal('queued'), z.literal('released'), z.literal('executed')]),
+    deferredId: StringSchema.min(1),
+    actionId: StringSchema.min(1),
+    requiredGrantBatchIds: z.array(StringSchema.min(1)),
+  })
+  .strict();
+
 export const OperationPartialTraceEntrySchema = z
   .object({
     kind: z.literal('operationPartial'),

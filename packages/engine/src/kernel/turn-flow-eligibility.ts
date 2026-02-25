@@ -9,6 +9,7 @@ import { evalCondition } from './eval-condition.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import type {
@@ -23,6 +24,7 @@ import type {
   TurnFlowPendingDeferredEventEffect,
   TurnFlowPendingEligibilityOverride,
   TurnFlowPendingFreeOperationGrant,
+  TurnFlowReleasedDeferredEventEffect,
   TurnFlowRuntimeCardState,
   TurnFlowRuntimeState,
 } from './types.js';
@@ -31,12 +33,13 @@ interface TurnFlowTransitionResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
   readonly boundaryDurations?: readonly TurnFlowDuration[];
-  readonly releasedDeferredEventEffects?: readonly TurnFlowDeferredEventEffectPayload[];
+  readonly releasedDeferredEventEffects?: readonly TurnFlowReleasedDeferredEventEffect[];
 }
 
 interface FreeOperationGrantConsumptionResult {
   readonly state: GameState;
-  readonly releasedDeferredEventEffects: readonly TurnFlowDeferredEventEffectPayload[];
+  readonly traceEntries: readonly TriggerLogEntry[];
+  readonly releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[];
 }
 
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
@@ -520,7 +523,7 @@ const splitReadyDeferredEventEffects = (
   pendingGrants: readonly TurnFlowPendingFreeOperationGrant[],
 ): {
   readonly remaining: readonly TurnFlowPendingDeferredEventEffect[];
-  readonly ready: readonly TurnFlowDeferredEventEffectPayload[];
+  readonly ready: readonly TurnFlowReleasedDeferredEventEffect[];
 } => {
   const pendingBatchIds = new Set(
     pendingGrants
@@ -528,11 +531,13 @@ const splitReadyDeferredEventEffects = (
       .filter((value): value is string => typeof value === 'string' && value.length > 0),
   );
   const remaining: TurnFlowPendingDeferredEventEffect[] = [];
-  const ready: TurnFlowDeferredEventEffectPayload[] = [];
+  const ready: TurnFlowReleasedDeferredEventEffect[] = [];
   for (const candidate of deferred) {
     const isReady = candidate.requiredGrantBatchIds.every((batchId) => !pendingBatchIds.has(batchId));
     if (isReady) {
       ready.push({
+        deferredId: candidate.deferredId,
+        requiredGrantBatchIds: candidate.requiredGrantBatchIds,
         effects: candidate.effects,
         moveParams: candidate.moveParams,
         actorPlayer: candidate.actorPlayer,
@@ -820,23 +825,24 @@ export const applyTurnFlowEligibilityAfterMove = (
     ...newFreeOpGrants,
   ];
   const deferredRequiredBatchIds = uniqueBatchIds(newFreeOpGrants);
-  const deferredEventEffects = deferredEventEffect === undefined
+  const deferredCandidate = deferredEventEffect === undefined
+    ? undefined
+    : {
+      ...deferredEventEffect,
+      deferredId: makeUniqueDeferredEventEffectId(
+        existingPendingDeferredEventEffects,
+        `deferred:${state.turnCount}:${activeSeat}:${String(move.actionId)}`,
+      ),
+      requiredGrantBatchIds: deferredRequiredBatchIds,
+    };
+  const deferredEventEffects = deferredCandidate === undefined || deferredCandidate.requiredGrantBatchIds.length === 0
     ? existingPendingDeferredEventEffects
-    : deferredRequiredBatchIds.length === 0
-      ? existingPendingDeferredEventEffects
-      : [
-        ...existingPendingDeferredEventEffects,
-        {
-          ...deferredEventEffect,
-          deferredId: makeUniqueDeferredEventEffectId(
-            existingPendingDeferredEventEffects,
-            `deferred:${state.turnCount}:${activeSeat}:${String(move.actionId)}`,
-          ),
-          requiredGrantBatchIds: deferredRequiredBatchIds,
-        },
-      ];
-  const releasedDeferredEventEffects = deferredEventEffect !== undefined && deferredRequiredBatchIds.length === 0
-    ? [deferredEventEffect]
+    : [
+      ...existingPendingDeferredEventEffects,
+      deferredCandidate,
+    ];
+  const releasedDeferredEventEffects = deferredCandidate !== undefined && deferredCandidate.requiredGrantBatchIds.length === 0
+    ? [deferredCandidate]
     : [];
   const firstActionClass =
     before.firstActionClass ??
@@ -885,6 +891,14 @@ export const applyTurnFlowEligibilityAfterMove = (
       after: cardSnapshot(currentCard),
       overrides: newOverrides,
     });
+  }
+  if (deferredCandidate !== undefined && deferredCandidate.requiredGrantBatchIds.length > 0) {
+    traceEntries.push(createDeferredLifecycleTraceEntry('queued', deferredCandidate));
+  }
+  if (releasedDeferredEventEffects.length > 0) {
+    for (const released of releasedDeferredEventEffects) {
+      traceEntries.push(createDeferredLifecycleTraceEntry('released', released));
+    }
   }
 
   let endedReason: 'rightmostPass' | 'twoNonPass' | undefined;
@@ -976,7 +990,7 @@ export const consumeTurnFlowFreeOperationGrant = (
   move: Move,
 ): FreeOperationGrantConsumptionResult => {
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
-    return { state, releasedDeferredEventEffects: [] };
+    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
   const activeSeat = String(state.activePlayer);
@@ -985,7 +999,7 @@ export const consumeTurnFlowFreeOperationGrant = (
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
   );
   if (consumedIndex < 0) {
-    return { state, releasedDeferredEventEffects: [] };
+    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const consumed = pending[consumedIndex]!;
   const decremented = consumed.remainingUses - 1;
@@ -1002,6 +1016,8 @@ export const consumeTurnFlowFreeOperationGrant = (
   const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPending);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
+  const traceEntries = splitDeferred.ready.map<TriggerLogEntry>((released) =>
+    createDeferredLifecycleTraceEntry('released', released));
   return {
     state: {
       ...state,
@@ -1013,6 +1029,7 @@ export const consumeTurnFlowFreeOperationGrant = (
         ),
       },
     },
+    traceEntries,
     releasedDeferredEventEffects: splitDeferred.ready,
   };
 };

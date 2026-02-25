@@ -25,6 +25,7 @@ import type {
   ActionPipelineDef,
 } from './types-operations.js';
 import type {
+  TurnFlowDeferredEventLifecycleTraceEntry,
   SimultaneousCommitTraceEntry,
   SimultaneousSubmissionTraceEntry,
   TurnOrderRuntimeState,
@@ -600,6 +601,7 @@ export type TriggerLogEntry =
   | TriggerTruncated
   | TurnFlowLifecycleTraceEntry
   | TurnFlowEligibilityTraceEntry
+  | TurnFlowDeferredEventLifecycleTraceEntry
   | SimultaneousSubmissionTraceEntry
   | SimultaneousCommitTraceEntry
   | OperationPartialTraceEntry

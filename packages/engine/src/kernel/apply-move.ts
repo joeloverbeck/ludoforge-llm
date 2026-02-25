@@ -36,6 +36,7 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import type { PhaseTransitionBudget } from './effect-context.js';
 import type {
   ActionDef,
@@ -49,6 +50,7 @@ import type {
   MoveParamValue,
   Rng,
   TurnFlowDeferredEventEffectPayload,
+  TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
   TriggerEvent,
 } from './types.js';
@@ -746,7 +748,7 @@ const executeMoveAction = (
 const applyReleasedDeferredEventEffects = (
   def: GameDef,
   state: GameState,
-  releasedDeferredEventEffects: readonly TurnFlowDeferredEventEffectPayload[],
+  releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[],
   shared: SharedMoveExecutionContext,
 ): MoveActionExecutionResult => {
   if (releasedDeferredEventEffects.length === 0) {
@@ -805,6 +807,10 @@ const applyReleasedDeferredEventEffects = (
       nextRng = emittedEventResult.rng;
       triggerLog = emittedEventResult.triggerLog;
     }
+    triggerLog = [
+      ...triggerLog,
+      createDeferredLifecycleTraceEntry('executed', deferredEventEffect),
+    ];
   }
   return {
     stateWithRng: {
@@ -844,7 +850,7 @@ const applyMoveCore = (
       const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move);
       return {
         state: consumed.state,
-        traceEntries: [] as readonly TriggerLogEntry[],
+        traceEntries: consumed.traceEntries,
         boundaryDurations: undefined,
         releasedDeferredEventEffects: consumed.releasedDeferredEventEffects,
       };

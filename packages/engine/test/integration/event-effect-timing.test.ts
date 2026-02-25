@@ -18,6 +18,7 @@ const createDef = (): GameDef =>
     constants: {},
     globalVars: [
       { name: 'afterCounter', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'afterCounterTwo', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'beforeCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'defaultCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'batchCounter', type: 'int', init: 0, min: 0, max: 99 },
@@ -57,7 +58,7 @@ const createDef = (): GameDef =>
             name: 'eventCardId',
             domain: {
               query: 'enums',
-              values: ['card-after', 'card-before', 'card-default', 'card-batch', 'card-branch'],
+              values: ['card-after', 'card-after-2', 'card-before', 'card-default', 'card-batch', 'card-branch'],
             },
           },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -115,6 +116,23 @@ const createDef = (): GameDef =>
                 },
               ],
               effects: [{ addVar: { scope: 'global', var: 'afterCounter', delta: 1 } }],
+            },
+          },
+          {
+            id: 'card-after-2',
+            title: 'Second deferred side effect',
+            sideMode: 'single',
+            unshaded: {
+              effectTiming: 'afterGrants',
+              freeOperationGrants: [
+                {
+                  seat: '3',
+                  sequence: { chain: 'vc-after-2', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+              ],
+              effects: [{ addVar: { scope: 'global', var: 'afterCounterTwo', delta: 1 } }],
             },
           },
           {
@@ -203,32 +221,62 @@ const createDef = (): GameDef =>
   }) as unknown as GameDef;
 
 const advanceToVc = (def: GameDef, state: ReturnType<typeof initialState>['state']) => {
-  const afterSeat1 = applyMove(def, state, { actionId: asActionId('operation'), params: {} }).state;
-  return applyMove(def, afterSeat1, { actionId: asActionId('operation'), params: {} }).state;
+  let next = state;
+  for (let step = 0; step < 8; step += 1) {
+    if (next.activePlayer === asPlayerId(3)) {
+      return next;
+    }
+    next = applyMove(def, next, { actionId: asActionId('operation'), params: {} }).state;
+  }
+  assert.fail('expected to rotate active seat to VC within 8 operation moves');
 };
+
+const deferredLifecycleEntries = (
+  triggerFirings: readonly { readonly kind: string }[],
+) =>
+  triggerFirings.filter(
+    (entry): entry is {
+      readonly kind: 'turnFlowDeferredEventLifecycle';
+      readonly stage: 'queued' | 'released' | 'executed';
+      readonly deferredId: string;
+      readonly actionId: string;
+      readonly requiredGrantBatchIds: readonly string[];
+    } => entry.kind === 'turnFlowDeferredEventLifecycle',
+  );
 
 describe('event effect timing integration', () => {
   it('defers effects for afterGrants until a granted free operation is consumed', () => {
     const def = createDef();
     const start = initialState(def, 31, 4).state;
 
-    const afterEvent = applyMove(def, start, {
+    const afterEventResult = applyMove(def, start, {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-after', side: 'unshaded', branch: 'none' },
-    }).state;
+    });
+    const afterEvent = afterEventResult.state;
     assert.equal(afterEvent.globalVars.afterCounter, 0);
+    const queued = deferredLifecycleEntries(afterEventResult.triggerFirings);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0]?.stage, 'queued');
+    assert.equal(queued[0]?.actionId, 'event');
+    assert.deepEqual(queued[0]?.requiredGrantBatchIds.length, 1);
 
     const vcWindow = advanceToVc(def, afterEvent);
     assert.equal(vcWindow.activePlayer, asPlayerId(3));
     assert.equal(vcWindow.globalVars.afterCounter, 0);
 
-    const afterFreeOp = applyMove(def, vcWindow, {
+    const afterFreeOpResult = applyMove(def, vcWindow, {
       actionId: asActionId('operation'),
       params: {},
       freeOperation: true,
-    }).state;
+    });
+    const afterFreeOp = afterFreeOpResult.state;
     assert.equal(afterFreeOp.globalVars.afterCounter, 1);
     assert.equal(requireCardDrivenRuntime(afterFreeOp).pendingFreeOperationGrants, undefined);
+    const lifecycle = deferredLifecycleEntries(afterFreeOpResult.triggerFirings);
+    assert.deepEqual(lifecycle.map((entry) => entry.stage), ['released', 'executed']);
+    assert.equal(lifecycle[0]?.deferredId, queued[0]?.deferredId);
+    assert.equal(lifecycle[1]?.deferredId, queued[0]?.deferredId);
   });
 
   it('keeps explicit beforeGrants behavior immediate', () => {
@@ -259,30 +307,39 @@ describe('event effect timing integration', () => {
     const def = createDef();
     const start = initialState(def, 34, 4).state;
 
-    const afterEvent = applyMove(def, start, {
+    const afterEventResult = applyMove(def, start, {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-batch', side: 'unshaded', branch: 'none' },
-    }).state;
+    });
+    const afterEvent = afterEventResult.state;
     const vcWindow = advanceToVc(def, afterEvent);
+    const queued = deferredLifecycleEntries(afterEventResult.triggerFirings);
+    assert.deepEqual(queued.map((entry) => entry.stage), ['queued']);
 
     assert.equal(requireCardDrivenRuntime(vcWindow).pendingFreeOperationGrants?.length, 2);
     assert.equal(vcWindow.globalVars.batchCounter, 0);
 
-    const afterFirstFree = applyMove(def, vcWindow, {
+    const afterFirstFreeResult = applyMove(def, vcWindow, {
       actionId: asActionId('operation'),
       params: {},
       freeOperation: true,
-    }).state;
+    });
+    const afterFirstFree = afterFirstFreeResult.state;
     assert.equal(requireCardDrivenRuntime(afterFirstFree).pendingFreeOperationGrants?.length, 1);
     assert.equal(afterFirstFree.globalVars.batchCounter, 0);
+    assert.equal(deferredLifecycleEntries(afterFirstFreeResult.triggerFirings).length, 0);
 
-    const afterSecondFree = applyMove(def, afterFirstFree, {
+    const afterSecondFreeResult = applyMove(def, afterFirstFree, {
       actionId: asActionId('operation'),
       params: {},
       freeOperation: true,
-    }).state;
+    });
+    const afterSecondFree = afterSecondFreeResult.state;
     assert.equal(requireCardDrivenRuntime(afterSecondFree).pendingFreeOperationGrants, undefined);
     assert.equal(afterSecondFree.globalVars.batchCounter, 1);
+    const lifecycle = deferredLifecycleEntries(afterSecondFreeResult.triggerFirings);
+    assert.deepEqual(lifecycle.map((entry) => entry.stage), ['released', 'executed']);
+    assert.equal(lifecycle[0]?.deferredId, queued[0]?.deferredId);
   });
 
   it('lets branch timing override side timing for selected branches', () => {
@@ -305,5 +362,60 @@ describe('event effect timing integration', () => {
     }).state;
     assert.equal(afterFreeOp.globalVars.branchSideCounter, 1);
     assert.equal(afterFreeOp.globalVars.branchCounter, 1);
+  });
+
+  it('preserves per-deferred lifecycle ordering across multiple queued deferred payloads', () => {
+    const def = createDef();
+    const start = initialState(def, 36, 4).state;
+    const vcStart = advanceToVc(def, start);
+
+    const firstEventResult = applyMove(def, vcStart, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-after', side: 'unshaded', branch: 'none' },
+    });
+    const secondEventWindow = advanceToVc(def, firstEventResult.state);
+    const secondEventResult = applyMove(def, secondEventWindow, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-after-2', side: 'unshaded', branch: 'none' },
+    });
+    const firstFreeWindow = advanceToVc(def, secondEventResult.state);
+    const firstFreeResult = applyMove(def, firstFreeWindow, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    });
+    const secondFreeWindow = advanceToVc(def, firstFreeResult.state);
+    const secondFreeResult = applyMove(def, secondFreeWindow, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    });
+
+    assert.equal(secondFreeResult.state.globalVars.afterCounter, 1);
+    assert.equal(secondFreeResult.state.globalVars.afterCounterTwo, 1);
+    assert.equal(requireCardDrivenRuntime(secondFreeResult.state).pendingFreeOperationGrants, undefined);
+
+    const firstQueued = deferredLifecycleEntries(firstEventResult.triggerFirings);
+    const secondQueued = deferredLifecycleEntries(secondEventResult.triggerFirings);
+    assert.deepEqual(firstQueued.map((entry) => entry.stage), ['queued']);
+    assert.deepEqual(secondQueued.map((entry) => entry.stage), ['queued']);
+    assert.notEqual(firstQueued[0]?.deferredId, secondQueued[0]?.deferredId);
+
+    const lifecycleByDeferredId = new Map<string, Array<'queued' | 'released' | 'executed'>>();
+    for (const entry of [
+      ...deferredLifecycleEntries(firstEventResult.triggerFirings),
+      ...deferredLifecycleEntries(secondEventResult.triggerFirings),
+      ...deferredLifecycleEntries(firstFreeResult.triggerFirings),
+      ...deferredLifecycleEntries(secondFreeResult.triggerFirings),
+    ]) {
+      const stages = lifecycleByDeferredId.get(entry.deferredId) ?? [];
+      stages.push(entry.stage);
+      lifecycleByDeferredId.set(entry.deferredId, stages);
+    }
+
+    assert.equal(lifecycleByDeferredId.size, 2);
+    for (const stages of lifecycleByDeferredId.values()) {
+      assert.deepEqual(stages, ['queued', 'released', 'executed']);
+    }
   });
 });

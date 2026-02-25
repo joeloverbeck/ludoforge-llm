@@ -835,6 +835,54 @@
                   "properties": {
                     "kind": {
                       "type": "string",
+                      "const": "turnFlowDeferredEventLifecycle"
+                    },
+                    "stage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "queued"
+                        },
+                        {
+                          "type": "string",
+                          "const": "released"
+                        },
+                        {
+                          "type": "string",
+                          "const": "executed"
+                        }
+                      ]
+                    },
+                    "deferredId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "actionId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "requiredGrantBatchIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "stage",
+                    "deferredId",
+                    "actionId",
+                    "requiredGrantBatchIds"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
                       "const": "simultaneousSubmission"
                     },
                     "player": {

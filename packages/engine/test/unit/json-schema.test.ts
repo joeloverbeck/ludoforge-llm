@@ -210,6 +210,13 @@ const validRuntimeTrace: GameTrace = {
           step: 'costSpendSkipped',
         },
         {
+          kind: 'turnFlowDeferredEventLifecycle',
+          stage: 'queued',
+          deferredId: 'deferred:1:0:playCard',
+          actionId: asActionId('playCard'),
+          requiredGrantBatchIds: ['play-card-grant'],
+        },
+        {
           kind: 'simultaneousSubmission',
           player: asPlayerId(0),
           move: { actionId: asActionId('playCard'), params: { amount: 1 } },
@@ -493,7 +500,7 @@ describe('json schema artifacts', () => {
     assert.ok(
       validate.errors?.some(
         (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
-          error.instancePath === '/moves/0/triggerFirings/7' || error.instancePath === '/moves/0/triggerFirings/8',
+          error.instancePath === '/moves/0/triggerFirings/8' || error.instancePath === '/moves/0/triggerFirings/9',
       ),
       JSON.stringify(validate.errors, null, 2),
     );

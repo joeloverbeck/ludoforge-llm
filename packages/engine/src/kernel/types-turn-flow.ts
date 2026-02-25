@@ -151,6 +151,11 @@ export interface TurnFlowPendingDeferredEventEffect extends TurnFlowDeferredEven
   readonly requiredGrantBatchIds: readonly string[];
 }
 
+export interface TurnFlowReleasedDeferredEventEffect extends TurnFlowDeferredEventEffectPayload {
+  readonly deferredId: string;
+  readonly requiredGrantBatchIds: readonly string[];
+}
+
 export interface CompoundActionState {
   readonly operationProfileId: string;
   readonly saTiming: 'before' | 'during' | 'after' | null;
@@ -254,4 +259,12 @@ export interface TurnFlowEligibilityTraceEntry {
   }[];
   readonly overrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly reason?: 'rightmostPass' | 'twoNonPass';
+}
+
+export interface TurnFlowDeferredEventLifecycleTraceEntry {
+  readonly kind: 'turnFlowDeferredEventLifecycle';
+  readonly stage: 'queued' | 'released' | 'executed';
+  readonly deferredId: string;
+  readonly actionId: string;
+  readonly requiredGrantBatchIds: readonly string[];
 }

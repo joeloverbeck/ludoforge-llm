@@ -38,6 +38,11 @@ const compileDef = (): GameDef => {
 const countFactionTokens = (state: GameState, zoneId: string, faction: string): number =>
   (state.zones[zoneId] ?? []).filter((token) => token.props.faction === faction).length;
 
+const decisionEntries = (move: Move): Array<[string, Move['params'][string]]> =>
+  Object.entries(move.params).filter(([key]) => key.startsWith('decision:')) as Array<
+    [string, Move['params'][string]]
+  >;
+
 const completeForApply = (
   def: GameDef,
   state: GameState,
@@ -242,6 +247,82 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(usInCities, 6, 'Expected 6 pieces total across cities');
   });
 
+  it('legalChoicesEvaluate returns first pending chooseOne over all city options for unshaded template', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined);
+    const cityZoneIds = def.zones
+      .filter((zone: ZoneDef) => zone.category === 'city')
+      .map((zone: ZoneDef) => zone.id)
+      .sort();
+
+    const baseState = clearAllZones(initialState(def, 2401, 2).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(0),
+      zones: {
+        ...baseState.zones,
+        [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
+        'out-of-play-US:none': Array.from({ length: 8 }, (_, i) =>
+          makeToken(`us-oop-${i}`, 'troops', 'US'),
+        ),
+      },
+    };
+
+    const template = legalMoves(def, setup).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(template, undefined, 'Expected unshaded event template');
+
+    const pending = legalChoicesEvaluate(def, setup, template!);
+    assert.equal(pending.kind, 'pending');
+    if (pending.kind !== 'pending') {
+      throw new Error('Expected pending choice request for unshaded event template.');
+    }
+    assert.equal(pending.type, 'chooseOne');
+    assert.equal(pending.decisionId.includes('$targetCity'), true);
+    const optionIds = pending.options.map((option) => String(option.value)).sort();
+    assert.deepEqual(optionIds, cityZoneIds);
+  });
+
+  it('completeTemplateMove resolves exactly 6 city decision params for unshaded Gulf of Tonkin', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined);
+    const cityZoneIds = new Set<string>(
+      def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id),
+    );
+
+    const baseState = clearAllZones(initialState(def, 2402, 2).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(0),
+      zones: {
+        ...baseState.zones,
+        [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
+        'out-of-play-US:none': Array.from({ length: 8 }, (_, i) =>
+          makeToken(`us-oop-${i}`, 'troops', 'US'),
+        ),
+      },
+    };
+
+    const template = legalMoves(def, setup).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(template, undefined, 'Expected unshaded event template');
+
+    const completion = completeTemplateMove(def, setup, template!, createRng(2402n));
+    assert.notEqual(completion, null, 'Expected template to complete');
+    const completed = completion!.move;
+    const choices = decisionEntries(completed);
+    assert.equal(choices.length, 6, 'Expected one decision per moved piece');
+    for (const [, value] of choices) {
+      assert.equal(typeof value, 'string');
+      assert.equal(cityZoneIds.has(value as string), true, `Expected city id, received ${String(value)}`);
+    }
+    assert.doesNotThrow(() => applyMove(def, setup, completed));
+  });
+
   it('moves all available pieces when fewer than 6 exist in out-of-play', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
@@ -324,6 +405,90 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       0,
     );
     assert.equal(usInCities, 0, 'Expected no US pieces in cities when out-of-play was empty');
+  });
+
+  it('treats Gulf of Tonkin shaded side as complete (no chooseOne required)', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined);
+
+    const baseState = clearAllZones(initialState(def, 2403, 2).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(0),
+      zones: {
+        ...baseState.zones,
+        [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
+        'casualties-US:none': [makeToken('us-cas-0', 'troops', 'US')],
+      },
+    };
+
+    const shadedTemplate = legalMoves(def, setup).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'shaded',
+    );
+    assert.notEqual(shadedTemplate, undefined, 'Expected shaded event move');
+    assert.equal(legalChoicesEvaluate(def, setup, shadedTemplate!).kind, 'complete');
+    assert.equal(decisionEntries(shadedTemplate!).length, 0);
+    assert.doesNotThrow(() => applyMove(def, setup, shadedTemplate!));
+  });
+
+  it('excludes an event side when chooseOne options are unsatisfiable', () => {
+    const source = compileDef();
+    const def = structuredClone(source);
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined);
+
+    const card = eventDeck!.cards.find((entry) => entry.id === 'card-1');
+    assert.notEqual(card, undefined);
+    const findFirstChooseOne = (value: unknown): Record<string, unknown> | null => {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const nested = findFirstChooseOne(item);
+          if (nested !== null) {
+            return nested;
+          }
+        }
+        return null;
+      }
+      if (value === null || typeof value !== 'object') {
+        return null;
+      }
+      if (Object.prototype.hasOwnProperty.call(value, 'chooseOne')) {
+        return value as Record<string, unknown>;
+      }
+      for (const nested of Object.values(value as Record<string, unknown>)) {
+        const result = findFirstChooseOne(nested);
+        if (result !== null) {
+          return result;
+        }
+      }
+      return null;
+    };
+
+    const chooseOneHolder = findFirstChooseOne(card!.unshaded?.effects ?? []);
+    assert.notEqual(chooseOneHolder, null, 'Expected to locate a chooseOne effect in card-1 unshaded');
+    (
+      chooseOneHolder as {
+        chooseOne: {
+          options: { query: string; values?: readonly string[] };
+        };
+      }
+    ).chooseOne.options = { query: 'enums', values: [] };
+
+    const baseState = clearAllZones(initialState(def, 2404, 2).state);
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(0),
+      zones: {
+        ...baseState.zones,
+        [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
+        'out-of-play-US:none': [makeToken('us-oop-0', 'troops', 'US')],
+      },
+    };
+
+    const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
+    const unshaded = eventMoves.find((move) => move.params.side === 'unshaded');
+    assert.equal(unshaded, undefined, 'Expected unsatisfiable unshaded side to be excluded from legalMoves');
   });
 
   it('executes card 1 unshaded by moving up to 6 US out-of-play pieces into cities', () => {

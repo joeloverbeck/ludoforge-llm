@@ -560,6 +560,138 @@ describe('translateEffectTrace', () => {
     );
     expect(entries[0]?.playerId).toBe(0);
   });
+
+  it('keeps scope actor rendering consistent across var changes, trigger varChanged, and transfer endpoints', () => {
+    const visualConfig = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        overrides: {
+          alpha: { label: 'Alpha Zone' },
+        },
+      },
+      factions: {
+        us: { displayName: 'United States' },
+      },
+    });
+
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'varChange',
+        scope: 'perPlayer',
+        varName: 'resources',
+        oldValue: 9,
+        newValue: 7,
+        player: asPlayerId(0),
+        provenance: provenance(),
+      },
+      {
+        kind: 'varChange',
+        scope: 'zone',
+        varName: 'support',
+        oldValue: 1,
+        newValue: 2,
+        zone: 'alpha',
+        provenance: provenance(),
+      },
+      {
+        kind: 'varChange',
+        scope: 'zone',
+        varName: 'support',
+        oldValue: 2,
+        newValue: 3,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'perPlayer', varName: 'resources', player: asPlayerId(0) },
+        to: { scope: 'zone', varName: 'resources', zone: 'alpha' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: { scope: 'perPlayer', varName: 'resources' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'zone', varName: 'support' },
+        to: { scope: 'global', varName: 'pool' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+    ];
+
+    const triggerLog: readonly TriggerLogEntry[] = [
+      {
+        kind: 'fired',
+        triggerId: asTriggerId('on-resources-changed'),
+        event: {
+          type: 'varChanged',
+          scope: 'perPlayer',
+          var: 'resources',
+          player: asPlayerId(0),
+          oldValue: 9,
+          newValue: 7,
+        },
+        depth: 1,
+      },
+      {
+        kind: 'truncated',
+        event: {
+          type: 'varChanged',
+          scope: 'zone',
+          var: 'support',
+          zone: 'alpha' as never,
+          oldValue: 1,
+          newValue: 2,
+        },
+        depth: 1,
+      },
+      {
+        kind: 'fired',
+        triggerId: asTriggerId('on-zone-support-changed'),
+        event: {
+          type: 'varChanged',
+          scope: 'zone',
+          var: 'support',
+          oldValue: 2,
+          newValue: 3,
+        },
+        depth: 1,
+      },
+    ];
+
+    const entries = translateEffectTrace(effectTrace, triggerLog, visualConfig, gameDefFixture(), 11);
+    expect(entries).toHaveLength(9);
+
+    expect(entries[0]?.message).toBe('United States: Resources changed from 9 to 7.');
+    expect(entries[1]?.message).toBe('Alpha Zone: Support changed from 1 to 2.');
+    expect(entries[2]?.message).toBe('Zone: Support changed from 2 to 3.');
+
+    expect(entries[3]?.message).toContain('from United States to Alpha Zone');
+    expect(entries[4]?.message).toContain('from Global to Per Player');
+    expect(entries[5]?.message).toContain('from Zone to Global');
+
+    expect(entries[6]?.message).toBe(
+      'Triggered On Resources Changed on United States: Resources changed from 9 to 7.',
+    );
+    expect(entries[7]?.message).toBe('Trigger processing truncated for Alpha Zone: Support changed from 1 to 2.');
+    expect(entries[8]?.message).toBe(
+      'Triggered On Zone Support Changed on Zone: Support changed from 2 to 3.',
+    );
+  });
 });
 
 function provenance() {

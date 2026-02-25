@@ -3,7 +3,7 @@ import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { EventLogKind } from './event-log-kind.js';
-import { optionalPlayerId } from './model-utils.js';
+import { formatScopeDisplay, optionalPlayerId } from './model-utils.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
 
 export interface EventLogEntry {
@@ -88,7 +88,23 @@ function translateEffectEntry(
       return {
         ...base,
         kind: 'variable',
-        message: `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)} from ${formatResourceEndpoint(entry.from, visualConfig, lookup)} to ${formatResourceEndpoint(entry.to, visualConfig, lookup)}.`,
+        message:
+          `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
+          ` from ${formatScopeDisplay({
+            scope: entry.from.scope,
+            context: 'endpoint',
+            playerId: entry.from.player,
+            zoneId: entry.from.zone,
+            resolvePlayerName: (playerId) => resolvePlayerName(playerId, visualConfig, lookup),
+            resolveZoneName: (zoneId) => resolveZoneName(zoneId, visualConfig),
+          })} to ${formatScopeDisplay({
+            scope: entry.to.scope,
+            context: 'endpoint',
+            playerId: entry.to.player,
+            zoneId: entry.to.zone,
+            resolvePlayerName: (playerId) => resolvePlayerName(playerId, visualConfig, lookup),
+            resolveZoneName: (zoneId) => resolveZoneName(zoneId, visualConfig),
+          })}.`,
       };
 
     case 'createToken':
@@ -390,57 +406,6 @@ function formatFilterOp(op: 'eq' | 'neq' | 'in' | 'notIn'): string {
   }
 }
 
-function formatResourceEndpoint(
-  endpoint: {
-    readonly scope: 'global' | 'perPlayer' | 'zone';
-    readonly varName: string;
-    readonly player?: number;
-    readonly zone?: string;
-  },
-  visualConfig: VisualConfigProvider,
-  lookup: PlayerLookup,
-): string {
-  if (endpoint.scope === 'global') {
-    return 'Global';
-  }
-
-  if (endpoint.scope === 'zone') {
-    if (endpoint.zone === undefined) {
-      return 'Zone';
-    }
-    return resolveZoneName(endpoint.zone, visualConfig);
-  }
-
-  const playerId = endpoint.player;
-  if (playerId === undefined) {
-    return 'Per Player';
-  }
-
-  return resolvePlayerName(playerId, visualConfig, lookup);
-}
-
-function formatScopePrefix(input: {
-  readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
-  readonly playerId: number | undefined;
-  readonly zoneId: string | undefined;
-  readonly visualConfig: VisualConfigProvider;
-  readonly lookup: PlayerLookup;
-}): string {
-  if (input.scope === 'perPlayer') {
-    const owner = input.playerId === undefined
-      ? 'Player'
-      : resolvePlayerName(input.playerId, input.visualConfig, input.lookup);
-    return `${owner}: `;
-  }
-  if (input.scope === 'zone') {
-    const zoneName = input.zoneId === undefined
-      ? 'Zone'
-      : resolveZoneName(input.zoneId, input.visualConfig);
-    return `${zoneName}: `;
-  }
-  return '';
-}
-
 function formatScopedVariableChangeMessage(input: {
   readonly scope: 'global' | 'perPlayer' | 'zone' | undefined;
   readonly variable: string;
@@ -464,12 +429,13 @@ function formatScopedVariableChangeClause(input: {
   readonly visualConfig: VisualConfigProvider;
   readonly lookup: PlayerLookup;
 }): string {
-  const scopePrefix = formatScopePrefix({
+  const scopePrefix = formatScopeDisplay({
     scope: input.scope,
+    context: 'prefix',
     playerId: input.playerId,
     zoneId: input.zoneId === undefined ? undefined : String(input.zoneId),
-    visualConfig: input.visualConfig,
-    lookup: input.lookup,
+    resolvePlayerName: (playerId) => resolvePlayerName(playerId, input.visualConfig, input.lookup),
+    resolveZoneName: (zoneId) => resolveZoneName(zoneId, input.visualConfig),
   });
   const headline = `${scopePrefix}${input.variable} changed`;
   if (input.oldValue === undefined && input.newValue === undefined) {

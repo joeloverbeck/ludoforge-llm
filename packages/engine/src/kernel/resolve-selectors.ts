@@ -1,7 +1,7 @@
 import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import type { EvalContext } from './eval-context.js';
+import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
 import {
-  EVAL_ERROR_DEFER_CLASS,
   type EvalErrorContextForCode,
   missingBindingError,
   missingVarError,

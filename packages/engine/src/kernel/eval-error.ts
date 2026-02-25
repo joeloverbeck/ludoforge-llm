@@ -1,4 +1,5 @@
 import type { PlayerId, ZoneId } from './branded.js';
+import type { EvalErrorDeferClass } from './eval-error-defer-class.js';
 import type { ConditionAST, OptionsQuery, PlayerSel, Reference, ValueExpr, ZoneSel } from './types.js';
 
 export type DataAssetEvalErrorCode =
@@ -28,12 +29,6 @@ export type EvalErrorCode =
   | DataAssetEvalErrorCode;
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
-
-export const EVAL_ERROR_DEFER_CLASS = {
-  UNRESOLVED_BINDING_SELECTOR_CARDINALITY: 'unresolvedBindingSelectorCardinality',
-} as const;
-
-export type EvalErrorDeferClass = (typeof EVAL_ERROR_DEFER_CLASS)[keyof typeof EVAL_ERROR_DEFER_CLASS];
 
 export type SelectorCardinalityEvalErrorContext = EvalErrorContext & {
   readonly selector: PlayerSel;
@@ -192,19 +187,4 @@ export function isEvalErrorCode<C extends EvalErrorCode>(
   code: C,
 ): error is EvalError<C> {
   return isEvalError(error) && error.code === code;
-}
-
-export function hasEvalErrorDeferClass(
-  error: unknown,
-  deferClass: EvalErrorDeferClass,
-): error is EvalError<'SELECTOR_CARDINALITY'> {
-  return isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.deferClass === deferClass;
-}
-
-export function isRecoverableEvalResolutionError(error: unknown): boolean {
-  return (
-    isEvalErrorCode(error, 'DIVISION_BY_ZERO') ||
-    isEvalErrorCode(error, 'MISSING_BINDING') ||
-    isEvalErrorCode(error, 'MISSING_VAR')
-  );
 }

@@ -1,4 +1,6 @@
-import { EVAL_ERROR_DEFER_CLASS, hasEvalErrorDeferClass, isEvalErrorCode } from './eval-error.js';
+import { hasEvalErrorDeferClass } from './eval-error-classification.js';
+import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
+import { isEvalErrorCode } from './eval-error.js';
 
 export type MissingBindingPolicyContext =
   | 'legalMoves.executorDuringParamEnumeration'

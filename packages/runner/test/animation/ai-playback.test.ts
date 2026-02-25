@@ -195,6 +195,28 @@ describe('createAiPlaybackController', () => {
     controller.destroy();
   });
 
+  it('calls onError when resolveAiStep returns uncompletable-template', async () => {
+    const store = createAiStore({
+      resolveAiStep: async () => 'uncompletable-template',
+    });
+    const onError = vi.fn();
+
+    const controller = createAiPlaybackController({
+      store: store as unknown as StoreApi<GameStore>,
+      animation: { setDetailLevel: vi.fn(), skipAll: vi.fn() },
+      baseStepDelayMs: 0,
+      onError,
+    });
+
+    controller.start();
+    await flushAsync();
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('could not be completed'));
+
+    controller.destroy();
+  });
+
   it('retries on no-op then calls onError after max retries exhausted', async () => {
     let calls = 0;
     const store = createAiStore({

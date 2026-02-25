@@ -33,6 +33,8 @@ interface GameStoreState {
   readonly gameLifecycle: GameLifecycle;
   readonly loading: boolean;
   readonly error: WorkerError | null;
+  readonly orchestrationDiagnostic: OrchestrationDiagnostic | null;
+  readonly orchestrationDiagnosticSequence: number;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly choicePending: ChoicePendingRequest | null;
   readonly effectTrace: readonly EffectTraceEntry[];
@@ -57,7 +59,20 @@ interface GameStoreState {
 }
 type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 
-export type AiStepOutcome = 'advanced' | 'no-op' | 'human-turn' | 'terminal' | 'no-legal-moves';
+export type AiStepOutcome =
+  | 'advanced'
+  | 'no-op'
+  | 'human-turn'
+  | 'terminal'
+  | 'no-legal-moves'
+  | 'uncompletable-template';
+
+export interface OrchestrationDiagnostic {
+  readonly sequence: number;
+  readonly code: 'AI_PLAYBACK' | 'UNCOMPLETABLE_TEMPLATE_MOVE';
+  readonly message: string;
+  readonly details?: unknown;
+}
 
 export interface AppliedMoveEvent {
   readonly sequence: number;
@@ -94,7 +109,8 @@ interface GameStoreActions {
   setAnimationPlaybackSpeed(speed: AnimationPlaybackSpeed): void;
   setAnimationPaused(paused: boolean): void;
   requestAnimationSkipCurrent(): void;
-  setPlaybackError(message: string): void;
+  reportPlaybackDiagnostic(message: string): void;
+  clearOrchestrationDiagnostic(): void;
   clearError(): void;
   setActivePhaseBanner(phase: string | null): void;
 }
@@ -154,6 +170,8 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   gameLifecycle: 'idle',
   loading: false,
   error: null,
+  orchestrationDiagnostic: null,
+  orchestrationDiagnosticSequence: 0,
   legalMoveResult: null,
   choicePending: null,
   effectTrace: [],
@@ -184,6 +202,8 @@ function resetSessionState(): Pick<
   | 'gameDef'
   | 'gameState'
   | 'playerID'
+  | 'orchestrationDiagnostic'
+  | 'orchestrationDiagnosticSequence'
   | 'legalMoveResult'
   | 'choicePending'
   | 'effectTrace'
@@ -200,6 +220,8 @@ function resetSessionState(): Pick<
     gameDef: null,
     gameState: null,
     playerID: null,
+    orchestrationDiagnostic: null,
+    orchestrationDiagnosticSequence: 0,
     legalMoveResult: null,
     choicePending: null,
     effectTrace: [],
@@ -358,6 +380,24 @@ function toChoiceValidationError(issue: ChoiceValidationIssue): WorkerError {
   };
 }
 
+function buildUncompletableTemplateDiagnostic(
+  sequence: number,
+  move: Move,
+  activePlayerID: PlayerId | null,
+  legalMoveCount: number,
+): OrchestrationDiagnostic {
+  return {
+    sequence,
+    code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
+    message: `AI selected legal template move "${move.actionId}" but completion returned null.`,
+    details: {
+      actionId: move.actionId,
+      activePlayerID,
+      legalMoveCount,
+    },
+  };
+}
+
 function validateChoiceSubmission(
   pendingType: ChoicePendingRequest['type'],
   actionType: ChoiceActionType,
@@ -485,6 +525,8 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     gameLifecycle: state.gameLifecycle,
     loading: state.loading,
     error: state.error,
+    orchestrationDiagnostic: state.orchestrationDiagnostic,
+    orchestrationDiagnosticSequence: state.orchestrationDiagnosticSequence,
     legalMoveResult: state.legalMoveResult,
     choicePending: state.choicePending,
     effectTrace: state.effectTrace,
@@ -684,11 +726,19 @@ export function createGameStore(
 
         const completedMove = await bridge.completeMove(aiMove);
         if (completedMove === null) {
+          const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
           guardSetAndDerive(ctx, {
             legalMoveResult,
+            orchestrationDiagnosticSequence: nextDiagnosticSequence,
+            orchestrationDiagnostic: buildUncompletableTemplateDiagnostic(
+              nextDiagnosticSequence,
+              aiMove,
+              state.renderModel?.activePlayerID ?? null,
+              legalMoveResult.moves.length,
+            ),
             error: null,
           });
-          return 'no-legal-moves';
+          return 'uncompletable-template';
         }
 
         const result = await bridge.applyMove(completedMove, undefined, toOperationStamp(ctx));
@@ -979,8 +1029,22 @@ export function createGameStore(
           set((state) => ({ animationSkipRequestToken: state.animationSkipRequestToken + 1 }));
         },
 
-        setPlaybackError(message) {
-          set({ error: { code: 'INTERNAL_ERROR', message, details: undefined } });
+        reportPlaybackDiagnostic(message) {
+          set((state) => {
+            const sequence = state.orchestrationDiagnosticSequence + 1;
+            return {
+              orchestrationDiagnosticSequence: sequence,
+              orchestrationDiagnostic: {
+                sequence,
+                code: 'AI_PLAYBACK',
+                message,
+              },
+            };
+          });
+        },
+
+        clearOrchestrationDiagnostic() {
+          set({ orchestrationDiagnostic: null });
         },
 
         clearError() {

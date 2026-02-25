@@ -52,6 +52,8 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     gameLifecycle: lifecycle,
     loading: false,
     error: null,
+    orchestrationDiagnostic: null,
+    orchestrationDiagnosticSequence: 0,
     legalMoveResult: null,
     choicePending: null,
     effectTrace: [],
@@ -94,7 +96,8 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     setAnimationPlaybackSpeed: vi.fn(),
     setAnimationPaused: vi.fn(),
     requestAnimationSkipCurrent: vi.fn(),
-    setPlaybackError: vi.fn(),
+    reportPlaybackDiagnostic: vi.fn(),
+    clearOrchestrationDiagnostic: vi.fn(),
     setActivePhaseBanner: vi.fn(),
     clearError: vi.fn(),
   }));

@@ -729,6 +729,44 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
+  it('resolveAiTurn exits on uncompletable template move with diagnostic error', async () => {
+    const def = compileStoreFixture(8);
+    const aiState: GameState = {
+      ...initialState(def, 30, 2).state,
+      activePlayer: asPlayerId(1),
+    };
+    const templateMove: Move = { actionId: asActionId('tick'), params: {} };
+    const completeMove = vi.fn<GameWorkerAPI['completeMove']>(async () => null);
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
+      throw new Error('applyMove should not be called when template completion fails');
+    });
+    const bridge = createBridgeStub({
+      init: () => ({ state: aiState, setupTrace: [] }),
+      enumerateLegalMoves: () => ({ moves: [templateMove], warnings: [] }),
+      terminalResult: () => null,
+      completeMove,
+      applyMove,
+    });
+    const store = createStoreWithDefaultVisuals(bridge);
+
+    await store.getState().initGame(def, 30, TWO_PLAYER_CONFIG);
+    await store.getState().resolveAiTurn();
+
+    expect(completeMove).toHaveBeenCalledTimes(1);
+    expect(applyMove).not.toHaveBeenCalled();
+    expect(store.getState().gameState).toEqual(aiState);
+    expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().orchestrationDiagnostic).toMatchObject({
+      code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
+      message: expect.stringContaining('completion returned null'),
+      details: expect.objectContaining({
+        actionId: asActionId('tick'),
+        activePlayerID: asPlayerId(1),
+      }),
+    });
+  });
+
   it('resolveAiStep applies only one AI move', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
@@ -937,7 +975,7 @@ describe('createGameStore', () => {
     expect(applyMove.mock.calls[0]?.[0]).toEqual(completedMove);
   });
 
-  it('resolveAiStep returns no-legal-moves when completeMove returns null', async () => {
+  it('resolveAiStep returns uncompletable-template when completeMove returns null', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 61, 2).state,
@@ -960,10 +998,18 @@ describe('createGameStore', () => {
     await store.getState().initGame(def, 61, TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();
 
-    expect(outcome).toBe('no-legal-moves');
+    expect(outcome).toBe('uncompletable-template');
     expect(completeMove).toHaveBeenCalledTimes(1);
     expect(applyMove).not.toHaveBeenCalled();
     expect(store.getState().error).toBeNull();
+    expect(store.getState().orchestrationDiagnostic).toMatchObject({
+      code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
+      message: expect.stringContaining('completion returned null'),
+      details: expect.objectContaining({
+        actionId: asActionId('tick'),
+        activePlayerID: asPlayerId(1),
+      }),
+    });
   });
 
   it('real-worker cancelChoice pops one choice and re-queries pending decision', async () => {
@@ -1280,18 +1326,19 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
-  it('setPlaybackError sets error with INTERNAL_ERROR code', () => {
+  it('reportPlaybackDiagnostic stores a non-fatal orchestration diagnostic', () => {
     const bridge = createBridgeStub({});
     const store = createStoreWithDefaultVisuals(bridge);
 
-    store.getState().setPlaybackError('AI turn stalled');
-    const error = store.getState().error;
-    expect(error).not.toBeNull();
-    expect(error!.code).toBe('INTERNAL_ERROR');
-    expect(error!.message).toBe('AI turn stalled');
-
-    store.getState().clearError();
+    store.getState().reportPlaybackDiagnostic('AI turn stalled');
     expect(store.getState().error).toBeNull();
+    expect(store.getState().orchestrationDiagnostic).toMatchObject({
+      code: 'AI_PLAYBACK',
+      message: 'AI turn stalled',
+    });
+
+    store.getState().clearOrchestrationDiagnostic();
+    expect(store.getState().orchestrationDiagnostic).toBeNull();
   });
 
   it('reportBootstrapFailure clears stale session state and preserves structured error payload', async () => {

@@ -177,6 +177,12 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
           return;
         }
 
+        if (outcome === 'uncompletable-template') {
+          options.onError?.('AI selected a legal template move that could not be completed.');
+          pendingSkip = false;
+          return;
+        }
+
         if (outcome === 'no-op') {
           noOpCount += 1;
           if (noOpCount >= maxNoOpRetries) {

@@ -367,7 +367,7 @@ export async function createGameCanvasRuntime(
         },
       },
       onError: (message) => {
-        selectorStore.getState().setPlaybackError(message);
+        selectorStore.getState().reportPlaybackDiagnostic(message);
       },
     });
     aiPlaybackController.start();

@@ -1,6 +1,6 @@
 # ENGINEARCH-018: Type-Narrow Defer-Class Contracts by EvalError Code
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel defer-class typing + classifier API + type/runtime tests
@@ -14,13 +14,16 @@
 
 1. `EVAL_ERROR_DEFER_CLASSES_BY_CODE` exists and currently maps only `SELECTOR_CARDINALITY` defer classes.
 2. `hasEvalErrorDeferClass` is currently typed with the broad `EvalErrorDeferClass` parameter instead of a code-specific subtype.
-3. No active ticket currently introduces per-code defer-class narrowing for classifier signatures.
+3. `ENGINEARCH-019` is active and depends on this ticket; it addresses map-driven classifier parity, not type-level code/defer-class narrowing.
 
 ## Architecture Check
 
 1. Per-code defer-class typing is cleaner than broad unions because it prevents invalid combinations at compile time.
 2. This change is kernel-generic and does not introduce game-specific behavior into GameDef/runtime/simulator.
 3. No backwards-compatibility aliases/shims are introduced; invalid call patterns become direct type failures.
+4. This is beneficial over current architecture because it separates concerns cleanly:
+   - `ENGINEARCH-018`: compile-time contract correctness (type system).
+   - `ENGINEARCH-019`: runtime taxonomy sourcing/parity (behavioral source-of-truth).
 
 ## What to Change
 
@@ -30,7 +33,7 @@ Add utility types (for example `EvalErrorCodeWithDeferClass` and `EvalErrorDefer
 
 ### 2. Narrow classifier contracts to code-specific defer classes
 
-Update `hasEvalErrorDeferClass` (or replace with a code-parameterized variant) so the defer-class parameter is constrained to the selected error code branch.
+Update `hasEvalErrorDeferClass` (or replace with a code-parameterized variant) so the defer-class parameter is constrained to the selected error code branch. Keep this ticket scoped to type-level narrowing plus parity runtime behavior for existing `SELECTOR_CARDINALITY` paths; do not fold in map-consumption refactors from `ENGINEARCH-019`.
 
 ### 3. Add compile-time guardrails and parity runtime checks
 
@@ -40,7 +43,6 @@ Add type-level tests that reject invalid code/defer-class pairings and keep runt
 
 - `packages/engine/src/kernel/eval-error-defer-class.ts` (modify)
 - `packages/engine/src/kernel/eval-error-classification.ts` (modify)
-- `packages/engine/src/kernel/missing-binding-policy.ts` (modify, if needed)
 - `packages/engine/test/unit/types-foundation.test.ts` (modify)
 - `packages/engine/test/unit/eval-error-classification.test.ts` (modify)
 
@@ -77,3 +79,20 @@ Add type-level tests that reject invalid code/defer-class pairings and keep runt
 3. `node --test packages/engine/dist/test/unit/eval-error-classification.test.js`
 4. `pnpm -F @ludoforge/engine test:unit`
 
+## Outcome
+
+- Completion date: 2026-02-25
+- What changed:
+  - Added code-derived utility types `EvalErrorCodeWithDeferClass` and `EvalErrorDeferClassForCode<C>` in `eval-error-defer-class.ts`.
+  - Narrowed `hasEvalErrorDeferClass` to a code-parameterized contract in `eval-error-classification.ts`.
+  - Updated the `missing-binding-policy` caller to pass explicit code + defer class.
+  - Strengthened compile-time contract coverage in `types-foundation.test.ts`.
+  - Updated runtime parity assertions in `eval-error-classification.test.ts`.
+- Deviations from original plan:
+  - `missing-binding-policy.ts` was touched in implementation even though it was removed from the revised “Files to Touch” list during reassessment; this was required to satisfy the stricter classifier signature.
+- Verification results:
+  - `pnpm -F @ludoforge/engine typecheck` passed.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/eval-error-classification.test.js` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed (159/159).
+  - `pnpm -F @ludoforge/engine lint` passed.

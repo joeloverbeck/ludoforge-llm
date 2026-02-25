@@ -1,11 +1,20 @@
-import type { EvalErrorDeferClass } from './eval-error-defer-class.js';
+import {
+  EVAL_ERROR_DEFER_CLASSES_BY_CODE,
+  type EvalErrorCodeWithDeferClass,
+  type EvalErrorDeferClassForCode,
+} from './eval-error-defer-class.js';
 import { type EvalError, isEvalErrorCode } from './eval-error.js';
 
-export function hasEvalErrorDeferClass(
+export function hasEvalErrorDeferClass<C extends EvalErrorCodeWithDeferClass>(
   error: unknown,
-  deferClass: EvalErrorDeferClass,
-): error is EvalError<'SELECTOR_CARDINALITY'> {
-  return isEvalErrorCode(error, 'SELECTOR_CARDINALITY') && error.context?.deferClass === deferClass;
+  code: C,
+  deferClass: EvalErrorDeferClassForCode<C>,
+): error is EvalError<C> {
+  if (!isEvalErrorCode(error, code)) {
+    return false;
+  }
+  const canonicalDeferClassesForCode = EVAL_ERROR_DEFER_CLASSES_BY_CODE[code];
+  return canonicalDeferClassesForCode.includes(deferClass) && error.context?.deferClass === deferClass;
 }
 
 export function isRecoverableEvalResolutionError(error: unknown): boolean {

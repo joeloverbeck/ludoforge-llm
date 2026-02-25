@@ -8,7 +8,11 @@ export type MissingBindingPolicyContext =
   | 'pipeline.discoveryPredicate';
 
 const isDeferrableUnresolvedSelectorCardinality = (error: unknown): boolean => {
-  return hasEvalErrorDeferClass(error, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY);
+  return hasEvalErrorDeferClass(
+    error,
+    'SELECTOR_CARDINALITY',
+    EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+  );
 };
 
 /**

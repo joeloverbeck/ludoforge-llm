@@ -7,8 +7,12 @@ import {
   asTokenId,
   asZoneId,
   type Diagnostic,
+  type EvalErrorCodeWithDeferClass,
+  type EvalErrorDeferClassForCode,
   type EvalErrorContextForCode,
+  EVAL_ERROR_DEFER_CLASS,
   divisionByZeroError,
+  hasEvalErrorDeferClass,
   type PlayerId,
   queryBoundsExceededError,
   type ZoneId,
@@ -132,6 +136,31 @@ describe('kernel type foundations', () => {
       resolvedCount: 0,
       resolvedZones: [],
     });
+
+    const deferCode: EvalErrorCodeWithDeferClass = 'SELECTOR_CARDINALITY';
+    assert.equal(deferCode, 'SELECTOR_CARDINALITY');
+
+    const validDeferClass: EvalErrorDeferClassForCode<'SELECTOR_CARDINALITY'> =
+      EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY;
+    assert.equal(validDeferClass, EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY);
+
+    const typedError = selectorCardinalityError('typed defer classifier', typedContext);
+    assert.equal(
+      hasEvalErrorDeferClass(
+        typedError,
+        'SELECTOR_CARDINALITY',
+        EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY,
+      ),
+      true,
+    );
+
+    // @ts-expect-error Only eval error codes with defer classes are allowed.
+    hasEvalErrorDeferClass(typedError, 'MISSING_BINDING', validDeferClass);
+
+    // @ts-expect-error MISSING_BINDING does not have a defer-class type.
+    const invalidCodeDeferClass: EvalErrorDeferClassForCode<'MISSING_BINDING'> =
+      EVAL_ERROR_DEFER_CLASS.UNRESOLVED_BINDING_SELECTOR_CARDINALITY;
+    void invalidCodeDeferClass;
   });
 
   it('enforces structured context contracts for additional eval error codes', () => {

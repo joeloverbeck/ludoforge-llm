@@ -227,8 +227,8 @@ describe('FITL momentum formula modifiers', () => {
       params: {
         targetSpaces: [LOC_SPACE],
         chainSpaces: [],
-        $movingGuerrillas: [mover],
-        $movingTroops: [],
+        [`$movingGuerrillas@${LOC_SPACE}`]: [mover],
+        [`$movingTroops@${LOC_SPACE}`]: [],
       },
     }).state;
 

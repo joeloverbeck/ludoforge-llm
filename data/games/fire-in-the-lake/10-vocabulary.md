@@ -169,6 +169,11 @@ globalMarkerLattices:
       - ky
       - thieu
     defaultState: minh
+  - id: leaderFlipped
+    states:
+      - normal
+      - flipped
+    defaultState: normal
 globalVars:
   - name: coinResources
     type: int

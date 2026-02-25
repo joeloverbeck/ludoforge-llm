@@ -43,6 +43,7 @@ const token = (id: string): Token => ({ id: asTokenId(id), type: 'card', props: 
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [token('d1'), token('d2'), token('d3')],

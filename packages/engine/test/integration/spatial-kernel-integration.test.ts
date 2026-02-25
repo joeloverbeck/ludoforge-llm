@@ -72,6 +72,7 @@ phase: [asPhaseId('main')],
 const makeRuntimeState = (): GameState => ({
   globalVars: { entered: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'a:none': [],

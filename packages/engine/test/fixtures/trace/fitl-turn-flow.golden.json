@@ -96,6 +96,7 @@
           "2": {},
           "3": {}
         },
+        "zoneVars": {},
         "playerCount": 4,
         "zones": {
           "deck:none": [
@@ -146,7 +147,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0x89dd7a3952999a45",
+        "stateHash": "0xaf473da573639e67",
         "actionUsage": {
           "pass": {
             "turnCount": 1,
@@ -238,6 +239,7 @@
           "2": {},
           "3": {}
         },
+        "zoneVars": {},
         "playerCount": 4,
         "zones": {
           "deck:none": [
@@ -281,7 +283,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0x89dd7a3952999a45",
+        "stateHash": "0xaf473da573639e67",
         "actionUsage": {
           "pass": {
             "turnCount": 0,
@@ -413,6 +415,7 @@
           "2": {},
           "3": {}
         },
+        "zoneVars": {},
         "playerCount": 4,
         "zones": {
           "deck:none": [
@@ -456,7 +459,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0x3c539e5d57b6d9ed",
+        "stateHash": "0x12f5367d2fd2c28d",
         "actionUsage": {
           "pass": {
             "turnCount": 0,
@@ -599,6 +602,7 @@
           "2": {},
           "3": {}
         },
+        "zoneVars": {},
         "playerCount": 4,
         "zones": {
           "deck:none": [],
@@ -642,7 +646,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0x3c539e5d57b6d9ed",
+        "stateHash": "0x12f5367d2fd2c28d",
         "actionUsage": {
           "pass": {
             "turnCount": 0,

@@ -450,7 +450,7 @@ describe('FITL COIN operations integration', () => {
     const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
       (request: ChoicePendingRequest) => {
         if (request.name === 'targetSpaces') return [targetSpace];
-        if (request.name === '$movingTroops') return [...movingTroops];
+        if (request.name.startsWith('$movingTroops@')) return [...movingTroops];
         return pickDeterministicDecisionValue(request);
       };
 

@@ -74,6 +74,7 @@ phase: [asPhaseId('main')],
 const createState = (): GameState => ({
   globalVars: { energy: 5, score: 0, triggered: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

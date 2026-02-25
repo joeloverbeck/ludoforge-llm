@@ -1,9 +1,10 @@
 import { resolvePlayerSel } from './resolve-selectors.js';
+import { resolveZoneRef } from './resolve-zone-ref.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { PlayerId } from './branded.js';
+import type { PlayerId, ZoneId } from './branded.js';
 import type { EffectAST } from './types.js';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
@@ -89,10 +90,109 @@ const perPlayerVarChangedEvent = (
   newValue,
 });
 
+const resolveZoneVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
+  const variableDef = (ctx.def.zoneVars ?? []).find((variable) => variable.name === varName);
+  if (variableDef === undefined) {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Unknown zone variable: ${varName}`, {
+      effectType,
+      scope: 'zoneVar',
+      var: varName,
+      availableZoneVars: (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort(),
+    });
+  }
+
+  return variableDef;
+};
+
+const zoneVarChangedEvent = (
+  zoneId: ZoneId,
+  varName: string,
+  oldValue: number,
+  newValue: number,
+) => ({
+  type: 'varChanged' as const,
+  scope: 'zone' as const,
+  zone: zoneId,
+  var: varName,
+  oldValue,
+  newValue,
+});
+
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { scope, var: variableName, player, value } = effect.setVar;
+  const { scope, var: variableName, player, zone, value } = effect.setVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedValue = evalValue(value, evalCtx);
+
+  if (scope === 'zoneVar') {
+    if (zone === undefined) {
+      throw effectRuntimeError('variableRuntimeValidationFailed', 'setVar scope "zoneVar" requires zone selector', {
+        effectType: 'setVar',
+        scope: 'zoneVar',
+        var: variableName,
+      });
+    }
+
+    const resolvedZoneId = resolveZoneRef(zone, evalCtx);
+    const variableDef = resolveZoneVarDef(ctx, variableName, 'setVar');
+    if (variableDef.type !== 'int') {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `setVar on zone variable only supports int type: ${variableName}`, {
+        effectType: 'setVar',
+        scope: 'zoneVar',
+        var: variableName,
+        actualType: variableDef.type,
+      });
+    }
+
+    const zoneVarMap = ctx.state.zoneVars[String(resolvedZoneId)];
+    if (zoneVarMap === undefined) {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing for zone: ${String(resolvedZoneId)}`, {
+        effectType: 'setVar',
+        scope: 'zoneVar',
+        zone: String(resolvedZoneId),
+        var: variableName,
+        availableZones: Object.keys(ctx.state.zoneVars).sort(),
+      });
+    }
+
+    const currentValue = zoneVarMap[variableName];
+    if (typeof currentValue !== 'number') {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing: ${variableName} in zone ${String(resolvedZoneId)}`, {
+        effectType: 'setVar',
+        scope: 'zoneVar',
+        zone: String(resolvedZoneId),
+        var: variableName,
+        availableZoneVars: Object.keys(zoneVarMap).sort(),
+      });
+    }
+
+    const nextValue = clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max);
+    if (
+      !emitVarChangeTraceIfChanged(ctx, {
+        scope: 'zone',
+        zone: String(resolvedZoneId),
+        varName: variableName,
+        oldValue: currentValue,
+        newValue: nextValue,
+      })
+    ) {
+      return { state: ctx.state, rng: ctx.rng };
+    }
+
+    return {
+      state: {
+        ...ctx.state,
+        zoneVars: {
+          ...ctx.state.zoneVars,
+          [String(resolvedZoneId)]: {
+            ...zoneVarMap,
+            [variableName]: nextValue,
+          },
+        },
+      },
+      rng: ctx.rng,
+      emittedEvents: [zoneVarChangedEvent(resolvedZoneId, variableName, currentValue, nextValue)],
+    };
+  }
 
   if (scope === 'global') {
     const variableDef = resolveGlobalVarDef(ctx, variableName, 'setVar');
@@ -209,9 +309,80 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 };
 
 export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { scope, var: variableName, player, delta } = effect.addVar;
+  const { scope, var: variableName, player, zone, delta } = effect.addVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
+
+  if (scope === 'zoneVar') {
+    if (zone === undefined) {
+      throw effectRuntimeError('variableRuntimeValidationFailed', 'addVar scope "zoneVar" requires zone selector', {
+        effectType: 'addVar',
+        scope: 'zoneVar',
+        var: variableName,
+      });
+    }
+
+    const resolvedZoneId = resolveZoneRef(zone, evalCtx);
+    const variableDef = resolveZoneVarDef(ctx, variableName, 'addVar');
+    if (variableDef.type !== 'int') {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int zone variable: ${variableName}`, {
+        effectType: 'addVar',
+        scope: 'zoneVar',
+        var: variableName,
+        actualType: variableDef.type,
+      });
+    }
+
+    const zoneVarMap = ctx.state.zoneVars[String(resolvedZoneId)];
+    if (zoneVarMap === undefined) {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing for zone: ${String(resolvedZoneId)}`, {
+        effectType: 'addVar',
+        scope: 'zoneVar',
+        zone: String(resolvedZoneId),
+        var: variableName,
+        availableZones: Object.keys(ctx.state.zoneVars).sort(),
+      });
+    }
+
+    const currentValue = zoneVarMap[variableName];
+    if (typeof currentValue !== 'number') {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing: ${variableName} in zone ${String(resolvedZoneId)}`, {
+        effectType: 'addVar',
+        scope: 'zoneVar',
+        zone: String(resolvedZoneId),
+        var: variableName,
+        availableZoneVars: Object.keys(zoneVarMap).sort(),
+      });
+    }
+
+    const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
+    if (
+      !emitVarChangeTraceIfChanged(ctx, {
+        scope: 'zone',
+        zone: String(resolvedZoneId),
+        varName: variableName,
+        oldValue: currentValue,
+        newValue: nextValue,
+      })
+    ) {
+      return { state: ctx.state, rng: ctx.rng };
+    }
+
+    return {
+      state: {
+        ...ctx.state,
+        zoneVars: {
+          ...ctx.state.zoneVars,
+          [String(resolvedZoneId)]: {
+            ...zoneVarMap,
+            [variableName]: nextValue,
+          },
+        },
+      },
+      rng: ctx.rng,
+      emittedEvents: [zoneVarChangedEvent(resolvedZoneId, variableName, currentValue, nextValue)],
+    };
+  }
 
   if (scope === 'global') {
     const variableDef = resolveGlobalVarDef(ctx, variableName, 'addVar');

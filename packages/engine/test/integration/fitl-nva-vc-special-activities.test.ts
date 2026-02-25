@@ -794,8 +794,8 @@ describe('FITL NVA/VC special activities integration', () => {
         actionId: asActionId('march'),
         params: {
           targetSpaces: ['quang-tri-thua-thien:none'],
-          $movingGuerrillas: [],
-          $movingTroops: [],
+          '$movingGuerrillas@quang-tri-thua-thien:none': [],
+          '$movingTroops@quang-tri-thua-thien:none': [],
           chainSpaces: [],
         },
         compound: {

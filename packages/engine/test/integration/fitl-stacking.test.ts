@@ -163,6 +163,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
     const makeState = (): GameState => ({
       globalVars: {},
       perPlayerVars: {},
+      zoneVars: {},
       playerCount: 4,
       zones: {
         'quangTri:none': [makeToken('b1', 'base', 'US'), makeToken('b2', 'base', 'ARVN')],

@@ -53,16 +53,30 @@ describe('FITL tutorial medium event-card production spec', () => {
       const hasLeaderFlip = branch.effects?.some(
         (effect) =>
           'if' in effect &&
-          effect.if.then.some((nested) => 'setGlobalMarker' in nested) &&
-          effect.if.else?.some((nested) => 'setGlobalMarker' in nested) === true,
+          effect.if.then.some(
+            (nested) =>
+              'setGlobalMarker' in nested && nested.setGlobalMarker.marker === 'leaderFlipped',
+          ),
       );
-      assert.equal(hasLeaderFlip, true, `Expected leader flip branch logic in ${branch.id}`);
+      assert.equal(hasLeaderFlip, true, `Expected leaderFlipped marker in ${branch.id}`);
     }
 
     const shadedShift = card?.shaded?.effects?.find((effect) => 'shiftMarker' in effect);
     assert.deepEqual(shadedShift, {
-      shiftMarker: { space: '$targetCity', marker: 'supportOpposition', delta: -1 },
+      shiftMarker: { space: '$targetCity', marker: 'supportOpposition', delta: -2 },
     });
+
+    // Terror placement via zoneVar + global counter sync
+    const shadedTerror = card?.shaded?.effects?.filter((effect) => 'addVar' in effect);
+    assert.equal(shadedTerror?.length, 2, 'Expected 2 addVar effects (zoneVar terrorCount + global counter)');
+    const zoneVarTerror = shadedTerror?.find(
+      (effect) => effect.addVar.scope === 'zoneVar' && effect.addVar.var === 'terrorCount',
+    );
+    assert.notEqual(zoneVarTerror, undefined, 'Expected addVar zoneVar terrorCount effect');
+    const globalCounter = shadedTerror?.find(
+      (effect) => effect.addVar.scope === 'global' && effect.addVar.var === 'terrorSabotageMarkersPlaced',
+    );
+    assert.notEqual(globalCounter, undefined, 'Expected addVar global terrorSabotageMarkersPlaced effect');
   });
 
   it('compiles card 75 (Sihanouk) with structured free-operation grants', () => {

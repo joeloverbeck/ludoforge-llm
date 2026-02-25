@@ -242,6 +242,7 @@ describe('FITL removal ordering macros', () => {
       const makeState = (): GameState => ({
         globalVars: { aid: 15 },
         perPlayerVars: {},
+        zoneVars: {},
         playerCount: 2,
         zones: {
           'quangTri:none': [
@@ -317,6 +318,7 @@ describe('FITL removal ordering macros', () => {
       const state: GameState = {
         globalVars: { aid: 15 },
         perPlayerVars: {},
+        zoneVars: {},
         playerCount: 2,
         zones: { 'board:none': [] },
         nextTokenOrdinal: 1,
@@ -382,6 +384,7 @@ describe('FITL removal ordering macros', () => {
       const state: GameState = {
         globalVars: {},
         perPlayerVars: {},
+        zoneVars: {},
         playerCount: 2,
         zones: {
           'quangTri:none': [

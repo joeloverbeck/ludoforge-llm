@@ -28,6 +28,7 @@ export interface EffectMacroOrigin {
 export type Reference =
   | { readonly ref: 'gvar'; readonly var: string }
   | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: string }
+  | { readonly ref: 'zoneVar'; readonly zone: ZoneSel; readonly var: string }
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
   | { readonly ref: 'assetField'; readonly row: string; readonly tableId: string; readonly field: string }
@@ -200,8 +201,9 @@ export type OptionsQuery =
 export type EffectAST =
   | {
       readonly setVar: {
-        readonly scope: 'global' | 'pvar';
+        readonly scope: 'global' | 'pvar' | 'zoneVar';
         readonly player?: PlayerSel;
+        readonly zone?: ZoneRef;
         readonly var: string;
         readonly value: ValueExpr;
       };
@@ -213,8 +215,9 @@ export type EffectAST =
     }
   | {
       readonly addVar: {
-        readonly scope: 'global' | 'pvar';
+        readonly scope: 'global' | 'pvar' | 'zoneVar';
         readonly player?: PlayerSel;
+        readonly zone?: ZoneRef;
         readonly var: string;
         readonly delta: NumericValueExpr;
       };

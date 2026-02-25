@@ -18659,7 +18659,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.5.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops",
+                      "bind": "$movingTroops@{$space}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$space",
@@ -18685,7 +18685,7 @@
                       "bind": "$troop",
                       "over": {
                         "query": "binding",
-                        "name": "$movingTroops"
+                        "name": "$movingTroops@{$space}"
                       },
                       "effects": [
                         {
@@ -26191,7 +26191,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.chooseN",
-                      "bind": "$movingGuerrillas",
+                      "bind": "$movingGuerrillas@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -26215,7 +26215,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops",
+                      "bind": "$movingTroops@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -26246,7 +26246,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingGuerrillas"
+                              "name": "$movingGuerrillas@{$destSpace}"
                             }
                           }
                         },
@@ -26255,7 +26255,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingTroops"
+                              "name": "$movingTroops@{$destSpace}"
                             }
                           }
                         }
@@ -26364,7 +26364,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingGuerrillas"
+                                    "name": "$movingGuerrillas@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -26391,7 +26391,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingTroops"
+                                    "name": "$movingTroops@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -26529,7 +26529,7 @@
                                                     },
                                                     "over": {
                                                       "query": "binding",
-                                                      "name": "$movingGuerrillas"
+                                                      "name": "$movingGuerrillas@{$destSpace}"
                                                     },
                                                     "effects": [
                                                       {
@@ -26563,7 +26563,7 @@
                                                               "op": "count",
                                                               "query": {
                                                                 "query": "binding",
-                                                                "name": "$movingGuerrillas"
+                                                                "name": "$movingGuerrillas@{$destSpace}"
                                                               }
                                                             }
                                                           },
@@ -26581,7 +26581,7 @@
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$movingGuerrillas"
+                                                            "name": "$movingGuerrillas@{$destSpace}"
                                                           },
                                                           "effects": [
                                                             {
@@ -26732,7 +26732,7 @@
                 "then": [
                   {
                     "forEach": {
-                      "bind": "$chainSpace",
+                      "bind": "$destSpace",
                       "over": {
                         "query": "binding",
                         "name": "chainSpaces"
@@ -26741,10 +26741,10 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.0.chooseN",
-                            "bind": "$movingGuerrillas",
+                            "bind": "$movingGuerrillas@{$destSpace}",
                             "options": {
                               "query": "tokensInAdjacentZones",
-                              "zone": "$chainSpace",
+                              "zone": "$destSpace",
                               "filter": [
                                 {
                                   "prop": "faction",
@@ -26765,10 +26765,10 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.10.stages[3].effects.0.if.then.0.forEach.effects.1.chooseN",
-                            "bind": "$movingTroops",
+                            "bind": "$movingTroops@{$destSpace}",
                             "options": {
                               "query": "tokensInAdjacentZones",
-                              "zone": "$chainSpace",
+                              "zone": "$destSpace",
                               "filter": [
                                 {
                                   "prop": "faction",
@@ -26796,7 +26796,7 @@
                                   "op": "count",
                                   "query": {
                                     "query": "binding",
-                                    "name": "$movingGuerrillas"
+                                    "name": "$movingGuerrillas@{$destSpace}"
                                   }
                                 }
                               },
@@ -26805,7 +26805,7 @@
                                   "op": "count",
                                   "query": {
                                     "query": "binding",
-                                    "name": "$movingTroops"
+                                    "name": "$movingTroops@{$destSpace}"
                                   }
                                 }
                               }
@@ -26847,7 +26847,7 @@
                                                   "op": "==",
                                                   "left": {
                                                     "ref": "zoneProp",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "prop": "country"
                                                   },
                                                   "right": "laos"
@@ -26856,7 +26856,7 @@
                                                   "op": "==",
                                                   "left": {
                                                     "ref": "zoneProp",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "prop": "country"
                                                   },
                                                   "right": "cambodia"
@@ -26884,7 +26884,7 @@
                                                     "op": "!=",
                                                     "left": {
                                                       "ref": "zoneProp",
-                                                      "zone": "$chainSpace",
+                                                      "zone": "$destSpace",
                                                       "prop": "category"
                                                     },
                                                     "right": "loc"
@@ -26914,7 +26914,7 @@
                                         },
                                         "over": {
                                           "query": "binding",
-                                          "name": "$movingGuerrillas"
+                                          "name": "$movingGuerrillas@{$destSpace}"
                                         },
                                         "effects": [
                                           {
@@ -26926,7 +26926,7 @@
                                                   "token": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__piece"
                                                 }
                                               },
-                                              "to": "$chainSpace"
+                                              "to": "$destSpace"
                                             }
                                           }
                                         ]
@@ -26941,7 +26941,7 @@
                                         },
                                         "over": {
                                           "query": "binding",
-                                          "name": "$movingTroops"
+                                          "name": "$movingTroops@{$destSpace}"
                                         },
                                         "effects": [
                                           {
@@ -26953,7 +26953,7 @@
                                                   "token": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__piece"
                                                 }
                                               },
-                                              "to": "$chainSpace"
+                                              "to": "$destSpace"
                                             }
                                           }
                                         ]
@@ -26971,7 +26971,7 @@
                                                   "op": "==",
                                                   "left": {
                                                     "ref": "zoneProp",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "prop": "category"
                                                   },
                                                   "right": "loc"
@@ -26983,7 +26983,7 @@
                                                       "op": "==",
                                                       "left": {
                                                         "ref": "markerState",
-                                                        "space": "$chainSpace",
+                                                        "space": "$destSpace",
                                                         "marker": "supportOpposition"
                                                       },
                                                       "right": "passiveSupport"
@@ -26992,7 +26992,7 @@
                                                       "op": "==",
                                                       "left": {
                                                         "ref": "markerState",
-                                                        "space": "$chainSpace",
+                                                        "space": "$destSpace",
                                                         "marker": "supportOpposition"
                                                       },
                                                       "right": "activeSupport"
@@ -27014,7 +27014,7 @@
                                                   "op": "count",
                                                   "query": {
                                                     "query": "tokensInZone",
-                                                    "zone": "$chainSpace",
+                                                    "zone": "$destSpace",
                                                     "filter": [
                                                       {
                                                         "prop": "faction",
@@ -27079,7 +27079,7 @@
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$movingGuerrillas"
+                                                            "name": "$movingGuerrillas@{$destSpace}"
                                                           },
                                                           "effects": [
                                                             {
@@ -27113,7 +27113,7 @@
                                                                     "op": "count",
                                                                     "query": {
                                                                       "query": "binding",
-                                                                      "name": "$movingGuerrillas"
+                                                                      "name": "$movingGuerrillas@{$destSpace}"
                                                                     }
                                                                   }
                                                                 },
@@ -27131,7 +27131,7 @@
                                                                 },
                                                                 "over": {
                                                                   "query": "binding",
-                                                                  "name": "$movingGuerrillas"
+                                                                  "name": "$movingGuerrillas@{$destSpace}"
                                                                 },
                                                                 "effects": [
                                                                   {
@@ -27488,7 +27488,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.chooseN",
-                      "bind": "$movingGuerrillas",
+                      "bind": "$movingGuerrillas@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -27512,7 +27512,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.1.chooseN",
-                      "bind": "$movingTroops",
+                      "bind": "$movingTroops@{$destSpace}",
                       "options": {
                         "query": "tokensInAdjacentZones",
                         "zone": "$destSpace",
@@ -27543,7 +27543,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingGuerrillas"
+                              "name": "$movingGuerrillas@{$destSpace}"
                             }
                           }
                         },
@@ -27552,7 +27552,7 @@
                             "op": "count",
                             "query": {
                               "query": "binding",
-                              "name": "$movingTroops"
+                              "name": "$movingTroops@{$destSpace}"
                             }
                           }
                         }
@@ -27661,7 +27661,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingGuerrillas"
+                                    "name": "$movingGuerrillas@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -27688,7 +27688,7 @@
                                   },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingTroops"
+                                    "name": "$movingTroops@{$destSpace}"
                                   },
                                   "effects": [
                                     {
@@ -27826,7 +27826,7 @@
                                                     },
                                                     "over": {
                                                       "query": "binding",
-                                                      "name": "$movingGuerrillas"
+                                                      "name": "$movingGuerrillas@{$destSpace}"
                                                     },
                                                     "effects": [
                                                       {
@@ -27873,7 +27873,7 @@
                                                               "op": "count",
                                                               "query": {
                                                                 "query": "binding",
-                                                                "name": "$movingGuerrillas"
+                                                                "name": "$movingGuerrillas@{$destSpace}"
                                                               }
                                                             }
                                                           },
@@ -27891,7 +27891,7 @@
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$movingGuerrillas"
+                                                            "name": "$movingGuerrillas@{$destSpace}"
                                                           },
                                                           "effects": [
                                                             {
@@ -50130,9 +50130,11 @@
           },
           "unshaded": {
             "text": "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities.",
+            "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "2",
+                "executeAsSeat": "0",
                 "sequence": {
                   "chain": "gulf-of-tonkin-us-airstrike",
                   "step": 0
@@ -50145,9 +50147,10 @@
             ],
             "effects": [
               {
-                "forEach": {
-                  "bind": "$usOutOfPlayPiece",
-                  "over": {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.chooseN",
+                  "bind": "$selectedPieces",
+                  "options": {
                     "query": "tokensInZone",
                     "zone": "out-of-play-US:none",
                     "filter": [
@@ -50158,10 +50161,20 @@
                       }
                     ]
                   },
+                  "max": 6
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usOutOfPlayPiece",
+                  "over": {
+                    "query": "binding",
+                    "name": "$selectedPieces"
+                  },
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.forEach.effects.0.chooseOne",
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.1.forEach.effects.0.chooseOne",
                         "bind": "$targetCity@{$usOutOfPlayPiece}",
                         "options": {
                           "query": "mapSpaces",
@@ -50196,8 +50209,7 @@
                         }
                       }
                     }
-                  ],
-                  "limit": 6
+                  ]
                 }
               }
             ]
@@ -50629,6 +50641,7 @@
           },
           "unshaded": {
             "text": "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes.",
+            "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
                 "seat": "0",

@@ -10,6 +10,7 @@ const fixtureState: GameState = {
     '0': { vp: 3, mana: 1 },
     '1': { vp: 4, mana: 2 },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [],

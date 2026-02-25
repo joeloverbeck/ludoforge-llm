@@ -269,7 +269,13 @@ describe('FITL RVN leader lingering effects', () => {
           [space]: {
             ...(baseState.markers[space] ?? {}),
             supportOpposition: 'neutral',
-            terror: withTerror ? 'terror' : 'none',
+          },
+        },
+        zoneVars: {
+          ...baseState.zoneVars,
+          [space]: {
+            ...(baseState.zoneVars[space] ?? {}),
+            terrorCount: withTerror ? 1 : 0,
           },
         },
       };

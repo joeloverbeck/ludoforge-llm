@@ -26,6 +26,7 @@ import {
 const makeState = (resources: number): GameState => ({
   globalVars: { resources },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
   nextTokenOrdinal: 0,

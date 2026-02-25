@@ -107,14 +107,24 @@ export const applyMoveWithResolvedDecisionIds = (
   const normalized = normalizeDecisionParamsForMoveInternal(def, state, move, false, options);
   const withCompound = normalized.compound === undefined
     ? normalized
-    : {
-      ...normalized,
-      compound: {
-        ...normalized.compound,
-        // Compound legality/constraint diagnostics belong to applyMove's compound-aware validation path.
-        // Preserve unresolved SA decisions here to avoid masking canonical compound errors.
-        specialActivity: normalizeDecisionParamsForMoveInternal(def, state, normalized.compound.specialActivity, true, options),
-      },
-    };
+    : (() => {
+      const { compound, ...operationMove } = normalized;
+      const operationResult = applyMove(def, state, operationMove);
+      return {
+        ...normalized,
+        compound: {
+          ...compound,
+          // Resolve SA choices from post-operation state so legal domains reflect operation outcomes.
+          // Preserve incomplete SA params so applyMove continues to own compound legality diagnostics.
+          specialActivity: normalizeDecisionParamsForMoveInternal(
+            def,
+            operationResult.state,
+            compound.specialActivity,
+            true,
+            options,
+          ),
+        },
+      };
+    })();
   return applyMove(def, state, withCompound);
 };

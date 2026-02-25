@@ -45,6 +45,7 @@ const makeToken = (id: string, props: Readonly<Record<string, number | string | 
 const makeState = (): GameState => ({
   globalVars: { a: 3, b: 4 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [makeToken('deck-1', { vp: 1, cost: 3 }), makeToken('deck-2', { vp: 2, cost: 1 })],

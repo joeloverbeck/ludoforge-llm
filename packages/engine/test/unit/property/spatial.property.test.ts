@@ -16,6 +16,7 @@ import {
 const makeState = (zoneIds: readonly string[]): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: Object.fromEntries(zoneIds.map((zoneId) => [zoneId, []])),
   nextTokenOrdinal: 0,

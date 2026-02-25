@@ -62,6 +62,7 @@ const makeState = (): GameState => ({
     '0': { coins: 7 },
     '1': { coins: 4 },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

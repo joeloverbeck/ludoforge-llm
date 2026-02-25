@@ -6,6 +6,7 @@ export const CANONICAL_SECTION_KEYS = [
   'globalMarkerLattices',
   'globalVars',
   'perPlayerVars',
+  'zoneVars',
   'zones',
   'tokenTypes',
   'setup',
@@ -161,6 +162,7 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isGlobalVarsShape(value)) {
     matches.push('globalVars');
     matches.push('perPlayerVars');
+    matches.push('zoneVars');
   }
   if (isZonesShape(value)) {
     matches.push('zones');

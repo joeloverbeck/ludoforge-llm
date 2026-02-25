@@ -37,6 +37,7 @@ const gameDefStub: GameDef = {
 const gameStateStub: GameState = {
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

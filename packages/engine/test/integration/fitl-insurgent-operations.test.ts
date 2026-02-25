@@ -221,7 +221,7 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(final.globalVars.nvaResources, 4, 'NVA Terror should spend 1 resource in a Province/City');
     assert.equal(final.globalVars.terrorSabotageMarkersPlaced, 1, 'NVA Terror should consume one shared terror/sabotage marker');
-    assert.equal(final.markers[ATTACK_SPACE]?.terror, 'terror', 'NVA Terror should place a Terror marker in Province/City');
+    assert.ok((final.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0) > 0, 'NVA Terror should increment terrorCount zoneVar in Province/City');
     assert.equal(final.markers[ATTACK_SPACE]?.supportOpposition, 'neutral', 'NVA Terror should shift Support one step toward Neutral');
     const movedGuerrilla = (final.zones[ATTACK_SPACE] ?? []).find((token) => token.id === asTokenId('terror-nva-province-g'));
     assert.ok(movedGuerrilla, 'Expected NVA guerrilla to remain in target space');
@@ -261,7 +261,7 @@ describe('FITL insurgent operations integration', () => {
     }).state;
 
     assert.equal(final.globalVars.nvaResources, 4, 'Troops-only NVA Terror in Province/City should still spend 1 resource');
-    assert.equal(final.markers[ATTACK_SPACE]?.terror, 'terror', 'Troops-only NVA Terror should still place Terror marker');
+    assert.ok((final.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0) > 0, 'Troops-only NVA Terror should still increment terrorCount zoneVar');
     assert.equal(
       final.markers[ATTACK_SPACE]?.supportOpposition,
       'activeOpposition',
@@ -339,7 +339,7 @@ describe('FITL insurgent operations integration', () => {
       params: { targetSpaces: [ATTACK_SPACE] },
     }).state;
 
-    assert.notEqual(capFinal.markers[ATTACK_SPACE]?.terror, 'terror', 'NVA Terror should not place marker when marker supply is exhausted');
+    assert.equal(capFinal.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0, 0, 'NVA Terror should not increment terrorCount when marker supply is exhausted');
     assert.equal(capFinal.globalVars.terrorSabotageMarkersPlaced, 15, 'Marker supply counter should remain capped at 15');
     assert.equal(capFinal.markers[ATTACK_SPACE]?.supportOpposition, 'neutral', 'NVA Terror should still shift Support toward Neutral');
 
@@ -352,11 +352,11 @@ describe('FITL insurgent operations integration', () => {
           nvaResources: 5,
           terrorSabotageMarkersPlaced: 1,
         },
-        markers: {
-          ...operationInitialState(def, 195, 4).markers,
+        zoneVars: {
+          ...operationInitialState(def, 195, 4).zoneVars,
           [ATTACK_SPACE]: {
-            ...(operationInitialState(def, 195, 4).markers[ATTACK_SPACE] ?? {}),
-            terror: 'terror',
+            ...(operationInitialState(def, 195, 4).zoneVars[ATTACK_SPACE] ?? {}),
+            terrorCount: 1,
           },
         },
       },
@@ -451,7 +451,7 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(final.globalVars.vcResources, 4, 'VC Terror should spend 1 resource in a Province/City');
     assert.equal(final.globalVars.terrorSabotageMarkersPlaced, 1, 'VC Terror should consume one shared terror/sabotage marker');
-    assert.equal(final.markers[ATTACK_SPACE]?.terror, 'terror', 'VC Terror should place a Terror marker in Province/City');
+    assert.ok((final.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0) > 0, 'VC Terror should increment terrorCount zoneVar in Province/City');
     assert.equal(final.markers[ATTACK_SPACE]?.supportOpposition, 'passiveOpposition', 'VC Terror should shift one level toward Active Opposition');
     const movedGuerrilla = (final.zones[ATTACK_SPACE] ?? []).find((token) => token.id === asTokenId('terror-vc-province-g'));
     assert.ok(movedGuerrilla, 'Expected VC guerrilla to remain in target space');
@@ -562,7 +562,7 @@ describe('FITL insurgent operations integration', () => {
       params: { targetSpaces: [ATTACK_SPACE] },
     }).state;
 
-    assert.notEqual(capFinal.markers[ATTACK_SPACE]?.terror, 'terror', 'VC Terror should not place marker when marker supply is exhausted');
+    assert.equal(capFinal.zoneVars[ATTACK_SPACE]?.terrorCount ?? 0, 0, 'VC Terror should not increment terrorCount when marker supply is exhausted');
     assert.equal(capFinal.globalVars.terrorSabotageMarkersPlaced, 15, 'Marker supply counter should remain capped at 15');
     assert.equal(capFinal.markers[ATTACK_SPACE]?.supportOpposition, 'passiveOpposition', 'VC Terror should still shift toward Opposition even if marker supply is exhausted');
 
@@ -575,11 +575,11 @@ describe('FITL insurgent operations integration', () => {
           vcResources: 5,
           terrorSabotageMarkersPlaced: 1,
         },
-        markers: {
-          ...operationInitialState(def, 201, 4).markers,
+        zoneVars: {
+          ...operationInitialState(def, 201, 4).zoneVars,
           [ATTACK_SPACE]: {
-            ...(operationInitialState(def, 201, 4).markers[ATTACK_SPACE] ?? {}),
-            terror: 'terror',
+            ...(operationInitialState(def, 201, 4).zoneVars[ATTACK_SPACE] ?? {}),
+            terrorCount: 1,
           },
         },
       },
@@ -888,7 +888,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const provinceFinal = applyMoveWithResolvedDecisionIds(def, provinceSetup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [provinceMover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [provinceMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
 
     assert.equal(provinceFinal.globalVars.nvaResources, 4, 'Province/City destination should spend 1 NVA resource');
@@ -914,7 +914,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const locFinal = applyMoveWithResolvedDecisionIds(def, locSetup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [LOC_SPACE], chainSpaces: [], $movingGuerrillas: [], $movingTroops: [locMover] },
+      params: { targetSpaces: [LOC_SPACE], chainSpaces: [], [`$movingGuerrillas@${LOC_SPACE}`]: [], [`$movingTroops@${LOC_SPACE}`]: [locMover] },
     }).state;
 
     assert.equal(locFinal.globalVars.nvaResources, 5, 'LoC destination should be free for March');
@@ -957,7 +957,7 @@ describe('FITL insurgent operations integration', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [LOC_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [LOC_SPACE], chainSpaces: [], [`$movingGuerrillas@${LOC_SPACE}`]: [mover], [`$movingTroops@${LOC_SPACE}`]: [] },
     }).state;
     const moved = (final.zones[LOC_SPACE] ?? []).find((token) => token.id === mover);
 
@@ -1006,7 +1006,7 @@ describe('FITL insurgent operations integration', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     const moved = (final.zones[ATTACK_SPACE] ?? []).find((token) => token.id === mover);
 
@@ -1039,12 +1039,12 @@ describe('FITL insurgent operations integration', () => {
 
     const nonFree = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     const free = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
       freeOperation: true,
-      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
 
     assert.equal(nonFree.globalVars.nvaResources, 4, 'Non-free March should spend 1 NVA resource for Province/City destination');
@@ -1075,7 +1075,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const provinceFinal = applyMoveWithResolvedDecisionIds(def, provinceSetup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [provinceMover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [provinceMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
 
     assert.equal(provinceFinal.globalVars.vcResources, 4, 'Province/City destination should spend 1 VC resource');
@@ -1101,7 +1101,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const locFinal = applyMoveWithResolvedDecisionIds(def, locSetup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [LOC_SPACE], $movingGuerrillas: [locMover], $movingTroops: [] },
+      params: { targetSpaces: [LOC_SPACE], [`$movingGuerrillas@${LOC_SPACE}`]: [locMover], [`$movingTroops@${LOC_SPACE}`]: [] },
     }).state;
 
     assert.equal(locFinal.globalVars.vcResources, 5, 'LoC destination should be free for VC March');
@@ -1132,12 +1132,12 @@ describe('FITL insurgent operations integration', () => {
 
     const nonFree = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     const free = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
       freeOperation: true,
-      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
 
     assert.equal(nonFree.globalVars.vcResources, 4, 'Non-free VC March should spend 1 resource for Province/City destination');
@@ -1171,7 +1171,7 @@ describe('FITL insurgent operations integration', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, nvaSetup, {
           actionId: asActionId('march'),
-          params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [nvaMover], $movingTroops: [] },
+          params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [nvaMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Paid NVA March with 0 resources should reject Province/City destination selection',
@@ -1179,14 +1179,14 @@ describe('FITL insurgent operations integration', () => {
 
     const nvaLocFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [LOC_SPACE], $movingGuerrillas: [nvaMover], $movingTroops: [] },
+      params: { targetSpaces: [LOC_SPACE], [`$movingGuerrillas@${LOC_SPACE}`]: [nvaMover], [`$movingTroops@${LOC_SPACE}`]: [] },
     }).state;
     assert.equal(nvaLocFinal.globalVars.nvaResources, 0, 'NVA March should allow LoC destination selection at 0 resources');
 
     const nvaFreeFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, {
       actionId: asActionId('march'),
       freeOperation: true,
-      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [nvaMover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [nvaMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     assert.equal(nvaFreeFinal.globalVars.nvaResources, 0, 'Free-operation NVA March should bypass paid selector cap');
 
@@ -1212,7 +1212,7 @@ describe('FITL insurgent operations integration', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, vcSetup, {
           actionId: asActionId('march'),
-          params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [vcMover], $movingTroops: [] },
+          params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [vcMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Paid VC March with 0 resources should reject Province/City destination selection',
@@ -1221,7 +1221,7 @@ describe('FITL insurgent operations integration', () => {
     const vcFreeFinal = applyMoveWithResolvedDecisionIds(def, vcSetup, {
       actionId: asActionId('march'),
       freeOperation: true,
-      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [vcMover], $movingTroops: [] },
+      params: { targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [vcMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     assert.equal(vcFreeFinal.globalVars.vcResources, 0, 'Free-operation VC March should bypass paid selector cap');
   });
@@ -1263,7 +1263,7 @@ describe('FITL insurgent operations integration', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { targetSpaces: [LOC_SPACE], $movingGuerrillas: [mover], $movingTroops: [] },
+      params: { targetSpaces: [LOC_SPACE], [`$movingGuerrillas@${LOC_SPACE}`]: [mover], [`$movingTroops@${LOC_SPACE}`]: [] },
     }).state;
     const moved = (final.zones[LOC_SPACE] ?? []).find((token) => token.id === mover);
 
@@ -1300,8 +1300,10 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [SOUTHERN_LAOS],
         chainSpaces: [NE_CAMBODIA],
-        $movingGuerrillas: [mover],
-        $movingTroops: [],
+        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [mover],
+        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
+        [`$movingGuerrillas@${NE_CAMBODIA}`]: [mover],
+        [`$movingTroops@${NE_CAMBODIA}`]: [],
       },
     }).state;
 
@@ -1407,8 +1409,10 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [SOUTHERN_LAOS],
         chainSpaces: [NE_CAMBODIA],
-        $movingGuerrillas: [mover],
-        $movingTroops: [],
+        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [mover],
+        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
+        [`$movingGuerrillas@${NE_CAMBODIA}`]: [mover],
+        [`$movingTroops@${NE_CAMBODIA}`]: [],
       },
     }).state;
 
@@ -1444,8 +1448,8 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [SOUTHERN_LAOS],
         chainSpaces: [NE_CAMBODIA],
-        $movingGuerrillas: [moverNoTrail],
-        $movingTroops: [],
+        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [moverNoTrail],
+        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
       },
     }).state;
     assert.ok((noTrailFinal.zones[SOUTHERN_LAOS] ?? []).some((token) => token.id === moverNoTrail));
@@ -1475,8 +1479,8 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [SOUTHERN_LAOS],
         chainSpaces: [NE_CAMBODIA],
-        $movingGuerrillas: [moverLimOp],
-        $movingTroops: [],
+        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [moverLimOp],
+        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
       },
     }).state;
     assert.ok((limOpFinal.zones[SOUTHERN_LAOS] ?? []).some((token) => token.id === moverLimOp));
@@ -1511,8 +1515,10 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [SOUTHERN_LAOS],
         chainSpaces: [NE_CAMBODIA],
-        $movingGuerrillas: [mover],
-        $movingTroops: [],
+        [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [mover],
+        [`$movingTroops@${SOUTHERN_LAOS}`]: [],
+        [`$movingGuerrillas@${NE_CAMBODIA}`]: [mover],
+        [`$movingTroops@${NE_CAMBODIA}`]: [],
       },
     }).state;
 

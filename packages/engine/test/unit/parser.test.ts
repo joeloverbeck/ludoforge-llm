@@ -15,6 +15,7 @@ describe('parseGameSpec API shape', () => {
       globalMarkerLattices: null,
       globalVars: null,
       perPlayerVars: null,
+      zoneVars: null,
       zones: null,
       tokenTypes: null,
       setup: null,

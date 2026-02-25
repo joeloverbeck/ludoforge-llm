@@ -19,6 +19,7 @@ const phaseId = asPhaseId('main');
 const baseState: GameState = {
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

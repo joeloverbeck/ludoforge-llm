@@ -38,6 +38,7 @@ const withCoupSupportPhase = (
     readonly zones?: Partial<GameState['zones']>;
     readonly markers?: Partial<GameState['markers']>;
     readonly globalMarkers?: Partial<GameState['globalMarkers']>;
+    readonly zoneVars?: Partial<GameState['zoneVars']>;
   },
 ): GameState => {
   const globalVars = overrides?.globalVars === undefined
@@ -53,6 +54,9 @@ const withCoupSupportPhase = (
   const markers = overrides?.markers === undefined
     ? base.markers
     : ({ ...base.markers, ...overrides.markers } as GameState['markers']);
+  const zoneVars = overrides?.zoneVars === undefined
+    ? base.zoneVars
+    : ({ ...base.zoneVars, ...overrides.zoneVars } as GameState['zoneVars']);
   const globalMarkers: Readonly<Record<string, string>> = {
     ...((base.globalMarkers ?? {}) as Record<string, string>),
     ...((overrides?.globalMarkers ?? {}) as Record<string, string>),
@@ -65,6 +69,7 @@ const withCoupSupportPhase = (
     globalVars,
     zones,
     markers,
+    zoneVars,
     globalMarkers: globalMarkers as GameState['globalMarkers'],
   } as GameState;
 };
@@ -101,8 +106,14 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'terror',
           supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [target]: {
+          ...(base.zoneVars[target] ?? {}),
+          terrorCount: 1,
         },
       },
       globalMarkers: {
@@ -117,7 +128,7 @@ describe('FITL coup support phase production actions', () => {
     });
 
     assert.equal(result.state.globalVars.arvnResources, 15);
-    assert.equal(result.state.markers[target]?.terror, 'none');
+    assert.equal(result.state.zoneVars[target]?.terrorCount ?? 0, 0);
     assert.equal(result.state.markers[target]?.coupPacifySpaceUsage, 'used');
   });
 
@@ -177,8 +188,14 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'terror',
           supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [target]: {
+          ...(base.zoneVars[target] ?? {}),
+          terrorCount: 1,
         },
       },
       globalMarkers: {
@@ -197,7 +214,7 @@ describe('FITL coup support phase production actions', () => {
       params: { targetSpace: target, action: 'removeTerror' },
     }).state;
 
-    assert.equal(terrorRemoved.markers[target]?.terror, 'none');
+    assert.equal(terrorRemoved.zoneVars[target]?.terrorCount ?? 0, 0);
 
     const noTerror = withCoupSupportPhase(base, {
       activePlayer: 0 as GameState['activePlayer'],
@@ -213,7 +230,6 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'none',
           supportOpposition: 'neutral',
         },
       },
@@ -316,8 +332,14 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'terror',
           supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [target]: {
+          ...(base.zoneVars[target] ?? {}),
+          terrorCount: 1,
         },
       },
       globalMarkers: {
@@ -336,7 +358,7 @@ describe('FITL coup support phase production actions', () => {
       params: { targetSpace: target, action: 'removeTerror' },
     }).state;
 
-    assert.equal(terrorRemoved.markers[target]?.terror, 'none');
+    assert.equal(terrorRemoved.zoneVars[target]?.terrorCount ?? 0, 0);
 
     const noTerror = withCoupSupportPhase(base, {
       activePlayer: 1 as GameState['activePlayer'],
@@ -351,7 +373,6 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'none',
           supportOpposition: 'neutral',
         },
       },
@@ -387,8 +408,14 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'terror',
           supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [target]: {
+          ...(base.zoneVars[target] ?? {}),
+          terrorCount: 1,
         },
       },
     });
@@ -403,7 +430,7 @@ describe('FITL coup support phase production actions', () => {
       params: { targetSpace: target, action: 'removeTerror' },
     }).state;
 
-    assert.equal(terrorRemoved.markers[target]?.terror, 'none');
+    assert.equal(terrorRemoved.zoneVars[target]?.terrorCount ?? 0, 0);
     assert.equal(terrorRemoved.globalVars.vcResources, 5);
 
     const noTerror = withCoupSupportPhase(base, {
@@ -419,7 +446,6 @@ describe('FITL coup support phase production actions', () => {
         ...base.markers,
         [target]: {
           ...(base.markers[target] ?? {}),
-          terror: 'none',
           supportOpposition: 'neutral',
         },
       },
@@ -449,7 +475,7 @@ describe('FITL coup support phase production actions', () => {
       },
       markers: {
         ...base.markers,
-        'quang-nam:none': { supportOpposition: 'neutral', terror: 'none', coupAgitateSpaceUsage: 'open' },
+        'quang-nam:none': { supportOpposition: 'neutral', coupAgitateSpaceUsage: 'open' },
         'saigon:none': { coupAgitateSpaceUsage: 'used' },
         'da-nang:none': { coupAgitateSpaceUsage: 'used' },
         'hue:none': { coupAgitateSpaceUsage: 'used' },

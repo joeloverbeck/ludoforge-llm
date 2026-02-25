@@ -220,6 +220,7 @@ function mergeSection(
     case 'imports':
     case 'globalVars':
     case 'perPlayerVars':
+    case 'zoneVars':
     case 'zones':
     case 'tokenTypes':
     case 'setup':
@@ -317,6 +318,7 @@ function mergeListSection(
     | 'globalMarkerLattices'
     | 'globalVars'
     | 'perPlayerVars'
+    | 'zoneVars'
     | 'zones'
     | 'tokenTypes'
     | 'setup'
@@ -359,6 +361,10 @@ function mergeListSection(
     case 'perPlayerVars':
       (doc as MutableGameSpecDoc).perPlayerVars =
         (doc.perPlayerVars === null ? listValue : [...doc.perPlayerVars, ...listValue]) as MutableGameSpecDoc['perPlayerVars'];
+      return buildAnchoredPaths(section, listValue, existingLength);
+    case 'zoneVars':
+      (doc as MutableGameSpecDoc).zoneVars =
+        (doc.zoneVars === null ? listValue : [...doc.zoneVars, ...listValue]) as MutableGameSpecDoc['zoneVars'];
       return buildAnchoredPaths(section, listValue, existingLength);
     case 'zones':
       (doc as MutableGameSpecDoc).zones = (doc.zones === null ? listValue : [...doc.zones, ...listValue]) as MutableGameSpecDoc['zones'];
@@ -431,6 +437,7 @@ function getListSectionLength(
     | 'globalMarkerLattices'
     | 'globalVars'
     | 'perPlayerVars'
+    | 'zoneVars'
     | 'zones'
     | 'tokenTypes'
     | 'setup'

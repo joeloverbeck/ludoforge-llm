@@ -120,6 +120,7 @@ phase: [asPhaseId('main')],
 const createState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [],

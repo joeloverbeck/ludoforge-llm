@@ -47,6 +47,7 @@ phase: [asPhaseId('main')],
 const makeState = (activePlayer: number): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 4,
   zones: { 'board:none': [] },
   nextTokenOrdinal: 0,

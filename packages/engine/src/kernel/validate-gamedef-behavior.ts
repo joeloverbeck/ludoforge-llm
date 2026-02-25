@@ -1734,19 +1734,22 @@ export const validatePostAdjacencyBehavior = (
     if (trigger.event.type === 'varChanged' && trigger.event.var) {
       const globalVarNames = def.globalVars.map((variable) => variable.name);
       const perPlayerVarNames = def.perPlayerVars.map((variable) => variable.name);
+      const zoneVarNames = (def.zoneVars ?? []).map((variable) => variable.name);
       const candidateNames =
         trigger.event.scope === 'global'
           ? globalVarNames
           : trigger.event.scope === 'perPlayer'
             ? perPlayerVarNames
-            : [...globalVarNames, ...perPlayerVarNames];
+            : trigger.event.scope === 'zone'
+              ? zoneVarNames
+              : [...globalVarNames, ...perPlayerVarNames, ...zoneVarNames];
       if (!candidateNames.includes(trigger.event.var)) {
         diagnostics.push({
           code: 'REF_VAR_MISSING',
           path: `triggers[${triggerIndex}].event.var`,
           severity: 'error',
           message: `Unknown variable "${trigger.event.var}".`,
-          suggestion: 'Use one of the declared globalVars/perPlayerVars names.',
+          suggestion: 'Use one of the declared globalVars/perPlayerVars/zoneVars names.',
         });
       }
     }

@@ -50,6 +50,7 @@ describe('effect error context contracts', () => {
   const baseState: GameState = {
     globalVars: {},
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: { 'board:none': [] },
     nextTokenOrdinal: 0,

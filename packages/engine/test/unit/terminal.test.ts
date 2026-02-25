@@ -25,6 +25,7 @@ const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
     '1': { points: 0 },
     '2': { points: 0 },
   },
+  zoneVars: {},
   playerCount: 3,
   zones: {},
   nextTokenOrdinal: 0,

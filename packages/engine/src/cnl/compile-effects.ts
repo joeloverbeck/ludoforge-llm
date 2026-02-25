@@ -206,7 +206,7 @@ function lowerSetVarEffect(
 ): EffectLoweringResult<EffectAST> {
   const scopeValue = source.scope;
   const varName = source.var;
-  if ((scopeValue !== 'global' && scopeValue !== 'pvar') || typeof varName !== 'string') {
+  if ((scopeValue !== 'global' && scopeValue !== 'pvar' && scopeValue !== 'zoneVar') || typeof varName !== 'string') {
     return missingCapability(path, 'setVar effect', source);
   }
 
@@ -221,6 +221,25 @@ function lowerSetVarEffect(
       value: {
         setVar: {
           scope: 'global',
+          var: varName,
+          value: value.value,
+        },
+      },
+      diagnostics,
+    };
+  }
+
+  if (scopeValue === 'zoneVar') {
+    const zone = lowerZoneSelector(source.zone, context, scope, `${path}.zone`);
+    diagnostics.push(...zone.diagnostics);
+    if (zone.value === null) {
+      return { value: null, diagnostics };
+    }
+    return {
+      value: {
+        setVar: {
+          scope: 'zoneVar',
+          zone: zone.value,
           var: varName,
           value: value.value,
         },
@@ -256,7 +275,7 @@ function lowerAddVarEffect(
 ): EffectLoweringResult<EffectAST> {
   const scopeValue = source.scope;
   const varName = source.var;
-  if ((scopeValue !== 'global' && scopeValue !== 'pvar') || typeof varName !== 'string') {
+  if ((scopeValue !== 'global' && scopeValue !== 'pvar' && scopeValue !== 'zoneVar') || typeof varName !== 'string') {
     return missingCapability(path, 'addVar effect', source);
   }
 
@@ -271,6 +290,25 @@ function lowerAddVarEffect(
       value: {
         addVar: {
           scope: 'global',
+          var: varName,
+          delta: delta.value,
+        },
+      },
+      diagnostics,
+    };
+  }
+
+  if (scopeValue === 'zoneVar') {
+    const zone = lowerZoneSelector(source.zone, context, scope, `${path}.zone`);
+    diagnostics.push(...zone.diagnostics);
+    if (zone.value === null) {
+      return { value: null, diagnostics };
+    }
+    return {
+      value: {
+        addVar: {
+          scope: 'zoneVar',
+          zone: zone.value,
           var: varName,
           delta: delta.value,
         },

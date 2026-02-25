@@ -51,6 +51,7 @@ export const ReferenceSchema = z.union([
       var: StringSchema,
     })
     .strict(),
+  z.object({ ref: z.literal('zoneVar'), zone: ZoneSelSchema, var: StringSchema }).strict(),
   z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('assetField'), row: StringSchema, tableId: StringSchema, field: StringSchema }).strict(),
@@ -369,8 +370,9 @@ effectAstSchemaInternal = z.union([
     .object({
       setVar: z
         .object({
-          scope: z.union([z.literal('global'), z.literal('pvar')]),
+          scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
           player: PlayerSelSchema.optional(),
+          zone: ZoneRefSchema.optional(),
           var: StringSchema,
           value: ValueExprSchema,
         })
@@ -390,8 +392,9 @@ effectAstSchemaInternal = z.union([
     .object({
       addVar: z
         .object({
-          scope: z.union([z.literal('global'), z.literal('pvar')]),
+          scope: z.union([z.literal('global'), z.literal('pvar'), z.literal('zoneVar')]),
           player: PlayerSelSchema.optional(),
+          zone: ZoneRefSchema.optional(),
           var: StringSchema,
           delta: NumericValueExprSchema,
         })

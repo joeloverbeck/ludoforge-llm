@@ -40,6 +40,7 @@ const createBaseDef = (): GameDef =>
 const createState = (overrides: Partial<GameState> = {}): GameState => ({
   globalVars: { step: 0, order: 0 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

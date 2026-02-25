@@ -50,6 +50,7 @@ const makeBaseDef = (overrides?: {
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: { resources: 10 },
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'board:none': [],

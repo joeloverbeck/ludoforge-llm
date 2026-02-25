@@ -170,9 +170,10 @@ export const TriggerEventSchema = z.union([
   z
     .object({
       type: z.literal('varChanged'),
-      scope: z.union([z.literal('global'), z.literal('perPlayer')]).optional(),
+      scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]).optional(),
       var: StringSchema.optional(),
       player: IntegerSchema.optional(),
+      zone: StringSchema.optional(),
       oldValue: z.union([NumberSchema, BooleanSchema]).optional(),
       newValue: z.union([NumberSchema, BooleanSchema]).optional(),
     })
@@ -337,6 +338,7 @@ export const GameDefSchema = z
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
+    zoneVars: z.array(VariableDefSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
   })
@@ -384,6 +386,7 @@ export const GameStateSchema = z
   .object({
     globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
+    zoneVars: z.record(StringSchema, z.record(StringSchema, NumberSchema)),
     playerCount: NumberSchema,
     zones: z.record(StringSchema, z.array(TokenSchema)),
     nextTokenOrdinal: NumberSchema,
@@ -534,11 +537,12 @@ export const EffectTraceEntrySchema = z.union([
   z
     .object({
       kind: z.literal('varChange'),
-      scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+      scope: z.union([z.literal('global'), z.literal('perPlayer'), z.literal('zone')]),
       varName: StringSchema,
       oldValue: z.union([NumberSchema, BooleanSchema]),
       newValue: z.union([NumberSchema, BooleanSchema]),
       player: IntegerSchema.optional(),
+      zone: StringSchema.optional(),
       provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
@@ -710,6 +714,7 @@ export const SerializedGameStateSchema = z
   .object({
     globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
+    zoneVars: z.record(StringSchema, z.record(StringSchema, NumberSchema)),
     playerCount: NumberSchema,
     zones: z.record(StringSchema, z.array(TokenSchema)),
     nextTokenOrdinal: NumberSchema,

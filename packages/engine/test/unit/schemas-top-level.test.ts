@@ -121,6 +121,7 @@ phase: ['main'],
 const validGameState = {
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: { 'deck:none': [] },
   nextTokenOrdinal: 0,

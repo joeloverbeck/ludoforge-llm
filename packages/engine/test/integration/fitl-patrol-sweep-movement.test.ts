@@ -54,6 +54,7 @@ function makeState(zones: Record<string, Token[]>): GameState {
   return {
     globalVars: {},
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones,
     nextTokenOrdinal: 100,

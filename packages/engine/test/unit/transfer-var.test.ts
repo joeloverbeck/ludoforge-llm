@@ -43,6 +43,7 @@ const makeState = (): GameState => ({
     '0': { coins: 10, committed: 1, locked: false },
     '1': { coins: 7, committed: 2, locked: false },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

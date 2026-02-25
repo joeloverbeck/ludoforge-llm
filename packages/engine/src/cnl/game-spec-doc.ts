@@ -380,6 +380,7 @@ export interface GameSpecDoc {
   readonly globalMarkerLattices: readonly GameSpecGlobalMarkerLatticeDef[] | null;
   readonly globalVars: readonly GameSpecVarDef[] | null;
   readonly perPlayerVars: readonly GameSpecVarDef[] | null;
+  readonly zoneVars: readonly GameSpecVarDef[] | null;
   readonly zones: readonly GameSpecZoneDef[] | null;
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
@@ -404,6 +405,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     globalMarkerLattices: null,
     globalVars: null,
     perPlayerVars: null,
+    zoneVars: null,
     zones: null,
     tokenTypes: null,
     setup: null,

@@ -17,6 +17,7 @@ const makeState = (overrides: Partial<GameState> = {}): GameState => ({
     '0': { vp: 0, energy: 1 },
     '1': { vp: 0, energy: 1 },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {
     deck: [makeToken('t1')],

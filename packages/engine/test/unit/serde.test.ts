@@ -22,6 +22,7 @@ const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join
 const gameStateFixture: GameState = {
   globalVars: { round: 1 },
   perPlayerVars: { '0': { vp: 3 } },
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 12,

@@ -48,9 +48,9 @@ export function lowerConstants(
 }
 
 export function lowerVarDefs(
-  variables: GameSpecDoc['globalVars'] | GameSpecDoc['perPlayerVars'],
+  variables: GameSpecDoc['globalVars'] | GameSpecDoc['perPlayerVars'] | GameSpecDoc['zoneVars'],
   diagnostics: Diagnostic[],
-  pathPrefix: 'doc.globalVars' | 'doc.perPlayerVars',
+  pathPrefix: 'doc.globalVars' | 'doc.perPlayerVars' | 'doc.zoneVars',
 ): readonly VariableDef[] {
   if (variables === null) {
     return [];

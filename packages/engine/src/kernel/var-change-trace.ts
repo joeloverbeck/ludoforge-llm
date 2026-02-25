@@ -21,9 +21,18 @@ type PerPlayerVarChangeTrace = {
   readonly provenance?: EffectTraceProvenance;
 };
 
+type ZoneVarChangeTrace = {
+  readonly scope: 'zone';
+  readonly zone: string;
+  readonly varName: string;
+  readonly oldValue: VariableValue;
+  readonly newValue: VariableValue;
+  readonly provenance?: EffectTraceProvenance;
+};
+
 export const emitVarChangeTraceIfChanged = (
   ctx: Pick<EffectContext, 'collector' | 'state' | 'traceContext' | 'effectPath'>,
-  entry: GlobalVarChangeTrace | PerPlayerVarChangeTrace,
+  entry: GlobalVarChangeTrace | PerPlayerVarChangeTrace | ZoneVarChangeTrace,
 ): boolean => {
   if (entry.oldValue === entry.newValue) {
     return false;
@@ -33,6 +42,7 @@ export const emitVarChangeTraceIfChanged = (
     kind: 'varChange',
     scope: entry.scope,
     ...(entry.scope === 'perPlayer' ? { player: entry.player } : {}),
+    ...(entry.scope === 'zone' ? { zone: entry.zone } : {}),
     varName: entry.varName,
     oldValue: entry.oldValue,
     newValue: entry.newValue,

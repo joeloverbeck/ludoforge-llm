@@ -914,10 +914,10 @@ effectMacros:
                 when:
                   op: and
                   args:
-                    - { op: '!=', left: { ref: markerState, space: { param: space }, marker: terror }, right: 'terror' }
+                    - { op: '==', left: { ref: zoneVar, zone: { param: space }, var: terrorCount }, right: 0 }
                     - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
                 then:
-                  - setMarker: { space: { param: space }, marker: terror, state: terror }
+                  - addVar: { scope: zoneVar, zone: { param: space }, var: terrorCount, delta: 1 }
                   - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
             - if:
                 when: { op: '==', left: { param: shiftFromSupportOnly }, right: true }
@@ -961,7 +961,7 @@ effectMacros:
   # - Move insurgent guerrillas/troops from adjacent spaces.
   # - Activate moved guerrillas if (LoC or Support) and (moving + COIN pieces > 3).
   - id: insurgent-march-resolve-destination
-    exports: [$movingGuerrillas, $movingTroops]
+    exports: ['$movingGuerrillas@{$destSpace}', '$movingTroops@{$destSpace}']
     params:
       - { name: destSpace, type: string }
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
@@ -970,7 +970,7 @@ effectMacros:
       - { name: maxActivatedGuerrillas, type: value }
     effects:
       - chooseN:
-          bind: $movingGuerrillas
+          bind: '$movingGuerrillas@{$destSpace}'
           options:
             query: tokensInAdjacentZones
             zone: { param: destSpace }
@@ -980,7 +980,7 @@ effectMacros:
           min: 0
           max: 99
       - chooseN:
-          bind: $movingTroops
+          bind: '$movingTroops@{$destSpace}'
           options:
             query: tokensInAdjacentZones
             zone: { param: destSpace }
@@ -993,8 +993,8 @@ effectMacros:
           bind: $movingCount
           value:
             op: '+'
-            left: { aggregate: { op: count, query: { query: binding, name: $movingGuerrillas } } }
-            right: { aggregate: { op: count, query: { query: binding, name: $movingTroops } } }
+            left: { aggregate: { op: count, query: { query: binding, name: '$movingGuerrillas@{$destSpace}' } } }
+            right: { aggregate: { op: count, query: { query: binding, name: '$movingTroops@{$destSpace}' } } }
           in:
             - if:
                 when: { op: '>', left: { ref: binding, name: $movingCount }, right: 0 }
@@ -1018,7 +1018,7 @@ effectMacros:
                             amount: -1
                   - forEach:
                       bind: $piece
-                      over: { query: binding, name: $movingGuerrillas }
+                      over: { query: binding, name: '$movingGuerrillas@{$destSpace}' }
                       effects:
                         - moveToken:
                             token: $piece
@@ -1026,7 +1026,7 @@ effectMacros:
                             to: { param: destSpace }
                   - forEach:
                       bind: $piece
-                      over: { query: binding, name: $movingTroops }
+                      over: { query: binding, name: '$movingTroops@{$destSpace}' }
                       effects:
                         - moveToken:
                             token: $piece
@@ -1073,7 +1073,7 @@ effectMacros:
                                   then:
                                     - forEach:
                                         bind: $movedPiece
-                                        over: { query: binding, name: $movingGuerrillas }
+                                        over: { query: binding, name: '$movingGuerrillas@{$destSpace}' }
                                         limit: { param: maxActivatedGuerrillas }
                                         effects:
                                           - setTokenProp: { token: $movedPiece, prop: activity, value: active }
@@ -1083,12 +1083,12 @@ effectMacros:
                                           args:
                                             - { op: '==', left: { ref: gvar, var: mom_claymores }, right: true }
                                             - op: '>'
-                                              left: { aggregate: { op: count, query: { query: binding, name: $movingGuerrillas } } }
+                                              left: { aggregate: { op: count, query: { query: binding, name: '$movingGuerrillas@{$destSpace}' } } }
                                               right: 0
                                         then:
                                           - forEach:
                                               bind: $claymoresRemoved
-                                              over: { query: binding, name: $movingGuerrillas }
+                                              over: { query: binding, name: '$movingGuerrillas@{$destSpace}' }
                                               limit: 1
                                               effects:
                                                 - moveToken:
@@ -2619,7 +2619,7 @@ effectMacros:
           bind: $space
           over: { query: mapSpaces }
           effects:
-            - setMarker: { space: $space, marker: terror, state: none }
+            - setVar: { scope: zoneVar, zone: $space, var: terrorCount, value: 0 }
             - setMarker: { space: $space, marker: sabotage, state: none }
       - setVar: { scope: global, var: terrorSabotageMarkersPlaced, value: 0 }
       - forEach:
@@ -2681,6 +2681,7 @@ effectMacros:
       - setVar: { scope: global, var: mom_bodyCount, value: false }
       - setVar: { scope: global, var: mom_generalLansdale, value: false }
       - setVar: { scope: global, var: mom_typhoonKate, value: false }
+      - setGlobalMarker: { marker: leaderFlipped, state: normal }
 
 conditionMacros:
   # Shared Rule 1.8.1 predicate:
@@ -2738,7 +2739,7 @@ conditionMacros:
       right: 0
 
   # Shared coup support/agitation branch predicate:
-  # action is removeTerror and the target space currently has terror.
+  # action is removeTerror and the target space currently has terror (terrorCount > 0).
   - id: fitl-coup-support-remove-terror-action-allowed
     params:
       - { name: actionExpr, type: value }
@@ -2747,15 +2748,22 @@ conditionMacros:
       op: and
       args:
         - { op: '==', left: { param: actionExpr }, right: removeTerror }
-        - conditionMacro: fitl-space-marker-state-is
-          args:
-            spaceIdExpr: { param: targetSpaceExpr }
-            markerId: terror
-            markerStateExpr: terror
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: targetSpaceExpr } }
+                    - { op: '>', left: { ref: zoneVar, zone: $zone, var: terrorCount }, right: 0 }
+          right: 0
 
   # Shared coup support/agitation shift branch predicate:
-  # action matches, terror is absent, support/opposition is not already at target state,
-  # and per-space support-shift cap has not reached two.
+  # action matches, terror is absent (terrorCount == 0), support/opposition is not already
+  # at target state, and per-space support-shift cap has not reached two.
   - id: fitl-coup-support-shift-action-allowed
     params:
       - { name: actionExpr, type: value }
@@ -2766,11 +2774,18 @@ conditionMacros:
       op: and
       args:
         - { op: '==', left: { param: actionExpr }, right: { param: requiredActionExpr } }
-        - conditionMacro: fitl-space-marker-state-is
-          args:
-            spaceIdExpr: { param: targetSpaceExpr }
-            markerId: terror
-            markerStateExpr: none
+        - op: '>'
+          left:
+            aggregate:
+              op: count
+              query:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: targetSpaceExpr } }
+                    - { op: '==', left: { ref: zoneVar, zone: $zone, var: terrorCount }, right: 0 }
+          right: 0
         - conditionMacro: fitl-space-marker-state-is-not
           args:
             spaceIdExpr: { param: targetSpaceExpr }

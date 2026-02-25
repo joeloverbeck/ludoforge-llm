@@ -493,6 +493,7 @@ describe('compiler structured section results', () => {
       | 'globalVars'
       | 'globalMarkerLattices'
       | 'perPlayerVars'
+      | 'zoneVars'
       | 'zones'
       | 'tokenTypes'
       | 'setup'

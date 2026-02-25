@@ -56,6 +56,7 @@ const makeCtx = (sourceTokens: readonly Token[], globalVars?: Record<string, num
       ...(globalVars ?? {}),
     },
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: {
       [sourceZone]: [...sourceTokens],

@@ -64,6 +64,7 @@ const createBaseState = (): GameState => ({
     '0': { score: 3 },
     '1': { score: 1 },
   },
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'deck:none': [

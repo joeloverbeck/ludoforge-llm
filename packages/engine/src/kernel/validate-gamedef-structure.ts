@@ -15,6 +15,9 @@ export type ValidationContext = {
   perPlayerVarTypesByName: ReadonlyMap<string, GameDef['perPlayerVars'][number]['type']>;
   globalVarCandidates: readonly string[];
   perPlayerVarCandidates: readonly string[];
+  zoneVarNames: Set<string>;
+  zoneVarTypesByName: ReadonlyMap<string, NonNullable<GameDef['zoneVars']>[number]['type']>;
+  zoneVarCandidates: readonly string[];
   markerLatticeNames: Set<string>;
   markerLatticeCandidates: readonly string[];
   markerLatticeStatesById: ReadonlyMap<string, readonly string[]>;
@@ -1012,6 +1015,9 @@ export const buildValidationContext = (
   const perPlayerVarCandidates = [...new Set(def.perPlayerVars.map((variable) => variable.name))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const zoneVarCandidates = [...new Set((def.zoneVars ?? []).map((variable) => variable.name))].sort((left, right) =>
+    left.localeCompare(right),
+  );
   const tokenTypeCandidates = [...new Set(def.tokenTypes.map((tokenType) => tokenType.id))].sort((left, right) =>
     left.localeCompare(right),
   );
@@ -1077,6 +1083,9 @@ export const buildValidationContext = (
     perPlayerVarNames: new Set(perPlayerVarCandidates),
     perPlayerVarTypesByName: new Map(def.perPlayerVars.map((variable) => [variable.name, variable.type])),
     perPlayerVarCandidates,
+    zoneVarNames: new Set(zoneVarCandidates),
+    zoneVarTypesByName: new Map((def.zoneVars ?? []).map((variable) => [variable.name, variable.type])),
+    zoneVarCandidates,
     markerLatticeNames: new Set(markerLatticeCandidates),
     markerLatticeCandidates,
     markerLatticeStatesById: new Map((def.markerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),

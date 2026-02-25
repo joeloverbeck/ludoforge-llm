@@ -49,6 +49,7 @@ export interface CompileSectionResults {
   readonly globalVars: GameDef['globalVars'] | null;
   readonly globalMarkerLattices: Exclude<GameDef['globalMarkerLattices'], undefined> | null;
   readonly perPlayerVars: GameDef['perPlayerVars'] | null;
+  readonly zoneVars: Exclude<GameDef['zoneVars'], undefined> | null;
   readonly zones: GameDef['zones'] | null;
   readonly tokenTypes: GameDef['tokenTypes'] | null;
   readonly setup: GameDef['setup'] | null;
@@ -245,6 +246,7 @@ function compileExpandedDoc(
     globalVars: null,
     globalMarkerLattices: null,
     perPlayerVars: null,
+    zoneVars: null,
     zones: null,
     tokenTypes: null,
     setup: null,
@@ -296,6 +298,11 @@ function compileExpandedDoc(
     lowerVarDefs(resolvedTableRefDoc.perPlayerVars, diagnostics, 'doc.perPlayerVars'),
   );
   sections.perPlayerVars = perPlayerVars.failed ? null : perPlayerVars.value;
+
+  const zoneVars = compileSection(diagnostics, () =>
+    lowerVarDefs(resolvedTableRefDoc.zoneVars, diagnostics, 'doc.zoneVars'),
+  );
+  sections.zoneVars = zoneVars.failed ? null : zoneVars.value;
 
   let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
   let zones: GameDef['zones'] | null = null;
@@ -528,6 +535,7 @@ function compileExpandedDoc(
     constants: constants.value,
     globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,
+    ...(zoneVars.value !== null && zoneVars.value.length > 0 ? { zoneVars: zoneVars.value } : {}),
     zones,
     ...(derivedFromAssets.seats === null ? {} : { seats: derivedFromAssets.seats }),
     ...(derivedFromAssets.tracks === null ? {} : { tracks: derivedFromAssets.tracks }),

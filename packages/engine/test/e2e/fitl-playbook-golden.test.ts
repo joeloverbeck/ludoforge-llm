@@ -90,6 +90,91 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
   ];
 };
 
+const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrideRule[] => [
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === 'targetSpaces'
+      && request.decisionId.includes('doc.actionPipelines.10.stages[0].effects.0'),
+    value: [
+      'kien-phong:none',
+      'kien-giang-an-xuyen:none',
+      'quang-tri-thua-thien:none',
+    ],
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$movingGuerrillas@kien-phong:none',
+    value: (request: ChoicePendingRequest) =>
+      request.options
+        .map((option) => option.value)
+        .filter((value): value is string => typeof value === 'string')
+        .filter((value) => /_(204|205|85|84|83)$/.test(value))
+        .slice(0, 2),
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$movingTroops@kien-phong:none',
+    value: [],
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$movingTroops@quang-tri-thua-thien:none',
+    value: [],
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$movingGuerrillas@quang-tri-thua-thien:none',
+    value: (request: ChoicePendingRequest) =>
+      request.options
+        .map((option) => option.value)
+        .filter((value): value is string => typeof value === 'string')
+        .filter((value) => !/_(204|205|85|84|83)$/.test(value))
+        .slice(0, 7),
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$movingGuerrillas@kien-giang-an-xuyen:none',
+    value: (request: ChoicePendingRequest) =>
+      request.options
+        .map((option) => option.value)
+        .filter((value): value is string => typeof value === 'string')
+        .filter((value) => /_(85|84|83)$/.test(value))
+        .slice(0, 2),
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$movingTroops@kien-giang-an-xuyen:none',
+    value: [],
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === 'chainSpaces',
+    value: [],
+  },
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === 'targetSpaces'
+      && request.decisionId.includes('doc.actionPipelines.22.stages[0].effects.0'),
+    value: ['southern-laos:none', 'kien-giang-an-xuyen:none'],
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$infiltrateMode@southern-laos:none',
+    value: 'build-up',
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$infiltrateGuerrillasToReplace@southern-laos:none',
+    value: (request: ChoicePendingRequest) =>
+      request.options
+        .map((option) => option.value)
+        .filter((value): value is string => typeof value === 'string'),
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$infiltrateMode@kien-giang-an-xuyen:none',
+    value: 'takeover',
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$infiltrateTakeoverReplace@kien-giang-an-xuyen:none',
+    value: 'yes',
+  },
+  {
+    when: (request: ChoicePendingRequest) => request.name === '$infiltrateTakeoverTargetType@kien-giang-an-xuyen:none',
+    value: 'guerrilla',
+  },
+];
+
 const FITL_FACTION_CONFIG: SeatGroupConfig = {
   coinSeats: ['US', 'ARVN'],
   insurgentSeats: ['NVA', 'VC'],
@@ -516,6 +601,9 @@ const TURN_3: PlaybookTurn = {
 //   - Removes 2 active VC guerrillas, shifts Quang Tri to Passive Opposition
 //   - Degrades Trail 2 -> 1
 //   - Consumes grant and releases deferred deployment (6 US out-of-play pieces to cities)
+// Move 3: NVA March + Infiltrate (Op+SA)
+//   - Explicitly force the playbook narrative branch:
+//     Quang Tri + Kien Phong + Kien Giang March, then Southern Laos + Kien Giang Infiltrate
 const TURN_4: PlaybookTurn = {
   label: 'Turn 4 — Gulf of Tonkin',
   moves: [
@@ -595,31 +683,94 @@ const TURN_4: PlaybookTurn = {
         ],
       },
     },
+    {
+      kind: 'resolved',
+      label: 'NVA March + Infiltrate',
+      move: {
+        actionId: asActionId('march'),
+        actionClass: 'operationPlusSpecialActivity',
+        params: {},
+        compound: {
+          specialActivity: {
+            actionId: asActionId('infiltrate'),
+            actionClass: 'operationPlusSpecialActivity',
+            params: {},
+          },
+          timing: 'after',
+        },
+      },
+      options: {
+        overrides: createTurn4NvaReportBranchDecisionOverrides(),
+      },
+      expectedState: {
+        globalVars: {
+          nvaResources: 2,
+          trail: 1,
+          infiltrateCount: 1,
+          vcResources: 10,
+          arvnResources: 24,
+          aid: 14,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7 },
+          { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 4 },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 0 },
+          { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 5 },
+          { zone: 'southern-laos:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+        ],
+        markers: [
+          { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+        ],
+        computedValues: [
+          { label: 'VC victory marker', expected: 16, compute: computeVcVictory },
+        ],
+      },
+    },
   ],
   expectedEndState: {
     globalVars: {
-      nvaResources: 5,
+      nvaResources: 2,
       trail: 1,
+      infiltrateCount: 1,
       vcResources: 10,
       arvnResources: 24,
       aid: 14,
       patronage: 15,
     },
+    eligibility: { '0': false, '1': true, '2': false, '3': true },
+    activePlayer: 3,
+    currentCard: 'card-97',
+    previewCard: 'card-79',
+    deckSize: 7,
+    seatOrder: ['3', '0', '1', '2'],
+    firstEligible: '3',
+    secondEligible: '1',
+    nonPassCount: 0,
     zoneTokenCounts: [
-      { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 10 },
+      { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 11 },
       { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7 },
       { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 4 },
       { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 2 },
+      { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+      { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 4 },
+      { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 0 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 5 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'guerrilla', count: 0 },
     ],
     markers: [
       { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+      { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+      { space: 'kien-phong:none', marker: 'supportOpposition', expected: 'activeOpposition' },
     ],
     computedValues: [
       { label: 'pending free-operation grants', expected: 0, compute: (_def, state) =>
         state.turnOrderState.type === 'cardDriven'
           ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
           : 0 },
-      { label: 'VC victory marker', expected: 18, compute: computeVcVictory },
+      { label: 'VC victory marker', expected: 16, compute: computeVcVictory },
     ],
   },
 };

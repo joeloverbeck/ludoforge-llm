@@ -70,6 +70,7 @@ const makeState = (): GameState => ({
     1: { money: 10 },
     2: { money: 4 },
   },
+  zoneVars: {},
   playerCount: 3,
   zones: {
     'deck:none': [makeToken('deck-1', { cost: 3 }), makeToken('deck-2', { cost: 1 })],

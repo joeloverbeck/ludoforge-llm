@@ -77,6 +77,7 @@ const makeSpaceWithoutAttributes = (overrides: {
 const makeState = (zones: Record<string, readonly Token[]>, globalVars: Record<string, number> = {}): GameState => ({
   globalVars,
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 4,
   zones,
   nextTokenOrdinal: 0,

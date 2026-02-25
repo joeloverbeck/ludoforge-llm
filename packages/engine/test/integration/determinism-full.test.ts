@@ -66,6 +66,7 @@ const createInitialState = (seed: bigint): GameState => {
       '0': {},
       '1': {},
     },
+    zoneVars: {},
     playerCount: 2,
     zones: {
       'bag:none': [...tokens],

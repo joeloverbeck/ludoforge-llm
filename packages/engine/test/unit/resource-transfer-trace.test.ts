@@ -46,6 +46,7 @@ function makeCtx(args: {
       '0': { coins: args.player0Coins, committed: 0 },
       '1': { coins: 0, committed: args.player1Committed ?? 0 },
     },
+    zoneVars: {},
     playerCount: 2,
     zones: {},
     nextTokenOrdinal: 0,

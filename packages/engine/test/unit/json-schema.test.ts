@@ -236,6 +236,7 @@ const validRuntimeTrace: GameTrace = {
   finalState: {
     globalVars: {},
     perPlayerVars: {},
+    zoneVars: {},
     playerCount: 2,
     zones: { 'deck:none': [] },
     nextTokenOrdinal: 0,

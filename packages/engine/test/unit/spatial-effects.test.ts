@@ -40,6 +40,7 @@ const token = (id: string): Token => ({ id: asTokenId(id), type: 'pawn', props: 
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {
     'a:none': [token('t1'), token('t2')],

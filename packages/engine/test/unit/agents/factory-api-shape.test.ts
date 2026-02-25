@@ -43,6 +43,7 @@ const defStub: GameDef = {
 const stateStub: GameState = {
   globalVars: {},
   perPlayerVars: {},
+  zoneVars: {},
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,

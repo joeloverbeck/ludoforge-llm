@@ -34,7 +34,7 @@ import {
 } from './renderers/action-announcement-renderer.js';
 import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
-import { getOrComputeLayout } from '../layout/layout-cache.js';
+import { getOrComputeLayout, type FullLayoutResult } from '../layout/layout-cache.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 
@@ -177,13 +177,13 @@ export async function createGameCanvasRuntime(
   const initialGameDef = initialState.gameDef;
   const positionStore = deps.createPositionStore(initialGameDef === null ? initialZoneIDs : []);
 
-  const applyGameDefLayout = (gameDef: GameStore['gameDef']): void => {
+  const applyGameDefLayout = (gameDef: GameStore['gameDef']): FullLayoutResult | null => {
     if (gameDef === null) {
       positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
       if (layersForBackground !== null) {
         drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
       }
-      return;
+      return null;
     }
 
     if (!Array.isArray(gameDef.zones)) {
@@ -191,7 +191,7 @@ export async function createGameCanvasRuntime(
       if (layersForBackground !== null) {
         drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
       }
-      return;
+      return null;
     }
 
     const layoutResult = getOrComputeLayout(gameDef, options.visualConfigProvider);
@@ -204,10 +204,12 @@ export async function createGameCanvasRuntime(
         layoutResult.boardBounds,
       );
     }
+    return layoutResult;
   };
 
+  let initialLayoutResult: FullLayoutResult | null = null;
   if (initialGameDef !== null) {
-    applyGameDefLayout(initialGameDef);
+    initialLayoutResult = applyGameDefLayout(initialGameDef);
   }
 
   const gameCanvas = await deps.createGameCanvas(options.container, {
@@ -218,7 +220,9 @@ export async function createGameCanvasRuntime(
   if (currentGameDef === null || !Array.isArray(currentGameDef.zones)) {
     drawTableBackground(gameCanvas.layers.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
   } else {
-    const layoutResult = getOrComputeLayout(currentGameDef, options.visualConfigProvider);
+    const layoutResult = initialLayoutResult !== null && currentGameDef === initialGameDef
+      ? initialLayoutResult
+      : getOrComputeLayout(currentGameDef, options.visualConfigProvider);
     drawTableBackground(
       gameCanvas.layers.backgroundLayer,
       options.visualConfigProvider.getTableBackground(),

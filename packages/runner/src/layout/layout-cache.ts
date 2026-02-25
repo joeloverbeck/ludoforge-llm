@@ -17,6 +17,7 @@ export interface FullLayoutResult {
 }
 
 const layoutCache = new Map<string, FullLayoutResult>();
+let gameDefHashCache = new WeakMap<GameDef, string>();
 
 export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualConfigProvider): FullLayoutResult {
   const cacheKey = createLayoutCacheKey(def, visualConfigProvider.configHash);
@@ -66,6 +67,7 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
 
 export function clearLayoutCache(): void {
   layoutCache.clear();
+  gameDefHashCache = new WeakMap<GameDef, string>();
 }
 
 function computeUnifiedBounds(positions: ReadonlyMap<string, Position>): ZonePositionMap['bounds'] {
@@ -102,5 +104,16 @@ function computeUnifiedBounds(positions: ReadonlyMap<string, Position>): ZonePos
 }
 
 function createLayoutCacheKey(def: GameDef, configHash: string): string {
-  return `${def.metadata.id}:${hashStableValue(def)}:${configHash}`;
+  return `${def.metadata.id}:${getOrComputeDefHash(def)}:${configHash}`;
+}
+
+function getOrComputeDefHash(def: GameDef): string {
+  const cached = gameDefHashCache.get(def);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const computed = hashStableValue(def);
+  gameDefHashCache.set(def, computed);
+  return computed;
 }

@@ -578,6 +578,19 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects boolean zoneVars at structural validation time', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'ZONE_VAR_TYPE_INVALID' && diag.path === 'zoneVars[0].type'),
+    );
+  });
+
   it('rejects addVar targeting boolean zoneVars', () => {
     const base = createValidGameDef();
     const def = {

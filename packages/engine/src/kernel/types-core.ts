@@ -247,7 +247,7 @@ export interface GameDef {
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
-  readonly zoneVars?: readonly VariableDef[];
+  readonly zoneVars?: readonly IntVariableDef[];
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
   readonly tableContracts?: readonly RuntimeTableContract[];
 }

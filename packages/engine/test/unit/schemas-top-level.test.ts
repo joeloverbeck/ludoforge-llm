@@ -530,6 +530,16 @@ describe('top-level runtime schemas', () => {
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'globalVars.0.init'));
   });
 
+  it('rejects boolean zoneVars definitions at schema level', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'zoneVars.0.type'));
+  });
+
   it('fails on invalid turnOrder turnFlow duration with actionable nested path', () => {
     const result = GameDefSchema.safeParse({
       ...fullGameDef,

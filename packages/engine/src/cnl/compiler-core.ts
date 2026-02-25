@@ -302,7 +302,22 @@ function compileExpandedDoc(
   const zoneVars = compileSection(diagnostics, () =>
     lowerVarDefs(resolvedTableRefDoc.zoneVars, diagnostics, 'doc.zoneVars'),
   );
-  sections.zoneVars = zoneVars.failed ? null : zoneVars.value;
+  const loweredZoneVars: NonNullable<GameDef['zoneVars']> = zoneVars.value.filter(
+    (variable, index): variable is Extract<VariableDef, { readonly type: 'int' }> => {
+      if (variable.type === 'int') {
+        return true;
+      }
+      diagnostics.push({
+        code: 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID',
+        path: `doc.zoneVars.${index}.type`,
+        severity: 'error',
+        message: `Cannot lower zoneVars.${index}: only int zoneVars are supported.`,
+        suggestion: 'Use an int zone variable definition (type, init, min, max).',
+      });
+      return false;
+    },
+  );
+  sections.zoneVars = zoneVars.failed ? null : loweredZoneVars;
 
   let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
   let zones: GameDef['zones'] | null = null;
@@ -535,7 +550,7 @@ function compileExpandedDoc(
     constants: constants.value,
     globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,
-    ...(zoneVars.value !== null && zoneVars.value.length > 0 ? { zoneVars: zoneVars.value } : {}),
+    ...(loweredZoneVars.length > 0 ? { zoneVars: loweredZoneVars } : {}),
     zones,
     ...(derivedFromAssets.seats === null ? {} : { seats: derivedFromAssets.seats }),
     ...(derivedFromAssets.tracks === null ? {} : { tracks: derivedFromAssets.tracks }),

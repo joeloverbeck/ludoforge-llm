@@ -339,7 +339,7 @@ export const GameDefSchema = z
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
-    zoneVars: z.array(VariableDefSchema).optional(),
+    zoneVars: z.array(IntVariableDefSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
   })

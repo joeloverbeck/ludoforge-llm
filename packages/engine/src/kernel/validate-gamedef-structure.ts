@@ -16,7 +16,7 @@ export type ValidationContext = {
   globalVarCandidates: readonly string[];
   perPlayerVarCandidates: readonly string[];
   zoneVarNames: Set<string>;
-  zoneVarTypesByName: ReadonlyMap<string, NonNullable<GameDef['zoneVars']>[number]['type']>;
+  zoneVarTypesByName: ReadonlyMap<string, GameDef['globalVars'][number]['type']>;
   zoneVarCandidates: readonly string[];
   markerLatticeNames: Set<string>;
   markerLatticeCandidates: readonly string[];
@@ -334,6 +334,26 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
         path: `perPlayerVars[${index}]`,
         severity: 'error',
         message: `Variable "${variable.name}" must satisfy min <= init <= max; received ${variable.min} <= ${variable.init} <= ${variable.max}.`,
+      });
+    }
+  });
+  (def.zoneVars ?? []).forEach((variable, index) => {
+    if (variable.type !== 'int') {
+      diagnostics.push({
+        code: 'ZONE_VAR_TYPE_INVALID',
+        path: `zoneVars[${index}].type`,
+        severity: 'error',
+        message: `zoneVars variable \"${variable.name}\" must use type \"int\".`,
+        suggestion: 'Use int zoneVars definitions; boolean zoneVars are not supported.',
+      });
+      return;
+    }
+    if (variable.min > variable.init || variable.init > variable.max) {
+      diagnostics.push({
+        code: 'VAR_BOUNDS_INVALID',
+        path: `zoneVars[${index}]`,
+        severity: 'error',
+        message: `Variable \"${variable.name}\" must satisfy min <= init <= max; received ${variable.min} <= ${variable.init} <= ${variable.max}.`,
       });
     }
   });

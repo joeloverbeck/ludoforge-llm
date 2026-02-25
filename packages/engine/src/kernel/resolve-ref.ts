@@ -252,6 +252,14 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
 
   if (ref.ref === 'markerState') {
     const spaceId = resolveMapSpaceId(ref.space, ctx);
+    const availableMapSpaceIds = ctx.def.zones.map((zone) => String(zone.id)).sort();
+    if (!availableMapSpaceIds.includes(String(spaceId))) {
+      throw missingVarError(`Unknown map-space id for markerState: ${String(spaceId)}`, {
+        reference: ref,
+        spaceId: String(spaceId),
+        availableMapSpaceIds,
+      });
+    }
     const spaceMarkers = ctx.state.markers[spaceId] ?? {};
 
     const state = spaceMarkers[ref.marker];

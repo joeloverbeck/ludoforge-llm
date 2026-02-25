@@ -425,13 +425,13 @@ describe('resolveRef', () => {
     const stateWithMarkers: GameState = {
       ...makeState(),
       markers: {
-        'quang-nam:none': { supportOpposition: 'neutral' },
+        'hand:1': { supportOpposition: 'neutral' },
       },
     };
     const ctx = makeCtx({
       state: stateWithMarkers,
       bindings: {
-        '$space': 'quang-nam:none',
+        '$space': 'hand:1',
       },
     });
 
@@ -445,7 +445,7 @@ describe('resolveRef', () => {
     const stateWithMarkers: GameState = {
       ...makeState(),
       markers: {
-        'quang-nam:none': { supportOpposition: 'neutral' },
+        'hand:1': { supportOpposition: 'neutral' },
       },
     };
     const ctx = makeCtx({ state: stateWithMarkers, bindings: {} });
@@ -460,7 +460,7 @@ describe('resolveRef', () => {
     const ctx = makeCtx({
       def: makeDefWithMarkers(),
       state: makeState(),
-      bindings: { '$space': 'quang-nam:none' },
+      bindings: { '$space': 'deck:none' },
     });
 
     assert.equal(
@@ -472,12 +472,29 @@ describe('resolveRef', () => {
   it('throws MISSING_VAR when marker lattice does not exist', () => {
     const ctx = makeCtx({
       state: makeState(),
-      bindings: { '$space': 'quang-nam:none' },
+      bindings: { '$space': 'deck:none' },
     });
 
     assert.throws(
       () => resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('throws MISSING_VAR for markerState when bound map-space id is unknown', () => {
+    const ctx = makeCtx({
+      def: makeDefWithMarkers(),
+      state: makeState(),
+      bindings: { '$space': 'quang-nam:none' },
+    });
+
+    assert.throws(
+      () => resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'MISSING_VAR') &&
+        error.context?.spaceId === 'quang-nam:none' &&
+        Array.isArray(error.context?.availableMapSpaceIds) &&
+        (error.context?.availableMapSpaceIds as unknown[]).includes('deck:none'),
     );
   });
 

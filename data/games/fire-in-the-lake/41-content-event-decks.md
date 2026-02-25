@@ -710,7 +710,8 @@ eventDecks:
           text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
           effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "0"
+            - seat: "2"
+              executeAsSeat: "0"
               sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]

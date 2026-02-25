@@ -3,7 +3,12 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectErrorCode } from './effect-error.js';
 import { applyEffects } from './effects.js';
-import { executeEventMove } from './event-execution.js';
+import {
+  executeEventMove,
+  resolveEventEffectList,
+  resolveEventEffectTimingForMove,
+  resolveEventFreeOperationGrants,
+} from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
@@ -212,7 +217,12 @@ const violatesCompoundParamConstraints = (
   return null;
 };
 
-const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: Move): void => {
+const validateDecisionSequenceForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: { readonly allowIncomplete?: boolean },
+): void => {
   try {
     const result = resolveMoveDecisionSequence(def, state, move, {
       choose: () => undefined,
@@ -224,6 +234,9 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
         detail: result.illegal.reason,
       });
+    }
+    if (options?.allowIncomplete === true) {
+      return;
     }
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS, {
       nextDecisionId: result.nextDecision?.decisionId,
@@ -248,6 +261,25 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
     }
     throw err;
   }
+};
+
+const shouldDeferIncompleteDecisionValidation = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): boolean => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return false;
+  }
+  const timing = resolveEventEffectTimingForMove(def, state, move);
+  if (timing !== 'afterGrants') {
+    return false;
+  }
+  const effects = resolveEventEffectList(def, state, move);
+  if (effects.length === 0) {
+    return false;
+  }
+  return resolveEventFreeOperationGrants(def, state, move).length > 0;
 };
 
 const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
@@ -290,6 +322,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
   if (action === undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
+  const allowIncomplete = shouldDeferIncompleteDecisionValidation(def, state, move);
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
@@ -374,7 +407,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
         ...metadata,
       });
     }
-    validateDecisionSequenceForMove(def, state, move);
+    validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
     validateTurnFlowWindowAccess(def, state, move);
     return {
       action,
@@ -382,7 +415,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
     };
   }
   validateDeclaredActionParams(action, preflight.evalCtx, move);
-  validateDecisionSequenceForMove(def, state, move);
+  validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
   validateTurnFlowWindowAccess(def, state, move);
   return {
     action,

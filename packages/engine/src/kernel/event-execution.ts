@@ -234,6 +234,18 @@ export const resolveEventEffectList = (
   ];
 };
 
+export const resolveEventEffectTimingForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): EventEffectTiming | null => {
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
+    return null;
+  }
+  return resolveEventEffectTiming(context);
+};
+
 const applyEffectList = (
   def: GameDef,
   state: GameState,

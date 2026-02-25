@@ -90,7 +90,8 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(typeof card?.shaded?.text, 'string');
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        seat: '0',
+        seat: '2',
+        executeAsSeat: '0',
         sequence: { chain: 'gulf-of-tonkin-us-airstrike', step: 0 },
         operationClass: 'operation',
         actionIds: ['airStrike'],

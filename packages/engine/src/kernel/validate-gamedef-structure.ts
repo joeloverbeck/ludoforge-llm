@@ -2,7 +2,7 @@ import type { Diagnostic } from './diagnostics.js';
 import { attributeValueEquals } from './attribute-value-equals.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
-import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, ZoneDef } from './types.js';
+import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, VariableDef, ZoneDef } from './types.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
@@ -11,12 +11,12 @@ const RESERVED_RUNTIME_PARAM_NAMES: ReadonlySet<string> = new Set(RUNTIME_RESERV
 export type ValidationContext = {
   globalVarNames: Set<string>;
   perPlayerVarNames: Set<string>;
-  globalVarTypesByName: ReadonlyMap<string, GameDef['globalVars'][number]['type']>;
-  perPlayerVarTypesByName: ReadonlyMap<string, GameDef['perPlayerVars'][number]['type']>;
+  globalVarTypesByName: ReadonlyMap<string, VariableDef['type']>;
+  perPlayerVarTypesByName: ReadonlyMap<string, VariableDef['type']>;
   globalVarCandidates: readonly string[];
   perPlayerVarCandidates: readonly string[];
   zoneVarNames: Set<string>;
-  zoneVarTypesByName: ReadonlyMap<string, GameDef['globalVars'][number]['type']>;
+  zoneVarTypesByName: ReadonlyMap<string, 'int'>;
   zoneVarCandidates: readonly string[];
   markerLatticeNames: Set<string>;
   markerLatticeCandidates: readonly string[];

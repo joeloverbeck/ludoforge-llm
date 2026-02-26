@@ -591,7 +591,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('rejects addVar targeting boolean zoneVars', () => {
+  it('keeps boolean zoneVar diagnostics at structure layer for addVar', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -606,9 +606,13 @@ describe('validateGameDef reference checks', () => {
 
     const diagnostics = validateGameDef(def);
     assert.ok(
+      diagnostics.some((diag) => diag.code === 'ZONE_VAR_TYPE_INVALID' && diag.path === 'zoneVars[0].type'),
+    );
+    assert.equal(
       diagnostics.some(
         (diag) => diag.code === 'ADDVAR_BOOLEAN_TARGET_INVALID' && diag.path === 'actions[0].effects[0].addVar.var',
       ),
+      false,
     );
   });
 
@@ -1369,6 +1373,40 @@ describe('validateGameDef reference checks', () => {
         (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
           && diag.path === 'actions[0].effects[0].transferVar.from.var',
       ),
+    );
+  });
+
+  it('keeps boolean zoneVar diagnostics at structure layer for transferVar', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'zoneVar', zone: 'deck:none', var: 'locked' },
+                to: { scope: 'global', var: 'vp' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'ZONE_VAR_TYPE_INVALID' && diag.path === 'zoneVars[0].type'),
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].transferVar.from.var',
+      ),
+      false,
     );
   });
 

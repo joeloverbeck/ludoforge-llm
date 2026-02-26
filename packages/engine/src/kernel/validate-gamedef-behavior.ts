@@ -1077,7 +1077,7 @@ export const validateEffectAst = (
     }
 
     const varType = getScopedVarType(effect.addVar.scope, effect.addVar.var, context);
-    if (varType === 'boolean') {
+    if (effect.addVar.scope !== 'zoneVar' && varType === 'boolean') {
       diagnostics.push({
         code: 'ADDVAR_BOOLEAN_TARGET_INVALID',
         path: `${path}.addVar.var`,
@@ -1157,15 +1157,6 @@ export const validateEffectAst = (
           endpoint.var,
           context.zoneVarCandidates,
         );
-      }
-      if (context.zoneVarTypesByName.get(endpoint.var) === 'boolean') {
-        diagnostics.push({
-          code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
-          path: varPath,
-          severity: 'error',
-          message: `transferVar cannot target boolean variable "${endpoint.var}".`,
-          suggestion: 'Use integer variables for transferVar source and destination.',
-        });
       }
       validateZoneRef(diagnostics, endpoint.zone, `${endpointPath}.zone`, context);
     }

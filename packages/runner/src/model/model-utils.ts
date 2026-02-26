@@ -71,9 +71,9 @@ export function formatScopeEndpointDisplay(
         return missingEndpointIdentity(input.scope, 'zoneId');
       }
       return input.resolveZoneName(input.zoneId);
+    default:
+      return invalidEndpointScope((input as { readonly scope?: unknown }).scope);
   }
-
-  return invalidEndpointScope(input.scope);
 }
 
 function missingEndpointIdentity(scope: ScopeEndpointKind, field: 'playerId' | 'zoneId'): never {

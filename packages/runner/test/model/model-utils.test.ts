@@ -112,4 +112,26 @@ describe('model-utils', () => {
       }),
     ).toThrow('Invalid endpoint scope for event-log rendering');
   });
+
+  it('throws deterministic invalid-scope errors for non-domain endpoint scope values', () => {
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: 'bogus' as unknown as 'global',
+        playerId: undefined,
+        zoneId: undefined,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: () => 'unused',
+      }),
+    ).toThrow('Invalid endpoint scope for event-log rendering: bogus');
+
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: null as unknown as 'global',
+        playerId: undefined,
+        zoneId: undefined,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: () => 'unused',
+      }),
+    ).toThrow('Invalid endpoint scope for event-log rendering: null');
+  });
 });

@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
+      - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo lint
       - run: pnpm turbo typecheck
@@ -35,6 +36,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
+      - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
       # Only build — node --test glob patterns require Node 22+
       - run: pnpm turbo build

@@ -506,11 +506,9 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
         resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
       }),
-    endpoint: ({ scope, playerId, zoneId }) =>
+    endpoint: (input) =>
       formatScopeEndpointDisplay({
-        scope,
-        playerId,
-        zoneId,
+        ...input,
         resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
       }),

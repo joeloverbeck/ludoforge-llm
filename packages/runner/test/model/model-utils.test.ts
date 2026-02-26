@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatScopeEndpointDisplay, formatScopePrefixDisplay, optionalPlayerId } from '../../src/model/model-utils.js';
+import {
+  endpointVarNameAsString,
+  formatScopeEndpointDisplay,
+  formatScopePrefixDisplay,
+  optionalPlayerId,
+} from '../../src/model/model-utils.js';
 
 describe('model-utils', () => {
   it('returns an empty object for undefined playerId', () => {
@@ -133,5 +138,19 @@ describe('model-utils', () => {
         resolveZoneName: () => 'unused',
       }),
     ).toThrow('Invalid endpoint scope for event-log rendering: null');
+  });
+
+  it('returns endpoint varName when it is a string', () => {
+    expect(endpointVarNameAsString({ varName: 'pool' }, 'from')).toBe('pool');
+  });
+
+  it('throws deterministic error when endpoint varName is missing or non-string', () => {
+    expect(() => endpointVarNameAsString({}, 'from')).toThrow(
+      'Invalid endpoint payload for event-log rendering: from.varName must be a string',
+    );
+
+    expect(() => endpointVarNameAsString({ varName: 123 }, 'to')).toThrow(
+      'Invalid endpoint payload for event-log rendering: to.varName must be a string',
+    );
   });
 });

@@ -1,6 +1,6 @@
 # EVTLOG-015: Enforce transfer endpoint `varName` contract with deterministic domain errors
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None - runner-only
@@ -14,7 +14,8 @@ Transfer endpoint hardening now validates endpoint object shape and scope identi
 
 1. `translate-effect-trace` currently formats transfer messages with `formatIdAsDisplayName(entry.from.varName)` and no explicit runtime contract check for `varName` type.
 2. Current tests cover endpoint scope and identity failures (`scope`, `player`, `zone`) and non-object endpoint payloads, but do not assert `varName` invariant failures.
-3. **Mismatch + correction**: endpoint hardening is incomplete; endpoint payload contract should include `varName: string` and fail with deterministic domain errors when violated.
+3. **Mismatch + correction**: endpoint hardening is incomplete; transfer message rendering requires `from.varName` and should fail with deterministic domain errors when endpoint `varName` is missing/non-string.
+4. **Scope correction**: `trace-projection` does not consume endpoint `varName`; enforcing this renderer-specific invariant there adds coupling without improving architecture. Keep the contract check in event-log translation/shared model utilities.
 
 ## Architecture Check
 
@@ -26,7 +27,7 @@ Transfer endpoint hardening now validates endpoint object shape and scope identi
 
 ### 1. Add deterministic endpoint `varName` validation
 
-Extend transfer endpoint payload validation to require `varName` to be a string for both `from` and `to` endpoints before formatting.
+Extend transfer endpoint payload validation to require `varName` to be a string for both `from` and `to` endpoints before transfer message formatting.
 
 ### 2. Reuse shared domain-error helpers
 
@@ -40,9 +41,8 @@ Add tests for missing/non-string `from.varName` and `to.varName` payloads to pre
 
 - `packages/runner/src/model/model-utils.ts` (modify)
 - `packages/runner/src/model/translate-effect-trace.ts` (modify)
-- `packages/runner/src/model/trace-projection.ts` (modify if shared endpoint contract is enforced there)
 - `packages/runner/test/model/translate-effect-trace.test.ts` (modify)
-- `packages/runner/test/model/trace-projection.test.ts` (modify if projection path validates contract)
+- `packages/runner/test/model/model-utils.test.ts` (modify if shared helper behavior is asserted directly)
 
 ## Out of Scope
 
@@ -67,10 +67,24 @@ Add tests for missing/non-string `from.varName` and `to.varName` payloads to pre
 ### New/Modified Tests
 
 1. `packages/runner/test/model/translate-effect-trace.test.ts` - add malformed `varName` endpoint payload assertions for both `from` and `to`.
-2. `packages/runner/test/model/trace-projection.test.ts` - if projection consumes normalized endpoint contract, add malformed `varName` assertions to lock deterministic failure path.
+2. `packages/runner/test/model/model-utils.test.ts` - if helper coverage is added, assert deterministic error for missing/non-string endpoint `varName`.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/runner test -- translate-effect-trace trace-projection`
+1. `pnpm -F @ludoforge/runner test -- translate-effect-trace model-utils`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- What changed:
+  - Added deterministic endpoint `varName` contract checks in shared runner model utilities.
+  - Updated transfer message translation to validate both endpoint payloads (`from` and `to`) before formatting and to reuse validated endpoint objects for display conversion.
+  - Added/updated tests covering missing and non-string `varName` failures in both utility-level and event-log translation paths.
+- Deviations from original plan:
+  - Removed `trace-projection` changes from scope after reassessment; projection does not consume `varName`, so enforcing renderer formatting invariants there would increase coupling without architectural benefit.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test -- translate-effect-trace model-utils` passed.
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.

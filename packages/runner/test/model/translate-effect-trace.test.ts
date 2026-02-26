@@ -863,6 +863,70 @@ describe('translateEffectTrace', () => {
       ).toThrow('Invalid endpoint payload for event-log rendering: to must be an object');
     }
   });
+
+  it('throws deterministic error when resource-transfer from.varName is missing or non-string', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntries: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global' } as unknown as { scope: 'global'; varName: string },
+        to: { scope: 'global', varName: 'pool' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 42 } as unknown as { scope: 'global'; varName: string },
+        to: { scope: 'global', varName: 'pool' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+    ];
+
+    for (const invalidTraceEntry of invalidTraceEntries) {
+      expect(() =>
+        translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+      ).toThrow('Invalid endpoint payload for event-log rendering: from.varName must be a string');
+    }
+  });
+
+  it('throws deterministic error when resource-transfer to.varName is missing or non-string', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntries: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: { scope: 'global' } as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: { scope: 'global', varName: 42 } as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+    ];
+
+    for (const invalidTraceEntry of invalidTraceEntries) {
+      expect(() =>
+        translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+      ).toThrow('Invalid endpoint payload for event-log rendering: to.varName must be a string');
+    }
+  });
 });
 
 function provenance() {

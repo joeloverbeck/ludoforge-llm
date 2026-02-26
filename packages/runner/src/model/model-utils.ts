@@ -11,6 +11,7 @@ type EndpointPayloadField = 'from' | 'to';
 
 export interface ScopeEndpointPayloadObject {
   readonly scope?: unknown;
+  readonly varName?: unknown;
   readonly player?: unknown;
   readonly zone?: unknown;
 }
@@ -88,6 +89,10 @@ export function endpointPayloadMustBeObject(field: EndpointPayloadField): never 
   throw new Error(`Invalid endpoint payload for event-log rendering: ${field} must be an object`);
 }
 
+export function endpointVarNameMustBeString(field: EndpointPayloadField): never {
+  throw new Error(`Invalid endpoint payload for event-log rendering: ${field}.varName must be a string`);
+}
+
 export function asScopeEndpointPayloadObject(
   endpoint: unknown,
   field: EndpointPayloadField,
@@ -96,4 +101,14 @@ export function asScopeEndpointPayloadObject(
     return endpointPayloadMustBeObject(field);
   }
   return endpoint as ScopeEndpointPayloadObject;
+}
+
+export function endpointVarNameAsString(
+  endpoint: ScopeEndpointPayloadObject,
+  field: EndpointPayloadField,
+): string {
+  if (typeof endpoint.varName !== 'string') {
+    return endpointVarNameMustBeString(field);
+  }
+  return endpoint.varName;
 }

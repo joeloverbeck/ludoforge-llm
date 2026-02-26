@@ -1,10 +1,11 @@
-import type { EffectTraceEntry, EffectTraceResourceEndpoint, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
+import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { EventLogKind } from './event-log-kind.js';
 import {
   asScopeEndpointPayloadObject,
+  endpointVarNameAsString,
   formatScopeEndpointDisplay,
   formatScopePrefixDisplay,
   invalidEndpointScope,
@@ -95,14 +96,21 @@ function translateEffectEntry(
     }
 
     case 'resourceTransfer':
-      return {
-        ...base,
-        kind: 'variable',
-        message:
-          `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
-          ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.from, 'from'))}` +
-          ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.to, 'to'))}.`,
-      };
+      {
+        const fromEndpoint = asScopeEndpointPayloadObject(entry.from, 'from');
+        const toEndpoint = asScopeEndpointPayloadObject(entry.to, 'to');
+        const fromVarName = endpointVarNameAsString(fromEndpoint, 'from');
+        endpointVarNameAsString(toEndpoint, 'to');
+
+        return {
+          ...base,
+          kind: 'variable',
+          message:
+            `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(fromVarName)}` +
+            ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(fromEndpoint))}` +
+            ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(toEndpoint))}.`,
+        };
+      }
 
     case 'createToken':
       return {
@@ -527,20 +535,16 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
   };
 }
 
-function toScopeEndpointDisplayInput(
-  endpoint: EffectTraceResourceEndpoint | unknown,
-  field: 'from' | 'to',
-): ScopeEndpointDisplayInput {
-  const objectEndpoint = asScopeEndpointPayloadObject(endpoint, field);
-  switch (objectEndpoint.scope) {
+function toScopeEndpointDisplayInput(endpoint: ScopeEndpointPayloadObject): ScopeEndpointDisplayInput {
+  switch (endpoint.scope) {
     case 'global':
       return { scope: 'global', playerId: undefined, zoneId: undefined };
     case 'perPlayer':
-      return toPerPlayerScopeEndpointDisplayInput(objectEndpoint);
+      return toPerPlayerScopeEndpointDisplayInput(endpoint);
     case 'zone':
-      return toZoneScopeEndpointDisplayInput(objectEndpoint);
+      return toZoneScopeEndpointDisplayInput(endpoint);
     default:
-      return invalidEndpointScope(objectEndpoint.scope);
+      return invalidEndpointScope(endpoint.scope);
   }
 }
 

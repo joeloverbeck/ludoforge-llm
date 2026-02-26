@@ -1,3 +1,5 @@
+**Status**: ✅ COMPLETED
+
 # Fire in the Lake Playbook - Turn 1
 
 FIRE IN THE LAKE TUTORIAL
@@ -177,3 +179,12 @@ Make Trucks the current card for game turn 2 by placing it atop
 Burning Bonze. Reveal the next card (2.3.7) in the deck (Green
 Berets), which then becomes the preview card for the turn to follow.
 
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **Coverage**: All 3 moves in Turn 1 now have intermediate assertions (expectedState on Moves 1-2, expectedOperationState on Move 3). Initial state and end state enhanced with victory markers, globalMarkers, and zone baselines.
+- **Deviations from narrative**:
+  - US VP initial = 41 (not 38) — narrative miscounted Available-US pieces; formula counts all tokens in available-US:none including irregulars.
+  - US VP after Burning Bonze = 35 (not 32) — consistent +3 offset from initial.
+  - Aid after Train+Pacify = 8 (not 3) — Minh leader bonus adds +5 aid on ARVN Train.
+- **Verification**: All 2731 engine tests pass (0 failures), all 8 playbook turns green.

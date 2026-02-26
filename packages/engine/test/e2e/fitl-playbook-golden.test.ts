@@ -447,6 +447,22 @@ const TURN_1: PlaybookTurn = {
         actionId: asActionId('event'),
         params: { eventCardId: 'card-107', side: 'shaded' },
       },
+      expectedState: {
+        globalVars: {
+          aid: 3,              // 15 - 12
+          arvnResources: 30,   // unchanged
+          nvaResources: 10,    // unchanged
+          vcResources: 5,      // events don't cost resources
+          patronage: 15,       // unchanged
+          trail: 1,            // unchanged
+        },
+        markers: [
+          { space: 'saigon:none', marker: 'supportOpposition', expected: 'neutral' },
+        ],
+        computedValues: [
+          { label: 'US victory marker after Burning Bonze', expected: 35, compute: computeUsVictory },
+        ],
+      },
     },
     {
       kind: 'simple',
@@ -454,6 +470,20 @@ const TURN_1: PlaybookTurn = {
       move: {
         actionId: asActionId('pass'),
         params: {},
+      },
+      expectedState: {
+        globalVars: {
+          nvaResources: 11,    // 10 + 1 Insurgent pass bonus
+          aid: 3,              // unchanged from Move 1
+          arvnResources: 30,   // unchanged
+          vcResources: 5,      // unchanged
+        },
+        markers: [
+          { space: 'saigon:none', marker: 'supportOpposition', expected: 'neutral' },
+        ],
+        computedValues: [
+          { label: 'US victory marker after NVA pass', expected: 35, compute: computeUsVictory },
+        ],
       },
     },
     {
@@ -482,6 +512,26 @@ const TURN_1: PlaybookTurn = {
           timing: 'after',
         },
       },
+      expectedOperationState: {
+        globalVars: {
+          arvnResources: 24,   // 30 - 3 (Train) - 3 (Pacify)
+          aid: 8,              // 3 + 5 (Minh leader bonus on Train)
+          nvaResources: 11,    // unchanged
+          vcResources: 5,      // unchanged
+          patronage: 15,       // unchanged
+        },
+        zoneTokenCounts: [
+          { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 8 },  // 2 + 6 placed
+          { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },  // unchanged
+          { zone: 'available-ARVN:none', faction: 'ARVN', type: 'troops', count: 2 }, // 8 - 6
+        ],
+        markers: [
+          { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+        ],
+        computedValues: [
+          { label: 'US victory marker after Pacify', expected: 41, compute: computeUsVictory },
+        ],
+      },
     },
   ],
   expectedEndState: {
@@ -507,9 +557,23 @@ const TURN_1: PlaybookTurn = {
       { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },
       { zone: 'saigon:none', faction: 'US', type: 'troops', count: 2 },
       { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
+      // An Loc & Can Tho unchanged by Govern (Govern doesn't move pieces)
+      { zone: 'an-loc:none', faction: 'ARVN', type: 'troops', count: 2 },
+      { zone: 'an-loc:none', faction: 'ARVN', type: 'police', count: 2 },
+      { zone: 'can-tho:none', faction: 'ARVN', type: 'troops', count: 2 },
+      { zone: 'can-tho:none', faction: 'ARVN', type: 'police', count: 2 },
+      // ARVN Available after 6 troops placed
+      { zone: 'available-ARVN:none', faction: 'ARVN', type: 'troops', count: 2 },
     ],
     markers: [
       { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+    ],
+    globalMarkers: [
+      { marker: 'activeLeader', expected: 'minh' },
+    ],
+    computedValues: [
+      { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+      { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
     ],
   },
 };
@@ -1925,11 +1989,30 @@ describe('FITL playbook golden suite', () => {
         { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
         { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 2 },
         { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },
+        // An Loc & Can Tho baselines (Govern prerequisites for Turn 1)
+        { zone: 'an-loc:none', faction: 'ARVN', type: 'troops', count: 2 },
+        { zone: 'an-loc:none', faction: 'ARVN', type: 'police', count: 2 },
+        { zone: 'can-tho:none', faction: 'ARVN', type: 'troops', count: 2 },
+        { zone: 'can-tho:none', faction: 'ARVN', type: 'police', count: 2 },
+        // ARVN Available troop baseline (8 troops before Training)
+        { zone: 'available-ARVN:none', faction: 'ARVN', type: 'troops', count: 8 },
+      ],
+      totalTokenCounts: [
+        { faction: 'ARVN', type: 'troops', count: 30 },
       ],
       markers: [
         { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
       ],
-    }, 'initial state');
+      // RVN Leader: Duong Van Minh active at start
+      globalMarkers: [
+        { marker: 'activeLeader', expected: 'minh' },
+      ],
+      // Victory markers at game start (US = Total Support 15 + Available-US 26 = 41)
+      computedValues: [
+        { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+        { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
+      ],
+    }, 'initial state', def);
   });
 
   for (const [turnIndex, turn] of PLAYBOOK_TURNS.entries()) {

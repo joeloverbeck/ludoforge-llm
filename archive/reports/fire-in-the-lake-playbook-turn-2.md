@@ -1,5 +1,7 @@
 # Fire in the Lake - Playbook Turn 2
 
+**Status**: COMPLETED
+
 This turn #2 starts from when turn #1 ended.
 
 GAME TURN 2, Trucks
@@ -78,3 +80,15 @@ the VC and ARVN tokens to Eligible, and shift both the NVA and
 US Eligibility tokens to Ineligible. Green Berets will be the current
 card after being placed atop Trucks. Reveal the next card from the
 deck, Gulf of Tonkin, as our preview card.
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **What was done**: Added comprehensive intermediate and end-state assertions to Turn 2 of the FITL playbook golden test (`packages/engine/test/e2e/fitl-playbook-golden.test.ts`).
+  - Move 1 (NVA Rally): `expectedState` with 6 global vars, 21 zone token count checks (including underground props verification, NVA bases, VC base presence, US pieces, Saigon garrison, available NVA guerrillas), markers, and 4 computed victory values (US=41, NVA=4, VC=27, ARVN=35).
+  - Turn 2 end state (after US Sweep): Enhanced `expectedEndState` with underground props for NVA guerrillas, NVA bases, VC base presence in Quang Tri (Sweep does NOT remove bases), VC guerrilla activation states (active=2, underground=0), US pieces, Saigon garrison, available NVA (2) and VC (14) guerrillas, `globalMarkers` (activeLeader='minh'), and 4 computed victory values.
+- **Key verification**: VC Base in Quang Tri confirmed present (count=1) after Sweep — Sweep activates guerrillas but does not remove pieces.
+- **Test results**: All 45 e2e tests pass (44 pass, 1 skipped, 0 failures).
+- **No production code bugs found**: All assertion values matched expected game state.

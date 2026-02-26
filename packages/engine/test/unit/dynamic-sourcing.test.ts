@@ -2,20 +2,18 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  buildAdjacencyGraph,
   applyEffect,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
-  createCollector,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 /**
  * Dynamic piece sourcing pattern (Rule 1.4.1):
@@ -78,17 +76,9 @@ const makeState = (zones: Record<string, readonly Token[]>): GameState => ({
   markers: {},
 });
 
-const makeCtx = (zones: Record<string, readonly Token[]>): EffectContext => ({
+const makeCtx = (zones: Record<string, readonly Token[]>): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
-  adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(zones),
-  rng: createRng(42n),
-  activePlayer: asPlayerId(0),
-  actorPlayer: asPlayerId(0),
-  bindings: {},
-  moveParams: {},
-  collector: createCollector(),
-  mode: 'execution',
 });
 
 /**

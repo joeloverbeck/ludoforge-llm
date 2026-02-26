@@ -6,16 +6,14 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
-  buildAdjacencyGraph,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type ZoneDef,
-  createCollector,
 } from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
+import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const mapZones: readonly ZoneDef[] = [
@@ -66,22 +64,13 @@ function makeState(overrides?: Partial<GameState>): GameState {
   };
 }
 
-type EffectContextOverrides = Omit<Partial<EffectContext>, 'mode'>;
-
-function makeCtx(overrides?: EffectContextOverrides): EffectContext {
-  return {
+function makeCtx(overrides?: EffectContextTestOverrides): EffectContext {
+  return makeExecutionEffectContext({
     def: makeDef(),
-    adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(),
-    rng: createRng(42n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
     bindings: { __freeOperation: false },
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
     ...overrides,
-  };
+  });
 }
 
 describe('FITL per-province-city-cost macro', () => {

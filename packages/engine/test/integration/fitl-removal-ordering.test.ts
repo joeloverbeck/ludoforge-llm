@@ -9,15 +9,13 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
-  createCollector,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 import type { EffectMacroDef, GameSpecEffect } from '../../src/cnl/game-spec-doc.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
@@ -284,18 +282,7 @@ describe('FITL removal ordering macros', () => {
         { addVar: { scope: 'global', var: 'aid', delta: 6 } },
       ];
 
-      const ctx: EffectContext = {
-        def: makeDef(),
-        adjacencyGraph: buildAdjacencyGraph([]),
-        state,
-        rng: createRng(42n),
-        activePlayer: asPlayerId(0),
-        actorPlayer: asPlayerId(0),
-        bindings: {},
-        moveParams: {},
-        collector: createCollector(),
-        mode: 'execution',
-      };
+      const ctx: EffectContext = makeExecutionEffectContext({ def: makeDef(), state });
 
       const result = applyEffects(aidEffects, ctx);
       assert.equal(result.state.globalVars.aid, 21, 'Aid should increase by 6 (15 + 6 = 21)');
@@ -338,18 +325,7 @@ describe('FITL removal ordering macros', () => {
         { addVar: { scope: 'global', var: 'aid', delta: 12 } },
       ];
 
-      const ctx: EffectContext = {
-        def,
-        adjacencyGraph: buildAdjacencyGraph([]),
-        state,
-        rng: createRng(42n),
-        activePlayer: asPlayerId(0),
-        actorPlayer: asPlayerId(0),
-        bindings: {},
-        moveParams: {},
-        collector: createCollector(),
-        mode: 'execution',
-      };
+      const ctx: EffectContext = makeExecutionEffectContext({ def, state });
 
       const result = applyEffects(aidEffects, ctx);
       assert.equal(result.state.globalVars.aid, 27, 'Aid should be 15 + 12 = 27');
@@ -461,18 +437,7 @@ describe('FITL removal ordering macros', () => {
         } },
       ];
 
-      const ctx: EffectContext = {
-        def,
-        adjacencyGraph: buildAdjacencyGraph([]),
-        state,
-        rng: createRng(42n),
-        activePlayer: asPlayerId(0),
-        actorPlayer: asPlayerId(0),
-        bindings: {},
-        moveParams: {},
-        collector: createCollector(),
-        mode: 'execution',
-      };
+      const ctx: EffectContext = makeExecutionEffectContext({ def, state });
 
       const result = applyEffects(effects, ctx);
       assert.equal(result.state.zones['casualties-US:none']?.length, 1, 'US defender should be removed to casualties');

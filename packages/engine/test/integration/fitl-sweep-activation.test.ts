@@ -7,15 +7,13 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
-  createCollector,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -99,18 +97,10 @@ function buildSweepActivationEffects(zone: string, cubeCount: number, sfCount: n
 }
 
 function makeCtx(state: GameState): EffectContext {
-  return {
+  return makeExecutionEffectContext({
     def: makeDef(),
-    adjacencyGraph: buildAdjacencyGraph([]),
     state,
-    rng: createRng(42n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
-  };
+  });
 }
 
 describe('FITL sweep-activation macro', () => {

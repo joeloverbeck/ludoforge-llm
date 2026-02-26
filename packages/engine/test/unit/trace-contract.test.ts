@@ -7,15 +7,14 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
-  buildAdjacencyGraph,
   createCollector,
-  createRng,
   TriggerLogEntrySchema,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 const phaseId = asPhaseId('main');
 const actionId = asActionId('commit');
@@ -76,17 +75,10 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeEffectCtx = (): EffectContext => ({
+const makeEffectCtx = (): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
-  adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
-  rng: createRng(42n),
-  activePlayer: asPlayerId(0),
-  actorPlayer: asPlayerId(0),
-  bindings: {},
-  moveParams: {},
   collector: createCollector({ trace: true }),
-  mode: 'execution',
   traceContext: { eventContext: 'actionEffect', actionId: 'contract', effectPathRoot: 'test.effects' },
   effectPath: '',
 });

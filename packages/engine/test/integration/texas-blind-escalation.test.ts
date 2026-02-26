@@ -3,16 +3,13 @@ import { describe, it } from 'node:test';
 
 import {
   applyEffects,
-  asPlayerId,
   assertValidatedGameDef,
-  buildAdjacencyGraph,
-  createCollector,
-  createRng,
   initialState,
   type EffectAST,
   type GameDef,
 } from '../../src/kernel/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const loadEscalateMacro = (): { readonly def: GameDef; readonly effects: readonly EffectAST[] } => {
@@ -57,18 +54,7 @@ const runEscalate = (
     },
   };
 
-  return applyEffects(effects, {
-    def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    state,
-    rng: createRng(19n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
-  }).state.globalVars;
+  return applyEffects(effects, makeExecutionEffectContext({ def, state })).state.globalVars;
 };
 
 describe('texas blind escalation macro', () => {

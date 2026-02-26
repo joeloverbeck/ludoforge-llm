@@ -516,17 +516,13 @@ describe('lattice marker shift via addVar', () => {
     markers: {},
   });
 
-  const makeLatticeCtx = (markerValue: number): EffectContext => ({
+  const makeLatticeCtx = (markerValue: number): EffectContext => makeExecutionEffectContext({
     def: makeLatticeDef(),
-    adjacencyGraph: buildAdjacencyGraph([]),
     state: makeLatticeState(markerValue),
     rng: createRng(17n),
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
     collector: createCollector(),
-    mode: 'execution',
   });
 
   it('shifts +1 from middle state (index 2 → 3)', () => {

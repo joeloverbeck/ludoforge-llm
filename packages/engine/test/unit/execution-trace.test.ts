@@ -7,16 +7,14 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
   createCollector,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
-  type ZoneDef,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 const minimalDef: GameDef = {
   metadata: { id: 'trace-test', players: { min: 2, max: 2 } },
@@ -55,21 +53,14 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
     turnOrderState: { type: 'roundRobin' },
     markers: {},
   };
-  const zoneDefs: readonly ZoneDef[] = minimalDef.zones;
-  return {
+  return makeExecutionEffectContext({
     def: minimalDef,
-    adjacencyGraph: buildAdjacencyGraph(zoneDefs),
     state,
-    rng: createRng(42n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
     bindings: bindings ?? {},
-    moveParams: {},
     collector: createCollector(trace !== undefined ? { trace } : undefined),
-    mode: 'execution',
     traceContext: { eventContext: 'actionEffect', actionId: 'test-action', effectPathRoot: 'test.effects' },
     effectPath: '',
-  };
+  });
 }
 
 describe('Effect execution trace', () => {

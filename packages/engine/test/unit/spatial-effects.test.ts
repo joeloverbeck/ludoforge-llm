@@ -7,15 +7,13 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
-  createRng,
   isEffectErrorCode,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
-  createCollector,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'spatial-effects-test', players: { min: 1, max: 2 } },
@@ -58,24 +56,11 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-type EffectContextOverrides = Omit<Partial<EffectContext>, 'mode'>;
-
-const makeCtx = (overrides?: EffectContextOverrides): EffectContext => {
-  const def = makeDef();
-  return {
-    def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    state: makeState(),
-    rng: createRng(101n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
-    ...overrides,
-  };
-};
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
+  def: makeDef(),
+  state: makeState(),
+  ...overrides,
+});
 
 describe('moveTokenAdjacent spatial runtime', () => {
   it('moves a token to an adjacent zone, conserves token count, and emits tokenEntered', () => {

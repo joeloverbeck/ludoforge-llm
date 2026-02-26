@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asPhaseId, asPlayerId, asZoneId, type GameDef, type GameState } from '../../src/kernel/index.js';
+import { asPhaseId, asPlayerId, asZoneId, createCollector, type GameDef, type GameState } from '../../src/kernel/index.js';
 import { makeDiscoveryEffectContext, makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
@@ -44,5 +44,21 @@ describe('effect-context test helper', () => {
   it('uses explicit discovery mode when requested', () => {
     const context = makeDiscoveryEffectContext({ def: makeDef(), state: makeState() });
     assert.equal(context.mode, 'discovery');
+  });
+
+  it('passes through trace-specific fields used by trace contract tests', () => {
+    const traceContext = { eventContext: 'actionEffect' as const, actionId: 'test', effectPathRoot: 'test.effects' };
+    const collector = createCollector({ trace: true });
+    const context = makeExecutionEffectContext({
+      def: makeDef(),
+      state: makeState(),
+      traceContext,
+      effectPath: 'test.effects[0]',
+      collector,
+    });
+
+    assert.deepEqual(context.traceContext, traceContext);
+    assert.equal(context.effectPath, 'test.effects[0]');
+    assert.equal(context.collector, collector);
   });
 });

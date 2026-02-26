@@ -3,11 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyEffect,
-  asPlayerId,
   asTokenId,
-  buildAdjacencyGraph,
-  createCollector,
-  createRng,
   isEffectErrorCode,
   type EffectContext,
   type GameDef,
@@ -15,6 +11,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -44,18 +41,7 @@ describe('FITL production stacking constraints', () => {
   });
 
   describe('runtime enforcement from compiled production constraints', () => {
-    const makeCtx = (state: GameState, def: GameDef): EffectContext => ({
-      def,
-      state,
-      rng: createRng(42n),
-      activePlayer: asPlayerId(0),
-      actorPlayer: asPlayerId(0),
-      bindings: {},
-      moveParams: {},
-      collector: createCollector(),
-      mode: 'execution',
-      adjacencyGraph: buildAdjacencyGraph(def.zones),
-    });
+    const makeCtx = (state: GameState, def: GameDef): EffectContext => makeExecutionEffectContext({ def, state });
 
     it('rejects a 3rd base in a city/province', () => {
       const { parsed, compiled } = compileProductionSpec();

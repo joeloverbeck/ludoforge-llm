@@ -7,16 +7,14 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
   type ZoneDef,
-  createCollector,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -85,19 +83,11 @@ const zoneDefs: readonly ZoneDef[] = [
 ];
 
 function makeCtx(state: GameState, bindings?: Record<string, unknown>): EffectContext {
-  const def = makeDef(zoneDefs);
-  return {
-    def,
-    adjacencyGraph: buildAdjacencyGraph(zoneDefs),
+  return makeExecutionEffectContext({
+    def: makeDef(zoneDefs),
     state,
-    rng: createRng(42n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
     bindings: bindings ?? {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
-  };
+  });
 }
 
 /**

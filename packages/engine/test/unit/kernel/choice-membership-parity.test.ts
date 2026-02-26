@@ -8,9 +8,7 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
   createCollector,
-  createRng,
   isEffectErrorCode,
   legalChoicesDiscover,
   type ActionDef,
@@ -21,6 +19,7 @@ import {
   type Move,
   type MoveParamValue,
 } from '../../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
 
 const makeDef = (effects: readonly EffectAST[]): GameDef =>
   ({
@@ -88,18 +87,12 @@ const makeMove = (params: Record<string, unknown>): Move => ({
 const makeEffectContext = (moveParams: Readonly<Record<string, MoveParamValue>>): EffectContext => {
   const def = makeDef([chooseOneEffect]);
   const state = makeState();
-  return {
+  return makeExecutionEffectContext({
     def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
-    rng: createRng(11n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
     moveParams,
     collector: createCollector(),
-    mode: 'execution',
-  };
+  });
 };
 
 describe('choice membership parity', () => {

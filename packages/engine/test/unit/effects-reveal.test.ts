@@ -7,9 +7,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
-  buildAdjacencyGraph,
   createCollector,
-  createRng,
   EFFECT_RUNTIME_REASONS,
   isEffectErrorCode,
   type EffectAST,
@@ -19,6 +17,7 @@ import {
 } from '../../src/kernel/index.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
+import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-reveal-test', players: { min: 2, max: 2 } },
@@ -59,41 +58,17 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-type EffectContextOverrides = Omit<Partial<EffectContext>, 'mode'>;
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
+  def: makeDef(),
+  state: makeState(),
+  ...overrides,
+});
 
-const makeCtx = (overrides?: EffectContextOverrides): EffectContext => {
-  const def = makeDef();
-  return {
-    def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    state: makeState(),
-    rng: createRng(9n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
-    ...overrides,
-  };
-};
-
-const makeDiscoveryCtx = (overrides?: EffectContextOverrides): EffectContext => {
-  const def = makeDef();
-  return {
-    def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    state: makeState(),
-    rng: createRng(9n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'discovery',
-    ...overrides,
-  };
-};
+const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeDiscoveryEffectContext({
+  def: makeDef(),
+  state: makeState(),
+  ...overrides,
+});
 
 describe('effects reveal', () => {
   it('appends a zone grant for a specific player selector', () => {

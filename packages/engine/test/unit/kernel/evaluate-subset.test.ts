@@ -8,16 +8,13 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  buildAdjacencyGraph,
-  createCollector,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
   type Token,
-  type ZoneDef,
 } from '../../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
 
 const sourceZone = asZoneId('source:none');
 const sinkZone = asZoneId('sink:none');
@@ -72,19 +69,10 @@ const makeCtx = (sourceTokens: readonly Token[], globalVars?: Record<string, num
     turnOrderState: { type: 'roundRobin' },
     markers: {},
   };
-  const zoneDefs: readonly ZoneDef[] = testDef.zones;
-  return {
+  return makeExecutionEffectContext({
     def: testDef,
-    adjacencyGraph: buildAdjacencyGraph(zoneDefs),
     state,
-    rng: createRng(1n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
-    bindings: {},
-    moveParams: {},
-    collector: createCollector(),
-    mode: 'execution',
-  };
+  });
 };
 
 describe('evaluateSubset effect', () => {

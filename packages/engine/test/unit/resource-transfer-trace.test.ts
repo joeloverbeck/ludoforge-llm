@@ -5,15 +5,13 @@ import {
   applyEffects,
   asPhaseId,
   asPlayerId,
-  buildAdjacencyGraph,
   createCollector,
-  createRng,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
-  type ZoneDef,
 } from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 
 const traceDef: GameDef = {
   metadata: { id: 'resource-transfer-trace-test', players: { min: 2, max: 2 } },
@@ -35,8 +33,6 @@ const traceDef: GameDef = {
   triggers: [],
   terminal: { conditions: [] },
 } as unknown as GameDef;
-
-const zoneDefs: readonly ZoneDef[] = traceDef.zones;
 
 function makeCtx(args: {
   readonly player0Coins: number;
@@ -67,20 +63,14 @@ function makeCtx(args: {
     markers: {},
   };
 
-  return {
+  return makeExecutionEffectContext({
     def: traceDef,
-    adjacencyGraph: buildAdjacencyGraph(zoneDefs),
     state,
-    rng: createRng(42n),
-    activePlayer: asPlayerId(0),
-    actorPlayer: asPlayerId(0),
     bindings: args.bindings ?? {},
-    moveParams: {},
     collector: createCollector({ trace: true }),
-    mode: 'execution',
     traceContext: { eventContext: 'actionEffect', actionId: 'transfer', effectPathRoot: 'test.effects' },
     effectPath: '',
-  };
+  });
 }
 
 describe('resourceTransfer effect trace entries', () => {

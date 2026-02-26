@@ -11,6 +11,9 @@ import {
 import {
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
+  resolveRuntimeScopedEndpointWithMalformedSupport,
+  type ScopedVarMalformedResolvableEndpoint,
+  type ScopedVarResolvableEndpoint,
   resolveScopedIntVarDef,
   resolveScopedVarDef,
   writeScopedVarToBranches,
@@ -70,6 +73,27 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   collector: createCollector(),
   ...overrides,
 });
+
+const assertScopedEndpointTypingContracts = () => {
+  const strictPvarEndpoint: ScopedVarResolvableEndpoint = { scope: 'pvar', player: 'actor', var: 'hp' };
+  const strictZoneEndpoint: ScopedVarResolvableEndpoint = { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' };
+  const tolerantPvarEndpoint: ScopedVarMalformedResolvableEndpoint = { scope: 'pvar', var: 'hp' };
+  const tolerantZoneEndpoint: ScopedVarMalformedResolvableEndpoint = { scope: 'zoneVar', var: 'supply' };
+
+  // @ts-expect-error strict endpoint contract requires a player selector for pvar scope.
+  const malformedStrictPvar: ScopedVarResolvableEndpoint = { scope: 'pvar', var: 'hp' };
+  // @ts-expect-error strict endpoint contract requires a zone selector for zoneVar scope.
+  const malformedStrictZone: ScopedVarResolvableEndpoint = { scope: 'zoneVar', var: 'supply' };
+
+  void strictPvarEndpoint;
+  void strictZoneEndpoint;
+  void tolerantPvarEndpoint;
+  void tolerantZoneEndpoint;
+  void malformedStrictPvar;
+  void malformedStrictZone;
+};
+
+assertScopedEndpointTypingContracts();
 
 describe('scoped-var-runtime-access', () => {
   it('resolves scoped variable definitions across global/pvar/zoneVar', () => {
@@ -239,12 +263,30 @@ describe('scoped-var-runtime-access', () => {
     assert.deepEqual(zoneEndpoint, { scope: 'zone', zone: 'zone-a:none', var: 'supply' });
   });
 
+  it('keeps tolerant resolver parity for well-formed scoped endpoints', () => {
+    const ctx = makeCtx();
+
+    const endpoint = resolveRuntimeScopedEndpointWithMalformedSupport(
+      { scope: 'pvar', player: 'actor', var: 'hp' },
+      ctx,
+      {
+        code: 'resourceRuntimeValidationFailed',
+        effectType: 'transferVar',
+        pvarCardinalityMessage: 'must resolve one player',
+        pvarResolutionFailureMessage: 'pvar resolution failed',
+        zoneResolutionFailureMessage: 'zone resolution failed',
+      },
+    );
+
+    assert.deepEqual(endpoint, { scope: 'pvar', player: asPlayerId(0), var: 'hp' });
+  });
+
   it('throws on missing transferVar pvar/zone selectors through shared endpoint resolver', () => {
     const ctx = makeCtx();
 
     assert.throws(
       () =>
-        resolveRuntimeScopedEndpoint(
+        resolveRuntimeScopedEndpointWithMalformedSupport(
           { scope: 'pvar', var: 'hp' },
           ctx,
           {
@@ -264,7 +306,7 @@ describe('scoped-var-runtime-access', () => {
 
     assert.throws(
       () =>
-        resolveRuntimeScopedEndpoint(
+        resolveRuntimeScopedEndpointWithMalformedSupport(
           { scope: 'zoneVar', var: 'supply' },
           ctx,
           {

@@ -25,6 +25,22 @@ export type ScopedVarResolvableEndpoint =
   | Readonly<{
       scope: 'pvar';
       var: string;
+      player: PlayerSel;
+    }>
+  | Readonly<{
+      scope: 'zoneVar';
+      var: string;
+      zone: ZoneRef;
+    }>;
+
+export type ScopedVarMalformedResolvableEndpoint =
+  | Readonly<{
+      scope: 'global';
+      var: string;
+    }>
+  | Readonly<{
+      scope: 'pvar';
+      var: string;
       player?: PlayerSel;
     }>
   | Readonly<{
@@ -37,8 +53,8 @@ export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVa
 
 const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
 
-export const resolveRuntimeScopedEndpoint = (
-  endpoint: ScopedVarResolvableEndpoint,
+const resolveRuntimeScopedEndpointImpl = (
+  endpoint: ScopedVarMalformedResolvableEndpoint,
   evalCtx: EffectContext,
   options: Readonly<{
     code: ScopedVarRuntimeErrorCode;
@@ -119,6 +135,18 @@ export const resolveRuntimeScopedEndpoint = (
     var: endpoint.var,
   };
 };
+
+export const resolveRuntimeScopedEndpoint = (
+  endpoint: ScopedVarResolvableEndpoint,
+  evalCtx: EffectContext,
+  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[2],
+): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, options);
+
+export const resolveRuntimeScopedEndpointWithMalformedSupport = (
+  endpoint: ScopedVarMalformedResolvableEndpoint,
+  evalCtx: EffectContext,
+  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[2],
+): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, options);
 
 export const resolveScopedVarDef = (
   ctx: EffectContext,

@@ -3,7 +3,7 @@ import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
 import {
   readScopedVarValue,
-  resolveRuntimeScopedEndpoint,
+  resolveRuntimeScopedEndpointWithMalformedSupport,
   resolveScopedIntVarDef,
   writeScopedVarToBranches,
 } from './scoped-var-runtime-access.js';
@@ -143,7 +143,7 @@ const resolveEndpoint = (
   evalCtx: EffectContext,
   ctx: EffectContext,
 ): ResolvedEndpoint => {
-  const runtimeEndpoint = resolveRuntimeScopedEndpoint(endpoint, evalCtx, {
+  const runtimeEndpoint = resolveRuntimeScopedEndpointWithMalformedSupport(endpoint, evalCtx, {
     code: 'resourceRuntimeValidationFailed',
     effectType: 'transferVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',

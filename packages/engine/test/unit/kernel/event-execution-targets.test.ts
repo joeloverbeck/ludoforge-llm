@@ -2,12 +2,16 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  executeEventMove,
+  resolveEventEligibilityOverrides,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
   resolveEventEffectList,
+  resolveEventFreeOperationGrants,
   resolveEventTargetDefs,
+  shouldDeferIncompleteDecisionValidationForMove,
   synthesizeEventTargetEffects,
   type EventCardDef,
   type EventTargetDef,
@@ -61,6 +65,15 @@ const makeBaseState = (cardId: string): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
 });
+
+const withActions = (def: GameDef, actions: readonly unknown[]): GameDef =>
+  ({ ...def, actions: [...actions] }) as unknown as GameDef;
+
+const withCardDrivenState = (state: GameState): GameState =>
+  ({
+    ...state,
+    turnOrderState: { type: 'cardDriven' },
+  }) as unknown as GameState;
 
 describe('event target synthesis', () => {
   it('maps exact n=1 to chooseOne', () => {
@@ -202,5 +215,114 @@ describe('event target resolution and effect ordering', () => {
 
     assert.equal(effects[0].chooseOne.bind, '$sideTarget');
     assert.equal(effects[1].chooseOne.bind, '$branchTarget');
+  });
+});
+
+describe('event playability context parity', () => {
+  const eventCard: EventCardDef = {
+    id: 'event-card',
+    title: 'Event',
+    sideMode: 'single',
+    playCondition: {
+      op: '>=',
+      left: { ref: 'gvar', var: 'canPlay' },
+      right: 1,
+    },
+    unshaded: {
+      effectTiming: 'afterGrants',
+      effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
+      freeOperationGrants: [{ seat: '0', sequence: { chain: 'seq', step: 0 }, operationClass: 'operation', actionIds: ['operation'] }],
+      eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'window-a' }],
+    },
+  };
+
+  const eventAction = {
+    id: 'event',
+    capabilities: ['cardEvent'],
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+
+  const nonEventAction = {
+    ...eventAction,
+    capabilities: [],
+  };
+
+  const move: Move = {
+    actionId: 'event' as Move['actionId'],
+    params: {},
+  };
+
+  it('returns no grants/overrides, no deferred leniency, and no event execution for non-card-event moves', () => {
+    const def = withActions(makeBaseDef(eventCard), [nonEventAction]);
+    const state = withCardDrivenState({
+      ...makeBaseState(eventCard.id),
+      globalVars: { canPlay: 1, resolved: 0 },
+    });
+
+    assert.deepEqual(resolveEventFreeOperationGrants(def, state, move), []);
+    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), []);
+    assert.equal(shouldDeferIncompleteDecisionValidationForMove(def, state, move), false);
+
+    const result = executeEventMove(def, state, { state: state.rng }, move);
+    assert.equal(result.state, state);
+    assert.equal(result.rng.state, state.rng);
+    assert.deepEqual(result.emittedEvents, []);
+    assert.equal(result.deferredEventEffect, undefined);
+  });
+
+  it('returns no grants/overrides, no deferred leniency, and no event execution when playCondition is false', () => {
+    const def = withActions(
+      {
+        ...makeBaseDef(eventCard),
+        globalVars: [{ name: 'canPlay', type: 'int', init: 0, min: 0, max: 1 }, { name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
+      } as unknown as GameDef,
+      [eventAction],
+    );
+    const state = withCardDrivenState({
+      ...makeBaseState(eventCard.id),
+      globalVars: { canPlay: 0, resolved: 0 },
+    });
+
+    assert.deepEqual(resolveEventFreeOperationGrants(def, state, move), []);
+    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), []);
+    assert.equal(shouldDeferIncompleteDecisionValidationForMove(def, state, move), false);
+
+    const result = executeEventMove(def, state, { state: state.rng }, move);
+    assert.equal(result.state, state);
+    assert.equal(result.rng.state, state.rng);
+    assert.deepEqual(result.emittedEvents, []);
+    assert.equal(result.deferredEventEffect, undefined);
+  });
+
+  it('returns grants/overrides and enables deferred leniency for playable afterGrants event moves', () => {
+    const def = withActions(
+      {
+        ...makeBaseDef(eventCard),
+        globalVars: [{ name: 'canPlay', type: 'int', init: 1, min: 0, max: 1 }, { name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
+      } as unknown as GameDef,
+      [eventAction],
+    );
+    const state = withCardDrivenState({
+      ...makeBaseState(eventCard.id),
+      globalVars: { canPlay: 1, resolved: 0 },
+    });
+
+    const grants = resolveEventFreeOperationGrants(def, state, move);
+    const overrides = resolveEventEligibilityOverrides(def, state, move);
+    assert.equal(grants.length, 1);
+    assert.equal(overrides.length, 1);
+    assert.equal(shouldDeferIncompleteDecisionValidationForMove(def, state, move), true);
+
+    const result = executeEventMove(def, state, { state: state.rng }, move);
+    assert.equal(result.state.globalVars.resolved, 0);
+    assert.equal(result.deferredEventEffect?.effects.length, 1);
+    assert.equal(result.deferredEventEffect?.actionId, 'event');
   });
 });

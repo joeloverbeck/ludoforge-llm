@@ -101,30 +101,13 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     return { state: ctx.state, rng: ctx.rng };
   }
 
-  if (endpoint.scope === 'zone') {
-    if (typeof nextValue !== 'number') {
-      throw effectRuntimeError(
-        'variableRuntimeValidationFailed',
-        `setVar on zone variable must resolve to int value: ${variableName}`,
-        {
-          effectType: 'setVar',
-          scope: 'zoneVar',
-          var: variableName,
-          actualType: typeof nextValue,
-          value: nextValue,
-        },
-      );
-    }
-
-    return {
-      state: writeScopedVarsToState(ctx.state, [toScopedVarWrite(endpoint, nextValue)]),
-      rng: ctx.rng,
-      emittedEvents: [emittedEvent],
-    };
-  }
+  const scopedWrite =
+    endpoint.scope === 'zone'
+      ? toScopedVarWrite(endpoint, expectInteger(nextValue, 'setVar', 'value'))
+      : toScopedVarWrite(endpoint, nextValue);
 
   return {
-    state: writeScopedVarsToState(ctx.state, [toScopedVarWrite(endpoint, nextValue)]),
+    state: writeScopedVarsToState(ctx.state, [scopedWrite]),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };

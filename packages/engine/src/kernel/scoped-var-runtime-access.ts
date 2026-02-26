@@ -414,14 +414,7 @@ export const readScopedIntVarValue = (
   });
 };
 
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
-  write: ScopedVarWrite,
-): ScopedVarStateBranches {
-  return writeScopedVarsToBranches(branches, [write]);
-}
-
-export const writeScopedVarsToBranches = (
+const writeScopedVarsToBranches = (
   branches: ScopedVarStateBranches,
   writes: readonly ScopedVarWrite[],
 ): ScopedVarStateBranches => {

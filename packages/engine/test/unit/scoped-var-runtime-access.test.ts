@@ -19,7 +19,6 @@ import {
   toScopedVarWrite,
   resolveScopedIntVarDef,
   resolveScopedVarDef,
-  writeScopedVarToBranches,
   writeScopedVarsToState,
 } from '../../src/kernel/scoped-var-runtime-access.js';
 import type { GameDef, GameState } from '../../src/kernel/types.js';
@@ -312,43 +311,27 @@ describe('scoped-var-runtime-access', () => {
     );
   });
 
-  it('writes scoped runtime values immutably for each scope', () => {
+  it('writes scoped runtime values immutably for each scope through canonical state writer', () => {
     const state = makeState();
-    const baseBranches = {
-      globalVars: state.globalVars,
-      perPlayerVars: state.perPlayerVars,
-      zoneVars: state.zoneVars,
-    };
-
-    const globalWrite = writeScopedVarToBranches(baseBranches, {
-      endpoint: { scope: 'global', var: 'score' },
-      value: 8,
-    });
+    const globalWrite = writeScopedVarsToState(state, [{ endpoint: { scope: 'global', var: 'score' }, value: 8 }]);
     assert.equal(globalWrite.globalVars.score, 8);
-    assert.notEqual(globalWrite.globalVars, baseBranches.globalVars);
-    assert.equal(globalWrite.perPlayerVars, baseBranches.perPlayerVars);
-    assert.equal(globalWrite.zoneVars, baseBranches.zoneVars);
+    assert.notEqual(globalWrite.globalVars, state.globalVars);
+    assert.equal(globalWrite.perPlayerVars, state.perPlayerVars);
+    assert.equal(globalWrite.zoneVars, state.zoneVars);
 
-    const pvarWrite = writeScopedVarToBranches(baseBranches, {
-      endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'hp' },
-      value: 10,
-    });
+    const pvarWrite = writeScopedVarsToState(state, [{ endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'hp' }, value: 10 }]);
     assert.equal(pvarWrite.perPlayerVars['0']?.hp, 10);
-    assert.notEqual(pvarWrite.perPlayerVars, baseBranches.perPlayerVars);
-    assert.equal(pvarWrite.globalVars, baseBranches.globalVars);
-    assert.equal(pvarWrite.zoneVars, baseBranches.zoneVars);
+    assert.notEqual(pvarWrite.perPlayerVars, state.perPlayerVars);
+    assert.equal(pvarWrite.globalVars, state.globalVars);
+    assert.equal(pvarWrite.zoneVars, state.zoneVars);
 
-    const zoneWrite = writeScopedVarToBranches(
-      baseBranches,
-      {
-        endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
-        value: 4,
-      },
-    );
+    const zoneWrite = writeScopedVarsToState(state, [
+      { endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value: 4 },
+    ]);
     assert.equal(zoneWrite.zoneVars['zone-a:none']?.supply, 4);
-    assert.notEqual(zoneWrite.zoneVars, baseBranches.zoneVars);
-    assert.equal(zoneWrite.globalVars, baseBranches.globalVars);
-    assert.equal(zoneWrite.perPlayerVars, baseBranches.perPlayerVars);
+    assert.notEqual(zoneWrite.zoneVars, state.zoneVars);
+    assert.equal(zoneWrite.globalVars, state.globalVars);
+    assert.equal(zoneWrite.perPlayerVars, state.perPlayerVars);
   });
 
   it('throws canonical runtime diagnostics for malformed zone write construction', () => {

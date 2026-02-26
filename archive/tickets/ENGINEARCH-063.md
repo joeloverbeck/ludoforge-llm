@@ -1,6 +1,6 @@
 # ENGINEARCH-063: Enforce a single public scoped-var write surface and add architecture guardrails
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel scoped-var write API surface + effects-var cleanup + guard tests
@@ -14,8 +14,9 @@ The runtime currently routes writes through `writeScopedVarsToState`, but branch
 
 1. `effects-var.ts` and `effects-resource.ts` currently use `writeScopedVarsToState`, so runtime behavior is already functionally centralized on the batched state writer.
 2. `scoped-var-runtime-access.ts` still exports `writeScopedVarToBranches` and `writeScopedVarsToBranches`, which exposes non-canonical write entry points beyond module boundaries.
-3. Existing tests cover scoped write correctness but do not enforce an architectural boundary that forbids reintroducing non-canonical write paths in effect modules.
-4. **Mismatch + correction**: scoped writes should expose exactly one public state-level write API, with branch-level helpers internal to the module, and static guard tests should prevent drift.
+3. Existing architecture-guard tests cover other kernel boundaries (resolver normalization, endpoint-resolver policy, scoped int-read policy), but there is no guard dedicated to scoped-var write-surface drift.
+4. `scoped-var-runtime-access.test.ts` currently imports/tests `writeScopedVarToBranches`, so removing branch-level exports requires test updates in that file.
+5. **Mismatch + correction**: scoped writes should expose exactly one public state-level write API (`writeScopedVarsToState`) while keeping branch-level writers module-private, with static guard tests preventing drift.
 
 ## Architecture Check
 
@@ -40,6 +41,8 @@ Add a kernel guard test that fails when:
 - `writeScopedVarToState` is reintroduced,
 - branch-level helpers are exported from `scoped-var-runtime-access.ts`.
 
+Leverage the existing `packages/engine/test/unit/kernel/*-guard.test.ts` pattern and helper utilities instead of introducing a one-off guard style.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/scoped-var-runtime-access.ts` (modify)
@@ -58,7 +61,7 @@ Add a kernel guard test that fails when:
 
 ### Tests That Must Pass
 
-1. Scoped write module exports only canonical state-level write API (`writeScopedVarsToState`) for runtime mutation entry.
+1. Scoped write module keeps exactly one exported runtime write entry point (`writeScopedVarsToState`); branch-level write helpers are not exported.
 2. Kernel guard test fails if effect modules bypass canonical scoped write surface or if removed alias paths reappear.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
 
@@ -72,7 +75,7 @@ Add a kernel guard test that fails when:
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` — static architecture guard for canonical scoped write surface usage.
-2. `packages/engine/test/unit/scoped-var-runtime-access.test.ts` — update imports/assertions to match narrowed public API (if required).
+2. `packages/engine/test/unit/scoped-var-runtime-access.test.ts` — update imports/assertions to match narrowed public write API (required because branch helper is currently imported).
 
 ### Commands
 
@@ -80,3 +83,19 @@ Add a kernel guard test that fails when:
 2. `node --test packages/engine/dist/test/unit/kernel/scoped-var-write-surface-guard.test.js packages/engine/dist/test/unit/scoped-var-runtime-access.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- What changed:
+  - Removed public exports for branch-level scoped write helpers in `scoped-var-runtime-access.ts` (`writeScopedVarToBranches`, `writeScopedVarsToBranches`) so `writeScopedVarsToState` is the single exported write entry point.
+  - Simplified `applySetVar` in `effects-var.ts` to a single canonical return path while preserving zone-write type/invariant safety.
+  - Added `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` to enforce canonical scoped write architecture and prevent drift.
+  - Updated `packages/engine/test/unit/scoped-var-runtime-access.test.ts` to validate immutability through `writeScopedVarsToState` rather than branch-level helpers.
+- Deviations from original plan:
+  - No behavioral/runtime semantic changes were needed; work stayed at API-surface tightening + architecture guards.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/scoped-var-write-surface-guard.test.js packages/engine/dist/test/unit/scoped-var-runtime-access.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (293/293).
+  - `pnpm -F @ludoforge/engine lint` passed.

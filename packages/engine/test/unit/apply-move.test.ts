@@ -171,12 +171,18 @@ const createEventDynamicDecisionState = (): GameState => ({
 
 const createDeferredDecisionEventDef = (
   withFreeGrant: boolean,
-  options?: { readonly operationRequiresDynamicDecision?: boolean },
+  options?: {
+    readonly operationRequiresDynamicDecision?: boolean;
+    readonly includePlayCondition?: boolean;
+  },
 ): GameDef =>
   ({
     metadata: { id: withFreeGrant ? 'deferred-decision-with-grant' : 'deferred-decision-no-grant', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
-    globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+    globalVars: [
+      { name: 'resolved', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'canPlay', type: 'int', init: 1, min: 0, max: 1 },
+    ],
     perPlayerVars: [],
     zones: [
       { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
@@ -248,6 +254,15 @@ const createDeferredDecisionEventDef = (
             id: 'card-deferred',
             title: 'Deferred Card',
             sideMode: 'single',
+            ...(options?.includePlayCondition === true
+              ? {
+                playCondition: {
+                  op: '>=',
+                  left: { ref: 'gvar', var: 'canPlay' },
+                  right: 1,
+                },
+              }
+              : {}),
             unshaded: {
               effectTiming: 'afterGrants',
               ...(withFreeGrant
@@ -2244,6 +2259,23 @@ phase: [asPhaseId('main')],
   it('keeps incomplete deferred event-side params illegal when afterGrants has no free-op grants', () => {
     const def = createDeferredDecisionEventDef(false);
     const state = createDeferredDecisionEventState(def);
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
+        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        return true;
+      },
+    );
+  });
+
+  it('keeps incomplete deferred event-side params illegal when playCondition is false', () => {
+    const def = createDeferredDecisionEventDef(true, { includePlayCondition: true });
+    const baseState = createDeferredDecisionEventState(def);
+    const state = { ...baseState, globalVars: { ...baseState.globalVars, canPlay: 0 } };
 
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),

@@ -1,6 +1,6 @@
 # FITLKERN-022: Add `playCondition` guard coverage for deferred incomplete-decision leniency
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — unit tests (kernel apply-move legality)
@@ -14,12 +14,13 @@ Without this coverage, future changes could reintroduce leniency for unplayable 
 
 ## Assumption Reassessment (2026-02-26)
 
-1. `shouldDeferIncompleteDecisionValidationForMove` in `packages/engine/src/kernel/event-execution.ts` now checks `playCondition` before allowing deferred leniency.
-2. Current tests in `packages/engine/test/unit/apply-move.test.ts` cover:
+1. Verified: `shouldDeferIncompleteDecisionValidationForMove` in `packages/engine/src/kernel/event-execution.ts` checks card `playCondition` before allowing deferred leniency.
+2. Verified: current tests in `packages/engine/test/unit/apply-move.test.ts` cover:
    - deferred leniency allowed with `afterGrants` + free-op grants
    - deferred leniency rejected without free-op grants
    - non-event actions rejected even with pending deferred grants
-3. Mismatch + correction: there is no explicit test asserting that false `playCondition` keeps incomplete event params illegal even when card timing/grants would otherwise qualify.
+3. Verified gap: there is no explicit test asserting that false `playCondition` keeps incomplete event params illegal even when card timing/grants would otherwise qualify.
+4. Scope correction: implementation remains unit-test-only in `apply-move.test.ts`; no runtime code changes are required.
 
 ## Architecture Check
 
@@ -40,9 +41,9 @@ Create a deferred event fixture where:
 
 Assert `applyMove` throws `ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS` for incomplete event params.
 
-### 2. Add true-`playCondition` control test (optional if existing fixture can be reused)
+### 2. Reuse existing true-path control coverage
 
-Either reuse existing passing deferred case or add an explicit paired assertion where `playCondition` is true and incomplete params are accepted in the intended deferred path.
+Use the existing passing deferred case (`afterGrants` + pending free-op grant) as the true-path control for allowed leniency.
 
 ## Files to Touch
 
@@ -78,3 +79,18 @@ Either reuse existing passing deferred case or add an explicit paired assertion 
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/unit/apply-move.test.js`
 3. `pnpm -F @ludoforge/engine test:unit`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- Implemented:
+  - Added explicit unit coverage for deferred event legality when `playCondition` is false, asserting `MOVE_HAS_INCOMPLETE_PARAMS` for incomplete dynamic event params.
+  - Kept the existing deferred-with-grant case as the true-path control.
+- Changed vs originally planned:
+  - No runtime/kernel code changes were needed; this remained a test-only invariant lock.
+  - Added fixture support in test setup to include optional `playCondition` for deferred event cards.
+- Verification:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/apply-move.test.js` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed (176/176).
+  - `pnpm -F @ludoforge/engine lint` passed.

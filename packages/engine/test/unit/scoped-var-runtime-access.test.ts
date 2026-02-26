@@ -5,6 +5,7 @@ import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createRng,
 import type { EffectContext } from '../../src/kernel/effect-context.js';
 import {
   readScopedVarValue,
+  resolveRuntimeScopedEndpoint,
   resolveScopedIntVarDef,
   resolveScopedVarDef,
   resolveSinglePlayerWithNormalization,
@@ -175,6 +176,92 @@ describe('scoped-var-runtime-access', () => {
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
         String(error).includes('zone endpoint resolution failed') &&
         String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('resolves runtime scoped endpoints for global/pvar/zoneVar', () => {
+    const ctx = makeCtx();
+
+    const globalEndpoint = resolveRuntimeScopedEndpoint(
+      { scope: 'global', var: 'score' },
+      ctx,
+      {
+        code: 'variableRuntimeValidationFailed',
+        effectType: 'setVar',
+        pvarCardinalityMessage: 'must resolve one player',
+        pvarResolutionFailureMessage: 'pvar resolution failed',
+        zoneResolutionFailureMessage: 'zone resolution failed',
+      },
+    );
+    const pvarEndpoint = resolveRuntimeScopedEndpoint(
+      { scope: 'pvar', player: 'actor', var: 'hp' },
+      ctx,
+      {
+        code: 'variableRuntimeValidationFailed',
+        effectType: 'setVar',
+        pvarCardinalityMessage: 'must resolve one player',
+        pvarResolutionFailureMessage: 'pvar resolution failed',
+        zoneResolutionFailureMessage: 'zone resolution failed',
+      },
+    );
+    const zoneEndpoint = resolveRuntimeScopedEndpoint(
+      { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
+      ctx,
+      {
+        code: 'resourceRuntimeValidationFailed',
+        effectType: 'transferVar',
+        pvarCardinalityMessage: 'must resolve one player',
+        pvarResolutionFailureMessage: 'pvar resolution failed',
+        zoneResolutionFailureMessage: 'zone resolution failed',
+      },
+    );
+
+    assert.deepEqual(globalEndpoint, { scope: 'global', var: 'score' });
+    assert.deepEqual(pvarEndpoint, { scope: 'pvar', player: asPlayerId(0), var: 'hp' });
+    assert.deepEqual(zoneEndpoint, { scope: 'zone', zone: 'zone-a:none', var: 'supply' });
+  });
+
+  it('throws on missing transferVar pvar/zone selectors through shared endpoint resolver', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        resolveRuntimeScopedEndpoint(
+          { scope: 'pvar', var: 'hp' },
+          ctx,
+          {
+            code: 'resourceRuntimeValidationFailed',
+            effectType: 'transferVar',
+            pvarCardinalityMessage: 'must resolve one player',
+            pvarResolutionFailureMessage: 'pvar resolution failed',
+            zoneResolutionFailureMessage: 'zone resolution failed',
+            pvarMissingSelectorMessage: 'transferVar pvar endpoint requires player selector',
+            zoneMissingSelectorMessage: 'transferVar zoneVar endpoint requires zone selector',
+          },
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('transferVar pvar endpoint requires player selector'),
+    );
+
+    assert.throws(
+      () =>
+        resolveRuntimeScopedEndpoint(
+          { scope: 'zoneVar', var: 'supply' },
+          ctx,
+          {
+            code: 'resourceRuntimeValidationFailed',
+            effectType: 'transferVar',
+            pvarCardinalityMessage: 'must resolve one player',
+            pvarResolutionFailureMessage: 'pvar resolution failed',
+            zoneResolutionFailureMessage: 'zone resolution failed',
+            pvarMissingSelectorMessage: 'transferVar pvar endpoint requires player selector',
+            zoneMissingSelectorMessage: 'transferVar zoneVar endpoint requires zone selector',
+          },
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('transferVar zoneVar endpoint requires zone selector'),
     );
   });
 });

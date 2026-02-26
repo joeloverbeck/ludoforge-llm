@@ -16,6 +16,22 @@ type DefinitionScopeEndpoint = Readonly<{
   var: string;
 }>;
 
+export type ScopedVarResolvableEndpoint =
+  | Readonly<{
+      scope: 'global';
+      var: string;
+    }>
+  | Readonly<{
+      scope: 'pvar';
+      var: string;
+      player?: PlayerSel;
+    }>
+  | Readonly<{
+      scope: 'zoneVar';
+      var: string;
+      zone?: ZoneRef;
+    }>;
+
 export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
 
 const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
@@ -120,6 +136,89 @@ export const resolveZoneWithNormalization = (
       },
     });
   }
+};
+
+export const resolveRuntimeScopedEndpoint = (
+  endpoint: ScopedVarResolvableEndpoint,
+  evalCtx: EffectContext,
+  options: Readonly<{
+    code: ScopedVarRuntimeErrorCode;
+    effectType: ScopedVarEffectType;
+    pvarCardinalityMessage: string;
+    pvarResolutionFailureMessage: string;
+    zoneResolutionFailureMessage: string;
+    pvarMissingSelectorMessage?: string;
+    zoneMissingSelectorMessage?: string;
+    context?: Readonly<Record<string, unknown>>;
+  }>,
+): RuntimeScopedVarEndpoint => {
+  if (endpoint.scope === 'global') {
+    return {
+      scope: 'global',
+      var: endpoint.var,
+    };
+  }
+
+  if (endpoint.scope === 'pvar') {
+    if (endpoint.player === undefined) {
+      throw effectRuntimeError(
+        options.code,
+        options.pvarMissingSelectorMessage ?? `${options.effectType} pvar endpoint requires player selector`,
+        {
+          effectType: options.effectType,
+          scope: 'pvar',
+          endpoint,
+          ...(options.context ?? {}),
+        },
+      );
+    }
+
+    const player = resolveSinglePlayerWithNormalization(endpoint.player, evalCtx, {
+      code: options.code,
+      effectType: options.effectType,
+      scope: 'pvar',
+      cardinalityMessage: options.pvarCardinalityMessage,
+      resolutionFailureMessage: options.pvarResolutionFailureMessage,
+      context: {
+        endpoint,
+        ...(options.context ?? {}),
+      },
+    });
+    return {
+      scope: 'pvar',
+      player,
+      var: endpoint.var,
+    };
+  }
+
+  if (endpoint.zone === undefined) {
+    throw effectRuntimeError(
+      options.code,
+      options.zoneMissingSelectorMessage ?? `${options.effectType} zoneVar endpoint requires zone selector`,
+      {
+        effectType: options.effectType,
+        scope: 'zoneVar',
+        endpoint,
+        ...(options.context ?? {}),
+      },
+    );
+  }
+
+  const zone = resolveZoneWithNormalization(endpoint.zone, evalCtx, {
+    code: options.code,
+    effectType: options.effectType,
+    scope: 'zoneVar',
+    resolutionFailureMessage: options.zoneResolutionFailureMessage,
+    context: {
+      endpoint,
+      ...(options.context ?? {}),
+    },
+  });
+  return {
+    scope: 'zone',
+    zone,
+    var: endpoint.var,
+  };
 };
 
 export const resolveScopedVarDef = (

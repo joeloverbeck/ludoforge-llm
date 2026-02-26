@@ -1,6 +1,12 @@
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
-import { resolveSinglePlayerWithNormalization, resolveZoneWithNormalization } from './scoped-var-runtime-access.js';
+import {
+  readScopedVarValue,
+  resolveRuntimeScopedEndpoint,
+  resolveScopedVarDef,
+  resolveSinglePlayerWithNormalization,
+  writeScopedVarToBranches,
+} from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -39,46 +45,61 @@ const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): bo
   return value;
 };
 
-const resolveGlobalVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
-  const variableDef = ctx.def.globalVars.find((variable) => variable.name === varName);
-  if (variableDef === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Unknown global variable: ${varName}`, {
-      effectType,
+const writeScopedVarToState = (
+  ctx: EffectContext,
+  endpoint: RuntimeScopedVarEndpoint,
+  value: number | boolean,
+): EffectContext['state'] => {
+  const baseBranches = {
+    globalVars: ctx.state.globalVars,
+    perPlayerVars: ctx.state.perPlayerVars,
+    zoneVars: ctx.state.zoneVars,
+  };
+  const branches =
+    endpoint.scope === 'zone'
+      ? writeScopedVarToBranches(baseBranches, endpoint, value as number)
+      : writeScopedVarToBranches(baseBranches, endpoint, value);
+
+  return {
+    ...ctx.state,
+    globalVars: branches.globalVars,
+    perPlayerVars: branches.perPlayerVars,
+    zoneVars: branches.zoneVars,
+  };
+};
+
+const readScopedIntForAddVar = (ctx: EffectContext, endpoint: RuntimeScopedVarEndpoint, variableName: string): number => {
+  const value = readScopedVarValue(ctx, endpoint, 'addVar', 'variableRuntimeValidationFailed');
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (endpoint.scope === 'global') {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Global variable state is missing: ${variableName}`, {
+      effectType: 'addVar',
       scope: 'global',
-      var: varName,
-      availableGlobalVars: ctx.def.globalVars.map((variable) => variable.name).sort(),
+      var: variableName,
+      availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
     });
   }
 
-  return variableDef;
-};
-
-const resolvePerPlayerVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
-  const variableDef = ctx.def.perPlayerVars.find((variable) => variable.name === varName);
-  if (variableDef === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Unknown per-player variable: ${varName}`, {
-      effectType,
+  if (endpoint.scope === 'pvar') {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player variable state is missing: ${variableName}`, {
+      effectType: 'addVar',
       scope: 'pvar',
-      var: varName,
-      availablePerPlayerVars: ctx.def.perPlayerVars.map((variable) => variable.name).sort(),
+      playerId: endpoint.player,
+      var: variableName,
+      availablePlayerVars: Object.keys(ctx.state.perPlayerVars[endpoint.player] ?? {}).sort(),
     });
   }
 
-  return variableDef;
-};
-
-const resolveZoneVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
-  const variableDef = (ctx.def.zoneVars ?? []).find((variable) => variable.name === varName);
-  if (variableDef === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Unknown zone variable: ${varName}`, {
-      effectType,
-      scope: 'zoneVar',
-      var: varName,
-      availableZoneVars: (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort(),
-    });
-  }
-
-  return variableDef;
+  throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing: ${variableName} in zone ${String(endpoint.zone)}`, {
+    effectType: 'addVar',
+    scope: 'zoneVar',
+    zone: String(endpoint.zone),
+    var: variableName,
+    availableZoneVars: Object.keys(ctx.state.zoneVars[String(endpoint.zone)] ?? {}).sort(),
+  });
 };
 
 const emitVarChangeArtifacts = (
@@ -96,342 +117,89 @@ const emitVarChangeArtifacts = (
 };
 
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { scope, var: variableName, value } = effect.setVar;
+  const { var: variableName, value } = effect.setVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedValue = evalValue(value, evalCtx);
-
-  if (scope === 'zoneVar') {
-    const resolvedZoneId = resolveZoneWithNormalization(effect.setVar.zone, evalCtx, {
-      code: 'variableRuntimeValidationFailed',
-      effectType: 'setVar',
-      scope: 'zoneVar',
-      resolutionFailureMessage: 'setVar zoneVar selector resolution failed',
-      context: { endpoint: effect.setVar },
-    });
-    const variableDef = resolveZoneVarDef(ctx, variableName, 'setVar');
-    if (variableDef.type !== 'int') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `setVar on zone variable only supports int type: ${variableName}`, {
-        effectType: 'setVar',
-        scope: 'zoneVar',
-        var: variableName,
-        actualType: variableDef.type,
-      });
-    }
-
-    const zoneVarMap = ctx.state.zoneVars[String(resolvedZoneId)];
-    if (zoneVarMap === undefined) {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing for zone: ${String(resolvedZoneId)}`, {
-        effectType: 'setVar',
-        scope: 'zoneVar',
-        zone: String(resolvedZoneId),
-        var: variableName,
-        availableZones: Object.keys(ctx.state.zoneVars).sort(),
-      });
-    }
-
-    const currentValue = zoneVarMap[variableName];
-    if (typeof currentValue !== 'number') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing: ${variableName} in zone ${String(resolvedZoneId)}`, {
-        effectType: 'setVar',
-        scope: 'zoneVar',
-        zone: String(resolvedZoneId),
-        var: variableName,
-        availableZoneVars: Object.keys(zoneVarMap).sort(),
-      });
-    }
-
-    const nextValue = clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max);
-    const emittedEvent = emitVarChangeArtifacts(
-      ctx,
-      { scope: 'zone', zone: resolvedZoneId, var: variableName },
-      currentValue,
-      nextValue,
-    );
-    if (emittedEvent === undefined) {
-      return { state: ctx.state, rng: ctx.rng };
-    }
-
-    return {
-      state: {
-        ...ctx.state,
-        zoneVars: {
-          ...ctx.state.zoneVars,
-          [String(resolvedZoneId)]: {
-            ...zoneVarMap,
-            [variableName]: nextValue,
-          },
-        },
-      },
-      rng: ctx.rng,
-      emittedEvents: [emittedEvent],
-    };
-  }
-
-  if (scope === 'global') {
-    const variableDef = resolveGlobalVarDef(ctx, variableName, 'setVar');
-    const currentValue = ctx.state.globalVars[variableName];
-    if (typeof currentValue !== 'number' && typeof currentValue !== 'boolean') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `Global variable state is missing: ${variableName}`, {
-        effectType: 'setVar',
-        scope: 'global',
-        var: variableName,
-        availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
-      });
-    }
-
-    const nextValue =
-      variableDef.type === 'int'
-        ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
-        : expectBoolean(evaluatedValue, 'setVar', 'value');
-    const emittedEvent = emitVarChangeArtifacts(ctx, { scope: 'global', var: variableName }, currentValue, nextValue);
-    if (emittedEvent === undefined) {
-      return { state: ctx.state, rng: ctx.rng };
-    }
-
-    return {
-      state: {
-        ...ctx.state,
-        globalVars: {
-          ...ctx.state.globalVars,
-          [variableName]: nextValue,
-        },
-      },
-      rng: ctx.rng,
-      emittedEvents: [emittedEvent],
-    };
-  }
-
-  const playerId = resolveSinglePlayerWithNormalization(effect.setVar.player, evalCtx, {
+  const endpoint = resolveRuntimeScopedEndpoint(effect.setVar, evalCtx, {
     code: 'variableRuntimeValidationFailed',
     effectType: 'setVar',
-    scope: 'pvar',
-    cardinalityMessage: 'Per-player variable operations require exactly one resolved player',
-    resolutionFailureMessage: 'setVar pvar selector resolution failed',
+    pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
+    pvarResolutionFailureMessage: 'setVar pvar selector resolution failed',
+    zoneResolutionFailureMessage: 'setVar zoneVar selector resolution failed',
     context: { endpoint: effect.setVar },
   });
-  const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'setVar');
-  const playerVars = ctx.state.perPlayerVars[playerId];
-  if (playerVars === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
+  const variableDef = resolveScopedVarDef(
+    ctx,
+    { scope: effect.setVar.scope, var: variableName },
+    'setVar',
+    'variableRuntimeValidationFailed',
+  );
+  if (endpoint.scope === 'zone' && variableDef.type !== 'int') {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `setVar on zone variable only supports int type: ${variableName}`, {
       effectType: 'setVar',
-      scope: 'pvar',
-      playerId,
-      availablePlayers: Object.keys(ctx.state.perPlayerVars).sort(),
-    });
-  }
-
-  const currentValue = playerVars[variableName];
-  if (typeof currentValue !== 'number' && typeof currentValue !== 'boolean') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player variable state is missing: ${variableName}`, {
-      effectType: 'setVar',
-      scope: 'pvar',
-      playerId,
+      scope: 'zoneVar',
       var: variableName,
-      availablePlayerVars: Object.keys(playerVars).sort(),
+      actualType: variableDef.type,
     });
   }
 
+  const currentValue = readScopedVarValue(ctx, endpoint, 'setVar', 'variableRuntimeValidationFailed');
   const nextValue =
     variableDef.type === 'int'
       ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
-  const emittedEvent = emitVarChangeArtifacts(
-    ctx,
-    { scope: 'pvar', player: playerId, var: variableName },
-    currentValue,
-    nextValue,
-  );
+  const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: ctx.state, rng: ctx.rng };
   }
 
   return {
-    state: {
-      ...ctx.state,
-      perPlayerVars: {
-        ...ctx.state.perPlayerVars,
-        [playerId]: {
-          ...playerVars,
-          [variableName]: nextValue,
-        },
-      },
-    },
+    state: writeScopedVarToState(ctx, endpoint, nextValue),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };
 };
 
 export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const { scope, var: variableName, delta } = effect.addVar;
+  const { var: variableName, delta } = effect.addVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
-
-  if (scope === 'zoneVar') {
-    const resolvedZoneId = resolveZoneWithNormalization(effect.addVar.zone, evalCtx, {
-      code: 'variableRuntimeValidationFailed',
-      effectType: 'addVar',
-      scope: 'zoneVar',
-      resolutionFailureMessage: 'addVar zoneVar selector resolution failed',
-      context: { endpoint: effect.addVar },
-    });
-    const variableDef = resolveZoneVarDef(ctx, variableName, 'addVar');
-    if (variableDef.type !== 'int') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int zone variable: ${variableName}`, {
-        effectType: 'addVar',
-        scope: 'zoneVar',
-        var: variableName,
-        actualType: variableDef.type,
-      });
-    }
-
-    const zoneVarMap = ctx.state.zoneVars[String(resolvedZoneId)];
-    if (zoneVarMap === undefined) {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing for zone: ${String(resolvedZoneId)}`, {
-        effectType: 'addVar',
-        scope: 'zoneVar',
-        zone: String(resolvedZoneId),
-        var: variableName,
-        availableZones: Object.keys(ctx.state.zoneVars).sort(),
-      });
-    }
-
-    const currentValue = zoneVarMap[variableName];
-    if (typeof currentValue !== 'number') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing: ${variableName} in zone ${String(resolvedZoneId)}`, {
-        effectType: 'addVar',
-        scope: 'zoneVar',
-        zone: String(resolvedZoneId),
-        var: variableName,
-        availableZoneVars: Object.keys(zoneVarMap).sort(),
-      });
-    }
-
-    const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-    const emittedEvent = emitVarChangeArtifacts(
-      ctx,
-      { scope: 'zone', zone: resolvedZoneId, var: variableName },
-      currentValue,
-      nextValue,
-    );
-    if (emittedEvent === undefined) {
-      return { state: ctx.state, rng: ctx.rng };
-    }
-
-    return {
-      state: {
-        ...ctx.state,
-        zoneVars: {
-          ...ctx.state.zoneVars,
-          [String(resolvedZoneId)]: {
-            ...zoneVarMap,
-            [variableName]: nextValue,
-          },
-        },
-      },
-      rng: ctx.rng,
-      emittedEvents: [emittedEvent],
-    };
-  }
-
-  if (scope === 'global') {
-    const variableDef = resolveGlobalVarDef(ctx, variableName, 'addVar');
-    if (variableDef.type !== 'int') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int variable: ${variableName}`, {
-        effectType: 'addVar',
-        scope: 'global',
-        var: variableName,
-        actualType: variableDef.type,
-      });
-    }
-    const currentValue = ctx.state.globalVars[variableName];
-    if (typeof currentValue !== 'number') {
-      throw effectRuntimeError('variableRuntimeValidationFailed', `Global variable state is missing: ${variableName}`, {
-        effectType: 'addVar',
-        scope: 'global',
-        var: variableName,
-        availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
-      });
-    }
-
-    const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-    const emittedEvent = emitVarChangeArtifacts(ctx, { scope: 'global', var: variableName }, currentValue, nextValue);
-    if (emittedEvent === undefined) {
-      return { state: ctx.state, rng: ctx.rng };
-    }
-
-    return {
-      state: {
-        ...ctx.state,
-        globalVars: {
-          ...ctx.state.globalVars,
-          [variableName]: nextValue,
-        },
-      },
-      rng: ctx.rng,
-      emittedEvents: [emittedEvent],
-    };
-  }
-
-  const playerId = resolveSinglePlayerWithNormalization(effect.addVar.player, evalCtx, {
+  const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, {
     code: 'variableRuntimeValidationFailed',
     effectType: 'addVar',
-    scope: 'pvar',
-    cardinalityMessage: 'Per-player variable operations require exactly one resolved player',
-    resolutionFailureMessage: 'addVar pvar selector resolution failed',
+    pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
+    pvarResolutionFailureMessage: 'addVar pvar selector resolution failed',
+    zoneResolutionFailureMessage: 'addVar zoneVar selector resolution failed',
     context: { endpoint: effect.addVar },
   });
-  const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'addVar');
+  const variableDef = resolveScopedVarDef(
+    ctx,
+    { scope: effect.addVar.scope, var: variableName },
+    'addVar',
+    'variableRuntimeValidationFailed',
+  );
   if (variableDef.type !== 'int') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int variable: ${variableName}`, {
+    const message =
+      effect.addVar.scope === 'zoneVar'
+        ? `addVar cannot target non-int zone variable: ${variableName}`
+        : `addVar cannot target non-int variable: ${variableName}`;
+    throw effectRuntimeError('variableRuntimeValidationFailed', message, {
       effectType: 'addVar',
-      scope: 'pvar',
+      scope: effect.addVar.scope,
       var: variableName,
       actualType: variableDef.type,
     });
   }
-  const playerVars = ctx.state.perPlayerVars[playerId];
-  if (playerVars === undefined) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
-      effectType: 'addVar',
-      scope: 'pvar',
-      playerId,
-      availablePlayers: Object.keys(ctx.state.perPlayerVars).sort(),
-    });
-  }
 
-  const currentValue = playerVars[variableName];
-  if (typeof currentValue !== 'number') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player variable state is missing: ${variableName}`, {
-      effectType: 'addVar',
-      scope: 'pvar',
-      playerId,
-      var: variableName,
-      availablePlayerVars: Object.keys(playerVars).sort(),
-    });
-  }
-
+  const currentValue = readScopedIntForAddVar(ctx, endpoint, variableName);
   const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-  const emittedEvent = emitVarChangeArtifacts(
-    ctx,
-    { scope: 'pvar', player: playerId, var: variableName },
-    currentValue,
-    nextValue,
-  );
+  const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: ctx.state, rng: ctx.rng };
   }
 
   return {
-    state: {
-      ...ctx.state,
-      perPlayerVars: {
-        ...ctx.state.perPlayerVars,
-        [playerId]: {
-          ...playerVars,
-          [variableName]: nextValue,
-        },
-      },
-    },
+    state: writeScopedVarToState(ctx, endpoint, nextValue),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };

@@ -99,6 +99,27 @@ describe('effects var handlers', () => {
     assert.equal(result.state.globalVars, ctx.state.globalVars);
   });
 
+  it('setVar zoneVar updates only the targeted zone branch', () => {
+    const zoneCtx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [{ id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' }],
+        zoneVars: [{ name: 'threat', type: 'int', init: 0, min: 0, max: 10 }],
+      },
+      state: {
+        ...makeState(),
+        zoneVars: { 'zone-a:none': { threat: 4 } },
+      },
+    });
+
+    const result = applyEffect({ setVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', value: 8 } }, zoneCtx);
+
+    assert.equal(result.state.zoneVars['zone-a:none']?.threat, 8);
+    assert.notEqual(result.state.zoneVars, zoneCtx.state.zoneVars);
+    assert.equal(result.state.globalVars, zoneCtx.state.globalVars);
+    assert.equal(result.state.perPlayerVars, zoneCtx.state.perPlayerVars);
+  });
+
   it('setVar supports boolean variables for global and per-player scopes', () => {
     const ctx = makeCtx();
 

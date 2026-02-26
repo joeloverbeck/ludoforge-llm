@@ -326,6 +326,24 @@ describe('transferVar effect', () => {
     ]);
   });
 
+  it('zoneVar->zoneVar transfer preserves unrelated global/per-player branch references', () => {
+    const ctx = makeCtx();
+    const result = applyEffect(
+      {
+        transferVar: {
+          from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
+          to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
+          amount: 2,
+        },
+      },
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars, ctx.state.globalVars);
+    assert.equal(result.state.perPlayerVars, ctx.state.perPlayerVars);
+    assert.notEqual(result.state.zoneVars, ctx.state.zoneVars);
+  });
+
   it('caps transfer by destination max headroom while preserving conservation', () => {
     const ctx = makeCtx({
       state: {

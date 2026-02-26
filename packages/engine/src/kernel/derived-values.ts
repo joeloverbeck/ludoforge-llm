@@ -116,6 +116,7 @@ export type VictoryFormula =
       readonly type: 'markerTotalPlusZoneCount';
       readonly markerConfig: MarkerWeightConfig;
       readonly countZone: string;
+      readonly countTokenTypes?: readonly string[];
     }
   | {
       readonly type: 'markerTotalPlusMapBases';
@@ -306,19 +307,31 @@ export function sumControlledPopulation(
   return total;
 }
 
+/** Discriminated filter for `countTokensInZone`. */
+export type ZoneCountFilter =
+  | { readonly kind: 'bySeat'; readonly seats: readonly string[]; readonly seatProp: string }
+  | { readonly kind: 'byTokenType'; readonly tokenTypes: readonly string[] };
+
 /**
- * Count tokens in a single zone, optionally filtered by seat.
+ * Count tokens in a single zone, optionally filtered by seat or token type.
+ * The two filter modes are mutually exclusive (enforced by the discriminated union).
  */
 export function countTokensInZone(
   state: GameState,
   zoneId: string,
-  seats?: readonly string[],
-  seatProp?: string,
+  filter?: ZoneCountFilter,
 ): number {
-  if (seats !== undefined && seatProp !== undefined) {
-    return countSeatTokens(state, zoneId, seats, seatProp);
+  if (filter === undefined) {
+    return getZoneTokens(state, zoneId).length;
   }
-  return getZoneTokens(state, zoneId).length;
+  switch (filter.kind) {
+    case 'bySeat':
+      return countSeatTokens(state, zoneId, filter.seats, filter.seatProp);
+    case 'byTokenType': {
+      const tokens = getZoneTokens(state, zoneId);
+      return tokens.filter(t => filter.tokenTypes.includes(t.type)).length;
+    }
+  }
 }
 
 /**
@@ -359,7 +372,13 @@ export function computeVictoryMarker(
   switch (formula.type) {
     case 'markerTotalPlusZoneCount': {
       const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
-      const zoneCount = countTokensInZone(state, formula.countZone);
+      const zoneCount = countTokensInZone(
+        state,
+        formula.countZone,
+        formula.countTokenTypes !== undefined
+          ? { kind: 'byTokenType', tokenTypes: formula.countTokenTypes }
+          : undefined,
+      );
       return markerTotal + zoneCount;
     }
     case 'markerTotalPlusMapBases': {

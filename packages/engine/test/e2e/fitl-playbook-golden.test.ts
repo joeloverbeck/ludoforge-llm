@@ -378,6 +378,7 @@ const FITL_US_FORMULA: VictoryFormula = {
   type: 'markerTotalPlusZoneCount',
   markerConfig: FITL_SUPPORT_CONFIG,
   countZone: 'available-US:none',
+  countTokenTypes: ['us-troops', 'us-bases'],
 };
 
 const computeUsVictory = (def: GameDef, state: GameState): number =>
@@ -460,7 +461,7 @@ const TURN_1: PlaybookTurn = {
           { space: 'saigon:none', marker: 'supportOpposition', expected: 'neutral' },
         ],
         computedValues: [
-          { label: 'US victory marker after Burning Bonze', expected: 35, compute: computeUsVictory },
+          { label: 'US victory marker after Burning Bonze', expected: 32, compute: computeUsVictory },
         ],
       },
     },
@@ -482,7 +483,7 @@ const TURN_1: PlaybookTurn = {
           { space: 'saigon:none', marker: 'supportOpposition', expected: 'neutral' },
         ],
         computedValues: [
-          { label: 'US victory marker after NVA pass', expected: 35, compute: computeUsVictory },
+          { label: 'US victory marker after NVA pass', expected: 32, compute: computeUsVictory },
         ],
       },
     },
@@ -529,7 +530,7 @@ const TURN_1: PlaybookTurn = {
           { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
         ],
         computedValues: [
-          { label: 'US victory marker after Pacify', expected: 41, compute: computeUsVictory },
+          { label: 'US victory marker after Pacify', expected: 38, compute: computeUsVictory },
         ],
       },
     },
@@ -572,7 +573,7 @@ const TURN_1: PlaybookTurn = {
       { marker: 'activeLeader', expected: 'minh' },
     ],
     computedValues: [
-      { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+      { label: 'US victory marker', expected: 38, compute: computeUsVictory },
       { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
     ],
   },
@@ -665,7 +666,7 @@ const TURN_2: PlaybookTurn = {
         ],
         computedValues: [
           // Rally doesn't change support/opposition or control → all VPs unchanged
-          { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+          { label: 'US victory marker', expected: 38, compute: computeUsVictory },
           { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
           { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
           { label: 'ARVN victory marker', expected: 35, compute: computeArvnVictory },
@@ -746,7 +747,7 @@ const TURN_2: PlaybookTurn = {
     ],
     computedValues: [
       // Sweep doesn't change support/opposition or control → all VPs unchanged
-      { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+      { label: 'US victory marker', expected: 38, compute: computeUsVictory },
       { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
       { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
       { label: 'ARVN victory marker', expected: 35, compute: computeArvnVictory },
@@ -788,11 +789,20 @@ const TURN_3: PlaybookTurn = {
           aid: 14,
           arvnResources: 24,
           patronage: 15,
+          nvaResources: 5,
+          vcResources: 5,
+          trail: 2,
         },
         zoneTokenCounts: [
           // 3 irregulars placed from available-US:none + 1 initial = 4 total
           { zone: 'binh-dinh:none', faction: 'US', type: 'irregular', count: 4 },
+          // All placed irregulars are underground per playbook
+          { zone: 'binh-dinh:none', faction: 'US', type: 'irregular', count: 4,
+            props: { activity: 'underground' } },
           { zone: 'available-US:none', faction: 'US', type: 'irregular', count: 0 },
+          // Binh Dinh VC pieces unchanged (validates COIN control count)
+          { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2 },
+          { zone: 'binh-dinh:none', faction: 'VC', type: 'base', count: 1 },
         ],
         totalTokenCounts: [
           { faction: 'US', type: 'irregular', count: 6 },
@@ -800,6 +810,12 @@ const TURN_3: PlaybookTurn = {
         markers: [
           { space: 'binh-dinh:none', marker: 'supportOpposition', expected: 'activeSupport' },
           { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+        ],
+        computedValues: [
+          { label: 'US VP after Green Berets', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN VP after COIN Control gained', expected: 37, compute: computeArvnVictory },
+          { label: 'NVA VP unchanged', expected: 4, compute: computeNvaVictory },
+          { label: 'VC VP unchanged', expected: 27, compute: computeVcVictory },
         ],
       },
     },
@@ -839,15 +855,29 @@ const TURN_3: PlaybookTurn = {
           patronage: 15,
         },
         zoneTokenCounts: [
+          // Pleiku: 2 initial underground + 2 Rally underground = 4 underground
           { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4 },
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4,
+            props: { activity: 'underground' } },
+          // Quang Tri: 2 active (Turn 2 Sweep) + 3 Rally underground = 5 total
           { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 5 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 2,
+            props: { activity: 'active' } },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3,
+            props: { activity: 'underground' } },
+          // Hue: 1 Rally underground
           { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
+          { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1,
+            props: { activity: 'underground' } },
+          // Tax spaces pre-Tax (all underground, 0 active)
           { zone: 'quang-tin-quang-ngai:none', faction: 'VC', type: 'guerrilla',
             count: 0, props: { activity: 'active' } },
           { zone: 'quang-duc-long-khanh:none', faction: 'VC', type: 'guerrilla',
             count: 0, props: { activity: 'active' } },
           { zone: 'binh-tuy-binh-thuan:none', faction: 'VC', type: 'guerrilla',
             count: 0, props: { activity: 'active' } },
+          // Available VC guerrillas after Rally placement (14 - 6 = 8)
+          { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 8 },
         ],
         totalTokenCounts: [
           { faction: 'VC', type: 'guerrilla', count: 30 },
@@ -856,6 +886,12 @@ const TURN_3: PlaybookTurn = {
           { space: 'quang-tin-quang-ngai:none', marker: 'supportOpposition', expected: 'activeOpposition' },
           { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'activeOpposition' },
           { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+        computedValues: [
+          { label: 'US VP unchanged after Rally', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN VP unchanged after Rally', expected: 37, compute: computeArvnVictory },
+          { label: 'NVA VP unchanged after Rally', expected: 4, compute: computeNvaVictory },
+          { label: 'VC VP unchanged after Rally', expected: 27, compute: computeVcVictory },
         ],
       },
     },
@@ -881,11 +917,21 @@ const TURN_3: PlaybookTurn = {
     zoneTokenCounts: [
       // Green Berets event placements
       { zone: 'binh-dinh:none', faction: 'US', type: 'irregular', count: 4 },
+      { zone: 'binh-dinh:none', faction: 'US', type: 'irregular', count: 4,
+        props: { activity: 'underground' } },
       { zone: 'available-US:none', faction: 'US', type: 'irregular', count: 0 },
-      // VC Rally placements (all underground)
+      // VC Rally placements (underground)
       { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4 },
+      { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4,
+        props: { activity: 'underground' } },
       { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 5 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 2,
+        props: { activity: 'active' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3,
+        props: { activity: 'underground' } },
       { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1,
+        props: { activity: 'underground' } },
       // Tax flipped guerrillas (1 active per space)
       { zone: 'quang-tin-quang-ngai:none', faction: 'VC', type: 'guerrilla',
         count: 1, props: { activity: 'active' } },
@@ -893,6 +939,9 @@ const TURN_3: PlaybookTurn = {
         count: 1, props: { activity: 'active' } },
       { zone: 'binh-tuy-binh-thuan:none', faction: 'VC', type: 'guerrilla',
         count: 1, props: { activity: 'active' } },
+      // Available piece counts
+      { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 8 },
+      { zone: 'available-NVA:none', faction: 'NVA', type: 'guerrilla', count: 2 },
     ],
     totalTokenCounts: [
       { faction: 'US', type: 'irregular', count: 6 },
@@ -904,6 +953,15 @@ const TURN_3: PlaybookTurn = {
       { space: 'quang-tin-quang-ngai:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
       { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
       { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+    ],
+    globalMarkers: [
+      { marker: 'activeLeader', expected: 'minh' },
+    ],
+    computedValues: [
+      { label: 'US victory marker', expected: 42, compute: computeUsVictory },
+      { label: 'ARVN victory marker', expected: 37, compute: computeArvnVictory },
+      { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
+      { label: 'VC victory marker', expected: 23, compute: computeVcVictory },
     ],
   },
 };
@@ -2114,9 +2172,9 @@ describe('FITL playbook golden suite', () => {
       globalMarkers: [
         { marker: 'activeLeader', expected: 'minh' },
       ],
-      // Victory markers at game start (US = Total Support 15 + Available-US 26 = 41)
+      // Victory markers at game start (US = Total Support 15 + Available US Troops+Bases 23 = 38)
       computedValues: [
-        { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+        { label: 'US victory marker', expected: 38, compute: computeUsVictory },
         { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
       ],
     }, 'initial state', def);

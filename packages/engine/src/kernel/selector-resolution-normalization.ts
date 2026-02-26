@@ -9,6 +9,16 @@ import type { PlayerSel, ZoneRef } from './types.js';
 
 type NormalizedResolverCode = EffectRuntimeReason;
 type NormalizedResolverEffectType = string;
+type NormalizedResolverPayloadField = 'selector' | 'zone';
+
+export type NormalizedResolverScope =
+  | 'activePlayer'
+  | 'from'
+  | 'pvar'
+  | 'space'
+  | 'to'
+  | 'zone'
+  | 'zoneVar';
 
 export const normalizeSelectorResolutionError = (
   error: unknown,
@@ -16,7 +26,9 @@ export const normalizeSelectorResolutionError = (
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
     message: string;
-    scope: string;
+    scope: NormalizedResolverScope;
+    payloadField?: NormalizedResolverPayloadField;
+    payload?: unknown;
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): never => {
@@ -37,6 +49,7 @@ export const normalizeSelectorResolutionError = (
   throw effectRuntimeError(options.code, options.message, {
     effectType: options.effectType,
     scope: options.scope,
+    ...(options.payloadField === undefined ? {} : { [options.payloadField]: options.payload }),
     ...(options.context ?? {}),
     ...(isEvalError(error) ? { sourceErrorCode: error.code } : {}),
     ...errorContext,
@@ -49,7 +62,7 @@ export const resolveSinglePlayerWithNormalization = (
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
-    scope: string;
+    scope: NormalizedResolverScope;
     cardinalityMessage: string;
     resolutionFailureMessage: string;
     context?: Readonly<Record<string, unknown>>;
@@ -67,10 +80,9 @@ export const resolveSinglePlayerWithNormalization = (
       effectType: options.effectType,
       message: options.resolutionFailureMessage,
       scope: options.scope,
-      context: {
-        selector,
-        ...(options.context ?? {}),
-      },
+      payloadField: 'selector',
+      payload: selector,
+      ...(options.context === undefined ? {} : { context: options.context }),
     });
   }
 
@@ -94,7 +106,7 @@ export const resolvePlayersWithNormalization = (
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
-    scope: string;
+    scope: NormalizedResolverScope;
     resolutionFailureMessage: string;
     context?: Readonly<Record<string, unknown>>;
   }>,
@@ -110,10 +122,9 @@ export const resolvePlayersWithNormalization = (
       effectType: options.effectType,
       message: options.resolutionFailureMessage,
       scope: options.scope,
-      context: {
-        selector,
-        ...(options.context ?? {}),
-      },
+      payloadField: 'selector',
+      payload: selector,
+      ...(options.context === undefined ? {} : { context: options.context }),
     });
   }
 };
@@ -124,7 +135,7 @@ export const resolveZoneWithNormalization = (
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
-    scope: string;
+    scope: NormalizedResolverScope;
     resolutionFailureMessage: string;
     context?: Readonly<Record<string, unknown>>;
   }>,
@@ -140,10 +151,9 @@ export const resolveZoneWithNormalization = (
       effectType: options.effectType,
       message: options.resolutionFailureMessage,
       scope: options.scope,
-      context: {
-        zone: zoneRef,
-        ...(options.context ?? {}),
-      },
+      payloadField: 'zone',
+      payload: zoneRef,
+      ...(options.context === undefined ? {} : { context: options.context }),
     });
   }
 };

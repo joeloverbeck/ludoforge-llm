@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Fire in the Lake - Playbook Turn 3
 
 GAME TURN 3, Green Berets
@@ -71,3 +73,14 @@ tokens (NVA and US to Eligible, ARVN and VC to Ineligible). Gulf
 of Tonkin becomes the current card for Turn 4 once it is placed upon
 Green Berets. Reveal the next preview card (which will be Brinks
 Hotel) for the turn following.
+
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **What changed**: Comprehensive Turn 3 assertions added to `fitl-playbook-golden.test.ts`, covering:
+  - Move 1 (ARVN Green Berets event): globalVars freeze, underground irregular placement, VC piece baselines, all 4 faction VP assertions
+  - Move 2 (VC Rally + Tax): underground/active breakdown for Rally placements, available VC guerrilla count, pre-Tax active checks, all 4 faction VP assertions
+  - Turn 3 end state: underground/active breakdown, available piece counts, globalMarkers, all 4 faction VP assertions
+- **Deviations**: Binh Dinh has 2 VC guerrillas (not 1 as originally planned). US VP formula fix required `['us-troops', 'us-bases']` token type names (matching production template types), not `['troops', 'base']` (semantic piece types).
+- **Additional fix**: Extended kernel `VictoryFormula` type with `countTokenTypes` field and fixed US VP overcounting (irregulars were included). Cascaded corrected VP values across Turns 1-2.
+- **Verification**: All 9 playbook turns pass, full engine test suite green.

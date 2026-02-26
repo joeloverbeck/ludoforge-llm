@@ -507,12 +507,33 @@ describe('countTokensInZone', () => {
     const state = makeState({
       'zone-a': [makeFactionToken('t1', 'US'), makeFactionToken('t2', 'NVA')],
     });
-    assert.equal(countTokensInZone(state, 'zone-a', ['US'], 'faction'), 1);
+    assert.equal(countTokensInZone(state, 'zone-a', { kind: 'bySeat', seats: ['US'], seatProp: 'faction' }), 1);
   });
 
   it('returns 0 for missing zone', () => {
     const state = makeState({});
     assert.equal(countTokensInZone(state, 'nonexistent'), 0);
+  });
+
+  it('counts only tokens matching tokenTypes filter', () => {
+    const state = makeState({
+      'zone-a': [
+        { id: asTokenId('t1'), type: 'troops', props: { faction: 'US' } },
+        { id: asTokenId('t2'), type: 'base', props: { faction: 'US' } },
+        { id: asTokenId('t3'), type: 'irregular', props: { faction: 'US' } },
+        { id: asTokenId('t4'), type: 'troops', props: { faction: 'US' } },
+      ],
+    });
+    assert.equal(countTokensInZone(state, 'zone-a', { kind: 'byTokenType', tokenTypes: ['troops', 'base'] }), 3);
+  });
+
+  it('returns 0 when no tokens match tokenTypes filter', () => {
+    const state = makeState({
+      'zone-a': [
+        { id: asTokenId('t1'), type: 'irregular', props: { faction: 'US' } },
+      ],
+    });
+    assert.equal(countTokensInZone(state, 'zone-a', { kind: 'byTokenType', tokenTypes: ['troops', 'base'] }), 0);
   });
 });
 
@@ -572,6 +593,27 @@ describe('computeVictoryMarker', () => {
       countZone: 'available',
     };
     assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), 8);
+  });
+
+  it('markerTotalPlusZoneCount with countTokenTypes: filters to troops+base only (5 + 2 = 7)', () => {
+    const state = makeState({
+      s1: [],
+      s2: [],
+      s3: [],
+      available: [
+        { id: asTokenId('a1'), type: 'troops', props: { faction: 'US' } },
+        { id: asTokenId('a2'), type: 'base', props: { faction: 'US' } },
+        { id: asTokenId('a3'), type: 'irregular', props: { faction: 'US' } },
+      ],
+    });
+    const formula: VictoryFormula = {
+      type: 'markerTotalPlusZoneCount',
+      markerConfig: SUPPORT_CONFIG,
+      countZone: 'available',
+      countTokenTypes: ['troops', 'base'],
+    };
+    // Total Support = 5, troops+base count = 2 (irregular excluded)
+    assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), 7);
   });
 
   it('markerTotalPlusMapBases: Total Opposition (3) + VC bases on map (1) = 4', () => {

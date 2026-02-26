@@ -387,7 +387,6 @@ export const replayPlaybookTurn = (
     }
     // Per-move intermediate assertion
     if (playMove.expectedState !== undefined) {
-
       assertPlaybookSnapshot(current, playMove.expectedState, playMove.label, def);
     }
   }

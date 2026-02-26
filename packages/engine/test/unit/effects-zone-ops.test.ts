@@ -17,6 +17,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-zone-ops-test', players: { min: 1, max: 2 } },
@@ -288,5 +289,69 @@ describe('effects moveAll and shuffle', () => {
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'SPATIAL_DESTINATION_REQUIRED');
     });
+  });
+
+  it('moveAll normalizes unresolved from selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            moveAll: {
+              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              to: 'discard:none',
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveAll.from zone resolution failed'),
+    );
+  });
+
+  it('moveAll normalizes unresolved to selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            moveAll: {
+              from: 'deck:none',
+              to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveAll.to zone resolution failed'),
+    );
+  });
+
+  it('shuffle normalizes unresolved zone selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => applyEffect({ shuffle: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } }, ctx),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'shuffle.zone resolution failed'),
+    );
+  });
+
+  it('moveTokenAdjacent normalizes unresolved from selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            moveTokenAdjacent: {
+              token: '$token',
+              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              direction: 'discard:none',
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveTokenAdjacent.from zone resolution failed'),
+    );
   });
 });

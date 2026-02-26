@@ -18,6 +18,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-token-move-draw-test', players: { min: 1, max: 2 } },
@@ -223,6 +224,57 @@ describe('effects moveToken and draw', () => {
     assert.throws(
       () => applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: 1.5 } }, ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('draw.count'),
+    );
+  });
+
+  it('draw normalizes unresolved zone selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'draw.from zone resolution failed'),
+    );
+  });
+
+  it('moveToken normalizes unresolved from selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            moveToken: {
+              token: '$token',
+              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              to: 'discard:none',
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveToken.from zone resolution failed'),
+    );
+  });
+
+  it('moveToken normalizes unresolved to selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            moveToken: {
+              token: '$token',
+              from: 'deck:none',
+              to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveToken.to zone resolution failed'),
     );
   });
 

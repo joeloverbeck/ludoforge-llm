@@ -3046,10 +3046,10 @@
                                                 "transferVar": {
                                                   "from": {
                                                     "scope": "pvar",
-                                                    "var": "chipStack",
                                                     "player": {
                                                       "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player"
-                                                    }
+                                                    },
+                                                    "var": "chipStack"
                                                   },
                                                   "to": {
                                                     "scope": "global",
@@ -3115,10 +3115,10 @@
                               "transferVar": {
                                 "from": {
                                   "scope": "pvar",
-                                  "var": "chipStack",
                                   "player": {
                                     "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__dealerSeatBinding"
-                                  }
+                                  },
+                                  "var": "chipStack"
                                 },
                                 "to": {
                                   "scope": "global",
@@ -3188,10 +3188,10 @@
                               "transferVar": {
                                 "from": {
                                   "scope": "pvar",
-                                  "var": "chipStack",
                                   "player": {
                                     "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
-                                  }
+                                  },
+                                  "var": "chipStack"
                                 },
                                 "to": {
                                   "scope": "global",
@@ -3449,10 +3449,10 @@
                                                       "transferVar": {
                                                         "from": {
                                                           "scope": "pvar",
-                                                          "var": "chipStack",
                                                           "player": {
                                                             "chosen": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_16__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player"
-                                                          }
+                                                          },
+                                                          "var": "chipStack"
                                                         },
                                                         "to": {
                                                           "scope": "global",
@@ -3518,10 +3518,10 @@
                                     "transferVar": {
                                       "from": {
                                         "scope": "pvar",
-                                        "var": "chipStack",
                                         "player": {
                                           "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__sbSeat"
-                                        }
+                                        },
+                                        "var": "chipStack"
                                       },
                                       "to": {
                                         "scope": "global",
@@ -3591,10 +3591,10 @@
                                     "transferVar": {
                                       "from": {
                                         "scope": "pvar",
-                                        "var": "chipStack",
                                         "player": {
                                           "chosen": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_16__bbSeat"
-                                        }
+                                        },
+                                        "var": "chipStack"
                                       },
                                       "to": {
                                         "scope": "global",
@@ -10351,8 +10351,8 @@
           "transferVar": {
             "from": {
               "scope": "pvar",
-              "var": "chipStack",
-              "player": "actor"
+              "player": "actor",
+              "var": "chipStack"
             },
             "to": {
               "scope": "global",
@@ -11146,8 +11146,8 @@
                 "transferVar": {
                   "from": {
                     "scope": "pvar",
-                    "var": "chipStack",
-                    "player": "actor"
+                    "player": "actor",
+                    "var": "chipStack"
                   },
                   "to": {
                     "scope": "global",
@@ -11996,8 +11996,8 @@
                       "transferVar": {
                         "from": {
                           "scope": "pvar",
-                          "var": "chipStack",
-                          "player": "actor"
+                          "player": "actor",
+                          "var": "chipStack"
                         },
                         "to": {
                           "scope": "global",

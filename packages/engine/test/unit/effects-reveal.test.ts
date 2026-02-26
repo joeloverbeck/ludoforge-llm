@@ -17,6 +17,8 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-reveal-test', players: { min: 2, max: 2 } },
@@ -221,6 +223,37 @@ describe('effects reveal', () => {
     assert.throws(
       () => applyEffect({ reveal: { zone: 'hand:0', to: 'all' } }, ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Zone state not found'),
+    );
+  });
+
+  it('normalizes unresolved reveal.zone bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { reveal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.zone resolution failed'),
+    );
+  });
+
+  it('normalizes unresolved reveal.to selectors to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.to selector resolution failed'),
+    );
+  });
+
+  it('passes through unresolved reveal.to selectors in discovery mode', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+
+    assert.throws(
+      () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 });
@@ -541,6 +574,52 @@ describe('effects conceal', () => {
         assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED);
         return String(error).includes('Zone state not found');
       },
+    );
+  });
+
+  it('normalizes unresolved conceal.zone bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { conceal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.zone resolution failed'),
+    );
+  });
+
+  it('normalizes unresolved conceal.from selectors to effect runtime errors', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: [asPlayerId(0)] }],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.from selector resolution failed'),
+    );
+  });
+
+  it('passes through unresolved conceal.from selectors in discovery mode', () => {
+    const ctx = makeCtx({
+      mode: 'discovery',
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: [asPlayerId(0)] }],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 

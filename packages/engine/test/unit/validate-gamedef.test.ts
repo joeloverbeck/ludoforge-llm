@@ -554,6 +554,54 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects addVar targeting boolean global vars', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      globalVars: [...base.globalVars, { name: 'flag', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ addVar: { scope: 'global', var: 'flag', delta: 1 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ADDVAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].addVar.var'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('rejects addVar targeting boolean per-player vars', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      perPlayerVars: [...base.perPlayerVars, { name: 'ready', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ addVar: { scope: 'pvar', player: 'active', var: 'ready', delta: 1 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ADDVAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].addVar.var'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
   it('reports undefined zoneVar references for setVar and addVar', () => {
     const base = createValidGameDef();
     const def = {
@@ -1405,6 +1453,40 @@ describe('validateGameDef reference checks', () => {
       diagnostics.some(
         (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
           && diag.path === 'actions[0].effects[0].transferVar.from.var',
+      ),
+      false,
+    );
+  });
+
+  it('keeps boolean zoneVar diagnostics at structure layer for transferVar destination', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'global', var: 'vp' },
+                to: { scope: 'zoneVar', zone: 'deck:none', var: 'locked' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'ZONE_VAR_TYPE_INVALID' && diag.path === 'zoneVars[0].type'),
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].transferVar.to.var',
       ),
       false,
     );

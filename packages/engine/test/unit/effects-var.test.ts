@@ -14,6 +14,7 @@ import {
   type GameState,
   createCollector,
 } from '../../src/kernel/index.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-var-test', players: { min: 1, max: 2 } },
@@ -192,6 +193,46 @@ describe('effects var handlers', () => {
     });
   });
 
+  it('throws canonical addVar runtime diagnostics when int-targeted runtime state is corrupted to boolean', () => {
+    const corruptedState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...corruptedState,
+        globalVars: {
+          ...corruptedState.globalVars,
+          score: true as unknown as number,
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 1 } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Global variable state must be a finite safe integer: score'),
+    );
+  });
+
+  it('throws canonical setVar runtime diagnostics when int-targeted runtime state is corrupted to non-integer number', () => {
+    const corruptedState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...corruptedState,
+        globalVars: {
+          ...corruptedState.globalVars,
+          score: Number.POSITIVE_INFINITY,
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ setVar: { scope: 'global', var: 'score', value: 4 } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Global variable state must be a finite safe integer: score'),
+    );
+  });
+
   it('throws EFFECT_RUNTIME when per-player selector resolves to non-scalar cardinality', () => {
     const ctx = makeCtx();
 
@@ -211,10 +252,67 @@ describe('effects var handlers', () => {
           },
           ctx,
         ),
-      (error: unknown) =>
-        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
-        String(error).includes('setVar pvar selector resolution failed') &&
-        String(error).includes('sourceErrorCode'),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'setVar pvar selector resolution failed'),
+    );
+  });
+
+  it('wraps zoneVar selector resolution failures into EFFECT_RUNTIME for setVar', () => {
+    const zoneCtx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [{ id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' }],
+        zoneVars: [{ name: 'threat', type: 'int', init: 0, min: 0, max: 10 }],
+      },
+      state: {
+        ...makeState(),
+        zoneVars: { 'zone-a:none': { threat: 4 } },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            setVar: {
+              scope: 'zoneVar',
+              zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } },
+              var: 'threat',
+              value: 1,
+            },
+          },
+          zoneCtx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'setVar zoneVar selector resolution failed'),
+    );
+  });
+
+  it('wraps zoneVar selector resolution failures into EFFECT_RUNTIME for addVar', () => {
+    const zoneCtx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [{ id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' }],
+        zoneVars: [{ name: 'threat', type: 'int', init: 0, min: 0, max: 10 }],
+      },
+      state: {
+        ...makeState(),
+        zoneVars: { 'zone-a:none': { threat: 4 } },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            addVar: {
+              scope: 'zoneVar',
+              zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } },
+              var: 'threat',
+              delta: 1,
+            },
+          },
+          zoneCtx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'addVar zoneVar selector resolution failed'),
     );
   });
 
@@ -241,10 +339,7 @@ describe('effects var handlers', () => {
 
     assert.throws(
       () => applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, ctx),
-      (error: unknown) =>
-        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
-        String(error).includes('setActivePlayer selector resolution failed') &&
-        String(error).includes('sourceErrorCode'),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'setActivePlayer selector resolution failed'),
     );
   });
 

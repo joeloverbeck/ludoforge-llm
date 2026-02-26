@@ -1025,18 +1025,15 @@ const validateScopedVarReference = (
   }
 };
 
-const getScopedVarType = (
-  scope: AstScopedVarScope,
+const getBooleanCapableScopedVarType = (
+  scope: Exclude<AstScopedVarScope, 'zoneVar'>,
   variable: string,
   context: ValidationContext,
 ): 'int' | 'boolean' | undefined => {
   if (scope === 'global') {
     return context.globalVarTypesByName.get(variable);
   }
-  if (scope === 'pvar') {
-    return context.perPlayerVarTypesByName.get(variable);
-  }
-  return context.zoneVarTypesByName.get(variable);
+  return context.perPlayerVarTypesByName.get(variable);
 };
 
 export const validateEffectAst = (
@@ -1076,15 +1073,17 @@ export const validateEffectAst = (
       validateZoneRef(diagnostics, effect.addVar.zone, `${path}.addVar.zone`, context);
     }
 
-    const varType = getScopedVarType(effect.addVar.scope, effect.addVar.var, context);
-    if (effect.addVar.scope !== 'zoneVar' && varType === 'boolean') {
-      diagnostics.push({
-        code: 'ADDVAR_BOOLEAN_TARGET_INVALID',
-        path: `${path}.addVar.var`,
-        severity: 'error',
-        message: `addVar cannot target boolean variable "${effect.addVar.var}".`,
-        suggestion: 'Use setVar with a boolean value expression for boolean variables.',
-      });
+    if (effect.addVar.scope !== 'zoneVar') {
+      const varType = getBooleanCapableScopedVarType(effect.addVar.scope, effect.addVar.var, context);
+      if (varType === 'boolean') {
+        diagnostics.push({
+          code: 'ADDVAR_BOOLEAN_TARGET_INVALID',
+          path: `${path}.addVar.var`,
+          severity: 'error',
+          message: `addVar cannot target boolean variable "${effect.addVar.var}".`,
+          suggestion: 'Use setVar with a boolean value expression for boolean variables.',
+        });
+      }
     }
 
     validateNumericValueExpr(diagnostics, effect.addVar.delta, `${path}.addVar.delta`, context);

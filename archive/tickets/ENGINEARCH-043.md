@@ -1,6 +1,6 @@
 # ENGINEARCH-043: Add explicit addVar boolean-target regression coverage for global/pvar scopes
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — validator unit-test hardening
@@ -12,15 +12,15 @@ Recent zoneVar diagnostic-ownership cleanup removed boolean-target diagnostics f
 
 ## Assumption Reassessment (2026-02-26)
 
-1. `addVar` boolean-target diagnostics are still expected for `globalVars` and `perPlayerVars` boolean definitions.
-2. `validate-gamedef.test.ts` currently asserts negative zoneVar behavior (`ADDVAR_BOOLEAN_TARGET_INVALID` absent for invalid boolean zoneVars) but lacks dedicated positive tests for non-zone scopes.
-3. **Mismatch + correction**: diagnostic ownership moved correctly for zoneVar, but guardrail tests for global/pvar behavior parity are missing and should be added.
+1. `ADDVAR_BOOLEAN_TARGET_INVALID` is currently implemented in `packages/engine/src/kernel/validate-gamedef-behavior.ts` for `addVar` targets with scope `global` and `pvar` when the target variable type is boolean.
+2. `validate-gamedef.test.ts` currently asserts zoneVar ownership behavior (`ZONE_VAR_TYPE_INVALID` present and `ADDVAR_BOOLEAN_TARGET_INVALID` absent for zoneVar boolean targets).
+3. **Mismatch + correction**: the implementation is already correct, but positive regression coverage is missing for boolean `global` and `pvar` targets. This ticket is test hardening only.
 
 ## Architecture Check
 
-1. Explicit positive-scope tests are cleaner than relying on incidental coverage; they pin intent at the contract boundary.
-2. This is game-agnostic validator coverage and does not introduce game-specific logic into `GameDef` or simulation.
-3. No backwards-compatibility aliasing/shims are introduced.
+1. Adding explicit positive-scope tests is better than relying on implicit behavior because it protects the validator contract at the exact boundary where regressions can happen.
+2. This work is strictly game-agnostic validation coverage and keeps all ownership in shared validator modules.
+3. The current architecture (structure-layer zoneVar typing + behavior-layer non-zone boolean addVar guard) is cleaner and more extensible than collapsing all scope logic into one layer; no architecture change is needed beyond test hardening.
 
 ## What to Change
 
@@ -35,6 +35,10 @@ and assert `ADDVAR_BOOLEAN_TARGET_INVALID` appears at the expected path.
 ### 2. Keep zoneVar ownership assertion unchanged
 
 Retain existing assertions that invalid boolean zoneVars emit structure-layer diagnostics (`ZONE_VAR_TYPE_INVALID`) and do not emit zoneVar addVar boolean-target diagnostics.
+
+### 3. Scope confirmation
+
+No runtime/kernel behavior changes. No schema changes. No production code edits expected.
 
 ## Files to Touch
 
@@ -72,3 +76,18 @@ Retain existing assertions that invalid boolean zoneVars emit structure-layer di
 2. `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- What changed:
+  - Reassessed and corrected ticket assumptions to reflect current implementation ownership in `validate-gamedef-behavior.ts`.
+  - Added explicit validator regression tests for boolean `addVar` targets in `global` and `pvar` scopes.
+- Deviations from original plan:
+  - None on implementation scope; this remained test-only hardening.
+  - Clarified architecture assessment in-ticket before implementation.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/validate-gamedef.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (287/287).
+  - `pnpm -F @ludoforge/engine lint` passed.

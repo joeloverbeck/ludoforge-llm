@@ -21,6 +21,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-lifecycle-test', players: { min: 1, max: 2 } },
@@ -153,6 +154,19 @@ describe('effects token lifecycle', () => {
 
     assert.equal(ctx.state.nextTokenOrdinal, 3);
     assert.equal(ctx.state.zones['deck:none']?.length, 2);
+  });
+
+  it('createToken normalizes unresolved zone selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { createToken: { type: 'card', zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'createToken.zone resolution failed'),
+    );
   });
 
   it('destroyToken removes exactly one token when present', () => {

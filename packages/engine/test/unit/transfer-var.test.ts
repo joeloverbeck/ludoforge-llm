@@ -15,6 +15,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'transfer-var-test', players: { min: 2, max: 2 } },
@@ -408,6 +409,39 @@ describe('transferVar effect', () => {
     );
   });
 
+  it('throws canonical transferVar runtime diagnostics when int-targeted runtime state is corrupted to boolean', () => {
+    const corruptedState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...corruptedState,
+        perPlayerVars: {
+          ...corruptedState.perPlayerVars,
+          '0': {
+            ...corruptedState.perPlayerVars['0'],
+            coins: false as unknown as number,
+          },
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            transferVar: {
+              from: { scope: 'pvar', player: 'actor', var: 'coins' },
+              to: { scope: 'global', var: 'pot' },
+              amount: 1,
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Per-player variable state must be a finite safe integer: coins'),
+    );
+  });
+
   it('throws EFFECT_RUNTIME when pvar endpoint payload omits player selector', () => {
     const ctx = makeCtx();
     const malformed = {
@@ -453,10 +487,39 @@ describe('transferVar effect', () => {
 
     assert.throws(
       () => applyEffect(unresolvedSelectorEffect, ctx),
-      (error: unknown) =>
-        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
-        String(error).includes('transferVar pvar endpoint resolution failed') &&
-        String(error).includes('sourceErrorCode'),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'transferVar pvar endpoint resolution failed'),
+    );
+  });
+
+  it('wraps source zoneVar endpoint selector resolution failures into EFFECT_RUNTIME', () => {
+    const ctx = makeCtx();
+    const unresolvedSourceZone = {
+      transferVar: {
+        from: { scope: 'zoneVar', zone: { zoneExpr: { ref: 'binding', name: '$missingSourceZone' } }, var: 'supply' },
+        to: { scope: 'global', var: 'pot' },
+        amount: 1,
+      },
+    } as unknown as EffectAST;
+
+    assert.throws(
+      () => applyEffect(unresolvedSourceZone, ctx),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'transferVar zoneVar endpoint resolution failed'),
+    );
+  });
+
+  it('wraps destination zoneVar endpoint selector resolution failures into EFFECT_RUNTIME', () => {
+    const ctx = makeCtx();
+    const unresolvedDestinationZone = {
+      transferVar: {
+        from: { scope: 'global', var: 'pot' },
+        to: { scope: 'zoneVar', zone: { zoneExpr: { ref: 'binding', name: '$missingDestinationZone' } }, var: 'supply' },
+        amount: 1,
+      },
+    } as unknown as EffectAST;
+
+    assert.throws(
+      () => applyEffect(unresolvedDestinationZone, ctx),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'transferVar zoneVar endpoint resolution failed'),
     );
   });
 

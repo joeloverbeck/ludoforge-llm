@@ -15,6 +15,7 @@ import {
   type GameState,
   createCollector,
 } from '../../src/kernel/index.js';
+import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-choice-test', players: { min: 1, max: 2 } },
@@ -500,5 +501,69 @@ describe('effects choice assertions', () => {
       () => applyEffect(effect, ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown marker lattice'),
     );
+  });
+
+  it('setMarker normalizes unresolved space selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      setMarker: {
+        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        marker: 'unknownMarker',
+        state: 'neutral',
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('setMarker.space zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('shiftMarker normalizes unresolved space selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      shiftMarker: {
+        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        marker: 'unknownMarker',
+        delta: 1,
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('shiftMarker.space zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('setMarker passes through unresolved selector errors in discovery mode', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+    const effect: EffectAST = {
+      setMarker: {
+        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        marker: 'unknownMarker',
+        state: 'neutral',
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'));
+  });
+
+  it('shiftMarker passes through unresolved selector errors in discovery mode', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+    const effect: EffectAST = {
+      shiftMarker: {
+        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        marker: 'unknownMarker',
+        delta: 1,
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'));
   });
 });

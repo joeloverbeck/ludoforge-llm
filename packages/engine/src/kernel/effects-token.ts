@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { nextInt } from './prng.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
+import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
@@ -190,8 +190,21 @@ const resolveMoveTokenAdjacentDestination = (
 
 export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveZoneRef(effect.moveToken.from, evalCtx);
-  const toZone = resolveZoneRef(effect.moveToken.to, evalCtx);
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const fromZone = resolveZoneWithNormalization(effect.moveToken.from, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'moveToken',
+    scope: 'from',
+    resolutionFailureMessage: 'moveToken.from zone resolution failed',
+    onResolutionFailure,
+  });
+  const toZone = resolveZoneWithNormalization(effect.moveToken.to, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'moveToken',
+    scope: 'to',
+    resolutionFailureMessage: 'moveToken.to zone resolution failed',
+    onResolutionFailure,
+  });
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveToken', 'from');
@@ -291,7 +304,14 @@ export const applyMoveTokenAdjacent = (
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveZoneRef(effect.moveTokenAdjacent.from, evalCtx);
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const fromZone = resolveZoneWithNormalization(effect.moveTokenAdjacent.from, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'moveTokenAdjacent',
+    scope: 'from',
+    resolutionFailureMessage: 'moveTokenAdjacent.from zone resolution failed',
+    onResolutionFailure,
+  });
   const fromZoneId = String(fromZone);
   const toZoneId = resolveMoveTokenAdjacentDestination(effect.moveTokenAdjacent.direction, ctx);
   const adjacentZones = ctx.adjacencyGraph.neighbors[fromZoneId] ?? [];
@@ -319,7 +339,16 @@ export const applyMoveTokenAdjacent = (
 
 export const applyCreateToken = (effect: Extract<EffectAST, { readonly createToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const zoneId = String(resolveZoneRef(effect.createToken.zone, evalCtx));
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const zoneId = String(
+    resolveZoneWithNormalization(effect.createToken.zone, evalCtx, {
+      code: 'tokenRuntimeValidationFailed',
+      effectType: 'createToken',
+      scope: 'zone',
+      resolutionFailureMessage: 'createToken.zone resolution failed',
+      onResolutionFailure,
+    }),
+  );
   const zoneTokens = resolveZoneTokens(ctx, zoneId, 'createToken', 'zone');
 
   const ordinal = ctx.state.nextTokenOrdinal;
@@ -511,8 +540,21 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
   }
 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveZoneRef(effect.draw.from, evalCtx);
-  const toZone = resolveZoneRef(effect.draw.to, evalCtx);
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const fromZone = resolveZoneWithNormalization(effect.draw.from, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'draw',
+    scope: 'from',
+    resolutionFailureMessage: 'draw.from zone resolution failed',
+    onResolutionFailure,
+  });
+  const toZone = resolveZoneWithNormalization(effect.draw.to, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'draw',
+    scope: 'to',
+    resolutionFailureMessage: 'draw.to zone resolution failed',
+    onResolutionFailure,
+  });
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
 
@@ -555,8 +597,21 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
 
 export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveZoneRef(effect.moveAll.from, evalCtx);
-  const toZone = resolveZoneRef(effect.moveAll.to, evalCtx);
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const fromZone = resolveZoneWithNormalization(effect.moveAll.from, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'moveAll',
+    scope: 'from',
+    resolutionFailureMessage: 'moveAll.from zone resolution failed',
+    onResolutionFailure,
+  });
+  const toZone = resolveZoneWithNormalization(effect.moveAll.to, evalCtx, {
+    code: 'tokenRuntimeValidationFailed',
+    effectType: 'moveAll',
+    scope: 'to',
+    resolutionFailureMessage: 'moveAll.to zone resolution failed',
+    onResolutionFailure,
+  });
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveAll', 'from');
@@ -631,7 +686,16 @@ export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unkn
 
 export const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const zoneId = String(resolveZoneRef(effect.shuffle.zone, evalCtx));
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const zoneId = String(
+    resolveZoneWithNormalization(effect.shuffle.zone, evalCtx, {
+      code: 'tokenRuntimeValidationFailed',
+      effectType: 'shuffle',
+      scope: 'zone',
+      resolutionFailureMessage: 'shuffle.zone resolution failed',
+      onResolutionFailure,
+    }),
+  );
   const zoneTokens = resolveZoneTokens(ctx, zoneId, 'shuffle', 'zone');
 
   if (zoneTokens.length <= 1) {

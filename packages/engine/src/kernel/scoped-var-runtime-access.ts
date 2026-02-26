@@ -1,15 +1,17 @@
-import { effectRuntimeError, isEffectRuntimeError } from './effect-error.js';
-import { isEvalError } from './eval-error.js';
-import { resolvePlayerSel } from './resolve-selectors.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
+import { effectRuntimeError } from './effect-error.js';
+import {
+  resolveSinglePlayerWithNormalization,
+  resolveZoneWithNormalization,
+  selectorResolutionFailurePolicyForMode,
+} from './selector-resolution-normalization.js';
+import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
-import type { PlayerId, ZoneId } from './branded.js';
 import type { GameState, IntVariableDef, PlayerSel, VariableDef, VariableValue, ZoneRef } from './types.js';
 
 type ScopedVarDefinitionScope = 'global' | 'pvar' | 'zoneVar';
-type ScopedVarRuntimeErrorCode = 'variableRuntimeValidationFailed' | 'resourceRuntimeValidationFailed';
-type ScopedVarEffectType = 'setVar' | 'addVar' | 'transferVar';
+type ScopedVarRuntimeErrorCode = EffectRuntimeReason;
+type ScopedVarEffectType = string;
 
 type DefinitionScopeEndpoint = Readonly<{
   scope: ScopedVarDefinitionScope;
@@ -24,122 +26,69 @@ export type ScopedVarResolvableEndpoint =
   | Readonly<{
       scope: 'pvar';
       var: string;
-      player?: PlayerSel;
+      player: PlayerSel;
     }>
   | Readonly<{
       scope: 'zoneVar';
       var: string;
-      zone?: ZoneRef;
+      zone: ZoneRef;
     }>;
 
+type OptionalizeKeys<T, K extends PropertyKey> = Omit<T, Extract<K, keyof T>> & Partial<Pick<T, Extract<K, keyof T>>>;
+type ScopedVarResolvableEndpointScope = ScopedVarResolvableEndpoint['scope'];
+type ScopedVarResolvableEndpointByScope = {
+  [S in ScopedVarResolvableEndpointScope]: Extract<ScopedVarResolvableEndpoint, { scope: S }>;
+};
+type ScopedVarSelectorKeyByScope = {
+  global: never;
+  pvar: 'player';
+  zoneVar: 'zone';
+};
+
+export type ScopedVarMalformedResolvableEndpoint = {
+  [S in ScopedVarResolvableEndpointScope]: Readonly<
+    OptionalizeKeys<ScopedVarResolvableEndpointByScope[S], ScopedVarSelectorKeyByScope[S]>
+  >;
+}[ScopedVarResolvableEndpointScope];
+
 export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
+type ScopedZoneVarWrite = Readonly<{
+  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>;
+  value: number;
+}>;
+type ScopedNonZoneVarWrite = Readonly<{
+  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>;
+  value: VariableValue;
+}>;
+export type ScopedVarWrite = ScopedZoneVarWrite | ScopedNonZoneVarWrite;
+
+const isZoneScopedWrite = (write: ScopedVarWrite): write is ScopedZoneVarWrite => write.endpoint.scope === 'zone';
+
+export function toScopedVarWrite(
+  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
+  value: number,
+): ScopedZoneVarWrite;
+export function toScopedVarWrite(
+  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
+  value: VariableValue,
+): ScopedNonZoneVarWrite;
+export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: number): ScopedVarWrite;
+export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: VariableValue): ScopedVarWrite {
+  if (endpoint.scope === 'zone') {
+    if (typeof value !== 'number') {
+      throw new TypeError(`Zone scoped variable writes require numeric values: ${endpoint.var}`);
+    }
+
+    return { endpoint, value };
+  }
+
+  return { endpoint, value };
+}
 
 const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
 
-const normalizeSelectorResolutionError = (
-  error: unknown,
-  options: Readonly<{
-    code: ScopedVarRuntimeErrorCode;
-    effectType: ScopedVarEffectType | 'setActivePlayer';
-    message: string;
-    scope: string;
-    context?: Readonly<Record<string, unknown>>;
-  }>,
-): never => {
-  if (isEffectRuntimeError(error)) {
-    throw error;
-  }
-
-  const errorContext =
-    error instanceof Error
-      ? {
-          errorName: error.name,
-          errorMessage: error.message,
-        }
-      : {
-          thrown: String(error),
-        };
-
-  throw effectRuntimeError(options.code, options.message, {
-    effectType: options.effectType,
-    scope: options.scope,
-    ...(options.context ?? {}),
-    ...(isEvalError(error) ? { sourceErrorCode: error.code } : {}),
-    ...errorContext,
-  });
-};
-
-export const resolveSinglePlayerWithNormalization = (
-  selector: PlayerSel,
-  evalCtx: EffectContext,
-  options: Readonly<{
-    code: ScopedVarRuntimeErrorCode;
-    effectType: ScopedVarEffectType | 'setActivePlayer';
-    scope: string;
-    cardinalityMessage: string;
-    resolutionFailureMessage: string;
-    context?: Readonly<Record<string, unknown>>;
-  }>,
-): PlayerId => {
-  let resolvedPlayers: readonly PlayerId[];
-  try {
-    resolvedPlayers = resolvePlayerSel(selector, evalCtx);
-  } catch (error: unknown) {
-    return normalizeSelectorResolutionError(error, {
-      code: options.code,
-      effectType: options.effectType,
-      message: options.resolutionFailureMessage,
-      scope: options.scope,
-      context: {
-        selector,
-        ...(options.context ?? {}),
-      },
-    });
-  }
-
-  if (resolvedPlayers.length !== 1) {
-    throw effectRuntimeError(options.code, options.cardinalityMessage, {
-      effectType: options.effectType,
-      scope: options.scope,
-      selector,
-      resolvedCount: resolvedPlayers.length,
-      resolvedPlayers,
-      ...(options.context ?? {}),
-    });
-  }
-
-  return resolvedPlayers[0]!;
-};
-
-export const resolveZoneWithNormalization = (
-  zoneRef: ZoneRef,
-  evalCtx: EffectContext,
-  options: Readonly<{
-    code: ScopedVarRuntimeErrorCode;
-    effectType: ScopedVarEffectType | 'setActivePlayer';
-    scope: string;
-    resolutionFailureMessage: string;
-    context?: Readonly<Record<string, unknown>>;
-  }>,
-): ZoneId => {
-  try {
-    return resolveZoneRef(zoneRef, evalCtx);
-  } catch (error: unknown) {
-    return normalizeSelectorResolutionError(error, {
-      code: options.code,
-      effectType: options.effectType,
-      message: options.resolutionFailureMessage,
-      scope: options.scope,
-      context: {
-        zone: zoneRef,
-        ...(options.context ?? {}),
-      },
-    });
-  }
-};
-
-export const resolveRuntimeScopedEndpoint = (
-  endpoint: ScopedVarResolvableEndpoint,
+const resolveRuntimeScopedEndpointImpl = (
+  endpoint: ScopedVarMalformedResolvableEndpoint,
   evalCtx: EffectContext,
   options: Readonly<{
     code: ScopedVarRuntimeErrorCode;
@@ -152,6 +101,8 @@ export const resolveRuntimeScopedEndpoint = (
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): RuntimeScopedVarEndpoint => {
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+
   if (endpoint.scope === 'global') {
     return {
       scope: 'global',
@@ -179,6 +130,7 @@ export const resolveRuntimeScopedEndpoint = (
       scope: 'pvar',
       cardinalityMessage: options.pvarCardinalityMessage,
       resolutionFailureMessage: options.pvarResolutionFailureMessage,
+      onResolutionFailure,
       context: {
         endpoint,
         ...(options.context ?? {}),
@@ -209,6 +161,7 @@ export const resolveRuntimeScopedEndpoint = (
     effectType: options.effectType,
     scope: 'zoneVar',
     resolutionFailureMessage: options.zoneResolutionFailureMessage,
+    onResolutionFailure,
     context: {
       endpoint,
       ...(options.context ?? {}),
@@ -220,6 +173,18 @@ export const resolveRuntimeScopedEndpoint = (
     var: endpoint.var,
   };
 };
+
+export const resolveRuntimeScopedEndpoint = (
+  endpoint: ScopedVarResolvableEndpoint,
+  evalCtx: EffectContext,
+  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[2],
+): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, options);
+
+export const resolveRuntimeScopedEndpointWithMalformedSupport = (
+  endpoint: ScopedVarMalformedResolvableEndpoint,
+  evalCtx: EffectContext,
+  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[2],
+): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, options);
 
 export const resolveScopedVarDef = (
   ctx: EffectContext,
@@ -354,52 +319,147 @@ export const readScopedVarValue = (
   return value;
 };
 
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
-  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
-  value: number,
-): ScopedVarStateBranches;
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
-  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
-  value: VariableValue,
-): ScopedVarStateBranches;
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
+export const readScopedIntVarValue = (
+  ctx: EffectContext,
   endpoint: RuntimeScopedVarEndpoint,
-  value: VariableValue,
-): ScopedVarStateBranches {
+  effectType: ScopedVarEffectType,
+  code: ScopedVarRuntimeErrorCode,
+): number => {
+  const value = readScopedVarValue(ctx, endpoint, effectType, code);
+  if (typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value)) {
+    return value;
+  }
+
   if (endpoint.scope === 'global') {
-    return {
-      ...branches,
-      globalVars: {
-        ...branches.globalVars,
-        [endpoint.var]: value,
-      },
-    };
+    throw effectRuntimeError(code, `Global variable state must be a finite safe integer: ${endpoint.var}`, {
+      effectType,
+      scope: 'global',
+      var: endpoint.var,
+      actualType: typeof value,
+      value,
+      availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
+    });
   }
 
   if (endpoint.scope === 'pvar') {
+    throw effectRuntimeError(code, `Per-player variable state must be a finite safe integer: ${endpoint.var}`, {
+      effectType,
+      scope: 'pvar',
+      playerId: endpoint.player,
+      var: endpoint.var,
+      actualType: typeof value,
+      value,
+      availablePlayerVars: Object.keys(ctx.state.perPlayerVars[endpoint.player] ?? {}).sort(),
+    });
+  }
+
+  throw effectRuntimeError(code, `Zone variable state must be a finite safe integer: ${endpoint.var} in zone ${String(endpoint.zone)}`, {
+    effectType,
+    scope: 'zoneVar',
+    zone: String(endpoint.zone),
+    var: endpoint.var,
+    actualType: typeof value,
+    value,
+    availableZoneVars: Object.keys(ctx.state.zoneVars[String(endpoint.zone)] ?? {}).sort(),
+  });
+};
+
+export function writeScopedVarToBranches(
+  branches: ScopedVarStateBranches,
+  write: ScopedVarWrite,
+): ScopedVarStateBranches {
+  if (isZoneScopedWrite(write)) {
     return {
       ...branches,
-      perPlayerVars: {
-        ...branches.perPlayerVars,
-        [endpoint.player]: {
-          ...branches.perPlayerVars[endpoint.player],
-          [endpoint.var]: value,
+      zoneVars: {
+        ...branches.zoneVars,
+        [write.endpoint.zone]: {
+          ...(branches.zoneVars[write.endpoint.zone] ?? {}),
+          [write.endpoint.var]: write.value,
         },
       },
     };
   }
 
-  return {
-    ...branches,
-    zoneVars: {
-      ...branches.zoneVars,
-      [endpoint.zone]: {
-        ...(branches.zoneVars[endpoint.zone] ?? {}),
-        [endpoint.var]: value as number,
+  if (write.endpoint.scope === 'global') {
+    return {
+      ...branches,
+      globalVars: {
+        ...branches.globalVars,
+        [write.endpoint.var]: write.value,
       },
+    };
+  }
+
+  if (write.endpoint.scope === 'pvar') {
+    return {
+      ...branches,
+      perPlayerVars: {
+        ...branches.perPlayerVars,
+        [write.endpoint.player]: {
+          ...branches.perPlayerVars[write.endpoint.player],
+          [write.endpoint.var]: write.value,
+        },
+      },
+    };
+  }
+
+  const exhaustiveEndpointCheck: never = write.endpoint;
+  void exhaustiveEndpointCheck;
+  return branches;
+}
+
+export function writeScopedVarToState(
+  state: GameState,
+  write: ScopedVarWrite,
+): GameState {
+  const branches = writeScopedVarToBranches(
+    {
+      globalVars: state.globalVars,
+      perPlayerVars: state.perPlayerVars,
+      zoneVars: state.zoneVars,
     },
+    write,
+  );
+
+  return {
+    ...state,
+    globalVars: branches.globalVars,
+    perPlayerVars: branches.perPlayerVars,
+    zoneVars: branches.zoneVars,
   };
 }
+
+export const writeScopedVarsToBranches = (
+  branches: ScopedVarStateBranches,
+  writes: readonly ScopedVarWrite[],
+): ScopedVarStateBranches => {
+  let nextBranches = branches;
+  for (const write of writes) {
+    nextBranches = writeScopedVarToBranches(nextBranches, write);
+  }
+
+  return nextBranches;
+};
+
+export const writeScopedVarsToState = (state: GameState, writes: readonly ScopedVarWrite[]): GameState => {
+  if (writes.length === 0) {
+    return state;
+  }
+
+  const branches = writeScopedVarsToBranches(
+    {
+      globalVars: state.globalVars,
+      perPlayerVars: state.perPlayerVars,
+      zoneVars: state.zoneVars,
+    },
+    writes,
+  );
+
+  return {
+    ...state,
+    globalVars: branches.globalVars,
+    perPlayerVars: branches.perPlayerVars,
+    zoneVars: branches.zoneVars,
+  };
+};

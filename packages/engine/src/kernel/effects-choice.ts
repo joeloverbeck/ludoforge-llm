@@ -1,6 +1,6 @@
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { composeDecisionId, scopeDecisionIdForIteration } from './decision-id.js';
+import { composeScopedDecisionId } from './decision-id.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
@@ -59,8 +59,12 @@ const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effect
 
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
-  const baseDecisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, resolvedBind);
-  const decisionId = scopeDecisionIdForIteration(baseDecisionId, effect.chooseOne.internalDecisionId, ctx.iterationPath);
+  const decisionId = composeScopedDecisionId(
+    effect.chooseOne.internalDecisionId,
+    effect.chooseOne.bind,
+    resolvedBind,
+    ctx.iterationPath,
+  );
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
@@ -136,8 +140,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const chooseN = effect.chooseN;
   const bindTemplate = chooseN.bind;
   const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
-  const baseDecisionId = composeDecisionId(chooseN.internalDecisionId, bindTemplate, bind);
-  const decisionId = scopeDecisionIdForIteration(baseDecisionId, chooseN.internalDecisionId, ctx.iterationPath);
+  const decisionId = composeScopedDecisionId(chooseN.internalDecisionId, bindTemplate, bind, ctx.iterationPath);
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {

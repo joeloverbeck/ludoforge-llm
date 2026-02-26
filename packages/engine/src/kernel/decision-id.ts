@@ -1,6 +1,6 @@
 const DECISION_INSTANCE_SEPARATOR = '::';
 
-export const composeDecisionId = (
+const composeDecisionId = (
   internalDecisionId: string,
   bindTemplate: string,
   resolvedBind: string,
@@ -15,7 +15,7 @@ export const composeDecisionId = (
  * Scope decision IDs for forEach iterations only when composeDecisionId did not already
  * produce a per-iteration unique instance ID from template resolution.
  */
-export const scopeDecisionIdForIteration = (
+const scopeDecisionIdForIteration = (
   baseDecisionId: string,
   internalDecisionId: string,
   iterationPath: string | undefined,
@@ -24,6 +24,16 @@ export const scopeDecisionIdForIteration = (
   return needsIterationScoping && iterationPath !== undefined
     ? `${baseDecisionId}${iterationPath}`
     : baseDecisionId;
+};
+
+export const composeScopedDecisionId = (
+  internalDecisionId: string,
+  bindTemplate: string,
+  resolvedBind: string,
+  iterationPath: string | undefined,
+): string => {
+  const baseDecisionId = composeDecisionId(internalDecisionId, bindTemplate, resolvedBind);
+  return scopeDecisionIdForIteration(baseDecisionId, internalDecisionId, iterationPath);
 };
 
 export const extractResolvedBindFromDecisionId = (decisionId: string): string | null => {

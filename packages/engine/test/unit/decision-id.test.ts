@@ -1,19 +1,27 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { composeDecisionId, extractResolvedBindFromDecisionId, scopeDecisionIdForIteration } from '../../src/kernel/decision-id.js';
+import {
+  composeScopedDecisionId,
+  extractResolvedBindFromDecisionId,
+} from '../../src/kernel/decision-id.js';
 
 describe('decision-id helpers', () => {
-  it('returns internal decision ID for static binds', () => {
+  it('composeScopedDecisionId returns internal decision ID for static binds without iteration path', () => {
     assert.equal(
-      composeDecisionId('decision:$choice', '$choice', '$choice'),
+      composeScopedDecisionId('decision:$choice', '$choice', '$choice', undefined),
       'decision:$choice',
     );
   });
 
-  it('appends resolved bind for templated binds', () => {
+  it('composeScopedDecisionId appends resolved bind for templated binds', () => {
     assert.equal(
-      composeDecisionId('decision:$choice@{$zone}', '$choice@{$zone}', '$choice@saigon:none'),
+      composeScopedDecisionId(
+        'decision:$choice@{$zone}',
+        '$choice@{$zone}',
+        '$choice@saigon:none',
+        undefined,
+      ),
       'decision:$choice@{$zone}::$choice@saigon:none',
     );
   });
@@ -29,34 +37,28 @@ describe('decision-id helpers', () => {
     );
   });
 
-  it('does not append iterationPath when iteration path is undefined', () => {
+  it('composeScopedDecisionId appends iterationPath for static binds', () => {
     assert.equal(
-      scopeDecisionIdForIteration('decision:$choice', 'decision:$choice', undefined),
-      'decision:$choice',
+      composeScopedDecisionId('decision:$choice', '$choice', '$choice', '[0]'),
+      'decision:$choice[0]',
     );
   });
 
-  it('does not append iterationPath when decision ID is already template-scoped', () => {
+  it('composeScopedDecisionId does not append iterationPath when bind is template-scoped', () => {
     assert.equal(
-      scopeDecisionIdForIteration(
-        'decision:$choice@{$zone}::$choice@saigon:none',
+      composeScopedDecisionId(
         'decision:$choice@{$zone}',
+        '$choice@{$zone}',
+        '$choice@saigon:none',
         '[0]',
       ),
       'decision:$choice@{$zone}::$choice@saigon:none',
     );
   });
 
-  it('appends iterationPath when decision ID is static and iteration path is defined', () => {
+  it('composeScopedDecisionId appends nested iteration paths for static binds', () => {
     assert.equal(
-      scopeDecisionIdForIteration('decision:$choice', 'decision:$choice', '[0]'),
-      'decision:$choice[0]',
-    );
-  });
-
-  it('appends nested iteration paths for nested loops', () => {
-    assert.equal(
-      scopeDecisionIdForIteration('decision:$choice', 'decision:$choice', '[0][1]'),
+      composeScopedDecisionId('decision:$choice', '$choice', '$choice', '[0][1]'),
       'decision:$choice[0][1]',
     );
   });

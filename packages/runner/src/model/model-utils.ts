@@ -7,6 +7,13 @@ export function optionalPlayerId(playerId: number | undefined): { readonly playe
 
 export type ScopeKind = 'global' | 'perPlayer' | 'zone' | undefined;
 export type ScopeEndpointKind = Exclude<ScopeKind, undefined>;
+type EndpointPayloadField = 'from' | 'to';
+
+export interface ScopeEndpointPayloadObject {
+  readonly scope?: unknown;
+  readonly player?: unknown;
+  readonly zone?: unknown;
+}
 
 interface ScopeLabelResolvers {
   readonly scope: ScopeKind;
@@ -73,6 +80,20 @@ function missingEndpointIdentity(scope: ScopeEndpointKind, field: 'playerId' | '
   throw new Error(`Missing endpoint identity for ${scope} scope: ${field}`);
 }
 
-function invalidEndpointScope(scope: unknown): never {
+export function invalidEndpointScope(scope: unknown): never {
   throw new Error(`Invalid endpoint scope for event-log rendering: ${String(scope)}`);
+}
+
+export function endpointPayloadMustBeObject(field: EndpointPayloadField): never {
+  throw new Error(`Invalid endpoint payload for event-log rendering: ${field} must be an object`);
+}
+
+export function asScopeEndpointPayloadObject(
+  endpoint: unknown,
+  field: EndpointPayloadField,
+): ScopeEndpointPayloadObject {
+  if (typeof endpoint !== 'object' || endpoint === null) {
+    return endpointPayloadMustBeObject(field);
+  }
+  return endpoint as ScopeEndpointPayloadObject;
 }

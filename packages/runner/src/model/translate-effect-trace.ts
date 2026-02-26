@@ -4,10 +4,13 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { EventLogKind } from './event-log-kind.js';
 import {
+  asScopeEndpointPayloadObject,
   formatScopeEndpointDisplay,
   formatScopePrefixDisplay,
+  invalidEndpointScope,
   optionalPlayerId,
   type ScopeEndpointDisplayInput,
+  type ScopeEndpointPayloadObject,
   type ScopeKind,
 } from './model-utils.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
@@ -97,8 +100,8 @@ function translateEffectEntry(
         kind: 'variable',
         message:
           `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
-          ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.from))}` +
-          ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.to))}.`,
+          ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.from, 'from'))}` +
+          ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.to, 'to'))}.`,
       };
 
     case 'createToken':
@@ -514,21 +517,37 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
   };
 }
 
-function toScopeEndpointDisplayInput(endpoint: EffectTraceResourceEndpoint): ScopeEndpointDisplayInput {
-  switch (endpoint.scope) {
+function toScopeEndpointDisplayInput(
+  endpoint: EffectTraceResourceEndpoint | unknown,
+  field: 'from' | 'to',
+): ScopeEndpointDisplayInput {
+  const objectEndpoint = asScopeEndpointPayloadObject(endpoint, field);
+  switch (objectEndpoint.scope) {
     case 'global':
       return { scope: 'global', playerId: undefined, zoneId: undefined };
     case 'perPlayer':
-      return { scope: 'perPlayer', playerId: endpoint.player, zoneId: undefined };
+      return toPerPlayerScopeEndpointDisplayInput(objectEndpoint);
     case 'zone':
-      return { scope: 'zone', playerId: undefined, zoneId: endpoint.zone };
+      return toZoneScopeEndpointDisplayInput(objectEndpoint);
     default:
-      return invalidEndpointScope((endpoint as { readonly scope?: unknown }).scope);
+      return invalidEndpointScope(objectEndpoint.scope);
   }
 }
 
-function invalidEndpointScope(scope: unknown): never {
-  throw new Error(`Invalid endpoint scope for event-log rendering: ${String(scope)}`);
+function toPerPlayerScopeEndpointDisplayInput(endpoint: ScopeEndpointPayloadObject): ScopeEndpointDisplayInput {
+  return {
+    scope: 'perPlayer',
+    playerId: endpoint.player as number,
+    zoneId: undefined,
+  };
+}
+
+function toZoneScopeEndpointDisplayInput(endpoint: ScopeEndpointPayloadObject): ScopeEndpointDisplayInput {
+  return {
+    scope: 'zone',
+    playerId: undefined,
+    zoneId: endpoint.zone as string,
+  };
 }
 
 function formatValue(value: unknown): string {

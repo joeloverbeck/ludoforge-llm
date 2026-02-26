@@ -747,6 +747,55 @@ describe('translateEffectTrace', () => {
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
     ).toThrow('Missing endpoint identity for zone scope: zoneId');
   });
+
+  it('throws deterministic error when resource-transfer from endpoint is missing', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry = {
+      kind: 'resourceTransfer',
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    } as unknown as EffectTraceEntry;
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Invalid endpoint payload for event-log rendering: from must be an object');
+  });
+
+  it('throws deterministic error when resource-transfer to endpoint is non-object', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntries: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: null as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      } as unknown as EffectTraceEntry,
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: 'global' as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      } as unknown as EffectTraceEntry,
+    ];
+
+    for (const invalidTraceEntry of invalidTraceEntries) {
+      expect(() =>
+        translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+      ).toThrow('Invalid endpoint payload for event-log rendering: to must be an object');
+    }
+  });
 });
 
 function provenance() {

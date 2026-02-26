@@ -5,9 +5,7 @@ import { isEffectErrorCode } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import {
   executeEventMove,
-  resolveEventEffectList,
-  resolveEventEffectTimingForMove,
-  resolveEventFreeOperationGrants,
+  shouldDeferIncompleteDecisionValidationForMove,
 } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
@@ -263,25 +261,6 @@ const validateDecisionSequenceForMove = (
   }
 };
 
-const shouldDeferIncompleteDecisionValidation = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): boolean => {
-  if (state.turnOrderState.type !== 'cardDriven') {
-    return false;
-  }
-  const timing = resolveEventEffectTimingForMove(def, state, move);
-  if (timing !== 'afterGrants') {
-    return false;
-  }
-  const effects = resolveEventEffectList(def, state, move);
-  if (effects.length === 0) {
-    return false;
-  }
-  return resolveEventFreeOperationGrants(def, state, move).length > 0;
-};
-
 const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
   for (const param of action.params) {
     if (!isDeclaredActionParamValueInDomain(param, move.params[param.name], evalCtx)) {
@@ -322,7 +301,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
   if (action === undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
-  const allowIncomplete = shouldDeferIncompleteDecisionValidation(def, state, move);
+  const allowIncomplete = shouldDeferIncompleteDecisionValidationForMove(def, state, move);
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;

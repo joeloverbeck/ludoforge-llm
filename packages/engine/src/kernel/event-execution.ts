@@ -306,6 +306,47 @@ export const resolveEventEffectTimingForMove = (
   return resolveEventEffectTiming(context);
 };
 
+export const shouldDeferIncompleteDecisionValidationForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): boolean => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return false;
+  }
+  if (!isCardEventMove(def, move)) {
+    return false;
+  }
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
+    return false;
+  }
+  if (context.card.playCondition !== undefined) {
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const runtimeTableIndex = buildRuntimeTableIndex(def);
+    const conditionMet = evalCondition(context.card.playCondition, {
+      def,
+      adjacencyGraph,
+      runtimeTableIndex,
+      state,
+      activePlayer: state.activePlayer,
+      actorPlayer: state.activePlayer,
+      bindings: { ...move.params },
+      collector: createCollector(),
+    });
+    if (!conditionMet) {
+      return false;
+    }
+  }
+  if (resolveEventEffectTiming(context) !== 'afterGrants') {
+    return false;
+  }
+  if (collectEventEffects(context).length === 0) {
+    return false;
+  }
+  return collectFreeOperationGrants(context).length > 0;
+};
+
 const applyEffectList = (
   def: GameDef,
   state: GameState,

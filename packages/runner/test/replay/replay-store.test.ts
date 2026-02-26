@@ -116,11 +116,11 @@ describe('createReplayStore', () => {
     const controller = createControllerMock();
     const store = createReplayStore(controller);
 
-    (controller.setSpeed as ReturnType<typeof vi.fn>)(4);
+    (controller.setSpeed as (speed: number) => void)(4);
     store.getState().syncFromController();
     expect(store.getState().playbackSpeed).toBe(4);
 
-    (controller.play as ReturnType<typeof vi.fn>)();
+    (controller.play as () => void)();
     store.getState().syncFromController();
     expect(store.getState().isPlaying).toBe(true);
 

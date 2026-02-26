@@ -7,7 +7,7 @@ import { createAnimationController } from '../../src/animation/animation-control
 import { createPresetRegistry } from '../../src/animation/preset-registry';
 import { buildTimeline } from '../../src/animation/timeline-builder';
 import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
-import type { GsapTimelineLike } from '../../src/animation/gsap-setup';
+import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import type { GameStore } from '../../src/store/game-store';
 
@@ -32,11 +32,7 @@ interface ControllerStoreState {
 }
 
 interface GsapFixture {
-  readonly gsap: {
-    readonly registerPlugin: ReturnType<typeof vi.fn>;
-    readonly defaults: ReturnType<typeof vi.fn>;
-    readonly timeline: ReturnType<typeof vi.fn>;
-  };
+  readonly gsap: GsapLike;
   readonly createdTimelines: GsapTimelineLike[];
 }
 
@@ -81,7 +77,7 @@ function createGsapFixture(): GsapFixture {
       registerPlugin: vi.fn(),
       defaults: vi.fn(),
       timeline,
-    },
+    } as unknown as GsapLike,
     createdTimelines,
   };
 }

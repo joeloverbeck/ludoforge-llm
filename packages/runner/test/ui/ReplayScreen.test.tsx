@@ -64,14 +64,14 @@ function createReplayStoreMock(initial?: Partial<{
       return isPlaying;
     },
     playbackSpeed: initial?.playbackSpeed ?? 1,
-    stepForward: spies.stepForward,
-    stepBackward: spies.stepBackward,
-    jumpToMove: spies.jumpToMove,
-    play: spies.play,
-    pause: spies.pause,
-    setSpeed: vi.fn(),
-    syncFromController: vi.fn(),
-    destroy: vi.fn(),
+    stepForward: spies.stepForward as never,
+    stepBackward: spies.stepBackward as never,
+    jumpToMove: spies.jumpToMove as never,
+    play: spies.play as never,
+    pause: spies.pause as never,
+    setSpeed: vi.fn() as never,
+    syncFromController: vi.fn() as never,
+    destroy: vi.fn() as never,
   }));
 
   return { store, spies };

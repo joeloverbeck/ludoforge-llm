@@ -105,7 +105,7 @@ AnimationLogger,
     logFaceControllerCall: vi.fn(),
     logTokenVisibilityInit: vi.fn(),
     logWarning: vi.fn(),
-  };
+  } as never;
 }
 
 afterEach(() => {

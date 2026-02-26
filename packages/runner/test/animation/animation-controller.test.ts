@@ -291,7 +291,7 @@ describe('createAnimationController', () => {
         presetRegistry,
         queueFactory: () => queue,
         traceToDescriptors: traceToDescriptorsMock,
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -409,7 +409,7 @@ describe('createAnimationController', () => {
             isTriggered: false,
           } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -585,7 +585,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => queue,
         traceToDescriptors: vi.fn(() => [{ kind: 'skipped', traceKind: 'forEach' } as const]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -641,7 +641,7 @@ describe('createAnimationController', () => {
             isTriggered: false,
           } as const,
         ]),
-        buildTimeline: vi.fn(() => timeline.timeline),
+        buildTimeline: vi.fn(() => timeline.timeline) as never,
         onError: vi.fn(),
       },
     );
@@ -881,7 +881,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => queue,
         traceToDescriptors,
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -969,7 +969,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => queue,
         traceToDescriptors,
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -1074,7 +1074,7 @@ describe('createAnimationController', () => {
         traceToDescriptors: vi.fn(() => [
           { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError,
       },
     );
@@ -1119,7 +1119,7 @@ describe('createAnimationController', () => {
         traceToDescriptors: vi.fn(() => [
           { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -1165,7 +1165,7 @@ describe('createAnimationController', () => {
         traceToDescriptors: vi.fn(() => [
           { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -1211,7 +1211,7 @@ describe('createAnimationController', () => {
         traceToDescriptors: vi.fn(() => [
           { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
         onWarning,
       },
@@ -1285,7 +1285,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => queue,
         traceToDescriptors: traceToDescriptorsMock,
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
         scheduleFrame,
       },
@@ -1359,7 +1359,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => queue,
         traceToDescriptors: traceToDescriptorsMock,
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
         scheduleFrame,
       },
@@ -1547,7 +1547,7 @@ describe('createAnimationController', () => {
             isTriggered: false,
           } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -1612,7 +1612,7 @@ describe('createAnimationController', () => {
             isTriggered: false,
           } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -1693,7 +1693,7 @@ describe('createAnimationController', () => {
             isTriggered: false,
           } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );
@@ -1749,7 +1749,7 @@ describe('createAnimationController', () => {
         traceToDescriptors: vi.fn(() => [
           { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
         ]),
-        buildTimeline: vi.fn(() => timeline.timeline),
+        buildTimeline: vi.fn(() => timeline.timeline) as never,
         onError: vi.fn(),
       },
     );
@@ -1821,7 +1821,7 @@ describe('createAnimationController', () => {
         traceToDescriptors: vi.fn(() => [
           { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
         ]),
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
         logger,
       },
@@ -1995,7 +1995,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => queue,
         traceToDescriptors,
-        buildTimeline: buildTimelineMock,
+        buildTimeline: buildTimelineMock as never,
         onError: vi.fn(),
       },
     );

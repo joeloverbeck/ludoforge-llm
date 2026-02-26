@@ -1055,7 +1055,7 @@ actions:
   - { id: ambushVc, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: nvaTransferResources
     actor: active
-    executor: '2'
+    executor: 'actor'
     phase: [main]
     params:
       - name: amount
@@ -1075,7 +1075,7 @@ actions:
     limits: []
   - id: vcTransferResources
     actor: active
-    executor: '3'
+    executor: 'actor'
     phase: [main]
     params:
       - name: amount
@@ -3074,6 +3074,7 @@ actionPipelines:
   # ── US/ARVN special-activity profiles ──
   - id: advise-profile
     actionId: advise
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     accompanyingOps: [train, patrol]
     compoundParamConstraints:
       - relation: disjoint
@@ -3204,6 +3205,7 @@ actionPipelines:
     linkedWindows: [us-special-window]
   - id: air-lift-profile
     actionId: airLift
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     accompanyingOps: any
     legality:
       op: or
@@ -3313,6 +3315,7 @@ actionPipelines:
     linkedWindows: [us-special-window]
   - id: air-strike-profile
     actionId: airStrike
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     accompanyingOps: any
     legality:
       op: or
@@ -3635,6 +3638,7 @@ actionPipelines:
     linkedWindows: [us-special-window]
   - id: govern-profile
     actionId: govern
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     accompanyingOps: [train, patrol]
     compoundParamConstraints:
       - relation: disjoint
@@ -3781,6 +3785,7 @@ actionPipelines:
     linkedWindows: [arvn-special-window]
   - id: transport-profile
     actionId: transport
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     accompanyingOps: any
     legality:
       op: or
@@ -3928,6 +3933,7 @@ actionPipelines:
     linkedWindows: [arvn-special-window]
   - id: raid-profile
     actionId: raid
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     accompanyingOps: [patrol, sweep, assault]
     legality: true
     costValidation: null
@@ -4025,6 +4031,7 @@ actionPipelines:
   # ── NVA/VC special-activity profiles ──
   - id: infiltrate-profile
     actionId: infiltrate
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     accompanyingOps: [rally, march]
     legality:
       op: or
@@ -4322,6 +4329,7 @@ actionPipelines:
     linkedWindows: [nva-special-window]
   - id: bombard-profile
     actionId: bombard
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     accompanyingOps: any
     legality:
       op: or
@@ -4461,6 +4469,7 @@ actionPipelines:
     linkedWindows: [nva-special-window]
   - id: nva-ambush-profile
     actionId: ambushNva
+    applicability: { op: '==', left: { ref: activePlayer }, right: 2 }
     accompanyingOps: [march, attack]
     compoundParamConstraints:
       - relation: subset
@@ -4513,6 +4522,7 @@ actionPipelines:
     linkedWindows: [nva-special-window]
   - id: tax-profile
     actionId: tax
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     accompanyingOps: any
     legality: null
     costValidation: null
@@ -4578,6 +4588,7 @@ actionPipelines:
     linkedWindows: [vc-special-window]
   - id: subvert-profile
     actionId: subvert
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     accompanyingOps: [rally, march, terror]
     legality:
       op: '>'
@@ -4817,6 +4828,7 @@ actionPipelines:
     linkedWindows: [vc-special-window]
   - id: vc-ambush-profile
     actionId: ambushVc
+    applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
     accompanyingOps: [march, attack]
     compoundParamConstraints:
       - relation: subset
@@ -4874,6 +4886,7 @@ actionPipelines:
   # ── Joint operation stub profiles ──
   - id: us-op-profile
     actionId: usOp
+    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
     legality: null
     costValidation:
         conditionMacro: us-joint-op-arvn-spend-eligible
@@ -4904,6 +4917,7 @@ actionPipelines:
     atomicity: atomic
   - id: arvn-op-profile
     actionId: arvnOp
+    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
     legality: null
     costValidation:
         op: ">="

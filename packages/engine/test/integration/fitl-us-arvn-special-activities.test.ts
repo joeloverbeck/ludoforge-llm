@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   asActionId,
+  asPlayerId,
   asTokenId,
   ILLEGAL_MOVE_REASONS,
   initialState,
@@ -153,6 +154,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const start = initialState(def, 113, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(0),
       globalVars: {
         ...start.globalVars,
         aid: 10,
@@ -219,6 +221,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const start = initialState(def, 191, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(0),
       zones: {
         ...start.zones,
         [spaceA]: [
@@ -326,6 +329,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const start = initialState(def, 277, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(0),
       globalVars: {
         ...start.globalVars,
         trail: 2,
@@ -401,6 +405,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const start = initialState(def, 503, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(1),
       globalVars: {
         ...start.globalVars,
         aid: 20,
@@ -476,6 +481,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const start = initialState(def, 521, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(1),
       zones: {
         ...start.zones,
         [origin]: [
@@ -522,6 +528,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const start = initialState(def, 557, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(1),
       zones: {
         ...start.zones,
         [adjacentSource]: [
@@ -580,7 +587,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.notEqual(compiled.gameDef, null);
 
-    const state = initialState(compiled.gameDef!, 211, 4).state;
+    const state = { ...initialState(compiled.gameDef!, 211, 4).state, activePlayer: asPlayerId(0) };
 
     assert.throws(
       () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
@@ -721,7 +728,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const spaceA = 'quang-nam:none';
     const spaceB = 'saigon:none';
 
-    const monsoonState = withMonsoonLookahead(initialState(def, 449, 4).state);
+    const monsoonState = { ...withMonsoonLookahead(initialState(def, 449, 4).state), activePlayer: asPlayerId(0) };
     assert.throws(
       () =>
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
@@ -759,6 +766,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const seeded = initialState(def, 457, 4).state;
     const monsoonState = withMonsoonLookahead({
       ...seeded,
+      activePlayer: asPlayerId(0),
       zones: {
         ...seeded.zones,
         [spaceA]: [makeToken('monsoon-us-a', 'troops', 'US', { type: 'troops' })],

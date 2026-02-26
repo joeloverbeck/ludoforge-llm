@@ -130,6 +130,7 @@ describe('FITL RVN leader lingering effects', () => {
     const baseState = clearAllZones(initialState(def, 9003, 4).state);
     const setup: GameState = {
       ...baseState,
+      activePlayer: asPlayerId(1),
       zones: {
         ...baseState.zones,
         [origin]: [
@@ -173,6 +174,7 @@ describe('FITL RVN leader lingering effects', () => {
     const baseState = clearAllZones(initialState(def, 90031, 4).state);
     const setup: GameState = {
       ...baseState,
+      activePlayer: asPlayerId(1),
       zones: {
         ...baseState.zones,
         [origin]: [
@@ -203,6 +205,7 @@ describe('FITL RVN leader lingering effects', () => {
     const baseState = clearAllZones(initialState(def, 9004, 4).state);
     const setup: GameState = {
       ...baseState,
+      activePlayer: asPlayerId(1),
       globalVars: {
         ...baseState.globalVars,
         aid: 30,

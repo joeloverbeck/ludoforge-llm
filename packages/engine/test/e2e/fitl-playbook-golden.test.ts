@@ -268,6 +268,27 @@ const computeArvnVictory = (def: GameDef, state: GameState): number =>
     FITL_ARVN_FORMULA,
   );
 
+const FITL_SUPPORT_CONFIG: MarkerWeightConfig = {
+  activeState: 'activeSupport',
+  passiveState: 'passiveSupport',
+};
+
+const FITL_US_FORMULA: VictoryFormula = {
+  type: 'markerTotalPlusZoneCount',
+  markerConfig: FITL_SUPPORT_CONFIG,
+  countZone: 'available-US:none',
+};
+
+const computeUsVictory = (def: GameDef, state: GameState): number =>
+  computeVictoryMarker(
+    DERIVED_METRICS_CONTEXT,
+    state,
+    mapSpaces(def),
+    supportOppositionBySpace(def, state),
+    FITL_FACTION_CONFIG,
+    FITL_US_FORMULA,
+  );
+
 // ---------------------------------------------------------------------------
 // Deck engineering — replace all card zones with the playbook's 13-card mini-deck
 // ---------------------------------------------------------------------------
@@ -1197,7 +1218,10 @@ const TURN_7: PlaybookTurn = {
       patronage: 15,
       trail: 1,
     },
-    eligibility: { '0': true, '1': true, '2': false, '3': false },
+    // After the card boundary fires (coup card promoted to played),
+    // advanceToDecisionPoint detects stale phase and transitions into
+    // coupVictory where the coup entry reset makes all factions eligible.
+    eligibility: { '0': true, '1': true, '2': true, '3': true },
     currentCard: 'card-125',
     previewCard: 'card-75',
     deckSize: 4,
@@ -1226,11 +1250,442 @@ const TURN_7: PlaybookTurn = {
   },
 };
 
+// Turn 8 — Coup! Nguyen Khanh (card-125)
+// The coup card triggers a full Coup Round (Rule 6.0) with 6 phases:
+//   coupVictory (6.1), coupResources (6.2), coupSupport (6.3),
+//   coupRedeploy (6.4), coupCommitment (6.5), coupReset (6.6).
+// At start of Turn 8, all factions are reset to eligible for each coup phase.
+// Within coup phases, factions act sequentially (no card-driven 2-faction limit).
+//
+// Phase 6.1 — Victory Check: No faction meets victory threshold. 1 move auto-advances.
+// Phase 6.2 — Resources: Macro effects compute ARVN/VC/NVA earnings, casualties-aid.
+//   ARVN: 18+14(aid)+15(econ)=47, VC: 10+7(bases)=17, NVA: 2+3(bases)+2(trail×2)=7
+//   Aid: 14−3(1 casualty)=11
+// Phase 6.3 — Support: US Pacification (Hue, Saigon), ARVN passes, VC Agitation (4 spaces)
+// Phase 6.4 — Redeploy: ARVN mandatory+police, NVA troop moves
+// Phase 6.5 — Commitment: US casualty routing, troop deployment/withdrawal
+// Phase 6.6 — Reset: Auto-effects (flip guerrillas, mark eligible, advance cards)
+const TURN_8: PlaybookTurn = {
+  label: 'Turn 8 — Coup! Nguyen Khanh',
+  moves: [
+    // -----------------------------------------------------------------------
+    // Phase 6.1 — Victory Check
+    // -----------------------------------------------------------------------
+    {
+      kind: 'simple',
+      label: 'Victory check (no faction meets threshold)',
+      move: {
+        actionId: asActionId('coupVictoryCheck'),
+        params: {},
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Phase 6.2 — Resources
+    // -----------------------------------------------------------------------
+    {
+      kind: 'simple',
+      label: 'Resources resolution',
+      move: {
+        actionId: asActionId('coupResourcesResolve'),
+        params: {},
+      },
+      expectedState: {
+        globalVars: {
+          arvnResources: 47,
+          vcResources: 17,
+          nvaResources: 7,
+          aid: 11,
+          patronage: 15,
+          trail: 1,
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Phase 6.3 — Support: US Pacification
+    // -----------------------------------------------------------------------
+    // US Pacify Hue: remove terror (cost 3 ARVN res)
+    {
+      kind: 'resolved',
+      label: 'US Pacify Hue — remove terror',
+      move: {
+        actionId: asActionId('coupPacifyUS'),
+        params: {
+          targetSpace: 'hue:none',
+          action: 'removeTerror',
+        },
+      },
+      expectedState: {
+        globalVars: { arvnResources: 44 },
+      },
+    },
+    // US Pacify Hue: shift toward support (cost 3 ARVN res)
+    {
+      kind: 'resolved',
+      label: 'US Pacify Hue — shift support 1',
+      move: {
+        actionId: asActionId('coupPacifyUS'),
+        params: {
+          targetSpace: 'hue:none',
+          action: 'shiftSupport',
+        },
+      },
+      expectedState: {
+        globalVars: { arvnResources: 41 },
+        markers: [
+          { space: 'hue:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+        ],
+      },
+    },
+    // US Pacify Hue: shift toward support again (cost 3 ARVN res)
+    {
+      kind: 'resolved',
+      label: 'US Pacify Hue — shift support 2',
+      move: {
+        actionId: asActionId('coupPacifyUS'),
+        params: {
+          targetSpace: 'hue:none',
+          action: 'shiftSupport',
+        },
+      },
+      expectedState: {
+        globalVars: { arvnResources: 38 },
+        markers: [
+          { space: 'hue:none', marker: 'supportOpposition', expected: 'neutral' },
+        ],
+      },
+    },
+    // US Pacify Saigon: shift to active support (cost 3 ARVN res)
+    {
+      kind: 'resolved',
+      label: 'US Pacify Saigon — shift to active support',
+      move: {
+        actionId: asActionId('coupPacifyUS'),
+        params: {
+          targetSpace: 'saigon:none',
+          action: 'shiftSupport',
+        },
+      },
+      expectedState: {
+        globalVars: { arvnResources: 35 },
+        markers: [
+          { space: 'saigon:none', marker: 'supportOpposition', expected: 'activeSupport' },
+        ],
+        computedValues: [
+          { label: 'US victory marker after Saigon pacify', expected: 48, compute: computeUsVictory },
+        ],
+      },
+    },
+    // US passes further pacification
+    {
+      kind: 'simple',
+      label: 'US passes pacification',
+      move: {
+        actionId: asActionId('coupPacifyPass'),
+        params: {},
+      },
+    },
+    // ARVN passes pacification
+    {
+      kind: 'simple',
+      label: 'ARVN passes pacification',
+      move: {
+        actionId: asActionId('coupPacifyPass'),
+        params: {},
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Phase 6.3 — Support: VC Agitation
+    // -----------------------------------------------------------------------
+    // VC Agitate Quang Tri (pop 2): passive → active opposition (cost 1 VC res)
+    {
+      kind: 'resolved',
+      label: 'VC Agitate Quang Tri',
+      move: {
+        actionId: asActionId('coupAgitateVC'),
+        params: {
+          targetSpace: 'quang-tri-thua-thien:none',
+          action: 'shiftOpposition',
+        },
+      },
+      expectedState: {
+        globalVars: { vcResources: 16 },
+        markers: [
+          { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+      },
+    },
+    // VC Agitate Quang Tin (pop 2): passive → active opposition (cost 1 VC res)
+    {
+      kind: 'resolved',
+      label: 'VC Agitate Quang Tin',
+      move: {
+        actionId: asActionId('coupAgitateVC'),
+        params: {
+          targetSpace: 'quang-tin-quang-ngai:none',
+          action: 'shiftOpposition',
+        },
+      },
+      expectedState: {
+        globalVars: { vcResources: 15 },
+        markers: [
+          { space: 'quang-tin-quang-ngai:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+      },
+    },
+    // VC Agitate Quang Duc (pop 1): passive → active opposition (cost 1 VC res)
+    {
+      kind: 'resolved',
+      label: 'VC Agitate Quang Duc',
+      move: {
+        actionId: asActionId('coupAgitateVC'),
+        params: {
+          targetSpace: 'quang-duc-long-khanh:none',
+          action: 'shiftOpposition',
+        },
+      },
+      expectedState: {
+        globalVars: { vcResources: 14 },
+        markers: [
+          { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+      },
+    },
+    // VC Agitate Binh Tuy (pop 1): passive → active opposition (cost 1 VC res)
+    {
+      kind: 'resolved',
+      label: 'VC Agitate Binh Tuy',
+      move: {
+        actionId: asActionId('coupAgitateVC'),
+        params: {
+          targetSpace: 'binh-tuy-binh-thuan:none',
+          action: 'shiftOpposition',
+        },
+      },
+      expectedState: {
+        globalVars: { vcResources: 13 },
+        markers: [
+          { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+        computedValues: [
+          { label: 'VC victory after agitation', expected: 29, compute: computeVcVictory },
+        ],
+      },
+    },
+    // VC passes agitation
+    {
+      kind: 'simple',
+      label: 'VC passes agitation',
+      move: {
+        actionId: asActionId('coupAgitatePass'),
+        params: {},
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Phase 6.4 — Redeploy
+    // -----------------------------------------------------------------------
+    // US has no redeploy actions — explicit pass
+    {
+      kind: 'simple',
+      label: 'US passes redeploy',
+      move: {
+        actionId: asActionId('coupRedeployPass'),
+        params: {},
+      },
+    },
+    // ARVN mandatory: Binh Dinh troop → Qui Nhon
+    {
+      kind: 'simple',
+      label: 'ARVN mandatory redeploy Binh Dinh troop to Qui Nhon',
+      move: {
+        actionId: asActionId('coupArvnRedeployMandatory'),
+        params: {
+          sourceSpace: 'binh-dinh:none',
+          targetSpace: 'qui-nhon:none',
+        },
+      },
+    },
+    // ARVN mandatory: Binh Dinh troop → Da Nang
+    {
+      kind: 'simple',
+      label: 'ARVN mandatory redeploy Binh Dinh troop to Da Nang',
+      move: {
+        actionId: asActionId('coupArvnRedeployMandatory'),
+        params: {
+          sourceSpace: 'binh-dinh:none',
+          targetSpace: 'da-nang:none',
+        },
+      },
+    },
+    // ARVN police: Saigon → loc-saigon-can-tho
+    {
+      kind: 'simple',
+      label: 'ARVN redeploy police Saigon to LoC Saigon-Can Tho',
+      move: {
+        actionId: asActionId('coupArvnRedeployPolice'),
+        params: {
+          sourceSpace: 'saigon:none',
+          targetSpace: 'loc-saigon-can-tho:none',
+        },
+      },
+    },
+    // ARVN passes redeploy
+    {
+      kind: 'simple',
+      label: 'ARVN passes redeploy',
+      move: {
+        actionId: asActionId('coupRedeployPass'),
+        params: {},
+      },
+    },
+    // NVA redeploy: 4 troops from Southern Laos → North Vietnam
+    {
+      kind: 'simple',
+      label: 'NVA redeploy troop 1 Southern Laos to North Vietnam',
+      move: {
+        actionId: asActionId('coupNvaRedeployTroops'),
+        params: {
+          sourceSpace: 'southern-laos:none',
+          targetSpace: 'north-vietnam:none',
+        },
+      },
+    },
+    {
+      kind: 'simple',
+      label: 'NVA redeploy troop 2 Southern Laos to North Vietnam',
+      move: {
+        actionId: asActionId('coupNvaRedeployTroops'),
+        params: {
+          sourceSpace: 'southern-laos:none',
+          targetSpace: 'north-vietnam:none',
+        },
+      },
+    },
+    {
+      kind: 'simple',
+      label: 'NVA redeploy troop 3 Southern Laos to North Vietnam',
+      move: {
+        actionId: asActionId('coupNvaRedeployTroops'),
+        params: {
+          sourceSpace: 'southern-laos:none',
+          targetSpace: 'north-vietnam:none',
+        },
+      },
+    },
+    {
+      kind: 'simple',
+      label: 'NVA redeploy troop 4 Southern Laos to North Vietnam',
+      move: {
+        actionId: asActionId('coupNvaRedeployTroops'),
+        params: {
+          sourceSpace: 'southern-laos:none',
+          targetSpace: 'north-vietnam:none',
+        },
+      },
+    },
+    // NVA passes redeploy
+    {
+      kind: 'simple',
+      label: 'NVA passes redeploy',
+      move: {
+        actionId: asActionId('coupRedeployPass'),
+        params: {},
+      },
+    },
+    // VC has no redeploy actions — explicit pass
+    {
+      kind: 'simple',
+      label: 'VC passes redeploy',
+      move: {
+        actionId: asActionId('coupRedeployPass'),
+        params: {},
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Phase 6.5 — Commitment
+    // -----------------------------------------------------------------------
+    {
+      kind: 'resolved',
+      label: 'US Commitment resolution',
+      move: {
+        actionId: asActionId('coupCommitmentResolve'),
+        params: {},
+      },
+    },
+    // US passes commitment
+    {
+      kind: 'simple',
+      label: 'US passes commitment',
+      move: {
+        actionId: asActionId('coupCommitmentPass'),
+        params: {},
+      },
+    },
+    // ARVN has no commitment actions — explicit pass
+    {
+      kind: 'simple',
+      label: 'ARVN passes commitment',
+      move: {
+        actionId: asActionId('coupCommitmentPass'),
+        params: {},
+      },
+    },
+    // NVA has no commitment actions — explicit pass
+    {
+      kind: 'simple',
+      label: 'NVA passes commitment',
+      move: {
+        actionId: asActionId('coupCommitmentPass'),
+        params: {},
+      },
+    },
+    // VC has no commitment actions — explicit pass
+    {
+      kind: 'simple',
+      label: 'VC passes commitment',
+      move: {
+        actionId: asActionId('coupCommitmentPass'),
+        params: {},
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      aid: 11,
+      arvnResources: 35,
+      nvaResources: 7,
+      vcResources: 13,
+      patronage: 15,
+      trail: 1,
+    },
+    // After reset (6.6): all factions eligible, new card = Sihanouk
+    eligibility: { '0': true, '1': true, '2': true, '3': true },
+    currentCard: 'card-75',  // Sihanouk
+    previewCard: 'card-17',  // Claymores
+    deckSize: 3,
+    globalMarkers: [
+      { marker: 'cap_boobyTraps', expected: 'shaded' },
+    ],
+    markers: [
+      { space: 'hue:none', marker: 'supportOpposition', expected: 'neutral' },
+      { space: 'saigon:none', marker: 'supportOpposition', expected: 'activeSupport' },
+      { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      { space: 'quang-tin-quang-ngai:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+    ],
+    computedValues: [
+      { label: 'VC victory marker', expected: 29, compute: computeVcVictory },
+      { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
+      { label: 'US victory marker', expected: 49, compute: computeUsVictory },
+    ],
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Playbook turns in execution order
 // ---------------------------------------------------------------------------
 
-const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5, TURN_6, TURN_7];
+const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5, TURN_6, TURN_7, TURN_8];
 
 // ---------------------------------------------------------------------------
 // Test suite

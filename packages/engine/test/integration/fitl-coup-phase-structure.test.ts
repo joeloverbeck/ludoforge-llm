@@ -97,15 +97,22 @@ describe('FITL production coup phase structure', () => {
     assert.equal(afterNonCoupMain.currentPhase, asPhaseId('main'));
     assert.equal(afterNonCoupMain.turnCount, nonCoup.turnCount + 1);
 
-    const firstCoup = withBoundaryCards(base, {
+    // When a coup card is the played card, the turn skips the main phase and
+    // starts directly in coupVictory. Verify by advancing from the last non-coup
+    // phase of the previous turn (main) — the turn rollover should set the
+    // initial phase to coupVictory, not main.
+    const preCoup = withBoundaryCards(base, {
       currentPhase: asPhaseId('main'),
-      playedIsCoup: true,
-      lookaheadIsCoup: false,
+      playedIsCoup: false,
+      lookaheadIsCoup: true,
       consecutiveCoupRounds: 0,
     });
-    const afterFirstCoupMain = advancePhase(def, firstCoup);
-    assert.equal(afterFirstCoupMain.currentPhase, asPhaseId('coupVictory'));
-    assert.equal(afterFirstCoupMain.turnCount, firstCoup.turnCount);
+    // advancePhase from main (last effective phase when non-coup) triggers turn
+    // rollover. The card boundary advances: the coup card (lookahead) becomes the
+    // played card. The new turn should start in coupVictory.
+    const afterRollover = advancePhase(def, preCoup);
+    assert.equal(afterRollover.currentPhase, asPhaseId('coupVictory'));
+    assert.equal(afterRollover.turnCount, preCoup.turnCount + 1);
 
     const suppressedConsecutive = withBoundaryCards(base, {
       currentPhase: asPhaseId('main'),

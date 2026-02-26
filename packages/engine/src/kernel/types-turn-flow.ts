@@ -109,6 +109,7 @@ export interface CoupPlanDef {
   readonly phases: readonly CoupPlanPhaseDef[];
   readonly finalRoundOmitPhases?: readonly string[];
   readonly maxConsecutiveRounds?: number;
+  readonly seatOrder?: readonly string[];
 }
 
 export interface TurnFlowRuntimeCardState {

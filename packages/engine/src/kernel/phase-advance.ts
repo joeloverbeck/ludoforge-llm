@@ -31,6 +31,61 @@ const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | 
   return numeric;
 };
 
+const resolveCoupPhaseIds = (def: GameDef): ReadonlySet<string> => {
+  if (def.turnOrder?.type !== 'cardDriven') {
+    return new Set<string>();
+  }
+  return new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => p.id));
+};
+
+const isInCoupPhase = (def: GameDef, state: GameState): boolean =>
+  resolveCoupPhaseIds(def).has(String(state.currentPhase));
+
+/**
+ * When entering a coup phase, reset the turn flow state so all factions are
+ * eligible, the first seat in seatOrder is active, and the current card
+ * tracking is cleared. If the coup plan defines a seatOrder, it overrides
+ * the card-based seat order for the duration of the coup phase.
+ * Returns the state unchanged if the target phase is not a coup phase or
+ * the turn order is not card-driven.
+ */
+const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameState['currentPhase']): GameState => {
+  if (def.turnOrder?.type !== 'cardDriven' || state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  const coupPhaseIds = resolveCoupPhaseIds(def);
+  if (!coupPhaseIds.has(String(phaseId))) {
+    return state;
+  }
+  const runtime = state.turnOrderState.runtime;
+  const coupSeatOrder = def.turnOrder.config.coupPlan?.seatOrder ?? runtime.seatOrder;
+  const allEligible = Object.fromEntries(
+    coupSeatOrder.map((seat) => [seat, true]),
+  ) as Readonly<Record<string, boolean>>;
+  const firstSeat = coupSeatOrder[0] ?? null;
+  const secondSeat = coupSeatOrder[1] ?? null;
+  return {
+    ...state,
+    activePlayer: firstSeat !== null ? asPlayerId(Number(firstSeat)) : state.activePlayer,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        seatOrder: coupSeatOrder,
+        eligibility: allEligible,
+        currentCard: {
+          firstEligible: firstSeat,
+          secondEligible: secondSeat,
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    },
+  };
+};
+
 const resolveCardDrivenCoupContext = (
   def: GameDef,
   state: GameState,
@@ -98,7 +153,9 @@ const effectiveTurnPhases = (def: GameDef, state: GameState): GameDef['turnStruc
       ? (def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan?.finalRoundOmitPhases : undefined) ?? []
       : [],
   );
-  return def.turnStructure.phases.filter((phase) => !omitted.has(String(phase.id)));
+  return def.turnStructure.phases.filter(
+    (phase) => context.coupPhaseIds.has(String(phase.id)) && !omitted.has(String(phase.id)),
+  );
 };
 
 const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'activePlayer' | 'turnOrderState'> => {
@@ -152,11 +209,24 @@ export const advancePhase = (
   const phases = effectiveTurnPhases(def, state);
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
   if (currentPhaseIndex < 0) {
-    throw kernelRuntimeError(
-      'PHASE_ADVANCE_CURRENT_PHASE_NOT_FOUND',
-      `advancePhase could not find current phase ${String(state.currentPhase)} in effective turn phases`,
-      { currentPhase: state.currentPhase },
-    );
+    // Current phase is not in the effective turn phases — force a direct transition
+    // to the first effective phase. This occurs when applyTurnFlowCardBoundary promotes
+    // a coup card mid-round (in applyTurnFlowEligibilityAfterMove), leaving the state
+    // in 'main' while effective phases are now coup-only.
+    const targetPhase = phases[0];
+    if (targetPhase === undefined) {
+      throw kernelRuntimeError(
+        'PHASE_ADVANCE_CURRENT_PHASE_NOT_FOUND',
+        `advancePhase could not find current phase ${String(state.currentPhase)} in effective turn phases`,
+        { currentPhase: state.currentPhase },
+      );
+    }
+    let redirected = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
+    redirected = applyCoupPhaseEntryReset(def, resetPhaseUsage({
+      ...redirected,
+      currentPhase: targetPhase.id,
+    }), targetPhase.id);
+    return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
   }
 
   let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
@@ -172,10 +242,11 @@ export const advancePhase = (
       );
     }
 
-    nextState = resetPhaseUsage({
+    nextState = applyCoupPhaseEntryReset(def, resetPhaseUsage({
       ...nextState,
       currentPhase: nextPhase.id,
-    });
+    }), nextPhase.id);
+
     return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
   }
 
@@ -196,18 +267,67 @@ export const advancePhase = (
     triggerLogCollector.push(...turnFlowLifecycle.traceEntries);
   }
   const turnOrderAdvance = advanceTurnOrder(def, nextState);
-  const initialPhase = firstPhaseId(def);
-  const rolledState = resetPhaseUsage(
+  const rolledForCoupCheck = {
+    ...nextState,
+    turnCount: nextState.turnCount + 1,
+    activePlayer: turnOrderAdvance.activePlayer,
+    turnOrderState: turnOrderAdvance.turnOrderState,
+  };
+  const effectivePhases = effectiveTurnPhases(def, rolledForCoupCheck);
+  const initialPhase = effectivePhases.at(0)?.id ?? firstPhaseId(def);
+  const rolledState = applyCoupPhaseEntryReset(def, resetPhaseUsage(
     resetTurnUsage({
-      ...nextState,
-      turnCount: nextState.turnCount + 1,
-      activePlayer: turnOrderAdvance.activePlayer,
-      turnOrderState: turnOrderAdvance.turnOrderState,
+      ...rolledForCoupCheck,
       currentPhase: initialPhase,
     }),
-  );
+  ), initialPhase);
   const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
   return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
+};
+
+/**
+ * In coup phases, when the current player has no legal moves, implicitly
+ * pass them and cycle to the next eligible seat. Returns null if no
+ * more eligible seats remain (the phase should advance instead).
+ */
+const coupPhaseImplicitPass = (
+  def: GameDef,
+  state: GameState,
+): GameState | null => {
+  if (!isInCoupPhase(def, state) || state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+
+  const runtime = state.turnOrderState.runtime;
+  const currentSeat = String(state.activePlayer);
+  const acted = new Set([...runtime.currentCard.actedSeats, currentSeat]);
+  const passed = new Set([...runtime.currentCard.passedSeats, currentSeat]);
+
+  const remaining = runtime.seatOrder.filter(
+    (seat) => runtime.eligibility[seat] === true && !acted.has(seat),
+  );
+  if (remaining.length === 0) {
+    return null;
+  }
+
+  const nextSeat = remaining[0]!;
+  return {
+    ...state,
+    activePlayer: asPlayerId(Number(nextSeat)),
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        currentCard: {
+          ...runtime.currentCard,
+          actedSeats: [...acted],
+          passedSeats: [...passed],
+          firstEligible: remaining[0] ?? null,
+          secondEligible: remaining[1] ?? null,
+        },
+      },
+    },
+  };
 };
 
 export const advanceToDecisionPoint = (
@@ -226,17 +346,32 @@ export const advanceToDecisionPoint = (
     );
   }
 
-  const maxAutoAdvancesPerMove = state.playerCount * phaseCount + 1;
+  const maxAutoAdvancesPerMove = 2 * state.playerCount * phaseCount + 1;
   let nextState = state;
   let advances = 0;
 
-  while (terminalResult(def, nextState, cachedRuntime) === null && legalMoves(def, nextState, undefined, cachedRuntime).length === 0) {
+  while (terminalResult(def, nextState, cachedRuntime) === null) {
+    const isInterruptPhase = (def.turnStructure.interrupts ?? []).some((phase) => phase.id === nextState.currentPhase);
+    const phaseValid = isInterruptPhase || effectiveTurnPhases(def, nextState).some((phase) => phase.id === nextState.currentPhase);
+    if (phaseValid && legalMoves(def, nextState, undefined, cachedRuntime).length > 0) {
+      break;
+    }
+
     if (advances >= maxAutoAdvancesPerMove) {
       throw kernelRuntimeError(
         'DECISION_POINT_STALL_LOOP_DETECTED',
         `STALL_LOOP_DETECTED: exceeded maxAutoAdvancesPerMove=${maxAutoAdvancesPerMove}`,
         { maxAutoAdvancesPerMove },
       );
+    }
+
+    if (phaseValid) {
+      const coupCycled = coupPhaseImplicitPass(def, nextState);
+      if (coupCycled !== null) {
+        nextState = coupCycled;
+        advances += 1;
+        continue;
+      }
     }
 
     nextState = advancePhase(def, nextState, triggerLogCollector, policy, collector, cachedRuntime);

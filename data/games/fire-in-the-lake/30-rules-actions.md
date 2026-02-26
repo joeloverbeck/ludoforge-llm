@@ -106,6 +106,7 @@ turnOrder:
           steps: [resolve-reset]
       finalRoundOmitPhases: [coupCommitment, coupReset]
       maxConsecutiveRounds: 1
+      seatOrder: ['0', '1', '2', '3']
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)
@@ -148,7 +149,7 @@ actions:
         - { op: '==', left: { ref: activePlayer }, right: 1 }
     cost: []
     effects: []
-    limits: [{ scope: phase, max: 1 }]
+    limits: []
   - id: coupAgitatePass
     actor: active
     executor: 'actor'
@@ -157,10 +158,10 @@ actions:
     pre: { op: '==', left: { ref: activePlayer }, right: 3 }
     cost: []
     effects: []
-    limits: [{ scope: phase, max: 1 }]
+    limits: []
   - id: coupPacifyUS
     actor: active
-    executor: '0'
+    executor: 'actor'
     phase: [coupSupport]
     params:
       - name: targetSpace
@@ -270,7 +271,7 @@ actions:
     limits: []
   - id: coupPacifyARVN
     actor: active
-    executor: '1'
+    executor: 'actor'
     phase: [coupSupport]
     params:
       - name: targetSpace
@@ -379,7 +380,7 @@ actions:
     limits: []
   - id: coupAgitateVC
     actor: active
-    executor: '3'
+    executor: 'actor'
     phase: [coupSupport]
     params:
       - name: targetSpace
@@ -470,7 +471,7 @@ actions:
     limits: []
   - id: coupArvnRedeployMandatory
     actor: active
-    executor: '1'
+    executor: 'actor'
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
@@ -604,7 +605,7 @@ actions:
     limits: []
   - id: coupArvnRedeployOptionalTroops
     actor: active
-    executor: '1'
+    executor: 'actor'
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
@@ -737,7 +738,7 @@ actions:
     limits: []
   - id: coupArvnRedeployPolice
     actor: active
-    executor: '1'
+    executor: 'actor'
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
@@ -821,7 +822,7 @@ actions:
     limits: []
   - id: coupNvaRedeployTroops
     actor: active
-    executor: '2'
+    executor: 'actor'
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
@@ -879,7 +880,7 @@ actions:
     pre: null
     cost: []
     effects: []
-    limits: [{ scope: phase, max: 1 }]
+    limits: []
   - id: coupCommitmentPass
     actor: active
     executor: 'actor'
@@ -888,10 +889,10 @@ actions:
     pre: null
     cost: []
     effects: []
-    limits: [{ scope: phase, max: 1 }]
+    limits: []
   - id: coupCommitmentResolve
     actor: active
-    executor: '0'
+    executor: 'actor'
     phase: [coupCommitment]
     params: []
     pre: { op: '==', left: { ref: activePlayer }, right: 0 }

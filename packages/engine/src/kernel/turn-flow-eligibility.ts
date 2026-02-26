@@ -43,7 +43,8 @@ interface FreeOperationGrantConsumptionResult {
   readonly releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[];
 }
 
-const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
+const isPassAction = (def: GameDef, move: Move): boolean =>
+  String(move.actionId) === 'pass' || resolveTurnFlowActionClass(def, move) === 'pass';
 
 const cardDrivenConfig = (def: GameDef) =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
@@ -760,27 +761,36 @@ export const applyTurnFlowEligibilityAfterMove = (
     return { state, traceEntries: [] };
   }
 
+  const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
+    ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => p.id))
+    : new Set<string>();
+  const inCoupPhase = coupPhaseIds.has(String(state.currentPhase));
+
   const before = runtime.currentCard;
   const acted = new Set(before.actedSeats);
-  acted.add(activeSeat);
+  if (!inCoupPhase || isPassAction(def, move)) {
+    acted.add(activeSeat);
+  }
   const passed = new Set(before.passedSeats);
   let nonPassCount = before.nonPassCount;
   const rewards: Array<{ resource: string; amount: number }> = [];
   let step: 'candidateScan' | 'passChain' = 'candidateScan';
 
-  if (isPassAction(move)) {
+  if (isPassAction(def, move)) {
     step = 'passChain';
     passed.add(activeSeat);
-    for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
-      if (reward.seat !== activeSeat) {
-        continue;
+    if (!inCoupPhase) {
+      for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
+        if (reward.seat !== activeSeat) {
+          continue;
+        }
+        if (state.globalVars[reward.resource] === undefined) {
+          continue;
+        }
+        rewards.push({ resource: reward.resource, amount: reward.amount });
       }
-      if (state.globalVars[reward.resource] === undefined) {
-        continue;
-      }
-      rewards.push({ resource: reward.resource, amount: reward.amount });
     }
-  } else {
+  } else if (!inCoupPhase) {
     nonPassCount += 1;
   }
 
@@ -879,7 +889,14 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   let endedReason: 'rightmostPass' | 'twoNonPass' | undefined;
-  if (step === 'passChain' && currentCard.firstEligible === null && currentCard.secondEligible === null) {
+  if (inCoupPhase) {
+    // In coup phases, the round ends only when ALL seats have passed.
+    // (The standard firstEligible/secondEligible tracking is not used in
+    // coup phases, so the normal rightmostPass condition would fire prematurely.)
+    if (runtime.seatOrder.every((seat) => acted.has(seat))) {
+      endedReason = 'rightmostPass';
+    }
+  } else if (step === 'passChain' && currentCard.firstEligible === null && currentCard.secondEligible === null) {
     endedReason = 'rightmostPass';
   } else if (currentCard.nonPassCount >= 2) {
     endedReason = 'twoNonPass';
@@ -894,14 +911,22 @@ export const applyTurnFlowEligibilityAfterMove = (
   let baseState = rewardState;
   let boundaryDurations: readonly TurnFlowDuration[] | undefined;
   if (endedReason !== undefined) {
-    nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
     nextPendingOverrides = [];
 
     const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
       ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => String(p.id)))
       : new Set<string>();
-    const inCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
-    if (!inCoupPhase) {
+    const roundEndsInCoupPhase = coupPhaseIds.has(String(rewardState.currentPhase));
+
+    if (roundEndsInCoupPhase) {
+      // In coup phases, a round ending means the phase is complete.
+      // Make all factions ineligible so advanceToDecisionPoint advances
+      // to the next phase instead of starting a new round.
+      nextEligibility = Object.fromEntries(
+        runtime.seatOrder.map((seat) => [seat, false]),
+      ) as Readonly<Record<string, boolean>>;
+    } else {
+      nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
       const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
       baseState = lifecycle.state;
       traceEntries.push(...lifecycle.traceEntries);

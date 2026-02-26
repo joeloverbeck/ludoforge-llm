@@ -155,6 +155,7 @@ const applyInvariants = (
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
         `Runtime smoke invariant failed [${invariant.id}] policy=${context.policyId} seed=${context.seed} players=${context.playerCount} step=${context.step}: ${message}`,
+        { cause: error },
       );
     }
   }

@@ -618,7 +618,7 @@ export const applyFlipGlobalMarker = (
   }
 
   const currentState = ctx.state.globalMarkers?.[evaluatedMarker] ?? lattice.defaultState;
-  let nextState: string | null = null;
+  let nextState: string | null;
   if (currentState === evaluatedStateA) {
     nextState = evaluatedStateB;
   } else if (currentState === evaluatedStateB) {

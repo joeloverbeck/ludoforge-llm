@@ -162,7 +162,7 @@ export const replayScript = (config: ReplayScriptConfig): ReplayScriptResult => 
         config.assertStep({ stepIndex, step, executed });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Replay step assertion failed at ${formatReplayContext(before, stepIndex, step.move, config.keyVars)}: ${message}`);
+        throw new Error(`Replay step assertion failed at ${formatReplayContext(before, stepIndex, step.move, config.keyVars)}: ${message}`, { cause: error });
       }
     }
 

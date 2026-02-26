@@ -16,6 +16,26 @@ export interface ScopeEndpointPayloadObject {
   readonly zone?: unknown;
 }
 
+export type NormalizedTransferEndpoint =
+  | Readonly<{
+      scope: 'global';
+      varName: string;
+      playerId: undefined;
+      zoneId: undefined;
+    }>
+  | Readonly<{
+      scope: 'perPlayer';
+      varName: string;
+      playerId: number;
+      zoneId: undefined;
+    }>
+  | Readonly<{
+      scope: 'zone';
+      varName: string;
+      playerId: undefined;
+      zoneId: string;
+    }>;
+
 interface ScopeLabelResolvers {
   readonly scope: ScopeKind;
   readonly playerId: number | undefined;
@@ -82,15 +102,15 @@ function missingEndpointIdentity(scope: ScopeEndpointKind, field: 'playerId' | '
 }
 
 export function invalidEndpointScope(scope: unknown): never {
-  throw new Error(`Invalid endpoint scope for event-log rendering: ${String(scope)}`);
+  throw new Error(`Invalid transfer endpoint scope: ${String(scope)}`);
 }
 
 export function endpointPayloadMustBeObject(field: EndpointPayloadField): never {
-  throw new Error(`Invalid endpoint payload for event-log rendering: ${field} must be an object`);
+  throw new Error(`Invalid transfer endpoint payload: ${field} must be an object`);
 }
 
 export function endpointVarNameMustBeString(field: EndpointPayloadField): never {
-  throw new Error(`Invalid endpoint payload for event-log rendering: ${field}.varName must be a string`);
+  throw new Error(`Invalid transfer endpoint payload: ${field}.varName must be a string`);
 }
 
 export function asScopeEndpointPayloadObject(
@@ -111,4 +131,55 @@ export function endpointVarNameAsString(
     return endpointVarNameMustBeString(field);
   }
   return endpoint.varName;
+}
+
+export function normalizeTransferEndpoint(endpoint: unknown, field: EndpointPayloadField): NormalizedTransferEndpoint {
+  const payload = asScopeEndpointPayloadObject(endpoint, field);
+  const varName = endpointVarNameAsString(payload, field);
+
+  switch (payload.scope) {
+    case 'global':
+      return {
+        scope: 'global',
+        varName,
+        playerId: undefined,
+        zoneId: undefined,
+      };
+
+    case 'perPlayer': {
+      const playerId = toFiniteNumberOrUndefined(payload.player);
+      if (playerId === undefined) {
+        return missingEndpointIdentity('perPlayer', 'playerId');
+      }
+      return {
+        scope: 'perPlayer',
+        varName,
+        playerId,
+        zoneId: undefined,
+      };
+    }
+
+    case 'zone': {
+      const zoneId = typeof payload.zone === 'string' ? payload.zone : undefined;
+      if (zoneId === undefined) {
+        return missingEndpointIdentity('zone', 'zoneId');
+      }
+      return {
+        scope: 'zone',
+        varName,
+        playerId: undefined,
+        zoneId,
+      };
+    }
+
+    default:
+      return invalidEndpointScope(payload.scope);
+  }
+}
+
+function toFiniteNumberOrUndefined(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return value;
 }

@@ -115,7 +115,7 @@ describe('model-utils', () => {
         resolvePlayerName: () => 'unused',
         resolveZoneName: () => 'unused',
       }),
-    ).toThrow('Invalid endpoint scope for event-log rendering');
+    ).toThrow('Invalid transfer endpoint scope');
   });
 
   it('throws deterministic invalid-scope errors for non-domain endpoint scope values', () => {
@@ -127,7 +127,7 @@ describe('model-utils', () => {
         resolvePlayerName: () => 'unused',
         resolveZoneName: () => 'unused',
       }),
-    ).toThrow('Invalid endpoint scope for event-log rendering: bogus');
+    ).toThrow('Invalid transfer endpoint scope: bogus');
 
     expect(() =>
       formatScopeEndpointDisplay({
@@ -137,7 +137,7 @@ describe('model-utils', () => {
         resolvePlayerName: () => 'unused',
         resolveZoneName: () => 'unused',
       }),
-    ).toThrow('Invalid endpoint scope for event-log rendering: null');
+    ).toThrow('Invalid transfer endpoint scope: null');
   });
 
   it('returns endpoint varName when it is a string', () => {
@@ -146,11 +146,11 @@ describe('model-utils', () => {
 
   it('throws deterministic error when endpoint varName is missing or non-string', () => {
     expect(() => endpointVarNameAsString({}, 'from')).toThrow(
-      'Invalid endpoint payload for event-log rendering: from.varName must be a string',
+      'Invalid transfer endpoint payload: from.varName must be a string',
     );
 
     expect(() => endpointVarNameAsString({ varName: 123 }, 'to')).toThrow(
-      'Invalid endpoint payload for event-log rendering: to.varName must be a string',
+      'Invalid transfer endpoint payload: to.varName must be a string',
     );
   });
 });

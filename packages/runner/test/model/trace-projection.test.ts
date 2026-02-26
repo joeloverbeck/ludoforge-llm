@@ -1,11 +1,13 @@
 import { asPlayerId, type EffectTraceEntry, type TriggerEvent } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import {
   isTriggeredEffectTraceEntry,
   projectEffectTraceEntry,
   projectTriggerEvent,
 } from '../../src/model/trace-projection.js';
+import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
 
 describe('trace-projection', () => {
   it('projects refs and player context for effect trace entries', () => {
@@ -220,6 +222,71 @@ describe('trace-projection', () => {
     expect(isTriggeredEffectTraceEntry(triggered)).toBe(true);
     expect(isTriggeredEffectTraceEntry(nonTriggered)).toBe(false);
   });
+
+  it('throws deterministic endpoint contract errors for malformed resource transfers', () => {
+    const invalidScopeTransfer: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: undefined as unknown as 'global', varName: 'pool' },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance('actionEffect'),
+    };
+    const missingPerPlayerIdentityTransfer: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'perPlayer', varName: 'pool', player: undefined as unknown as ReturnType<typeof asPlayerId> },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance('actionEffect'),
+    };
+    const missingZoneIdentityTransfer: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'zone', varName: 'pool', zone: undefined as unknown as string },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance('actionEffect'),
+    };
+
+    expect(() => projectEffectTraceEntry(invalidScopeTransfer)).toThrow(
+      'Invalid transfer endpoint scope: undefined',
+    );
+    expect(() => projectEffectTraceEntry(missingPerPlayerIdentityTransfer)).toThrow(
+      'Missing endpoint identity for perPlayer scope: playerId',
+    );
+    expect(() => projectEffectTraceEntry(missingZoneIdentityTransfer)).toThrow(
+      'Missing endpoint identity for zone scope: zoneId',
+    );
+  });
+
+  it('matches translate-effect-trace error semantics for malformed resource transfers', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const entry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'zone', varName: 'pool', zone: undefined as unknown as string },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance('actionEffect'),
+    };
+
+    const projectError = catchError(() => projectEffectTraceEntry(entry));
+    const translateError = catchError(() =>
+      translateEffectTrace([entry], [], visualConfig, gameDefNoFactionsFixture(), 0),
+    );
+
+    expect(projectError).toBe('Missing endpoint identity for zone scope: zoneId');
+    expect(translateError).toBe(projectError);
+  });
 });
 
 function provenance(eventContext: EffectTraceEntry['provenance']['eventContext']) {
@@ -227,5 +294,30 @@ function provenance(eventContext: EffectTraceEntry['provenance']['eventContext']
     phase: 'main',
     eventContext,
     effectPath: 'effects[0]',
+  } as const;
+}
+
+function catchError(fn: () => unknown): string {
+  try {
+    fn();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error('Expected function to throw');
+}
+
+function gameDefNoFactionsFixture() {
+  return {
+    metadata: { id: 'fixture-no-factions', players: { min: 2, max: 4 } },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: 'main' as never }] },
+    actions: [],
+    triggers: [],
+    terminal: { conditions: [] },
   } as const;
 }

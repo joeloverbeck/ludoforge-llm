@@ -8,6 +8,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { projectEffectTraceEntry } from '../../src/model/trace-projection.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
 
 describe('translateEffectTrace', () => {
@@ -722,7 +723,7 @@ describe('translateEffectTrace', () => {
 
     expect(() =>
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-    ).toThrow('Invalid endpoint scope for event-log rendering');
+    ).toThrow('Invalid transfer endpoint scope');
   });
 
   it('throws on missing per-player resource-transfer endpoint identity', () => {
@@ -812,7 +813,7 @@ describe('translateEffectTrace', () => {
 
     expect(() =>
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-    ).toThrow('Invalid endpoint scope for event-log rendering');
+    ).toThrow('Invalid transfer endpoint scope');
   });
 
   it('throws deterministic error when resource-transfer from endpoint is missing', () => {
@@ -829,7 +830,7 @@ describe('translateEffectTrace', () => {
 
     expect(() =>
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-    ).toThrow('Invalid endpoint payload for event-log rendering: from must be an object');
+    ).toThrow('Invalid transfer endpoint payload: from must be an object');
   });
 
   it('throws deterministic error when resource-transfer to endpoint is non-object', () => {
@@ -860,7 +861,7 @@ describe('translateEffectTrace', () => {
     for (const invalidTraceEntry of invalidTraceEntries) {
       expect(() =>
         translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-      ).toThrow('Invalid endpoint payload for event-log rendering: to must be an object');
+      ).toThrow('Invalid transfer endpoint payload: to must be an object');
     }
   });
 
@@ -892,7 +893,7 @@ describe('translateEffectTrace', () => {
     for (const invalidTraceEntry of invalidTraceEntries) {
       expect(() =>
         translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-      ).toThrow('Invalid endpoint payload for event-log rendering: from.varName must be a string');
+      ).toThrow('Invalid transfer endpoint payload: from.varName must be a string');
     }
   });
 
@@ -924,8 +925,30 @@ describe('translateEffectTrace', () => {
     for (const invalidTraceEntry of invalidTraceEntries) {
       expect(() =>
         translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-      ).toThrow('Invalid endpoint payload for event-log rendering: to.varName must be a string');
+      ).toThrow('Invalid transfer endpoint payload: to.varName must be a string');
     }
+  });
+
+  it('matches trace projection error semantics for malformed resource-transfer endpoints', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'perPlayer', varName: 'pool', player: undefined as unknown as ReturnType<typeof asPlayerId> },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    const translateError = catchError(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    );
+    const projectionError = catchError(() => projectEffectTraceEntry(invalidTraceEntry));
+
+    expect(translateError).toBe('Missing endpoint identity for perPlayer scope: playerId');
+    expect(projectionError).toBe(translateError);
   });
 });
 
@@ -973,4 +996,13 @@ function gameDefNoFactionsFixture(): GameDef {
     triggers: [],
     terminal: { conditions: [] },
   } as GameDef;
+}
+
+function catchError(fn: () => unknown): string {
+  try {
+    fn();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error('Expected function to throw');
 }

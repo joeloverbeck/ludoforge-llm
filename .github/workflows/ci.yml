@@ -27,7 +27,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [20]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -36,5 +36,5 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      # Only build — node --test glob patterns require Node 22+
       - run: pnpm turbo build
-      - run: pnpm turbo test

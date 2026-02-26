@@ -1129,10 +1129,10 @@ describe('applyMove() executor applicability contract', () => {
 });
 
 // ---------------------------------------------------------------------------
-// replaceRemainingStages compound flag
+// compound timing validation + replaceRemainingStages behavior
 // ---------------------------------------------------------------------------
 
-describe('applyMove() compound replaceRemainingStages', () => {
+describe('applyMove() compound timing validation and replaceRemainingStages', () => {
   const costVar: VariableDef = { name: 'cost', type: 'int', init: 0, min: 0, max: 100 };
   const combatVar: VariableDef = { name: 'combat', type: 'int', init: 0, min: 0, max: 100 };
   const saVar: VariableDef = { name: 'saEffect', type: 'int', init: 0, min: 0, max: 100 };
@@ -1159,6 +1159,10 @@ describe('applyMove() compound replaceRemainingStages', () => {
     effects: [{ addVar: { scope: 'global', var: 'saEffect', delta: 1 } }],
     limits: [],
   };
+  const noPipelineDef = makeBaseDef({
+    actions: [operation, specialActivityAction],
+    globalVars: [resourcesVar, costVar, combatVar, saVar],
+  });
 
   const threeStageProfile: ActionPipelineDef = {
     id: 'attack-profile',
@@ -1174,6 +1178,209 @@ describe('applyMove() compound replaceRemainingStages', () => {
     ],
     atomicity: 'atomic',
   };
+
+  it('insertAfterStage with timing=before is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'before',
+        insertAfterStage: 0,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.metadata?.['timing'], 'before');
+        return true;
+      },
+    );
+  });
+
+  it('insertAfterStage with timing=after is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'after',
+        insertAfterStage: 0,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.metadata?.['timing'], 'after');
+        return true;
+      },
+    );
+  });
+
+  it('replaceRemainingStages with timing=before is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'before',
+        replaceRemainingStages: true,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.metadata?.['timing'], 'before');
+        return true;
+      },
+    );
+  });
+
+  it('replaceRemainingStages with timing=after is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'after',
+        replaceRemainingStages: true,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.metadata?.['timing'], 'after');
+        return true;
+      },
+    );
+  });
+
+  it('timing=during without matched pipeline is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        insertAfterStage: 0,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['timing'], 'during');
+        assert.match(String(details.metadata?.['detail']), /requires a matched staged action pipeline/);
+        return true;
+      },
+    );
+  });
+
+  it('timing=during with zero-stage pipeline is illegal', () => {
+    const zeroStageProfile: ActionPipelineDef = {
+      id: 'attack-zero-stage-profile',
+      actionId: asActionId('attack'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeBaseDef({
+      actions: [operation, specialActivityAction],
+      actionPipelines: [zeroStageProfile],
+      globalVars: [resourcesVar, costVar, combatVar, saVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(def, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.metadata?.['stageCount'], 0);
+        assert.equal(details.metadata?.['insertAfterStage'], 0);
+        return true;
+      },
+    );
+  });
+
+  it('insertAfterStage out of bounds is illegal for timing=during', () => {
+    const def = makeBaseDef({
+      actions: [operation, specialActivityAction],
+      actionPipelines: [threeStageProfile],
+      globalVars: [resourcesVar, costVar, combatVar, saVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        insertAfterStage: 3,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(def, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.metadata?.['stageCount'], 3);
+        assert.equal(details.metadata?.['insertAfterStage'], 3);
+        return true;
+      },
+    );
+  });
 
   it('replaceRemainingStages: true skips stages after insertAfterStage', () => {
     const def = makeBaseDef({

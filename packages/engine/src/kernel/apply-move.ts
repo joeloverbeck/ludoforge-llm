@@ -159,6 +159,59 @@ const operationAllowsSpecialActivity = (
   return accompanyingOps.includes(String(operationActionId));
 };
 
+const validateCompoundTimingConfiguration = (
+  move: Move,
+  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  actionPipeline: ActionPipelineDef | undefined,
+): void => {
+  if (move.compound === undefined) {
+    return;
+  }
+  const { timing, insertAfterStage, replaceRemainingStages } = move.compound;
+  if (timing !== 'during' && insertAfterStage !== undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      invalidField: 'insertAfterStage',
+      detail: 'insertAfterStage requires timing=during',
+    });
+  }
+  if (timing !== 'during' && replaceRemainingStages !== undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      invalidField: 'replaceRemainingStages',
+      detail: 'replaceRemainingStages requires timing=during',
+    });
+  }
+  if (timing === 'during' && executionProfile === undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      detail: 'timing=during requires a matched staged action pipeline',
+    });
+  }
+  if (timing === 'during' && actionPipeline !== undefined && actionPipeline.stages.length === 0) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      invalidField: 'insertAfterStage',
+      insertAfterStage: insertAfterStage ?? 0,
+      stageCount: 0,
+      detail: 'timing=during requires an action pipeline with at least one declared stage',
+    });
+  }
+  if (timing === 'during' && executionProfile !== undefined) {
+    const stageCount = executionProfile.resolutionStages.length;
+    const resolvedInsertAfterStage = insertAfterStage ?? 0;
+    if (resolvedInsertAfterStage >= stageCount) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+        timing,
+        invalidField: 'insertAfterStage',
+        insertAfterStage: resolvedInsertAfterStage,
+        stageCount,
+        detail: 'insertAfterStage must reference an existing stage index',
+      });
+    }
+  }
+};
+
 const toParamValueSet = (
   value: MoveParamValue | undefined,
 ): ReadonlySet<MoveParamScalar> => {
@@ -364,6 +417,13 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
   if (preflight.kind === 'notApplicable') {
     throw illegalMoveError(move, toApplyMoveIllegalReason(preflight.reason));
   }
+  const matchedExecutionProfile = preflight.pipelineDispatch.kind === 'matched'
+    ? toExecutionPipeline(action, preflight.pipelineDispatch.profile)
+    : undefined;
+  const matchedActionPipeline = preflight.pipelineDispatch.kind === 'matched'
+    ? preflight.pipelineDispatch.profile
+    : undefined;
+  validateCompoundTimingConfiguration(move, matchedExecutionProfile, matchedActionPipeline);
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
@@ -529,6 +589,7 @@ const executeMoveAction = (
   }
   const actionPipeline = pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined;
   const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
+  validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
   const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
   const runtimeMoveParams = {
     ...move.params,

@@ -1,93 +1,121 @@
-# ENGINEARCH-072: Harden module export-contract guards against wildcard/default export bypasses
+# ENGINEARCH-072: Validate compound timing/flags fail fast (no silent no-ops)
 
 **Status**: ✅ COMPLETED
-**Priority**: HIGH
+**Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: Yes — kernel architecture guard helper + guard contract enforcement
+**Engine Changes**: Yes — kernel move validation/runtime reasons + unit tests
 **Deps**: none
 
 ## Problem
 
-The new export-contract guard for `scoped-var-runtime-access.ts` asserts a named-export allowlist, but the shared helper only collects named exports. It does not detect `export * from ...` or default export paths, which can bypass intended API boundary checks and silently widen the public surface.
+Compound move fields currently allow silent no-op configurations:
+
+1. `replaceRemainingStages: true` does nothing when `timing` is `'before'` or `'after'`.
+2. `insertAfterStage` does nothing when `timing` is `'before'` or `'after'`.
+3. `timing: 'during'` does nothing when the operation has no matched staged execution pipeline (SA never runs).
+
+These should fail fast as illegal moves instead of being accepted and partially ignored.
 
 ## Assumption Reassessment (2026-02-26)
 
-1. `packages/engine/test/helpers/kernel-source-ast-guard.ts` now includes `collectTopLevelNamedExports(...)` for guard use.
-2. Current helper behavior is split:
-   - `collectTopLevelNamedExports(...)` captures named exports only.
-   - `isIdentifierExported(...)` can detect identifier-level `export = identifier` usage when checking a specific symbol.
-   - There is no helper-level contract metadata for `export *`, `export default`, or `export =` presence as first-class export-surface flags.
-3. `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` currently enforces a named allowlist and targeted symbol checks, but does not assert that wildcard/default/assignment export mechanisms are categorically forbidden.
-4. **Mismatch + correction**: module export-contract guards should enforce the complete export surface (named exports + disallowed export mechanisms), not only named identifiers.
+1. In [`packages/engine/src/kernel/apply-move.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/apply-move.ts), `insertAfterStage` and `replaceRemainingStages` are only consumed in the `'during'` staged loop path, so they are silently ignored for `'before'`/`'after'`.
+2. In the same file, `'during'` execution is only meaningful when `executionProfile` exists; without a matched pipeline, compound SA is never invoked.
+3. [`packages/engine/src/kernel/schemas-core.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/schemas-core.ts) validates field shapes only; it does not enforce cross-field timing semantics.
+4. [`packages/engine/src/kernel/runtime-reasons.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/runtime-reasons.ts) currently has no dedicated illegal-move reason for invalid compound timing/flag configuration.
+5. **Mismatch + correction**: Validation must reject (not warn) these misconfigurations:
+   - `insertAfterStage` or `replaceRemainingStages` when `timing !== 'during'`
+   - `timing === 'during'` when no staged execution pipeline is matched
 
 ## Architecture Check
 
-1. Guarding against wildcard/default export bypasses is strictly cleaner and more robust than relying on a named-only allowlist because it closes API-surface escape hatches.
-2. This is kernel test-architecture hardening only; it does not introduce game-specific behavior and keeps GameDef/runtime/simulator fully game-agnostic.
-3. No backwards-compatibility aliases/shims should be introduced.
+1. Fail-fast runtime validation is architecturally better than silent no-op behavior: it preserves invariants and makes authored specs deterministic.
+2. Validation belongs in shared kernel move-validation/execution flow (generic `CompoundMovePayload` semantics), not in game-specific compilers or data.
+3. Add a dedicated illegal-move reason code for this invariant breach rather than overloading unrelated reasons.
+4. No compatibility aliasing: invalid configurations should break and be fixed at source.
 
 ## What to Change
 
-### 1. Extend export-surface helper contracts
+### 1. Runtime validation in `apply-move.ts`
 
-Update `kernel-source-ast-guard.ts` with helper(s) that return explicit export-surface metadata (for example `hasExportAll`, `hasDefaultExport`, `hasExportAssignment`) in addition to named export identifiers.
+Add a shared compound timing validator and enforce it before execution:
 
-### 2. Tighten scoped-var export contract guard
+- Reject `insertAfterStage` when `timing !== 'during'`
+- Reject `replaceRemainingStages` when `timing !== 'during'`
+- Reject `timing === 'during'` when no matched staged execution profile exists
 
-Update `scoped-var-write-surface-guard.test.ts` to assert both:
-- exact named allowlist, and
-- explicit prohibition of wildcard/default/assignment export mechanisms for the module contract, independent of named-identifier checks.
+Implementation behavior: throw `IllegalMoveError` with a dedicated `ILLEGAL_MOVE_REASONS` entry and metadata identifying the invalid fields/timing context.
+
+### 2. Extend illegal-move reasons in `runtime-reasons.ts`
+
+Add one explicit reason constant/message for invalid compound timing configuration and include it in `KERNEL_RUNTIME_REASONS`.
+
+### 3. Unit tests for the validation
+
+Add test cases that verify:
+- `insertAfterStage` with `timing: 'before'` → illegal
+- `insertAfterStage` with `timing: 'after'` → illegal
+- `replaceRemainingStages: true` with `timing: 'before'` → illegal
+- `replaceRemainingStages: true` with `timing: 'after'` → illegal
+- `timing: 'during'` with no matched pipeline → illegal
+- Valid combinations continue working
 
 ## Files to Touch
 
-- `packages/engine/test/helpers/kernel-source-ast-guard.ts` (modify)
-- `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` (modify)
+- `packages/engine/src/kernel/apply-move.ts` (modify)
+- `packages/engine/src/kernel/runtime-reasons.ts` (modify)
+- `packages/engine/test/unit/kernel/apply-move.test.ts` (modify)
+- `packages/engine/test/unit/kernel/runtime-reasons.test.ts` (modify)
 
 ## Out of Scope
 
-- Runtime scoped-var read/write semantics
-- GameSpecDoc/GameDef schema or compiler behavior changes
-- Runner or visual-config concerns
+- Compile-time validation in the compiler (compound constraints are assembled from GameSpecDoc data; compiler-level validation is separate)
+- `insertAfterStage` bounds checking (ensuring it's < stage count) — related but distinct
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. Guard fails if `scoped-var-runtime-access.ts` introduces `export * from ...`.
-2. Guard fails if `scoped-var-runtime-access.ts` introduces default export/assignment forms.
-3. Guard still enforces exact named-export allowlist.
-4. Existing suite: `pnpm -F @ludoforge/engine test`
+1. `replaceRemainingStages: true` with `timing: 'before'` throws `IllegalMoveError`
+2. `replaceRemainingStages: true` with `timing: 'after'` throws `IllegalMoveError`
+3. `insertAfterStage` with `timing: 'before'` throws `IllegalMoveError`
+4. `insertAfterStage` with `timing: 'after'` throws `IllegalMoveError`
+5. `timing: 'during'` without staged pipeline throws `IllegalMoveError`
+6. Valid `timing: 'during'` with staged pipeline and flags continues working
+7. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
 
-1. Kernel module API boundary guards cover full export surface, not only named identifiers.
-2. Internal staging shapes and non-contract exports remain non-public.
+1. `replaceRemainingStages` and `insertAfterStage` are only meaningful when `timing === 'during'`
+2. `timing === 'during'` requires a matched staged execution pipeline
+3. Misconfigured compound moves fail fast with descriptive errors rather than silently ignoring fields
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` — extend contract assertions to cover wildcard/default/assignment export bypass vectors.
+1. `packages/engine/test/unit/kernel/apply-move.test.ts` — New/extended describe block for compound timing validation
+2. `packages/engine/test/unit/kernel/runtime-reasons.test.ts` — Update stable taxonomy expectations for new reason constant
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/kernel/scoped-var-write-surface-guard.test.js`
+1. `pnpm turbo build`
+2. `node --test "packages/engine/dist/test/unit/kernel/apply-move.test.js" "packages/engine/dist/test/unit/kernel/runtime-reasons.test.js"`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
 
 ## Outcome
 
-- Completion date: 2026-02-26
-- What was changed:
-  - Updated ticket assumptions to reflect actual helper behavior (named-export collection plus identifier-level `export =` detection only in targeted checks), and clarified scope to require explicit export-surface metadata.
-  - Implemented export-surface metadata in `kernel-source-ast-guard.ts` with explicit flags for wildcard re-exports, default exports, and export assignments.
-  - Strengthened `scoped-var-write-surface-guard.test.ts` to enforce both exact named exports and explicit prohibition of wildcard/default/assignment export mechanisms.
-  - Added regression assertions that the new metadata detects each disallowed export mechanism.
-- Deviations from original plan:
-  - Added an extra helper-detection regression assertion block in the guard test to validate the metadata itself, not only the target module contract.
-- Verification results:
-  - `pnpm -F @ludoforge/engine build` passed.
-  - `node --test packages/engine/dist/test/unit/kernel/scoped-var-write-surface-guard.test.js` passed.
-  - `pnpm -F @ludoforge/engine test` passed.
-  - `pnpm -F @ludoforge/engine lint` passed.
+- **Completion date**: 2026-02-26
+- **What changed**:
+  - Added shared compound timing configuration validation in `apply-move.ts` and enforced it in both move validation and move execution paths.
+  - Added a new canonical reason: `ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID`.
+  - Added kernel unit tests for invalid compound timing/flag combinations, including `timing: 'during'` without a staged pipeline.
+  - Updated runtime-reason taxonomy test expectations for the new reason constant.
+- **Deviations from original plan**:
+  - Included `timing: 'during'` without matched staged pipeline in enforcement scope (not just `insertAfterStage`/`replaceRemainingStages` with non-`during` timings), because current architecture treated it as a silent no-op.
+  - Updated `runtime-reasons.test.ts` in addition to originally listed files to preserve stable reason-taxonomy contracts.
+- **Verification results**:
+  - `pnpm turbo build` ✅
+  - `node --test "packages/engine/dist/test/unit/kernel/apply-move.test.js" "packages/engine/dist/test/unit/kernel/runtime-reasons.test.js"` ✅
+  - `pnpm -F @ludoforge/engine test` ✅ (297 passed, 0 failed)
+  - `pnpm -F @ludoforge/engine lint` ✅

@@ -596,6 +596,7 @@ describe('translateEffectTrace', () => {
       {
         kind: 'varChange',
         scope: 'zone',
+        zone: 'beta',
         varName: 'support',
         oldValue: 2,
         newValue: 3,
@@ -614,7 +615,7 @@ describe('translateEffectTrace', () => {
       {
         kind: 'resourceTransfer',
         from: { scope: 'global', varName: 'pool' },
-        to: { scope: 'perPlayer', varName: 'resources' },
+        to: { scope: 'perPlayer', varName: 'resources', player: asPlayerId(1) },
         requestedAmount: 1,
         actualAmount: 1,
         sourceAvailable: 1,
@@ -623,7 +624,7 @@ describe('translateEffectTrace', () => {
       },
       {
         kind: 'resourceTransfer',
-        from: { scope: 'zone', varName: 'support' },
+        from: { scope: 'zone', varName: 'support', zone: 'alpha' },
         to: { scope: 'global', varName: 'pool' },
         requestedAmount: 1,
         actualAmount: 1,
@@ -678,11 +679,11 @@ describe('translateEffectTrace', () => {
 
     expect(entries[0]?.message).toBe('United States: Resources changed from 9 to 7.');
     expect(entries[1]?.message).toBe('Alpha Zone: Support changed from 1 to 2.');
-    expect(entries[2]?.message).toBe('Zone: Support changed from 2 to 3.');
+    expect(entries[2]?.message).toBe('Beta: Support changed from 2 to 3.');
 
     expect(entries[3]?.message).toContain('from United States to Alpha Zone');
-    expect(entries[4]?.message).toContain('from Global to Per Player');
-    expect(entries[5]?.message).toContain('from Zone to Global');
+    expect(entries[4]?.message).toContain('from Global to Arvn');
+    expect(entries[5]?.message).toContain('from Alpha Zone to Global');
 
     expect(entries[6]?.message).toBe(
       'Triggered On Resources Changed on United States: Resources changed from 9 to 7.',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  normalizeTransferEndpoint,
   endpointVarNameAsString,
   formatScopeEndpointDisplay,
   formatScopePrefixDisplay,
@@ -151,6 +152,78 @@ describe('model-utils', () => {
 
     expect(() => endpointVarNameAsString({ varName: 123 }, 'to')).toThrow(
       'Invalid transfer endpoint payload: to.varName must be a string',
+    );
+  });
+
+  it('normalizes global transfer endpoints and ignores unrelated identity fields', () => {
+    expect(normalizeTransferEndpoint({ scope: 'global', varName: 'bank' }, 'from')).toEqual({
+      scope: 'global',
+      varName: 'bank',
+      playerId: undefined,
+      zoneId: undefined,
+    });
+
+    expect(
+      normalizeTransferEndpoint({ scope: 'global', varName: 'bank', player: 1, zone: 'zone-a' }, 'to'),
+    ).toEqual({
+      scope: 'global',
+      varName: 'bank',
+      playerId: undefined,
+      zoneId: undefined,
+    });
+  });
+
+  it('normalizes per-player transfer endpoints', () => {
+    expect(normalizeTransferEndpoint({ scope: 'perPlayer', varName: 'coins', player: 2 }, 'from')).toEqual({
+      scope: 'perPlayer',
+      varName: 'coins',
+      playerId: 2,
+      zoneId: undefined,
+    });
+  });
+
+  it('normalizes zone transfer endpoints', () => {
+    expect(normalizeTransferEndpoint({ scope: 'zone', varName: 'pool', zone: 'zone-left' }, 'to')).toEqual({
+      scope: 'zone',
+      varName: 'pool',
+      playerId: undefined,
+      zoneId: 'zone-left',
+    });
+  });
+
+  it('throws deterministic errors for malformed transfer endpoint payloads', () => {
+    expect(() => normalizeTransferEndpoint(undefined, 'from')).toThrow(
+      'Invalid transfer endpoint payload: from must be an object',
+    );
+    expect(() => normalizeTransferEndpoint('global', 'to')).toThrow(
+      'Invalid transfer endpoint payload: to must be an object',
+    );
+    expect(() => normalizeTransferEndpoint({ scope: 'global' }, 'from')).toThrow(
+      'Invalid transfer endpoint payload: from.varName must be a string',
+    );
+    expect(() => normalizeTransferEndpoint({ scope: 'global', varName: 123 }, 'to')).toThrow(
+      'Invalid transfer endpoint payload: to.varName must be a string',
+    );
+    expect(() => normalizeTransferEndpoint({ scope: 'bogus', varName: 'x' }, 'from')).toThrow(
+      'Invalid transfer endpoint scope: bogus',
+    );
+  });
+
+  it('throws deterministic errors for missing scoped transfer endpoint identity', () => {
+    expect(() => normalizeTransferEndpoint({ scope: 'perPlayer', varName: 'coins' }, 'from')).toThrow(
+      'Missing endpoint identity for perPlayer scope: playerId',
+    );
+    expect(() => normalizeTransferEndpoint({ scope: 'perPlayer', varName: 'coins', player: NaN }, 'to')).toThrow(
+      'Missing endpoint identity for perPlayer scope: playerId',
+    );
+    expect(
+      () => normalizeTransferEndpoint({ scope: 'perPlayer', varName: 'coins', player: Infinity }, 'from'),
+    ).toThrow('Missing endpoint identity for perPlayer scope: playerId');
+    expect(() => normalizeTransferEndpoint({ scope: 'zone', varName: 'pool' }, 'to')).toThrow(
+      'Missing endpoint identity for zone scope: zoneId',
+    );
+    expect(() => normalizeTransferEndpoint({ scope: 'zone', varName: 'pool', zone: 1 }, 'from')).toThrow(
+      'Missing endpoint identity for zone scope: zoneId',
     );
   });
 });

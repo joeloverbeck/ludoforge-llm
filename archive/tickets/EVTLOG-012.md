@@ -1,6 +1,6 @@
 # EVTLOG-012: Enforce strict endpoint identity in runner scope endpoint rendering
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -10,17 +10,19 @@
 
 Runner endpoint scope rendering still tolerates missing endpoint identity (`playerId`/`zoneId`) by printing fallback labels (`Per Player`, `Zone`). This can hide malformed trace payloads and weaken event-log trust.
 
-## Assumption Reassessment (2026-02-25)
+## Assumption Reassessment (2026-02-26)
 
-1. Runner now rejects invalid endpoint `scope`, but still silently accepts missing identity fields for `perPlayer`/`zone` endpoint contexts.
-2. Endpoint messages are intended to represent concrete transfer endpoints, so missing identity should be impossible under strict engine contracts.
-3. **Mismatch + correction**: current runner behavior is still permissive for endpoint identity; ticket must switch endpoint rendering to fail-fast semantics.
+1. ✅ Confirmed: runner already rejects invalid endpoint `scope` at runtime (`Invalid endpoint scope for event-log rendering`).
+2. ✅ Confirmed: endpoint rendering for `perPlayer`/`zone` still silently accepts missing identity and falls back to generic labels.
+3. ✅ Confirmed: translation call sites already pass endpoint scope details; the architectural gap is contract strictness, not missing plumbing.
+4. **Scope correction**: focus this ticket on strict endpoint identity enforcement (type + runtime), and on tests for malformed identity payloads.
 
 ## Architecture Check
 
 1. Failing fast on missing endpoint identity is cleaner and more robust than fallback labels because endpoint log data should be concrete, not guessed.
-2. This preserves the architecture boundary: runner displays agnostic runtime data and does not inject game-specific defaults.
-3. No backwards-compatibility fallback labels for malformed endpoint payloads.
+2. Stronger endpoint input typing (discriminated endpoint contract) improves extensibility by making invalid call patterns harder to express.
+3. This preserves the architecture boundary: runner displays agnostic runtime data and does not inject game-specific defaults.
+4. No backwards-compatibility fallback labels for malformed endpoint payloads.
 
 ## What to Change
 
@@ -32,9 +34,13 @@ Make endpoint rendering require:
 
 Throw on missing required identity instead of rendering fallback labels.
 
-### 2. Update translation call surfaces and tests
+### 2. Strengthen type contract at call boundaries
 
-Ensure all runner call sites pass strict endpoint identity and add failure-path assertions for malformed payloads.
+Use a discriminated endpoint input type for endpoint formatting so required identity is explicit by scope.
+
+### 3. Update tests
+
+Add failure-path assertions for malformed endpoint identity payloads in model utils and translation boundary tests.
 
 ## Files to Touch
 
@@ -74,3 +80,18 @@ Ensure all runner call sites pass strict endpoint identity and add failure-path 
 1. `pnpm -F @ludoforge/runner test -- model-utils translate-effect-trace`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **What changed**:
+  - Endpoint rendering now rejects missing identity for `perPlayer` (`playerId`) and `zone` (`zoneId`) instead of fallback labels.
+  - Endpoint rendering input contract was tightened with a discriminated type keyed by `scope`.
+  - Translation now maps resource-transfer endpoints through that stricter contract and preserves explicit invalid-scope failure behavior.
+  - Tests were updated/added for missing endpoint identity in both utility and translation layers.
+- **Deviations from original plan**:
+  - None functionally; scope was clarified first to focus on endpoint identity strictness rather than broader translation plumbing.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner test -- model-utils translate-effect-trace` (pass)
+  - `pnpm -F @ludoforge/runner test` (pass)
+  - `pnpm -F @ludoforge/runner lint` (pass)

@@ -1,4 +1,4 @@
-import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
+import type { EffectTraceEntry, EffectTraceResourceEndpoint, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
@@ -7,7 +7,7 @@ import {
   formatScopeEndpointDisplay,
   formatScopePrefixDisplay,
   optionalPlayerId,
-  type ScopeEndpointKind,
+  type ScopeEndpointDisplayInput,
   type ScopeKind,
 } from './model-utils.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
@@ -97,15 +97,8 @@ function translateEffectEntry(
         kind: 'variable',
         message:
           `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
-          ` from ${scopeFormatter.endpoint({
-            scope: entry.from.scope,
-            playerId: entry.from.scope === 'perPlayer' ? entry.from.player : undefined,
-            zoneId: entry.from.scope === 'zone' ? entry.from.zone : undefined,
-          })} to ${scopeFormatter.endpoint({
-            scope: entry.to.scope,
-            playerId: entry.to.scope === 'perPlayer' ? entry.to.player : undefined,
-            zoneId: entry.to.scope === 'zone' ? entry.to.zone : undefined,
-          })}.`,
+          ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.from))}` +
+          ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.to))}.`,
       };
 
     case 'createToken':
@@ -497,11 +490,7 @@ interface ScopeFormatter {
     readonly playerId: number | undefined;
     readonly zoneId: string | undefined;
   }) => string;
-  readonly endpoint: (input: {
-    readonly scope: ScopeEndpointKind;
-    readonly playerId: number | undefined;
-    readonly zoneId: string | undefined;
-  }) => string;
+  readonly endpoint: (input: ScopeEndpointDisplayInput) => string;
 }
 
 function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: PlayerLookup): ScopeFormatter {
@@ -523,6 +512,23 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
       }),
   };
+}
+
+function toScopeEndpointDisplayInput(endpoint: EffectTraceResourceEndpoint): ScopeEndpointDisplayInput {
+  switch (endpoint.scope) {
+    case 'global':
+      return { scope: 'global', playerId: undefined, zoneId: undefined };
+    case 'perPlayer':
+      return { scope: 'perPlayer', playerId: endpoint.player, zoneId: undefined };
+    case 'zone':
+      return { scope: 'zone', playerId: undefined, zoneId: endpoint.zone };
+    default:
+      return invalidEndpointScope((endpoint as { readonly scope?: unknown }).scope);
+  }
+}
+
+function invalidEndpointScope(scope: unknown): never {
+  throw new Error(`Invalid endpoint scope for event-log rendering: ${String(scope)}`);
 }
 
 function formatValue(value: unknown): string {

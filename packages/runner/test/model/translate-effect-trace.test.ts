@@ -711,6 +711,42 @@ describe('translateEffectTrace', () => {
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
     ).toThrow('Invalid endpoint scope for event-log rendering');
   });
+
+  it('throws on missing per-player resource-transfer endpoint identity', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'perPlayer', varName: 'pool', player: undefined as unknown as ReturnType<typeof asPlayerId> },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Missing endpoint identity for perPlayer scope: playerId');
+  });
+
+  it('throws on missing zone resource-transfer endpoint identity', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'zone', varName: 'pool', zone: undefined as unknown as string },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Missing endpoint identity for zone scope: zoneId');
+  });
 });
 
 function provenance() {

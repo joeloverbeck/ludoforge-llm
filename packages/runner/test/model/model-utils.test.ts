@@ -33,17 +33,7 @@ describe('model-utils', () => {
     ).toBe('Player 2: ');
   });
 
-  it('uses fallback labels when scope ids are missing', () => {
-    expect(
-      formatScopeEndpointDisplay({
-        scope: 'perPlayer',
-        playerId: undefined,
-        zoneId: undefined,
-        resolvePlayerName: () => 'unused',
-        resolveZoneName: (zoneId) => zoneId,
-      }),
-    ).toBe('Per Player');
-
+  it('uses fallback labels for prefix display when scope ids are missing', () => {
     expect(
       formatScopePrefixDisplay({
         scope: 'perPlayer',
@@ -55,16 +45,6 @@ describe('model-utils', () => {
     ).toBe('Player: ');
 
     expect(
-      formatScopeEndpointDisplay({
-        scope: 'zone',
-        playerId: undefined,
-        zoneId: undefined,
-        resolvePlayerName: () => 'unused',
-        resolveZoneName: (zoneId) => zoneId,
-      }),
-    ).toBe('Zone');
-
-    expect(
       formatScopePrefixDisplay({
         scope: 'zone',
         playerId: undefined,
@@ -73,6 +53,30 @@ describe('model-utils', () => {
         resolveZoneName: (zoneId) => zoneId,
       }),
     ).toBe('Zone: ');
+  });
+
+  it('throws when per-player endpoint identity is missing', () => {
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: 'perPlayer',
+        playerId: undefined as unknown as number,
+        zoneId: undefined,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: (zoneId) => zoneId,
+      }),
+    ).toThrow('Missing endpoint identity for perPlayer scope: playerId');
+  });
+
+  it('throws when zone endpoint identity is missing', () => {
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: 'zone',
+        playerId: undefined,
+        zoneId: undefined as unknown as string,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: (zoneId) => zoneId,
+      }),
+    ).toThrow('Missing endpoint identity for zone scope: zoneId');
   });
 
   it('renders global endpoint and empty global prefix', () => {

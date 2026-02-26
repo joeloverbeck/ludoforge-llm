@@ -30,19 +30,47 @@ export function formatScopePrefixDisplay(input: ScopeLabelResolvers): string {
   return '';
 }
 
-export function formatScopeEndpointDisplay(input: Omit<ScopeLabelResolvers, 'scope'> & { readonly scope: ScopeEndpointKind }): string {
+export type ScopeEndpointDisplayInput =
+  | Readonly<{
+      scope: 'global';
+      playerId: number | undefined;
+      zoneId: string | undefined;
+    }>
+  | Readonly<{
+      scope: 'perPlayer';
+      playerId: number;
+      zoneId: string | undefined;
+    }>
+  | Readonly<{
+      scope: 'zone';
+      playerId: number | undefined;
+      zoneId: string;
+    }>;
+
+export function formatScopeEndpointDisplay(
+  input: Omit<ScopeLabelResolvers, 'scope' | 'playerId' | 'zoneId'> & ScopeEndpointDisplayInput,
+): string {
   switch (input.scope) {
     case 'global':
       return 'Global';
     case 'perPlayer': {
-      const owner = input.playerId === undefined ? 'Player' : input.resolvePlayerName(input.playerId);
-      return owner === 'Player' ? 'Per Player' : owner;
+      if (typeof input.playerId !== 'number') {
+        return missingEndpointIdentity(input.scope, 'playerId');
+      }
+      return input.resolvePlayerName(input.playerId);
     }
     case 'zone':
-      return input.zoneId === undefined ? 'Zone' : input.resolveZoneName(input.zoneId);
+      if (typeof input.zoneId !== 'string') {
+        return missingEndpointIdentity(input.scope, 'zoneId');
+      }
+      return input.resolveZoneName(input.zoneId);
   }
 
   return invalidEndpointScope(input.scope);
+}
+
+function missingEndpointIdentity(scope: ScopeEndpointKind, field: 'playerId' | 'zoneId'): never {
+  throw new Error(`Missing endpoint identity for ${scope} scope: ${field}`);
 }
 
 function invalidEndpointScope(scope: unknown): never {

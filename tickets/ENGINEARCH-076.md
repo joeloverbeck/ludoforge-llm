@@ -1,3 +1,55 @@
+# ENGINEARCH-076: Add focused regression test for forEach static-bind decision scoping
+
+**Status**: PENDING
+**Priority**: MEDIUM
+**Effort**: Small
+**Engine Changes**: None — test-only
+**Deps**: None (ENGINEARCH-075 is a nice-to-have but independent)
+
+## Problem
+
+The production fix for forEach iteration decision-ID scoping (static-bind `chooseOne`/`chooseN` inside forEach reusing the same decision ID across iterations) lacks a focused unit test. The fix is exercised indirectly by the FITL golden test (Turn 8 commitment) and an adapted existing test in `legal-choices.test.ts`, but neither directly tests the specific bug scenario in isolation.
+
+A regression test should exercise: a `forEach` iterating N times where inner `chooseOne` or `chooseN` uses a static bind (no `{$loopVar}` template), and verify that each iteration produces a distinct scoped decision ID (`$bind[0]`, `$bind[1]`, etc.).
+
+## Assumption Reassessment (2026-02-26)
+
+1. `effects-choice.ts` now appends `ctx.iterationPath` to decision IDs when `composeDecisionId` returns the raw `internalDecisionId` (i.e., no template resolution). Confirmed.
+2. `effects-control.ts` sets `iterationPath: '[${iterIdx}]'` per forEach iteration. Confirmed.
+3. The existing adapted test in `legal-choices.test.ts` (line ~1724) tests a single iteration path `[0]` and `[1]` but through the full `legalChoicesDiscover` pipeline, not isolating the scoping mechanism.
+
+## Architecture Check
+
+1. A dedicated test in `legal-choices.test.ts` (or a new `forEach-decision-scoping.test.ts`) directly targeting the specific scenario improves regression safety for a critical fix.
+2. No game-specific logic. The test uses synthetic action definitions with forEach + static-bind chooseOne.
+3. No backwards-compatibility concerns.
+
+## What to Change
+
+### 1. Add test case to `legal-choices.test.ts`
+
+Add a test "scopes static-bind chooseOne decision IDs per forEach iteration" that:
+- Defines an action with `chooseN` (select target spaces) followed by `forEach` over the selected spaces, with an inner `chooseOne` using a static bind like `$mode`
+- Calls `legalChoicesDiscover` incrementally:
+  - First call: resolves `chooseN` targets → returns pending `$mode[0]`
+  - Second call: provides `$mode[0]` → returns pending `$mode[1]`
+  - Third call: provides `$mode[1]` → returns complete
+- Asserts each pending decision has a distinct, correctly-scoped `decisionId`
+
+### 2. Add test for nested forEach scoping
+
+Add a test "accumulates iteration paths for nested forEach" that:
+- Defines a double-nested forEach with a static-bind chooseOne in the inner loop
+- Verifies decision IDs include accumulated paths like `$choice[0][0]`, `$choice[0][1]`, `$choice[1][0]`
+
+## Files to Touch
+
+- `packages/engine/test/unit/kernel/legal-choices.test.ts` (modify — add test cases)
+
+## Out of Scope
+
+- Changing production code (this ticket is test-only)
+- Testing template-resolved binds (already well-covered by existing tests)
 # ENGINEARCH-076: Unify compound/pipeline preflight to remove duplicated kernel validation paths
 
 **Status**: PENDING
@@ -62,6 +114,14 @@ Add tests that exercise both normal and `skipValidation`-driven execution behavi
 
 ### Tests That Must Pass
 
+1. New test: "scopes static-bind chooseOne decision IDs per forEach iteration"
+2. New test: "accumulates iteration paths for nested forEach"
+3. Existing suite: `pnpm turbo test --force`
+
+### Invariants
+
+1. Each forEach iteration must produce a distinct `decisionId` for static-bind inner decisions
+2. Nested forEach must accumulate iteration indices (e.g., `[outer][inner]`)
 1. Compound timing invariants behave identically in standard validated execution and skip-validation execution contexts.
 2. No behavior regression for existing operation pipeline legality/cost preflight checks.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
@@ -75,6 +135,12 @@ Add tests that exercise both normal and `skipValidation`-driven execution behavi
 
 ### New/Modified Tests
 
+1. `packages/engine/test/unit/kernel/legal-choices.test.ts` — add 2 test cases covering single and nested forEach with static-bind decisions
+
+### Commands
+
+1. `cd packages/engine && node --test dist/test/unit/kernel/legal-choices.test.js`
+2. `pnpm turbo test --force`
 1. `packages/engine/test/unit/kernel/apply-move.test.ts` — parity assertions for shared preflight behavior
 2. `packages/engine/test/integration/*` or `packages/engine/test/e2e/*` — optional parity regression if unit-only coverage is insufficient
 

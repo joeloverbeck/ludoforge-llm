@@ -80,7 +80,7 @@ describe('FITL coup victory phase gating', () => {
     });
   });
 
-  it('advances from coupVictory to coupResources, then through support to the next decision point after coupResourcesResolve', () => {
+  it('advances from coupVictory to coupResources, then to coupSupport after coupResourcesResolve', () => {
     const def = compileProductionDef();
     const start = withClearedZones(def, initialState(def,8102, 4).state);
     const state: GameState = {
@@ -113,7 +113,7 @@ describe('FITL coup victory phase gating', () => {
 
     assert.equal(terminalResult(def, applied.state), null);
     assert.equal(applied.state.currentPhase, asPhaseId('coupResources'));
-    assert.equal(afterResources.state.currentPhase, asPhaseId('coupRedeploy'));
+    assert.equal(afterResources.state.currentPhase, asPhaseId('coupSupport'));
     assert.equal(afterResources.state.turnCount, state.turnCount);
   });
 

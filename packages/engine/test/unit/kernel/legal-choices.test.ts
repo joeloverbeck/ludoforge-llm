@@ -1721,9 +1721,13 @@ phase: [asPhaseId('main')],
         },
       });
 
+      // Decision IDs inside forEach iterations are scoped with the iteration index.
+      // Iteration [0] over targetSpace b:none resolves $moving[0] = ['g1'].
+      // Iteration [1] over targetSpace c:none resolves $moving[1] = [] (no tokens left to move).
       const result = legalChoicesDiscover(def, state, makeMove('chainOp', {
         'decision:targetSpaces': ['b:none', 'c:none'],
-        'decision:$moving': ['g1'],
+        'decision:$moving[0]': ['g1'],
+        'decision:$moving[1]': [],
       }));
       assert.deepStrictEqual(result, { kind: 'complete', complete: true });
     });

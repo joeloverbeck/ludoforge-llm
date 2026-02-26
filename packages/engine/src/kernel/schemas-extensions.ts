@@ -387,6 +387,7 @@ export const CoupPlanSchema = z
     phases: z.array(CoupPlanPhaseSchema).min(1),
     finalRoundOmitPhases: z.array(StringSchema.min(1)).optional(),
     maxConsecutiveRounds: IntegerSchema.min(1).optional(),
+    seatOrder: z.array(StringSchema.min(1)).min(1).optional(),
   })
   .strict();
 

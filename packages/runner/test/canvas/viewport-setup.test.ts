@@ -85,7 +85,7 @@ describe('setupViewport', () => {
 
   it('creates a viewport with explicit events and enables pan/zoom plugins', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config);
@@ -115,7 +115,7 @@ describe('setupViewport', () => {
 
   it('moves world layers into viewport and keeps HUD outside viewport', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config);
@@ -140,7 +140,7 @@ describe('setupViewport', () => {
 
   it('updates clamp bounds using updateWorldBounds with zoom-aware overscroll padding', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     // padX = 1280 / 0.25 / 2 = 2560, padY = 720 / 0.25 / 2 = 1440
@@ -167,7 +167,7 @@ describe('setupViewport', () => {
 
   it('applies zoom-aware overscroll padding to clamp bounds in updateWorldBounds', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     setupViewport(config);
@@ -189,7 +189,7 @@ describe('setupViewport', () => {
 
   it('centerOnBounds moves viewport to content center', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config);
@@ -201,7 +201,7 @@ describe('setupViewport', () => {
 
   it('centerOnBounds works with asymmetric bounds', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config);
@@ -213,7 +213,7 @@ describe('setupViewport', () => {
 
   it('overscroll padding works with zero-size bounds', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config);
@@ -232,7 +232,7 @@ describe('setupViewport', () => {
 
   it('cleans up viewport plugins, detaches layers, and removes viewport from stage on destroy', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config);
@@ -251,7 +251,7 @@ describe('setupViewport', () => {
 
   it('throws when minScale is greater than maxScale', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
 
@@ -266,7 +266,7 @@ describe('setupViewport', () => {
 
   it('throws when updateWorldBounds receives invalid bounds', () => {
     const viewport = createMockViewport();
-    viewportCtorMock.mockImplementation(() => viewport);
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
     const result = setupViewport(config as never);

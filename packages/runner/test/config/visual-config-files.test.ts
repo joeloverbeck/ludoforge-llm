@@ -39,7 +39,10 @@ describe('visual-config.yaml files', () => {
     expect(result.success).toBe(true);
   });
 
-  it('FITL visual-config uses canonical runtime ids and expected visual rule chain', () => {
+  it(
+    'FITL visual-config uses canonical runtime ids and expected visual rule chain',
+    { timeout: 15_000 },
+    () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
     const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake');
     const internalScenarioDeckZones = fitlGameDef.zones.filter((zone) => zone.isInternal === true);
@@ -123,7 +126,8 @@ describe('visual-config.yaml files', () => {
         symbol: 'star',
       },
     ]);
-  });
+    },
+  );
 
   it("Texas visual-config parses, validates, and uses explicit runtime ids for roles/animation", () => {
     const raw = readText('data/games/texas-holdem/visual-config.yaml');

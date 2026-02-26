@@ -6,6 +6,7 @@ import {
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
+  toScopedVarWrite,
   writeScopedVarToState,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
@@ -100,8 +101,30 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     return { state: ctx.state, rng: ctx.rng };
   }
 
+  if (endpoint.scope === 'zone') {
+    if (typeof nextValue !== 'number') {
+      throw effectRuntimeError(
+        'variableRuntimeValidationFailed',
+        `setVar on zone variable must resolve to int value: ${variableName}`,
+        {
+          effectType: 'setVar',
+          scope: 'zoneVar',
+          var: variableName,
+          actualType: typeof nextValue,
+          value: nextValue,
+        },
+      );
+    }
+
+    return {
+      state: writeScopedVarToState(ctx.state, toScopedVarWrite(endpoint, nextValue)),
+      rng: ctx.rng,
+      emittedEvents: [emittedEvent],
+    };
+  }
+
   return {
-    state: writeScopedVarToState(ctx.state, endpoint, nextValue),
+    state: writeScopedVarToState(ctx.state, toScopedVarWrite(endpoint, nextValue)),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };
@@ -146,7 +169,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   return {
-    state: writeScopedVarToState(ctx.state, endpoint, nextValue),
+    state: writeScopedVarToState(ctx.state, toScopedVarWrite(endpoint, nextValue)),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };

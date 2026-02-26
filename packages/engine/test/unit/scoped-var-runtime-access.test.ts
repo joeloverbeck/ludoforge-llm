@@ -15,6 +15,7 @@ import {
   resolveRuntimeScopedEndpointWithMalformedSupport,
   type ScopedVarMalformedResolvableEndpoint,
   type ScopedVarResolvableEndpoint,
+  type ScopedVarWrite,
   resolveScopedIntVarDef,
   resolveScopedVarDef,
   writeScopedVarToBranches,
@@ -131,6 +132,31 @@ const assertScopedEndpointTypingContracts = () => {
 };
 
 assertScopedEndpointTypingContracts();
+
+const assertScopedWriteTypingContracts = () => {
+  const globalWrite: ScopedVarWrite = { endpoint: { scope: 'global', var: 'flag' }, value: true };
+  const pvarWrite: ScopedVarWrite = {
+    endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'ready' },
+    value: false,
+  };
+  const zoneWrite: ScopedVarWrite = {
+    endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+    value: 2,
+  };
+
+  // @ts-expect-error zone scoped writes require numeric values.
+  const invalidZoneWrite: ScopedVarWrite = {
+    endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+    value: false,
+  };
+
+  void globalWrite;
+  void pvarWrite;
+  void zoneWrite;
+  void invalidZoneWrite;
+};
+
+assertScopedWriteTypingContracts();
 
 describe('scoped-var-runtime-access', () => {
   it('resolves scoped variable definitions across global/pvar/zoneVar', () => {
@@ -294,13 +320,19 @@ describe('scoped-var-runtime-access', () => {
       zoneVars: state.zoneVars,
     };
 
-    const globalWrite = writeScopedVarToBranches(baseBranches, { scope: 'global', var: 'score' }, 8);
+    const globalWrite = writeScopedVarToBranches(baseBranches, {
+      endpoint: { scope: 'global', var: 'score' },
+      value: 8,
+    });
     assert.equal(globalWrite.globalVars.score, 8);
     assert.notEqual(globalWrite.globalVars, baseBranches.globalVars);
     assert.equal(globalWrite.perPlayerVars, baseBranches.perPlayerVars);
     assert.equal(globalWrite.zoneVars, baseBranches.zoneVars);
 
-    const pvarWrite = writeScopedVarToBranches(baseBranches, { scope: 'pvar', player: asPlayerId(0), var: 'hp' }, 10);
+    const pvarWrite = writeScopedVarToBranches(baseBranches, {
+      endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'hp' },
+      value: 10,
+    });
     assert.equal(pvarWrite.perPlayerVars['0']?.hp, 10);
     assert.notEqual(pvarWrite.perPlayerVars, baseBranches.perPlayerVars);
     assert.equal(pvarWrite.globalVars, baseBranches.globalVars);
@@ -308,8 +340,10 @@ describe('scoped-var-runtime-access', () => {
 
     const zoneWrite = writeScopedVarToBranches(
       baseBranches,
-      { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
-      4,
+      {
+        endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+        value: 4,
+      },
     );
     assert.equal(zoneWrite.zoneVars['zone-a:none']?.supply, 4);
     assert.notEqual(zoneWrite.zoneVars, baseBranches.zoneVars);
@@ -320,7 +354,10 @@ describe('scoped-var-runtime-access', () => {
   it('writes scoped runtime values to full state while preserving non-var branches', () => {
     const state = makeState();
 
-    const updated = writeScopedVarToState(state, { scope: 'pvar', player: asPlayerId(1), var: 'hp' }, 12);
+    const updated = writeScopedVarToState(state, {
+      endpoint: { scope: 'pvar', player: asPlayerId(1), var: 'hp' },
+      value: 12,
+    });
 
     assert.equal(updated.perPlayerVars['1']?.hp, 12);
     assert.notEqual(updated.perPlayerVars, state.perPlayerVars);
@@ -333,8 +370,14 @@ describe('scoped-var-runtime-access', () => {
 
   it('supports chained scoped state writes without dropping prior writes', () => {
     const state = makeState();
-    const afterGlobal = writeScopedVarToState(state, { scope: 'global', var: 'score' }, 11);
-    const afterZone = writeScopedVarToState(afterGlobal, { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, 2);
+    const afterGlobal = writeScopedVarToState(state, {
+      endpoint: { scope: 'global', var: 'score' },
+      value: 11,
+    });
+    const afterZone = writeScopedVarToState(afterGlobal, {
+      endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+      value: 2,
+    });
 
     assert.equal(afterZone.globalVars.score, 11);
     assert.equal(afterZone.zoneVars['zone-a:none']?.supply, 2);

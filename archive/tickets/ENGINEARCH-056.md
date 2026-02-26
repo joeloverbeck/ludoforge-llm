@@ -1,6 +1,6 @@
 # ENGINEARCH-056: Restore strict endpoint/value coupling for batched scoped-var writes
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel scoped-var write contract tightening + tests
@@ -14,14 +14,16 @@
 
 1. `zoneVars` are int-only by architecture and schema/validation contracts; runtime zone write paths should not accept boolean payloads.
 2. Current `ScopedVarWrite` in `scoped-var-runtime-access.ts` no longer couples endpoint scope to value type.
-3. Current runtime implementation still casts zone writes via `as number`, so compile-time invalid combinations are not prevented at the batched helper boundary.
-4. **Mismatch + correction**: batched write contracts must preserve strict scope/value coupling (`zone -> number`, `global|pvar -> VariableValue`) exactly like single-write expectations.
+3. `writeScopedVarToState`/`writeScopedVarToBranches` expose overloads that preserve strict coupling for single writes, but `writeScopedVarsToState`/`writeScopedVarsToBranches` currently accept `ScopedVarWrite[]` where `value` is always `VariableValue`.
+4. Current shared writer implementation still uses `as number` on zone writes; with the broad batched write type this means compile-time invalid combinations are representable until they hit implementation details.
+5. **Mismatch + correction**: batched contracts must preserve strict scope/value coupling (`zone -> number`, `global|pvar -> VariableValue`) just like single-write contracts.
 
 ## Architecture Check
 
 1. Tight endpoint/value coupling is cleaner and more robust than permissive unions because invalid write shapes become unrepresentable.
-2. This is kernel-internal and game-agnostic; it does not introduce game-specific rules into GameDef or simulator logic.
-3. No backwards-compatibility shims/aliases are introduced.
+2. Keeping coupling at the type boundary is more extensible than relying on internal casts; future call sites get compile-time safety without additional runtime branching.
+3. This is kernel-internal and game-agnostic; it does not introduce game-specific rules into GameDef or simulator logic.
+4. No backwards-compatibility shims/aliases are introduced.
 
 ## What to Change
 
@@ -73,3 +75,21 @@ No semantic behavior changes in effect handlers; this is contract hardening only
 2. `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **What changed**:
+  - Tightened batched scoped write typing in `scoped-var-runtime-access.ts` so invalid `zone`+boolean writes are not representable.
+  - Refactored single-write helper APIs to consume `ScopedVarWrite` objects, keeping endpoint/value coupling in one structural unit.
+  - Added `toScopedVarWrite(...)` overloaded constructor so broad runtime endpoints are converted through one strict, validated path.
+  - Removed cast-based zone write assignment by routing writes through discriminated/guarded shapes.
+  - Added compile-time assertions in `scoped-var-runtime-access.test.ts` to lock valid/invalid batched scope/value combinations.
+  - Revalidated engine build, targeted unit test, full engine test suite, and engine lint.
+- **Deviations from original plan**:
+  - Introduced `toScopedVarWrite(...)` as a strict constructor entrypoint for mixed-scope runtime endpoints, instead of widening `ScopedVarWrite` itself; this kept the public write union fully scope-discriminated.
+- **Verification**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`291` tests).
+  - `pnpm -F @ludoforge/engine lint` passed.

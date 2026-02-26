@@ -52,10 +52,38 @@ export type ScopedVarMalformedResolvableEndpoint = {
 }[ScopedVarResolvableEndpointScope];
 
 export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
-export type ScopedVarWrite = Readonly<{
-  endpoint: RuntimeScopedVarEndpoint;
+type ScopedZoneVarWrite = Readonly<{
+  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>;
+  value: number;
+}>;
+type ScopedNonZoneVarWrite = Readonly<{
+  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>;
   value: VariableValue;
 }>;
+export type ScopedVarWrite = ScopedZoneVarWrite | ScopedNonZoneVarWrite;
+
+const isZoneScopedWrite = (write: ScopedVarWrite): write is ScopedZoneVarWrite => write.endpoint.scope === 'zone';
+
+export function toScopedVarWrite(
+  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
+  value: number,
+): ScopedZoneVarWrite;
+export function toScopedVarWrite(
+  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
+  value: VariableValue,
+): ScopedNonZoneVarWrite;
+export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: number): ScopedVarWrite;
+export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: VariableValue): ScopedVarWrite {
+  if (endpoint.scope === 'zone') {
+    if (typeof value !== 'number') {
+      throw new TypeError(`Zone scoped variable writes require numeric values: ${endpoint.var}`);
+    }
+
+    return { endpoint, value };
+  }
+
+  return { endpoint, value };
+}
 
 const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
 
@@ -338,78 +366,52 @@ export const readScopedIntVarValue = (
 
 export function writeScopedVarToBranches(
   branches: ScopedVarStateBranches,
-  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
-  value: number,
-): ScopedVarStateBranches;
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
-  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
-  value: VariableValue,
-): ScopedVarStateBranches;
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
-  endpoint: RuntimeScopedVarEndpoint,
-  value: VariableValue,
-): ScopedVarStateBranches;
-export function writeScopedVarToBranches(
-  branches: ScopedVarStateBranches,
-  endpoint: RuntimeScopedVarEndpoint,
-  value: VariableValue,
+  write: ScopedVarWrite,
 ): ScopedVarStateBranches {
-  if (endpoint.scope === 'global') {
+  if (isZoneScopedWrite(write)) {
     return {
       ...branches,
-      globalVars: {
-        ...branches.globalVars,
-        [endpoint.var]: value,
-      },
-    };
-  }
-
-  if (endpoint.scope === 'pvar') {
-    return {
-      ...branches,
-      perPlayerVars: {
-        ...branches.perPlayerVars,
-        [endpoint.player]: {
-          ...branches.perPlayerVars[endpoint.player],
-          [endpoint.var]: value,
+      zoneVars: {
+        ...branches.zoneVars,
+        [write.endpoint.zone]: {
+          ...(branches.zoneVars[write.endpoint.zone] ?? {}),
+          [write.endpoint.var]: write.value,
         },
       },
     };
   }
 
-  return {
-    ...branches,
-    zoneVars: {
-      ...branches.zoneVars,
-      [endpoint.zone]: {
-        ...(branches.zoneVars[endpoint.zone] ?? {}),
-        [endpoint.var]: value as number,
+  if (write.endpoint.scope === 'global') {
+    return {
+      ...branches,
+      globalVars: {
+        ...branches.globalVars,
+        [write.endpoint.var]: write.value,
       },
-    },
-  };
+    };
+  }
+
+  if (write.endpoint.scope === 'pvar') {
+    return {
+      ...branches,
+      perPlayerVars: {
+        ...branches.perPlayerVars,
+        [write.endpoint.player]: {
+          ...branches.perPlayerVars[write.endpoint.player],
+          [write.endpoint.var]: write.value,
+        },
+      },
+    };
+  }
+
+  const exhaustiveEndpointCheck: never = write.endpoint;
+  void exhaustiveEndpointCheck;
+  return branches;
 }
 
 export function writeScopedVarToState(
   state: GameState,
-  endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
-  value: number,
-): GameState;
-export function writeScopedVarToState(
-  state: GameState,
-  endpoint: Exclude<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
-  value: VariableValue,
-): GameState;
-export function writeScopedVarToState(
-  state: GameState,
-  endpoint: RuntimeScopedVarEndpoint,
-  value: VariableValue,
-): GameState;
-export function writeScopedVarToState(
-  state: GameState,
-  endpoint: RuntimeScopedVarEndpoint,
-  value: VariableValue,
+  write: ScopedVarWrite,
 ): GameState {
   const branches = writeScopedVarToBranches(
     {
@@ -417,8 +419,7 @@ export function writeScopedVarToState(
       perPlayerVars: state.perPlayerVars,
       zoneVars: state.zoneVars,
     },
-    endpoint,
-    value,
+    write,
   );
 
   return {
@@ -435,7 +436,7 @@ export const writeScopedVarsToBranches = (
 ): ScopedVarStateBranches => {
   let nextBranches = branches;
   for (const write of writes) {
-    nextBranches = writeScopedVarToBranches(nextBranches, write.endpoint, write.value);
+    nextBranches = writeScopedVarToBranches(nextBranches, write);
   }
 
   return nextBranches;

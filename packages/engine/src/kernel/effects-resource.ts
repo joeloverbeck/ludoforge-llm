@@ -5,6 +5,7 @@ import {
   readScopedIntVarValue,
   resolveRuntimeScopedEndpointWithMalformedSupport,
   resolveScopedIntVarDef,
+  toScopedVarWrite,
   writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
@@ -231,8 +232,8 @@ export const applyTransferVar = (
   emitVarChangeTraceIfChanged(ctx, { ...destinationVarChange, provenance });
 
   const nextState = writeScopedVarsToState(ctx.state, [
-    { endpoint: source, value: sourceAfter },
-    { endpoint: destination, value: destinationAfter },
+    toScopedVarWrite(source, sourceAfter),
+    toScopedVarWrite(destination, destinationAfter),
   ]);
 
   return {

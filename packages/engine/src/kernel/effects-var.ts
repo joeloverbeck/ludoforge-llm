@@ -6,7 +6,7 @@ import {
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
-  writeScopedVarToBranches,
+  writeScopedVarToState,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
@@ -44,29 +44,6 @@ const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): bo
   }
 
   return value;
-};
-
-const writeScopedVarToState = (
-  ctx: EffectContext,
-  endpoint: RuntimeScopedVarEndpoint,
-  value: number | boolean,
-): EffectContext['state'] => {
-  const baseBranches = {
-    globalVars: ctx.state.globalVars,
-    perPlayerVars: ctx.state.perPlayerVars,
-    zoneVars: ctx.state.zoneVars,
-  };
-  const branches =
-    endpoint.scope === 'zone'
-      ? writeScopedVarToBranches(baseBranches, endpoint, value as number)
-      : writeScopedVarToBranches(baseBranches, endpoint, value);
-
-  return {
-    ...ctx.state,
-    globalVars: branches.globalVars,
-    perPlayerVars: branches.perPlayerVars,
-    zoneVars: branches.zoneVars,
-  };
 };
 
 const emitVarChangeArtifacts = (
@@ -124,7 +101,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   }
 
   return {
-    state: writeScopedVarToState(ctx, endpoint, nextValue),
+    state: writeScopedVarToState(ctx.state, endpoint, nextValue),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };
@@ -169,7 +146,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   return {
-    state: writeScopedVarToState(ctx, endpoint, nextValue),
+    state: writeScopedVarToState(ctx.state, endpoint, nextValue),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };

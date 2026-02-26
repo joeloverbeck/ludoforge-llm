@@ -18,6 +18,8 @@ import {
   resolveScopedIntVarDef,
   resolveScopedVarDef,
   writeScopedVarToBranches,
+  writeScopedVarToState,
+  writeScopedVarsToState,
 } from '../../src/kernel/scoped-var-runtime-access.js';
 import type { GameDef, GameState } from '../../src/kernel/types.js';
 
@@ -279,6 +281,53 @@ describe('scoped-var-runtime-access', () => {
     assert.notEqual(zoneWrite.zoneVars, baseBranches.zoneVars);
     assert.equal(zoneWrite.globalVars, baseBranches.globalVars);
     assert.equal(zoneWrite.perPlayerVars, baseBranches.perPlayerVars);
+  });
+
+  it('writes scoped runtime values to full state while preserving non-var branches', () => {
+    const state = makeState();
+
+    const updated = writeScopedVarToState(state, { scope: 'pvar', player: asPlayerId(1), var: 'hp' }, 12);
+
+    assert.equal(updated.perPlayerVars['1']?.hp, 12);
+    assert.notEqual(updated.perPlayerVars, state.perPlayerVars);
+    assert.equal(updated.globalVars, state.globalVars);
+    assert.equal(updated.zoneVars, state.zoneVars);
+    assert.equal(updated.zones, state.zones);
+    assert.equal(updated.turnOrderState, state.turnOrderState);
+    assert.equal(updated.markers, state.markers);
+  });
+
+  it('supports chained scoped state writes without dropping prior writes', () => {
+    const state = makeState();
+    const afterGlobal = writeScopedVarToState(state, { scope: 'global', var: 'score' }, 11);
+    const afterZone = writeScopedVarToState(afterGlobal, { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, 2);
+
+    assert.equal(afterZone.globalVars.score, 11);
+    assert.equal(afterZone.zoneVars['zone-a:none']?.supply, 2);
+    assert.equal(afterZone.perPlayerVars, state.perPlayerVars);
+  });
+
+  it('applies batched scoped state writes in order through one helper', () => {
+    const state = makeState();
+    const updated = writeScopedVarsToState(state, [
+      { endpoint: { scope: 'global', var: 'score' }, value: 11 },
+      { endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value: 2 },
+      { endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'hp' }, value: 9 },
+    ]);
+
+    assert.equal(updated.globalVars.score, 11);
+    assert.equal(updated.zoneVars['zone-a:none']?.supply, 2);
+    assert.equal(updated.perPlayerVars['0']?.hp, 9);
+    assert.notEqual(updated.globalVars, state.globalVars);
+    assert.notEqual(updated.zoneVars, state.zoneVars);
+    assert.notEqual(updated.perPlayerVars, state.perPlayerVars);
+    assert.equal(updated.zones, state.zones);
+  });
+
+  it('returns the same state reference for empty batched writes', () => {
+    const state = makeState();
+    const unchanged = writeScopedVarsToState(state, []);
+    assert.equal(unchanged, state);
   });
 
   it('normalizes selector resolution failures into effect runtime errors', () => {

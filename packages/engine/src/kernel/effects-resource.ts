@@ -5,7 +5,7 @@ import {
   readScopedIntVarValue,
   resolveRuntimeScopedEndpointWithMalformedSupport,
   resolveScopedIntVarDef,
-  writeScopedVarToBranches,
+  writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
@@ -78,18 +78,6 @@ type ResolvedEndpoint =
       readonly max: number;
       readonly before: number;
     };
-
-const writeResolvedEndpointValue = (
-  branches: Pick<EffectContext['state'], 'globalVars' | 'perPlayerVars' | 'zoneVars'>,
-  endpoint: ResolvedEndpoint,
-  value: number,
-): Pick<EffectContext['state'], 'globalVars' | 'perPlayerVars' | 'zoneVars'> => {
-  if (endpoint.scope === 'zone') {
-    return writeScopedVarToBranches(branches, endpoint, value);
-  }
-
-  return writeScopedVarToBranches(branches, endpoint, value);
-};
 
 const resolveEndpoint = (
   endpoint: TransferEndpoint,
@@ -242,21 +230,13 @@ export const applyTransferVar = (
   emitVarChangeTraceIfChanged(ctx, { ...sourceVarChange, provenance });
   emitVarChangeTraceIfChanged(ctx, { ...destinationVarChange, provenance });
 
-  let branches = {
-    globalVars: ctx.state.globalVars,
-    perPlayerVars: ctx.state.perPlayerVars,
-    zoneVars: ctx.state.zoneVars,
-  };
-  branches = writeResolvedEndpointValue(branches, source, sourceAfter);
-  branches = writeResolvedEndpointValue(branches, destination, destinationAfter);
+  const nextState = writeScopedVarsToState(ctx.state, [
+    { endpoint: source, value: sourceAfter },
+    { endpoint: destination, value: destinationAfter },
+  ]);
 
   return {
-    state: {
-      ...ctx.state,
-      globalVars: branches.globalVars,
-      perPlayerVars: branches.perPlayerVars,
-      zoneVars: branches.zoneVars,
-    },
+    state: nextState,
     rng: ctx.rng,
     emittedEvents: [
       toVarChangedEvent(source, source.before, sourceAfter),

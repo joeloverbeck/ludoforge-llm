@@ -1,6 +1,6 @@
 # ENGINEARCH-050: Canonicalize scoped-var state write application and remove residual write-branch duplication
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes - kernel shared state-write wrapper + effect cleanup
@@ -13,9 +13,12 @@ Scoped branch writes now use shared branch-level helpers, but effect modules sti
 ## Assumption Reassessment (2026-02-26)
 
 1. `writeScopedVarToBranches` is canonical at branch level (`globalVars`/`perPlayerVars`/`zoneVars`).
-2. Effect modules still implement state-level write glue and residual redundant branch checks.
-3. Existing tests pass, but write application architecture is not fully centralized.
-4. **Mismatch + correction**: state-level scoped write application should be shared to eliminate final duplication and simplify future maintenance.
+2. Effect modules still implement duplicated state-level write glue:
+   - `effects-var.ts` has `writeScopedVarToState`.
+   - `effects-resource.ts` has `writeResolvedEndpointValue` and reconstructs state manually.
+3. `effects-resource.ts` contains a redundant `zone` vs non-`zone` conditional where both branches call identical logic.
+4. Existing tests already cover key immutable branch identity behavior for var/resource flows; this ticket should focus on write-path centralization, not broad new behavior.
+5. **Scope correction**: add one shared state-level write helper and route both effect modules through it; keep current runtime behavior and identity invariants unchanged.
 
 ## Architecture Check
 
@@ -31,7 +34,7 @@ In `scoped-var-runtime-access.ts`, add helper(s) that apply scoped writes direct
 
 ### 2. Refactor effect modules to use shared state writes
 
-- Replace local wrappers in var/resource handlers.
+- Replace local wrappers in var/resource handlers with shared runtime-access helper calls.
 - Remove redundant conditional branches where both branches call identical write logic.
 
 ### 3. Keep immutable identity contracts explicit
@@ -45,7 +48,7 @@ Preserve branch identity expectations for unaffected branches and existing no-op
 - `packages/engine/src/kernel/effects-resource.ts` (modify)
 - `packages/engine/test/unit/scoped-var-runtime-access.test.ts` (modify/add)
 - `packages/engine/test/unit/effects-var.test.ts` (modify/add)
-- `packages/engine/test/unit/transfer-var.test.ts` (modify/add)
+- `packages/engine/test/unit/transfer-var.test.ts` (modify/add if needed; covers `transferVar` in `effects-resource.ts`)
 
 ## Out of Scope
 
@@ -71,8 +74,8 @@ Preserve branch identity expectations for unaffected branches and existing no-op
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/scoped-var-runtime-access.test.ts` - direct state-write helper contract coverage.
-2. `packages/engine/test/unit/effects-var.test.ts` - guard unaffected branch identity after scoped writes.
-3. `packages/engine/test/unit/transfer-var.test.ts` - guard unaffected branch identity after scoped transfers.
+2. `packages/engine/test/unit/effects-var.test.ts` - ensure scoped writes preserve current no-op and immutable identity expectations after helper adoption.
+3. `packages/engine/test/unit/transfer-var.test.ts` - ensure transfer writes preserve immutable identity expectations after helper adoption.
 
 ### Commands
 
@@ -80,3 +83,19 @@ Preserve branch identity expectations for unaffected branches and existing no-op
 2. `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js packages/engine/dist/test/unit/effects-var.test.js packages/engine/dist/test/unit/transfer-var.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **What changed**:
+  - Added shared `writeScopedVarToState` in `scoped-var-runtime-access.ts` and explicit runtime-endpoint overloads.
+  - Refactored `effects-var.ts` to remove local write glue and call shared state-write helper.
+  - Refactored `effects-resource.ts` to remove `writeResolvedEndpointValue`, remove redundant branch conditional, and apply writes through shared helper.
+  - Added state-level helper contract tests in `scoped-var-runtime-access.test.ts` (non-var branch preservation + chained writes).
+- **Deviations from original plan**:
+  - No additional `effects-var.test.ts` or `transfer-var.test.ts` changes were required because existing tests already covered branch identity/no-op behavior; coverage was strengthened where the new shared helper was introduced.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js packages/engine/dist/test/unit/effects-var.test.js packages/engine/dist/test/unit/transfer-var.test.js` passed (3/3).
+  - `pnpm -F @ludoforge/engine test` passed (289/289).
+  - `pnpm -F @ludoforge/engine lint` passed.

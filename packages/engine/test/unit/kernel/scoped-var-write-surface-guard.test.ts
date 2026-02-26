@@ -1,12 +1,25 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isIdentifierExported, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
+import { collectTopLevelNamedExports, isIdentifierExported, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
 import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const canonicalScopedWriteHelper = 'writeScopedVarsToState';
 const branchScopedWriteHelpers = ['writeScopedVarToBranches', 'writeScopedVarsToBranches'] as const;
 const removedSingularAlias = 'writeScopedVarToState';
 const scopedVarRuntimeAccessModule = 'src/kernel/scoped-var-runtime-access.ts';
+const expectedScopedVarRuntimeAccessExports = [
+  'ScopedVarMalformedResolvableEndpoint',
+  'ScopedVarResolvableEndpoint',
+  'ScopedVarWrite',
+  'toScopedVarWrite',
+  'resolveRuntimeScopedEndpoint',
+  'resolveRuntimeScopedEndpointWithMalformedSupport',
+  'resolveScopedVarDef',
+  'resolveScopedIntVarDef',
+  'readScopedVarValue',
+  'readScopedIntVarValue',
+  'writeScopedVarsToState',
+] as const;
 
 describe('scoped-var write surface architecture guard', () => {
   it('keeps branch-level scoped write helpers private and preserves one runtime write entry point', () => {
@@ -31,6 +44,23 @@ describe('scoped-var write surface architecture guard', () => {
       scopedVarSource,
       new RegExp(`\\b(?:export\\s+)?(?:const|function)\\s+${removedSingularAlias}\\b`, 'u'),
       'scoped-var-runtime-access.ts must not define legacy singular write alias',
+    );
+  });
+
+  it('exports only the intended scoped-var runtime-access public API', () => {
+    const scopedVarSource = readKernelSource(scopedVarRuntimeAccessModule);
+    const scopedVarSourceFile = parseTypeScriptSource(scopedVarSource, scopedVarRuntimeAccessModule);
+    const exportedNames = collectTopLevelNamedExports(scopedVarSourceFile);
+
+    assert.deepEqual(
+      [...exportedNames].sort(),
+      [...expectedScopedVarRuntimeAccessExports].sort(),
+      'scoped-var-runtime-access.ts public exports must match the curated API contract',
+    );
+    assert.equal(
+      exportedNames.has('ScopedVarStateBranches'),
+      false,
+      'scoped-var-runtime-access.ts must not export internal branch staging types',
     );
   });
 

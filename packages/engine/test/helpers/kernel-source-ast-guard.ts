@@ -125,6 +125,43 @@ export const isIdentifierExported = (sourceFile: ts.SourceFile, identifier: stri
   return false;
 };
 
+export const collectTopLevelNamedExports = (sourceFile: ts.SourceFile): Set<string> => {
+  const names = new Set<string>();
+
+  for (const statement of sourceFile.statements) {
+    if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)) &&
+      hasExportModifier(statement.modifiers)
+    ) {
+      if (statement.name !== undefined) {
+        names.add(statement.name.text);
+      }
+      continue;
+    }
+
+    if (ts.isVariableStatement(statement) && hasExportModifier(statement.modifiers)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          names.add(declaration.name.text);
+        }
+      }
+      continue;
+    }
+
+    if (ts.isExportDeclaration(statement) && statement.exportClause !== undefined && ts.isNamedExports(statement.exportClause)) {
+      for (const specifier of statement.exportClause.elements) {
+        names.add(specifier.name.text);
+      }
+    }
+  }
+
+  return names;
+};
+
 export const getObjectPropertyExpression = (
   objectLiteral: ts.ObjectLiteralExpression,
   propertyName: string,

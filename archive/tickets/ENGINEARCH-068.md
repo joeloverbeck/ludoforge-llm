@@ -1,6 +1,6 @@
 # ENGINEARCH-068: Tighten scoped-var runtime-access public API/type surface
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel scoped-var API surface + architecture contract tests
@@ -12,10 +12,11 @@ After the scoped write-surface narrowing, `scoped-var-runtime-access.ts` still e
 
 ## Assumption Reassessment (2026-02-26)
 
-1. `writeScopedVarToBranches` and `writeScopedVarsToBranches` are now module-private, and effect modules write through `writeScopedVarsToState`.
-2. `ScopedVarStateBranches` remains exported despite no current external usage.
-3. Existing guard tests do not assert an explicit allowlist/denylist for module public exports in `scoped-var-runtime-access.ts`.
-4. **Mismatch + correction**: internal branch staging types should be private unless they are intentional external contracts, and public surface should be guarded explicitly.
+1. `writeScopedVarsToBranches` is module-private and effect modules write through `writeScopedVarsToState`.
+2. `writeScopedVarToBranches` is already removed (it does not exist in current source) and should remain absent.
+3. `ScopedVarStateBranches` remains exported despite no current external usage.
+4. Existing guard tests assert canonical helper usage and branch-helper privacy, but do not enforce a full module export contract for `scoped-var-runtime-access.ts`.
+5. **Mismatch + correction**: internal branch staging types should be private unless they are intentional external contracts, and public surface should be guarded explicitly with a stable allowlist.
 
 ## Architecture Check
 
@@ -31,7 +32,7 @@ Make `ScopedVarStateBranches` module-private in `scoped-var-runtime-access.ts` u
 
 ### 2. Add scoped-var module export contract guard
 
-Add a guard test that enforces intended public write/API exports for `scoped-var-runtime-access.ts` and fails on reintroduction of internal branch-surface exports.
+Add a guard test that enforces intended public exports for `scoped-var-runtime-access.ts` (allowlist) and fails on reintroduction of internal branch-surface exports.
 
 ## Files to Touch
 
@@ -64,7 +65,7 @@ Add a guard test that enforces intended public write/API exports for `scoped-var
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` (or sibling guard) — enforce module export contract for scoped-var runtime-access public API.
+1. `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` (or sibling guard) — enforce module export allowlist for scoped-var runtime-access public API and block internal branch/staging exports.
 2. `packages/engine/test/unit/scoped-var-runtime-access.test.ts` — adjust only if type-level/public-surface assertions need alignment.
 
 ### Commands
@@ -73,3 +74,18 @@ Add a guard test that enforces intended public write/API exports for `scoped-var
 2. `node --test packages/engine/dist/test/unit/kernel/scoped-var-write-surface-guard.test.js packages/engine/dist/test/unit/scoped-var-runtime-access.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- What changed:
+  - Made `ScopedVarStateBranches` module-private in `scoped-var-runtime-access.ts`.
+  - Expanded `scoped-var-write-surface-guard.test.ts` with a strict export allowlist for `scoped-var-runtime-access.ts`.
+  - Corrected this ticket's assumptions to reflect that `writeScopedVarToBranches` is already removed.
+- Deviations from original plan:
+  - The implementation did not add a separate sibling guard file; it strengthened the existing guard test file to keep the architecture contract centralized.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/scoped-var-write-surface-guard.test.js packages/engine/dist/test/unit/scoped-var-runtime-access.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

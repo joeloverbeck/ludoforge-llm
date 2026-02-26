@@ -52,7 +52,7 @@ export type ScopedVarMalformedResolvableEndpoint = {
   >;
 }[ScopedVarResolvableEndpointScope];
 
-export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
+type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
 type MutableScopedVarStateBranches = {
   globalVars: Record<string, VariableValue>;
   perPlayerVars: Record<number, Record<string, VariableValue>>;

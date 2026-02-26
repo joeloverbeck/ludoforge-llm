@@ -50,6 +50,11 @@ export interface ComputedValueCheck {
   readonly compute: (def: GameDef, state: GameState) => number;
 }
 
+export interface GlobalMarkerCheck {
+  readonly marker: string;
+  readonly expected: string;
+}
+
 export interface PlaybookStateSnapshot {
   readonly globalVars?: Readonly<Record<string, number>>;
   readonly eligibility?: Readonly<Record<string, boolean>>;
@@ -64,6 +69,7 @@ export interface PlaybookStateSnapshot {
   readonly zoneTokenCounts?: readonly ZoneTokenCountCheck[];
   readonly totalTokenCounts?: readonly TotalTokenCountCheck[];
   readonly markers?: readonly MarkerCheck[];
+  readonly globalMarkers?: readonly GlobalMarkerCheck[];
   readonly zoneVars?: readonly ZoneVarCheck[];
   readonly computedValues?: readonly ComputedValueCheck[];
 }
@@ -281,6 +287,17 @@ export const assertPlaybookSnapshot = (
     }
   }
 
+  if (expected.globalMarkers !== undefined) {
+    for (const check of expected.globalMarkers) {
+      const actual = state.globalMarkers?.[check.marker];
+      assert.equal(
+        actual,
+        check.expected,
+        `${label}: expected global marker ${check.marker}=${check.expected}, got ${String(actual)}`,
+      );
+    }
+  }
+
   if (expected.zoneVars !== undefined) {
     for (const check of expected.zoneVars) {
       const zoneVars = state.zoneVars[check.zone];
@@ -370,6 +387,7 @@ export const replayPlaybookTurn = (
     }
     // Per-move intermediate assertion
     if (playMove.expectedState !== undefined) {
+
       assertPlaybookSnapshot(current, playMove.expectedState, playMove.label, def);
     }
   }

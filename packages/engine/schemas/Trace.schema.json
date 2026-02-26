@@ -23,7 +23,7 @@
             "maximum": 9007199254740991
           },
           "move": {
-            "$ref": "#/definitions/anon_7d35729e"
+            "$ref": "#/definitions/anon_91ba66db"
           },
           "legalMoveCount": {
             "type": "number"
@@ -4056,7 +4056,7 @@
         }
       ]
     },
-    "anon_7d35729e": {
+    "anon_91ba66db": {
       "type": "object",
       "properties": {
         "actionId": {
@@ -4108,7 +4108,7 @@
           "type": "object",
           "properties": {
             "specialActivity": {
-              "$ref": "#/definitions/anon_7d35729e"
+              "$ref": "#/definitions/anon_91ba66db"
             },
             "timing": {
               "anyOf": [
@@ -4130,6 +4130,9 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "replaceRemainingStages": {
+              "type": "boolean"
             }
           },
           "required": [

@@ -530,6 +530,7 @@ export interface CompoundMovePayload {
   readonly specialActivity: Move;
   readonly timing: 'before' | 'during' | 'after';
   readonly insertAfterStage?: number;
+  readonly replaceRemainingStages?: boolean;
 }
 
 export interface Move {

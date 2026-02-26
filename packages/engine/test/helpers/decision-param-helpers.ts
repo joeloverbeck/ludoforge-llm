@@ -109,16 +109,24 @@ export const applyMoveWithResolvedDecisionIds = (
     ? normalized
     : (() => {
       const { compound, ...operationMove } = normalized;
-      const operationResult = applyMove(def, state, operationMove);
+      // When replaceRemainingStages is true, the SA runs mid-operation (after insertAfterStage),
+      // not after all operation stages. Running the full operation here would produce a state where
+      // later stages have already mutated the board (e.g. attack combat activates guerrillas),
+      // making SA option domains invalid. Use the original state as the best approximation of the
+      // mid-operation state for SA decision normalization.
+      const saResolutionState = compound.replaceRemainingStages === true
+        ? state
+        : applyMove(def, state, operationMove).state;
       return {
         ...normalized,
         compound: {
           ...compound,
-          // Resolve SA choices from post-operation state so legal domains reflect operation outcomes.
+          // Resolve SA choices from post-operation (or pre-operation for replaceRemainingStages)
+          // state so legal domains reflect the state the SA will actually execute in.
           // Preserve incomplete SA params so applyMove continues to own compound legality diagnostics.
           specialActivity: normalizeDecisionParamsForMoveInternal(
             def,
-            operationResult.state,
+            saResolutionState,
             compound.specialActivity,
             true,
             options,

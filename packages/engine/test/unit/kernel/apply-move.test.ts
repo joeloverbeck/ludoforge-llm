@@ -1127,3 +1127,126 @@ describe('applyMove() executor applicability contract', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// replaceRemainingStages compound flag
+// ---------------------------------------------------------------------------
+
+describe('applyMove() compound replaceRemainingStages', () => {
+  const costVar: VariableDef = { name: 'cost', type: 'int', init: 0, min: 0, max: 100 };
+  const combatVar: VariableDef = { name: 'combat', type: 'int', init: 0, min: 0, max: 100 };
+  const saVar: VariableDef = { name: 'saEffect', type: 'int', init: 0, min: 0, max: 100 };
+
+  const operation: ActionDef = {
+    id: asActionId('attack'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+  const specialActivityAction: ActionDef = {
+    id: asActionId('ambush'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [{ addVar: { scope: 'global', var: 'saEffect', delta: 1 } }],
+    limits: [],
+  };
+
+  const threeStageProfile: ActionPipelineDef = {
+    id: 'attack-profile',
+    actionId: asActionId('attack'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      { stage: 'select-spaces', effects: [] },
+      { stage: 'cost-per-space', effects: [{ addVar: { scope: 'global', var: 'cost', delta: 1 } }] },
+      { stage: 'resolve-per-space', effects: [{ addVar: { scope: 'global', var: 'combat', delta: 1 } }] },
+    ],
+    atomicity: 'atomic',
+  };
+
+  it('replaceRemainingStages: true skips stages after insertAfterStage', () => {
+    const def = makeBaseDef({
+      actions: [operation, specialActivityAction],
+      actionPipelines: [threeStageProfile],
+      globalVars: [resourcesVar, costVar, combatVar, saVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        insertAfterStage: 1,
+        replaceRemainingStages: true,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    const result = applyMove(def, state, move);
+    // Stage 0 (select-spaces): no vars changed
+    // Stage 1 (cost-per-space): cost +1
+    // SA fires after stage 1: saEffect +1
+    // Stage 2 (resolve-per-space): SKIPPED due to replaceRemainingStages
+    assert.equal(result.state.globalVars['cost'], 1, 'cost stage should execute');
+    assert.equal(result.state.globalVars['saEffect'], 1, 'SA should execute');
+    assert.equal(result.state.globalVars['combat'], 0, 'combat stage should be skipped');
+  });
+
+  it('replaceRemainingStages: false preserves all stages', () => {
+    const def = makeBaseDef({
+      actions: [operation, specialActivityAction],
+      actionPipelines: [threeStageProfile],
+      globalVars: [resourcesVar, costVar, combatVar, saVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        insertAfterStage: 1,
+        replaceRemainingStages: false,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    const result = applyMove(def, state, move);
+    assert.equal(result.state.globalVars['cost'], 1, 'cost stage should execute');
+    assert.equal(result.state.globalVars['saEffect'], 1, 'SA should execute');
+    assert.equal(result.state.globalVars['combat'], 1, 'combat stage should also execute');
+  });
+
+  it('absent replaceRemainingStages preserves all stages (backward compat)', () => {
+    const def = makeBaseDef({
+      actions: [operation, specialActivityAction],
+      actionPipelines: [threeStageProfile],
+      globalVars: [resourcesVar, costVar, combatVar, saVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        insertAfterStage: 1,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    const result = applyMove(def, state, move);
+    assert.equal(result.state.globalVars['cost'], 1);
+    assert.equal(result.state.globalVars['saEffect'], 1);
+    assert.equal(result.state.globalVars['combat'], 1, 'all stages preserved when flag absent');
+  });
+});

@@ -1,6 +1,6 @@
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
-import { resolveSinglePlayerWithNormalization } from './selector-resolution-normalization.js';
+import { resolveSinglePlayerWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import {
   readScopedIntVarValue,
   readScopedVarValue,
@@ -157,12 +157,14 @@ export const applySetActivePlayer = (
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const nextActive = resolveSinglePlayerWithNormalization(effect.setActivePlayer.player, evalCtx, {
     code: 'variableRuntimeValidationFailed',
     effectType: 'setActivePlayer',
     scope: 'activePlayer',
     cardinalityMessage: 'setActivePlayer requires exactly one resolved player',
     resolutionFailureMessage: 'setActivePlayer selector resolution failed',
+    onResolutionFailure,
     context: { endpoint: effect.setActivePlayer },
   });
   if (nextActive === ctx.state.activePlayer) {

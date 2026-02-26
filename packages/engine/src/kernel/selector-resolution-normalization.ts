@@ -3,7 +3,8 @@ import { isEvalError } from './eval-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import type { EffectRuntimeReason } from './runtime-reasons.js';
-import type { EffectContext } from './effect-context.js';
+import type { EvalContext } from './eval-context.js';
+import type { EffectInterpreterMode } from './effect-context.js';
 import type { PlayerId, ZoneId } from './branded.js';
 import type { PlayerSel, ZoneRef } from './types.js';
 
@@ -19,6 +20,12 @@ export type NormalizedResolverScope =
   | 'to'
   | 'zone'
   | 'zoneVar';
+
+export type SelectorResolutionFailurePolicy = 'normalize' | 'passthrough';
+
+export const selectorResolutionFailurePolicyForMode = (
+  mode: EffectInterpreterMode | undefined,
+): SelectorResolutionFailurePolicy => (mode === 'discovery' ? 'passthrough' : 'normalize');
 
 export const normalizeSelectorResolutionError = (
   error: unknown,
@@ -58,13 +65,14 @@ export const normalizeSelectorResolutionError = (
 
 export const resolveSinglePlayerWithNormalization = (
   selector: PlayerSel,
-  evalCtx: EffectContext,
+  evalCtx: EvalContext,
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
     scope: NormalizedResolverScope;
     cardinalityMessage: string;
     resolutionFailureMessage: string;
+    onResolutionFailure: SelectorResolutionFailurePolicy;
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): PlayerId => {
@@ -72,7 +80,7 @@ export const resolveSinglePlayerWithNormalization = (
   try {
     resolvedPlayers = resolvePlayerSel(selector, evalCtx);
   } catch (error: unknown) {
-    if (evalCtx.mode === 'discovery') {
+    if (options.onResolutionFailure === 'passthrough') {
       throw error;
     }
     return normalizeSelectorResolutionError(error, {
@@ -102,19 +110,20 @@ export const resolveSinglePlayerWithNormalization = (
 
 export const resolvePlayersWithNormalization = (
   selector: PlayerSel,
-  evalCtx: EffectContext,
+  evalCtx: EvalContext,
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
     scope: NormalizedResolverScope;
     resolutionFailureMessage: string;
+    onResolutionFailure: SelectorResolutionFailurePolicy;
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): readonly PlayerId[] => {
   try {
     return resolvePlayerSel(selector, evalCtx);
   } catch (error: unknown) {
-    if (evalCtx.mode === 'discovery') {
+    if (options.onResolutionFailure === 'passthrough') {
       throw error;
     }
     return normalizeSelectorResolutionError(error, {
@@ -131,19 +140,20 @@ export const resolvePlayersWithNormalization = (
 
 export const resolveZoneWithNormalization = (
   zoneRef: ZoneRef,
-  evalCtx: EffectContext,
+  evalCtx: EvalContext,
   options: Readonly<{
     code: NormalizedResolverCode;
     effectType: NormalizedResolverEffectType;
     scope: NormalizedResolverScope;
     resolutionFailureMessage: string;
+    onResolutionFailure: SelectorResolutionFailurePolicy;
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): ZoneId => {
   try {
     return resolveZoneRef(zoneRef, evalCtx);
   } catch (error: unknown) {
-    if (evalCtx.mode === 'discovery') {
+    if (options.onResolutionFailure === 'passthrough') {
       throw error;
     }
     return normalizeSelectorResolutionError(error, {

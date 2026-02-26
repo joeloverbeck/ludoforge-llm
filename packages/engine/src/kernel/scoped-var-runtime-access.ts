@@ -2,6 +2,7 @@ import { effectRuntimeError } from './effect-error.js';
 import {
   resolveSinglePlayerWithNormalization,
   resolveZoneWithNormalization,
+  selectorResolutionFailurePolicyForMode,
 } from './selector-resolution-normalization.js';
 import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
@@ -71,6 +72,8 @@ const resolveRuntimeScopedEndpointImpl = (
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): RuntimeScopedVarEndpoint => {
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+
   if (endpoint.scope === 'global') {
     return {
       scope: 'global',
@@ -98,6 +101,7 @@ const resolveRuntimeScopedEndpointImpl = (
       scope: 'pvar',
       cardinalityMessage: options.pvarCardinalityMessage,
       resolutionFailureMessage: options.pvarResolutionFailureMessage,
+      onResolutionFailure,
       context: {
         endpoint,
         ...(options.context ?? {}),
@@ -128,6 +132,7 @@ const resolveRuntimeScopedEndpointImpl = (
     effectType: options.effectType,
     scope: 'zoneVar',
     resolutionFailureMessage: options.zoneResolutionFailureMessage,
+    onResolutionFailure,
     context: {
       endpoint,
       ...(options.context ?? {}),

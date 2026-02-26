@@ -17,6 +17,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
@@ -244,6 +245,15 @@ describe('effects reveal', () => {
     assert.throws(
       () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.to selector resolution failed'),
+    );
+  });
+
+  it('passes through unresolved reveal.to selectors in discovery mode', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+
+    assert.throws(
+      () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 });
@@ -593,6 +603,23 @@ describe('effects conceal', () => {
     assert.throws(
       () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.from selector resolution failed'),
+    );
+  });
+
+  it('passes through unresolved conceal.from selectors in discovery mode', () => {
+    const ctx = makeCtx({
+      mode: 'discovery',
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: [asPlayerId(0)] }],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 

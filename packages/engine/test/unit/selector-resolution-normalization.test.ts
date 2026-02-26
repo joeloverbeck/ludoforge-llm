@@ -1,9 +1,58 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector } from '../../src/kernel/index.js';
 import { effectRuntimeError, isEffectErrorCode } from '../../src/kernel/effect-error.js';
-import { missingBindingError } from '../../src/kernel/eval-error.js';
-import { normalizeSelectorResolutionError } from '../../src/kernel/selector-resolution-normalization.js';
+import { isEvalErrorCode, missingBindingError } from '../../src/kernel/eval-error.js';
+import {
+  normalizeSelectorResolutionError,
+  resolveZoneWithNormalization,
+  selectorResolutionFailurePolicyForMode,
+} from '../../src/kernel/selector-resolution-normalization.js';
+import type { EvalContext } from '../../src/kernel/eval-context.js';
+import type { GameDef, GameState } from '../../src/kernel/types.js';
+
+const makeEvalCtx = (): EvalContext => {
+  const def: GameDef = {
+    metadata: { id: 'selector-resolution-normalization-test', players: { min: 2, max: 2 } },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [{ id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' }],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [] },
+    actions: [],
+    triggers: [],
+    terminal: { conditions: [] },
+  };
+  const state: GameState = {
+    globalVars: {},
+    perPlayerVars: {},
+    zoneVars: {},
+    playerCount: 2,
+    zones: { 'zone-a:none': [] },
+    nextTokenOrdinal: 0,
+    currentPhase: asPhaseId('main'),
+    activePlayer: asPlayerId(0),
+    turnCount: 1,
+    rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+    stateHash: 0n,
+    actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
+    markers: {},
+  };
+
+  return {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    collector: createCollector(),
+  };
+};
 
 describe('selector-resolution-normalization', () => {
   it('rethrows existing EffectRuntimeError unchanged', () => {
@@ -83,5 +132,42 @@ describe('selector-resolution-normalization', () => {
         return true;
       },
     );
+  });
+
+  it('applies explicit failure policy (normalize vs passthrough) independent of context shape', () => {
+    const evalCtx = makeEvalCtx();
+
+    assert.throws(
+      () =>
+        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, evalCtx, {
+          code: 'resourceRuntimeValidationFailed',
+          effectType: 'transferVar',
+          scope: 'zoneVar',
+          resolutionFailureMessage: 'zone resolution failed',
+          onResolutionFailure: 'passthrough',
+        }),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+
+    assert.throws(
+      () =>
+        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, evalCtx, {
+          code: 'resourceRuntimeValidationFailed',
+          effectType: 'transferVar',
+          scope: 'zoneVar',
+          resolutionFailureMessage: 'zone resolution failed',
+          onResolutionFailure: 'normalize',
+        }),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('maps interpreter mode to a canonical selector-resolution failure policy', () => {
+    assert.equal(selectorResolutionFailurePolicyForMode(undefined), 'normalize');
+    assert.equal(selectorResolutionFailurePolicyForMode('execution'), 'normalize');
+    assert.equal(selectorResolutionFailurePolicyForMode('discovery'), 'passthrough');
   });
 });

@@ -341,6 +341,7 @@ describe('scoped-var-runtime-access', () => {
           scope: 'pvar',
           cardinalityMessage: 'must resolve one player',
           resolutionFailureMessage: 'selector resolution failed',
+          onResolutionFailure: 'normalize',
         }),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
@@ -359,6 +360,7 @@ describe('scoped-var-runtime-access', () => {
           effectType: 'transferVar',
           scope: 'zoneVar',
           resolutionFailureMessage: 'zone endpoint resolution failed',
+          onResolutionFailure: 'normalize',
         }),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
@@ -377,8 +379,28 @@ describe('scoped-var-runtime-access', () => {
           effectType: 'transferVar',
           scope: 'zoneVar',
           resolutionFailureMessage: 'zone endpoint resolution failed',
+          onResolutionFailure: 'passthrough',
         }),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+  });
+
+  it('normalizes discovery-mode failures when explicit policy requests normalization', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+
+    assert.throws(
+      () =>
+        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, ctx, {
+          code: 'resourceRuntimeValidationFailed',
+          effectType: 'transferVar',
+          scope: 'zoneVar',
+          resolutionFailureMessage: 'zone endpoint resolution failed',
+          onResolutionFailure: 'normalize',
+        }),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('zone endpoint resolution failed') &&
+        String(error).includes('sourceErrorCode'),
     );
   });
 

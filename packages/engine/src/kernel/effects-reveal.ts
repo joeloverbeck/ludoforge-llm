@@ -6,7 +6,11 @@ import {
   removeMatchingRevealGrants,
   revealGrantEquals,
 } from './hidden-info-grants.js';
-import { resolvePlayersWithNormalization, resolveZoneWithNormalization } from './selector-resolution-normalization.js';
+import {
+  resolvePlayersWithNormalization,
+  resolveZoneWithNormalization,
+  selectorResolutionFailurePolicyForMode,
+} from './selector-resolution-normalization.js';
 import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
@@ -23,12 +27,14 @@ export const applyConceal = (
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.conceal.zone, evalCtx, {
       code: 'concealRuntimeValidationFailed',
       effectType: 'conceal',
       scope: 'zone',
       resolutionFailureMessage: 'conceal.zone resolution failed',
+      onResolutionFailure,
     }),
   );
 
@@ -57,6 +63,7 @@ export const applyConceal = (
           effectType: 'conceal',
           scope: 'from',
           resolutionFailureMessage: 'conceal.from selector resolution failed',
+          onResolutionFailure,
         }),
         ctx.state.playerCount,
       );
@@ -99,12 +106,14 @@ export const applyConceal = (
 
 export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.reveal.zone, evalCtx, {
       code: 'revealRuntimeValidationFailed',
       effectType: 'reveal',
       scope: 'zone',
       resolutionFailureMessage: 'reveal.zone resolution failed',
+      onResolutionFailure,
     }),
   );
 
@@ -127,6 +136,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
         effectType: 'reveal',
         scope: 'to',
         resolutionFailureMessage: 'reveal.to selector resolution failed',
+        onResolutionFailure,
       }),
       ctx.state.playerCount,
     );

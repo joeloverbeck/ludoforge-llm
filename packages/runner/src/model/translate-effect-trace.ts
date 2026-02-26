@@ -266,6 +266,18 @@ function translateTriggerEntry(
         tokenIds: [],
       };
 
+    case 'operationCompoundStagesReplaced':
+      return {
+        ...base,
+        kind: 'lifecycle',
+        message:
+          `${formatIdAsDisplayName(entry.actionId)} replaced remaining stages in ${formatIdAsDisplayName(entry.profileId)} ` +
+          `after stage ${entry.insertAfterStage} (${entry.skippedStageCount}/${entry.totalStages} stage(s) skipped).`,
+        depth: 0,
+        zoneIds: [],
+        tokenIds: [],
+      };
+
     case 'turnFlowDeferredEventLifecycle':
       return {
         ...base,

@@ -4,6 +4,7 @@ import { pipelineApplicabilityEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST, EffectAST, GameDef, ActionPipelineDef } from './types.js';
 
 export interface ExecutionPipeline {
+  readonly profileId: string;
   readonly legality: ConditionAST | null;
   readonly costValidation: ConditionAST | null;
   readonly costSpend: readonly EffectAST[];
@@ -47,6 +48,7 @@ export const toExecutionPipeline = (
   _action: ActionDef,
   profile: ActionPipelineDef,
 ): ExecutionPipeline => ({
+  profileId: profile.id,
   legality: profile.legality,
   costValidation: profile.costValidation,
   costSpend: profile.costEffects,

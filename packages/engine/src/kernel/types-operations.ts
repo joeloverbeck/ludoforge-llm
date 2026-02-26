@@ -48,3 +48,12 @@ export interface OperationFreeTraceEntry {
   readonly actionId: ActionId;
   readonly step: 'costSpendSkipped';
 }
+
+export interface OperationCompoundStagesReplacedTraceEntry {
+  readonly kind: 'operationCompoundStagesReplaced';
+  readonly actionId: ActionId;
+  readonly profileId: string;
+  readonly insertAfterStage: number;
+  readonly totalStages: number;
+  readonly skippedStageCount: number;
+}

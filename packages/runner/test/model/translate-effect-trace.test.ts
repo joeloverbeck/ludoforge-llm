@@ -166,6 +166,14 @@ describe('translateEffectTrace', () => {
         actionId: 'sweep' as never,
         step: 'costSpendSkipped',
       },
+      {
+        kind: 'operationCompoundStagesReplaced',
+        actionId: 'assault' as never,
+        profileId: 'assault-profile',
+        insertAfterStage: 1,
+        totalStages: 3,
+        skippedStageCount: 1,
+      },
     ];
 
     const entries = translateEffectTrace(effectTrace, triggerLog, visualConfig, gameDefFixture(), 7);
@@ -189,6 +197,7 @@ describe('translateEffectTrace', () => {
       'move-7-trigger-5',
       'move-7-trigger-6',
       'move-7-trigger-7',
+      'move-7-trigger-8',
     ]);
 
     const movement = entries[0];
@@ -249,6 +258,10 @@ describe('translateEffectTrace', () => {
     expect(entries[14]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[15]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[16]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[17]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[17]?.message).toContain('Assault');
+    expect(entries[17]?.message).toContain('Assault Profile');
+    expect(entries[17]?.message).toContain('1/3');
 
     const uniqueIds = new Set(entries.map((entry) => entry.id));
     expect(uniqueIds.size).toBe(entries.length);

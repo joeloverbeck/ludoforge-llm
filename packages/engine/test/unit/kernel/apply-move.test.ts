@@ -16,6 +16,7 @@ import {
   type GameState,
   type Move,
   type ActionPipelineDef,
+  type OperationCompoundStagesReplacedTraceEntry,
   type VariableDef,
 } from '../../../src/kernel/index.js';
 
@@ -1408,6 +1409,15 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     assert.equal(result.state.globalVars['cost'], 1, 'cost stage should execute');
     assert.equal(result.state.globalVars['saEffect'], 1, 'SA should execute');
     assert.equal(result.state.globalVars['combat'], 0, 'combat stage should be skipped');
+    const traceEntry = result.triggerFirings.find(
+      (entry): entry is OperationCompoundStagesReplacedTraceEntry => entry.kind === 'operationCompoundStagesReplaced',
+    );
+    assert.ok(traceEntry, 'trace should include operationCompoundStagesReplaced');
+    assert.equal(traceEntry.actionId, asActionId('attack'));
+    assert.equal(traceEntry.profileId, 'attack-profile');
+    assert.equal(traceEntry.insertAfterStage, 1);
+    assert.equal(traceEntry.totalStages, 3);
+    assert.equal(traceEntry.skippedStageCount, 1);
   });
 
   it('replaceRemainingStages: false preserves all stages', () => {
@@ -1432,6 +1442,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     assert.equal(result.state.globalVars['cost'], 1, 'cost stage should execute');
     assert.equal(result.state.globalVars['saEffect'], 1, 'SA should execute');
     assert.equal(result.state.globalVars['combat'], 1, 'combat stage should also execute');
+    assert.equal(
+      result.triggerFirings.some((entry) => entry.kind === 'operationCompoundStagesReplaced'),
+      false,
+      'trace should not include operationCompoundStagesReplaced when stages are preserved',
+    );
   });
 
   it('absent replaceRemainingStages preserves all stages (backward compat)', () => {
@@ -1455,5 +1470,38 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     assert.equal(result.state.globalVars['cost'], 1);
     assert.equal(result.state.globalVars['saEffect'], 1);
     assert.equal(result.state.globalVars['combat'], 1, 'all stages preserved when flag absent');
+    assert.equal(
+      result.triggerFirings.some((entry) => entry.kind === 'operationCompoundStagesReplaced'),
+      false,
+      'trace should not include operationCompoundStagesReplaced when replaceRemainingStages is absent',
+    );
+  });
+
+  it('replaceRemainingStages: true at final stage emits zero skippedStageCount', () => {
+    const def = makeBaseDef({
+      actions: [operation, specialActivityAction],
+      actionPipelines: [threeStageProfile],
+      globalVars: [resourcesVar, costVar, combatVar, saVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'during',
+        insertAfterStage: 2,
+        replaceRemainingStages: true,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    const result = applyMove(def, state, move);
+    const traceEntry = result.triggerFirings.find(
+      (entry): entry is OperationCompoundStagesReplacedTraceEntry => entry.kind === 'operationCompoundStagesReplaced',
+    );
+    assert.ok(traceEntry, 'trace should include operationCompoundStagesReplaced');
+    assert.equal(traceEntry.insertAfterStage, 2);
+    assert.equal(traceEntry.totalStages, 3);
+    assert.equal(traceEntry.skippedStageCount, 0);
   });
 });

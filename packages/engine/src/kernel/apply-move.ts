@@ -679,7 +679,7 @@ const executeMoveAction = (
     executionTraceEntries.push({
       kind: 'operationPartial',
       actionId: action.id,
-      profileId: actionPipeline?.id ?? 'unknown',
+      profileId: executionProfile.profileId,
       step: 'costSpendSkipped',
       reason: 'costValidationFailed',
     });
@@ -744,6 +744,14 @@ const executeMoveAction = (
       if (stageIdx === insertAfter) {
         applyCompoundSA();
         if (move.compound?.replaceRemainingStages === true) {
+          executionTraceEntries.push({
+            kind: 'operationCompoundStagesReplaced',
+            actionId: action.id,
+            profileId: executionProfile.profileId,
+            insertAfterStage: insertAfter,
+            totalStages: executionProfile.resolutionStages.length,
+            skippedStageCount: executionProfile.resolutionStages.length - insertAfter - 1,
+          });
           break;
         }
       }

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { resolveActionPipelineDispatch } from '../../../src/kernel/apply-move-pipeline.js';
+import { resolveActionPipelineDispatch, toExecutionPipeline } from '../../../src/kernel/apply-move-pipeline.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
 import {
@@ -187,5 +187,35 @@ describe('resolveActionPipelineDispatch()', () => {
 
     const result = resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(0)));
     assert.equal(result.kind, 'noneConfigured');
+  });
+});
+
+describe('toExecutionPipeline()', () => {
+  it('carries profile id into execution pipeline contract', () => {
+    const action: ActionDef = {
+      id: asActionId('attack'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: 1 } }],
+      limits: [],
+    };
+    const profile: ActionPipelineDef = {
+      id: 'attack-profile',
+      actionId: asActionId('attack'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const execution = toExecutionPipeline(action, profile);
+    assert.equal(execution.profileId, 'attack-profile');
+    assert.equal(execution.partialMode, 'atomic');
   });
 });

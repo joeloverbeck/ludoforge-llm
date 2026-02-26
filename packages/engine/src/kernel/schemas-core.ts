@@ -17,6 +17,7 @@ import {
 } from './schemas-ast.js';
 import {
   OperationFreeTraceEntrySchema,
+  OperationCompoundStagesReplacedTraceEntrySchema,
   OperationPartialTraceEntrySchema,
   SimultaneousCommitTraceEntrySchema,
   SimultaneousSubmissionTraceEntrySchema,
@@ -641,6 +642,7 @@ export const TriggerLogEntrySchema = z.union([
   SimultaneousCommitTraceEntrySchema,
   OperationPartialTraceEntrySchema,
   OperationFreeTraceEntrySchema,
+  OperationCompoundStagesReplacedTraceEntrySchema,
 ]);
 
 export const MoveLogSchema = z

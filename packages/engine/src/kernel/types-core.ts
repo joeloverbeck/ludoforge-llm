@@ -21,6 +21,7 @@ import type {
 import type { ActiveLastingEffect, EventDeckDef } from './types-events.js';
 import type {
   OperationFreeTraceEntry,
+  OperationCompoundStagesReplacedTraceEntry,
   OperationPartialTraceEntry,
   ActionPipelineDef,
 } from './types-operations.js';
@@ -616,7 +617,8 @@ export type TriggerLogEntry =
   | SimultaneousSubmissionTraceEntry
   | SimultaneousCommitTraceEntry
   | OperationPartialTraceEntry
-  | OperationFreeTraceEntry;
+  | OperationFreeTraceEntry
+  | OperationCompoundStagesReplacedTraceEntry;
 
 // ── Runtime Warnings ──────────────────────────────────────
 

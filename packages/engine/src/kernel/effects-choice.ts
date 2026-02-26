@@ -6,7 +6,7 @@ import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
+import { resolveZoneWithNormalization } from './selector-resolution-normalization.js';
 import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -364,7 +364,12 @@ export const applyRollRandom = (
 export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: unknown }>, ctx: EffectContext): EffectResult => {
   const { space, marker, state: stateExpr } = effect.setMarker;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const spaceId = resolveZoneRef(space, evalCtx);
+  const spaceId = resolveZoneWithNormalization(space, evalCtx, {
+    code: 'choiceRuntimeValidationFailed',
+    effectType: 'setMarker',
+    scope: 'space',
+    resolutionFailureMessage: 'setMarker.space zone resolution failed',
+  });
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
@@ -404,7 +409,12 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
 export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMarker: unknown }>, ctx: EffectContext): EffectResult => {
   const { space, marker, delta: deltaExpr } = effect.shiftMarker;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const spaceId = resolveZoneRef(space, evalCtx);
+  const spaceId = resolveZoneWithNormalization(space, evalCtx, {
+    code: 'choiceRuntimeValidationFailed',
+    effectType: 'shiftMarker',
+    scope: 'space',
+    resolutionFailureMessage: 'shiftMarker.space zone resolution failed',
+  });
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {

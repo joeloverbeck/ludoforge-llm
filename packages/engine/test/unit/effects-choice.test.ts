@@ -501,4 +501,42 @@ describe('effects choice assertions', () => {
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown marker lattice'),
     );
   });
+
+  it('setMarker normalizes unresolved space selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      setMarker: {
+        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        marker: 'unknownMarker',
+        state: 'neutral',
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('setMarker.space zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('shiftMarker normalizes unresolved space selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      shiftMarker: {
+        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        marker: 'unknownMarker',
+        delta: 1,
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('shiftMarker.space zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
 });

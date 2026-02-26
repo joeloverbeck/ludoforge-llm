@@ -1,15 +1,16 @@
-import { effectRuntimeError, isEffectRuntimeError } from './effect-error.js';
-import { isEvalError } from './eval-error.js';
-import { resolvePlayerSel } from './resolve-selectors.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
+import { effectRuntimeError } from './effect-error.js';
+import {
+  resolveSinglePlayerWithNormalization,
+  resolveZoneWithNormalization,
+} from './selector-resolution-normalization.js';
+import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
-import type { PlayerId, ZoneId } from './branded.js';
 import type { GameState, IntVariableDef, PlayerSel, VariableDef, VariableValue, ZoneRef } from './types.js';
 
 type ScopedVarDefinitionScope = 'global' | 'pvar' | 'zoneVar';
-type ScopedVarRuntimeErrorCode = 'variableRuntimeValidationFailed' | 'resourceRuntimeValidationFailed';
-type ScopedVarEffectType = 'setVar' | 'addVar' | 'transferVar';
+type ScopedVarRuntimeErrorCode = EffectRuntimeReason;
+type ScopedVarEffectType = string;
 
 type DefinitionScopeEndpoint = Readonly<{
   scope: ScopedVarDefinitionScope;
@@ -35,108 +36,6 @@ export type ScopedVarResolvableEndpoint =
 export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
 
 const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
-
-const normalizeSelectorResolutionError = (
-  error: unknown,
-  options: Readonly<{
-    code: ScopedVarRuntimeErrorCode;
-    effectType: ScopedVarEffectType | 'setActivePlayer';
-    message: string;
-    scope: string;
-    context?: Readonly<Record<string, unknown>>;
-  }>,
-): never => {
-  if (isEffectRuntimeError(error)) {
-    throw error;
-  }
-
-  const errorContext =
-    error instanceof Error
-      ? {
-          errorName: error.name,
-          errorMessage: error.message,
-        }
-      : {
-          thrown: String(error),
-        };
-
-  throw effectRuntimeError(options.code, options.message, {
-    effectType: options.effectType,
-    scope: options.scope,
-    ...(options.context ?? {}),
-    ...(isEvalError(error) ? { sourceErrorCode: error.code } : {}),
-    ...errorContext,
-  });
-};
-
-export const resolveSinglePlayerWithNormalization = (
-  selector: PlayerSel,
-  evalCtx: EffectContext,
-  options: Readonly<{
-    code: ScopedVarRuntimeErrorCode;
-    effectType: ScopedVarEffectType | 'setActivePlayer';
-    scope: string;
-    cardinalityMessage: string;
-    resolutionFailureMessage: string;
-    context?: Readonly<Record<string, unknown>>;
-  }>,
-): PlayerId => {
-  let resolvedPlayers: readonly PlayerId[];
-  try {
-    resolvedPlayers = resolvePlayerSel(selector, evalCtx);
-  } catch (error: unknown) {
-    return normalizeSelectorResolutionError(error, {
-      code: options.code,
-      effectType: options.effectType,
-      message: options.resolutionFailureMessage,
-      scope: options.scope,
-      context: {
-        selector,
-        ...(options.context ?? {}),
-      },
-    });
-  }
-
-  if (resolvedPlayers.length !== 1) {
-    throw effectRuntimeError(options.code, options.cardinalityMessage, {
-      effectType: options.effectType,
-      scope: options.scope,
-      selector,
-      resolvedCount: resolvedPlayers.length,
-      resolvedPlayers,
-      ...(options.context ?? {}),
-    });
-  }
-
-  return resolvedPlayers[0]!;
-};
-
-export const resolveZoneWithNormalization = (
-  zoneRef: ZoneRef,
-  evalCtx: EffectContext,
-  options: Readonly<{
-    code: ScopedVarRuntimeErrorCode;
-    effectType: ScopedVarEffectType | 'setActivePlayer';
-    scope: string;
-    resolutionFailureMessage: string;
-    context?: Readonly<Record<string, unknown>>;
-  }>,
-): ZoneId => {
-  try {
-    return resolveZoneRef(zoneRef, evalCtx);
-  } catch (error: unknown) {
-    return normalizeSelectorResolutionError(error, {
-      code: options.code,
-      effectType: options.effectType,
-      message: options.resolutionFailureMessage,
-      scope: options.scope,
-      context: {
-        zone: zoneRef,
-        ...(options.context ?? {}),
-      },
-    });
-  }
-};
 
 export const resolveRuntimeScopedEndpoint = (
   endpoint: ScopedVarResolvableEndpoint,

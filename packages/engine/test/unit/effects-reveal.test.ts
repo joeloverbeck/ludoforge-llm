@@ -223,6 +223,34 @@ describe('effects reveal', () => {
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Zone state not found'),
     );
   });
+
+  it('normalizes unresolved reveal.zone bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { reveal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('reveal.zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('normalizes unresolved reveal.to selectors to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('reveal.to selector resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
 });
 
 describe('effects conceal', () => {

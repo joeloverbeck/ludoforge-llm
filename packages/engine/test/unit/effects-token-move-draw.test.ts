@@ -226,6 +226,22 @@ describe('effects moveToken and draw', () => {
     );
   });
 
+  it('draw normalizes unresolved zone selector bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('draw.from zone resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
   it('moveToken random with empty destination does not advance rng', () => {
     const state = makeState();
     const ctx = makeCtx({

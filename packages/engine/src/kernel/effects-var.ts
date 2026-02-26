@@ -1,10 +1,10 @@
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
+import { resolveSinglePlayerWithNormalization } from './selector-resolution-normalization.js';
 import {
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
-  resolveSinglePlayerWithNormalization,
   writeScopedVarToBranches,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';

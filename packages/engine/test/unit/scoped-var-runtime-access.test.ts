@@ -3,13 +3,16 @@ import { describe, it } from 'node:test';
 
 import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createRng, isEffectErrorCode } from '../../src/kernel/index.js';
 import type { EffectContext } from '../../src/kernel/effect-context.js';
+import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import {
+  resolveSinglePlayerWithNormalization,
+  resolveZoneWithNormalization,
+} from '../../src/kernel/selector-resolution-normalization.js';
 import {
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
   resolveScopedIntVarDef,
   resolveScopedVarDef,
-  resolveSinglePlayerWithNormalization,
-  resolveZoneWithNormalization,
   writeScopedVarToBranches,
 } from '../../src/kernel/scoped-var-runtime-access.js';
 import type { GameDef, GameState } from '../../src/kernel/types.js';
@@ -176,6 +179,21 @@ describe('scoped-var-runtime-access', () => {
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
         String(error).includes('zone endpoint resolution failed') &&
         String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('preserves raw eval errors for discovery-mode zone resolution failures', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+
+    assert.throws(
+      () =>
+        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, ctx, {
+          code: 'resourceRuntimeValidationFailed',
+          effectType: 'transferVar',
+          scope: 'zoneVar',
+          resolutionFailureMessage: 'zone endpoint resolution failed',
+        }),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 

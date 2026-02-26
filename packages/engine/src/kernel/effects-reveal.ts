@@ -1,6 +1,4 @@
 import type { PlayerId } from './branded.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
-import { resolvePlayerSel } from './resolve-selectors.js';
 import { effectRuntimeError } from './effect-error.js';
 import {
   canonicalTokenFilterKey,
@@ -8,6 +6,7 @@ import {
   removeMatchingRevealGrants,
   revealGrantEquals,
 } from './hidden-info-grants.js';
+import { resolvePlayersWithNormalization, resolveZoneWithNormalization } from './selector-resolution-normalization.js';
 import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
@@ -24,7 +23,14 @@ export const applyConceal = (
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const zoneId = String(resolveZoneRef(effect.conceal.zone, evalCtx));
+  const zoneId = String(
+    resolveZoneWithNormalization(effect.conceal.zone, evalCtx, {
+      code: 'concealRuntimeValidationFailed',
+      effectType: 'conceal',
+      scope: 'zone',
+      resolutionFailureMessage: 'conceal.zone resolution failed',
+    }),
+  );
 
   if (ctx.state.zones[zoneId] === undefined) {
     throw effectRuntimeError('concealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
@@ -45,7 +51,15 @@ export const applyConceal = (
     if (effect.conceal.from === 'all') {
       from = 'all';
     } else {
-      from = canonicalizeObserverSelection(resolvePlayerSel(effect.conceal.from, evalCtx), ctx.state.playerCount);
+      from = canonicalizeObserverSelection(
+        resolvePlayersWithNormalization(effect.conceal.from, evalCtx, {
+          code: 'concealRuntimeValidationFailed',
+          effectType: 'conceal',
+          scope: 'from',
+          resolutionFailureMessage: 'conceal.from selector resolution failed',
+        }),
+        ctx.state.playerCount,
+      );
     }
   }
   const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKey(effect.conceal.filter);
@@ -85,7 +99,14 @@ export const applyConceal = (
 
 export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const zoneId = String(resolveZoneRef(effect.reveal.zone, evalCtx));
+  const zoneId = String(
+    resolveZoneWithNormalization(effect.reveal.zone, evalCtx, {
+      code: 'revealRuntimeValidationFailed',
+      effectType: 'reveal',
+      scope: 'zone',
+      resolutionFailureMessage: 'reveal.zone resolution failed',
+    }),
+  );
 
   if (ctx.state.zones[zoneId] === undefined) {
     throw effectRuntimeError('revealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
@@ -100,7 +121,15 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
   if (effect.reveal.to === 'all') {
     observers = 'all';
   } else {
-    observers = canonicalizeObserverSelection(resolvePlayerSel(effect.reveal.to, evalCtx), ctx.state.playerCount);
+    observers = canonicalizeObserverSelection(
+      resolvePlayersWithNormalization(effect.reveal.to, evalCtx, {
+        code: 'revealRuntimeValidationFailed',
+        effectType: 'reveal',
+        scope: 'to',
+        resolutionFailureMessage: 'reveal.to selector resolution failed',
+      }),
+      ctx.state.playerCount,
+    );
   }
 
   const grant: RevealGrant = {

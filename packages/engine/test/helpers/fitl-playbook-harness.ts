@@ -38,6 +38,12 @@ export interface MarkerCheck {
   readonly expected: string;
 }
 
+export interface ZoneVarCheck {
+  readonly zone: string;
+  readonly variable: string;
+  readonly expected: number;
+}
+
 export interface ComputedValueCheck {
   readonly label: string;
   readonly expected: number;
@@ -58,6 +64,7 @@ export interface PlaybookStateSnapshot {
   readonly zoneTokenCounts?: readonly ZoneTokenCountCheck[];
   readonly totalTokenCounts?: readonly TotalTokenCountCheck[];
   readonly markers?: readonly MarkerCheck[];
+  readonly zoneVars?: readonly ZoneVarCheck[];
   readonly computedValues?: readonly ComputedValueCheck[];
 }
 
@@ -270,6 +277,34 @@ export const assertPlaybookSnapshot = (
         actual,
         check.expected,
         `${label}: expected ${check.marker} at ${check.space} = ${check.expected}, got ${String(actual)}`,
+      );
+    }
+  }
+
+  if (expected.zoneVars !== undefined) {
+    for (const check of expected.zoneVars) {
+      const zoneVars = state.zoneVars[check.zone];
+      assert.notEqual(
+        zoneVars,
+        undefined,
+        `${label}: expected zoneVar ${check.variable} at ${check.zone} to exist, but zone had no zoneVars entry`,
+      );
+      const actualRaw = zoneVars?.[check.variable];
+      assert.notEqual(
+        actualRaw,
+        undefined,
+        `${label}: expected zoneVar ${check.variable} at ${check.zone} to exist, but variable was missing`,
+      );
+      assert.equal(
+        typeof actualRaw,
+        'number',
+        `${label}: expected zoneVar ${check.variable} at ${check.zone} to be numeric, got ${typeof actualRaw}`,
+      );
+      const actual = actualRaw as number;
+      assert.equal(
+        actual,
+        check.expected,
+        `${label}: expected zoneVar ${check.variable} at ${check.zone} = ${check.expected}, got ${actual}`,
       );
     }
   }

@@ -52,11 +52,24 @@ export function lowerVarDefs(
   diagnostics: Diagnostic[],
   pathPrefix: 'doc.globalVars' | 'doc.perPlayerVars' | 'doc.zoneVars',
 ): readonly VariableDef[] {
+  return lowerVarDefsWithSourceIndices(variables, diagnostics, pathPrefix).map((entry) => entry.variable);
+}
+
+type LoweredVarWithSourceIndex = {
+  readonly sourceIndex: number;
+  readonly variable: VariableDef;
+};
+
+function lowerVarDefsWithSourceIndices(
+  variables: GameSpecDoc['globalVars'] | GameSpecDoc['perPlayerVars'] | GameSpecDoc['zoneVars'],
+  diagnostics: Diagnostic[],
+  pathPrefix: 'doc.globalVars' | 'doc.perPlayerVars' | 'doc.zoneVars',
+): readonly LoweredVarWithSourceIndex[] {
   if (variables === null) {
     return [];
   }
 
-  const lowered: VariableDef[] = [];
+  const lowered: LoweredVarWithSourceIndex[] = [];
   for (const [index, variable] of variables.entries()) {
     const path = `${pathPrefix}.${index}`;
     if (!isRecord(variable)) {
@@ -75,11 +88,14 @@ export function lowerVarDefs(
         continue;
       }
       lowered.push({
-        name: variable.name,
-        type: 'int',
-        init: variable.init,
-        min: variable.min,
-        max: variable.max,
+        sourceIndex: index,
+        variable: {
+          name: variable.name,
+          type: 'int',
+          init: variable.init,
+          min: variable.min,
+          max: variable.max,
+        },
       });
       continue;
     }
@@ -90,9 +106,12 @@ export function lowerVarDefs(
         continue;
       }
       lowered.push({
-        name: variable.name,
-        type: 'boolean',
-        init: variable.init,
+        sourceIndex: index,
+        variable: {
+          name: variable.name,
+          type: 'boolean',
+          init: variable.init,
+        },
       });
       continue;
     }
@@ -111,18 +130,18 @@ export function lowerIntVarDefs(
     return [];
   }
 
-  const lowered = lowerVarDefs(variables, diagnostics, pathPrefix);
+  const lowered = lowerVarDefsWithSourceIndices(variables, diagnostics, pathPrefix);
   const intOnly: Extract<VariableDef, { readonly type: 'int' }>[] = [];
-  for (const [index, variable] of lowered.entries()) {
+  for (const { sourceIndex, variable } of lowered) {
     if (variable.type === 'int') {
       intOnly.push(variable);
       continue;
     }
     diagnostics.push({
       code: 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID',
-      path: `${pathPrefix}.${index}.type`,
+      path: `${pathPrefix}.${sourceIndex}.type`,
       severity: 'error',
-      message: `Cannot lower zoneVars.${index}: only int zoneVars are supported.`,
+      message: `Cannot lower zoneVars.${sourceIndex}: only int zoneVars are supported.`,
       suggestion: 'Use an int zone variable definition (type, init, min, max).',
     });
   }

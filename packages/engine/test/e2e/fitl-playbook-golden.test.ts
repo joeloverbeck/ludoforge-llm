@@ -191,7 +191,7 @@ const FITL_VC_FORMULA: VictoryFormula = {
   type: 'markerTotalPlusMapBases',
   markerConfig: FITL_OPPOSITION_CONFIG,
   baseSeat: 'VC',
-  basePieceTypes: ['base'],
+  basePieceTypes: ['vc-bases'],
 };
 
 const DERIVED_METRICS_CONTEXT = {
@@ -679,7 +679,7 @@ const TURN_4: PlaybookTurn = {
           { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
         ],
         computedValues: [
-          { label: 'VC victory marker', expected: 18, compute: computeVcVictory },
+          { label: 'VC victory marker', expected: 25, compute: computeVcVictory },
         ],
       },
     },
@@ -724,7 +724,7 @@ const TURN_4: PlaybookTurn = {
           { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
         ],
         computedValues: [
-          { label: 'VC victory marker', expected: 16, compute: computeVcVictory },
+          { label: 'VC victory marker', expected: 23, compute: computeVcVictory },
         ],
       },
     },
@@ -770,7 +770,90 @@ const TURN_4: PlaybookTurn = {
         state.turnOrderState.type === 'cardDriven'
           ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
           : 0 },
-      { label: 'VC victory marker', expected: 16, compute: computeVcVictory },
+      { label: 'VC victory marker', expected: 23, compute: computeVcVictory },
+    ],
+  },
+};
+
+// Turn 5 — Brinks Hotel (card-97)
+// Seat order: VC, US, ARVN, NVA → seats [3, 0, 1, 2]
+// Move 1: VC plays shaded Brinks Hotel event
+//   - Target $targetCity auto-resolves to Hue (only city with VC presence)
+//   - Shifts Hue supportOpposition by -2 (neutral → activeOpposition)
+//   - Adds terrorCount +1 at Hue, terrorSabotageMarkersPlaced +1 globally
+//   - VC guerrilla in Hue stays underground (event, not Terror operation)
+//   - VC victory: 23 → 27 (Hue pop=2 × activeOpposition weight 2 = +4)
+// Move 2: ARVN passes (+3 arvnResources → 24 → 27)
+const TURN_5: PlaybookTurn = {
+  label: 'Turn 5 — Brinks Hotel',
+  moves: [
+    {
+      kind: 'resolved',
+      label: 'VC shaded Brinks Hotel',
+      move: {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-97', side: 'shaded' },
+      },
+      expectedState: {
+        globalVars: {
+          terrorSabotageMarkersPlaced: 1,
+          nvaResources: 2,
+          trail: 1,
+          vcResources: 10,
+          arvnResources: 24,
+          aid: 14,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1,
+            props: { activity: 'underground' } },
+        ],
+        markers: [
+          { space: 'hue:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+        ],
+        zoneVars: [
+          { zone: 'hue:none', variable: 'terrorCount', expected: 1 },
+        ],
+        computedValues: [
+          { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+        ],
+      },
+    },
+    {
+      kind: 'simple',
+      label: 'ARVN passes',
+      move: {
+        actionId: asActionId('pass'),
+        params: {},
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      nvaResources: 2,
+      trail: 1,
+      vcResources: 10,
+      arvnResources: 27,
+      aid: 14,
+      patronage: 15,
+    },
+    eligibility: { '0': true, '1': true, '2': true, '3': false },
+    activePlayer: 1,
+    currentCard: 'card-79',
+    previewCard: 'card-101',
+    deckSize: 6,
+    seatOrder: ['1', '2', '3', '0'],
+    firstEligible: '1',
+    secondEligible: '2',
+    nonPassCount: 0,
+    markers: [
+      { space: 'hue:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+    ],
+    zoneVars: [
+      { zone: 'hue:none', variable: 'terrorCount', expected: 1 },
+    ],
+    computedValues: [
+      { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
     ],
   },
 };
@@ -779,7 +862,7 @@ const TURN_4: PlaybookTurn = {
 // Playbook turns in execution order
 // ---------------------------------------------------------------------------
 
-const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4];
+const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5];
 
 // ---------------------------------------------------------------------------
 // Test suite

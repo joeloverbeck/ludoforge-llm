@@ -250,6 +250,49 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('uses original source index for zoneVar int-only diagnostics when earlier entries fail structural lowering', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'zonevar-int-only-source-index', players: { min: 2, max: 2 } },
+      zoneVars: [42, { name: 'locked', type: 'boolean', init: false }],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'tick',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'locked', delta: 1 } }],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(result.sections.zoneVars, null);
+    assert.deepEqual(
+      result.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID'),
+      {
+        code: 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID',
+        path: 'doc.zoneVars.1.type',
+        severity: 'error',
+        message: 'Cannot lower zoneVars.1: only int zoneVars are supported.',
+        suggestion: 'Use an int zone variable definition (type, init, min, max).',
+      },
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_XREF_ZONEVAR_MISSING'),
+      false,
+    );
+  });
+
   it('preserves valid int zoneVars references', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
@@ -458,6 +501,39 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('preserves source indices for fixedOrder diagnostics when invalid entries precede duplicates', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-order-fixed-index-fidelity', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: { type: 'fixedOrder' as const, order: ['us', 7, 'us'] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FIXED_ORDER_ENTRY_INVALID'
+          && diagnostic.path === 'doc.turnOrder.order.1',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FIXED_ORDER_DUPLICATE'
+          && diagnostic.path === 'doc.turnOrder.order.2',
+      ),
+      true,
+    );
+  });
+
   it('returns blocking diagnostics for malformed turnFlow metadata', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
@@ -494,6 +570,47 @@ describe('compile top-level actions/triggers/end conditions', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING' &&
           diagnostic.path === 'doc.turnOrder.config.turnFlow.actionClassByActionId',
+      ),
+      true,
+    );
+  });
+
+  it('returns blocking diagnostics for blank freeOperationActionIds entries', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-free-op-action-id-invalid', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            freeOperationActionIds: ['pass', '', '   '],
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.freeOperationActionIds.1',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.freeOperationActionIds.2',
       ),
       true,
     );
@@ -772,6 +889,96 @@ describe('compile top-level actions/triggers/end conditions', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE' &&
           diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.2',
+      ),
+      true,
+    );
+  });
+
+  it('preserves source indices for turnFlow ordering diagnostics when invalid entries are present', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-ordering-index-fidelity', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              seats: ['us', 7, 'us'],
+              overrideWindows: [],
+            },
+            actionClassByActionId: { pass: 'pass' as const, pivotalA: 'event' as const, pivotalB: 'event' as const },
+            optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+            pivotal: {
+              actionIds: ['pivotalA', null, 'pivotalB'],
+              interrupt: {
+                precedence: ['us', null, 'us', 'vc'],
+              },
+            },
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_SEAT_INVALID'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.1',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_SEAT'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.2',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PIVOTAL_ACTION_ID_INVALID'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.actionIds.1',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_INVALID_SEAT'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.1',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.2',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_SEAT'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.3',
       ),
       true,
     );

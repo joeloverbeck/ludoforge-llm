@@ -9,6 +9,11 @@ import type { GameSpecDoc } from './game-spec-doc.js';
 import { lowerCoupPlan } from './compile-victory.js';
 import { isRecord } from './compile-lowering.js';
 
+type IndexedString = {
+  readonly sourceIndex: number;
+  readonly value: string;
+};
+
 export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnostics: Diagnostic[]): TurnOrderStrategy | undefined {
   if (rawTurnOrder === null) {
     return undefined;
@@ -38,10 +43,27 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
       });
       return { type: 'simultaneous' };
     case 'fixedOrder': {
-      const order = Array.isArray(rawTurnOrder.order)
-        ? rawTurnOrder.order.filter((entry): entry is string => typeof entry === 'string')
-        : [];
-      if (order.length === 0) {
+      const orderEntries: IndexedString[] = [];
+      if (Array.isArray(rawTurnOrder.order)) {
+        for (const [index, entry] of rawTurnOrder.order.entries()) {
+          if (typeof entry !== 'string' || entry.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_COMPILER_FIXED_ORDER_ENTRY_INVALID',
+              path: `doc.turnOrder.order.${index}`,
+              severity: 'error',
+              message: 'fixedOrder entries must be non-empty player id strings.',
+              suggestion: 'Replace invalid entries with declared player ids.',
+            });
+            continue;
+          }
+          orderEntries.push({
+            sourceIndex: index,
+            value: entry,
+          });
+        }
+      }
+
+      if (orderEntries.length === 0) {
         diagnostics.push({
           code: 'CNL_COMPILER_FIXED_ORDER_EMPTY',
           path: 'doc.turnOrder.order',
@@ -52,11 +74,11 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
         return undefined;
       }
       const seen = new Set<string>();
-      for (const [index, playerId] of order.entries()) {
+      for (const { sourceIndex, value: playerId } of orderEntries) {
         if (seen.has(playerId)) {
           diagnostics.push({
             code: 'CNL_COMPILER_FIXED_ORDER_DUPLICATE',
-            path: `doc.turnOrder.order.${index}`,
+            path: `doc.turnOrder.order.${sourceIndex}`,
             severity: 'warning',
             message: `Duplicate fixedOrder player id "${playerId}".`,
             suggestion: 'Use unique player ids in turnOrder.order for deterministic sequencing.',
@@ -68,7 +90,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
 
       return {
         type: 'fixedOrder',
-        order,
+        order: orderEntries.map((entry) => entry.value),
       };
     }
     case 'cardDriven': {
@@ -203,7 +225,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
 
   if (Array.isArray(rawTurnFlow.freeOperationActionIds)) {
     for (const [index, actionId] of rawTurnFlow.freeOperationActionIds.entries()) {
-      if (typeof actionId === 'string') {
+      if (typeof actionId === 'string' && actionId.trim() !== '') {
         continue;
       }
       diagnostics.push({
@@ -236,16 +258,33 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     }
   }
 
-  const seatOrder = eligibility.seats.filter((seat): seat is string => typeof seat === 'string');
+  const seatOrderEntries: IndexedString[] = [];
+  for (const [index, seat] of eligibility.seats.entries()) {
+    if (typeof seat !== 'string' || seat.trim() === '') {
+      diagnostics.push({
+        code: 'CNL_COMPILER_TURN_FLOW_ORDERING_SEAT_INVALID',
+        path: `doc.turnOrder.config.turnFlow.eligibility.seats.${index}`,
+        severity: 'error',
+        message: 'eligibility.seats entries must be non-empty seat id strings.',
+        suggestion: 'Replace invalid entries with declared seat ids.',
+      });
+      continue;
+    }
+    seatOrderEntries.push({
+      sourceIndex: index,
+      value: seat,
+    });
+  }
+  const seatOrder = seatOrderEntries.map((entry) => entry.value);
   const seenSeats = new Set<string>();
-  for (const [index, seat] of seatOrder.entries()) {
+  for (const { sourceIndex, value: seat } of seatOrderEntries) {
     if (!seenSeats.has(seat)) {
       seenSeats.add(seat);
       continue;
     }
     diagnostics.push({
       code: 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_SEAT',
-      path: `doc.turnOrder.config.turnFlow.eligibility.seats.${index}`,
+      path: `doc.turnOrder.config.turnFlow.eligibility.seats.${sourceIndex}`,
       severity: 'error',
       message: `Duplicate seat id "${seat}" creates unresolved deterministic ordering.`,
       suggestion: 'Declare each seat id exactly once in eligibility.seats.',
@@ -271,13 +310,45 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
   }
 
   if (isRecord(rawTurnFlow.pivotal)) {
-    const actionIds = Array.isArray(rawTurnFlow.pivotal.actionIds)
-      ? rawTurnFlow.pivotal.actionIds.filter((actionId): actionId is string => typeof actionId === 'string')
-      : [];
+    const actionIdEntries: IndexedString[] = [];
+    if (Array.isArray(rawTurnFlow.pivotal.actionIds)) {
+      for (const [index, actionId] of rawTurnFlow.pivotal.actionIds.entries()) {
+        if (typeof actionId !== 'string' || actionId.trim() === '') {
+          diagnostics.push({
+            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PIVOTAL_ACTION_ID_INVALID',
+            path: `doc.turnOrder.config.turnFlow.pivotal.actionIds.${index}`,
+            severity: 'error',
+            message: 'pivotal.actionIds entries must be non-empty action id strings.',
+            suggestion: 'Replace invalid entries with declared action ids.',
+          });
+          continue;
+        }
+        actionIdEntries.push({
+          sourceIndex: index,
+          value: actionId,
+        });
+      }
+    }
     const interrupt = isRecord(rawTurnFlow.pivotal.interrupt) ? rawTurnFlow.pivotal.interrupt : null;
-    const precedence = Array.isArray(interrupt?.precedence)
-      ? interrupt.precedence.filter((entry): entry is string => typeof entry === 'string')
-      : [];
+    const precedenceEntries: IndexedString[] = [];
+    if (Array.isArray(interrupt?.precedence)) {
+      for (const [index, entry] of interrupt.precedence.entries()) {
+        if (typeof entry !== 'string' || entry.trim() === '') {
+          diagnostics.push({
+            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_INVALID_SEAT',
+            path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${index}`,
+            severity: 'error',
+            message: 'pivotal.interrupt.precedence entries must be non-empty seat id strings.',
+            suggestion: 'Replace invalid entries with declared seat ids.',
+          });
+          continue;
+        }
+        precedenceEntries.push({
+          sourceIndex: index,
+          value: entry,
+        });
+      }
+    }
     const cancellationRules = Array.isArray(interrupt?.cancellation) ? interrupt.cancellation : [];
 
     if (interrupt !== null && interrupt.cancellation !== undefined && !Array.isArray(interrupt.cancellation)) {
@@ -290,7 +361,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       });
     }
 
-    if (actionIds.length > 1 && precedence.length === 0) {
+    if (actionIdEntries.length > 1 && precedenceEntries.length === 0) {
       diagnostics.push({
         code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_REQUIRED',
         path: 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence',
@@ -301,11 +372,11 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     }
 
     const seenPrecedence = new Set<string>();
-    for (const [index, seat] of precedence.entries()) {
+    for (const { sourceIndex, value: seat } of precedenceEntries) {
       if (!seatOrder.includes(seat)) {
         diagnostics.push({
           code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_SEAT',
-          path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${index}`,
+          path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${sourceIndex}`,
           severity: 'error',
           message: `Interrupt precedence seat "${seat}" is not declared in eligibility.seats.`,
           suggestion: 'Use seat ids declared in turnFlow.eligibility.seats.',
@@ -319,7 +390,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
 
       diagnostics.push({
         code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE',
-        path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${index}`,
+        path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${sourceIndex}`,
         severity: 'error',
         message: `Duplicate interrupt precedence seat "${seat}" creates unresolved ordering.`,
         suggestion: 'List each seat at most once in pivotal.interrupt.precedence.',

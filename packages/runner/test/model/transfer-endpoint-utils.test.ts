@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  endpointVarNameAsString,
   formatTransferEndpointDisplay,
   normalizeTransferEndpoint,
 } from '../../src/model/transfer-endpoint-utils.js';
@@ -87,20 +86,6 @@ describe('transfer-endpoint-utils', () => {
         resolveZoneName: () => 'unused',
       }),
     ).toThrow('Invalid transfer endpoint scope: null');
-  });
-
-  it('returns endpoint varName when it is a string', () => {
-    expect(endpointVarNameAsString({ varName: 'pool' }, 'from')).toBe('pool');
-  });
-
-  it('throws deterministic error when endpoint varName is missing or non-string', () => {
-    expect(() => endpointVarNameAsString({}, 'from')).toThrow(
-      'Invalid transfer endpoint payload: from.varName must be a string',
-    );
-
-    expect(() => endpointVarNameAsString({ varName: 123 }, 'to')).toThrow(
-      'Invalid transfer endpoint payload: to.varName must be a string',
-    );
   });
 
   it('normalizes global transfer endpoints and ignores unrelated identity fields', () => {

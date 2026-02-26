@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { formatScopePrefixDisplay, optionalPlayerId } from '../../src/model/model-utils.js';
+import * as modelUtils from '../../src/model/model-utils.js';
 
 describe('model-utils', () => {
   it('returns an empty object for undefined playerId', () => {
@@ -55,5 +56,10 @@ describe('model-utils', () => {
         resolveZoneName: () => 'unused',
       }),
     ).toBe('');
+  });
+
+  it('does not expose transfer-endpoint module APIs', () => {
+    expect(modelUtils).not.toHaveProperty('normalizeTransferEndpoint');
+    expect(modelUtils).not.toHaveProperty('formatTransferEndpointDisplay');
   });
 });

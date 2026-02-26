@@ -1,9 +1,8 @@
-import type { ScopeKind } from './model-utils.js';
-
-export type ScopeEndpointKind = Exclude<ScopeKind, undefined>;
+type TransferEndpointScopeKind = 'global' | 'perPlayer' | 'zone';
+type TransferEndpointScope = TransferEndpointScopeKind | undefined;
 type EndpointPayloadField = 'from' | 'to';
 
-export interface TransferEndpointPayloadObject {
+interface TransferEndpointPayloadObject {
   readonly scope?: unknown;
   readonly varName?: unknown;
   readonly player?: unknown;
@@ -31,7 +30,7 @@ export type NormalizedTransferEndpoint =
     }>;
 
 interface TransferEndpointLabelResolvers {
-  readonly scope: ScopeKind;
+  readonly scope: TransferEndpointScope;
   readonly playerId: number | undefined;
   readonly zoneId: string | undefined;
   readonly resolvePlayerName: (playerId: number) => string;
@@ -77,23 +76,23 @@ export function formatTransferEndpointDisplay(
   }
 }
 
-function missingEndpointIdentity(scope: ScopeEndpointKind, field: 'playerId' | 'zoneId'): never {
+function missingEndpointIdentity(scope: TransferEndpointScopeKind, field: 'playerId' | 'zoneId'): never {
   throw new Error(`Missing endpoint identity for ${scope} scope: ${field}`);
 }
 
-export function invalidTransferEndpointScope(scope: unknown): never {
+function invalidTransferEndpointScope(scope: unknown): never {
   throw new Error(`Invalid transfer endpoint scope: ${String(scope)}`);
 }
 
-export function endpointPayloadMustBeObject(field: EndpointPayloadField): never {
+function endpointPayloadMustBeObject(field: EndpointPayloadField): never {
   throw new Error(`Invalid transfer endpoint payload: ${field} must be an object`);
 }
 
-export function endpointVarNameMustBeString(field: EndpointPayloadField): never {
+function endpointVarNameMustBeString(field: EndpointPayloadField): never {
   throw new Error(`Invalid transfer endpoint payload: ${field}.varName must be a string`);
 }
 
-export function asTransferEndpointPayloadObject(
+function asTransferEndpointPayloadObject(
   endpoint: unknown,
   field: EndpointPayloadField,
 ): TransferEndpointPayloadObject {
@@ -103,7 +102,7 @@ export function asTransferEndpointPayloadObject(
   return endpoint as TransferEndpointPayloadObject;
 }
 
-export function endpointVarNameAsString(
+function endpointVarNameAsString(
   endpoint: TransferEndpointPayloadObject,
   field: EndpointPayloadField,
 ): string {

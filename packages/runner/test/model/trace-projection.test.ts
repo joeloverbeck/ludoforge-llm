@@ -8,6 +8,7 @@ import {
   projectTriggerEvent,
 } from '../../src/model/trace-projection.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
+import { catchError } from './helpers/catch-error.js';
 
 describe('trace-projection', () => {
   it('projects refs and player context for effect trace entries', () => {
@@ -295,15 +296,6 @@ function provenance(eventContext: EffectTraceEntry['provenance']['eventContext']
     eventContext,
     effectPath: 'effects[0]',
   } as const;
-}
-
-function catchError(fn: () => unknown): string {
-  try {
-    fn();
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  throw new Error('Expected function to throw');
 }
 
 function gameDefNoFactionsFixture() {

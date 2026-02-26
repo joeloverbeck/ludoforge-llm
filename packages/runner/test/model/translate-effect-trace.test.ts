@@ -11,6 +11,7 @@ import { VisualConfigProvider } from '../../src/config/visual-config-provider.js
 import { projectEffectTraceEntry } from '../../src/model/trace-projection.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
 import { TRIGGER_LOG_ENTRIES_EXHAUSTIVE } from '../helpers/trigger-log-fixtures.js';
+import { catchError } from './helpers/catch-error.js';
 
 describe('translateEffectTrace', () => {
   it('translates effect and trigger entries with deterministic ordering and ids', () => {
@@ -926,13 +927,4 @@ function gameDefNoFactionsFixture(): GameDef {
     triggers: [],
     terminal: { conditions: [] },
   } as GameDef;
-}
-
-function catchError(fn: () => unknown): string {
-  try {
-    fn();
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  throw new Error('Expected function to throw');
 }

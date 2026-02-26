@@ -3,15 +3,13 @@ import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { EventLogKind } from './event-log-kind.js';
+import { formatScopePrefixDisplay, optionalPlayerId, type ScopeKind } from './model-utils.js';
 import {
-  formatScopeEndpointDisplay,
-  formatScopePrefixDisplay,
+  formatTransferEndpointDisplay,
   normalizeTransferEndpoint,
-  optionalPlayerId,
   type NormalizedTransferEndpoint,
-  type ScopeEndpointDisplayInput,
-  type ScopeKind,
-} from './model-utils.js';
+  type TransferEndpointDisplayInput,
+} from './transfer-endpoint-utils.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
 
 export interface EventLogEntry {
@@ -104,8 +102,8 @@ function translateEffectEntry(
           kind: 'variable',
           message:
             `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(fromVarName)}` +
-            ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(fromEndpoint))}` +
-            ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(toEndpoint))}.`,
+            ` from ${scopeFormatter.endpoint(toTransferEndpointDisplayInput(fromEndpoint))}` +
+            ` to ${scopeFormatter.endpoint(toTransferEndpointDisplayInput(toEndpoint))}.`,
         };
       }
 
@@ -510,7 +508,7 @@ interface ScopeFormatter {
     readonly playerId: number | undefined;
     readonly zoneId: string | undefined;
   }) => string;
-  readonly endpoint: (input: ScopeEndpointDisplayInput) => string;
+  readonly endpoint: (input: TransferEndpointDisplayInput) => string;
 }
 
 function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: PlayerLookup): ScopeFormatter {
@@ -524,7 +522,7 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
       }),
     endpoint: (input) =>
-      formatScopeEndpointDisplay({
+      formatTransferEndpointDisplay({
         ...input,
         resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
@@ -532,7 +530,7 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
   };
 }
 
-function toScopeEndpointDisplayInput(endpoint: NormalizedTransferEndpoint): ScopeEndpointDisplayInput {
+function toTransferEndpointDisplayInput(endpoint: NormalizedTransferEndpoint): TransferEndpointDisplayInput {
   switch (endpoint.scope) {
     case 'global':
       return {

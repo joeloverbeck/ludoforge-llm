@@ -1,5 +1,6 @@
 import type { EffectTraceEntry, TriggerEvent } from '@ludoforge/engine/runtime';
-import { normalizeTransferEndpoint, optionalPlayerId } from './model-utils.js';
+import { optionalPlayerId } from './model-utils.js';
+import { normalizeTransferEndpoint } from './transfer-endpoint-utils.js';
 
 export interface EffectTraceProjection {
   readonly kind: EffectTraceEntry['kind'];

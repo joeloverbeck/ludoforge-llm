@@ -1258,6 +1258,32 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     );
   });
 
+  it('replaceRemainingStages: false with timing=before is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'before',
+        replaceRemainingStages: false,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.metadata?.['timing'], 'before');
+        return true;
+      },
+    );
+  });
+
   it('replaceRemainingStages with timing=after is illegal', () => {
     const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
     const move: Move = {
@@ -1266,6 +1292,32 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       compound: {
         timing: 'after',
         replaceRemainingStages: true,
+        specialActivity: { actionId: asActionId('ambush'), params: {} },
+      },
+    };
+
+    assert.throws(
+      () => applyMove(noPipelineDef, state, move),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
+        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.metadata?.['timing'], 'after');
+        return true;
+      },
+    );
+  });
+
+  it('replaceRemainingStages: false with timing=after is illegal', () => {
+    const state = makeBaseState({ globalVars: { resources: 10, cost: 0, combat: 0, saEffect: 0 } });
+    const move: Move = {
+      actionId: asActionId('attack'),
+      params: {},
+      compound: {
+        timing: 'after',
+        replaceRemainingStages: false,
         specialActivity: { actionId: asActionId('ambush'), params: {} },
       },
     };

@@ -1,6 +1,6 @@
 # ENGINEARCH-075: Enforce test coverage for non-`during` `replaceRemainingStages` invariants
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — kernel unit tests only
@@ -13,14 +13,15 @@
 ## Assumption Reassessment (2026-02-26)
 
 1. `packages/engine/src/kernel/apply-move.ts` rejects `replaceRemainingStages` when `timing !== 'during'` without checking truthiness (`!== undefined` semantics).
-2. `packages/engine/test/unit/kernel/apply-move.test.ts` currently asserts non-`during` illegality for `replaceRemainingStages: true`, but not for `false`.
-3. Mismatch + correction: test coverage should pin the field-level invariant (`field presence`) rather than a single boolean value.
+2. `packages/engine/test/unit/kernel/apply-move.test.ts` currently asserts non-`during` illegality for `replaceRemainingStages: true` (`timing=before/after`), but not for `false`.
+3. Scope correction: add explicit `false` cases for both non-`during` timings so tests encode the field-presence invariant (`replaceRemainingStages !== undefined`) instead of a single truthy branch.
 
 ## Architecture Check
 
 1. This is a contract-hardening ticket: explicit tests make the invariant stable and prevent semantic drift.
 2. Scope is kernel-generic (`CompoundMovePayload`), with no game-specific branching.
 3. No backward-compatibility aliasing/shims are introduced.
+4. Benefit vs current architecture: this strengthens the existing architecture (presence-based validation) without introducing new behavior branches or policy surface area.
 
 ## What to Change
 
@@ -69,3 +70,20 @@ No new runtime reason code is required. Reuse `COMPOUND_TIMING_CONFIGURATION_INV
 1. `pnpm turbo build`
 2. `node --test "packages/engine/dist/test/unit/kernel/apply-move.test.js"`
 3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- What actually changed:
+  - Added two unit tests in `packages/engine/test/unit/kernel/apply-move.test.ts`:
+    - `replaceRemainingStages: false with timing=before is illegal`
+    - `replaceRemainingStages: false with timing=after is illegal`
+  - Updated this ticket’s assumption language to explicitly encode presence-based validation (`replaceRemainingStages !== undefined`) and confirm scope.
+- Deviations from original plan:
+  - None in implementation scope; no runtime/kernel behavior changes were needed.
+- Verification results:
+  - `pnpm turbo build` passed.
+  - `node --test "packages/engine/dist/test/unit/kernel/apply-move.test.js"` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`297/297`).
+  - `pnpm turbo lint` passed.

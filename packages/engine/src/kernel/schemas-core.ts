@@ -415,6 +415,7 @@ export const CompoundMovePayloadSchema: z.ZodType = z.lazy(() =>
       specialActivity: MoveSchema,
       timing: z.union([z.literal('before'), z.literal('during'), z.literal('after')]),
       insertAfterStage: z.number().int().min(0).optional(),
+      replaceRemainingStages: z.boolean().optional(),
     })
     .strict(),
 );

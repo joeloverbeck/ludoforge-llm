@@ -2874,7 +2874,7 @@ actionPipelines:
             args:
               faction: 'NVA'
               resourceVar: nvaResources
-      - stage: resolve-per-space
+      - stage: cost-per-space
         effects:
           - forEach:
               bind: $space
@@ -2900,6 +2900,12 @@ actionPipelines:
                                       zoneExpr: 'available-NVA:none'
                           else:
                             - addVar: { scope: global, var: nvaResources, delta: -1 }
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
                 - chooseOne:
                     bind: $attackMode
                     options: { query: enums, values: ['guerrilla-attack', 'troops-attack'] }
@@ -2966,7 +2972,7 @@ actionPipelines:
             args:
               faction: 'VC'
               resourceVar: vcResources
-      - stage: resolve-per-space
+      - stage: cost-per-space
         effects:
           - forEach:
               bind: $space
@@ -2976,6 +2982,12 @@ actionPipelines:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
                     then:
                       - addVar: { scope: global, var: vcResources, delta: -1 }
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
                 - forEach:
                     bind: $g
                     over:

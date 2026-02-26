@@ -703,6 +703,9 @@ const executeMoveAction = (
       }
       if (stageIdx === insertAfter) {
         applyCompoundSA();
+        if (move.compound?.replaceRemainingStages === true) {
+          break;
+        }
       }
     }
   }

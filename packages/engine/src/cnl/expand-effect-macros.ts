@@ -538,9 +538,15 @@ function sanitizeForBindingNamespace(value: string): string {
   return value.replace(/[^A-Za-z0-9_]/g, '_');
 }
 
+function sanitizeBindingStemPreservingTemplates(stem: string): string {
+  return stem.replace(/(\{[^{}]+\})|[^A-Za-z0-9_]/g, (_match, templateGroup: string | undefined) =>
+    templateGroup !== undefined ? templateGroup : '_',
+  );
+}
+
 function makeHygienicBindingName(macroId: string, invocationPath: string, bindingName: string): string {
   const stem = bindingName.startsWith('$') ? bindingName.slice(1) : bindingName;
-  return `$__macro_${sanitizeForBindingNamespace(macroId)}_${sanitizeForBindingNamespace(invocationPath)}_${sanitizeForBindingNamespace(stem)}`;
+  return `$__macro_${sanitizeForBindingNamespace(macroId)}_${sanitizeForBindingNamespace(invocationPath)}_${sanitizeBindingStemPreservingTemplates(stem)}`;
 }
 
 function collectDeclaredBinders(node: unknown, path: string, into: Set<string>, diagnostics: Diagnostic[]): void {

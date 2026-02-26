@@ -924,18 +924,20 @@ const createTurn6ArvnDecisionOverrides = (): readonly DecisionOverrideRule[] => 
     value: [],
   },
   // ── Sweep: LoC hop selection for Pleiku — choose the Saigon-An Loc-BMT LoC ──
+  // Bind name is macro-hygienized: $__macro_sweep_loc_hop_..._hopLocs_pleiku-darlac:none
   {
     when: (request: ChoicePendingRequest) =>
-      request.name === '$hopLocs@pleiku-darlac:none'
+      request.name.endsWith('hopLocs_pleiku-darlac:none')
       && request.options.some((o) => o.value === 'loc-saigon-an-loc-ban-me-thuot:none'),
     value: ['loc-saigon-an-loc-ban-me-thuot:none'],
   },
   // ── Sweep: Troops via LoC hop — select 6 of 8 ARVN troops from Saigon ──
   // The tokensInAdjacentZones query for the LoC includes An Loc troops (2) plus
   // Saigon troops (8). We skip the first 2 (An Loc) and take 6 from Saigon.
+  // Bind name is macro-hygienized: $__macro_sweep_loc_hop_..._movingHopTroops_pleiku-darlac:none
   {
     when: (request: ChoicePendingRequest) =>
-      request.name === '$movingHopTroops@pleiku-darlac:none',
+      request.name.endsWith('movingHopTroops_pleiku-darlac:none'),
     value: (request: ChoicePendingRequest) =>
       request.options
         .map((option) => option.value)
@@ -1099,11 +1101,136 @@ const TURN_6: PlaybookTurn = {
   },
 };
 
+// Turn 7 — Booby Traps (card-101) — Monsoon Season
+// Seat order: VC, NVA, US, ARVN → seats [3, 2, 0, 1]
+// US (seat 0) and ARVN (seat 1) are ineligible from Turn 6.
+// Move 1: VC plays shaded Booby Traps event
+//   - Sets global marker cap_boobyTraps to shaded
+//   - No resource cost, no board changes
+// Move 2: NVA Attack + Ambush (Op+SA) in Quang Tri
+//   - Attack pays cost: nvaResources 3 → 2
+//   - Ambush replaces combat (replaceRemainingStages):
+//     - Activates 1 NVA underground guerrilla in Quang Tri
+//     - Removes 1 US troop to casualties-US:none (US non-base first)
+const TURN_7: PlaybookTurn = {
+  label: 'Turn 7 — Booby Traps',
+  moves: [
+    {
+      kind: 'simple',
+      label: 'VC shaded Booby Traps',
+      move: {
+        actionId: asActionId('event'),
+        params: { eventCardId: 'card-101', side: 'shaded' },
+      },
+      expectedState: {
+        globalMarkers: [
+          { marker: 'cap_boobyTraps', expected: 'shaded' },
+        ],
+        globalVars: {
+          nvaResources: 3,
+          vcResources: 10,
+          arvnResources: 18,
+          aid: 14,
+          patronage: 15,
+          trail: 1,
+        },
+      },
+    },
+    {
+      kind: 'resolved',
+      label: 'NVA Attack + Ambush in Quang Tri',
+      move: {
+        actionId: asActionId('attack'),
+        actionClass: 'operationPlusSpecialActivity',
+        params: {
+          targetSpaces: ['quang-tri-thua-thien:none'],
+        },
+        compound: {
+          specialActivity: {
+            actionId: asActionId('ambushNva'),
+            actionClass: 'operationPlusSpecialActivity',
+            params: {
+              targetSpaces: ['quang-tri-thua-thien:none'],
+            },
+          },
+          timing: 'during',
+          insertAfterStage: 1,
+          replaceRemainingStages: true,
+        },
+      },
+      expectedState: {
+        globalVars: {
+          nvaResources: 2,
+          vcResources: 10,
+          arvnResources: 18,
+          aid: 14,
+          patronage: 15,
+          trail: 1,
+        },
+        zoneTokenCounts: [
+          // Quang Tri after Ambush: 1 NVA guerrilla flipped active
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 1,
+            props: { activity: 'active' } },
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 4,
+            props: { activity: 'underground' } },
+          // US troop removed to casualties
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 0 },
+          // ARVN ranger untouched
+          { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
+            props: { activity: 'active' } },
+          // VC guerrillas unchanged
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
+        ],
+        globalMarkers: [
+          { marker: 'cap_boobyTraps', expected: 'shaded' },
+        ],
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      nvaResources: 2,
+      vcResources: 10,
+      arvnResources: 18,
+      aid: 14,
+      patronage: 15,
+      trail: 1,
+    },
+    eligibility: { '0': true, '1': true, '2': false, '3': false },
+    currentCard: 'card-125',
+    previewCard: 'card-75',
+    deckSize: 4,
+    zoneTokenCounts: [
+      // Quang Tri final state
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 1,
+        props: { activity: 'active' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 4,
+        props: { activity: 'underground' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 0 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
+        props: { activity: 'active' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
+      // Casualties: at least 1 US troop
+      { zone: 'casualties-US:none', faction: 'US', type: 'troops', count: 1 },
+    ],
+    globalMarkers: [
+      { marker: 'cap_boobyTraps', expected: 'shaded' },
+    ],
+    computedValues: [
+      { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
+      { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
+      { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+    ],
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Playbook turns in execution order
 // ---------------------------------------------------------------------------
 
-const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5, TURN_6];
+const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5, TURN_6, TURN_7];
 
 // ---------------------------------------------------------------------------
 // Test suite

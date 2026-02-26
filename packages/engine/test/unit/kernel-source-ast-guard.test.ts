@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 import {
   assertModuleExportContract,
   collectCallExpressionsByIdentifier,
+  collectTopLevelExportSurface,
   collectTopLevelObjectLiteralInitializers,
+  isIdentifierExported,
   parseTypeScriptSource,
   resolveObjectLiteralFromExpression,
   resolveStringLiteralObjectPropertyWithSpreads,
@@ -106,5 +108,54 @@ describe('kernel source ast guard helpers', () => {
         }),
       /forbid export assignment/u,
     );
+  });
+
+  it('recognizes aliased named re-export semantics for local and exported identifiers', () => {
+    const sourceFile = parseTypeScriptSource(
+      `
+      const localValue = 1;
+      export { localValue as renamedValue };
+      export { upstream as externalAlias } from './dep.js';
+      `,
+      'contract-alias.ts',
+    );
+
+    assert.equal(isIdentifierExported(sourceFile, 'localValue'), true);
+    assert.equal(isIdentifierExported(sourceFile, 'renamedValue'), true);
+    assert.equal(isIdentifierExported(sourceFile, 'upstream'), true);
+    assert.equal(isIdentifierExported(sourceFile, 'externalAlias'), true);
+
+    const exportSurface = collectTopLevelExportSurface(sourceFile);
+    assert.deepEqual([...exportSurface.namedExports].sort(), ['externalAlias', 'renamedValue']);
+  });
+
+  it('detects default export declaration forms and mixed export surfaces', () => {
+    const defaultDeclarationSource = parseTypeScriptSource(
+      `
+      export default function exportedFn(): number {
+        return 1;
+      }
+      export default class ExportedClass {}
+      `,
+      'contract-default-declarations.ts',
+    );
+    const defaultDeclarationSurface = collectTopLevelExportSurface(defaultDeclarationSource);
+    assert.equal(defaultDeclarationSurface.hasDefaultExport, true);
+
+    const mixedSource = parseTypeScriptSource(
+      `
+      export const alpha = 1;
+      const beta = 2;
+      export { beta as gamma };
+      export * from './dep.js';
+      export default alpha;
+      `,
+      'contract-mixed.ts',
+    );
+    const mixedSurface = collectTopLevelExportSurface(mixedSource);
+    assert.deepEqual([...mixedSurface.namedExports].sort(), ['alpha', 'gamma']);
+    assert.equal(mixedSurface.hasExportAll, true);
+    assert.equal(mixedSurface.hasDefaultExport, true);
+    assert.equal(mixedSurface.hasExportAssignment, false);
   });
 });

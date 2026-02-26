@@ -55,6 +55,12 @@ export interface GlobalMarkerCheck {
   readonly expected: string;
 }
 
+export interface CardInZoneCheck {
+  readonly zone: string;
+  readonly cardId: string;
+  readonly present: boolean;
+}
+
 export interface PlaybookStateSnapshot {
   readonly globalVars?: Readonly<Record<string, number>>;
   readonly eligibility?: Readonly<Record<string, boolean>>;
@@ -66,6 +72,7 @@ export interface PlaybookStateSnapshot {
   readonly firstEligible?: string;
   readonly secondEligible?: string;
   readonly nonPassCount?: number;
+  readonly cardsInZones?: readonly CardInZoneCheck[];
   readonly zoneTokenCounts?: readonly ZoneTokenCountCheck[];
   readonly totalTokenCounts?: readonly TotalTokenCountCheck[];
   readonly markers?: readonly MarkerCheck[];
@@ -237,6 +244,17 @@ export const assertPlaybookSnapshot = (
         runtime.currentCard.nonPassCount,
         expected.nonPassCount,
         `${label}: expected nonPassCount=${expected.nonPassCount}, got ${runtime.currentCard.nonPassCount}`,
+      );
+    }
+  }
+
+  if (expected.cardsInZones !== undefined) {
+    for (const check of expected.cardsInZones) {
+      const actualPresent = zoneHasCard(state, check.zone, check.cardId);
+      assert.equal(
+        actualPresent,
+        check.present,
+        `${label}: expected card ${check.cardId} present=${check.present} in ${check.zone}, got ${actualPresent}`,
       );
     }
   }

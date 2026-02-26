@@ -610,6 +610,67 @@ const TURN_2: PlaybookTurn = {
           $improveTrail: 'yes',
         },
       },
+      expectedState: {
+        // Rally cost: 4 resources (1/space) + trail improvement (2) → 11 → 5
+        globalVars: {
+          nvaResources: 5,
+          trail: 2,
+          aid: 14,
+          arvnResources: 24,
+          vcResources: 5,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          // NVA Rally placements — all guerrillas underground
+          // North Vietnam: 3 initial + 2 placed (1 base + trail=1) = 5
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 5,
+            props: { activity: 'underground' } },
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
+          // Parrot's Beak: 3 initial + 2 placed (1 base + trail=1) = 5
+          { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+          { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 5,
+            props: { activity: 'underground' } },
+          { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'base', count: 1 },
+          // Kien Phong: 0 initial + 1 placed (no base) = 1
+          { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+          { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 1,
+            props: { activity: 'underground' } },
+          // Kien Giang: 0 initial + 1 placed (no base) = 1
+          { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 1,
+            props: { activity: 'underground' } },
+          // VC pieces unchanged by NVA Rally
+          { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 1 },
+          // Quang Tri untouched by Rally — VC base + 2 underground guerrillas
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 2 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 2,
+            props: { activity: 'underground' } },
+          // US pieces in Quang Tri unchanged
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 1 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'irregular', count: 1,
+            props: { activity: 'underground' } },
+          // Saigon pieces unchanged from Turn 1
+          { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 8 },
+          { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },
+          { zone: 'saigon:none', faction: 'US', type: 'troops', count: 2 },
+          { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
+          // Available NVA guerrillas: 8 initial - 6 placed = 2 remaining
+          { zone: 'available-NVA:none', faction: 'NVA', type: 'guerrilla', count: 2 },
+        ],
+        markers: [
+          { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+        ],
+        computedValues: [
+          // Rally doesn't change support/opposition or control → all VPs unchanged
+          { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+          { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
+          { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+          { label: 'ARVN victory marker', expected: 35, compute: computeArvnVictory },
+        ],
+      },
     },
     {
       kind: 'resolved',
@@ -642,17 +703,53 @@ const TURN_2: PlaybookTurn = {
     secondEligible: '3',
     nonPassCount: 0,
     zoneTokenCounts: [
-      // NVA Rally placements (all guerrillas underground)
+      // NVA Rally placements (all guerrillas underground — Sweep only affects Quang Tri)
       { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 5,
+        props: { activity: 'underground' } },
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
       { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+      { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 5,
+        props: { activity: 'underground' } },
+      { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'base', count: 1 },
       { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 1 },
       { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 1 },
-      // VC guerrillas in Quang Tri (activated by Sweep)
+      // VC pieces in provinces unchanged
+      { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      // CRITICAL: VC base in Quang Tri remains — Sweep does NOT remove bases
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+      // VC guerrillas in Quang Tri activated by Sweep (2 sweepers flip 2 underground)
       { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 2,
         props: { activity: 'active' } },
+      // No underground VC guerrillas remain in Quang Tri
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 0,
+        props: { activity: 'underground' } },
+      // US pieces in Quang Tri unchanged by Sweep
+      { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 1 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'irregular', count: 1,
+        props: { activity: 'underground' } },
+      // Saigon pieces unchanged from Turn 1
+      { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 8 },
+      { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 3 },
+      { zone: 'saigon:none', faction: 'US', type: 'troops', count: 2 },
+      { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
+      // Available pieces after Rally placements
+      { zone: 'available-NVA:none', faction: 'NVA', type: 'guerrilla', count: 2 },
+      { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 14 },
     ],
     markers: [
       { space: 'saigon:none', marker: 'supportOpposition', expected: 'passiveSupport' },
+    ],
+    globalMarkers: [
+      { marker: 'activeLeader', expected: 'minh' },
+    ],
+    computedValues: [
+      // Sweep doesn't change support/opposition or control → all VPs unchanged
+      { label: 'US victory marker', expected: 41, compute: computeUsVictory },
+      { label: 'NVA victory marker', expected: 4, compute: computeNvaVictory },
+      { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+      { label: 'ARVN victory marker', expected: 35, compute: computeArvnVictory },
     ],
   },
 };
@@ -1934,6 +2031,10 @@ const TURN_8: PlaybookTurn = {
       { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
         props: { activity: 'underground' } },
     ],
+    cardsInZones: [
+      { zone: 'leader:none', cardId: 'card-125', present: true },
+      { zone: 'played:none', cardId: 'card-125', present: false },
+    ],
     computedValues: [
       { label: 'VC victory marker', expected: 29, compute: computeVcVictory },
       { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
@@ -1984,6 +2085,12 @@ describe('FITL playbook golden suite', () => {
       currentCard: 'card-107',
       previewCard: 'card-55',
       deckSize: 11,
+      cardsInZones: [
+        { zone: 'leader:none', cardId: 'card-121', present: true },
+        { zone: 'leader:none', cardId: 'card-122', present: true },
+        { zone: 'leader:none', cardId: 'card-123', present: true },
+        { zone: 'leader:none', cardId: 'card-124', present: true },
+      ],
       zoneTokenCounts: [
         { zone: 'saigon:none', faction: 'US', type: 'troops', count: 2 },
         { zone: 'saigon:none', faction: 'US', type: 'base', count: 1 },
@@ -2021,4 +2128,6 @@ describe('FITL playbook golden suite', () => {
       replayPlaybookTurn(def, start, turn);
     });
   }
+
+
 });

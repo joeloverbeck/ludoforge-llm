@@ -350,6 +350,25 @@ describe('scoped-var-runtime-access', () => {
     );
   });
 
+  it('throws canonical runtime diagnostics for invalid numeric zone write construction', () => {
+    const invalidValues = [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1.5, Number.MAX_SAFE_INTEGER + 1];
+
+    for (const value of invalidValues) {
+      assert.throws(
+        () => toScopedVarWrite({ scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value),
+        (error: unknown) =>
+          isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+          String(error).includes('Zone scoped variable writes require finite safe integer values: supply') &&
+          String(error).includes('"reason":"internalInvariantViolation"'),
+      );
+    }
+  });
+
+  it('accepts finite safe integers for zone write construction', () => {
+    const write = toScopedVarWrite({ scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, 3);
+    assert.deepEqual(write, { endpoint: { scope: 'zone', zone: 'zone-a:none', var: 'supply' }, value: 3 });
+  });
+
   it('fails fast on impossible write endpoint scope in batched branch writes', () => {
     const state = makeState();
     const malformedWrites = [

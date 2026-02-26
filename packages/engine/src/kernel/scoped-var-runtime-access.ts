@@ -69,6 +69,8 @@ type ScopedNonZoneVarWrite = Readonly<{
 export type ScopedVarWrite = ScopedZoneVarWrite | ScopedNonZoneVarWrite;
 
 const isZoneScopedWrite = (write: ScopedVarWrite): write is ScopedZoneVarWrite => write.endpoint.scope === 'zone';
+const isFiniteSafeInteger = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
 const throwScopedVarWriteInvariantViolation = (write: ScopedVarWrite): never => {
   throw effectRuntimeError(
     EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
@@ -127,6 +129,20 @@ export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: Vari
         actualType: typeof value,
         value,
       });
+    }
+
+    if (!isFiniteSafeInteger(value)) {
+      throw effectRuntimeError(
+        EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
+        `Zone scoped variable writes require finite safe integer values: ${endpoint.var}`,
+        {
+          effectType: 'scopedVarWrite',
+          scope: 'zoneVar',
+          var: endpoint.var,
+          actualType: typeof value,
+          value,
+        },
+      );
     }
 
     return { endpoint, value };
@@ -376,7 +392,7 @@ export const readScopedIntVarValue = (
   code: ScopedVarRuntimeErrorCode,
 ): number => {
   const value = readScopedVarValue(ctx, endpoint, effectType, code);
-  if (typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value)) {
+  if (isFiniteSafeInteger(value)) {
     return value;
   }
 

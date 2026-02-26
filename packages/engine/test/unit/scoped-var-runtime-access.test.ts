@@ -19,7 +19,6 @@ import {
   resolveScopedIntVarDef,
   resolveScopedVarDef,
   writeScopedVarToBranches,
-  writeScopedVarToState,
   writeScopedVarsToState,
 } from '../../src/kernel/scoped-var-runtime-access.js';
 import type { GameDef, GameState } from '../../src/kernel/types.js';
@@ -351,13 +350,10 @@ describe('scoped-var-runtime-access', () => {
     assert.equal(zoneWrite.perPlayerVars, baseBranches.perPlayerVars);
   });
 
-  it('writes scoped runtime values to full state while preserving non-var branches', () => {
+  it('writes one-item batched scoped values to full state while preserving non-var branches', () => {
     const state = makeState();
 
-    const updated = writeScopedVarToState(state, {
-      endpoint: { scope: 'pvar', player: asPlayerId(1), var: 'hp' },
-      value: 12,
-    });
+    const updated = writeScopedVarsToState(state, [{ endpoint: { scope: 'pvar', player: asPlayerId(1), var: 'hp' }, value: 12 }]);
 
     assert.equal(updated.perPlayerVars['1']?.hp, 12);
     assert.notEqual(updated.perPlayerVars, state.perPlayerVars);
@@ -368,16 +364,12 @@ describe('scoped-var-runtime-access', () => {
     assert.equal(updated.markers, state.markers);
   });
 
-  it('supports chained scoped state writes without dropping prior writes', () => {
+  it('supports chained one-item batched state writes without dropping prior writes', () => {
     const state = makeState();
-    const afterGlobal = writeScopedVarToState(state, {
-      endpoint: { scope: 'global', var: 'score' },
-      value: 11,
-    });
-    const afterZone = writeScopedVarToState(afterGlobal, {
-      endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
-      value: 2,
-    });
+    const afterGlobal = writeScopedVarsToState(state, [{ endpoint: { scope: 'global', var: 'score' }, value: 11 }]);
+    const afterZone = writeScopedVarsToState(afterGlobal, [
+      { endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value: 2 },
+    ]);
 
     assert.equal(afterZone.globalVars.score, 11);
     assert.equal(afterZone.zoneVars['zone-a:none']?.supply, 2);

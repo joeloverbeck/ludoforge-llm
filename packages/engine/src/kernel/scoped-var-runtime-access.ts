@@ -63,6 +63,18 @@ type ScopedNonZoneVarWrite = Readonly<{
 export type ScopedVarWrite = ScopedZoneVarWrite | ScopedNonZoneVarWrite;
 
 const isZoneScopedWrite = (write: ScopedVarWrite): write is ScopedZoneVarWrite => write.endpoint.scope === 'zone';
+const scopedVarStateBranchesFromState = (state: GameState): ScopedVarStateBranches => ({
+  globalVars: state.globalVars,
+  perPlayerVars: state.perPlayerVars,
+  zoneVars: state.zoneVars,
+});
+
+const writeScopedVarBranchesToState = (state: GameState, branches: ScopedVarStateBranches): GameState => ({
+  ...state,
+  globalVars: branches.globalVars,
+  perPlayerVars: branches.perPlayerVars,
+  zoneVars: branches.zoneVars,
+});
 
 export function toScopedVarWrite(
   endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,
@@ -409,27 +421,6 @@ export function writeScopedVarToBranches(
   return branches;
 }
 
-export function writeScopedVarToState(
-  state: GameState,
-  write: ScopedVarWrite,
-): GameState {
-  const branches = writeScopedVarToBranches(
-    {
-      globalVars: state.globalVars,
-      perPlayerVars: state.perPlayerVars,
-      zoneVars: state.zoneVars,
-    },
-    write,
-  );
-
-  return {
-    ...state,
-    globalVars: branches.globalVars,
-    perPlayerVars: branches.perPlayerVars,
-    zoneVars: branches.zoneVars,
-  };
-}
-
 export const writeScopedVarsToBranches = (
   branches: ScopedVarStateBranches,
   writes: readonly ScopedVarWrite[],
@@ -447,19 +438,6 @@ export const writeScopedVarsToState = (state: GameState, writes: readonly Scoped
     return state;
   }
 
-  const branches = writeScopedVarsToBranches(
-    {
-      globalVars: state.globalVars,
-      perPlayerVars: state.perPlayerVars,
-      zoneVars: state.zoneVars,
-    },
-    writes,
-  );
-
-  return {
-    ...state,
-    globalVars: branches.globalVars,
-    perPlayerVars: branches.perPlayerVars,
-    zoneVars: branches.zoneVars,
-  };
+  const branches = writeScopedVarsToBranches(scopedVarStateBranchesFromState(state), writes);
+  return writeScopedVarBranchesToState(state, branches);
 };

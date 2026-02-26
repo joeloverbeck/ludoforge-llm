@@ -7,7 +7,7 @@ import {
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
   toScopedVarWrite,
-  writeScopedVarToState,
+  writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
@@ -117,14 +117,14 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     }
 
     return {
-      state: writeScopedVarToState(ctx.state, toScopedVarWrite(endpoint, nextValue)),
+      state: writeScopedVarsToState(ctx.state, [toScopedVarWrite(endpoint, nextValue)]),
       rng: ctx.rng,
       emittedEvents: [emittedEvent],
     };
   }
 
   return {
-    state: writeScopedVarToState(ctx.state, toScopedVarWrite(endpoint, nextValue)),
+    state: writeScopedVarsToState(ctx.state, [toScopedVarWrite(endpoint, nextValue)]),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };
@@ -169,7 +169,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   return {
-    state: writeScopedVarToState(ctx.state, toScopedVarWrite(endpoint, nextValue)),
+    state: writeScopedVarsToState(ctx.state, [toScopedVarWrite(endpoint, nextValue)]),
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };

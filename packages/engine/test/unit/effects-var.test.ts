@@ -193,6 +193,46 @@ describe('effects var handlers', () => {
     });
   });
 
+  it('throws canonical addVar runtime diagnostics when int-targeted runtime state is corrupted to boolean', () => {
+    const corruptedState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...corruptedState,
+        globalVars: {
+          ...corruptedState.globalVars,
+          score: true as unknown as number,
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 1 } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Global variable state must be a finite safe integer: score'),
+    );
+  });
+
+  it('throws canonical setVar runtime diagnostics when int-targeted runtime state is corrupted to non-integer number', () => {
+    const corruptedState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...corruptedState,
+        globalVars: {
+          ...corruptedState.globalVars,
+          score: Number.POSITIVE_INFINITY,
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ setVar: { scope: 'global', var: 'score', value: 4 } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Global variable state must be a finite safe integer: score'),
+    );
+  });
+
   it('throws EFFECT_RUNTIME when per-player selector resolves to non-scalar cardinality', () => {
     const ctx = makeCtx();
 

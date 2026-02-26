@@ -281,6 +281,51 @@ export const readScopedVarValue = (
   return value;
 };
 
+export const readScopedIntVarValue = (
+  ctx: EffectContext,
+  endpoint: RuntimeScopedVarEndpoint,
+  effectType: ScopedVarEffectType,
+  code: ScopedVarRuntimeErrorCode,
+): number => {
+  const value = readScopedVarValue(ctx, endpoint, effectType, code);
+  if (typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value)) {
+    return value;
+  }
+
+  if (endpoint.scope === 'global') {
+    throw effectRuntimeError(code, `Global variable state must be a finite safe integer: ${endpoint.var}`, {
+      effectType,
+      scope: 'global',
+      var: endpoint.var,
+      actualType: typeof value,
+      value,
+      availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
+    });
+  }
+
+  if (endpoint.scope === 'pvar') {
+    throw effectRuntimeError(code, `Per-player variable state must be a finite safe integer: ${endpoint.var}`, {
+      effectType,
+      scope: 'pvar',
+      playerId: endpoint.player,
+      var: endpoint.var,
+      actualType: typeof value,
+      value,
+      availablePlayerVars: Object.keys(ctx.state.perPlayerVars[endpoint.player] ?? {}).sort(),
+    });
+  }
+
+  throw effectRuntimeError(code, `Zone variable state must be a finite safe integer: ${endpoint.var} in zone ${String(endpoint.zone)}`, {
+    effectType,
+    scope: 'zoneVar',
+    zone: String(endpoint.zone),
+    var: endpoint.var,
+    actualType: typeof value,
+    value,
+    availableZoneVars: Object.keys(ctx.state.zoneVars[String(endpoint.zone)] ?? {}).sort(),
+  });
+};
+
 export function writeScopedVarToBranches(
   branches: ScopedVarStateBranches,
   endpoint: Extract<RuntimeScopedVarEndpoint, { readonly scope: 'zone' }>,

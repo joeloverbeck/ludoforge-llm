@@ -409,6 +409,39 @@ describe('transferVar effect', () => {
     );
   });
 
+  it('throws canonical transferVar runtime diagnostics when int-targeted runtime state is corrupted to boolean', () => {
+    const corruptedState = makeState();
+    const ctx = makeCtx({
+      state: {
+        ...corruptedState,
+        perPlayerVars: {
+          ...corruptedState.perPlayerVars,
+          '0': {
+            ...corruptedState.perPlayerVars['0'],
+            coins: false as unknown as number,
+          },
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            transferVar: {
+              from: { scope: 'pvar', player: 'actor', var: 'coins' },
+              to: { scope: 'global', var: 'pot' },
+              amount: 1,
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Per-player variable state must be a finite safe integer: coins'),
+    );
+  });
+
   it('throws EFFECT_RUNTIME when pvar endpoint payload omits player selector', () => {
     const ctx = makeCtx();
     const malformed = {

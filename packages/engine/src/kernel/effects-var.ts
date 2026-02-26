@@ -2,6 +2,7 @@ import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveSinglePlayerWithNormalization } from './selector-resolution-normalization.js';
 import {
+  readScopedIntVarValue,
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
@@ -68,40 +69,6 @@ const writeScopedVarToState = (
   };
 };
 
-const readScopedIntForAddVar = (ctx: EffectContext, endpoint: RuntimeScopedVarEndpoint, variableName: string): number => {
-  const value = readScopedVarValue(ctx, endpoint, 'addVar', 'variableRuntimeValidationFailed');
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  if (endpoint.scope === 'global') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Global variable state is missing: ${variableName}`, {
-      effectType: 'addVar',
-      scope: 'global',
-      var: variableName,
-      availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
-    });
-  }
-
-  if (endpoint.scope === 'pvar') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player variable state is missing: ${variableName}`, {
-      effectType: 'addVar',
-      scope: 'pvar',
-      playerId: endpoint.player,
-      var: variableName,
-      availablePlayerVars: Object.keys(ctx.state.perPlayerVars[endpoint.player] ?? {}).sort(),
-    });
-  }
-
-  throw effectRuntimeError('variableRuntimeValidationFailed', `Zone variable state is missing: ${variableName} in zone ${String(endpoint.zone)}`, {
-    effectType: 'addVar',
-    scope: 'zoneVar',
-    zone: String(endpoint.zone),
-    var: variableName,
-    availableZoneVars: Object.keys(ctx.state.zoneVars[String(endpoint.zone)] ?? {}).sort(),
-  });
-};
-
 const emitVarChangeArtifacts = (
   ctx: EffectContext,
   endpoint: RuntimeScopedVarEndpoint,
@@ -143,7 +110,10 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     });
   }
 
-  const currentValue = readScopedVarValue(ctx, endpoint, 'setVar', 'variableRuntimeValidationFailed');
+  const currentValue =
+    variableDef.type === 'int'
+      ? readScopedIntVarValue(ctx, endpoint, 'setVar', 'variableRuntimeValidationFailed')
+      : readScopedVarValue(ctx, endpoint, 'setVar', 'variableRuntimeValidationFailed');
   const nextValue =
     variableDef.type === 'int'
       ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
@@ -191,7 +161,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     });
   }
 
-  const currentValue = readScopedIntForAddVar(ctx, endpoint, variableName);
+  const currentValue = readScopedIntVarValue(ctx, endpoint, 'addVar', 'variableRuntimeValidationFailed');
   const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
   const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {

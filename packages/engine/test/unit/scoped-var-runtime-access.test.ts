@@ -9,6 +9,7 @@ import {
   resolveZoneWithNormalization,
 } from '../../src/kernel/selector-resolution-normalization.js';
 import {
+  readScopedIntVarValue,
   readScopedVarValue,
   resolveRuntimeScopedEndpoint,
   resolveRuntimeScopedEndpointWithMalformedSupport,
@@ -136,6 +137,117 @@ describe('scoped-var-runtime-access', () => {
     assert.equal(globalValue, true);
     assert.equal(pvarValue, 3);
     assert.equal(zoneValue, 9);
+  });
+
+  it('reads int-only scoped runtime values across global/pvar/zone endpoints', () => {
+    const ctx = makeCtx();
+
+    const globalValue = readScopedIntVarValue(ctx, { scope: 'global', var: 'score' }, 'addVar', 'variableRuntimeValidationFailed');
+    const pvarValue = readScopedIntVarValue(
+      ctx,
+      { scope: 'pvar', player: asPlayerId(1), var: 'hp' },
+      'addVar',
+      'variableRuntimeValidationFailed',
+    );
+    const zoneValue = readScopedIntVarValue(
+      ctx,
+      { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+      'transferVar',
+      'resourceRuntimeValidationFailed',
+    );
+
+    assert.equal(globalValue, 5);
+    assert.equal(pvarValue, 3);
+    assert.equal(zoneValue, 9);
+  });
+
+  it('throws canonical int-read runtime diagnostics for corrupted global/pvar/zone bool payloads', () => {
+    const corruptedCtx = makeCtx({
+      state: {
+        ...makeState(),
+        globalVars: { ...makeState().globalVars, score: true as unknown as number },
+        perPlayerVars: {
+          ...makeState().perPlayerVars,
+          '0': { ...makeState().perPlayerVars['0'], hp: false as unknown as number },
+        },
+        zoneVars: {
+          ...makeState().zoneVars,
+          'zone-a:none': { supply: true as unknown as number },
+        },
+      },
+    });
+
+    assert.throws(
+      () => readScopedIntVarValue(corruptedCtx, { scope: 'global', var: 'score' }, 'addVar', 'variableRuntimeValidationFailed'),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Global variable state must be a finite safe integer: score'),
+    );
+
+    assert.throws(
+      () =>
+        readScopedIntVarValue(
+          corruptedCtx,
+          { scope: 'pvar', player: asPlayerId(0), var: 'hp' },
+          'transferVar',
+          'resourceRuntimeValidationFailed',
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Per-player variable state must be a finite safe integer: hp'),
+    );
+
+    assert.throws(
+      () =>
+        readScopedIntVarValue(
+          corruptedCtx,
+          { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+          'transferVar',
+          'resourceRuntimeValidationFailed',
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Zone variable state is missing: supply in zone zone-a:none'),
+    );
+  });
+
+  it('throws canonical int-read runtime diagnostics for non-finite and non-integer numbers', () => {
+    const baseState = makeState();
+    const globalNanCtx = makeCtx({
+      state: {
+        ...baseState,
+        globalVars: { ...baseState.globalVars, score: Number.NaN },
+      },
+    });
+
+    assert.throws(
+      () => readScopedIntVarValue(globalNanCtx, { scope: 'global', var: 'score' }, 'addVar', 'variableRuntimeValidationFailed'),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Global variable state must be a finite safe integer: score'),
+    );
+
+    const pvarFractionalCtx = makeCtx({
+      state: {
+        ...baseState,
+        perPlayerVars: {
+          ...baseState.perPlayerVars,
+          '0': { ...baseState.perPlayerVars['0'], hp: 1.5 as unknown as number },
+        },
+      },
+    });
+    assert.throws(
+      () =>
+        readScopedIntVarValue(
+          pvarFractionalCtx,
+          { scope: 'pvar', player: asPlayerId(0), var: 'hp' },
+          'addVar',
+          'variableRuntimeValidationFailed',
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Per-player variable state must be a finite safe integer: hp'),
+    );
   });
 
   it('writes scoped runtime values immutably for each scope', () => {

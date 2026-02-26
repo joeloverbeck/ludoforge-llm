@@ -1458,6 +1458,40 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('keeps boolean zoneVar diagnostics at structure layer for transferVar destination', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'global', var: 'vp' },
+                to: { scope: 'zoneVar', zone: 'deck:none', var: 'locked' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'ZONE_VAR_TYPE_INVALID' && diag.path === 'zoneVars[0].type'),
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID'
+          && diag.path === 'actions[0].effects[0].transferVar.to.var',
+      ),
+      false,
+    );
+  });
+
   it('reports invalid phase references with alternatives', () => {
     const base = createValidGameDef();
     const def = {

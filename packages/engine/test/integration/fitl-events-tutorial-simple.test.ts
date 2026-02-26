@@ -79,7 +79,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     ]);
   });
 
-  it('compiles card 79 (Henry Cabot Lodge) with aid boost and shaded removal/patronage model', () => {
+  it('compiles card 79 (Henry Cabot Lodge) with aid boost and shaded chooseN/forEach removal + ineligibility', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -93,19 +93,39 @@ describe('FITL tutorial simple event-card production spec', () => {
 
     assert.deepEqual(card?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'aid', delta: 20 } }]);
 
-    const remove = card?.shaded?.effects?.find((effect) => 'removeByPriority' in effect);
-    assert.notEqual(remove, undefined);
-    assert.equal(remove?.removeByPriority.budget, 3);
-    const patronage = card?.shaded?.effects?.find((effect) => 'addVar' in effect);
-    assert.notEqual(patronage, undefined);
-    assert.equal(patronage?.addVar.var, 'patronage');
-    assert.deepEqual(patronage?.addVar.delta, {
-      op: '*',
-      left: 2,
-      right: {
-        op: '-',
-        left: 3,
-        right: { ref: 'binding', name: '$remainingRemovalBudget' },
+    // Shaded: no single-space targeting
+    assert.equal(card?.shaded?.targets, undefined);
+
+    // Shaded: ARVN ineligible through next card
+    assert.deepEqual(card?.shaded?.eligibilityOverrides, [
+      { target: { kind: 'seat', seat: '1' }, eligible: false, windowId: 'make-ineligible' },
+    ]);
+
+    // Shaded: chooseN for ARVN pieces from any map space
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EffectAST union narrowing
+    const chooseEffect = card?.shaded?.effects?.[0] as any;
+    assert.notEqual(chooseEffect, undefined);
+    assert.equal('chooseN' in chooseEffect, true);
+    assert.equal(chooseEffect.chooseN.bind, '$arvnPiecesToRemove');
+    assert.equal(chooseEffect.chooseN.min, 0);
+    assert.equal(chooseEffect.chooseN.max, 3);
+    assert.equal(chooseEffect.chooseN.options.query, 'tokensInMapSpaces');
+    assert.deepEqual(chooseEffect.chooseN.options.filter, [{ prop: 'faction', op: 'eq', value: 'ARVN' }]);
+
+    // Shaded: forEach with countBind + in for patronage
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EffectAST union narrowing
+    const forEachEffect = card?.shaded?.effects?.[1] as any;
+    assert.notEqual(forEachEffect, undefined);
+    assert.equal('forEach' in forEachEffect, true);
+    assert.equal(forEachEffect.forEach.bind, '$arvnPiece');
+    assert.equal(forEachEffect.forEach.countBind, '$removedCount');
+    assert.notEqual(forEachEffect.forEach.in, undefined);
+    assert.equal(forEachEffect.forEach.in.length, 1);
+    assert.deepEqual(forEachEffect.forEach.in[0], {
+      addVar: {
+        scope: 'global',
+        var: 'patronage',
+        delta: { op: '*', left: 2, right: { ref: 'binding', name: '$removedCount' } },
       },
     });
   });

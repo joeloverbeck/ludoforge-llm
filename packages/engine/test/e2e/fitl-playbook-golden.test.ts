@@ -194,6 +194,19 @@ const FITL_VC_FORMULA: VictoryFormula = {
   basePieceTypes: ['vc-bases'],
 };
 
+const FITL_NVA_FORMULA: VictoryFormula = {
+  type: 'controlledPopulationPlusMapBases',
+  controlFn: 'solo',
+  baseSeat: 'NVA',
+  basePieceTypes: ['nva-bases'],
+};
+
+const FITL_ARVN_FORMULA: VictoryFormula = {
+  type: 'controlledPopulationPlusGlobalVar',
+  controlFn: 'coin',
+  varName: 'patronage',
+};
+
 const DERIVED_METRICS_CONTEXT = {
   derivedMetrics: [
     {
@@ -233,6 +246,26 @@ const computeVcVictory = (def: GameDef, state: GameState): number =>
     supportOppositionBySpace(def, state),
     FITL_FACTION_CONFIG,
     FITL_VC_FORMULA,
+  );
+
+const computeNvaVictory = (def: GameDef, state: GameState): number =>
+  computeVictoryMarker(
+    DERIVED_METRICS_CONTEXT,
+    state,
+    mapSpaces(def),
+    supportOppositionBySpace(def, state),
+    FITL_FACTION_CONFIG,
+    FITL_NVA_FORMULA,
+  );
+
+const computeArvnVictory = (def: GameDef, state: GameState): number =>
+  computeVictoryMarker(
+    DERIVED_METRICS_CONTEXT,
+    state,
+    mapSpaces(def),
+    supportOppositionBySpace(def, state),
+    FITL_FACTION_CONFIG,
+    FITL_ARVN_FORMULA,
   );
 
 // ---------------------------------------------------------------------------
@@ -858,11 +891,219 @@ const TURN_5: PlaybookTurn = {
   },
 };
 
+// Turn 6 — Henry Cabot Lodge (card-79)
+// Seat order: ARVN, NVA, VC, US → seats [1, 2, 3, 0]
+// VC (seat 3) is ineligible from Turn 5 event.
+// Move 1: ARVN Sweep + Raid (Op+SA, raid before)
+//   - Raid target: Quang Tri — Ranger from Quang Nam activates, removes 2 NVA guerrillas
+//   - NVA loses control of Quang Tri (pop=2 → NVA victory 10 → 8)
+//   - Sweep target: Binh Dinh (2 troops from Qui Nhon, flip 2 VC guerrillas)
+//     + Pleiku (6 troops from Saigon via LoC hop, flip 4 VC guerrillas)
+//   - COIN control established in Pleiku (pop=1 → ARVN victory 37 → 38)
+//   - Cost: 6 ARVN resources (2 spaces × 3) → 27 → 21
+// Move 2: NVA passes (+1 resource → 2 → 3)
+//   - NVA passed; next eligible in sequence (VC ineligible → US) becomes 2nd eligible
+// Move 3: US Limited Op Assault in Pleiku
+//   - US base present → 2 damage per troop → removes 2 active VC guerrillas
+//   - ARVN co-assault: 6 troops in highland → floor(6/3)=2 → removes 2 active VC guerrillas
+//   - ARVN co-assault cost: 3 → arvnResources 21 → 18
+const createTurn6ArvnDecisionOverrides = (): readonly DecisionOverrideRule[] => [
+  // ── Sweep: Binh Dinh troop movement (direct adjacency from Qui Nhon) ──
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === '$movingTroops@binh-dinh:none',
+    value: (request: ChoicePendingRequest) =>
+      request.options
+        .map((option) => option.value)
+        .filter((value): value is string => typeof value === 'string'),
+  },
+  // ── Sweep: Pleiku troop movement — no direct adjacency, use LoC hop ──
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === '$movingTroops@pleiku-darlac:none',
+    value: [],
+  },
+  // ── Sweep: LoC hop selection for Pleiku — choose the Saigon-An Loc-BMT LoC ──
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === '$hopLocs@pleiku-darlac:none'
+      && request.options.some((o) => o.value === 'loc-saigon-an-loc-ban-me-thuot:none'),
+    value: ['loc-saigon-an-loc-ban-me-thuot:none'],
+  },
+  // ── Sweep: Troops via LoC hop — select 6 of 8 ARVN troops from Saigon ──
+  // The tokensInAdjacentZones query for the LoC includes An Loc troops (2) plus
+  // Saigon troops (8). We skip the first 2 (An Loc) and take 6 from Saigon.
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === '$movingHopTroops@pleiku-darlac:none',
+    value: (request: ChoicePendingRequest) =>
+      request.options
+        .map((option) => option.value)
+        .filter((value): value is string => typeof value === 'string')
+        .slice(2, 8),
+  },
+  // ── Raid: select adjacent zones with Rangers → Quang Nam ──
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === '$raidIncomingFrom@quang-tri-thua-thien:none',
+    value: ['quang-nam:none'],
+  },
+  // ── Raid: choose to remove insurgents ──
+  {
+    when: (request: ChoicePendingRequest) =>
+      request.name === '$raidRemove@quang-tri-thua-thien:none',
+    value: 'yes',
+  },
+];
+
+const TURN_6: PlaybookTurn = {
+  label: 'Turn 6 — Henry Cabot Lodge',
+  moves: [
+    {
+      kind: 'resolved',
+      label: 'ARVN Sweep + Raid (raid before)',
+      move: {
+        actionId: asActionId('sweep'),
+        actionClass: 'operationPlusSpecialActivity',
+        params: {
+          targetSpaces: ['binh-dinh:none', 'pleiku-darlac:none'],
+        },
+        compound: {
+          specialActivity: {
+            actionId: asActionId('raid'),
+            actionClass: 'operationPlusSpecialActivity',
+            params: {
+              targetSpaces: ['quang-tri-thua-thien:none'],
+              '$raidIncomingFrom@quang-tri-thua-thien:none': ['quang-nam:none'],
+              '$raidRemove@quang-tri-thua-thien:none': 'yes',
+            },
+          },
+          timing: 'before',
+        },
+      },
+      options: { overrides: createTurn6ArvnDecisionOverrides() },
+      expectedState: {
+        globalVars: {
+          arvnResources: 21,
+          nvaResources: 2,
+          vcResources: 10,
+          trail: 1,
+          aid: 14,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          // Raid effects: Quang Tri
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
+            props: { activity: 'active' } },
+          // Sweep: Binh Dinh — 2 VC guerrillas flipped active
+          { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2,
+            props: { activity: 'active' } },
+          { zone: 'binh-dinh:none', faction: 'ARVN', type: 'troops', count: 2 },
+          // Sweep: Pleiku — 4 VC guerrillas flipped active, 6 ARVN troops arrived
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4,
+            props: { activity: 'active' } },
+          { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
+          // Saigon: 2 ARVN troops remain (8 - 6)
+          { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 2 },
+          // Quang Nam: Ranger moved out
+          { zone: 'quang-nam:none', faction: 'ARVN', type: 'ranger', count: 0 },
+          // Qui Nhon: troops moved out
+          { zone: 'qui-nhon:none', faction: 'ARVN', type: 'troops', count: 0 },
+        ],
+        computedValues: [
+          { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
+          { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
+          { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+        ],
+      },
+    },
+    {
+      kind: 'simple',
+      label: 'NVA passes',
+      move: {
+        actionId: asActionId('pass'),
+        params: {},
+      },
+    },
+    {
+      kind: 'resolved',
+      label: 'US Limited Op Assault in Pleiku',
+      move: {
+        actionId: asActionId('assault'),
+        actionClass: 'limitedOperation',
+        params: {
+          targetSpaces: ['pleiku-darlac:none'],
+          $arvnFollowupSpaces: ['pleiku-darlac:none'],
+        },
+      },
+      expectedState: {
+        globalVars: {
+          arvnResources: 18,
+          nvaResources: 3,
+          vcResources: 10,
+          trail: 1,
+          aid: 14,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          // After US assault (2 removed) + ARVN co-assault (2 removed): 0 VC guerrillas
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 0 },
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'base', count: 1 },
+          { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
+          { zone: 'pleiku-darlac:none', faction: 'US', type: 'troops', count: 1 },
+        ],
+      },
+    },
+  ],
+  expectedEndState: {
+    globalVars: {
+      arvnResources: 18,
+      nvaResources: 3,
+      vcResources: 10,
+      trail: 1,
+      aid: 14,
+      patronage: 15,
+    },
+    eligibility: { '0': false, '1': false, '2': true, '3': true },
+    activePlayer: 3,
+    currentCard: 'card-101',
+    previewCard: 'card-125',
+    deckSize: 5,
+    seatOrder: ['3', '2', '0', '1'],
+    firstEligible: '3',
+    secondEligible: '2',
+    nonPassCount: 0,
+    zoneTokenCounts: [
+      // Quang Tri: NVA lost control (5 NVA vs 7 others)
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
+        props: { activity: 'active' } },
+      // Binh Dinh: 2 VC guerrillas activated by sweep
+      { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2,
+        props: { activity: 'active' } },
+      { zone: 'binh-dinh:none', faction: 'ARVN', type: 'troops', count: 2 },
+      // Pleiku: all VC guerrillas removed by assault, base remains
+      { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 0 },
+      { zone: 'pleiku-darlac:none', faction: 'VC', type: 'base', count: 1 },
+      { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
+      { zone: 'pleiku-darlac:none', faction: 'US', type: 'troops', count: 1 },
+      // Saigon: 2 ARVN troops remain
+      { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 2 },
+    ],
+    computedValues: [
+      { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
+      { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
+      { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+    ],
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Playbook turns in execution order
 // ---------------------------------------------------------------------------
 
-const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5];
+const PLAYBOOK_TURNS: readonly PlaybookTurn[] = [TURN_1, TURN_2, TURN_3, TURN_4, TURN_5, TURN_6];
 
 // ---------------------------------------------------------------------------
 // Test suite

@@ -27,6 +27,8 @@ turnOrder:
         overrideWindows:
           - id: remain-eligible
             duration: nextTurn
+          - id: make-ineligible
+            duration: nextTurn
           - id: us-special-window
             duration: turn
           - id: arvn-special-window
@@ -2006,51 +2008,10 @@ actionPipelines:
                           token: $troop
                           from: { zoneExpr: { ref: tokenZone, token: $troop } }
                           to: $space
-                - chooseN:
-                    bind: $hopLocs
-                    options:
-                      query: adjacentZones
-                      zone: $space
-                    min: 0
-                    max: 99
-                - forEach:
-                    bind: $hopLoc
-                    over: { query: binding, name: $hopLocs }
-                    effects:
-                      - if:
-                          when:
-                            op: and
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $hopLoc, prop: category }, right: 'loc' }
-                              - op: '=='
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $hopLoc
-                                      filter:
-                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                right: 0
-                          then:
-                            - chooseN:
-                                bind: $movingHopTroops
-                                options:
-                                  query: tokensInAdjacentZones
-                                  zone: $hopLoc
-                                  filter:
-                                    - { prop: faction, eq: 'US' }
-                                    - { prop: type, eq: troops }
-                                min: 0
-                                max: 99
-                            - forEach:
-                                bind: $hopTroop
-                                over: { query: binding, name: $movingHopTroops }
-                                effects:
-                                  - moveToken:
-                                      token: $hopTroop
-                                      from: { zoneExpr: { ref: tokenZone, token: $hopTroop } }
-                                      to: $space
+                - macro: sweep-loc-hop
+                  args:
+                    space: $space
+                    troopFaction: 'US'
 
       - stage: activate-guerrillas
         effects:
@@ -2173,6 +2134,10 @@ actionPipelines:
                           token: $troop
                           from: { zoneExpr: { ref: tokenZone, token: $troop } }
                           to: $space
+                - macro: sweep-loc-hop
+                  args:
+                    space: $space
+                    troopFaction: 'ARVN'
                 - macro: sweep-activation
                   args:
                     space: $space
@@ -3194,7 +3159,7 @@ actionPipelines:
                             zone: $space
                             filter:
                               - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
-                              - { prop: type, eq: guerrilla }
+                              - { prop: type, op: in, value: [irregular, ranger] }
                               - { prop: activity, eq: underground }
                           limit: 1
                           effects:
@@ -3297,7 +3262,7 @@ actionPipelines:
                       set: { ref: binding, name: spaces }
                     filter:
                       - { prop: faction, eq: ARVN }
-                      - { prop: type, op: in, value: [troops, guerrilla] }
+                      - { prop: type, op: in, value: [troops, ranger] }
                   - query: tokensInMapSpaces
                     spaceFilter:
                       op: in
@@ -3305,7 +3270,7 @@ actionPipelines:
                       set: { ref: binding, name: spaces }
                     filter:
                       - { prop: faction, eq: US }
-                      - { prop: type, eq: guerrilla }
+                      - { prop: type, eq: irregular }
               min: 0
               max: 4
           - forEach:
@@ -3927,7 +3892,7 @@ actionPipelines:
                       zone: $space
                       filter:
                         - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: guerrilla }
+                        - { prop: type, eq: ranger }
                     effects:
                       - setTokenProp: { token: $ranger, prop: activity, value: underground }
       - stage: cap-armored-cavalry-unshaded-assault
@@ -3992,7 +3957,7 @@ actionPipelines:
                             zone: $source
                             filter:
                               - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: guerrilla }
+                              - { prop: type, eq: ranger }
                           effects:
                             - moveToken:
                                 token: $ranger
@@ -4015,7 +3980,7 @@ actionPipelines:
                                 zone: $space
                                 filter:
                                   - { prop: faction, eq: ARVN }
-                                  - { prop: type, eq: guerrilla }
+                                  - { prop: type, eq: ranger }
                                   - { prop: activity, eq: underground }
                           right: 0
                     then:
@@ -4026,7 +3991,7 @@ actionPipelines:
                             zone: $space
                             filter:
                               - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: guerrilla }
+                              - { prop: type, eq: ranger }
                               - { prop: activity, eq: underground }
                           limit: 1
                           effects:

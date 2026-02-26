@@ -160,7 +160,7 @@ describe('FITL US/ARVN special activities integration', () => {
       zones: {
         ...start.zones,
         [space]: [
-          makeToken('advise-ranger', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('advise-ranger', 'ranger', 'ARVN', { type: 'ranger', activity: 'underground' }),
           makeToken('advise-nva-troop', 'troops', 'NVA', { type: 'troops' }),
           makeToken('advise-vc-underground', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
           makeToken('advise-vc-base-untunneled', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
@@ -225,15 +225,15 @@ describe('FITL US/ARVN special activities integration', () => {
           makeToken('lift-us-1', 'troops', 'US', { type: 'troops' }),
           makeToken('lift-us-2', 'troops', 'US', { type: 'troops' }),
           makeToken('lift-arvn-1', 'troops', 'ARVN', { type: 'troops' }),
-          makeToken('lift-ranger-1', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
-          makeToken('lift-irregular-1', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('lift-ranger-1', 'ranger', 'ARVN', { type: 'ranger', activity: 'underground' }),
+          makeToken('lift-irregular-1', 'irregular', 'US', { type: 'irregular', activity: 'underground' }),
         ],
         [spaceB]: [
           makeToken('lift-us-3', 'troops', 'US', { type: 'troops' }),
           makeToken('lift-arvn-2', 'troops', 'ARVN', { type: 'troops' }),
           makeToken('lift-arvn-3', 'troops', 'ARVN', { type: 'troops' }),
-          makeToken('lift-ranger-2', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
-          makeToken('lift-irregular-2', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('lift-ranger-2', 'ranger', 'ARVN', { type: 'ranger', activity: 'underground' }),
+          makeToken('lift-irregular-2', 'irregular', 'US', { type: 'irregular', activity: 'underground' }),
         ],
         [spaceC]: [],
       },
@@ -481,11 +481,11 @@ describe('FITL US/ARVN special activities integration', () => {
         [origin]: [
           makeToken('transport-arvn-t1', 'troops', 'ARVN', { type: 'troops' }),
           makeToken('transport-arvn-t2', 'troops', 'ARVN', { type: 'troops' }),
-          makeToken('transport-arvn-r1', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+          makeToken('transport-arvn-r1', 'ranger', 'ARVN', { type: 'ranger', activity: 'active' }),
         ],
         [destination]: [],
         [remote]: [
-          makeToken('transport-remote-ranger', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+          makeToken('transport-remote-ranger', 'ranger', 'ARVN', { type: 'ranger', activity: 'active' }),
         ],
       },
     };
@@ -525,8 +525,8 @@ describe('FITL US/ARVN special activities integration', () => {
       zones: {
         ...start.zones,
         [adjacentSource]: [
-          makeToken('raid-ranger-underground', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
-          makeToken('raid-ranger-active', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+          makeToken('raid-ranger-underground', 'ranger', 'ARVN', { type: 'ranger', activity: 'underground' }),
+          makeToken('raid-ranger-active', 'ranger', 'ARVN', { type: 'ranger', activity: 'active' }),
         ],
         [targetSpace]: [
           makeToken('raid-target-troop', 'troops', 'NVA', { type: 'troops' }),
@@ -549,7 +549,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.equal(final.globalVars.raidCount, 1);
     assert.equal(
-      countTokens(final, targetSpace, (token) => token.props.faction === 'ARVN' && token.type === 'guerrilla'),
+      countTokens(final, targetSpace, (token) => token.props.faction === 'ARVN' && token.type === 'ranger'),
       2,
       'Raid should move adjacent Rangers into selected space',
     );
@@ -676,7 +676,7 @@ describe('FITL US/ARVN special activities integration', () => {
       zones: {
         ...start.zones,
         [spaceActivate]: [
-          makeToken('multi-ranger', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('multi-ranger', 'ranger', 'ARVN', { type: 'ranger', activity: 'underground' }),
           makeToken('multi-activate-target-1', 'troops', 'NVA', { type: 'troops' }),
           makeToken('multi-activate-target-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
         ],

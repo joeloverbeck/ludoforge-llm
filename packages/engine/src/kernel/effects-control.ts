@@ -138,7 +138,8 @@ export const applyForEach = (
   let currentState = ctx.state;
   let currentRng = ctx.rng;
   const emittedEvents: TriggerEvent[] = [];
-  for (const item of boundedItems) {
+  for (let iterIdx = 0; iterIdx < boundedItems.length; iterIdx += 1) {
+    const item = boundedItems[iterIdx]!;
     const iterationCtx: EffectContext = {
       ...ctx,
       state: currentState,
@@ -147,6 +148,7 @@ export const applyForEach = (
         ...ctx.bindings,
         [effect.forEach.bind]: item,
       },
+      iterationPath: `${ctx.iterationPath ?? ''}[${iterIdx}]`,
     };
     const iterationResult = applyEffectsWithBudget(effect.forEach.effects, withTracePath(iterationCtx, '.forEach.effects'), budget);
     currentState = iterationResult.state;

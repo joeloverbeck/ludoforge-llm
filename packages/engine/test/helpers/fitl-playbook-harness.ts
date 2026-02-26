@@ -91,6 +91,7 @@ export type PlaybookMove =
       readonly label: string;
       readonly move: Move;
       readonly options?: ResolveDecisionParamsOptions;
+      readonly optionsFactory?: (def: GameDef, state: GameState) => ResolveDecisionParamsOptions;
       readonly expectedState?: PlaybookStateSnapshot;
       readonly expectedOperationState?: PlaybookStateSnapshot;
     };
@@ -360,11 +361,12 @@ export const replayPlaybookTurn = (
       }
       const { compound, ...opOnlyMove } = playMove.move;
       void compound;
+      const effectiveOpOptions = playMove.optionsFactory?.(def, current) ?? playMove.options;
       const opOnlyResult = applyMoveWithResolvedDecisionIds(
         def,
         current,
         opOnlyMove,
-        playMove.options,
+        effectiveOpOptions,
       );
       assertPlaybookSnapshot(
         opOnlyResult.state,
@@ -377,11 +379,12 @@ export const replayPlaybookTurn = (
       const result = applyMove(def, current, playMove.move);
       current = result.state;
     } else {
+      const effectiveOptions = playMove.optionsFactory?.(def, current) ?? playMove.options;
       const result = applyMoveWithResolvedDecisionIds(
         def,
         current,
         playMove.move,
-        playMove.options,
+        effectiveOptions,
       );
       current = result.state;
     }

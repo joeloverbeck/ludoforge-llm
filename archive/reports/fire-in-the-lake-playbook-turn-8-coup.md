@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Fire in the Lake - Playbook Turn 8 Coup
 
 Now that a Coup! round is about to occur, refer to the bottom half

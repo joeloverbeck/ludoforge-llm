@@ -47,6 +47,8 @@ export interface EffectContext {
   readonly mode: InterpreterMode;
   readonly collector: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  /** Accumulated forEach iteration path for scoping inner decision IDs. */
+  readonly iterationPath?: string;
 }
 
 export interface EffectResult {

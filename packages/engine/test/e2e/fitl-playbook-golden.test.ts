@@ -26,7 +26,7 @@ import {
   replayPlaybookTurns,
   type PlaybookTurn,
 } from '../helpers/fitl-playbook-harness.js';
-import { type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
+import { type DecisionOverrideRule, type ResolveDecisionParamsOptions } from '../helpers/decision-param-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Playbook deck order (top to bottom)
@@ -174,6 +174,107 @@ const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrid
     value: 'guerrilla',
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Turn 8 — Commitment decision overrides (Rule 6.5)
+// ---------------------------------------------------------------------------
+// The commitment macro (coup-process-commitment) uses chooseN / chooseOne
+// decisions for troop and base deployment. Without overrides, all chooseN
+// decisions default to 0 selections. The narrative specifies:
+//   1 troop from Available → An Loc (VP 49→48)
+//   1 troop from Binh Dinh → Qui Nhon (map-to-map)
+//   1 troop from Saigon → Can Tho (map-to-map)
+//   1 troop from Saigon → Cam Ranh (map-to-map)
+//   0 bases moved
+const createTurn8CommitmentOverrides = (
+  _def: GameDef,
+  state: GameState,
+): ResolveDecisionParamsOptions => {
+  // Build tokenId → zoneId reverse lookup for map troop identification
+  const tokenZoneLookup = new Map<string, string>();
+  for (const [zoneId, tokens] of Object.entries(state.zones)) {
+    for (const token of tokens ?? []) {
+      tokenZoneLookup.set(String(token.id), zoneId);
+    }
+  }
+
+  let mapTroopDestIndex = 0;
+  const mapTroopDestinations = ['qui-nhon:none', 'can-tho:none', 'cam-ranh:none'];
+
+  // Macro expansion prefixes bind variable names with the expansion path.
+  // Match on the suffix to be independent of the macro path prefix.
+  const nameEndsWith = (request: ChoicePendingRequest, suffix: string): boolean =>
+    request.name.endsWith(suffix);
+
+  return {
+    overrides: [
+      // Select 1 US troop from available to deploy
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitTroopsFromAvailable'),
+        value: (request: ChoicePendingRequest) =>
+          request.options
+            .map((option) => option.value)
+            .filter((value): value is string => typeof value === 'string')
+            .slice(0, 1),
+      },
+      // Deploy it to An Loc
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitTroopDestFromAvailable'),
+        value: 'an-loc:none',
+      },
+      // Select 3 US troops from map: 1 from Binh Dinh, 2 from Saigon
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitTroopsFromMap'),
+        value: (request: ChoicePendingRequest) => {
+          const allTokenIds = request.options
+            .map((option) => option.value)
+            .filter((value): value is string => typeof value === 'string');
+          const fromBinhDinh = allTokenIds.filter(
+            (id) => tokenZoneLookup.get(id) === 'binh-dinh:none',
+          );
+          const fromSaigon = allTokenIds.filter(
+            (id) => tokenZoneLookup.get(id) === 'saigon:none',
+          );
+          return [
+            ...fromBinhDinh.slice(0, 1),
+            ...fromSaigon.slice(0, 2),
+          ];
+        },
+      },
+      // All map troops move to-map (not to-available)
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitTroopMapMoveMode'),
+        value: 'to-map',
+      },
+      // Map troop destinations in sequence: Qui Nhon, Can Tho, Cam Ranh
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitTroopDestFromMap'),
+        value: () => {
+          const dest = mapTroopDestinations[mapTroopDestIndex];
+          mapTroopDestIndex += 1;
+          return dest;
+        },
+      },
+      // Select 0 bases (explicit empty to avoid deterministic default)
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitBasesFromAvailable'),
+        value: [],
+      },
+      // Select 0 bases from map (explicit empty)
+      {
+        when: (request: ChoicePendingRequest) =>
+          nameEndsWith(request, 'commitBasesFromMap'),
+        value: [],
+      },
+    ],
+  };
+};
 
 const FITL_FACTION_CONFIG: SeatGroupConfig = {
   coinSeats: ['US', 'ARVN'],
@@ -1246,6 +1347,9 @@ const TURN_7: PlaybookTurn = {
       { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
       { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
       { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+      // Narrative Turn 8: "the US victory point token is shifted up 6 boxes from 42 to 48"
+      // implies US VP = 42 at end of Turn 7.
+      { label: 'US victory marker', expected: 42, compute: computeUsVictory },
     ],
   },
 };
@@ -1277,6 +1381,16 @@ const TURN_8: PlaybookTurn = {
       move: {
         actionId: asActionId('coupVictoryCheck'),
         params: {},
+      },
+      // Narrative 6.1: "none of the four factions have met their victory condition thresholds"
+      // Prove it: US<50, ARVN<60(?), NVA<12(?), VC<40(?) — all below.
+      expectedState: {
+        computedValues: [
+          { label: 'US VP at victory check', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN VP at victory check', expected: 38, compute: computeArvnVictory },
+          { label: 'NVA VP at victory check', expected: 8, compute: computeNvaVictory },
+          { label: 'VC VP at victory check', expected: 27, compute: computeVcVictory },
+        ],
       },
     },
     // -----------------------------------------------------------------------
@@ -1316,6 +1430,10 @@ const TURN_8: PlaybookTurn = {
       },
       expectedState: {
         globalVars: { arvnResources: 44 },
+        // Narrative: "spend 3 ARVN resources to remove that [Terror] marker"
+        zoneVars: [
+          { zone: 'hue:none', variable: 'terrorCount', expected: 0 },
+        ],
       },
     },
     // US Pacify Hue: shift toward support (cost 3 ARVN res)
@@ -1351,6 +1469,12 @@ const TURN_8: PlaybookTurn = {
         globalVars: { arvnResources: 38 },
         markers: [
           { space: 'hue:none', marker: 'supportOpposition', expected: 'neutral' },
+        ],
+        // Narrative: "Lower the blue VC 'Oppose+Bases' VP token from 27 to 23"
+        // Narrative: "The US victory point token doesn't change because there is no Support in Hue"
+        computedValues: [
+          { label: 'VC VP after Hue neutralized', expected: 23, compute: computeVcVictory },
+          { label: 'US VP unchanged (Hue neutral, no support)', expected: 42, compute: computeUsVictory },
         ],
       },
     },
@@ -1536,6 +1660,22 @@ const TURN_8: PlaybookTurn = {
         actionId: asActionId('coupRedeployPass'),
         params: {},
       },
+      expectedState: {
+        // Narrative: 2 ARVN troops left Binh Dinh, 1→Qui Nhon, 1→Da Nang
+        zoneTokenCounts: [
+          { zone: 'binh-dinh:none', faction: 'ARVN', type: 'troops', count: 0 },
+          { zone: 'qui-nhon:none', faction: 'ARVN', type: 'troops', count: 1 },
+          { zone: 'da-nang:none', faction: 'ARVN', type: 'troops', count: 1 },
+          // Narrative: 1 police Saigon → LoC Saigon-Can Tho
+          { zone: 'loc-saigon-can-tho:none', faction: 'ARVN', type: 'police', count: 1 },
+          // Narrative: ARVN ranger in Quang Tri stays
+          { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1 },
+          // Narrative: "6 ARVN Troops in Pleiku may stay due to the US Base"
+          { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
+          // Narrative: "take 1 Police from Saigon" (decrement from prior count)
+          { zone: 'saigon:none', faction: 'ARVN', type: 'police', count: 2 },
+        ],
+      },
     },
     // NVA redeploy: 4 troops from Southern Laos → North Vietnam
     {
@@ -1590,6 +1730,14 @@ const TURN_8: PlaybookTurn = {
         actionId: asActionId('coupRedeployPass'),
         params: {},
       },
+      expectedState: {
+        // Narrative: NVA moved 4 of 5 troops from Southern Laos → North Vietnam
+        zoneTokenCounts: [
+          { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 1 },
+          // Narrative: "shift them to North Vietnam" — calibrating actual count
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'troops', count: 4 },
+        ],
+      },
     },
     // VC has no redeploy actions — explicit pass
     {
@@ -1599,16 +1747,46 @@ const TURN_8: PlaybookTurn = {
         actionId: asActionId('coupRedeployPass'),
         params: {},
       },
+      // Narrative 6.4.4: "examining the entire map, we see that no space Control
+      // has changed" — verify all faction VPs unchanged after redeploy.
+      expectedState: {
+        computedValues: [
+          { label: 'US VP unchanged after redeploy', expected: 48, compute: computeUsVictory },
+          { label: 'ARVN VP unchanged after redeploy', expected: 38, compute: computeArvnVictory },
+          { label: 'NVA VP unchanged after redeploy', expected: 8, compute: computeNvaVictory },
+          { label: 'VC VP unchanged after redeploy', expected: 29, compute: computeVcVictory },
+        ],
+      },
     },
     // -----------------------------------------------------------------------
     // Phase 6.5 — Commitment
     // -----------------------------------------------------------------------
+    // Narrative: 1 casualty ÷ 3 = 0 OOP; troop → Available (VP 48→49).
+    // Then: 1 Available → An Loc (VP 49→48), 1 Binh Dinh → Qui Nhon,
+    //        1 Saigon → Can Tho, 1 Saigon → Cam Ranh. 0 bases.
     {
       kind: 'resolved',
       label: 'US Commitment resolution',
       move: {
         actionId: asActionId('coupCommitmentResolve'),
         params: {},
+      },
+      optionsFactory: createTurn8CommitmentOverrides,
+      expectedState: {
+        // Casualties cleared, troops deployed/moved
+        zoneTokenCounts: [
+          { zone: 'casualties-US:none', faction: 'US', type: 'troops', count: 0 },
+          { zone: 'an-loc:none', faction: 'US', type: 'troops', count: 1 },
+          // Narrative: "Troop cube from Binh Dinh → City of Qui Nhon"
+          { zone: 'qui-nhon:none', faction: 'US', type: 'troops', count: 1 },
+          // Narrative: "1 US Troop from Saigon → City of Can Tho"
+          { zone: 'can-tho:none', faction: 'US', type: 'troops', count: 1 },
+          // Narrative: "another Troop from Saigon → City of Cam Ranh"
+          { zone: 'cam-ranh:none', faction: 'US', type: 'troops', count: 1 },
+        ],
+        computedValues: [
+          { label: 'US VP after commitment', expected: 48, compute: computeUsVictory },
+        ],
       },
     },
     // US passes commitment
@@ -1673,10 +1851,32 @@ const TURN_8: PlaybookTurn = {
       { space: 'quang-duc-long-khanh:none', marker: 'supportOpposition', expected: 'activeOpposition' },
       { space: 'binh-tuy-binh-thuan:none', marker: 'supportOpposition', expected: 'activeOpposition' },
     ],
+    zoneTokenCounts: [
+      // Casualties cleared during commitment
+      { zone: 'casualties-US:none', faction: 'US', type: 'troops', count: 0 },
+      // Commitment results (6.5): troop deployments/moves
+      { zone: 'an-loc:none', faction: 'US', type: 'troops', count: 1 },
+      { zone: 'qui-nhon:none', faction: 'US', type: 'troops', count: 1 },
+      { zone: 'can-tho:none', faction: 'US', type: 'troops', count: 1 },
+      { zone: 'cam-ranh:none', faction: 'US', type: 'troops', count: 1 },
+      // Redeploy results (6.4)
+      { zone: 'binh-dinh:none', faction: 'ARVN', type: 'troops', count: 0 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 1 },
+      // Reset (6.6): all guerrillas and SF flip underground
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5,
+        props: { activity: 'underground' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3,
+        props: { activity: 'underground' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
+        props: { activity: 'underground' } },
+    ],
     computedValues: [
       { label: 'VC victory marker', expected: 29, compute: computeVcVictory },
       { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
-      { label: 'US victory marker', expected: 49, compute: computeUsVictory },
+      // Narrative: US VP 48 (49 from casualty return, −1 for An Loc deployment)
+      { label: 'US victory marker', expected: 48, compute: computeUsVictory },
+      // Narrative: No control changes during redeploy (6.4.4); verify ARVN VP
+      { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
     ],
   },
 };

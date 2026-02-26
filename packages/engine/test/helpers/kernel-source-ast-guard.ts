@@ -54,6 +54,77 @@ export const hasImportWithModuleSubstring = (sourceFile: ts.SourceFile, moduleSu
   return false;
 };
 
+const hasExportModifier = (modifiers: ts.NodeArray<ts.ModifierLike> | undefined): boolean =>
+  modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+
+const variableStatementExportsIdentifier = (statement: ts.VariableStatement, identifier: string): boolean => {
+  if (!hasExportModifier(statement.modifiers)) {
+    return false;
+  }
+
+  return statement.declarationList.declarations.some(
+    (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === identifier,
+  );
+};
+
+const declarationStatementExportsIdentifier = (
+  statement:
+    | ts.FunctionDeclaration
+    | ts.ClassDeclaration
+    | ts.InterfaceDeclaration
+    | ts.TypeAliasDeclaration
+    | ts.EnumDeclaration,
+  identifier: string,
+): boolean => {
+  if (!hasExportModifier(statement.modifiers) || statement.name === undefined) {
+    return false;
+  }
+
+  return statement.name.text === identifier;
+};
+
+const exportDeclarationMentionsIdentifier = (statement: ts.ExportDeclaration, identifier: string): boolean => {
+  const clause = statement.exportClause;
+  if (clause === undefined || !ts.isNamedExports(clause)) {
+    return false;
+  }
+
+  return clause.elements.some((specifier) => {
+    const localName = specifier.propertyName?.text ?? specifier.name.text;
+    const exportedName = specifier.name.text;
+    return localName === identifier || exportedName === identifier;
+  });
+};
+
+export const isIdentifierExported = (sourceFile: ts.SourceFile, identifier: string): boolean => {
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement) && variableStatementExportsIdentifier(statement, identifier)) {
+      return true;
+    }
+
+    if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)) &&
+      declarationStatementExportsIdentifier(statement, identifier)
+    ) {
+      return true;
+    }
+
+    if (ts.isExportDeclaration(statement) && exportDeclarationMentionsIdentifier(statement, identifier)) {
+      return true;
+    }
+
+    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression) && statement.expression.text === identifier) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export const getObjectPropertyExpression = (
   objectLiteral: ts.ObjectLiteralExpression,
   propertyName: string,

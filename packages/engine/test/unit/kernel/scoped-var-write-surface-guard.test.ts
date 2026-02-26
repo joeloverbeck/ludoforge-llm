@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { isIdentifierExported, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
 import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const canonicalScopedWriteHelper = 'writeScopedVarsToState';
@@ -10,18 +11,19 @@ const scopedVarRuntimeAccessModule = 'src/kernel/scoped-var-runtime-access.ts';
 describe('scoped-var write surface architecture guard', () => {
   it('keeps branch-level scoped write helpers private and preserves one runtime write entry point', () => {
     const scopedVarSource = readKernelSource(scopedVarRuntimeAccessModule);
+    const scopedVarSourceFile = parseTypeScriptSource(scopedVarSource, scopedVarRuntimeAccessModule);
 
-    assert.match(
-      scopedVarSource,
-      /\bexport const writeScopedVarsToState\b/u,
+    assert.equal(
+      isIdentifierExported(scopedVarSourceFile, canonicalScopedWriteHelper),
+      true,
       'scoped-var-runtime-access.ts must export canonical writeScopedVarsToState',
     );
 
     for (const helperName of branchScopedWriteHelpers) {
-      assert.doesNotMatch(
-        scopedVarSource,
-        new RegExp(`\\bexport\\s+(?:const|function)\\s+${helperName}\\b`, 'u'),
-        `scoped-var-runtime-access.ts must not export ${helperName}`,
+      assert.equal(
+        isIdentifierExported(scopedVarSourceFile, helperName),
+        false,
+        `scoped-var-runtime-access.ts must not export ${helperName} in any export form`,
       );
     }
 

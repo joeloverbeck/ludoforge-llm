@@ -32,4 +32,8 @@ To keep architecture clean, robust, and extensible, every new ticket must be cre
 
 ## Archival Reminder
 
-When complete, mark status as completed, add Outcome, and move ticket to `archive/tickets/` per repository rules.
+Follow `docs/archival-workflow.md` as the canonical process.
+
+For active tickets, archive with:
+`node scripts/archive-ticket.mjs tickets/<ticket-file>.md archive/tickets/`
+

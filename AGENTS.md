@@ -87,25 +87,7 @@ PRs should include:
 
 ## Archiving Tickets and Specs
 
-When asked to archive a ticket, spec, brainstorming document, or report:
+Follow the canonical archival policy in `docs/archival-workflow.md`.
 
-1. **Edit the document** to mark its final status at the top:
-   - `**Status**: ✅ COMPLETED` or `**Status**: COMPLETED` - Fully implemented
-   - `**Status**: ❌ REJECTED` or `**Status**: REJECTED` - Decided not to implement
-   - `**Status**: ⏸️ DEFERRED` or `**Status**: DEFERRED` - Postponed for later
-   - `**Status**: 🚫 NOT IMPLEMENTED` or `**Status**: NOT IMPLEMENTED` - Started but abandoned
+Do not duplicate or drift this procedure in other files; update `docs/archival-workflow.md` as the source of truth.
 
-2. **Add an Outcome section** at the bottom (for completed items):
-   - Completion date
-   - What was actually changed
-   - Any deviations from the original plan
-   - Verification results
-
-3. **Move to appropriate archive subfolder**:
-   - `archive/tickets/` - Implementation tickets
-   - `archive/specs/` - Design specifications
-   - `archive/brainstorming/` - Brainstorming documents
-   - `archive/reports/` - Reports
-   - If the destination archive subfolder does not exist yet, create it first.
-
-4. **Delete the original** from `tickets/`, `specs/`, `brainstorming/`, or `reports/`

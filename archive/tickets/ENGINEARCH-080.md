@@ -1,6 +1,6 @@
 # ENGINEARCH-080: Make ticket archival collision-safe and history-preserving
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — repository workflow/tooling only
@@ -13,8 +13,8 @@ Ticket archival currently has no enforced collision guard. A completed ticket ca
 ## Assumption Reassessment (2026-02-26)
 
 1. Archival steps are documented in `AGENTS.md`/`CLAUDE.md`, but there is no required collision-check command in that flow.
-2. The repository already has evidence that archive filename collisions are realistic (same ticket ID reused across different content over time).
-3. Mismatch + correction: process documentation alone is insufficient; archival must be guarded by deterministic tooling that blocks overwrite-by-default and forces explicit rename on collision.
+2. The repository already has evidence that archive name collisions are realistic: several IDs already exist in multiple archived filenames (for example `ENGINEARCH-040.md` and `ENGINEARCH-040-reassessed-2026-02-26.md`).
+3. Mismatch + correction: current instructions say "move to archive" but do not mandate a guard command. Process docs alone are insufficient; archival must be enforced by deterministic tooling that blocks overwrite-by-default and requires an explicit non-colliding destination when needed.
 
 ## Architecture Check
 
@@ -27,7 +27,7 @@ Ticket archival currently has no enforced collision guard. A completed ticket ca
 ### 1. Add archive-ticket utility with collision guard
 
 Create a script under `scripts/` that:
-- accepts source path + destination directory/path,
+- accepts source path + destination directory or explicit destination file path,
 - verifies source exists,
 - rejects destination collisions by default,
 - supports explicit rename path to resolve collisions,
@@ -49,6 +49,7 @@ Add tests that cover:
 - failure on existing destination,
 - success when explicit non-colliding rename is provided,
 - failure when source is missing.
+- failure when destination parent directory does not exist.
 
 ## Files to Touch
 
@@ -70,7 +71,9 @@ Add tests that cover:
 
 1. Archival script fails on destination collision and leaves existing archive file untouched.
 2. Archival script succeeds for non-colliding moves and explicit rename paths.
-3. Existing suite: `pnpm turbo test --force`
+3. Archival script fails with a clear error when source is missing or destination parent directory is invalid.
+4. Existing suite: `pnpm turbo test --force`
+5. Existing suite: `pnpm turbo lint`
 
 ### Invariants
 
@@ -81,11 +84,25 @@ Add tests that cover:
 
 ### New/Modified Tests
 
-1. `scripts` archival utility test file — validates collision rejection, explicit rename, and missing-source handling.
-2. `tickets/README.md` / `AGENTS.md` / `CLAUDE.md` guidance updates — keeps process instructions aligned with enforced tooling.
+1. `scripts/archive-ticket.test.mjs` — validates non-colliding move success, collision rejection, explicit rename success, missing-source failure, and invalid-destination failure.
 
 ### Commands
 
 1. `node --test <scripts archival test file>`
 2. `pnpm turbo test --force`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- What changed:
+  - Added `scripts/archive-ticket.mjs` as the canonical collision-safe archival command.
+  - Added `scripts/archive-ticket.test.mjs` covering non-colliding move success, collision failure, explicit rename success, missing source failure, and invalid destination-parent failure.
+  - Updated archival instructions in `AGENTS.md`, `CLAUDE.md`, and `tickets/README.md` to require `node scripts/archive-ticket.mjs ...` instead of raw `mv`.
+- Deviations from original plan:
+  - No scope expansion beyond ticket goals; implementation stayed tooling/process-only.
+  - Error/success output was implemented with synchronous writes to ensure deterministic CLI diagnostics in automation.
+- Verification results:
+  - `node --test scripts/archive-ticket.test.mjs` passed.
+  - `pnpm turbo test --force` passed.
+  - `pnpm turbo lint` passed.

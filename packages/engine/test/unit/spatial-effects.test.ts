@@ -58,7 +58,9 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => {
+type EffectContextOverrides = Omit<Partial<EffectContext>, 'mode'>;
+
+const makeCtx = (overrides?: EffectContextOverrides): EffectContext => {
   const def = makeDef();
   return {
     def,
@@ -70,8 +72,8 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => {
     bindings: {},
     moveParams: {},
     collector: createCollector(),
-mode: 'execution',
-...overrides,
+    mode: 'execution',
+    ...overrides,
   };
 };
 

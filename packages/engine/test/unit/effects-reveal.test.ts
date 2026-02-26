@@ -59,7 +59,9 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => {
+type EffectContextOverrides = Omit<Partial<EffectContext>, 'mode'>;
+
+const makeCtx = (overrides?: EffectContextOverrides): EffectContext => {
   const def = makeDef();
   return {
     def,
@@ -71,8 +73,25 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => {
     bindings: {},
     moveParams: {},
     collector: createCollector(),
-mode: 'execution',
-...overrides,
+    mode: 'execution',
+    ...overrides,
+  };
+};
+
+const makeDiscoveryCtx = (overrides?: EffectContextOverrides): EffectContext => {
+  const def = makeDef();
+  return {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state: makeState(),
+    rng: createRng(9n),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    moveParams: {},
+    collector: createCollector(),
+    mode: 'discovery',
+    ...overrides,
   };
 };
 
@@ -250,7 +269,7 @@ describe('effects reveal', () => {
   });
 
   it('passes through unresolved reveal.to selectors in discovery mode', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
 
     assert.throws(
       () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
@@ -608,8 +627,7 @@ describe('effects conceal', () => {
   });
 
   it('passes through unresolved conceal.from selectors in discovery mode', () => {
-    const ctx = makeCtx({
-      mode: 'discovery',
+    const ctx = makeDiscoveryCtx({
       state: {
         ...makeState(),
         reveals: {

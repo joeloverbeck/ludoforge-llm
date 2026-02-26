@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffect,
@@ -64,7 +64,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -74,8 +74,20 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffec
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-mode: 'execution',
-...overrides,
+  ...overrides,
+});
+
+const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeDiscoveryEffectContext({
+  def: makeDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
+  state: makeState(),
+  rng: createRng(123n),
+  activePlayer: asPlayerId(0),
+  actorPlayer: asPlayerId(0),
+  bindings: {},
+  moveParams: {},
+  collector: createCollector(),
+  ...overrides,
 });
 
 describe('effects moveToken and draw', () => {
@@ -239,7 +251,7 @@ describe('effects moveToken and draw', () => {
       discoveryRun: () =>
         applyEffect(
           { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
-          makeCtx({ mode: 'discovery' }),
+          makeDiscoveryCtx(),
         ),
       normalizedMessage: 'draw.from zone resolution failed',
     });
@@ -267,7 +279,7 @@ describe('effects moveToken and draw', () => {
               to: 'discard:none',
             },
           },
-          makeCtx({ mode: 'discovery' }),
+          makeDiscoveryCtx(),
         ),
       normalizedMessage: 'moveToken.from zone resolution failed',
     });
@@ -295,7 +307,7 @@ describe('effects moveToken and draw', () => {
               to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
             },
           },
-          makeCtx({ mode: 'discovery' }),
+          makeDiscoveryCtx(),
         ),
       normalizedMessage: 'moveToken.to zone resolution failed',
     });
@@ -326,7 +338,7 @@ describe('effects moveToken and draw', () => {
 });
 
 describe('draw trace emission', () => {
-  const makeTraceCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+  const makeTraceCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(),
@@ -339,7 +351,6 @@ describe('draw trace emission', () => {
     traceContext: { eventContext: 'actionEffect', actionId: 'test-draw', effectPathRoot: 'test.effects' },
     effectPath: '',
     ...overrides,
-    mode: overrides?.mode ?? 'execution',
   });
 
   it('draw emits one moveToken trace entry per token drawn', () => {

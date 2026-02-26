@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   EffectRuntimeError,
@@ -59,7 +59,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -69,8 +69,7 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffec
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-mode: 'execution',
-...overrides,
+  ...overrides,
 });
 
 const makeToken = (id: string, type: string, faction: string): Token => ({

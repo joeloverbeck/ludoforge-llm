@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createRng, isEffectErrorCode } from '../../src/kernel/index.js';
 import type { EffectContext } from '../../src/kernel/effect-context.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
@@ -65,7 +65,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -75,8 +75,20 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffec
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-mode: 'execution',
-...overrides,
+  ...overrides,
+});
+
+const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeDiscoveryEffectContext({
+  def: makeDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
+  state: makeState(),
+  rng: createRng(7n),
+  activePlayer: asPlayerId(0),
+  actorPlayer: asPlayerId(0),
+  bindings: {},
+  moveParams: {},
+  collector: createCollector(),
+  ...overrides,
 });
 
 type AssertTrue<T extends true> = T;
@@ -571,7 +583,7 @@ describe('scoped-var-runtime-access', () => {
   });
 
   it('preserves raw eval errors for discovery-mode zone resolution failures', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
 
     assert.throws(
       () =>
@@ -587,7 +599,7 @@ describe('scoped-var-runtime-access', () => {
   });
 
   it('normalizes discovery-mode failures when explicit policy requests normalization', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
 
     assert.throws(
       () =>

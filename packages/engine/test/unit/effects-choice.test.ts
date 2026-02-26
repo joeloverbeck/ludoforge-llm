@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffect,
@@ -59,7 +59,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -69,8 +69,20 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffec
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-mode: 'execution',
-...overrides,
+  ...overrides,
+});
+
+const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeDiscoveryEffectContext({
+  def: makeDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
+  state: makeState(),
+  rng: createRng(19n),
+  activePlayer: asPlayerId(0),
+  actorPlayer: asPlayerId(0),
+  bindings: {},
+  moveParams: {},
+  collector: createCollector(),
+  ...overrides,
 });
 
 describe('effects choice assertions', () => {
@@ -105,7 +117,7 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseOne returns pending choice in discovery mode when move param binding is missing', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       chooseOne: {
         internalDecisionId: 'decision:$choice',
@@ -289,7 +301,7 @@ describe('effects choice assertions', () => {
   });
 
   it('rollRandom is a deterministic no-op in discovery mode', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       rollRandom: {
         bind: '$die',
@@ -544,7 +556,7 @@ describe('effects choice assertions', () => {
   });
 
   it('setMarker passes through unresolved selector errors in discovery mode', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       setMarker: {
         space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
@@ -557,7 +569,7 @@ describe('effects choice assertions', () => {
   });
 
   it('shiftMarker passes through unresolved selector errors in discovery mode', () => {
-    const ctx = makeCtx({ mode: 'discovery' });
+    const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       shiftMarker: {
         space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },

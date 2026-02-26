@@ -33,12 +33,14 @@ interface EffectContextTestOptions {
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
-  readonly mode?: InterpreterMode;
+  readonly mode: InterpreterMode;
   readonly collector?: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
 }
 
-export const makeEffectContext = ({
+export type EffectContextTestOverrides = Omit<Partial<EffectContext>, 'mode'>;
+
+const makeEffectContext = ({
   def,
   state,
   adjacencyGraph = buildAdjacencyGraph(def.zones),
@@ -47,7 +49,7 @@ export const makeEffectContext = ({
   actorPlayer = activePlayer,
   bindings = {},
   moveParams = {},
-  mode = 'execution',
+  mode,
   collector = createCollector(),
   runtimeTableIndex,
   traceContext,
@@ -79,3 +81,11 @@ export const makeEffectContext = ({
   collector,
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
 });
+
+type EffectContextTestOptionsWithoutMode = Omit<EffectContextTestOptions, 'mode'>;
+
+export const makeExecutionEffectContext = (options: EffectContextTestOptionsWithoutMode): EffectContext =>
+  makeEffectContext({ ...options, mode: 'execution' });
+
+export const makeDiscoveryEffectContext = (options: EffectContextTestOptionsWithoutMode): EffectContext =>
+  makeEffectContext({ ...options, mode: 'discovery' });

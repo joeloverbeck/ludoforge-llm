@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffect,
@@ -69,7 +69,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -79,8 +79,7 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffec
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-mode: 'execution',
-...overrides,
+  ...overrides,
 });
 
 describe('effects token lifecycle', () => {
@@ -451,7 +450,7 @@ const makeMarkerDef = (): GameDef => ({
   markerLattices: [supportLattice],
 });
 
-const makeMarkerCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
+const makeMarkerCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
   def: makeMarkerDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -461,8 +460,7 @@ const makeMarkerCtx = (overrides?: Partial<EffectContext>): EffectContext => mak
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-mode: 'execution',
-...overrides,
+  ...overrides,
 });
 
 describe('effects setMarker', () => {

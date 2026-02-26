@@ -66,7 +66,9 @@ function makeState(overrides?: Partial<GameState>): GameState {
   };
 }
 
-function makeCtx(overrides?: Partial<EffectContext>): EffectContext {
+type EffectContextOverrides = Omit<Partial<EffectContext>, 'mode'>;
+
+function makeCtx(overrides?: EffectContextOverrides): EffectContext {
   return {
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
@@ -77,8 +79,8 @@ function makeCtx(overrides?: Partial<EffectContext>): EffectContext {
     bindings: { __freeOperation: false },
     moveParams: {},
     collector: createCollector(),
-mode: 'execution',
-...overrides,
+    mode: 'execution',
+    ...overrides,
   };
 }
 

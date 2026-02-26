@@ -14,7 +14,7 @@ import {
   type GameState,
   createCollector,
 } from '../../src/kernel/index.js';
-import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
+import { assertSelectorResolutionPolicyBoundary, isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-var-test', players: { min: 1, max: 2 } },
@@ -334,13 +334,13 @@ describe('effects var handlers', () => {
     });
   });
 
-  it('wraps setActivePlayer selector resolution failures into EFFECT_RUNTIME', () => {
-    const ctx = makeCtx();
-
-    assert.throws(
-      () => applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, ctx),
-      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'setActivePlayer selector resolution failed'),
-    );
+  it('setActivePlayer unresolved selector follows execution/discovery policy boundary', () => {
+    assertSelectorResolutionPolicyBoundary({
+      executionRun: () => applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, makeCtx()),
+      discoveryRun: () =>
+        applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, makeCtx({ mode: 'discovery' })),
+      normalizedMessage: 'setActivePlayer selector resolution failed',
+    });
   });
 
   it('uses moveParams for chosen selectors and lets bindings override moveParams', () => {

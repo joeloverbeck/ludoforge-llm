@@ -18,7 +18,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
-import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
+import { assertSelectorResolutionPolicyBoundary } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-token-move-draw-test', players: { min: 1, max: 2 } },
@@ -227,24 +227,25 @@ describe('effects moveToken and draw', () => {
     );
   });
 
-  it('draw normalizes unresolved zone selector bindings to effect runtime errors', () => {
-    const ctx = makeCtx();
-
-    assert.throws(
-      () =>
+  it('draw unresolved selector follows execution/discovery policy boundary', () => {
+    assertSelectorResolutionPolicyBoundary({
+      executionRun: () =>
         applyEffect(
           { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
-          ctx,
+          makeCtx(),
         ),
-      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'draw.from zone resolution failed'),
-    );
+      discoveryRun: () =>
+        applyEffect(
+          { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          makeCtx({ mode: 'discovery' }),
+        ),
+      normalizedMessage: 'draw.from zone resolution failed',
+    });
   });
 
-  it('moveToken normalizes unresolved from selector bindings to effect runtime errors', () => {
-    const ctx = makeCtx();
-
-    assert.throws(
-      () =>
+  it('moveToken.from unresolved selector follows execution/discovery policy boundary', () => {
+    assertSelectorResolutionPolicyBoundary({
+      executionRun: () =>
         applyEffect(
           {
             moveToken: {
@@ -253,17 +254,26 @@ describe('effects moveToken and draw', () => {
               to: 'discard:none',
             },
           },
-          ctx,
+          makeCtx(),
         ),
-      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveToken.from zone resolution failed'),
-    );
+      discoveryRun: () =>
+        applyEffect(
+          {
+            moveToken: {
+              token: '$token',
+              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              to: 'discard:none',
+            },
+          },
+          makeCtx({ mode: 'discovery' }),
+        ),
+      normalizedMessage: 'moveToken.from zone resolution failed',
+    });
   });
 
-  it('moveToken normalizes unresolved to selector bindings to effect runtime errors', () => {
-    const ctx = makeCtx();
-
-    assert.throws(
-      () =>
+  it('moveToken unresolved selector follows execution/discovery policy boundary', () => {
+    assertSelectorResolutionPolicyBoundary({
+      executionRun: () =>
         applyEffect(
           {
             moveToken: {
@@ -272,10 +282,21 @@ describe('effects moveToken and draw', () => {
               to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
             },
           },
-          ctx,
+          makeCtx(),
         ),
-      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveToken.to zone resolution failed'),
-    );
+      discoveryRun: () =>
+        applyEffect(
+          {
+            moveToken: {
+              token: '$token',
+              from: 'deck:none',
+              to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
+            },
+          },
+          makeCtx({ mode: 'discovery' }),
+        ),
+      normalizedMessage: 'moveToken.to zone resolution failed',
+    });
   });
 
   it('moveToken random with empty destination does not advance rng', () => {

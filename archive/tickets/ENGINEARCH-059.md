@@ -1,6 +1,6 @@
 # ENGINEARCH-059: Add discovery-mode passthrough coverage for token and active-player selector normalization paths
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel test coverage hardening for resolver policy boundaries
@@ -12,22 +12,26 @@ Recent resolver-normalization refactors introduced explicit failure-policy wirin
 
 ## Assumption Reassessment (2026-02-26)
 
-1. `effects-token.ts` now derives and passes explicit `onResolutionFailure` policy into normalized zone resolution helpers.
-2. `effects-var.ts` (`setActivePlayer`) now derives and passes explicit `onResolutionFailure` policy into normalized player resolution helpers.
-3. Existing unit tests currently assert execution-mode normalization for these paths, but do not assert discovery-mode passthrough for the same call sites.
-4. **Mismatch + correction**: policy behavior should be asserted in both execution and discovery modes at all updated call sites, not only reveal/choice/scoped-var tests.
+1. `effects-token.ts` currently derives explicit `onResolutionFailure` via `selectorResolutionFailurePolicyForMode(evalCtx.mode)` and passes it to normalized zone resolvers in token handlers (including `moveToken`/`draw` paths covered by this ticket).
+2. `effects-var.ts` (`applySetActivePlayer`) currently derives the same policy and passes it into `resolveSinglePlayerWithNormalization(...)`.
+3. `packages/engine/test/unit/effects-token-move-draw.test.ts` and `packages/engine/test/unit/effects-var.test.ts` currently verify execution-mode normalization (`EFFECT_RUNTIME`) for unresolved selectors, but do not verify discovery-mode passthrough (`MISSING_BINDING`) at those same call sites.
+4. Discovery-mode passthrough behavior is already asserted in other suites (`effects-reveal`, `effects-choice`, `scoped-var-runtime-access`), so this ticket is specifically about closing parity gaps for token move/draw and `setActivePlayer` call sites.
+5. **Scope correction**: this ticket does not change resolver runtime behavior; it adds policy-boundary coverage to prevent accidental mode-policy regressions in future refactors.
 
 ## Architecture Check
 
 1. Adding discovery-mode policy-boundary tests is cleaner than relying on implicit behavior and prevents future policy drift.
 2. This is pure kernel test hardening and keeps GameDef/simulator architecture game-agnostic.
 3. No backwards-compatibility shims or alias paths are introduced.
+4. Benefit over current architecture: explicit dual-mode assertions (execution normalization + discovery passthrough) lock down intended resolver contracts at effect boundaries, which is more robust/extensible than relying on indirect coverage from unrelated effect suites.
 
 ## What to Change
 
 ### 1. Add discovery passthrough tests for token zone resolution failures
 
-Extend token effect unit tests so unresolved zone bindings in discovery mode surface raw eval errors (`MISSING_BINDING`) for at least one representative token path.
+Extend token effect unit tests so unresolved zone bindings in discovery mode surface raw eval errors (`MISSING_BINDING`) for representative token call sites:
+- `draw.from`
+- `moveToken.from` (and/or `moveToken.to`)
 
 ### 2. Add discovery passthrough test for setActivePlayer selector failures
 
@@ -71,3 +75,19 @@ Extend variable effect unit tests so unresolved chosen player selector in discov
 2. `node --test packages/engine/dist/test/unit/effects-token-move-draw.test.js packages/engine/dist/test/unit/effects-var.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-26
+- **What changed**:
+  - Updated this ticket's assumptions/scope to match current code and existing test landscape.
+  - Added discovery-mode passthrough assertions (`MISSING_BINDING`) in:
+    - `packages/engine/test/unit/effects-token-move-draw.test.ts` (`draw` + `moveToken` unresolved zone selectors)
+    - `packages/engine/test/unit/effects-var.test.ts` (`setActivePlayer` unresolved chosen selector)
+- **Deviation from original plan**:
+  - Expanded token-path coverage from "at least one representative path" to both `draw` and `moveToken` selector call sites for stronger policy-boundary parity.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed
+  - `node --test packages/engine/dist/test/unit/effects-token-move-draw.test.js packages/engine/dist/test/unit/effects-var.test.js` passed
+  - `pnpm -F @ludoforge/engine test` passed (292/292)
+  - `pnpm -F @ludoforge/engine lint` passed

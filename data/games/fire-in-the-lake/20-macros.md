@@ -1705,7 +1705,7 @@ effectMacros:
                           to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
 
   # ── cap-sweep-booby-traps-shaded-cost ─────────────────────────────────────
-  # Booby Traps shaded: each selected Sweep space costs 1 troop from acting faction.
+  # Booby Traps shaded: each Sweep space, VC removes 1 sweeping troop on roll 1-3 (US to Casualties, ARVN to Available).
   - id: cap-sweep-booby-traps-shaded-cost
     params:
       - { name: targetSpaces, type: value }
@@ -1719,26 +1719,34 @@ effectMacros:
                 bind: $space
                 over: { query: binding, name: { param: targetSpaces } }
                 effects:
-                  - forEach:
-                      bind: $lossTroop
-                      over:
-                        query: tokensInZone
-                        zone: $space
-                        filter: [{ prop: faction, eq: { param: actorFaction } }, { prop: type, eq: troops }]
-                      limit: 1
-                      effects:
+                  - rollRandom:
+                      bind: $boobyDie
+                      min: 1
+                      max: 6
+                      in:
                         - if:
-                            when: { op: '==', left: { param: actorFaction }, right: US }
+                            when: { op: '<=', left: { ref: binding, name: $boobyDie }, right: 3 }
                             then:
-                              - moveToken:
-                                  token: $lossTroop
-                                  from: $space
-                                  to: { zoneExpr: 'casualties-US:none' }
-                            else:
-                              - moveToken:
-                                  token: $lossTroop
-                                  from: $space
-                                  to: { zoneExpr: 'available-ARVN:none' }
+                              - forEach:
+                                  bind: $lossTroop
+                                  over:
+                                    query: tokensInZone
+                                    zone: $space
+                                    filter: [{ prop: faction, eq: { param: actorFaction } }, { prop: type, eq: troops }]
+                                  limit: 1
+                                  effects:
+                                    - if:
+                                        when: { op: '==', left: { param: actorFaction }, right: US }
+                                        then:
+                                          - moveToken:
+                                              token: $lossTroop
+                                              from: $space
+                                              to: { zoneExpr: 'casualties-US:none' }
+                                        else:
+                                          - moveToken:
+                                              token: $lossTroop
+                                              from: $space
+                                              to: { zoneExpr: 'available-ARVN:none' }
 
   # ── cap-assault-cobras-shaded-cost ────────────────────────────────────────
   # Cobras shaded: each Assault space, on roll 1-3, loses 1 US troop to Casualties.

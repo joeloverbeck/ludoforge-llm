@@ -63,7 +63,7 @@ describe('createGameCanvas', () => {
 
   it('creates an app with webgl configuration and returns app/layers', async () => {
     const app = createMockApplication();
-    applicationCtorMock.mockImplementation(() => app);
+    applicationCtorMock.mockImplementation(function () { return app; } as never);
 
     const appendChild = vi.fn();
     const container = { appendChild } as unknown as HTMLElement;
@@ -100,7 +100,7 @@ describe('createGameCanvas', () => {
 
     const app = createMockApplication();
     app.init = vi.fn(() => initPromise);
-    applicationCtorMock.mockImplementation(() => app);
+    applicationCtorMock.mockImplementation(function () { return app; } as never);
 
     const appendChild = vi.fn();
     const container = { appendChild } as unknown as HTMLElement;
@@ -119,7 +119,7 @@ describe('createGameCanvas', () => {
 
   it('destroys the app with deep cleanup flags', async () => {
     const app = createMockApplication();
-    applicationCtorMock.mockImplementation(() => app);
+    applicationCtorMock.mockImplementation(function () { return app; } as never);
 
     const container = { appendChild: vi.fn() } as unknown as HTMLElement;
 

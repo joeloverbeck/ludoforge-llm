@@ -56,7 +56,7 @@ describe('createReducedMotionObserver', () => {
     const win = {
       matchMedia: vi.fn(() => fixture.mediaQueryList),
     };
-    const observer = createReducedMotionObserver(win);
+    const observer = createReducedMotionObserver(win as never);
     const listener = vi.fn();
 
     const unsubscribe = observer.subscribe(listener);

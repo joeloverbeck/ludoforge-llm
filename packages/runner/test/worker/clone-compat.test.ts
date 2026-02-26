@@ -5,18 +5,16 @@ import * as runtime from '@ludoforge/engine/runtime';
 
 import {
   asActionId,
-  asPhaseId,
   asPlayerId,
-  asTriggerId,
   type ChoiceRequest,
   type EffectTraceEntry,
   type LegalMoveEnumerationResult,
   type RuntimeWarning,
   type TerminalResult,
-  type TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
 
 import { createGameWorker, type GameMetadata, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
+import { TRIGGER_LOG_ENTRIES_EXHAUSTIVE } from '../helpers/trigger-log-fixtures';
 import { LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
 
 const roundTripClone = <T>(value: T): T => {
@@ -102,80 +100,6 @@ const TRACE_ENTRIES: readonly EffectTraceEntry[] = [
   },
 ];
 
-const TRIGGER_LOG_ENTRIES: readonly TriggerLogEntry[] = [
-  {
-    kind: 'fired',
-    triggerId: asTriggerId('trigger-1'),
-    event: { type: 'phaseEnter', phase: asPhaseId('main') },
-    depth: 0,
-  },
-  {
-    kind: 'truncated',
-    event: { type: 'turnEnd' },
-    depth: 3,
-  },
-  {
-    kind: 'turnFlowLifecycle',
-    step: 'initialRevealPlayed',
-    slots: { played: 'played', lookahead: 'lookahead', leader: 'leader' },
-    before: { playedCardId: null, lookaheadCardId: 'c-1', leaderCardId: 'c-2' },
-    after: { playedCardId: 'c-1', lookaheadCardId: null, leaderCardId: 'c-2' },
-  },
-  {
-    kind: 'turnFlowEligibility',
-    step: 'candidateScan',
-    seat: 'A',
-    before: {
-      firstEligible: null,
-      secondEligible: null,
-      actedSeats: [],
-      passedSeats: [],
-      nonPassCount: 0,
-      firstActionClass: null,
-    },
-    after: {
-      firstEligible: 'A',
-      secondEligible: 'B',
-      actedSeats: ['A'],
-      passedSeats: [],
-      nonPassCount: 1,
-      firstActionClass: 'operation',
-    },
-  },
-  {
-    kind: 'simultaneousSubmission',
-    player: 0,
-    move: { actionId: 'tick', params: {} },
-    submittedBefore: { 0: false, 1: false },
-    submittedAfter: { 0: true, 1: false },
-  },
-  {
-    kind: 'simultaneousCommit',
-    playersInOrder: ['A', 'B'],
-    pendingCount: 2,
-  },
-  {
-    kind: 'operationPartial',
-    actionId: asActionId('tick'),
-    profileId: 'profile-1',
-    step: 'costSpendSkipped',
-    reason: 'costValidationFailed',
-  },
-  {
-    kind: 'operationFree',
-    actionId: asActionId('tick'),
-    step: 'costSpendSkipped',
-  },
-  {
-    kind: 'operationCompoundStagesReplaced',
-    actionId: asActionId('tick'),
-    profileId: 'profile-1',
-    insertAfterStage: 1,
-    totalStages: 3,
-    skippedStageCount: 1,
-  },
-];
-
 const RUNTIME_WARNINGS: readonly RuntimeWarning[] = [
   {
     code: 'EMPTY_QUERY_RESULT',
@@ -224,7 +148,7 @@ describe('worker boundary structured clone compatibility', () => {
   });
 
   it('round-trips all TriggerLogEntry variants and RuntimeWarning arrays', () => {
-    roundTripClone(TRIGGER_LOG_ENTRIES);
+    roundTripClone(TRIGGER_LOG_ENTRIES_EXHAUSTIVE);
     roundTripClone(RUNTIME_WARNINGS);
   });
 

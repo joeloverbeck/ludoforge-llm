@@ -10,6 +10,7 @@ import {
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { projectEffectTraceEntry } from '../../src/model/trace-projection.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
+import { TRIGGER_LOG_ENTRIES_EXHAUSTIVE } from '../helpers/trigger-log-fixtures.js';
 
 describe('translateEffectTrace', () => {
   it('translates effect and trigger entries with deterministic ordering and ids', () => {
@@ -103,83 +104,9 @@ describe('translateEffectTrace', () => {
       },
     ];
 
-    const triggerLog: readonly TriggerLogEntry[] = [
-      {
-        kind: 'fired',
-        triggerId: asTriggerId('on-turn-start'),
-        event: { type: 'tokenEntered', zone: 'hue' as never },
-        depth: 2,
-      },
-      {
-        kind: 'truncated',
-        event: { type: 'turnEnd' },
-        depth: 1,
-      },
-      {
-        kind: 'turnFlowLifecycle',
-        step: 'revealLookahead',
-        slots: { played: 'played', lookahead: 'lookahead', leader: 'leader' },
-        before: { playedCardId: null, lookaheadCardId: null, leaderCardId: null },
-        after: { playedCardId: null, lookaheadCardId: null, leaderCardId: null },
-      },
-      {
-        kind: 'turnFlowEligibility',
-        step: 'passChain',
-        seat: 'us',
-        before: {
-          firstEligible: null,
-          secondEligible: null,
-          actedSeats: [],
-          passedSeats: [],
-          nonPassCount: 0,
-          firstActionClass: null,
-        },
-        after: {
-          firstEligible: null,
-          secondEligible: null,
-          actedSeats: [],
-          passedSeats: [],
-          nonPassCount: 0,
-          firstActionClass: null,
-        },
-      },
-      {
-        kind: 'simultaneousSubmission',
-        player: 0,
-        move: { actionId: 'pass', params: {} },
-        submittedBefore: { 0: false },
-        submittedAfter: { 0: true },
-      },
-      {
-        kind: 'simultaneousCommit',
-        playersInOrder: ['us'],
-        pendingCount: 0,
-      },
-      {
-        kind: 'operationPartial',
-        actionId: 'patrol' as never,
-        profileId: 'op-profile',
-        step: 'costSpendSkipped',
-        reason: 'costValidationFailed',
-      },
-      {
-        kind: 'operationFree',
-        actionId: 'sweep' as never,
-        step: 'costSpendSkipped',
-      },
-      {
-        kind: 'operationCompoundStagesReplaced',
-        actionId: 'assault' as never,
-        profileId: 'assault-profile',
-        insertAfterStage: 1,
-        totalStages: 3,
-        skippedStageCount: 1,
-      },
-    ];
+    const entries = translateEffectTrace(effectTrace, TRIGGER_LOG_ENTRIES_EXHAUSTIVE, visualConfig, gameDefFixture(), 7);
 
-    const entries = translateEffectTrace(effectTrace, triggerLog, visualConfig, gameDefFixture(), 7);
-
-    expect(entries).toHaveLength(effectTrace.length + triggerLog.length);
+    expect(entries).toHaveLength(effectTrace.length + TRIGGER_LOG_ENTRIES_EXHAUSTIVE.length);
     expect(entries.map((entry) => entry.id)).toEqual([
       'move-7-effect-0',
       'move-7-effect-1',
@@ -199,6 +126,7 @@ describe('translateEffectTrace', () => {
       'move-7-trigger-6',
       'move-7-trigger-7',
       'move-7-trigger-8',
+      'move-7-trigger-9',
     ]);
 
     const movement = entries[0];
@@ -243,26 +171,28 @@ describe('translateEffectTrace', () => {
     const fired = entries[9];
     expect(fired).toMatchObject({
       kind: 'trigger',
-      depth: 2,
-      zoneIds: ['hue'],
+      depth: 0,
+      zoneIds: [],
       tokenIds: [],
     });
 
     const truncated = entries[10];
-    expect(truncated).toMatchObject({ kind: 'trigger', depth: 1 });
+    expect(truncated).toMatchObject({ kind: 'trigger', depth: 3 });
 
     const eligibility = entries[12];
     expect(eligibility).toMatchObject({ kind: 'phase', depth: 0, playerId: 0 });
 
-    const simultaneous = entries[13];
+    const simultaneous = entries[14];
     expect(simultaneous).toMatchObject({ kind: 'lifecycle', depth: 0, playerId: 0 });
-    expect(entries[14]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[15]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[16]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[17]).toMatchObject({ kind: 'lifecycle', depth: 0 });
-    expect(entries[17]?.message).toContain('Assault');
-    expect(entries[17]?.message).toContain('Assault Profile');
-    expect(entries[17]?.message).toContain('1/3');
+    expect(entries[18]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[13]?.message).toContain('Deferred');
+    expect(entries[13]?.message).toContain('Queued');
+    expect(entries[18]?.message).toContain('Tick');
+    expect(entries[18]?.message).toContain('Profile 1');
+    expect(entries[18]?.message).toContain('1/3');
 
     const uniqueIds = new Set(entries.map((entry) => entry.id));
     expect(uniqueIds.size).toBe(entries.length);

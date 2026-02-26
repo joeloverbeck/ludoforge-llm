@@ -323,8 +323,18 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, m
 };
 
 interface ValidatedMoveContext {
+  readonly preflight: MovePreflightContext;
+}
+
+interface MovePreflightContext {
   readonly action: ActionDef;
   readonly executionPlayer: GameState['activePlayer'];
+  readonly evalCtx: EvalContext;
+  readonly baseBindings: Readonly<Record<string, MoveParamValue | boolean | string>>;
+  readonly actionPipeline: ActionPipelineDef | undefined;
+  readonly executionProfile: ReturnType<typeof toExecutionPipeline> | undefined;
+  readonly costValidationPassed: boolean;
+  readonly isFreeOperationPipeline: boolean;
 }
 
 const validateTurnFlowWindowAccess = (def: GameDef, state: GameState, move: Move): void => {
@@ -340,6 +350,187 @@ const validateTurnFlowWindowAccess = (def: GameDef, state: GameState, move: Move
   }
 };
 
+const validateSpecialActivityCompoundConstraints = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  action: ActionDef,
+  cachedRuntime?: GameDefRuntime,
+): void => {
+  if (move.compound === undefined) {
+    return;
+  }
+  const saMove = move.compound.specialActivity;
+  const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
+  if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
+      operationActionId: action.id,
+      specialActivityActionId: saMove.actionId,
+      profileId: saPipeline.id,
+    });
+  }
+  if (saPipeline !== undefined) {
+    const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
+    if (violated !== null) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED, {
+        operationActionId: action.id,
+        specialActivityActionId: saMove.actionId,
+        profileId: saPipeline.id,
+        relation: violated.relation,
+        operationParam: violated.operationParam,
+        specialActivityParam: violated.specialActivityParam,
+      });
+    }
+  }
+};
+
+const resolvePipelineCostValidationStatus = (
+  move: Move,
+  action: ActionDef,
+  pipeline: ActionPipelineDef | undefined,
+  evalCtx: EvalContext,
+  isFreeOperationPipeline: boolean,
+): boolean => {
+  if (pipeline === undefined) {
+    return true;
+  }
+  const status = evaluatePipelinePredicateStatus(action, pipeline, evalCtx);
+  const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: isFreeOperationPipeline });
+  if (viabilityDecision.kind === 'illegalMove') {
+    const metadata = {
+      profileId: pipeline.id,
+    };
+    if (viabilityDecision.outcome === 'pipelineAtomicCostValidationFailed') {
+      throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
+        ...metadata,
+        partialExecutionMode: pipeline.atomicity,
+      });
+    }
+    throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
+      ...metadata,
+    });
+  }
+  return viabilityDecision.costValidationPassed;
+};
+
+const resolveMovePreflightContext = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>,
+  runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>,
+  mode: 'validation' | 'execution',
+  cachedRuntime?: GameDefRuntime,
+): MovePreflightContext => {
+  const action = findAction(def, move.actionId);
+  if (action === undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
+  }
+  const baseBindings = runtimeBindingsForMove(move, undefined);
+  const preflightEvalCtx = mode === 'validation'
+    ? (() => {
+      const preflight = resolveActionApplicabilityPreflight({
+        def,
+        state,
+        action,
+        adjacencyGraph,
+        decisionPlayer: state.activePlayer,
+        bindings: baseBindings,
+        runtimeTableIndex,
+        ...(move.freeOperation === true
+          ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, move) }
+          : {}),
+      });
+      if (preflight.kind === 'invalidSpec') {
+        throw selectorInvalidSpecError(
+          'applyMove',
+          preflight.selector,
+          action,
+          preflight.error,
+          preflight.selectorContractViolations,
+        );
+      }
+      if (preflight.kind === 'notApplicable') {
+        throw illegalMoveError(move, toApplyMoveIllegalReason(preflight.reason));
+      }
+      return {
+        executionPlayer: preflight.executionPlayer,
+        evalCtx: preflight.evalCtx,
+        actionPipeline: preflight.pipelineDispatch.kind === 'matched'
+          ? preflight.pipelineDispatch.profile
+          : undefined,
+      };
+    })()
+    : (() => {
+      const executionPlayer = move.freeOperation === true
+        ? resolveFreeOperationExecutionPlayer(def, state, move)
+        : (() => {
+          const resolution = resolveActionExecutor({
+            def,
+            state,
+            adjacencyGraph,
+            action,
+            decisionPlayer: state.activePlayer,
+            bindings: baseBindings,
+            runtimeTableIndex,
+          });
+          if (resolution.kind === 'notApplicable') {
+            throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
+          }
+          if (resolution.kind === 'invalidSpec') {
+            throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
+          }
+          return resolution.executionPlayer;
+        })();
+      const evalCtx = {
+        def,
+        adjacencyGraph,
+        runtimeTableIndex,
+        state,
+        activePlayer: executionPlayer,
+        actorPlayer: executionPlayer,
+        bindings: baseBindings,
+        collector: createCollector(),
+      };
+      const pipelineDispatch = resolveActionPipelineDispatch(def, action, evalCtx);
+      if (pipelineDispatch.kind === 'configuredNoMatch') {
+        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+      }
+      return {
+        executionPlayer,
+        evalCtx,
+        actionPipeline: pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined,
+      };
+    })();
+
+  const actionPipeline = preflightEvalCtx.actionPipeline;
+  const executionProfile = actionPipeline === undefined
+    ? undefined
+    : toExecutionPipeline(action, actionPipeline);
+  validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
+  validateSpecialActivityCompoundConstraints(def, state, move, action, cachedRuntime);
+
+  const isFreeOperationPipeline = move.freeOperation === true && executionProfile !== undefined;
+  const costValidationPassed = resolvePipelineCostValidationStatus(
+    move,
+    action,
+    actionPipeline,
+    preflightEvalCtx.evalCtx,
+    isFreeOperationPipeline,
+  );
+
+  return {
+    action,
+    executionPlayer: preflightEvalCtx.executionPlayer,
+    evalCtx: preflightEvalCtx.evalCtx,
+    baseBindings,
+    actionPipeline,
+    executionProfile,
+    costValidationPassed,
+    isFreeOperationPipeline,
+  };
+};
+
 const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?: GameDefRuntime): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
@@ -349,37 +540,11 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
       submittedActionClass: classMismatch.submitted,
     });
   }
-
-  const action = findAction(def, move.actionId);
-  if (action === undefined) {
-    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
-  }
+  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
+  const preflight = resolveMovePreflightContext(def, state, move, adjacencyGraph, runtimeTableIndex, 'validation', cachedRuntime);
+  const action = preflight.action;
   const allowIncomplete = shouldDeferIncompleteDecisionValidationForMove(def, state, move);
-
-  if (move.compound !== undefined) {
-    const saMove = move.compound.specialActivity;
-    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
-    if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
-        operationActionId: action.id,
-        specialActivityActionId: saMove.actionId,
-        profileId: saPipeline.id,
-      });
-    }
-    if (saPipeline !== undefined) {
-      const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
-      if (violated !== null) {
-        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED, {
-          operationActionId: action.id,
-          specialActivityActionId: saMove.actionId,
-          profileId: saPipeline.id,
-          relation: violated.relation,
-          operationParam: violated.operationParam,
-          specialActivityParam: violated.specialActivityParam,
-        });
-      }
-    }
-  }
 
   if (
     move.freeOperation === true &&
@@ -390,75 +555,16 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
       actionId: action.id,
     });
   }
-
-  const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const preflight = resolveActionApplicabilityPreflight({
-    def,
-    state,
-    action,
-    adjacencyGraph,
-    decisionPlayer: state.activePlayer,
-    bindings: runtimeBindingsForMove(move, undefined),
-    runtimeTableIndex,
-    ...(move.freeOperation === true
-      ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, move) }
-      : {}),
-  });
-  if (preflight.kind === 'invalidSpec') {
-    throw selectorInvalidSpecError(
-      'applyMove',
-      preflight.selector,
-      action,
-      preflight.error,
-      preflight.selectorContractViolations,
-    );
-  }
-  if (preflight.kind === 'notApplicable') {
-    throw illegalMoveError(move, toApplyMoveIllegalReason(preflight.reason));
-  }
-  const matchedExecutionProfile = preflight.pipelineDispatch.kind === 'matched'
-    ? toExecutionPipeline(action, preflight.pipelineDispatch.profile)
-    : undefined;
-  const matchedActionPipeline = preflight.pipelineDispatch.kind === 'matched'
-    ? preflight.pipelineDispatch.profile
-    : undefined;
-  validateCompoundTimingConfiguration(move, matchedExecutionProfile, matchedActionPipeline);
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
-
-  if (preflight.pipelineDispatch.kind === 'matched') {
-    const pipeline = preflight.pipelineDispatch.profile;
-    const status = evaluatePipelinePredicateStatus(action, pipeline, preflight.evalCtx);
-    const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
-    if (viabilityDecision.kind === 'illegalMove') {
-      const metadata = {
-        profileId: pipeline.id,
-      };
-      if (viabilityDecision.outcome === 'pipelineAtomicCostValidationFailed') {
-        throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
-          ...metadata,
-          partialExecutionMode: pipeline.atomicity,
-        });
-      }
-      throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
-        ...metadata,
-      });
-    }
-    validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
-    validateTurnFlowWindowAccess(def, state, move);
-    return {
-      action,
-      executionPlayer: preflight.executionPlayer,
-    };
+  if (preflight.actionPipeline === undefined) {
+    validateDeclaredActionParams(action, preflight.evalCtx, move);
   }
-  validateDeclaredActionParams(action, preflight.evalCtx, move);
   validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
   validateTurnFlowWindowAccess(def, state, move);
   return {
-    action,
-    executionPlayer: preflight.executionPlayer,
+    preflight,
   };
 };
 
@@ -537,33 +643,25 @@ const executeMoveAction = (
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
   const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
-  const action = validated?.action ?? findAction(def, move.actionId);
-  if (action === undefined) throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
+  const preflight = validated?.preflight ?? resolveMovePreflightContext(
+    def,
+    state,
+    move,
+    shared.adjacencyGraph,
+    shared.runtimeTableIndex,
+    'execution',
+    cachedRuntime,
+  );
+  const {
+    action,
+    executionPlayer,
+    baseBindings,
+    executionProfile,
+    costValidationPassed,
+    isFreeOperationPipeline,
+  } = preflight;
 
   const rng: Rng = { state: state.rng };
-  const baseBindings = runtimeBindingsForMove(move, undefined);
-  const executionPlayer = validated?.executionPlayer ?? (
-    move.freeOperation === true
-      ? resolveFreeOperationExecutionPlayer(def, state, move)
-      : (() => {
-        const resolution = resolveActionExecutor({
-          def,
-          state,
-          adjacencyGraph: shared.adjacencyGraph,
-          action,
-          decisionPlayer: state.activePlayer,
-          bindings: baseBindings,
-          runtimeTableIndex: shared.runtimeTableIndex,
-        });
-        if (resolution.kind === 'notApplicable') {
-          throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
-        }
-        if (resolution.kind === 'invalidSpec') {
-          throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
-        }
-        return resolution.executionPlayer;
-      })()
-  );
   const effectCtxBase = {
     def,
     adjacencyGraph: shared.adjacencyGraph,
@@ -582,14 +680,6 @@ const executeMoveAction = (
     effectPath: '',
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
   } as const;
-
-  const pipelineDispatch = resolveActionPipelineDispatch(def, action, { ...effectCtxBase, state });
-  if (pipelineDispatch.kind === 'configuredNoMatch') {
-    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
-  }
-  const actionPipeline = pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined;
-  const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
-  validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
   const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
   const runtimeMoveParams = {
     ...move.params,
@@ -600,52 +690,8 @@ const executeMoveAction = (
     bindings: buildMoveRuntimeBindings(move, resolvedDecisionBindings),
     moveParams: runtimeMoveParams,
   } as const;
-  const isFreeOp = move.freeOperation === true && executionProfile !== undefined;
 
-  if (move.compound !== undefined) {
-    const saMove = move.compound.specialActivity;
-    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
-    if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
-        operationActionId: action.id,
-        specialActivityActionId: saMove.actionId,
-        profileId: saPipeline.id,
-      });
-    }
-    if (saPipeline !== undefined) {
-      const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
-      if (violated !== null) {
-        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED, {
-          operationActionId: action.id,
-          specialActivityActionId: saMove.actionId,
-          profileId: saPipeline.id,
-          relation: violated.relation,
-          operationParam: violated.operationParam,
-          specialActivityParam: violated.specialActivityParam,
-        });
-      }
-    }
-  }
-
-  let costValidationPassed = true;
-  if (actionPipeline !== undefined) {
-    const status = evaluatePipelinePredicateStatus(action, actionPipeline, { ...effectCtx, state });
-    const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: isFreeOp });
-    if (viabilityDecision.kind === 'illegalMove') {
-      if (viabilityDecision.outcome === 'pipelineAtomicCostValidationFailed') {
-        throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
-          profileId: actionPipeline.id,
-          partialExecutionMode: actionPipeline.atomicity,
-        });
-      }
-      throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
-        profileId: actionPipeline.id,
-      });
-    }
-    costValidationPassed = viabilityDecision.costValidationPassed;
-  }
-
-  const shouldSpendCost = !isFreeOp && (
+  const shouldSpendCost = !isFreeOperationPipeline && (
     executionProfile === undefined ||
     executionProfile.costValidation === null ||
     costValidationPassed);
@@ -669,7 +715,7 @@ const executeMoveAction = (
   const emittedEvents: TriggerEvent[] = [];
   const executionTraceEntries: TriggerLogEntry[] = [];
 
-  if (isFreeOp) {
+  if (isFreeOperationPipeline) {
     executionTraceEntries.push({
       kind: 'operationFree',
       actionId: action.id,

@@ -1129,6 +1129,92 @@ describe('applyMove() executor applicability contract', () => {
   });
 });
 
+describe('applyMove() simultaneous commit preflight parity', () => {
+  it('enforces pipeline cost-validation invariants during skipValidation commit fan-in', () => {
+    const costlyAction: ActionDef = {
+      id: asActionId('costlyOp'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const costlyPipeline: ActionPipelineDef = {
+      id: 'costlyProfile',
+      actionId: costlyAction.id,
+      legality: null,
+      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 20 },
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [costlyAction, passAction], actionPipelines: [costlyPipeline] }),
+      turnOrder: { type: 'simultaneous' as const },
+    } as unknown as GameDef;
+    const state = makeBaseState({
+      globalVars: { resources: 1 },
+      activePlayer: asPlayerId(1),
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { 0: true, 1: false },
+        pending: {
+          0: {
+            actionId: String(costlyAction.id),
+            params: {},
+          },
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: passAction.id, params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
+        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
+        assert.equal(metadata?.profileId, 'costlyProfile');
+        assert.equal(metadata?.partialExecutionMode, 'atomic');
+        return true;
+      },
+    );
+
+    assert.throws(
+      () => applyMove(makeBaseDef({ actions: [costlyAction], actionPipelines: [costlyPipeline] }), makeBaseState({ globalVars: { resources: 1 } }), {
+        actionId: costlyAction.id,
+        params: {},
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
+        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
+        assert.equal(metadata?.profileId, 'costlyProfile');
+        assert.equal(metadata?.partialExecutionMode, 'atomic');
+        return true;
+      },
+    );
+  });
+});
+
 // ---------------------------------------------------------------------------
 // compound timing validation + replaceRemainingStages behavior
 // ---------------------------------------------------------------------------

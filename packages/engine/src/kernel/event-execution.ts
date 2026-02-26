@@ -270,6 +270,44 @@ const resolveEventExecutionContext = (
   };
 };
 
+const isPlayableEventContext = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  context: EventExecutionContext,
+): boolean => {
+  if (context.card.playCondition === undefined) {
+    return true;
+  }
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  return evalCondition(context.card.playCondition, {
+    def,
+    adjacencyGraph,
+    runtimeTableIndex,
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: { ...move.params },
+    collector: createCollector(),
+  });
+};
+
+const resolvePlayableEventExecutionContext = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): EventExecutionContext | null => {
+  if (!isCardEventMove(def, move)) {
+    return null;
+  }
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
+    return null;
+  }
+  return isPlayableEventContext(def, state, move, context) ? context : null;
+};
+
 const resolveEventEffectTiming = (context: EventExecutionContext): EventEffectTiming =>
   context.branch?.effectTiming ?? context.side.effectTiming ?? 'beforeGrants';
 
@@ -304,6 +342,27 @@ export const resolveEventEffectTimingForMove = (
     return null;
   }
   return resolveEventEffectTiming(context);
+};
+
+export const shouldDeferIncompleteDecisionValidationForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): boolean => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return false;
+  }
+  const context = resolvePlayableEventExecutionContext(def, state, move);
+  if (context === null) {
+    return false;
+  }
+  if (resolveEventEffectTiming(context) !== 'afterGrants') {
+    return false;
+  }
+  if (collectEventEffects(context).length === 0) {
+    return false;
+  }
+  return collectFreeOperationGrants(context).length > 0;
 };
 
 const applyEffectList = (
@@ -358,31 +417,9 @@ export const executeEventMove = (
   collector?: ExecutionCollector,
   actionId = String(move.actionId),
 ): LastingEffectApplyResult => {
-  if (!isCardEventMove(def, move)) {
-    return { state, rng, emittedEvents: [] };
-  }
-
-  const context = resolveEventExecutionContext(def, state, move);
+  const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
     return { state, rng, emittedEvents: [] };
-  }
-
-  if (context.card.playCondition !== undefined) {
-    const adjacencyGraph = buildAdjacencyGraph(def.zones);
-    const runtimeTableIndex = buildRuntimeTableIndex(def);
-    const conditionMet = evalCondition(context.card.playCondition, {
-      def,
-      adjacencyGraph,
-      runtimeTableIndex,
-      state,
-      activePlayer: state.activePlayer,
-      actorPlayer: state.activePlayer,
-      bindings: { ...move.params },
-      collector: createCollector(),
-    });
-    if (!conditionMet) {
-      return { state, rng, emittedEvents: [] };
-    }
   }
 
   const eventEffects = collectEventEffects(context);
@@ -466,29 +503,9 @@ export const resolveEventFreeOperationGrants = (
   state: GameState,
   move: Move,
 ): readonly EventFreeOperationGrantDef[] => {
-  if (!isCardEventMove(def, move)) {
-    return [];
-  }
-  const context = resolveEventExecutionContext(def, state, move);
+  const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
     return [];
-  }
-  if (context.card.playCondition !== undefined) {
-    const adjacencyGraph = buildAdjacencyGraph(def.zones);
-    const runtimeTableIndex = buildRuntimeTableIndex(def);
-    const conditionMet = evalCondition(context.card.playCondition, {
-      def,
-      adjacencyGraph,
-      runtimeTableIndex,
-      state,
-      activePlayer: state.activePlayer,
-      actorPlayer: state.activePlayer,
-      bindings: { ...move.params },
-      collector: createCollector(),
-    });
-    if (!conditionMet) {
-      return [];
-    }
   }
   return collectFreeOperationGrants(context);
 };
@@ -498,29 +515,9 @@ export const resolveEventEligibilityOverrides = (
   state: GameState,
   move: Move,
 ): readonly EventEligibilityOverrideDef[] => {
-  if (!isCardEventMove(def, move)) {
-    return [];
-  }
-  const context = resolveEventExecutionContext(def, state, move);
+  const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
     return [];
-  }
-  if (context.card.playCondition !== undefined) {
-    const adjacencyGraph = buildAdjacencyGraph(def.zones);
-    const runtimeTableIndex = buildRuntimeTableIndex(def);
-    const conditionMet = evalCondition(context.card.playCondition, {
-      def,
-      adjacencyGraph,
-      runtimeTableIndex,
-      state,
-      activePlayer: state.activePlayer,
-      actorPlayer: state.activePlayer,
-      bindings: { ...move.params },
-      collector: createCollector(),
-    });
-    if (!conditionMet) {
-      return [];
-    }
   }
   return collectEligibilityOverrides(context);
 };

@@ -637,6 +637,34 @@ export const OperationFreeTraceEntrySchema = z
   })
   .strict();
 
+export const OperationCompoundStagesReplacedTraceEntrySchema = z
+  .object({
+    kind: z.literal('operationCompoundStagesReplaced'),
+    actionId: StringSchema.min(1),
+    profileId: StringSchema.min(1),
+    insertAfterStage: IntegerSchema.min(0),
+    totalStages: IntegerSchema.min(1),
+    skippedStageCount: IntegerSchema.min(0),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.insertAfterStage >= value.totalStages) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'insertAfterStage must be less than totalStages.',
+        path: ['insertAfterStage'],
+      });
+    }
+    const expectedSkipped = value.totalStages - value.insertAfterStage - 1;
+    if (value.skippedStageCount !== expectedSkipped) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'skippedStageCount must equal totalStages - insertAfterStage - 1.',
+        path: ['skippedStageCount'],
+      });
+    }
+  });
+
 export const SimultaneousSubmissionTraceEntrySchema = z
   .object({
     kind: z.literal('simultaneousSubmission'),

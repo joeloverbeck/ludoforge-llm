@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatScopeEndpointDisplay, formatScopePrefixDisplay, optionalPlayerId } from '../../src/model/model-utils.js';
+import {
+  endpointVarNameAsString,
+  formatScopeEndpointDisplay,
+  formatScopePrefixDisplay,
+  optionalPlayerId,
+} from '../../src/model/model-utils.js';
 
 describe('model-utils', () => {
   it('returns an empty object for undefined playerId', () => {
@@ -110,6 +115,42 @@ describe('model-utils', () => {
         resolvePlayerName: () => 'unused',
         resolveZoneName: () => 'unused',
       }),
-    ).toThrow('Invalid endpoint scope for event-log rendering');
+    ).toThrow('Invalid transfer endpoint scope');
+  });
+
+  it('throws deterministic invalid-scope errors for non-domain endpoint scope values', () => {
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: 'bogus' as unknown as 'global',
+        playerId: undefined,
+        zoneId: undefined,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: () => 'unused',
+      }),
+    ).toThrow('Invalid transfer endpoint scope: bogus');
+
+    expect(() =>
+      formatScopeEndpointDisplay({
+        scope: null as unknown as 'global',
+        playerId: undefined,
+        zoneId: undefined,
+        resolvePlayerName: () => 'unused',
+        resolveZoneName: () => 'unused',
+      }),
+    ).toThrow('Invalid transfer endpoint scope: null');
+  });
+
+  it('returns endpoint varName when it is a string', () => {
+    expect(endpointVarNameAsString({ varName: 'pool' }, 'from')).toBe('pool');
+  });
+
+  it('throws deterministic error when endpoint varName is missing or non-string', () => {
+    expect(() => endpointVarNameAsString({}, 'from')).toThrow(
+      'Invalid transfer endpoint payload: from.varName must be a string',
+    );
+
+    expect(() => endpointVarNameAsString({ varName: 123 }, 'to')).toThrow(
+      'Invalid transfer endpoint payload: to.varName must be a string',
+    );
   });
 });

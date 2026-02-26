@@ -1,4 +1,4 @@
-import type { EffectTraceEntry, EffectTraceResourceEndpoint, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
+import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
@@ -6,7 +6,9 @@ import type { EventLogKind } from './event-log-kind.js';
 import {
   formatScopeEndpointDisplay,
   formatScopePrefixDisplay,
+  normalizeTransferEndpoint,
   optionalPlayerId,
+  type NormalizedTransferEndpoint,
   type ScopeEndpointDisplayInput,
   type ScopeKind,
 } from './model-utils.js';
@@ -92,14 +94,20 @@ function translateEffectEntry(
     }
 
     case 'resourceTransfer':
-      return {
-        ...base,
-        kind: 'variable',
-        message:
-          `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
-          ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.from))}` +
-          ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(entry.to))}.`,
-      };
+      {
+        const fromEndpoint = normalizeTransferEndpoint(entry.from, 'from');
+        const toEndpoint = normalizeTransferEndpoint(entry.to, 'to');
+        const fromVarName = fromEndpoint.varName;
+
+        return {
+          ...base,
+          kind: 'variable',
+          message:
+            `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(fromVarName)}` +
+            ` from ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(fromEndpoint))}` +
+            ` to ${scopeFormatter.endpoint(toScopeEndpointDisplayInput(toEndpoint))}.`,
+        };
+      }
 
     case 'createToken':
       return {
@@ -258,6 +266,18 @@ function translateTriggerEntry(
         ...base,
         kind: 'lifecycle',
         message: `${formatIdAsDisplayName(entry.actionId)} executed as free operation.`,
+        depth: 0,
+        zoneIds: [],
+        tokenIds: [],
+      };
+
+    case 'operationCompoundStagesReplaced':
+      return {
+        ...base,
+        kind: 'lifecycle',
+        message:
+          `${formatIdAsDisplayName(entry.actionId)} replaced remaining stages in ${formatIdAsDisplayName(entry.profileId)} ` +
+          `after stage ${entry.insertAfterStage} (${entry.skippedStageCount}/${entry.totalStages} stage(s) skipped).`,
         depth: 0,
         zoneIds: [],
         tokenIds: [],
@@ -503,32 +523,36 @@ function createScopeFormatter(visualConfig: VisualConfigProvider, lookup: Player
         resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
       }),
-    endpoint: ({ scope, playerId, zoneId }) =>
+    endpoint: (input) =>
       formatScopeEndpointDisplay({
-        scope,
-        playerId,
-        zoneId,
+        ...input,
         resolvePlayerName: (resolvedPlayerId) => resolvePlayerName(resolvedPlayerId, visualConfig, lookup),
         resolveZoneName: (resolvedZoneId) => resolveZoneName(resolvedZoneId, visualConfig),
       }),
   };
 }
 
-function toScopeEndpointDisplayInput(endpoint: EffectTraceResourceEndpoint): ScopeEndpointDisplayInput {
+function toScopeEndpointDisplayInput(endpoint: NormalizedTransferEndpoint): ScopeEndpointDisplayInput {
   switch (endpoint.scope) {
     case 'global':
-      return { scope: 'global', playerId: undefined, zoneId: undefined };
+      return {
+        scope: 'global',
+        playerId: undefined,
+        zoneId: undefined,
+      };
     case 'perPlayer':
-      return { scope: 'perPlayer', playerId: endpoint.player, zoneId: undefined };
+      return {
+        scope: 'perPlayer',
+        playerId: endpoint.playerId,
+        zoneId: undefined,
+      };
     case 'zone':
-      return { scope: 'zone', playerId: undefined, zoneId: endpoint.zone };
-    default:
-      return invalidEndpointScope((endpoint as { readonly scope?: unknown }).scope);
+      return {
+        scope: 'zone',
+        playerId: undefined,
+        zoneId: endpoint.zoneId,
+      };
   }
-}
-
-function invalidEndpointScope(scope: unknown): never {
-  throw new Error(`Invalid endpoint scope for event-log rendering: ${String(scope)}`);
 }
 
 function formatValue(value: unknown): string {

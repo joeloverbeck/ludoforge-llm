@@ -212,6 +212,14 @@ const validRuntimeTrace: GameTrace = {
           step: 'costSpendSkipped',
         },
         {
+          kind: 'operationCompoundStagesReplaced',
+          actionId: asActionId('playCard'),
+          profileId: 'play-card-profile',
+          insertAfterStage: 1,
+          totalStages: 3,
+          skippedStageCount: 1,
+        },
+        {
           kind: 'turnFlowDeferredEventLifecycle',
           stage: 'queued',
           deferredId: 'deferred:1:0:playCard',

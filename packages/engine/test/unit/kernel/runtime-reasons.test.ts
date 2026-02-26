@@ -52,6 +52,7 @@ describe('runtime reason taxonomy', () => {
       ACTION_NOT_LEGAL_IN_CURRENT_STATE: 'actionNotLegalInCurrentState',
       ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED: 'actionPipelineLegalityPredicateFailed',
       ACTION_PIPELINE_COST_VALIDATION_FAILED: 'actionPipelineCostValidationFailed',
+      COMPOUND_TIMING_CONFIGURATION_INVALID: 'compoundTimingConfigurationInvalid',
       SIMULTANEOUS_SUBMISSION_COMPOUND_UNSUPPORTED: 'simultaneousSubmissionCompoundUnsupported',
       SIMULTANEOUS_RUNTIME_STATE_REQUIRED: 'simultaneousRuntimeStateRequired',
     });
@@ -73,6 +74,7 @@ describe('runtime reason taxonomy', () => {
       'actionNotLegalInCurrentState',
       'actionPipelineLegalityPredicateFailed',
       'actionPipelineCostValidationFailed',
+      'compoundTimingConfigurationInvalid',
       'simultaneousSubmissionCompoundUnsupported',
       'simultaneousRuntimeStateRequired',
       'invalidSelectorSpec',

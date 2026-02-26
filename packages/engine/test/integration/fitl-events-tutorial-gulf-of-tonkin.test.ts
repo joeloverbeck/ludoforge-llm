@@ -6,6 +6,7 @@ import {
   asPlayerId,
   asTokenId,
   createRng,
+  ILLEGAL_MOVE_REASONS,
   initialState,
   legalChoicesEvaluate,
   legalMoves,
@@ -136,6 +137,105 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
         to: 'out-of-play-US:none',
       },
     });
+  });
+
+  it('routes Gulf of Tonkin free Air Strike through seat grant consumption and executeAs delegation at runtime', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined);
+
+    const baseState = initialState(def, 4501, 4).state;
+    assert.equal(baseState.turnOrderState.type, 'cardDriven');
+    if (baseState.turnOrderState.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order state');
+    }
+    const setup: GameState = {
+      ...baseState,
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...baseState.turnOrderState.runtime,
+          currentCard: {
+            ...baseState.turnOrderState.runtime.currentCard,
+            firstEligible: '0',
+            secondEligible: '2',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...baseState.zones,
+        [eventDeck!.discardZone]: [makeToken('card-1', 'card', 'none')],
+      },
+    };
+
+    const unshadedEvent = legalMoves(def, setup).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(unshadedEvent, undefined, 'Expected unshaded Gulf of Tonkin event move');
+
+    const afterEvent = applyMove(def, setup, completeForApply(def, setup, unshadedEvent!, 4501n)).state;
+    assert.equal(afterEvent.turnOrderState.type, 'cardDriven');
+    if (afterEvent.turnOrderState.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order state');
+    }
+    const pending = afterEvent.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0]?.seat, '2');
+    assert.equal(pending[0]?.executeAsSeat, '0');
+
+    const grantReadyState: GameState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(2),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...afterEvent.turnOrderState.runtime,
+          currentCard: {
+            ...afterEvent.turnOrderState.runtime.currentCard,
+            firstEligible: '2',
+            secondEligible: null,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const freeAirStrikeMove = legalMoves(def, grantReadyState).find(
+      (move) => String(move.actionId) === 'airStrike' && move.freeOperation === true,
+    );
+    assert.notEqual(freeAirStrikeMove, undefined, 'Expected free Air Strike move from pending grant');
+
+    const afterFreeAirStrike = applyMove(
+      def,
+      grantReadyState,
+      completeForApply(def, grantReadyState, freeAirStrikeMove!, 4502n),
+    ).state;
+    assert.equal(afterFreeAirStrike.turnOrderState.type, 'cardDriven');
+    if (afterFreeAirStrike.turnOrderState.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order state');
+    }
+    assert.deepEqual(afterFreeAirStrike.turnOrderState.runtime.pendingFreeOperationGrants ?? [], []);
+
+    assert.throws(
+      () =>
+        applyMove(def, afterFreeAirStrike, {
+          actionId: freeAirStrikeMove!.actionId,
+          params: freeAirStrikeMove!.params,
+          freeOperation: true,
+        }),
+      (error: unknown) =>
+        error instanceof Error &&
+        'reason' in error &&
+        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED,
+    );
   });
 
   it('moves mixed piece types (troops, bases, irregulars) from out-of-play', () => {

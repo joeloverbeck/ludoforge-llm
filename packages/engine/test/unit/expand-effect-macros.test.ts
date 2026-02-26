@@ -9,6 +9,24 @@ function makeDoc(overrides: Partial<GameSpecDoc>): GameSpecDoc {
   return { ...createEmptyGameSpecDoc(), ...overrides };
 }
 
+function expandSingleChooseOneBind(macroId: string, bindName: string): string {
+  const macroDef: EffectMacroDef = {
+    id: macroId,
+    params: [],
+    exports: [],
+    effects: [{ chooseOne: { bind: bindName, options: { query: 'enums', values: ['a', 'b'] } } }],
+  };
+  const doc = makeDoc({
+    effectMacros: [macroDef],
+    setup: [{ macro: macroDef.id, args: {} }],
+  });
+
+  const result = expandEffectMacros(doc);
+  assert.deepEqual(result.diagnostics, []);
+  const chooseOne = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+  return chooseOne.chooseOne.bind;
+}
+
 describe('expandEffectMacros', () => {
   it('returns doc unchanged when effectMacros is null', () => {
     const doc = makeDoc({ setup: [{ setVar: { scope: 'global', var: 'x', value: 1 } }] });
@@ -1167,6 +1185,37 @@ phase: ['main'],
     assert.notEqual(forEach.forEach.bind, '$space');
     assert.equal(forEach.forEach.effects[0].chooseN.options.filter.left, forEach.forEach.bind);
     assert.equal(forEach.forEach.effects[0].chooseN.options.filter.right, '$zone');
+  });
+
+  it('preserves simple {$var} template segments in hygienic binder stems', () => {
+    const bind = expandSingleChooseOneBind('simple-template-stem', '$hopLocs_{$zone}');
+    assert.equal(bind.endsWith('_hopLocs_{$zone}'), true);
+  });
+
+  it('preserves adjacent template segments in hygienic binder stems', () => {
+    const bind = expandSingleChooseOneBind('adjacent-template-stem', '$foo{$a}{$b}');
+    assert.equal(bind.endsWith('_foo{$a}{$b}'), true);
+  });
+
+  it('sanitizes special characters in stems with no templates', () => {
+    const bind = expandSingleChooseOneBind('specials-no-template', '$hop-locs@zone:foo');
+    assert.equal(bind.endsWith('_hop_locs_zone_foo'), true);
+  });
+
+  it('preserves templates while sanitizing surrounding special characters', () => {
+    const bind = expandSingleChooseOneBind('specials-with-template', '$hop-locs@{$zone}:suffix');
+    assert.equal(bind.endsWith('_hop_locs_{$zone}_suffix'), true);
+  });
+
+  it('sanitizes nested brace stems into safe binding namespace characters', () => {
+    const bind = expandSingleChooseOneBind('nested-brace-stem', '$foo{bar{baz}}');
+    assert.equal(bind.endsWith('_foo_bar{baz}_'), true);
+  });
+
+  it('handles empty stems without dropping hygienic binder prefix', () => {
+    const bind = expandSingleChooseOneBind('empty-stem', '$');
+    assert.equal(bind.startsWith('$__macro_empty_stem_'), true);
+    assert.equal(bind.endsWith('_'), true);
   });
 
   it('does not rewrite generic left/right string literals outside structured zone selectors', () => {

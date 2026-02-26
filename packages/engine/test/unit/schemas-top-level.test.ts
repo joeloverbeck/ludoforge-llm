@@ -716,6 +716,14 @@ describe('top-level runtime schemas', () => {
         step: 'costSpendSkipped',
       },
       {
+        kind: 'operationCompoundStagesReplaced',
+        actionId: 'train',
+        profileId: 'train-profile',
+        insertAfterStage: 1,
+        totalStages: 3,
+        skippedStageCount: 1,
+      },
+      {
         kind: 'turnFlowDeferredEventLifecycle',
         stage: 'executed',
         deferredId: 'deferred:1:0:event',

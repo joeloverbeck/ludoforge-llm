@@ -1,5 +1,5 @@
 import type { EffectTraceEntry, TriggerEvent } from '@ludoforge/engine/runtime';
-import { optionalPlayerId } from './model-utils.js';
+import { normalizeTransferEndpoint, optionalPlayerId } from './model-utils.js';
 
 export interface EffectTraceProjection {
   readonly kind: EffectTraceEntry['kind'];
@@ -34,11 +34,13 @@ export function projectEffectTraceEntry(entry: EffectTraceEntry): EffectTracePro
       };
 
     case 'resourceTransfer': {
-      const fromPlayer = entry.from.scope === 'perPlayer' ? toNumberOrUndefined(entry.from.player) : undefined;
-      const toPlayer = entry.to.scope === 'perPlayer' ? toNumberOrUndefined(entry.to.player) : undefined;
+      const fromEndpoint = normalizeTransferEndpoint(entry.from, 'from');
+      const toEndpoint = normalizeTransferEndpoint(entry.to, 'to');
+      const fromPlayer = fromEndpoint.scope === 'perPlayer' ? fromEndpoint.playerId : undefined;
+      const toPlayer = toEndpoint.scope === 'perPlayer' ? toEndpoint.playerId : undefined;
       const zoneIds = [
-        ...(entry.from.scope === 'zone' && entry.from.zone !== undefined ? [entry.from.zone] : []),
-        ...(entry.to.scope === 'zone' && entry.to.zone !== undefined ? [entry.to.zone] : []),
+        ...(fromEndpoint.scope === 'zone' ? [fromEndpoint.zoneId] : []),
+        ...(toEndpoint.scope === 'zone' ? [toEndpoint.zoneId] : []),
       ];
       return {
         kind: entry.kind,

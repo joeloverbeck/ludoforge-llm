@@ -166,6 +166,14 @@ const TRIGGER_LOG_ENTRIES: readonly TriggerLogEntry[] = [
     actionId: asActionId('tick'),
     step: 'costSpendSkipped',
   },
+  {
+    kind: 'operationCompoundStagesReplaced',
+    actionId: asActionId('tick'),
+    profileId: 'profile-1',
+    insertAfterStage: 1,
+    totalStages: 3,
+    skippedStageCount: 1,
+  },
 ];
 
 const RUNTIME_WARNINGS: readonly RuntimeWarning[] = [

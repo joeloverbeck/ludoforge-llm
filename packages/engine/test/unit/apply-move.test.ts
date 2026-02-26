@@ -169,11 +169,20 @@ const createEventDynamicDecisionState = (): GameState => ({
   actionUsage: {},
 });
 
-const createDeferredDecisionEventDef = (withFreeGrant: boolean): GameDef =>
+const createDeferredDecisionEventDef = (
+  withFreeGrant: boolean,
+  options?: {
+    readonly operationRequiresDynamicDecision?: boolean;
+    readonly includePlayCondition?: boolean;
+  },
+): GameDef =>
   ({
     metadata: { id: withFreeGrant ? 'deferred-decision-with-grant' : 'deferred-decision-no-grant', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
-    globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+    globalVars: [
+      { name: 'resolved', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'canPlay', type: 'int', init: 1, min: 0, max: 1 },
+    ],
     perPlayerVars: [],
     zones: [
       { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
@@ -218,7 +227,18 @@ const createDeferredDecisionEventDef = (withFreeGrant: boolean): GameDef =>
         params: [],
         pre: null,
         cost: [],
-        effects: [],
+        effects: options?.operationRequiresDynamicDecision === true
+          ? [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$opDelta',
+                bind: '$opDelta',
+                options: { query: 'enums', values: [1, 2] },
+              },
+            },
+            { addVar: { scope: 'global', var: 'resolved', delta: { ref: 'binding', name: '$opDelta' } } },
+          ]
+          : [],
         limits: [],
       },
     ],
@@ -234,6 +254,15 @@ const createDeferredDecisionEventDef = (withFreeGrant: boolean): GameDef =>
             id: 'card-deferred',
             title: 'Deferred Card',
             sideMode: 'single',
+            ...(options?.includePlayCondition === true
+              ? {
+                playCondition: {
+                  op: '>=',
+                  left: { ref: 'gvar', var: 'canPlay' },
+                  right: 1,
+                },
+              }
+              : {}),
             unshaded: {
               effectTiming: 'afterGrants',
               ...(withFreeGrant
@@ -2238,6 +2267,40 @@ phase: [asPhaseId('main')],
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
         assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        return true;
+      },
+    );
+  });
+
+  it('keeps incomplete deferred event-side params illegal when playCondition is false', () => {
+    const def = createDeferredDecisionEventDef(true, { includePlayCondition: true });
+    const baseState = createDeferredDecisionEventState(def);
+    const state = { ...baseState, globalVars: { ...baseState.globalVars, canPlay: 0 } };
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
+        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        return true;
+      },
+    );
+  });
+
+  it('keeps incomplete non-event params illegal when deferred grants are pending', () => {
+    const def = createDeferredDecisionEventDef(true, { operationRequiresDynamicDecision: true });
+    const state = createDeferredDecisionEventState(def);
+    const afterEvent = applyMove(def, state, { actionId: asActionId('event'), params: {} }).state;
+
+    assert.throws(
+      () => applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {} }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
+        assert.equal(details.metadata?.nextDecisionId, 'decision:$opDelta');
         return true;
       },
     );

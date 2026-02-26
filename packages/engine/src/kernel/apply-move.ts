@@ -5,9 +5,7 @@ import { isEffectErrorCode } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import {
   executeEventMove,
-  resolveEventEffectList,
-  resolveEventEffectTimingForMove,
-  resolveEventFreeOperationGrants,
+  shouldDeferIncompleteDecisionValidationForMove,
 } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
@@ -161,6 +159,59 @@ const operationAllowsSpecialActivity = (
   return accompanyingOps.includes(String(operationActionId));
 };
 
+const validateCompoundTimingConfiguration = (
+  move: Move,
+  executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
+  actionPipeline: ActionPipelineDef | undefined,
+): void => {
+  if (move.compound === undefined) {
+    return;
+  }
+  const { timing, insertAfterStage, replaceRemainingStages } = move.compound;
+  if (timing !== 'during' && insertAfterStage !== undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      invalidField: 'insertAfterStage',
+      detail: 'insertAfterStage requires timing=during',
+    });
+  }
+  if (timing !== 'during' && replaceRemainingStages !== undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      invalidField: 'replaceRemainingStages',
+      detail: 'replaceRemainingStages requires timing=during',
+    });
+  }
+  if (timing === 'during' && executionProfile === undefined) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      detail: 'timing=during requires a matched staged action pipeline',
+    });
+  }
+  if (timing === 'during' && actionPipeline !== undefined && actionPipeline.stages.length === 0) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+      timing,
+      invalidField: 'insertAfterStage',
+      insertAfterStage: insertAfterStage ?? 0,
+      stageCount: 0,
+      detail: 'timing=during requires an action pipeline with at least one declared stage',
+    });
+  }
+  if (timing === 'during' && executionProfile !== undefined) {
+    const stageCount = executionProfile.resolutionStages.length;
+    const resolvedInsertAfterStage = insertAfterStage ?? 0;
+    if (resolvedInsertAfterStage >= stageCount) {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+        timing,
+        invalidField: 'insertAfterStage',
+        insertAfterStage: resolvedInsertAfterStage,
+        stageCount,
+        detail: 'insertAfterStage must reference an existing stage index',
+      });
+    }
+  }
+};
+
 const toParamValueSet = (
   value: MoveParamValue | undefined,
 ): ReadonlySet<MoveParamScalar> => {
@@ -263,25 +314,6 @@ const validateDecisionSequenceForMove = (
   }
 };
 
-const shouldDeferIncompleteDecisionValidation = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): boolean => {
-  if (state.turnOrderState.type !== 'cardDriven') {
-    return false;
-  }
-  const timing = resolveEventEffectTimingForMove(def, state, move);
-  if (timing !== 'afterGrants') {
-    return false;
-  }
-  const effects = resolveEventEffectList(def, state, move);
-  if (effects.length === 0) {
-    return false;
-  }
-  return resolveEventFreeOperationGrants(def, state, move).length > 0;
-};
-
 const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
   for (const param of action.params) {
     if (!isDeclaredActionParamValueInDomain(param, move.params[param.name], evalCtx)) {
@@ -322,7 +354,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
   if (action === undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
-  const allowIncomplete = shouldDeferIncompleteDecisionValidation(def, state, move);
+  const allowIncomplete = shouldDeferIncompleteDecisionValidationForMove(def, state, move);
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
@@ -385,6 +417,13 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
   if (preflight.kind === 'notApplicable') {
     throw illegalMoveError(move, toApplyMoveIllegalReason(preflight.reason));
   }
+  const matchedExecutionProfile = preflight.pipelineDispatch.kind === 'matched'
+    ? toExecutionPipeline(action, preflight.pipelineDispatch.profile)
+    : undefined;
+  const matchedActionPipeline = preflight.pipelineDispatch.kind === 'matched'
+    ? preflight.pipelineDispatch.profile
+    : undefined;
+  validateCompoundTimingConfiguration(move, matchedExecutionProfile, matchedActionPipeline);
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
@@ -550,6 +589,7 @@ const executeMoveAction = (
   }
   const actionPipeline = pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined;
   const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
+  validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
   const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
   const runtimeMoveParams = {
     ...move.params,
@@ -639,7 +679,7 @@ const executeMoveAction = (
     executionTraceEntries.push({
       kind: 'operationPartial',
       actionId: action.id,
-      profileId: actionPipeline?.id ?? 'unknown',
+      profileId: executionProfile.profileId,
       step: 'costSpendSkipped',
       reason: 'costValidationFailed',
     });
@@ -704,6 +744,14 @@ const executeMoveAction = (
       if (stageIdx === insertAfter) {
         applyCompoundSA();
         if (move.compound?.replaceRemainingStages === true) {
+          executionTraceEntries.push({
+            kind: 'operationCompoundStagesReplaced',
+            actionId: action.id,
+            profileId: executionProfile.profileId,
+            insertAfterStage: insertAfter,
+            totalStages: executionProfile.resolutionStages.length,
+            skippedStageCount: executionProfile.resolutionStages.length - insertAfter - 1,
+          });
           break;
         }
       }

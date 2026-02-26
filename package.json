@@ -9,6 +9,7 @@
   "scripts": {
     "build": "turbo build",
     "clean": "turbo clean",
+    "guard:worktree-pointers": "node scripts/check-worktree-pointers.mjs",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",

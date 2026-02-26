@@ -8,6 +8,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { projectEffectTraceEntry } from '../../src/model/trace-projection.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
 
 describe('translateEffectTrace', () => {
@@ -166,6 +167,14 @@ describe('translateEffectTrace', () => {
         actionId: 'sweep' as never,
         step: 'costSpendSkipped',
       },
+      {
+        kind: 'operationCompoundStagesReplaced',
+        actionId: 'assault' as never,
+        profileId: 'assault-profile',
+        insertAfterStage: 1,
+        totalStages: 3,
+        skippedStageCount: 1,
+      },
     ];
 
     const entries = translateEffectTrace(effectTrace, triggerLog, visualConfig, gameDefFixture(), 7);
@@ -189,6 +198,7 @@ describe('translateEffectTrace', () => {
       'move-7-trigger-5',
       'move-7-trigger-6',
       'move-7-trigger-7',
+      'move-7-trigger-8',
     ]);
 
     const movement = entries[0];
@@ -249,6 +259,10 @@ describe('translateEffectTrace', () => {
     expect(entries[14]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[15]).toMatchObject({ kind: 'lifecycle', depth: 0 });
     expect(entries[16]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[17]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[17]?.message).toContain('Assault');
+    expect(entries[17]?.message).toContain('Assault Profile');
+    expect(entries[17]?.message).toContain('1/3');
 
     const uniqueIds = new Set(entries.map((entry) => entry.id));
     expect(uniqueIds.size).toBe(entries.length);
@@ -709,7 +723,7 @@ describe('translateEffectTrace', () => {
 
     expect(() =>
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
-    ).toThrow('Invalid endpoint scope for event-log rendering');
+    ).toThrow('Invalid transfer endpoint scope');
   });
 
   it('throws on missing per-player resource-transfer endpoint identity', () => {
@@ -746,6 +760,195 @@ describe('translateEffectTrace', () => {
     expect(() =>
       translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
     ).toThrow('Missing endpoint identity for zone scope: zoneId');
+  });
+
+  it('throws on missing destination per-player resource-transfer endpoint identity', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'global', varName: 'pool' },
+      to: { scope: 'perPlayer', varName: 'pool', player: undefined as unknown as ReturnType<typeof asPlayerId> },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Missing endpoint identity for perPlayer scope: playerId');
+  });
+
+  it('throws on missing destination zone resource-transfer endpoint identity', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'global', varName: 'pool' },
+      to: { scope: 'zone', varName: 'pool', zone: undefined as unknown as string },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Missing endpoint identity for zone scope: zoneId');
+  });
+
+  it('throws on invalid destination resource-transfer endpoint scope instead of coercing to Global', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'global', varName: 'pool' },
+      to: { scope: undefined as unknown as 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Invalid transfer endpoint scope');
+  });
+
+  it('throws deterministic error when resource-transfer from endpoint is missing', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry = {
+      kind: 'resourceTransfer',
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    } as unknown as EffectTraceEntry;
+
+    expect(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    ).toThrow('Invalid transfer endpoint payload: from must be an object');
+  });
+
+  it('throws deterministic error when resource-transfer to endpoint is non-object', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntries: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: null as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      } as unknown as EffectTraceEntry,
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: 'global' as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      } as unknown as EffectTraceEntry,
+    ];
+
+    for (const invalidTraceEntry of invalidTraceEntries) {
+      expect(() =>
+        translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+      ).toThrow('Invalid transfer endpoint payload: to must be an object');
+    }
+  });
+
+  it('throws deterministic error when resource-transfer from.varName is missing or non-string', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntries: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global' } as unknown as { scope: 'global'; varName: string },
+        to: { scope: 'global', varName: 'pool' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 42 } as unknown as { scope: 'global'; varName: string },
+        to: { scope: 'global', varName: 'pool' },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+    ];
+
+    for (const invalidTraceEntry of invalidTraceEntries) {
+      expect(() =>
+        translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+      ).toThrow('Invalid transfer endpoint payload: from.varName must be a string');
+    }
+  });
+
+  it('throws deterministic error when resource-transfer to.varName is missing or non-string', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntries: readonly EffectTraceEntry[] = [
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: { scope: 'global' } as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+      {
+        kind: 'resourceTransfer',
+        from: { scope: 'global', varName: 'pool' },
+        to: { scope: 'global', varName: 42 } as unknown as { scope: 'global'; varName: string },
+        requestedAmount: 1,
+        actualAmount: 1,
+        sourceAvailable: 1,
+        destinationHeadroom: 1,
+        provenance: provenance(),
+      },
+    ];
+
+    for (const invalidTraceEntry of invalidTraceEntries) {
+      expect(() =>
+        translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+      ).toThrow('Invalid transfer endpoint payload: to.varName must be a string');
+    }
+  });
+
+  it('matches trace projection error semantics for malformed resource-transfer endpoints', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const invalidTraceEntry: EffectTraceEntry = {
+      kind: 'resourceTransfer',
+      from: { scope: 'perPlayer', varName: 'pool', player: undefined as unknown as ReturnType<typeof asPlayerId> },
+      to: { scope: 'global', varName: 'pool' },
+      requestedAmount: 1,
+      actualAmount: 1,
+      sourceAvailable: 1,
+      destinationHeadroom: 1,
+      provenance: provenance(),
+    };
+
+    const translateError = catchError(() =>
+      translateEffectTrace([invalidTraceEntry], [], visualConfig, gameDefNoFactionsFixture(), 1),
+    );
+    const projectionError = catchError(() => projectEffectTraceEntry(invalidTraceEntry));
+
+    expect(translateError).toBe('Missing endpoint identity for perPlayer scope: playerId');
+    expect(projectionError).toBe(translateError);
   });
 });
 
@@ -793,4 +996,13 @@ function gameDefNoFactionsFixture(): GameDef {
     triggers: [],
     terminal: { conditions: [] },
   } as GameDef;
+}
+
+function catchError(fn: () => unknown): string {
+  try {
+    fn();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error('Expected function to throw');
 }

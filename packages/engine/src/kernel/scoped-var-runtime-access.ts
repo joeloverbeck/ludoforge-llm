@@ -4,6 +4,7 @@ import {
   resolveZoneWithNormalization,
   selectorResolutionFailurePolicyForMode,
 } from './selector-resolution-normalization.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
@@ -93,7 +94,13 @@ export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: numb
 export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: VariableValue): ScopedVarWrite {
   if (endpoint.scope === 'zone') {
     if (typeof value !== 'number') {
-      throw new TypeError(`Zone scoped variable writes require numeric values: ${endpoint.var}`);
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, `Zone scoped variable writes require numeric values: ${endpoint.var}`, {
+        effectType: 'scopedVarWrite',
+        scope: 'zoneVar',
+        var: endpoint.var,
+        actualType: typeof value,
+        value,
+      });
     }
 
     return { endpoint, value };

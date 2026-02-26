@@ -16,6 +16,7 @@ import {
   type ScopedVarMalformedResolvableEndpoint,
   type ScopedVarResolvableEndpoint,
   type ScopedVarWrite,
+  toScopedVarWrite,
   resolveScopedIntVarDef,
   resolveScopedVarDef,
   writeScopedVarToBranches,
@@ -348,6 +349,20 @@ describe('scoped-var-runtime-access', () => {
     assert.notEqual(zoneWrite.zoneVars, baseBranches.zoneVars);
     assert.equal(zoneWrite.globalVars, baseBranches.globalVars);
     assert.equal(zoneWrite.perPlayerVars, baseBranches.perPlayerVars);
+  });
+
+  it('throws canonical runtime diagnostics for malformed zone write construction', () => {
+    assert.throws(
+      () =>
+        toScopedVarWrite(
+          { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+          false as unknown as number,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Zone scoped variable writes require numeric values: supply') &&
+        String(error).includes('"reason":"internalInvariantViolation"'),
+    );
   });
 
   it('writes one-item batched scoped values to full state while preserving non-var branches', () => {

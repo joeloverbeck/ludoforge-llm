@@ -23,6 +23,7 @@ describe('runtime reason taxonomy', () => {
   it('publishes stable canonical effect runtime reasons', () => {
     assert.deepEqual(EFFECT_RUNTIME_REASONS, {
       EFFECT_BUDGET_CONFIG_INVALID: 'effectBudgetConfigInvalid',
+      INTERNAL_INVARIANT_VIOLATION: 'internalInvariantViolation',
       SUBSET_RUNTIME_VALIDATION_FAILED: 'subsetRuntimeValidationFailed',
       CHOICE_RUNTIME_VALIDATION_FAILED: 'choiceRuntimeValidationFailed',
       CONTROL_FLOW_RUNTIME_VALIDATION_FAILED: 'controlFlowRuntimeValidationFailed',
@@ -78,6 +79,7 @@ describe('runtime reason taxonomy', () => {
       'applicabilityEvaluationFailed',
       'pipelinePredicateEvaluationFailed',
       'effectBudgetConfigInvalid',
+      'internalInvariantViolation',
       'subsetRuntimeValidationFailed',
       'choiceRuntimeValidationFailed',
       'controlFlowRuntimeValidationFailed',

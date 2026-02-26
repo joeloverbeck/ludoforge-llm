@@ -17,6 +17,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-reveal-test', players: { min: 2, max: 2 } },
@@ -233,10 +234,7 @@ describe('effects reveal', () => {
           { reveal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } },
           ctx,
         ),
-      (error: unknown) =>
-        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
-        String(error).includes('reveal.zone resolution failed') &&
-        String(error).includes('sourceErrorCode'),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.zone resolution failed'),
     );
   });
 
@@ -245,10 +243,7 @@ describe('effects reveal', () => {
 
     assert.throws(
       () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
-      (error: unknown) =>
-        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
-        String(error).includes('reveal.to selector resolution failed') &&
-        String(error).includes('sourceErrorCode'),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.to selector resolution failed'),
     );
   });
 });
@@ -569,6 +564,35 @@ describe('effects conceal', () => {
         assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED);
         return String(error).includes('Zone state not found');
       },
+    );
+  });
+
+  it('normalizes unresolved conceal.zone bindings to effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { conceal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } },
+          ctx,
+        ),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.zone resolution failed'),
+    );
+  });
+
+  it('normalizes unresolved conceal.from selectors to effect runtime errors', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: [asPlayerId(0)] }],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.from selector resolution failed'),
     );
   });
 

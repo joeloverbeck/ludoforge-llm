@@ -125,7 +125,7 @@ function mapEntry(
         varName: entry.varName,
         oldValue: entry.oldValue,
         newValue: entry.newValue,
-        ...(entry.player === undefined ? {} : { player: entry.player }),
+        ...(entry.scope === 'perPlayer' ? { player: entry.player } : {}),
         preset: resolvePreset(entry.kind, 'varChange', options, presetRegistry),
         isTriggered: triggered,
       };

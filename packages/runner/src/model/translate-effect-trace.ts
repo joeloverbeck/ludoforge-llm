@@ -99,12 +99,12 @@ function translateEffectEntry(
           `Transferred ${entry.actualAmount} ${formatIdAsDisplayName(entry.from.varName)}` +
           ` from ${scopeFormatter.endpoint({
             scope: entry.from.scope,
-            playerId: entry.from.player,
-            zoneId: entry.from.zone,
+            playerId: entry.from.scope === 'perPlayer' ? entry.from.player : undefined,
+            zoneId: entry.from.scope === 'zone' ? entry.from.zone : undefined,
           })} to ${scopeFormatter.endpoint({
             scope: entry.to.scope,
-            playerId: entry.to.player,
-            zoneId: entry.to.zone,
+            playerId: entry.to.scope === 'perPlayer' ? entry.to.player : undefined,
+            zoneId: entry.to.scope === 'zone' ? entry.to.zone : undefined,
           })}.`,
       };
 

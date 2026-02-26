@@ -1,5 +1,6 @@
 import type { PlayerId } from './branded.js';
 import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
+import type { InterpreterMode } from './interpreter-mode.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type {
@@ -15,7 +16,6 @@ import type {
 } from './types.js';
 
 export const DEFAULT_MAX_EFFECT_OPS = 10_000;
-export type EffectInterpreterMode = 'execution' | 'discovery';
 
 export interface PhaseTransitionBudget {
   remaining: number;
@@ -44,7 +44,7 @@ export interface EffectContext {
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
-  readonly mode?: EffectInterpreterMode;
+  readonly mode?: InterpreterMode;
   readonly collector: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
 }

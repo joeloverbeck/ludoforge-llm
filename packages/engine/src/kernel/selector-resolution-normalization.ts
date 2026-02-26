@@ -4,7 +4,7 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EvalContext } from './eval-context.js';
-import type { EffectInterpreterMode } from './effect-context.js';
+import type { InterpreterMode } from './interpreter-mode.js';
 import type { PlayerId, ZoneId } from './branded.js';
 import type { PlayerSel, ZoneRef } from './types.js';
 
@@ -24,7 +24,7 @@ export type NormalizedResolverScope =
 export type SelectorResolutionFailurePolicy = 'normalize' | 'passthrough';
 
 export const selectorResolutionFailurePolicyForMode = (
-  mode: EffectInterpreterMode | undefined,
+  mode: InterpreterMode | undefined,
 ): SelectorResolutionFailurePolicy => (mode === 'discovery' ? 'passthrough' : 'normalize');
 
 export const normalizeSelectorResolutionError = (

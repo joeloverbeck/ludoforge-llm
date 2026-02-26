@@ -18,6 +18,17 @@ const selectorFreeModules = [
 ] as const;
 
 const prohibitedDirectResolvers = ['resolveZoneRef', 'resolvePlayerSel'] as const;
+const resolverHelpers = [
+  'resolveZoneWithNormalization',
+  'resolvePlayersWithNormalization',
+  'resolveSinglePlayerWithNormalization',
+] as const;
+const canonicalPolicyDerivation = 'selectorResolutionFailurePolicyForMode(evalCtx.mode)';
+const canonicalPolicyConst = 'const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);';
+const helperModulesRequiringCanonicalPolicyDerivation = [
+  ...Object.keys(selectorNormalizedModules),
+  'scoped-var-runtime-access.ts',
+] as const;
 
 describe('effect resolver normalization architecture guard', () => {
   it('keeps effect handler resolver usage aligned with normalization policy', () => {
@@ -57,6 +68,32 @@ describe('effect resolver normalization architecture guard', () => {
         source,
         /\bresolve(?:Zone|Players|SinglePlayer)WithNormalization\b/u,
         `${moduleName} is expected to be selector-free and not depend on selector normalization helpers`,
+      );
+    }
+  });
+
+  it('enforces canonical onResolutionFailure derivation for normalized resolver helper calls', () => {
+    for (const moduleName of helperModulesRequiringCanonicalPolicyDerivation) {
+      const source = readKernelSource(`src/kernel/${moduleName}`);
+      const usesResolverHelpers = resolverHelpers.some((helperName) => source.includes(helperName));
+      if (!usesResolverHelpers) {
+        continue;
+      }
+
+      assert.equal(
+        source.includes(canonicalPolicyConst),
+        true,
+        `${moduleName} must derive onResolutionFailure from ${canonicalPolicyDerivation}`,
+      );
+      assert.doesNotMatch(
+        source,
+        /onResolutionFailure:\s*['"](normalize|passthrough)['"]/u,
+        `${moduleName} must not use ad-hoc onResolutionFailure literals`,
+      );
+      assert.doesNotMatch(
+        source,
+        /onResolutionFailure:\s*selectorResolutionFailurePolicyForMode\(\s*evalCtx\.mode\s*\)/u,
+        `${moduleName} must reuse the canonical derived onResolutionFailure constant`,
       );
     }
   });

@@ -43,6 +43,7 @@ export * from './eval-error.js';
 export * from './eval-error-classification.js';
 export * from './eval-query.js';
 export * from './eval-value.js';
+export * from './interpreter-mode.js';
 export * from './value-membership.js';
 export * from './token-filter.js';
 export * from './prng.js';

@@ -1,9 +1,9 @@
 # ENGINEARCH-058: Introduce transactional batched scoped-var writer to minimize clone churn for multi-write effects
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
-**Engine Changes**: Yes — kernel scoped-var write internals + transferVar path test hardening
+**Engine Changes**: Yes — kernel scoped-var transactional batched writer internals + scoped-var helper regression tests
 **Deps**: ENGINEARCH-056, ENGINEARCH-057
 
 ## Problem
@@ -14,12 +14,12 @@ Current batched writes iterate through `writeScopedVarToBranches`, cloning branc
 
 1. `writeScopedVarsToBranches` currently performs sequential immutable updates, potentially recloning top-level and touched sub-branches multiple times per batch.
 2. `transferVar` now uses batched writes and is a representative multi-write effect path.
-3. Existing tests validate correctness, but there is no helper-level contract asserting minimal clone behavior per touched branch in a single batch.
-4. **Mismatch + correction**: batched write internals should be transaction-oriented (clone touched branches once) while preserving immutable external behavior.
+3. Existing tests already validate broad identity correctness for single writes and include `transferVar` integration identity checks (for example zoneVar transfer preserving unrelated branches).
+4. **Mismatch + correction**: what is still missing is helper-level regression coverage that a *single multi-write batch* avoids repeated reconstruction of the same touched containers; this should be asserted directly at `writeScopedVarsToBranches`/`writeScopedVarsToState` boundaries.
 
 ## Architecture Check
 
-1. Transactional branch staging is cleaner for long-term extensibility than repeated per-write cloning and reduces risk as multi-write effects grow.
+1. Transactional branch staging is cleaner for long-term extensibility than repeated per-write cloning because each touched container can be copied once per batch and then mutated in staged working copies before final freeze into immutable return objects.
 2. This remains entirely game-agnostic kernel mechanics; no game-specific logic crosses into runtime.
 3. No backwards-compatibility shims/aliases are introduced.
 
@@ -35,14 +35,12 @@ Keep existing public helper semantics (`writeScopedVarsToState`, `writeScopedVar
 
 ### 3. Add identity/clone regression coverage
 
-Add tests that assert untouched branches preserve identity and touched branches change predictably across multi-write batches.
+Add tests that assert untouched branches preserve identity, touched branches change predictably across multi-write batches, and same-branch multi-write batches do not force intermediate container churn behavior.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/scoped-var-runtime-access.ts` (modify)
-- `packages/engine/src/kernel/effects-resource.ts` (modify only if helper signature ripple requires it)
 - `packages/engine/test/unit/scoped-var-runtime-access.test.ts` (modify/add)
-- `packages/engine/test/unit/transfer-var.test.ts` (modify/add if needed for integration identity parity)
 
 ## Out of Scope
 
@@ -68,11 +66,25 @@ Add tests that assert untouched branches preserve identity and touched branches 
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/scoped-var-runtime-access.test.ts` — add transactional identity/clone behavior assertions for multi-write batches.
-2. `packages/engine/test/unit/transfer-var.test.ts` — integration guard that transferVar identity contracts remain stable after transactional writer refactor.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js packages/engine/dist/test/unit/transfer-var.test.js`
+2. `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-02-26
+- Actually changed:
+  - Refactored `writeScopedVarsToBranches` to transactional staged writes so touched scope containers are cloned once per batch and updated through staged mutable copies before returning immutable state branches.
+  - Kept `writeScopedVarToBranches` API contract intact by delegating it through the batched helper.
+  - Added helper-level regression tests for repeated writes within a single batch and nested identity stability on untouched player/zone branches.
+- Deviations from original plan:
+  - Did not modify `effects-resource.ts` or `transfer-var.test.ts` because reassessment showed current `transferVar` integration identity coverage already exists; helper-focused tests were the actual gap.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/scoped-var-runtime-access.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (292/292).
+  - `pnpm -F @ludoforge/engine lint` passed.

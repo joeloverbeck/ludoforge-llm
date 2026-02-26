@@ -393,6 +393,65 @@ describe('scoped-var-runtime-access', () => {
     assert.equal(updated.zones, state.zones);
   });
 
+  it('applies repeated writes to the same touched branches within one batch', () => {
+    const state = makeState();
+    const updated = writeScopedVarsToState(state, [
+      { endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'hp' }, value: 9 },
+      { endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'ready' }, value: true },
+      { endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value: 7 },
+      { endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value: 6 },
+    ]);
+
+    assert.equal(updated.perPlayerVars['0']?.hp, 9);
+    assert.equal(updated.perPlayerVars['0']?.ready, true);
+    assert.equal(updated.zoneVars['zone-a:none']?.supply, 6);
+    assert.notEqual(updated.perPlayerVars['0'], state.perPlayerVars['0']);
+    assert.equal(updated.perPlayerVars['1'], state.perPlayerVars['1']);
+    assert.notEqual(updated.zoneVars['zone-a:none'], state.zoneVars['zone-a:none']);
+    assert.equal(updated.globalVars, state.globalVars);
+  });
+
+  it('keeps untouched nested identities stable in multi-write batched branch updates', () => {
+    const branches = {
+      globalVars: { score: 5, flag: true },
+      perPlayerVars: {
+        '0': { hp: 7, ready: false },
+        '1': { hp: 3, ready: true },
+      },
+      zoneVars: {
+        'zone-a:none': { supply: 9 },
+        'zone-b:none': { supply: 4 },
+      },
+    };
+
+    const updated = writeScopedVarsToState(
+      {
+        ...makeState(),
+        globalVars: branches.globalVars,
+        perPlayerVars: branches.perPlayerVars,
+        zoneVars: branches.zoneVars,
+      },
+      [
+        { endpoint: { scope: 'global', var: 'score' }, value: 8 },
+        { endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'hp' }, value: 10 },
+        { endpoint: { scope: 'pvar', player: asPlayerId(0), var: 'ready' }, value: true },
+        { endpoint: { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' }, value: 3 },
+      ],
+    );
+
+    assert.equal(updated.globalVars.score, 8);
+    assert.equal(updated.perPlayerVars['0']?.hp, 10);
+    assert.equal(updated.perPlayerVars['0']?.ready, true);
+    assert.equal(updated.zoneVars['zone-a:none']?.supply, 3);
+    assert.notEqual(updated.globalVars, branches.globalVars);
+    assert.notEqual(updated.perPlayerVars, branches.perPlayerVars);
+    assert.notEqual(updated.perPlayerVars['0'], branches.perPlayerVars['0']);
+    assert.equal(updated.perPlayerVars['1'], branches.perPlayerVars['1']);
+    assert.notEqual(updated.zoneVars, branches.zoneVars);
+    assert.notEqual(updated.zoneVars['zone-a:none'], branches.zoneVars['zone-a:none']);
+    assert.equal(updated.zoneVars['zone-b:none'], branches.zoneVars['zone-b:none']);
+  });
+
   it('returns the same state reference for empty batched writes', () => {
     const state = makeState();
     const unchanged = writeScopedVarsToState(state, []);

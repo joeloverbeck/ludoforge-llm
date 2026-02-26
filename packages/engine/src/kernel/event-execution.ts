@@ -330,6 +330,7 @@ const applyEffectList = (
     bindings: { ...moveParams },
     moveParams,
     collector: collector ?? createCollector(),
+    mode: 'execution',
     traceContext: {
       eventContext: 'actionEffect',
       actionId,

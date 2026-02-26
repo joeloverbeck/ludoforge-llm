@@ -88,6 +88,7 @@ const makeCtx = (zones: Record<string, readonly Token[]>): EffectContext => ({
   bindings: {},
   moveParams: {},
   collector: createCollector(),
+  mode: 'execution',
 });
 
 /**

@@ -86,6 +86,7 @@ const makeEffectCtx = (): EffectContext => ({
   bindings: {},
   moveParams: {},
   collector: createCollector({ trace: true }),
+  mode: 'execution',
   traceContext: { eventContext: 'actionEffect', actionId: 'contract', effectPathRoot: 'test.effects' },
   effectPath: '',
 });

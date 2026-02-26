@@ -44,7 +44,7 @@ export interface EffectContext {
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
-  readonly mode?: InterpreterMode;
+  readonly mode: InterpreterMode;
   readonly collector: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
 }

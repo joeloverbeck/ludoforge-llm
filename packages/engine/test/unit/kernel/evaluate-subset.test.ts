@@ -83,6 +83,7 @@ const makeCtx = (sourceTokens: readonly Token[], globalVars?: Record<string, num
     bindings: {},
     moveParams: {},
     collector: createCollector(),
+    mode: 'execution',
   };
 };
 

@@ -14,7 +14,6 @@ import type { EffectAST } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
-const resolveInterpreterMode = (ctx: EffectContext): 'execution' | 'discovery' => ctx.mode ?? 'execution';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
   const merged: Record<string, unknown> = {
@@ -75,7 +74,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
     });
   });
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
-    if (resolveInterpreterMode(ctx) === 'discovery') {
+    if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(effect.chooseOne.options);
       return {
         state: ctx.state,
@@ -203,7 +202,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   });
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
-    if (resolveInterpreterMode(ctx) === 'discovery') {
+    if (ctx.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(chooseN.options);
       return {
         state: ctx.state,
@@ -311,7 +310,7 @@ export const applyRollRandom = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  if (resolveInterpreterMode(ctx) === 'discovery') {
+  if (ctx.mode === 'discovery') {
     return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
   }
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };

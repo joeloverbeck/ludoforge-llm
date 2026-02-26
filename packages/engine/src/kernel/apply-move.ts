@@ -534,6 +534,7 @@ const executeMoveAction = (
     bindings: baseBindings,
     moveParams: move.params,
     collector: shared.collector,
+    mode: 'execution' as const,
     traceContext: {
       eventContext: 'actionEffect' as const,
       actionId: String(action.id),
@@ -811,6 +812,7 @@ const applyReleasedDeferredEventEffects = (
       bindings: { ...deferredEventEffect.moveParams },
       moveParams: deferredEventEffect.moveParams,
       collector: shared.collector,
+      mode: 'execution',
       traceContext: {
         eventContext: 'actionEffect',
         actionId: deferredEventEffect.actionId,

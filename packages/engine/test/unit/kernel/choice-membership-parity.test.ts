@@ -98,6 +98,7 @@ const makeEffectContext = (moveParams: Readonly<Record<string, MoveParamValue>>)
     bindings: {},
     moveParams,
     collector: createCollector(),
+    mode: 'execution',
   };
 };
 

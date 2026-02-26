@@ -77,6 +77,7 @@ function makeCtx(args: {
     bindings: args.bindings ?? {},
     moveParams: {},
     collector: createCollector({ trace: true }),
+    mode: 'execution',
     traceContext: { eventContext: 'actionEffect', actionId: 'transfer', effectPathRoot: 'test.effects' },
     effectPath: '',
   };

@@ -166,7 +166,6 @@ describe('selector-resolution-normalization', () => {
   });
 
   it('maps interpreter mode to a canonical selector-resolution failure policy', () => {
-    assert.equal(selectorResolutionFailurePolicyForMode(undefined), 'normalize');
     assert.equal(selectorResolutionFailurePolicyForMode('execution'), 'normalize');
     assert.equal(selectorResolutionFailurePolicyForMode('discovery'), 'passthrough');
   });

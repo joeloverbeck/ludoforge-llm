@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffects,
@@ -66,7 +67,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -76,7 +77,8 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-  ...overrides,
+mode: 'execution',
+...overrides,
 });
 
 describe('effects complex integration chains', () => {

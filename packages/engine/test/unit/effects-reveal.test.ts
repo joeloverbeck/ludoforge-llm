@@ -71,7 +71,8 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => {
     bindings: {},
     moveParams: {},
     collector: createCollector(),
-    ...overrides,
+mode: 'execution',
+...overrides,
   };
 };
 

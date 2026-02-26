@@ -67,6 +67,7 @@ const runEscalate = (
     bindings: {},
     moveParams: {},
     collector: createCollector(),
+    mode: 'execution',
   }).state.globalVars;
 };
 

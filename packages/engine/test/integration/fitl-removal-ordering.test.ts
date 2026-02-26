@@ -294,6 +294,7 @@ describe('FITL removal ordering macros', () => {
         bindings: {},
         moveParams: {},
         collector: createCollector(),
+        mode: 'execution',
       };
 
       const result = applyEffects(aidEffects, ctx);
@@ -347,6 +348,7 @@ describe('FITL removal ordering macros', () => {
         bindings: {},
         moveParams: {},
         collector: createCollector(),
+        mode: 'execution',
       };
 
       const result = applyEffects(aidEffects, ctx);
@@ -469,6 +471,7 @@ describe('FITL removal ordering macros', () => {
         bindings: {},
         moveParams: {},
         collector: createCollector(),
+        mode: 'execution',
       };
 
       const result = applyEffects(effects, ctx);

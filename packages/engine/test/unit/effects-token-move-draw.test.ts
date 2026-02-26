@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffect,
@@ -63,7 +64,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -73,7 +74,8 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-  ...overrides,
+mode: 'execution',
+...overrides,
 });
 
 describe('effects moveToken and draw', () => {
@@ -324,7 +326,7 @@ describe('effects moveToken and draw', () => {
 });
 
 describe('draw trace emission', () => {
-  const makeTraceCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+  const makeTraceCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(),
@@ -337,6 +339,7 @@ describe('draw trace emission', () => {
     traceContext: { eventContext: 'actionEffect', actionId: 'test-draw', effectPathRoot: 'test.effects' },
     effectPath: '',
     ...overrides,
+    mode: overrides?.mode ?? 'execution',
   });
 
   it('draw emits one moveToken trace entry per token drawn', () => {

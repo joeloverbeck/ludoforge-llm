@@ -24,7 +24,7 @@ export type NormalizedResolverScope =
 export type SelectorResolutionFailurePolicy = 'normalize' | 'passthrough';
 
 export const selectorResolutionFailurePolicyForMode = (
-  mode: InterpreterMode | undefined,
+  mode: InterpreterMode,
 ): SelectorResolutionFailurePolicy => (mode === 'discovery' ? 'passthrough' : 'normalize');
 
 export const normalizeSelectorResolutionError = (

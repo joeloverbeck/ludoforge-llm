@@ -49,6 +49,7 @@ export const dispatchLifecycleEvent = (
       bindings: {},
       moveParams: {},
       collector: runtimeCollector,
+      mode: 'execution',
       traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: `${effectPathRoot}.effects` },
       effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),

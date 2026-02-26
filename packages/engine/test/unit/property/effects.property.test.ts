@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { makeEffectContext } from '../../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffect,
@@ -56,7 +57,7 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -66,7 +67,8 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   bindings: {},
   moveParams: {},
   collector: createCollector(),
-  ...overrides,
+mode: 'execution',
+...overrides,
 });
 
 const totalTokens = (state: GameState): number => Object.values(state.zones).reduce((sum, zone) => sum + zone.length, 0);

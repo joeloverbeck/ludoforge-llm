@@ -53,6 +53,7 @@ describe('FITL production stacking constraints', () => {
       bindings: {},
       moveParams: {},
       collector: createCollector(),
+      mode: 'execution',
       adjacencyGraph: buildAdjacencyGraph(def.zones),
     });
 

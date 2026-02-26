@@ -72,6 +72,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
     runtimeTableIndex,
     moveParams: {},
     collector,
+    mode: 'execution',
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
   });

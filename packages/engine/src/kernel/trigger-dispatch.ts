@@ -68,6 +68,7 @@ export const dispatchTriggers = (
       ...evalCtx,
       rng: nextRng,
       moveParams: {},
+      mode: 'execution',
       traceContext: {
         eventContext: 'triggerEffect',
         effectPathRoot: `${effectPathRoot}.trigger:${trigger.id}.effects`,

@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
 import {
   applyEffect,
   asPhaseId,
@@ -182,7 +183,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       markers: {},
     });
 
-    const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+    const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
       def: makeDef(),
       adjacencyGraph: buildAdjacencyGraph([]),
       state: makeState(),
@@ -192,6 +193,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       bindings: {},
       moveParams: {},
       collector: createCollector(),
+      mode: 'execution',
       ...overrides,
     });
 

@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { makeEffectContext } from '../helpers/effect-context-test-helpers.js';
 import {
   applyEffect,
   asActionId,
@@ -64,7 +65,7 @@ describe('effect error context contracts', () => {
     markers: {},
   };
 
-  const makeContext = (overrides?: Partial<EffectContext>): EffectContext => ({
+  const makeContext = (overrides?: Partial<EffectContext>): EffectContext => makeEffectContext({
     def: baseDef,
     adjacencyGraph: buildAdjacencyGraph(baseDef.zones),
     state: baseState,
@@ -74,7 +75,8 @@ describe('effect error context contracts', () => {
     bindings: {},
     moveParams: {},
     collector: createCollector(),
-    ...overrides,
+mode: 'execution',
+...overrides,
   });
 
   it('effectNotImplementedError emits typed EFFECT_NOT_IMPLEMENTED context', () => {

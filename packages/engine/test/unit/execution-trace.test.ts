@@ -66,6 +66,7 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
     bindings: bindings ?? {},
     moveParams: {},
     collector: createCollector(trace !== undefined ? { trace } : undefined),
+    mode: 'execution',
     traceContext: { eventContext: 'actionEffect', actionId: 'test-action', effectPathRoot: 'test.effects' },
     effectPath: '',
   };

@@ -96,6 +96,7 @@ function makeCtx(state: GameState, bindings?: Record<string, unknown>): EffectCo
     bindings: bindings ?? {},
     moveParams: {},
     collector: createCollector(),
+    mode: 'execution',
   };
 }
 

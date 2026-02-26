@@ -109,6 +109,7 @@ function makeCtx(state: GameState): EffectContext {
     bindings: {},
     moveParams: {},
     collector: createCollector(),
+    mode: 'execution',
   };
 }
 

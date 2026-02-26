@@ -34,21 +34,22 @@ export type ScopedVarResolvableEndpoint =
       zone: ZoneRef;
     }>;
 
-export type ScopedVarMalformedResolvableEndpoint =
-  | Readonly<{
-      scope: 'global';
-      var: string;
-    }>
-  | Readonly<{
-      scope: 'pvar';
-      var: string;
-      player?: PlayerSel;
-    }>
-  | Readonly<{
-      scope: 'zoneVar';
-      var: string;
-      zone?: ZoneRef;
-    }>;
+type OptionalizeKeys<T, K extends PropertyKey> = Omit<T, Extract<K, keyof T>> & Partial<Pick<T, Extract<K, keyof T>>>;
+type ScopedVarResolvableEndpointScope = ScopedVarResolvableEndpoint['scope'];
+type ScopedVarResolvableEndpointByScope = {
+  [S in ScopedVarResolvableEndpointScope]: Extract<ScopedVarResolvableEndpoint, { scope: S }>;
+};
+type ScopedVarSelectorKeyByScope = {
+  global: never;
+  pvar: 'player';
+  zoneVar: 'zone';
+};
+
+export type ScopedVarMalformedResolvableEndpoint = {
+  [S in ScopedVarResolvableEndpointScope]: Readonly<
+    OptionalizeKeys<ScopedVarResolvableEndpointByScope[S], ScopedVarSelectorKeyByScope[S]>
+  >;
+}[ScopedVarResolvableEndpointScope];
 
 export type ScopedVarStateBranches = Pick<GameState, 'globalVars' | 'perPlayerVars' | 'zoneVars'>;
 export type ScopedVarWrite = Readonly<{

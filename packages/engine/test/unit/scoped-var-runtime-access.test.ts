@@ -77,7 +77,41 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   ...overrides,
 });
 
+type AssertTrue<T extends true> = T;
+type IsEqual<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
+    ? ((<T>() => T extends B ? 1 : 2) extends (<T>() => T extends A ? 1 : 2) ? true : false)
+    : false;
+type IsOptionalKey<T, K extends keyof T> = Omit<T, K> extends T ? true : false;
+
 const assertScopedEndpointTypingContracts = () => {
+  type StrictGlobalEndpoint = Extract<ScopedVarResolvableEndpoint, { scope: 'global' }>;
+  type StrictPvarEndpoint = Extract<ScopedVarResolvableEndpoint, { scope: 'pvar' }>;
+  type StrictZoneEndpoint = Extract<ScopedVarResolvableEndpoint, { scope: 'zoneVar' }>;
+  type TolerantGlobalEndpoint = Extract<ScopedVarMalformedResolvableEndpoint, { scope: 'global' }>;
+  type TolerantPvarEndpoint = Extract<ScopedVarMalformedResolvableEndpoint, { scope: 'pvar' }>;
+  type TolerantZoneEndpoint = Extract<ScopedVarMalformedResolvableEndpoint, { scope: 'zoneVar' }>;
+  type StrictPvarSharedShape = Omit<StrictPvarEndpoint, 'player'>;
+  type TolerantPvarSharedShape = Omit<TolerantPvarEndpoint, 'player'>;
+  type StrictZoneSharedShape = Omit<StrictZoneEndpoint, 'zone'>;
+  type TolerantZoneSharedShape = Omit<TolerantZoneEndpoint, 'zone'>;
+
+  type GlobalShapeParity = AssertTrue<IsEqual<StrictGlobalEndpoint, TolerantGlobalEndpoint>>;
+  type PvarSharedShapeParity = AssertTrue<IsEqual<StrictPvarSharedShape, TolerantPvarSharedShape>>;
+  type ZoneSharedShapeParity = AssertTrue<IsEqual<StrictZoneSharedShape, TolerantZoneSharedShape>>;
+  type StrictPvarSelectorRequired = AssertTrue<IsEqual<IsOptionalKey<StrictPvarEndpoint, 'player'>, false>>;
+  type TolerantPvarSelectorOptional = AssertTrue<IsEqual<IsOptionalKey<TolerantPvarEndpoint, 'player'>, true>>;
+  type StrictZoneSelectorRequired = AssertTrue<IsEqual<IsOptionalKey<StrictZoneEndpoint, 'zone'>, false>>;
+  type TolerantZoneSelectorOptional = AssertTrue<IsEqual<IsOptionalKey<TolerantZoneEndpoint, 'zone'>, true>>;
+
+  void (null as unknown as GlobalShapeParity);
+  void (null as unknown as PvarSharedShapeParity);
+  void (null as unknown as ZoneSharedShapeParity);
+  void (null as unknown as StrictPvarSelectorRequired);
+  void (null as unknown as TolerantPvarSelectorOptional);
+  void (null as unknown as StrictZoneSelectorRequired);
+  void (null as unknown as TolerantZoneSelectorOptional);
+
   const strictPvarEndpoint: ScopedVarResolvableEndpoint = { scope: 'pvar', player: 'actor', var: 'hp' };
   const strictZoneEndpoint: ScopedVarResolvableEndpoint = { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' };
   const tolerantPvarEndpoint: ScopedVarMalformedResolvableEndpoint = { scope: 'pvar', var: 'hp' };

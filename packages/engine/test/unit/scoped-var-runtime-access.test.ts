@@ -1,0 +1,180 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createRng, isEffectErrorCode } from '../../src/kernel/index.js';
+import type { EffectContext } from '../../src/kernel/effect-context.js';
+import {
+  readScopedVarValue,
+  resolveScopedIntVarDef,
+  resolveScopedVarDef,
+  resolveSinglePlayerWithNormalization,
+  resolveZoneWithNormalization,
+  writeScopedVarToBranches,
+} from '../../src/kernel/scoped-var-runtime-access.js';
+import type { GameDef, GameState } from '../../src/kernel/types.js';
+
+const makeDef = (): GameDef => ({
+  metadata: { id: 'scoped-var-runtime-access-test', players: { min: 2, max: 2 } },
+  constants: {},
+  globalVars: [
+    { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'flag', type: 'boolean', init: false },
+  ],
+  perPlayerVars: [
+    { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'ready', type: 'boolean', init: false },
+  ],
+  zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 20 }],
+  zones: [{ id: 'zone-a:none' as never, owner: 'none', visibility: 'public', ordering: 'stack' }],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [] },
+  actions: [],
+  triggers: [],
+  terminal: { conditions: [] },
+});
+
+const makeState = (): GameState => ({
+  globalVars: { score: 5, flag: true },
+  perPlayerVars: {
+    '0': { hp: 7, ready: false },
+    '1': { hp: 3, ready: true },
+  },
+  zoneVars: { 'zone-a:none': { supply: 9 } },
+  playerCount: 2,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: asPhaseId('main'),
+  activePlayer: asPlayerId(0),
+  turnCount: 1,
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+  stateHash: 0n,
+  actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
+  markers: {},
+});
+
+const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+  def: makeDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
+  state: makeState(),
+  rng: createRng(7n),
+  activePlayer: asPlayerId(0),
+  actorPlayer: asPlayerId(0),
+  bindings: {},
+  moveParams: {},
+  collector: createCollector(),
+  ...overrides,
+});
+
+describe('scoped-var-runtime-access', () => {
+  it('resolves scoped variable definitions across global/pvar/zoneVar', () => {
+    const ctx = makeCtx();
+
+    const globalDef = resolveScopedVarDef(ctx, { scope: 'global', var: 'score' }, 'setVar', 'variableRuntimeValidationFailed');
+    const pvarDef = resolveScopedVarDef(ctx, { scope: 'pvar', var: 'ready' }, 'setVar', 'variableRuntimeValidationFailed');
+    const zoneDef = resolveScopedVarDef(ctx, { scope: 'zoneVar', var: 'supply' }, 'setVar', 'variableRuntimeValidationFailed');
+
+    assert.equal(globalDef.type, 'int');
+    assert.equal(pvarDef.type, 'boolean');
+    assert.equal(zoneDef.type, 'int');
+  });
+
+  it('enforces int-only contracts through resolveScopedIntVarDef', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () => resolveScopedIntVarDef(ctx, { scope: 'global', var: 'flag' }, 'transferVar', 'resourceRuntimeValidationFailed'),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-int variable'),
+    );
+  });
+
+  it('reads scoped runtime values across global/pvar/zone endpoints', () => {
+    const ctx = makeCtx();
+
+    const globalValue = readScopedVarValue(ctx, { scope: 'global', var: 'flag' }, 'setVar', 'variableRuntimeValidationFailed');
+    const pvarValue = readScopedVarValue(
+      ctx,
+      { scope: 'pvar', player: asPlayerId(1), var: 'hp' },
+      'setVar',
+      'variableRuntimeValidationFailed',
+    );
+    const zoneValue = readScopedVarValue(
+      ctx,
+      { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+      'setVar',
+      'variableRuntimeValidationFailed',
+    );
+
+    assert.equal(globalValue, true);
+    assert.equal(pvarValue, 3);
+    assert.equal(zoneValue, 9);
+  });
+
+  it('writes scoped runtime values immutably for each scope', () => {
+    const state = makeState();
+    const baseBranches = {
+      globalVars: state.globalVars,
+      perPlayerVars: state.perPlayerVars,
+      zoneVars: state.zoneVars,
+    };
+
+    const globalWrite = writeScopedVarToBranches(baseBranches, { scope: 'global', var: 'score' }, 8);
+    assert.equal(globalWrite.globalVars.score, 8);
+    assert.notEqual(globalWrite.globalVars, baseBranches.globalVars);
+    assert.equal(globalWrite.perPlayerVars, baseBranches.perPlayerVars);
+    assert.equal(globalWrite.zoneVars, baseBranches.zoneVars);
+
+    const pvarWrite = writeScopedVarToBranches(baseBranches, { scope: 'pvar', player: asPlayerId(0), var: 'hp' }, 10);
+    assert.equal(pvarWrite.perPlayerVars['0']?.hp, 10);
+    assert.notEqual(pvarWrite.perPlayerVars, baseBranches.perPlayerVars);
+    assert.equal(pvarWrite.globalVars, baseBranches.globalVars);
+    assert.equal(pvarWrite.zoneVars, baseBranches.zoneVars);
+
+    const zoneWrite = writeScopedVarToBranches(
+      baseBranches,
+      { scope: 'zone', zone: 'zone-a:none' as never, var: 'supply' },
+      4,
+    );
+    assert.equal(zoneWrite.zoneVars['zone-a:none']?.supply, 4);
+    assert.notEqual(zoneWrite.zoneVars, baseBranches.zoneVars);
+    assert.equal(zoneWrite.globalVars, baseBranches.globalVars);
+    assert.equal(zoneWrite.perPlayerVars, baseBranches.perPlayerVars);
+  });
+
+  it('normalizes selector resolution failures into effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        resolveSinglePlayerWithNormalization({ chosen: '$missingPlayer' }, ctx, {
+          code: 'variableRuntimeValidationFailed',
+          effectType: 'setVar',
+          scope: 'pvar',
+          cardinalityMessage: 'must resolve one player',
+          resolutionFailureMessage: 'selector resolution failed',
+        }),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('selector resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
+  it('normalizes zone resolution failures into effect runtime errors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, ctx, {
+          code: 'resourceRuntimeValidationFailed',
+          effectType: 'transferVar',
+          scope: 'zoneVar',
+          resolutionFailureMessage: 'zone endpoint resolution failed',
+        }),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('zone endpoint resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+});

@@ -179,6 +179,24 @@ describe('effects var handlers', () => {
     });
   });
 
+  it('wraps pvar selector resolution failures into EFFECT_RUNTIME for setVar', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            setVar: { scope: 'pvar', player: { chosen: '$missingPlayer' }, var: 'hp', value: 1 },
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('setVar pvar selector resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
   it('setActivePlayer updates state.activePlayer using selector resolution', () => {
     const ctx = makeCtx({
       moveParams: { $target: asPlayerId(0) },
@@ -195,6 +213,18 @@ describe('effects var handlers', () => {
     assert.throws(() => applyEffect({ setActivePlayer: { player: 'all' } }, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setActivePlayer requires exactly one resolved player');
     });
+  });
+
+  it('wraps setActivePlayer selector resolution failures into EFFECT_RUNTIME', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('setActivePlayer selector resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
   });
 
   it('uses moveParams for chosen selectors and lets bindings override moveParams', () => {

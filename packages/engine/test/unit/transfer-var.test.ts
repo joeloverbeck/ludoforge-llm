@@ -423,6 +423,25 @@ describe('transferVar effect', () => {
     );
   });
 
+  it('wraps pvar endpoint selector resolution failures into EFFECT_RUNTIME', () => {
+    const ctx = makeCtx();
+    const unresolvedSelectorEffect = {
+      transferVar: {
+        from: { scope: 'pvar', player: { chosen: '$missingPlayer' }, var: 'coins' },
+        to: { scope: 'global', var: 'pot' },
+        amount: 1,
+      },
+    } as unknown as EffectAST;
+
+    assert.throws(
+      () => applyEffect(unresolvedSelectorEffect, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('transferVar pvar endpoint resolution failed') &&
+        String(error).includes('sourceErrorCode'),
+    );
+  });
+
   it('keeps emitted varChanged events in scope-payload parity with varChange trace entries', () => {
     const cases: readonly { readonly name: string; readonly effect: EffectAST }[] = [
       {

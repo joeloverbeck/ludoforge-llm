@@ -1,15 +1,13 @@
 import { evalValue } from './eval-value.js';
-import { isEvalError } from './eval-error.js';
 import { emitTrace } from './execution-collector.js';
-import { effectRuntimeError, isEffectRuntimeError } from './effect-error.js';
-import { resolvePlayerSel } from './resolve-selectors.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
+import { effectRuntimeError } from './effect-error.js';
+import { resolveSinglePlayerWithNormalization, resolveZoneWithNormalization } from './scoped-var-runtime-access.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, PlayerSel } from './types.js';
+import type { EffectAST } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
@@ -31,19 +29,6 @@ const expectInteger = (
   }
 
   return value;
-};
-
-const resolveSinglePlayer = (selector: PlayerSel, ctx: EffectContext): PlayerId => {
-  const resolvedPlayers = resolvePlayerSel(selector, ctx);
-  if (resolvedPlayers.length !== 1) {
-    throw effectRuntimeError('resourceRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
-      effectType: 'transferVar',
-      selector,
-      resolvedCount: resolvedPlayers.length,
-      resolvedPlayers,
-    });
-  }
-  return resolvedPlayers[0]!;
 };
 
 const resolvePerPlayerIntVarDef = (ctx: EffectContext, varName: string) => {
@@ -167,34 +152,6 @@ type ResolvedEndpoint =
       readonly before: number;
     };
 
-const normalizeEndpointResolutionError = (
-  error: unknown,
-  scope: 'pvar' | 'zoneVar',
-  endpoint: TransferEndpoint,
-): never => {
-  if (isEffectRuntimeError(error)) {
-    throw error;
-  }
-
-  const errorContext =
-    error instanceof Error
-      ? {
-          errorName: error.name,
-          errorMessage: error.message,
-        }
-      : {
-          thrown: String(error),
-        };
-
-  throw effectRuntimeError('resourceRuntimeValidationFailed', `transferVar ${scope} endpoint resolution failed`, {
-    effectType: 'transferVar',
-    scope,
-    endpoint,
-    ...(isEvalError(error) ? { sourceErrorCode: error.code } : {}),
-    ...errorContext,
-  });
-};
-
 const resolveZoneIntVarDef = (ctx: EffectContext, varName: string) => {
   const variableDef = (ctx.def.zoneVars ?? []).find((variable) => variable.name === varName);
   if (variableDef === undefined) {
@@ -267,13 +224,14 @@ const resolveEndpoint = (
       });
     }
 
-    const player = (() => {
-      try {
-        return resolveSinglePlayer(endpoint.player, evalCtx);
-      } catch (error: unknown) {
-        return normalizeEndpointResolutionError(error, 'pvar', endpoint);
-      }
-    })();
+    const player = resolveSinglePlayerWithNormalization(endpoint.player, evalCtx, {
+      code: 'resourceRuntimeValidationFailed',
+      effectType: 'transferVar',
+      scope: 'pvar',
+      cardinalityMessage: 'Per-player variable operations require exactly one resolved player',
+      resolutionFailureMessage: 'transferVar pvar endpoint resolution failed',
+      context: { endpoint },
+    });
 
     const perPlayerVarDef = resolvePerPlayerIntVarDef(ctx, endpoint.var);
     return {
@@ -294,13 +252,13 @@ const resolveEndpoint = (
     });
   }
 
-  const zone = (() => {
-    try {
-      return resolveZoneRef(endpoint.zone, evalCtx);
-    } catch (error: unknown) {
-      return normalizeEndpointResolutionError(error, 'zoneVar', endpoint);
-    }
-  })();
+  const zone = resolveZoneWithNormalization(endpoint.zone, evalCtx, {
+    code: 'resourceRuntimeValidationFailed',
+    effectType: 'transferVar',
+    scope: 'zoneVar',
+    resolutionFailureMessage: 'transferVar zoneVar endpoint resolution failed',
+    context: { endpoint },
+  });
 
   const zoneVarDef = resolveZoneIntVarDef(ctx, endpoint.var);
   return {

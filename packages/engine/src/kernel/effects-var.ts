@@ -1,7 +1,6 @@
-import { resolvePlayerSel } from './resolve-selectors.js';
-import { resolveZoneRef } from './resolve-zone-ref.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
+import { resolveSinglePlayerWithNormalization, resolveZoneWithNormalization } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -102,7 +101,13 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   const evaluatedValue = evalValue(value, evalCtx);
 
   if (scope === 'zoneVar') {
-    const resolvedZoneId = resolveZoneRef(effect.setVar.zone, evalCtx);
+    const resolvedZoneId = resolveZoneWithNormalization(effect.setVar.zone, evalCtx, {
+      code: 'variableRuntimeValidationFailed',
+      effectType: 'setVar',
+      scope: 'zoneVar',
+      resolutionFailureMessage: 'setVar zoneVar selector resolution failed',
+      context: { endpoint: effect.setVar },
+    });
     const variableDef = resolveZoneVarDef(ctx, variableName, 'setVar');
     if (variableDef.type !== 'int') {
       throw effectRuntimeError('variableRuntimeValidationFailed', `setVar on zone variable only supports int type: ${variableName}`, {
@@ -196,18 +201,14 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     };
   }
 
-  const resolvedPlayers = resolvePlayerSel(effect.setVar.player, evalCtx);
-  if (resolvedPlayers.length !== 1) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
-      effectType: 'setVar',
-      scope: 'pvar',
-      selector: effect.setVar.player,
-      resolvedCount: resolvedPlayers.length,
-      resolvedPlayers,
-    });
-  }
-
-  const playerId = resolvedPlayers[0]!;
+  const playerId = resolveSinglePlayerWithNormalization(effect.setVar.player, evalCtx, {
+    code: 'variableRuntimeValidationFailed',
+    effectType: 'setVar',
+    scope: 'pvar',
+    cardinalityMessage: 'Per-player variable operations require exactly one resolved player',
+    resolutionFailureMessage: 'setVar pvar selector resolution failed',
+    context: { endpoint: effect.setVar },
+  });
   const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'setVar');
   const playerVars = ctx.state.perPlayerVars[playerId];
   if (playerVars === undefined) {
@@ -266,7 +267,13 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
 
   if (scope === 'zoneVar') {
-    const resolvedZoneId = resolveZoneRef(effect.addVar.zone, evalCtx);
+    const resolvedZoneId = resolveZoneWithNormalization(effect.addVar.zone, evalCtx, {
+      code: 'variableRuntimeValidationFailed',
+      effectType: 'addVar',
+      scope: 'zoneVar',
+      resolutionFailureMessage: 'addVar zoneVar selector resolution failed',
+      context: { endpoint: effect.addVar },
+    });
     const variableDef = resolveZoneVarDef(ctx, variableName, 'addVar');
     if (variableDef.type !== 'int') {
       throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int zone variable: ${variableName}`, {
@@ -365,18 +372,14 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     };
   }
 
-  const resolvedPlayers = resolvePlayerSel(effect.addVar.player, evalCtx);
-  if (resolvedPlayers.length !== 1) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
-      effectType: 'addVar',
-      scope: 'pvar',
-      selector: effect.addVar.player,
-      resolvedCount: resolvedPlayers.length,
-      resolvedPlayers,
-    });
-  }
-
-  const playerId = resolvedPlayers[0]!;
+  const playerId = resolveSinglePlayerWithNormalization(effect.addVar.player, evalCtx, {
+    code: 'variableRuntimeValidationFailed',
+    effectType: 'addVar',
+    scope: 'pvar',
+    cardinalityMessage: 'Per-player variable operations require exactly one resolved player',
+    resolutionFailureMessage: 'addVar pvar selector resolution failed',
+    context: { endpoint: effect.addVar },
+  });
   const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'addVar');
   if (variableDef.type !== 'int') {
     throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int variable: ${variableName}`, {
@@ -439,17 +442,14 @@ export const applySetActivePlayer = (
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const resolvedPlayers = resolvePlayerSel(effect.setActivePlayer.player, evalCtx);
-  if (resolvedPlayers.length !== 1) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', 'setActivePlayer requires exactly one resolved player', {
-      effectType: 'setActivePlayer',
-      selector: effect.setActivePlayer.player,
-      resolvedCount: resolvedPlayers.length,
-      resolvedPlayers,
-    });
-  }
-
-  const nextActive = resolvedPlayers[0]!;
+  const nextActive = resolveSinglePlayerWithNormalization(effect.setActivePlayer.player, evalCtx, {
+    code: 'variableRuntimeValidationFailed',
+    effectType: 'setActivePlayer',
+    scope: 'activePlayer',
+    cardinalityMessage: 'setActivePlayer requires exactly one resolved player',
+    resolutionFailureMessage: 'setActivePlayer selector resolution failed',
+    context: { endpoint: effect.setActivePlayer },
+  });
   if (nextActive === ctx.state.activePlayer) {
     return { state: ctx.state, rng: ctx.rng };
   }

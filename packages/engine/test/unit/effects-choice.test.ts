@@ -136,6 +136,20 @@ describe('effects choice assertions', () => {
     ]);
   });
 
+  it('chooseOne appends iterationPath to static decision IDs in discovery mode', () => {
+    const ctx = makeDiscoveryCtx({ iterationPath: '[2]' });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.decisionId, 'decision:$choice[2]');
+  });
+
   it('chooseOne throws when selected value is outside domain', () => {
     const ctx = makeCtx({ moveParams: { 'decision:$choice': 'delta' } });
     const effect: EffectAST = {
@@ -250,6 +264,24 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseN does not append iterationPath when decision ID is template-scoped', () => {
+    const ctx = makeDiscoveryCtx({
+      bindings: { $zone: 'saigon:none' },
+      iterationPath: '[1]',
+    });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks@{$zone}',
+        bind: '$picks@{$zone}',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+        n: 1,
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.decisionId, 'decision:$picks@{$zone}::$picks@saigon:none');
   });
 
   it('chooseN throws on duplicate selections', () => {

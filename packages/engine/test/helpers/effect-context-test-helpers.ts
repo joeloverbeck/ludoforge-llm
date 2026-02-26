@@ -36,6 +36,7 @@ interface EffectContextTestOptions {
   readonly mode: InterpreterMode;
   readonly collector?: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly iterationPath?: string;
 }
 
 export type EffectContextTestOverrides = Omit<Partial<EffectContext>, 'mode'>;
@@ -60,6 +61,7 @@ const makeEffectContext = ({
   freeOperationZoneFilterDiagnostics,
   maxQueryResults,
   phaseTransitionBudget,
+  iterationPath,
 }: EffectContextTestOptions): EffectContext => ({
   def,
   adjacencyGraph,
@@ -80,6 +82,7 @@ const makeEffectContext = ({
   mode,
   collector,
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
+  ...(iterationPath === undefined ? {} : { iterationPath }),
 });
 
 type EffectContextTestOptionsWithoutMode = Omit<EffectContextTestOptions, 'mode'>;

@@ -1,6 +1,6 @@
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { composeDecisionId } from './decision-id.js';
+import { composeDecisionId, scopeDecisionIdForIteration } from './decision-id.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
@@ -60,13 +60,7 @@ const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effect
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
   const baseDecisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, resolvedBind);
-  // Only append iteration path when the decision ID wasn't already made unique by template resolution.
-  // If the bind template includes a loop variable (e.g., $mode@{$region}), composeDecisionId already
-  // produces per-iteration-unique IDs. Static binds (e.g., $commitTroopMapMoveMode) need the path.
-  const needsIterationScoping = baseDecisionId === effect.chooseOne.internalDecisionId;
-  const decisionId = needsIterationScoping && ctx.iterationPath !== undefined
-    ? `${baseDecisionId}${ctx.iterationPath}`
-    : baseDecisionId;
+  const decisionId = scopeDecisionIdForIteration(baseDecisionId, effect.chooseOne.internalDecisionId, ctx.iterationPath);
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
@@ -143,10 +137,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const bindTemplate = chooseN.bind;
   const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
   const baseDecisionId = composeDecisionId(chooseN.internalDecisionId, bindTemplate, bind);
-  const needsIterationScoping = baseDecisionId === chooseN.internalDecisionId;
-  const decisionId = needsIterationScoping && ctx.iterationPath !== undefined
-    ? `${baseDecisionId}${ctx.iterationPath}`
-    : baseDecisionId;
+  const decisionId = scopeDecisionIdForIteration(baseDecisionId, chooseN.internalDecisionId, ctx.iterationPath);
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {

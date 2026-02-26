@@ -365,6 +365,60 @@ describe('scoped-var-runtime-access', () => {
     );
   });
 
+  it('fails fast on impossible write endpoint scope in batched branch writes', () => {
+    const state = makeState();
+    const malformedWrites = [
+      {
+        endpoint: { scope: 'actor', var: 'hp' },
+        value: 12,
+      },
+    ] as unknown as readonly ScopedVarWrite[];
+
+    assert.throws(
+      () => writeScopedVarsToState(state, malformedWrites),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Scoped variable write endpoint invariant violated') &&
+        String(error).includes('"reason":"internalInvariantViolation"'),
+    );
+  });
+
+  it('fails fast on malformed pvar write endpoint missing player selector in branch writes', () => {
+    const state = makeState();
+    const malformedWrites = [
+      {
+        endpoint: { scope: 'pvar', var: 'hp' },
+        value: 12,
+      },
+    ] as unknown as readonly ScopedVarWrite[];
+
+    assert.throws(
+      () => writeScopedVarsToState(state, malformedWrites),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Scoped variable write endpoint invariant violated') &&
+        String(error).includes('"reason":"internalInvariantViolation"'),
+    );
+  });
+
+  it('fails fast on malformed pvar write endpoint with non-integer player selector in branch writes', () => {
+    const state = makeState();
+    const malformedWrites = [
+      {
+        endpoint: { scope: 'pvar', player: 0.5, var: 'hp' },
+        value: 12,
+      },
+    ] as unknown as readonly ScopedVarWrite[];
+
+    assert.throws(
+      () => writeScopedVarsToState(state, malformedWrites),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
+        String(error).includes('Scoped variable write endpoint invariant violated') &&
+        String(error).includes('"reason":"internalInvariantViolation"'),
+    );
+  });
+
   it('writes one-item batched scoped values to full state while preserving non-var branches', () => {
     const state = makeState();
 

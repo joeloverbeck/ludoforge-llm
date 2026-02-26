@@ -69,6 +69,32 @@ type ScopedNonZoneVarWrite = Readonly<{
 export type ScopedVarWrite = ScopedZoneVarWrite | ScopedNonZoneVarWrite;
 
 const isZoneScopedWrite = (write: ScopedVarWrite): write is ScopedZoneVarWrite => write.endpoint.scope === 'zone';
+const throwScopedVarWriteInvariantViolation = (write: ScopedVarWrite): never => {
+  throw effectRuntimeError(
+    EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
+    'Scoped variable write endpoint invariant violated: expected pvar endpoint with integer player selector',
+    {
+      effectType: 'scopedVarWrite',
+      endpoint: write.endpoint,
+      value: write.value,
+    },
+  );
+};
+
+const resolvePvarScopedWritePlayerKey = (write: ScopedVarWrite): number => {
+  const endpoint = write.endpoint;
+  if (endpoint.scope !== 'pvar') {
+    throwScopedVarWriteInvariantViolation(write);
+  }
+
+  const player = (endpoint as { player?: unknown }).player;
+  if (typeof player !== 'number' || !Number.isInteger(player)) {
+    throwScopedVarWriteInvariantViolation(write);
+  }
+
+  return player as number;
+};
+
 const scopedVarStateBranchesFromState = (state: GameState): ScopedVarStateBranches => ({
   globalVars: state.globalVars,
   perPlayerVars: state.perPlayerVars,
@@ -438,13 +464,13 @@ export const writeScopedVarsToBranches = (
       globalVars[write.endpoint.var] = write.value;
       continue;
     }
+    const playerKey = resolvePvarScopedWritePlayerKey(write);
 
     if (!perPlayerVarsStaged) {
       perPlayerVars = { ...perPlayerVars };
       perPlayerVarsStaged = true;
     }
 
-    const playerKey = write.endpoint.player;
     if (!stagedPlayers.has(playerKey)) {
       perPlayerVars[playerKey] = {
         ...(perPlayerVars[playerKey] ?? {}),

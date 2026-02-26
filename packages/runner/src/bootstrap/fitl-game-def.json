@@ -11547,6 +11547,10 @@
               "duration": "nextTurn"
             },
             {
+              "id": "make-ineligible",
+              "duration": "nextTurn"
+            },
+            {
               "id": "us-special-window",
               "duration": "turn"
             },
@@ -11736,7 +11740,13 @@
           "coupCommitment",
           "coupReset"
         ],
-        "maxConsecutiveRounds": 1
+        "maxConsecutiveRounds": 1,
+        "seatOrder": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
       }
     }
   },
@@ -17820,7 +17830,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.4.stages[1].effects.0.forEach.effects.2.chooseN",
-                      "bind": "$hopLocs",
+                      "bind": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopLocs_{$space}",
                       "options": {
                         "query": "adjacentZones",
                         "zone": "$space"
@@ -17831,10 +17841,14 @@
                   },
                   {
                     "forEach": {
-                      "bind": "$hopLoc",
+                      "bind": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopLoc",
+                      "macroOrigin": {
+                        "macroId": "sweep-loc-hop",
+                        "stem": "hopLoc"
+                      },
                       "over": {
                         "query": "binding",
-                        "name": "$hopLocs"
+                        "name": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopLocs_{$space}"
                       },
                       "effects": [
                         {
@@ -17846,7 +17860,7 @@
                                   "op": "==",
                                   "left": {
                                     "ref": "zoneProp",
-                                    "zone": "$hopLoc",
+                                    "zone": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopLoc",
                                     "prop": "category"
                                   },
                                   "right": "loc"
@@ -17858,7 +17872,7 @@
                                       "op": "count",
                                       "query": {
                                         "query": "tokensInZone",
-                                        "zone": "$hopLoc",
+                                        "zone": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopLoc",
                                         "filter": [
                                           {
                                             "prop": "faction",
@@ -17880,10 +17894,10 @@
                               {
                                 "chooseN": {
                                   "internalDecisionId": "decision:doc.actionPipelines.4.stages[1].effects.0.forEach.effects.3.forEach.effects.0.if.then.0.chooseN",
-                                  "bind": "$movingHopTroops",
+                                  "bind": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__movingHopTroops_{$space}",
                                   "options": {
                                     "query": "tokensInAdjacentZones",
-                                    "zone": "$hopLoc",
+                                    "zone": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopLoc",
                                     "filter": [
                                       {
                                         "prop": "faction",
@@ -17903,19 +17917,23 @@
                               },
                               {
                                 "forEach": {
-                                  "bind": "$hopTroop",
+                                  "bind": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopTroop",
+                                  "macroOrigin": {
+                                    "macroId": "sweep-loc-hop",
+                                    "stem": "hopTroop"
+                                  },
                                   "over": {
                                     "query": "binding",
-                                    "name": "$movingHopTroops"
+                                    "name": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__movingHopTroops_{$space}"
                                   },
                                   "effects": [
                                     {
                                       "moveToken": {
-                                        "token": "$hopTroop",
+                                        "token": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopTroop",
                                         "from": {
                                           "zoneExpr": {
                                             "ref": "tokenZone",
-                                            "token": "$hopTroop"
+                                            "token": "$__macro_sweep_loc_hop_actionPipelines_4__stages_1__effects_0__forEach_effects_2__hopTroop"
                                           }
                                         },
                                         "to": "$space"
@@ -18304,62 +18322,85 @@
                       },
                       "effects": [
                         {
-                          "forEach": {
-                            "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
-                            "macroOrigin": {
-                              "macroId": "cap-sweep-booby-traps-shaded-cost",
-                              "stem": "lossTroop"
-                            },
-                            "over": {
-                              "query": "tokensInZone",
-                              "zone": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
-                              "filter": [
-                                {
-                                  "prop": "faction",
-                                  "op": "eq",
-                                  "value": "US"
-                                },
-                                {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "troops"
-                                }
-                              ]
-                            },
-                            "effects": [
+                          "rollRandom": {
+                            "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__boobyDie",
+                            "min": 1,
+                            "max": 6,
+                            "in": [
                               {
                                 "if": {
                                   "when": {
-                                    "op": "==",
-                                    "left": "US",
-                                    "right": "US"
+                                    "op": "<=",
+                                    "left": {
+                                      "ref": "binding",
+                                      "name": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__boobyDie"
+                                    },
+                                    "right": 3
                                   },
                                   "then": [
                                     {
-                                      "moveToken": {
-                                        "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
-                                        "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
-                                        "to": {
-                                          "zoneExpr": "casualties-US:none"
-                                        }
-                                      }
-                                    }
-                                  ],
-                                  "else": [
-                                    {
-                                      "moveToken": {
-                                        "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
-                                        "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
-                                        "to": {
-                                          "zoneExpr": "available-ARVN:none"
-                                        }
+                                      "forEach": {
+                                        "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
+                                        "macroOrigin": {
+                                          "macroId": "cap-sweep-booby-traps-shaded-cost",
+                                          "stem": "lossTroop"
+                                        },
+                                        "over": {
+                                          "query": "tokensInZone",
+                                          "zone": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
+                                          "filter": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "US"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "troops"
+                                            }
+                                          ]
+                                        },
+                                        "effects": [
+                                          {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": "US",
+                                                "right": "US"
+                                              },
+                                              "then": [
+                                                {
+                                                  "moveToken": {
+                                                    "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
+                                                    "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
+                                                    "to": {
+                                                      "zoneExpr": "casualties-US:none"
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "else": [
+                                                {
+                                                  "moveToken": {
+                                                    "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
+                                                    "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
+                                                    "to": {
+                                                      "zoneExpr": "available-ARVN:none"
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ],
+                                        "limit": 1
                                       }
                                     }
                                   ]
                                 }
                               }
-                            ],
-                            "limit": 1
+                            ]
                           }
                         }
                       ]
@@ -18687,8 +18728,129 @@
                     }
                   },
                   {
+                    "chooseN": {
+                      "internalDecisionId": "decision:doc.actionPipelines.5.stages[1].effects.0.forEach.effects.3.chooseN",
+                      "bind": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopLocs_{$space}",
+                      "options": {
+                        "query": "adjacentZones",
+                        "zone": "$space"
+                      },
+                      "max": 99,
+                      "min": 0
+                    }
+                  },
+                  {
+                    "forEach": {
+                      "bind": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopLoc",
+                      "macroOrigin": {
+                        "macroId": "sweep-loc-hop",
+                        "stem": "hopLoc"
+                      },
+                      "over": {
+                        "query": "binding",
+                        "name": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopLocs_{$space}"
+                      },
+                      "effects": [
+                        {
+                          "if": {
+                            "when": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopLoc",
+                                    "prop": "category"
+                                  },
+                                  "right": "loc"
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopLoc",
+                                        "filter": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "in",
+                                            "value": [
+                                              "NVA",
+                                              "VC"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "chooseN": {
+                                  "internalDecisionId": "decision:doc.actionPipelines.5.stages[1].effects.0.forEach.effects.4.forEach.effects.0.if.then.0.chooseN",
+                                  "bind": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__movingHopTroops_{$space}",
+                                  "options": {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopLoc",
+                                    "filter": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "ARVN"
+                                      },
+                                      {
+                                        "prop": "type",
+                                        "op": "eq",
+                                        "value": "troops"
+                                      }
+                                    ]
+                                  },
+                                  "max": 99,
+                                  "min": 0
+                                }
+                              },
+                              {
+                                "forEach": {
+                                  "bind": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopTroop",
+                                  "macroOrigin": {
+                                    "macroId": "sweep-loc-hop",
+                                    "stem": "hopTroop"
+                                  },
+                                  "over": {
+                                    "query": "binding",
+                                    "name": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__movingHopTroops_{$space}"
+                                  },
+                                  "effects": [
+                                    {
+                                      "moveToken": {
+                                        "token": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopTroop",
+                                        "from": {
+                                          "zoneExpr": {
+                                            "ref": "tokenZone",
+                                            "token": "$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__hopTroop"
+                                          }
+                                        },
+                                        "to": "$space"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
                     "let": {
-                      "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__cubeCount",
+                      "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__cubeCount",
                       "value": {
                         "aggregate": {
                           "op": "count",
@@ -18716,7 +18878,7 @@
                       "in": [
                         {
                           "let": {
-                            "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__sfCount",
+                            "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__sfCount",
                             "value": {
                               "aggregate": {
                                 "op": "count",
@@ -18741,22 +18903,22 @@
                             "in": [
                               {
                                 "let": {
-                                  "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__totalSweepers",
+                                  "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__totalSweepers",
                                   "value": {
                                     "op": "+",
                                     "left": {
                                       "ref": "binding",
-                                      "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__cubeCount"
+                                      "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__cubeCount"
                                     },
                                     "right": {
                                       "ref": "binding",
-                                      "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__sfCount"
+                                      "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__sfCount"
                                     }
                                   },
                                   "in": [
                                     {
                                       "let": {
-                                        "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__activationLimit",
+                                        "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__activationLimit",
                                         "value": {
                                           "if": {
                                             "when": {
@@ -18769,13 +18931,13 @@
                                               "op": "/",
                                               "left": {
                                                 "ref": "binding",
-                                                "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__totalSweepers"
+                                                "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__totalSweepers"
                                               },
                                               "right": 2
                                             },
                                             "else": {
                                               "ref": "binding",
-                                              "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__totalSweepers"
+                                              "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__totalSweepers"
                                             }
                                           }
                                         },
@@ -18786,14 +18948,14 @@
                                                 "op": ">",
                                                 "left": {
                                                   "ref": "binding",
-                                                  "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__activationLimit"
+                                                  "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__activationLimit"
                                                 },
                                                 "right": 0
                                               },
                                               "then": [
                                                 {
                                                   "forEach": {
-                                                    "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__guerrilla",
+                                                    "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__guerrilla",
                                                     "macroOrigin": {
                                                       "macroId": "sweep-activation",
                                                       "stem": "guerrilla"
@@ -18817,7 +18979,7 @@
                                                     "effects": [
                                                       {
                                                         "setTokenProp": {
-                                                          "token": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__guerrilla",
+                                                          "token": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__guerrilla",
                                                           "prop": "activity",
                                                           "value": "active"
                                                         }
@@ -18825,7 +18987,7 @@
                                                     ],
                                                     "limit": {
                                                       "ref": "binding",
-                                                      "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__activationLimit"
+                                                      "name": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_4__activationLimit"
                                                     }
                                                   }
                                                 }
@@ -19044,62 +19206,85 @@
                       },
                       "effects": [
                         {
-                          "forEach": {
-                            "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
-                            "macroOrigin": {
-                              "macroId": "cap-sweep-booby-traps-shaded-cost",
-                              "stem": "lossTroop"
-                            },
-                            "over": {
-                              "query": "tokensInZone",
-                              "zone": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
-                              "filter": [
-                                {
-                                  "prop": "faction",
-                                  "op": "eq",
-                                  "value": "ARVN"
-                                },
-                                {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "troops"
-                                }
-                              ]
-                            },
-                            "effects": [
+                          "rollRandom": {
+                            "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__boobyDie",
+                            "min": 1,
+                            "max": 6,
+                            "in": [
                               {
                                 "if": {
                                   "when": {
-                                    "op": "==",
-                                    "left": "ARVN",
-                                    "right": "US"
+                                    "op": "<=",
+                                    "left": {
+                                      "ref": "binding",
+                                      "name": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__boobyDie"
+                                    },
+                                    "right": 3
                                   },
                                   "then": [
                                     {
-                                      "moveToken": {
-                                        "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
-                                        "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
-                                        "to": {
-                                          "zoneExpr": "casualties-US:none"
-                                        }
-                                      }
-                                    }
-                                  ],
-                                  "else": [
-                                    {
-                                      "moveToken": {
-                                        "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
-                                        "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
-                                        "to": {
-                                          "zoneExpr": "available-ARVN:none"
-                                        }
+                                      "forEach": {
+                                        "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
+                                        "macroOrigin": {
+                                          "macroId": "cap-sweep-booby-traps-shaded-cost",
+                                          "stem": "lossTroop"
+                                        },
+                                        "over": {
+                                          "query": "tokensInZone",
+                                          "zone": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
+                                          "filter": [
+                                            {
+                                              "prop": "faction",
+                                              "op": "eq",
+                                              "value": "ARVN"
+                                            },
+                                            {
+                                              "prop": "type",
+                                              "op": "eq",
+                                              "value": "troops"
+                                            }
+                                          ]
+                                        },
+                                        "effects": [
+                                          {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": "ARVN",
+                                                "right": "US"
+                                              },
+                                              "then": [
+                                                {
+                                                  "moveToken": {
+                                                    "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
+                                                    "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
+                                                    "to": {
+                                                      "zoneExpr": "casualties-US:none"
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "else": [
+                                                {
+                                                  "moveToken": {
+                                                    "token": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
+                                                    "from": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
+                                                    "to": {
+                                                      "zoneExpr": "available-ARVN:none"
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ],
+                                        "limit": 1
                                       }
                                     }
                                   ]
                                 }
                               }
-                            ],
-                            "limit": 1
+                            ]
                           }
                         }
                       ]
@@ -28132,7 +28317,7 @@
           ]
         },
         {
-          "stage": "resolve-per-space",
+          "stage": "cost-per-space",
           "effects": [
             {
               "forEach": {
@@ -28207,10 +28392,26 @@
                         }
                       ]
                     }
-                  },
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "stage": "resolve-per-space",
+          "effects": [
+            {
+              "forEach": {
+                "bind": "$space",
+                "over": {
+                  "query": "binding",
+                  "name": "targetSpaces"
+                },
+                "effects": [
                   {
                     "chooseOne": {
-                      "internalDecisionId": "decision:doc.actionPipelines.12.stages[1].effects.0.forEach.effects.1.chooseOne",
+                      "internalDecisionId": "decision:doc.actionPipelines.12.stages[2].effects.0.forEach.effects.0.chooseOne",
                       "bind": "$attackMode",
                       "options": {
                         "query": "enums",
@@ -28309,7 +28510,7 @@
                                         "then": [
                                           {
                                             "let": {
-                                              "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore",
+                                              "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore",
                                               "value": {
                                                 "aggregate": {
                                                   "op": "count",
@@ -28332,7 +28533,7 @@
                                                     "budget": 2,
                                                     "groups": [
                                                       {
-                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                         "over": {
                                                           "query": "tokensInZone",
                                                           "zone": "$space",
@@ -28354,7 +28555,7 @@
                                                         }
                                                       },
                                                       {
-                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                         "over": {
                                                           "query": "tokensInZone",
                                                           "zone": "$space",
@@ -28376,7 +28577,7 @@
                                                         }
                                                       },
                                                       {
-                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                         "over": {
                                                           "query": "tokensInZone",
                                                           "zone": "$space",
@@ -28398,7 +28599,7 @@
                                                         }
                                                       },
                                                       {
-                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                         "over": {
                                                           "query": "tokensInZone",
                                                           "zone": "$space",
@@ -28424,7 +28625,7 @@
                                                 },
                                                 {
                                                   "let": {
-                                                    "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter",
+                                                    "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter",
                                                     "value": {
                                                       "aggregate": {
                                                         "op": "count",
@@ -28444,16 +28645,16 @@
                                                     "in": [
                                                       {
                                                         "let": {
-                                                          "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved",
+                                                          "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved",
                                                           "value": {
                                                             "op": "-",
                                                             "left": {
                                                               "ref": "binding",
-                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore"
+                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore"
                                                             },
                                                             "right": {
                                                               "ref": "binding",
-                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter"
+                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter"
                                                             }
                                                           },
                                                           "in": [
@@ -28463,14 +28664,14 @@
                                                                   "op": ">",
                                                                   "left": {
                                                                     "ref": "binding",
-                                                                    "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
+                                                                    "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
                                                                   },
                                                                   "right": 0
                                                                 },
                                                                 "then": [
                                                                   {
                                                                     "forEach": {
-                                                                      "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
+                                                                      "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
                                                                       "macroOrigin": {
                                                                         "macroId": "insurgent-attack-removal-order",
                                                                         "stem": "attritionPiece"
@@ -28489,7 +28690,7 @@
                                                                       "effects": [
                                                                         {
                                                                           "moveToken": {
-                                                                            "token": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
+                                                                            "token": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
                                                                             "from": "$space",
                                                                             "to": {
                                                                               "zoneExpr": {
@@ -28505,7 +28706,7 @@
                                                                       ],
                                                                       "limit": {
                                                                         "ref": "binding",
-                                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
+                                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_1__if_then_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
                                                                       }
                                                                     }
                                                                   }
@@ -28599,7 +28800,7 @@
                                   "in": [
                                     {
                                       "let": {
-                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usPiecesBefore",
+                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usPiecesBefore",
                                         "value": {
                                           "aggregate": {
                                             "op": "count",
@@ -28625,7 +28826,7 @@
                                               },
                                               "groups": [
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -28647,7 +28848,7 @@
                                                   }
                                                 },
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -28669,7 +28870,7 @@
                                                   }
                                                 },
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -28691,7 +28892,7 @@
                                                   }
                                                 },
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -28717,7 +28918,7 @@
                                           },
                                           {
                                             "let": {
-                                              "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usPiecesAfter",
+                                              "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usPiecesAfter",
                                               "value": {
                                                 "aggregate": {
                                                   "op": "count",
@@ -28737,16 +28938,16 @@
                                               "in": [
                                                 {
                                                   "let": {
-                                                    "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usRemoved",
+                                                    "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usRemoved",
                                                     "value": {
                                                       "op": "-",
                                                       "left": {
                                                         "ref": "binding",
-                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usPiecesBefore"
+                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usPiecesBefore"
                                                       },
                                                       "right": {
                                                         "ref": "binding",
-                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usPiecesAfter"
+                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usPiecesAfter"
                                                       }
                                                     },
                                                     "in": [
@@ -28756,14 +28957,14 @@
                                                             "op": ">",
                                                             "left": {
                                                               "ref": "binding",
-                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usRemoved"
+                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usRemoved"
                                                             },
                                                             "right": 0
                                                           },
                                                           "then": [
                                                             {
                                                               "forEach": {
-                                                                "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__attritionPiece",
+                                                                "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__attritionPiece",
                                                                 "macroOrigin": {
                                                                   "macroId": "insurgent-attack-removal-order",
                                                                   "stem": "attritionPiece"
@@ -28782,7 +28983,7 @@
                                                                 "effects": [
                                                                   {
                                                                     "moveToken": {
-                                                                      "token": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__attritionPiece",
+                                                                      "token": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__attritionPiece",
                                                                       "from": "$space",
                                                                       "to": {
                                                                         "zoneExpr": {
@@ -28798,7 +28999,7 @@
                                                                 ],
                                                                 "limit": {
                                                                   "ref": "binding",
-                                                                  "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__usRemoved"
+                                                                  "name": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_2__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__usRemoved"
                                                                 }
                                                               }
                                                             }
@@ -29032,7 +29233,7 @@
           ]
         },
         {
-          "stage": "resolve-per-space",
+          "stage": "cost-per-space",
           "effects": [
             {
               "forEach": {
@@ -29062,7 +29263,23 @@
                         }
                       ]
                     }
-                  },
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "stage": "resolve-per-space",
+          "effects": [
+            {
+              "forEach": {
+                "bind": "$space",
+                "over": {
+                  "query": "binding",
+                  "name": "targetSpaces"
+                },
+                "effects": [
                   {
                     "forEach": {
                       "bind": "$g",
@@ -29140,7 +29357,7 @@
                                   "then": [
                                     {
                                       "let": {
-                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore",
+                                        "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore",
                                         "value": {
                                           "aggregate": {
                                             "op": "count",
@@ -29163,7 +29380,7 @@
                                               "budget": 2,
                                               "groups": [
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -29185,7 +29402,7 @@
                                                   }
                                                 },
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -29207,7 +29424,7 @@
                                                   }
                                                 },
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -29229,7 +29446,7 @@
                                                   }
                                                 },
                                                 {
-                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__target",
+                                                  "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__target",
                                                   "over": {
                                                     "query": "tokensInZone",
                                                     "zone": "$space",
@@ -29255,7 +29472,7 @@
                                           },
                                           {
                                             "let": {
-                                              "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter",
+                                              "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter",
                                               "value": {
                                                 "aggregate": {
                                                   "op": "count",
@@ -29275,16 +29492,16 @@
                                               "in": [
                                                 {
                                                   "let": {
-                                                    "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usRemoved",
+                                                    "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved",
                                                     "value": {
                                                       "op": "-",
                                                       "left": {
                                                         "ref": "binding",
-                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore"
+                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesBefore"
                                                       },
                                                       "right": {
                                                         "ref": "binding",
-                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter"
+                                                        "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usPiecesAfter"
                                                       }
                                                     },
                                                     "in": [
@@ -29294,14 +29511,14 @@
                                                             "op": ">",
                                                             "left": {
                                                               "ref": "binding",
-                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
+                                                              "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
                                                             },
                                                             "right": 0
                                                           },
                                                           "then": [
                                                             {
                                                               "forEach": {
-                                                                "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
+                                                                "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
                                                                 "macroOrigin": {
                                                                   "macroId": "insurgent-attack-removal-order",
                                                                   "stem": "attritionPiece"
@@ -29320,7 +29537,7 @@
                                                                 "effects": [
                                                                   {
                                                                     "moveToken": {
-                                                                      "token": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
+                                                                      "token": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
                                                                       "from": "$space",
                                                                       "to": {
                                                                         "zoneExpr": {
@@ -29336,7 +29553,7 @@
                                                                 ],
                                                                 "limit": {
                                                                   "ref": "binding",
-                                                                  "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
+                                                                  "name": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_2__effects_0__forEach_effects_1__let_in_0__rollRandom_in_0__if_then_0__usRemoved"
                                                                 }
                                                               }
                                                             }
@@ -30688,6 +30905,13 @@
     {
       "id": "advise-profile",
       "actionId": "advise",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 0
+      },
       "accompanyingOps": [
         "train",
         "patrol"
@@ -31740,8 +31964,11 @@
                                 },
                                 {
                                   "prop": "type",
-                                  "op": "eq",
-                                  "value": "guerrilla"
+                                  "op": "in",
+                                  "value": [
+                                    "irregular",
+                                    "ranger"
+                                  ]
                                 },
                                 {
                                   "prop": "activity",
@@ -32216,6 +32443,13 @@
     {
       "id": "air-lift-profile",
       "actionId": "airLift",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 0
+      },
       "accompanyingOps": "any",
       "legality": {
         "op": "or",
@@ -32416,7 +32650,7 @@
                           "op": "in",
                           "value": [
                             "troops",
-                            "guerrilla"
+                            "ranger"
                           ]
                         }
                       ]
@@ -32446,7 +32680,7 @@
                         {
                           "prop": "type",
                           "op": "eq",
-                          "value": "guerrilla"
+                          "value": "irregular"
                         }
                       ]
                     }
@@ -32534,6 +32768,13 @@
     {
       "id": "air-strike-profile",
       "actionId": "airStrike",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 0
+      },
       "accompanyingOps": "any",
       "legality": {
         "op": "or",
@@ -33864,6 +34105,13 @@
     {
       "id": "govern-profile",
       "actionId": "govern",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 1
+      },
       "accompanyingOps": [
         "train",
         "patrol"
@@ -34550,6 +34798,13 @@
     {
       "id": "transport-profile",
       "actionId": "transport",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 1
+      },
       "accompanyingOps": "any",
       "legality": {
         "op": "or",
@@ -34617,7 +34872,7 @@
                                     "op": "in",
                                     "value": [
                                       "troops",
-                                      "guerrilla"
+                                      "ranger"
                                     ]
                                   }
                                 ]
@@ -34846,7 +35101,7 @@
                       "op": "in",
                       "value": [
                         "troops",
-                        "guerrilla"
+                        "ranger"
                       ]
                     }
                   ]
@@ -34917,7 +35172,7 @@
                           {
                             "prop": "type",
                             "op": "eq",
-                            "value": "guerrilla"
+                            "value": "ranger"
                           }
                         ]
                       },
@@ -35363,6 +35618,13 @@
     {
       "id": "raid-profile",
       "actionId": "raid",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 1
+      },
       "accompanyingOps": [
         "patrol",
         "sweep",
@@ -35484,7 +35746,7 @@
                                 {
                                   "prop": "type",
                                   "op": "eq",
-                                  "value": "guerrilla"
+                                  "value": "ranger"
                                 }
                               ]
                             },
@@ -35550,7 +35812,7 @@
                                     {
                                       "prop": "type",
                                       "op": "eq",
-                                      "value": "guerrilla"
+                                      "value": "ranger"
                                     },
                                     {
                                       "prop": "activity",
@@ -35581,7 +35843,7 @@
                                 {
                                   "prop": "type",
                                   "op": "eq",
-                                  "value": "guerrilla"
+                                  "value": "ranger"
                                 },
                                 {
                                   "prop": "activity",
@@ -36017,6 +36279,13 @@
     {
       "id": "infiltrate-profile",
       "actionId": "infiltrate",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 2
+      },
       "accompanyingOps": [
         "rally",
         "march"
@@ -37888,6 +38157,13 @@
     {
       "id": "bombard-profile",
       "actionId": "bombard",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 2
+      },
       "accompanyingOps": "any",
       "legality": {
         "op": "or",
@@ -38690,6 +38966,13 @@
     {
       "id": "nva-ambush-profile",
       "actionId": "ambushNva",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 2
+      },
       "accompanyingOps": [
         "march",
         "attack"
@@ -39651,6 +39934,13 @@
     {
       "id": "tax-profile",
       "actionId": "tax",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 3
+      },
       "accompanyingOps": "any",
       "legality": null,
       "costValidation": null,
@@ -40040,6 +40330,13 @@
     {
       "id": "subvert-profile",
       "actionId": "subvert",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 3
+      },
       "accompanyingOps": [
         "rally",
         "march",
@@ -40972,6 +41269,13 @@
     {
       "id": "vc-ambush-profile",
       "actionId": "ambushVc",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 3
+      },
       "accompanyingOps": [
         "march",
         "attack"
@@ -41959,6 +42263,13 @@
     {
       "id": "us-op-profile",
       "actionId": "usOp",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 0
+      },
       "legality": null,
       "costValidation": {
         "op": ">=",
@@ -42013,6 +42324,13 @@
     {
       "id": "arvn-op-profile",
       "actionId": "arvnOp",
+      "applicability": {
+        "op": "==",
+        "left": {
+          "ref": "activePlayer"
+        },
+        "right": 1
+      },
       "legality": null,
       "costValidation": {
         "op": ">=",
@@ -43033,12 +43351,7 @@
       },
       "cost": [],
       "effects": [],
-      "limits": [
-        {
-          "scope": "phase",
-          "max": 1
-        }
-      ]
+      "limits": []
     },
     {
       "id": "coupAgitatePass",
@@ -43057,19 +43370,12 @@
       },
       "cost": [],
       "effects": [],
-      "limits": [
-        {
-          "scope": "phase",
-          "max": 1
-        }
-      ]
+      "limits": []
     },
     {
       "id": "coupPacifyUS",
       "actor": "active",
-      "executor": {
-        "id": 0
-      },
+      "executor": "actor",
       "phase": [
         "coupSupport"
       ],
@@ -43623,9 +43929,7 @@
     {
       "id": "coupPacifyARVN",
       "actor": "active",
-      "executor": {
-        "id": 1
-      },
+      "executor": "actor",
       "phase": [
         "coupSupport"
       ],
@@ -44172,9 +44476,7 @@
     {
       "id": "coupAgitateVC",
       "actor": "active",
-      "executor": {
-        "id": 3
-      },
+      "executor": "actor",
       "phase": [
         "coupSupport"
       ],
@@ -44656,9 +44958,7 @@
     {
       "id": "coupArvnRedeployMandatory",
       "actor": "active",
-      "executor": {
-        "id": 1
-      },
+      "executor": "actor",
       "phase": [
         "coupRedeploy"
       ],
@@ -45062,9 +45362,7 @@
     {
       "id": "coupArvnRedeployOptionalTroops",
       "actor": "active",
-      "executor": {
-        "id": 1
-      },
+      "executor": "actor",
       "phase": [
         "coupRedeploy"
       ],
@@ -45445,9 +45743,7 @@
     {
       "id": "coupArvnRedeployPolice",
       "actor": "active",
-      "executor": {
-        "id": 1
-      },
+      "executor": "actor",
       "phase": [
         "coupRedeploy"
       ],
@@ -45697,9 +45993,7 @@
     {
       "id": "coupNvaRedeployTroops",
       "actor": "active",
-      "executor": {
-        "id": 2
-      },
+      "executor": "actor",
       "phase": [
         "coupRedeploy"
       ],
@@ -45851,12 +46145,7 @@
       "pre": null,
       "cost": [],
       "effects": [],
-      "limits": [
-        {
-          "scope": "phase",
-          "max": 1
-        }
-      ]
+      "limits": []
     },
     {
       "id": "coupCommitmentPass",
@@ -45869,19 +46158,12 @@
       "pre": null,
       "cost": [],
       "effects": [],
-      "limits": [
-        {
-          "scope": "phase",
-          "max": 1
-        }
-      ]
+      "limits": []
     },
     {
       "id": "coupCommitmentResolve",
       "actor": "active",
-      "executor": {
-        "id": 0
-      },
+      "executor": "actor",
       "phase": [
         "coupCommitment"
       ],
@@ -47438,9 +47720,7 @@
     {
       "id": "nvaTransferResources",
       "actor": "active",
-      "executor": {
-        "id": 2
-      },
+      "executor": "actor",
       "phase": [
         "main"
       ],
@@ -47509,9 +47789,7 @@
     {
       "id": "vcTransferResources",
       "actor": "active",
-      "executor": {
-        "id": 3
-      },
+      "executor": "actor",
       "phase": [
         "main"
       ],
@@ -56095,131 +56373,76 @@
             ]
           },
           "shaded": {
-            "text": "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each.",
-            "targets": [
+            "text": "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each. ARVN Ineligible through next card.",
+            "eligibilityOverrides": [
               {
-                "id": "$sourceSpace",
-                "selector": {
-                  "query": "mapSpaces"
+                "target": {
+                  "kind": "seat",
+                  "seat": "1"
                 },
-                "cardinality": {
-                  "max": 1
-                }
+                "eligible": false,
+                "windowId": "make-ineligible"
               }
             ],
             "effects": [
               {
-                "removeByPriority": {
-                  "budget": 3,
-                  "groups": [
-                    {
-                      "bind": "arvnTroop",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$sourceSpace",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "ARVN"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "eq",
-                            "value": "troops"
-                          }
-                        ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-ARVN:none"
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.44.shaded.effects.0.chooseN",
+                  "bind": "$arvnPiecesToRemove",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "ARVN"
                       }
-                    },
-                    {
-                      "bind": "arvnPolice",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$sourceSpace",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "ARVN"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "eq",
-                            "value": "police"
-                          }
-                        ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-ARVN:none"
-                      }
-                    },
-                    {
-                      "bind": "arvnRanger",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$sourceSpace",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "ARVN"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "eq",
-                            "value": "ranger"
-                          }
-                        ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-ARVN:none"
-                      }
-                    },
-                    {
-                      "bind": "arvnBase",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$sourceSpace",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "ARVN"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "eq",
-                            "value": "base"
-                          }
-                        ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-ARVN:none"
-                      }
-                    }
-                  ],
-                  "remainingBind": "$remainingRemovalBudget"
+                    ]
+                  },
+                  "max": 3,
+                  "min": 0
                 }
               },
               {
-                "addVar": {
-                  "scope": "global",
-                  "var": "patronage",
-                  "delta": {
-                    "op": "*",
-                    "left": 2,
-                    "right": {
-                      "op": "-",
-                      "left": 3,
-                      "right": {
-                        "ref": "binding",
-                        "name": "$remainingRemovalBudget"
+                "forEach": {
+                  "bind": "$arvnPiece",
+                  "over": {
+                    "query": "binding",
+                    "name": "$arvnPiecesToRemove"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$arvnPiece",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$arvnPiece"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "available-ARVN:none"
+                        }
                       }
                     }
-                  }
+                  ],
+                  "countBind": "$removedCount",
+                  "in": [
+                    {
+                      "addVar": {
+                        "scope": "global",
+                        "var": "patronage",
+                        "delta": {
+                          "op": "*",
+                          "left": 2,
+                          "right": {
+                            "ref": "binding",
+                            "name": "$removedCount"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             ]

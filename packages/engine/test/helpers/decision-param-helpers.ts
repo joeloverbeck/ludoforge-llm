@@ -114,9 +114,12 @@ export const applyMoveWithResolvedDecisionIds = (
       // later stages have already mutated the board (e.g. attack combat activates guerrillas),
       // making SA option domains invalid. Use the original state as the best approximation of the
       // mid-operation state for SA decision normalization.
+      // Preserve the original activePlayer for SA resolution. The standalone operation
+      // applyMove may advance the turn and change activePlayer, but compound moves are
+      // a single turn action — the SA must resolve with the same player context.
       const saResolutionState = compound.replaceRemainingStages === true
         ? state
-        : applyMove(def, state, operationMove).state;
+        : { ...applyMove(def, state, operationMove).state, activePlayer: state.activePlayer };
       return {
         ...normalized,
         compound: {

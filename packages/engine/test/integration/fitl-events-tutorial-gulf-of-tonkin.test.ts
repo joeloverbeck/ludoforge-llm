@@ -231,10 +231,14 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
           params: freeAirStrikeMove!.params,
           freeOperation: true,
         }),
-      (error: unknown) =>
-        error instanceof Error &&
-        'reason' in error &&
-        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED,
+      (error: unknown) => {
+        if (!(error instanceof Error) || !('reason' in error)) return false;
+        const reason = (error as { reason?: string }).reason;
+        // NVA (seat 2) can never use Air Strike — air-strike-profile applicability
+        // requires activePlayer == 0 (US). Pipeline dispatch rejects before the
+        // grant check runs.
+        return reason === ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE;
+      },
     );
   });
 

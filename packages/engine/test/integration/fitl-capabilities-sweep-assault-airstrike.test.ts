@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asTokenId, initialState, type GameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, initialState, type GameState, type Token } from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
@@ -212,6 +212,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const start = initialState(def, 1001, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(0),
       globalMarkers: {
         ...start.globalMarkers,
         cap_lgbs: 'shaded',
@@ -255,6 +256,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const start = initialState(def, 1002, 4).state;
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(0),
       globalVars: {
         ...start.globalVars,
         trail: 3,

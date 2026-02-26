@@ -389,6 +389,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const start = operationInitialState(def, 241, 4);
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(3),
       globalVars: {
         ...start.globalVars,
         vcResources: 5,
@@ -484,6 +485,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const start = operationInitialState(def, 271, 4);
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(3),
       globalVars: {
         ...start.globalVars,
         vcResources: 3,
@@ -525,6 +527,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const start = operationInitialState(def, 281, 4);
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(3),
       globalVars: {
         ...start.globalVars,
         vcResources: 6,
@@ -583,6 +586,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const start = operationInitialState(def, 251, 4);
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(3),
       globalVars: {
         ...start.globalVars,
         patronage: 10,
@@ -656,6 +660,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const start = operationInitialState(def, 257, 4);
     const modifiedStart: GameState = {
       ...start,
+      activePlayer: asPlayerId(3),
       globalVars: {
         ...start.globalVars,
         vcResources: 6,
@@ -704,9 +709,11 @@ describe('FITL NVA/VC special activities integration', () => {
 
     const state = operationInitialState(compiled.gameDef!, 313, 4);
 
+    // Use 'attack' as the accompanying operation — it's a legal NVA operation (seat 2)
+    // but is NOT in infiltrate-profile's accompanyingOps: [rally, march].
     assert.throws(
       () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
-        actionId: asActionId('usOp'),
+        actionId: asActionId('attack'),
         params: {},
         compound: {
           specialActivity: { actionId: asActionId('infiltrate'), params: {} },

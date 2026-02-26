@@ -1,6 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { collectTopLevelNamedExports, isIdentifierExported, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
+import {
+  assertModuleExportContract,
+  collectTopLevelExportSurface,
+  isIdentifierExported,
+  parseTypeScriptSource,
+} from '../../helpers/kernel-source-ast-guard.js';
 import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const canonicalScopedWriteHelper = 'writeScopedVarsToState';
@@ -22,6 +27,23 @@ const expectedScopedVarRuntimeAccessExports = [
 ] as const;
 
 describe('scoped-var write surface architecture guard', () => {
+  it('detects wildcard/default/assignment export mechanisms in export-surface metadata', () => {
+    const wildcardSurface = collectTopLevelExportSurface(
+      parseTypeScriptSource("export * from './dep.js';", 'wildcard.ts'),
+    );
+    assert.equal(wildcardSurface.hasExportAll, true, 'export-surface metadata must detect wildcard re-exports');
+
+    const defaultSurface = collectTopLevelExportSurface(
+      parseTypeScriptSource('const value = 1; export default value;', 'default.ts'),
+    );
+    assert.equal(defaultSurface.hasDefaultExport, true, 'export-surface metadata must detect default exports');
+
+    const assignmentSurface = collectTopLevelExportSurface(
+      parseTypeScriptSource('const value = 1; export = value;', 'assignment.ts'),
+    );
+    assert.equal(assignmentSurface.hasExportAssignment, true, 'export-surface metadata must detect export assignments');
+  });
+
   it('keeps branch-level scoped write helpers private and preserves one runtime write entry point', () => {
     const scopedVarSource = readKernelSource(scopedVarRuntimeAccessModule);
     const scopedVarSourceFile = parseTypeScriptSource(scopedVarSource, scopedVarRuntimeAccessModule);
@@ -50,18 +72,10 @@ describe('scoped-var write surface architecture guard', () => {
   it('exports only the intended scoped-var runtime-access public API', () => {
     const scopedVarSource = readKernelSource(scopedVarRuntimeAccessModule);
     const scopedVarSourceFile = parseTypeScriptSource(scopedVarSource, scopedVarRuntimeAccessModule);
-    const exportedNames = collectTopLevelNamedExports(scopedVarSourceFile);
-
-    assert.deepEqual(
-      [...exportedNames].sort(),
-      [...expectedScopedVarRuntimeAccessExports].sort(),
-      'scoped-var-runtime-access.ts public exports must match the curated API contract',
-    );
-    assert.equal(
-      exportedNames.has('ScopedVarStateBranches'),
-      false,
-      'scoped-var-runtime-access.ts must not export internal branch staging types',
-    );
+    assertModuleExportContract(scopedVarSourceFile, 'scoped-var-runtime-access.ts', {
+      expectedNamedExports: expectedScopedVarRuntimeAccessExports,
+      forbiddenNamedExports: ['ScopedVarStateBranches'],
+    });
   });
 
   it('forbids effect modules from bypassing canonical scoped write helper', () => {

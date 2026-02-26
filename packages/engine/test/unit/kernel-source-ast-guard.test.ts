@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  assertModuleExportContract,
   collectCallExpressionsByIdentifier,
   collectTopLevelObjectLiteralInitializers,
   parseTypeScriptSource,
@@ -60,5 +61,50 @@ describe('kernel source ast guard helpers', () => {
     assert.equal(resolveStringLiteralObjectPropertyWithSpreads(leaf, 'mode', objectInitializers), 'execution');
     assert.equal(resolveStringLiteralObjectPropertyWithSpreads(override, 'mode', objectInitializers), 'discovery');
     assert.equal(resolveStringLiteralObjectPropertyWithSpreads(nonLiteral, 'mode', objectInitializers), undefined);
+  });
+
+  it('asserts module export contracts including disallowed export mechanisms', () => {
+    const sourceFile = parseTypeScriptSource(
+      `
+      export const alpha = 1;
+      export const beta = 2;
+      `,
+      'contract-pass.ts',
+    );
+
+    assert.doesNotThrow(() =>
+      assertModuleExportContract(sourceFile, 'contract-pass.ts', {
+        expectedNamedExports: ['alpha', 'beta'],
+      }),
+    );
+  });
+
+  it('fails module export contracts when default/wildcard/assignment exports are present', () => {
+    const wildcardSource = parseTypeScriptSource("export * from './dep.js';", 'contract-wildcard.ts');
+    assert.throws(
+      () =>
+        assertModuleExportContract(wildcardSource, 'contract-wildcard.ts', {
+          expectedNamedExports: [],
+        }),
+      /forbid wildcard re-exports/u,
+    );
+
+    const defaultSource = parseTypeScriptSource('const value = 1; export default value;', 'contract-default.ts');
+    assert.throws(
+      () =>
+        assertModuleExportContract(defaultSource, 'contract-default.ts', {
+          expectedNamedExports: [],
+        }),
+      /forbid default export forms/u,
+    );
+
+    const assignmentSource = parseTypeScriptSource('const value = 1; export = value;', 'contract-assignment.ts');
+    assert.throws(
+      () =>
+        assertModuleExportContract(assignmentSource, 'contract-assignment.ts', {
+          expectedNamedExports: [],
+        }),
+      /forbid export assignment/u,
+    );
   });
 });

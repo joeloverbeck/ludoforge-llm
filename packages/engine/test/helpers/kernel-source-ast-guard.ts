@@ -1,3 +1,4 @@
+import * as assert from 'node:assert/strict';
 import ts from 'typescript';
 
 export const parseTypeScriptSource = (source: string, fileName: string): ts.SourceFile =>
@@ -160,6 +161,116 @@ export const collectTopLevelNamedExports = (sourceFile: ts.SourceFile): Set<stri
   }
 
   return names;
+};
+
+const hasDefaultModifier = (modifiers: ts.NodeArray<ts.ModifierLike> | undefined): boolean =>
+  modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) ?? false;
+
+export type TopLevelExportSurface = Readonly<{
+  namedExports: ReadonlySet<string>;
+  hasExportAll: boolean;
+  hasDefaultExport: boolean;
+  hasExportAssignment: boolean;
+}>;
+
+export const collectTopLevelExportSurface = (sourceFile: ts.SourceFile): TopLevelExportSurface => {
+  const namedExports = collectTopLevelNamedExports(sourceFile);
+  let hasExportAll = false;
+  let hasDefaultExport = false;
+  let hasExportAssignment = false;
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isExportDeclaration(statement)) {
+      if (statement.exportClause === undefined) {
+        hasExportAll = true;
+        continue;
+      }
+
+      if (ts.isNamedExports(statement.exportClause)) {
+        for (const specifier of statement.exportClause.elements) {
+          if (specifier.name.text === 'default' || specifier.propertyName?.text === 'default') {
+            hasDefaultExport = true;
+            break;
+          }
+        }
+      }
+      continue;
+    }
+
+    if (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      hasExportModifier(statement.modifiers) &&
+      hasDefaultModifier(statement.modifiers)
+    ) {
+      hasDefaultExport = true;
+      continue;
+    }
+
+    if (ts.isExportAssignment(statement)) {
+      if (statement.isExportEquals) {
+        hasExportAssignment = true;
+      } else {
+        hasDefaultExport = true;
+      }
+    }
+  }
+
+  return {
+    namedExports,
+    hasExportAll,
+    hasDefaultExport,
+    hasExportAssignment,
+  };
+};
+
+export type ModuleExportContract = Readonly<{
+  expectedNamedExports: readonly string[];
+  allowExportAll?: boolean;
+  allowDefaultExport?: boolean;
+  allowExportAssignment?: boolean;
+  forbiddenNamedExports?: readonly string[];
+}>;
+
+export const assertModuleExportContract = (
+  sourceFile: ts.SourceFile,
+  moduleLabel: string,
+  contract: ModuleExportContract,
+): TopLevelExportSurface => {
+  const exportSurface = collectTopLevelExportSurface(sourceFile);
+  const actualNamed = [...exportSurface.namedExports].sort();
+  const expectedNamed = [...contract.expectedNamedExports].sort();
+
+  assert.deepEqual(
+    actualNamed,
+    expectedNamed,
+    `${moduleLabel} public exports must match the curated API contract`,
+  );
+
+  for (const forbidden of contract.forbiddenNamedExports ?? []) {
+    assert.equal(
+      exportSurface.namedExports.has(forbidden),
+      false,
+      `${moduleLabel} must not export internal identifier ${forbidden}`,
+    );
+  }
+
+  assert.equal(
+    exportSurface.hasExportAll,
+    contract.allowExportAll ?? false,
+    `${moduleLabel} must ${contract.allowExportAll === true ? 'allow' : 'forbid'} wildcard re-exports in module API contracts`,
+  );
+  assert.equal(
+    exportSurface.hasDefaultExport,
+    contract.allowDefaultExport ?? false,
+    `${moduleLabel} must ${contract.allowDefaultExport === true ? 'allow' : 'forbid'} default export forms in module API contracts`,
+  );
+  assert.equal(
+    exportSurface.hasExportAssignment,
+    contract.allowExportAssignment ?? false,
+    `${moduleLabel} must ${contract.allowExportAssignment === true ? 'allow' : 'forbid'} export assignment in module API contracts`,
+  );
+
+  return exportSurface;
 };
 
 export const getObjectPropertyExpression = (

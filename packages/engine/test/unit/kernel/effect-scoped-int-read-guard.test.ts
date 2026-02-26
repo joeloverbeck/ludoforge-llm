@@ -1,19 +1,6 @@
 import * as assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
-
-const readKernelSource = (relativePath: string): string => {
-  const candidates = [join(process.cwd(), relativePath), join(process.cwd(), 'packages/engine', relativePath)];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return readFileSync(candidate, 'utf8');
-    }
-  }
-
-  throw new Error(`Could not find kernel source file for guard: ${relativePath}`);
-};
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 describe('effect scoped-int read architecture guard', () => {
   it('keeps addVar/transferVar int reads routed through shared runtime helper', () => {

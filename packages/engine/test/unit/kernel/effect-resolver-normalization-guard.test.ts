@@ -1,31 +1,6 @@
 import * as assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
-
-const readKernelSource = (relativePath: string): string => {
-  const candidates = [join(process.cwd(), relativePath), join(process.cwd(), 'packages/engine', relativePath)];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return readFileSync(candidate, 'utf8');
-    }
-  }
-
-  throw new Error(`Could not find kernel source file for guard: ${relativePath}`);
-};
-
-const listEffectModules = (): readonly string[] => {
-  const candidates = [join(process.cwd(), 'src/kernel'), join(process.cwd(), 'packages/engine/src/kernel')];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return readdirSync(candidate)
-        .filter((name) => name.startsWith('effects-') && name.endsWith('.ts'))
-        .sort();
-    }
-  }
-
-  throw new Error('Could not find kernel source directory for effect guard');
-};
+import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const selectorNormalizedModules = {
   'effects-choice.ts': ['resolveZoneWithNormalization'],
@@ -46,7 +21,7 @@ const prohibitedDirectResolvers = ['resolveZoneRef', 'resolvePlayerSel'] as cons
 
 describe('effect resolver normalization architecture guard', () => {
   it('keeps effect handler resolver usage aligned with normalization policy', () => {
-    const actualEffectModules = listEffectModules();
+    const actualEffectModules = listKernelModulesByPrefix('effects-');
     const policyModules = [...Object.keys(selectorNormalizedModules), ...selectorFreeModules].sort();
     assert.deepEqual(
       actualEffectModules,

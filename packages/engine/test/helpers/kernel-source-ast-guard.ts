@@ -188,5 +188,101 @@ export const getObjectPropertyExpression = (
   return undefined;
 };
 
+export const unwrapTypeScriptExpression = (expression: ts.Expression): ts.Expression => {
+  if (ts.isParenthesizedExpression(expression)) {
+    return unwrapTypeScriptExpression(expression.expression);
+  }
+  if (ts.isAsExpression(expression) || ts.isTypeAssertionExpression(expression) || ts.isSatisfiesExpression(expression)) {
+    return unwrapTypeScriptExpression(expression.expression);
+  }
+  return expression;
+};
+
+export const collectTopLevelObjectLiteralInitializers = (
+  sourceFile: ts.SourceFile,
+): ReadonlyMap<string, ts.ObjectLiteralExpression> => {
+  const initializers = new Map<string, ts.ObjectLiteralExpression>();
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer !== undefined) {
+      const unwrapped = unwrapTypeScriptExpression(node.initializer);
+      if (ts.isObjectLiteralExpression(unwrapped)) {
+        initializers.set(node.name.text, unwrapped);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return initializers;
+};
+
+export const resolveObjectLiteralFromExpression = (
+  expression: ts.Expression,
+  objectInitializers: ReadonlyMap<string, ts.ObjectLiteralExpression>,
+): ts.ObjectLiteralExpression | undefined => {
+  const unwrapped = unwrapTypeScriptExpression(expression);
+  if (ts.isObjectLiteralExpression(unwrapped)) {
+    return unwrapped;
+  }
+  if (ts.isIdentifier(unwrapped)) {
+    return objectInitializers.get(unwrapped.text);
+  }
+  return undefined;
+};
+
+export const resolveObjectPropertyExpressionWithSpreads = (
+  objectLiteral: ts.ObjectLiteralExpression,
+  propertyName: string,
+  objectInitializers: ReadonlyMap<string, ts.ObjectLiteralExpression>,
+  visitedIdentifiers: ReadonlySet<string> = new Set<string>(),
+): ts.Expression | undefined => {
+  const explicit = getObjectPropertyExpression(objectLiteral, propertyName);
+  if (explicit !== undefined) {
+    return explicit;
+  }
+
+  for (const property of objectLiteral.properties) {
+    if (!ts.isSpreadAssignment(property)) {
+      continue;
+    }
+    const spreadExpression = unwrapTypeScriptExpression(property.expression);
+    if (!ts.isIdentifier(spreadExpression)) {
+      continue;
+    }
+    if (visitedIdentifiers.has(spreadExpression.text)) {
+      continue;
+    }
+    const nested = objectInitializers.get(spreadExpression.text);
+    if (nested === undefined) {
+      continue;
+    }
+    const nextVisited = new Set(visitedIdentifiers);
+    nextVisited.add(spreadExpression.text);
+    const resolved = resolveObjectPropertyExpressionWithSpreads(nested, propertyName, objectInitializers, nextVisited);
+    if (resolved !== undefined) {
+      return resolved;
+    }
+  }
+
+  return undefined;
+};
+
+export const resolveStringLiteralObjectPropertyWithSpreads = (
+  objectLiteral: ts.ObjectLiteralExpression,
+  propertyName: string,
+  objectInitializers: ReadonlyMap<string, ts.ObjectLiteralExpression>,
+): string | undefined => {
+  const expression = resolveObjectPropertyExpressionWithSpreads(objectLiteral, propertyName, objectInitializers);
+  if (expression === undefined) {
+    return undefined;
+  }
+  const unwrapped = unwrapTypeScriptExpression(expression);
+  if (ts.isStringLiteral(unwrapped) || ts.isNoSubstitutionTemplateLiteral(unwrapped)) {
+    return unwrapped.text;
+  }
+  return undefined;
+};
+
 export const expressionToText = (sourceFile: ts.SourceFile, expression: ts.Expression): string =>
   expression.getText(sourceFile);

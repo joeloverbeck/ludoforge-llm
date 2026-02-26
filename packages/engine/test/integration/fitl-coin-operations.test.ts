@@ -265,7 +265,7 @@ describe('FITL COIN operations integration', () => {
       assert.ok(northVietnamExclusions.length >= 2, 'Expected northVietnam exclusion in both selection branches');
     });
 
-    it('move-troops includes direct adjacent movement and one-hop LoC movement wiring', () => {
+    it('move-troops includes direct adjacent movement and sweep-loc-hop macro call', () => {
       const parsed = parseSweepUsProfile();
       const moveTroops = parsed.stages[1];
       assert.equal(moveTroops.stage, 'move-troops');
@@ -279,28 +279,12 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(directMoveQuery.length >= 1, 'Expected direct adjacent US troop movement query');
 
-      const hopLocSelection = findDeep(moveTroops.effects, (node: any) =>
-        node?.query === 'adjacentZones' && node?.zone === '$space',
+      const hopMacroCall = findDeep(moveTroops.effects, (node: any) =>
+        node?.macro === 'sweep-loc-hop' &&
+        node?.args?.space === '$space' &&
+        node?.args?.troopFaction === 'US',
       );
-      assert.ok(hopLocSelection.length >= 1, 'Expected adjacent-zone selection for one-hop candidates');
-
-      const hopEligibilityGuard = findDeep(moveTroops.effects, (node: any) =>
-        node?.if?.when?.op === 'and' &&
-        findDeep(node.if.when.args, (inner: any) =>
-          inner?.op === '==' && inner?.left?.ref === 'zoneProp' && inner?.left?.prop === 'category' && inner?.right === 'loc',
-        ).length > 0 &&
-        findDeep(node.if.when.args, (inner: any) => inner?.op === '==' && inner?.right === 0).length > 0,
-      );
-      assert.ok(hopEligibilityGuard.length >= 1, 'Expected hop LoC guard (loc + no NVA/VC)');
-
-      const hopMoveQuery = findDeep(moveTroops.effects, (node: any) =>
-        node?.query === 'tokensInAdjacentZones' &&
-        node?.zone === '$hopLoc' &&
-        Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
-        node.filter.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
-      );
-      assert.ok(hopMoveQuery.length >= 1, 'Expected one-hop US troop movement query');
+      assert.ok(hopMacroCall.length >= 1, 'Expected sweep-loc-hop macro call with US troopFaction');
     });
 
     it('activate-guerrillas invokes sweep-activation macro with US cube+SF args', () => {

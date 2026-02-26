@@ -58,7 +58,7 @@ export const runGame = (
   const moveLogs: MoveLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
-  let stopReason: SimulationStopReason = 'maxTurns';
+  let stopReason: SimulationStopReason;
 
   while (true) {
     const terminal = terminalResult(validatedDef, state, runtime);

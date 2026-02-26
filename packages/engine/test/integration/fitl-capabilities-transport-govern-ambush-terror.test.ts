@@ -163,12 +163,12 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       const setup = addTokenToZone(
         addTokenToZone(start, origin, makeToken(`transport-${marker}-troop`, 'troops', 'ARVN', { type: 'troops' })),
         origin,
-        makeToken(`transport-${marker}-ranger`, 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+        makeToken(`transport-${marker}-ranger`, 'ranger', 'ARVN', { type: 'ranger', activity: 'active' }),
       );
       const setupWithRemoteRanger = addTokenToZone(
         setup,
         remote,
-        makeToken(`transport-${marker}-remote-ranger`, 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+        makeToken(`transport-${marker}-remote-ranger`, 'ranger', 'ARVN', { type: 'ranger', activity: 'active' }),
       );
       return applyMoveWithResolvedDecisionIds(def, setupWithRemoteRanger, {
         actionId: asActionId('transport'),
@@ -189,7 +189,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
         1,
       );
       assert.equal(
-        countTokens(state, destination, (token) => token.props.faction === 'ARVN' && token.type === 'guerrilla'),
+        countTokens(state, destination, (token) => token.props.faction === 'ARVN' && token.type === 'ranger'),
         1,
       );
     }
@@ -199,7 +199,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       1,
     );
     assert.equal(
-      countTokens(shaded, destination, (token) => token.props.faction === 'ARVN' && token.type === 'guerrilla'),
+      countTokens(shaded, destination, (token) => token.props.faction === 'ARVN' && token.type === 'ranger'),
       1,
     );
     const inactiveRanger = (inactive.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-inactive-ranger'));

@@ -1565,6 +1565,62 @@ effectMacros:
                                         from: $srcSpace
                                         to: { param: targetSpace }
 
+  # ── sweep-loc-hop ─────────────────────────────────────────────────────────
+  # Sweep troop movement via LoC hop: select adjacent LoCs clear of NVA/VC,
+  # then pull troops from zones adjacent to those LoCs into $space.
+  # Used by both US and ARVN sweep profiles.
+  - id: sweep-loc-hop
+    params:
+      - { name: space, type: string }
+      - { name: troopFaction, type: { kind: enum, values: [US, ARVN] } }
+    exports: []
+    effects:
+      - chooseN:
+          bind: '$hopLocs@{$space}'
+          options:
+            query: adjacentZones
+            zone: { param: space }
+          min: 0
+          max: 99
+      - forEach:
+          bind: $hopLoc
+          over: { query: binding, name: '$hopLocs@{$space}' }
+          effects:
+            - if:
+                when:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $hopLoc, prop: category }, right: 'loc' }
+                    - op: '=='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $hopLoc
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      right: 0
+                then:
+                  - chooseN:
+                      bind: '$movingHopTroops@{$space}'
+                      options:
+                        query: tokensInAdjacentZones
+                        zone: $hopLoc
+                        filter:
+                          - { prop: faction, eq: { param: troopFaction } }
+                          - { prop: type, eq: troops }
+                      min: 0
+                      max: 99
+                  - forEach:
+                      bind: $hopTroop
+                      over: { query: binding, name: '$movingHopTroops@{$space}' }
+                      effects:
+                        - moveToken:
+                            token: $hopTroop
+                            from: { zoneExpr: { ref: tokenZone, token: $hopTroop } }
+                            to: { param: space }
+
   # ── sweep-activation ───────────────────────────────────────────────────────
   # Guerrilla activation counting cubes + Special Forces, with Jungle terrain ratio.
   - id: sweep-activation

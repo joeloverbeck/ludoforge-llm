@@ -1619,63 +1619,35 @@ eventDecks:
           effects:
             - addVar: { scope: global, var: aid, delta: 20 }
         shaded:
-          text: "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each."
-          targets:
-            - id: $sourceSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
+          text: "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each. ARVN Ineligible through next card."
+          eligibilityOverrides:
+            - { target: { kind: seat, seat: '1' }, eligible: false, windowId: make-ineligible }
           effects:
-            - removeByPriority:
-                budget: 3
-                groups:
-                  - bind: arvnTroop
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: available-ARVN:none
-                  - bind: arvnPolice
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: police }
-                    to:
-                      zoneExpr: available-ARVN:none
-                  - bind: arvnRanger
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: ranger }
-                    to:
-                      zoneExpr: available-ARVN:none
-                  - bind: arvnBase
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: base }
-                    to:
-                      zoneExpr: available-ARVN:none
-                remainingBind: $remainingRemovalBudget
-            - addVar:
-                scope: global
-                var: patronage
-                delta:
-                  op: "*"
-                  left: 2
-                  right:
-                    op: "-"
-                    left: 3
-                    right: { ref: binding, name: $remainingRemovalBudget }
+            - chooseN:
+                bind: $arvnPiecesToRemove
+                options:
+                  query: tokensInMapSpaces
+                  filter:
+                    - { prop: faction, eq: ARVN }
+                min: 0
+                max: 3
+            - forEach:
+                bind: $arvnPiece
+                over: { query: binding, name: $arvnPiecesToRemove }
+                effects:
+                  - moveToken:
+                      token: $arvnPiece
+                      from: { zoneExpr: { ref: tokenZone, token: $arvnPiece } }
+                      to: { zoneExpr: available-ARVN:none }
+                countBind: $removedCount
+                in:
+                  - addVar:
+                      scope: global
+                      var: patronage
+                      delta:
+                        op: "*"
+                        left: 2
+                        right: { ref: binding, name: $removedCount }
       - id: card-107
         title: Burning Bonze
         sideMode: dual

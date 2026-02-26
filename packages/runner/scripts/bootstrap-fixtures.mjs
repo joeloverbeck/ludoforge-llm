@@ -119,7 +119,7 @@ export function syncBootstrapFixtures(options = {}) {
       continue;
     }
 
-    let existing = null;
+    let existing;
     try {
       existing = readFileSync(target.outputPath, 'utf8');
     } catch {

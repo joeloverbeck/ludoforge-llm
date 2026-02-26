@@ -18,5 +18,5 @@ metadata:
       - VC
     ARVNTransportEligibleTypes:
       - troops
-      - guerrilla
+      - ranger
 ```

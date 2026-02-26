@@ -20,7 +20,7 @@
     "schema:artifacts": "turbo schema:artifacts"
   },
   "devDependencies": {
-    "@eslint/js": "^9.34.0",
+    "@eslint/js": "^10.0.1",
     "eslint": "^10.0.2",
     "globals": "^17.3.0",
     "turbo": "^2.8.11",

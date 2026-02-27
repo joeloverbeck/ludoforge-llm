@@ -15,6 +15,9 @@ import {
   REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS,
   REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS,
   rewriteBinderSurfaceStringsInNode,
+  type MacroOriginNodeBindingAnnotationSpec,
+  type RemoveByPriorityMacroOriginGroupBindField,
+  type ReduceMacroOriginBindingAnnotationSpec,
 } from '../../src/cnl/binder-surface-registry.js';
 import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/cnl/binder-surface-contract.js';
 import { SUPPORTED_EFFECT_KINDS } from '../../src/cnl/effect-kind-registry.js';
@@ -82,6 +85,45 @@ function discoverContractDiscriminatorKinds(key: 'ref' | 'query' | 'op'): readon
 }
 
 describe('binder-surface-registry', () => {
+  it('enforces macro-origin policy typing at compile time', () => {
+    const validNodePolicy = [
+      { effectKind: 'forEach', bindFields: ['bind'] },
+      { effectKind: 'transferVar', bindFields: ['actualBind'] },
+      { effectKind: 'evaluateSubset', bindFields: ['subsetBind', 'resultBind', 'bestSubsetBind'] },
+    ] as const satisfies readonly MacroOriginNodeBindingAnnotationSpec[];
+    void validNodePolicy;
+
+    // @ts-expect-error transferVar node policy must use actualBind.
+    const invalidNodePolicy = [{ effectKind: 'transferVar', bindFields: ['bind'] }] as const satisfies readonly MacroOriginNodeBindingAnnotationSpec[];
+    void invalidNodePolicy;
+
+    // @ts-expect-error node macro-origin policy must not accept empty bind field lists.
+    const invalidNodePolicyEmptyFields = [{ effectKind: 'forEach', bindFields: [] }] as const satisfies readonly MacroOriginNodeBindingAnnotationSpec[];
+    void invalidNodePolicyEmptyFields;
+
+    const validReducePolicy = [
+      { bindField: 'itemBind', macroOriginField: 'itemMacroOrigin' },
+      { bindField: 'accBind', macroOriginField: 'accMacroOrigin' },
+      { bindField: 'resultBind', macroOriginField: 'resultMacroOrigin' },
+    ] as const satisfies readonly ReduceMacroOriginBindingAnnotationSpec[];
+    void validReducePolicy;
+
+    // @ts-expect-error itemBind must map to itemMacroOrigin.
+    const invalidReducePolicyPair = [{ bindField: 'itemBind', macroOriginField: 'accMacroOrigin' }] as const satisfies readonly ReduceMacroOriginBindingAnnotationSpec[];
+    void invalidReducePolicyPair;
+
+    // @ts-expect-error reduce macro-origin policy must not accept non-reduce bind fields.
+    const invalidReduceBindField = [{ bindField: 'bind', macroOriginField: 'itemMacroOrigin' }] as const satisfies readonly ReduceMacroOriginBindingAnnotationSpec[];
+    void invalidReduceBindField;
+
+    const validRemoveByPriorityGroupPolicy = ['bind'] as const satisfies readonly RemoveByPriorityMacroOriginGroupBindField[];
+    void validRemoveByPriorityGroupPolicy;
+
+    // @ts-expect-error removeByPriority group policy fields must be declared in groups.* binder paths.
+    const invalidRemoveByPriorityGroupPolicy = ['remainingBind'] as const satisfies readonly RemoveByPriorityMacroOriginGroupBindField[];
+    void invalidRemoveByPriorityGroupPolicy;
+  });
+
   it('defines binder surfaces for every supported effect kind', () => {
     assert.deepEqual(
       Object.keys(EFFECT_BINDER_SURFACES).sort(),
@@ -118,7 +160,7 @@ describe('binder-surface-registry', () => {
       const declaredLeafFields = new Set(
         EFFECT_BINDER_SURFACES[spec.effectKind].declaredBinderPaths
           .map((path) => path[path.length - 1])
-          .filter((segment): segment is string => typeof segment === 'string'),
+          .filter((segment): segment is NonNullable<typeof segment> => typeof segment === 'string'),
       );
       for (const bindField of spec.bindFields) {
         assert.equal(
@@ -134,7 +176,7 @@ describe('binder-surface-registry', () => {
     const reduceDeclaredLeafFields = new Set(
       EFFECT_BINDER_SURFACES.reduce.declaredBinderPaths
         .map((path) => path[path.length - 1])
-        .filter((segment): segment is string => typeof segment === 'string'),
+        .filter((segment): segment is NonNullable<typeof segment> => typeof segment === 'string'),
     );
     for (const spec of REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS) {
       assert.equal(
@@ -151,7 +193,7 @@ describe('binder-surface-registry', () => {
       EFFECT_BINDER_SURFACES.removeByPriority.declaredBinderPaths
         .filter((path) => path[0] === 'groups' && path[1] === '*')
         .map((path) => path[path.length - 1])
-        .filter((segment): segment is string => typeof segment === 'string'),
+        .filter((segment): segment is NonNullable<typeof segment> => typeof segment === 'string'),
     );
 
     for (const bindField of REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS) {

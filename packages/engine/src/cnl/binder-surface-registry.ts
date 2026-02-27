@@ -4,11 +4,13 @@ import {
   NON_EFFECT_BINDER_SURFACE_CONTRACT,
   type BinderPathSegment,
   type BinderSurfacePaths,
+  type EffectBinderSurfaceDefinition,
   type NonEffectBinderSurfaceDefinition,
 } from './binder-surface-contract.js';
 import { SUPPORTED_EFFECT_KINDS, type SupportedEffectKind } from './effect-kind-registry.js';
 
-export const EFFECT_BINDER_SURFACES = EFFECT_BINDER_SURFACE_CONTRACT;
+export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, EffectBinderSurfaceDefinition>> =
+  EFFECT_BINDER_SURFACE_CONTRACT;
 
 export interface BinderDeclarationCandidate {
   readonly path: string;
@@ -434,15 +436,56 @@ export const DECLARED_BINDER_EFFECT_KINDS: readonly SupportedEffectKind[] = SUPP
   (kind) => EFFECT_BINDER_SURFACES[kind].declaredBinderPaths.length > 0,
 );
 
-export interface MacroOriginNodeBindingAnnotationSpec {
-  readonly effectKind: SupportedEffectKind;
-  readonly bindFields: readonly string[];
+type LastPathSegment<TPath extends readonly unknown[]> = TPath extends readonly [...readonly unknown[], infer TLast]
+  ? TLast
+  : never;
+
+type DeclaredBinderLeafField<TEffectKind extends SupportedEffectKind> = Extract<
+  LastPathSegment<(typeof EFFECT_BINDER_SURFACE_CONTRACT)[TEffectKind]['declaredBinderPaths'][number]>,
+  string
+>;
+
+interface MacroOriginNodeBindFieldByEffectKind {
+  readonly forEach: Extract<DeclaredBinderLeafField<'forEach'>, 'bind'>;
+  readonly let: Extract<DeclaredBinderLeafField<'let'>, 'bind'>;
+  readonly bindValue: Extract<DeclaredBinderLeafField<'bindValue'>, 'bind'>;
+  readonly chooseOne: Extract<DeclaredBinderLeafField<'chooseOne'>, 'bind'>;
+  readonly chooseN: Extract<DeclaredBinderLeafField<'chooseN'>, 'bind'>;
+  readonly rollRandom: Extract<DeclaredBinderLeafField<'rollRandom'>, 'bind'>;
+  readonly transferVar: Extract<DeclaredBinderLeafField<'transferVar'>, 'actualBind'>;
+  readonly evaluateSubset: Extract<DeclaredBinderLeafField<'evaluateSubset'>, 'subsetBind' | 'resultBind' | 'bestSubsetBind'>;
 }
 
-export interface ReduceMacroOriginBindingAnnotationSpec {
-  readonly bindField: string;
-  readonly macroOriginField: string;
-}
+type MacroOriginNodeBindingEffectKind = keyof MacroOriginNodeBindFieldByEffectKind;
+
+export type MacroOriginNodeBindingAnnotationSpec = {
+  readonly [TEffectKind in MacroOriginNodeBindingEffectKind]: {
+    readonly effectKind: TEffectKind;
+    readonly bindFields: readonly [
+      MacroOriginNodeBindFieldByEffectKind[TEffectKind],
+      ...MacroOriginNodeBindFieldByEffectKind[TEffectKind][],
+    ];
+  };
+}[MacroOriginNodeBindingEffectKind];
+
+type StripBindSuffix<TField extends string> = TField extends `${infer TStem}Bind` ? TStem : never;
+
+type ReduceMacroOriginBindField = DeclaredBinderLeafField<'reduce'>;
+
+type ReduceMacroOriginFieldByBindField<TBindField extends ReduceMacroOriginBindField> =
+  `${StripBindSuffix<TBindField>}MacroOrigin`;
+
+export type ReduceMacroOriginBindingAnnotationSpec = {
+  readonly [TBindField in ReduceMacroOriginBindField]: {
+    readonly bindField: TBindField;
+    readonly macroOriginField: ReduceMacroOriginFieldByBindField<TBindField>;
+  };
+}[ReduceMacroOriginBindField];
+
+export type RemoveByPriorityMacroOriginGroupBindField = Extract<
+  (typeof EFFECT_BINDER_SURFACE_CONTRACT)['removeByPriority']['declaredBinderPaths'][number],
+  readonly ['groups', '*', string]
+>[2];
 
 export const MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS = [
   { effectKind: 'forEach', bindFields: ['bind'] },
@@ -473,4 +516,6 @@ export const REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS = [
   { bindField: 'resultBind', macroOriginField: 'resultMacroOrigin' },
 ] as const satisfies readonly ReduceMacroOriginBindingAnnotationSpec[];
 
-export const REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS = ['bind'] as const;
+export const REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS = [
+  'bind',
+] as const satisfies readonly RemoveByPriorityMacroOriginGroupBindField[];

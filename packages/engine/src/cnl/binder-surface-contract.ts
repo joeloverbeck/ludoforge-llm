@@ -43,7 +43,7 @@ const TOKEN_PATH: readonly BinderPath[] = [['token']];
 const LEFT_RIGHT_PATHS: readonly BinderPath[] = [['left'], ['right']];
 const FROM_TO_PATHS: readonly BinderPath[] = [['from'], ['to']];
 
-export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind, EffectBinderSurfaceDefinition>> = {
+export const EFFECT_BINDER_SURFACE_CONTRACT = {
   setVar: {
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
@@ -284,7 +284,7 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
-};
+} as const satisfies Readonly<Record<SupportedEffectKind, EffectBinderSurfaceDefinition>>;
 
 export const NON_EFFECT_BINDER_SURFACE_CONTRACT: readonly NonEffectBinderSurfaceDefinition[] = [
   {

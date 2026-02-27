@@ -484,6 +484,75 @@ phase: [asPhaseId('main')],
     assert.equal(applied.state.globalVars.score, 2);
   });
 
+  it('rejects stale replayed decision params when current pending decision identity changes', () => {
+    const def: GameDef = {
+      metadata: { id: 'non-pipeline-stale-decision-replay', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        {
+          id: asActionId('decide'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [{ name: 'mode', domain: { query: 'enums', values: ['a', 'b'] } }],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$pick@{mode}',
+                bind: '$pick@{mode}',
+                options: { query: 'intsInRange', min: 1, max: 2 },
+              },
+            },
+            { setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$pick@{mode}' } } },
+          ],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { score: 0 },
+      actionUsage: {},
+    };
+
+    const initialPending = legalChoicesDiscover(def, state, {
+      actionId: asActionId('decide'),
+      params: { mode: 'a' },
+    });
+    assert.equal(initialPending.kind, 'pending');
+    if (initialPending.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
+
+    assert.throws(
+      () =>
+        applyMove(def, state, {
+          actionId: asActionId('decide'),
+          params: {
+            mode: 'b',
+            [initialPending.decisionId]: 2,
+          },
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
+        return true;
+      },
+    );
+  });
+
   it('keeps input state unchanged when applyMove fails during effect execution', () => {
     const def = createDef();
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };

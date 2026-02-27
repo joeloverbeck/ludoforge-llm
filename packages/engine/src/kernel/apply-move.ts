@@ -1109,7 +1109,7 @@ const applySimultaneousSubmission = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
-  validateMove(def, state, move, cachedRuntime, options);
+  validateMove(def, state, move, cachedRuntime);
 
   const currentPlayer = Number(state.activePlayer);
   const submittedBefore = state.turnOrderState.submitted;

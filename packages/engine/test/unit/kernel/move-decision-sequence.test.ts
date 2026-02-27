@@ -703,4 +703,51 @@ phase: [asPhaseId('main')],
       (error: unknown) => error instanceof Error && error.message.includes('decision owner mismatch'),
     );
   });
+
+  it('returns the current pending decision when a stale replayed decision key is supplied', () => {
+    const action: ActionDef = {
+      id: asActionId('stale-key-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'mode', domain: { query: 'enums', values: ['a', 'b'] } }],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$pick@{mode}',
+            bind: '$pick@{mode}',
+            options: { query: 'intsInRange', min: 1, max: 2 },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+    const requestA = resolveMoveDecisionSequence(def, state, {
+      actionId: asActionId('stale-key-op'),
+      params: { mode: 'a' },
+    }, {
+      choose: () => undefined,
+    });
+    assert.equal(requestA.complete, false);
+    const staleDecisionId = requestA.nextDecision?.decisionId;
+    assert.equal(typeof staleDecisionId, 'string');
+
+    const result = resolveMoveDecisionSequence(def, state, {
+      actionId: asActionId('stale-key-op'),
+      params: {
+        mode: 'b',
+        [staleDecisionId as string]: 2,
+      },
+    }, {
+      choose: () => undefined,
+    });
+    assert.equal(result.complete, false);
+    assert.notEqual(result.nextDecision?.decisionId, staleDecisionId);
+    assert.equal(result.nextDecision?.name, '$pick@b');
+  });
 });

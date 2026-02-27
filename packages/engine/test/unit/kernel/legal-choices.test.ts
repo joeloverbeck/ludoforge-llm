@@ -186,6 +186,48 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(completed, { kind: 'complete', complete: true });
   });
 
+  it('recomputes pending decision identity from current bindings and does not accept stale decision keys', () => {
+    const action: ActionDef = {
+      id: asActionId('rebindChoiceAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'mode', domain: { query: 'enums', values: ['a', 'b'] } }],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$pick@{mode}',
+            bind: '$pick@{mode}',
+            options: { query: 'intsInRange', min: 1, max: 2 },
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    const requestA = legalChoicesDiscover(def, state, makeMove('rebindChoiceAction', { mode: 'a' }));
+    assert.equal(requestA.kind, 'pending');
+    if (requestA.kind !== 'pending') {
+      throw new Error('expected pending request for mode=a');
+    }
+
+    const requestB = legalChoicesDiscover(def, state, makeMove('rebindChoiceAction', {
+      mode: 'b',
+      [requestA.decisionId]: 2,
+    }));
+    assert.equal(requestB.kind, 'pending');
+    if (requestB.kind !== 'pending') {
+      throw new Error('expected pending request for mode=b');
+    }
+    assert.notEqual(requestB.decisionId, requestA.decisionId);
+    assert.equal(requestB.name, '$pick@b');
+  });
+
   it('fails fast when declared action param domain options are not move-param encodable', () => {
     const action: ActionDef = {
       id: asActionId('pickScheduleRowDeclared'),

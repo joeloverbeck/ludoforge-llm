@@ -124,12 +124,21 @@ const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrid
   },
   {
     when: (request: ChoicePendingRequest) => request.name === '$movingGuerrillas@quang-tri-thua-thien:none',
-    value: (request: ChoicePendingRequest) =>
-      request.options
+    value: (request: ChoicePendingRequest) => {
+      // Narrative: march all 5 NVA guerrillas from North Vietnam + 2 from Central Laos = 7
+      // NV Rally guerrillas: IDs 206, 207 (placed Turn 2)
+      // NV initial guerrillas: IDs 71, 72, 73 (1964 scenario setup)
+      // CL initial guerrillas: IDs 75, 76, 77 (1964 scenario setup)
+      // Must take all 5 NV + exactly 2 CL, leaving 1 CL behind
+      const nvIds = /_(71|72|73|206|207)$/;
+      const allValues = request.options
         .map((option) => option.value)
         .filter((value): value is string => typeof value === 'string')
-        .filter((value) => !/_(204|205|85|84|83)$/.test(value))
-        .slice(0, 7),
+        .filter((value) => !/_(204|205|85|84|83)$/.test(value));
+      const nvGuerrillas = allValues.filter((v) => nvIds.test(v));
+      const clGuerrillas = allValues.filter((v) => !nvIds.test(v));
+      return [...nvGuerrillas, ...clGuerrillas.slice(0, 2)];
+    },
   },
   {
     when: (request: ChoicePendingRequest) => request.name === '$movingGuerrillas@kien-giang-an-xuyen:none',
@@ -995,9 +1004,9 @@ const TURN_4: PlaybookTurn = {
           side: 'unshaded',
         },
       },
-      options: {
+      optionsFactory: () => ({
         overrides: createTurn4EventDecisionOverrides(),
-      },
+      }),
       expectedState: {
         globalVars: {
           nvaResources: 5,
@@ -1281,6 +1290,7 @@ const TURN_5: PlaybookTurn = {
       expectedState: {
         globalVars: {
           terrorSabotageMarkersPlaced: 1,
+          infiltrateCount: 1,
           nvaResources: 2,
           trail: 1,
           vcResources: 10,
@@ -1289,17 +1299,32 @@ const TURN_5: PlaybookTurn = {
           patronage: 15,
         },
         zoneTokenCounts: [
+          // VC guerrilla in Hue stays underground (event, not Terror operation)
+          { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
           { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1,
             props: { activity: 'underground' } },
+          // Hue COIN persistence — Control unaffected by Terror
+          { zone: 'hue:none', faction: 'US', type: 'troops', count: 3 },
+          { zone: 'hue:none', faction: 'US', type: 'base', count: 1 },
         ],
         markers: [
           { space: 'hue:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+          // Marker persistence from prior turns
+          { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+          { space: 'kien-phong:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+          { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+        ],
+        globalMarkers: [
+          { marker: 'activeLeader', expected: 'minh' },
         ],
         zoneVars: [
           { zone: 'hue:none', variable: 'terrorCount', expected: 1 },
         ],
         computedValues: [
           { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+          { label: 'NVA victory marker', expected: 10, compute: computeNvaVictory },
+          { label: 'US victory marker', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN victory marker', expected: 37, compute: computeArvnVictory },
         ],
       },
     },
@@ -1310,12 +1335,21 @@ const TURN_5: PlaybookTurn = {
         actionId: asActionId('pass'),
         params: {},
       },
+      expectedState: {
+        globalVars: {
+          arvnResources: 27,
+          vcResources: 10,
+          nvaResources: 2,
+        },
+      },
     },
   ],
   expectedEndState: {
     globalVars: {
       nvaResources: 2,
       trail: 1,
+      infiltrateCount: 1,
+      terrorSabotageMarkersPlaced: 1,
       vcResources: 10,
       arvnResources: 27,
       aid: 14,
@@ -1330,14 +1364,65 @@ const TURN_5: PlaybookTurn = {
     firstEligible: '1',
     secondEligible: '2',
     nonPassCount: 0,
+    zoneTokenCounts: [
+      // Board persistence — Turn 5 moves no tokens
+      { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 11 },
+      // Quang Tri: 3 VC guerrillas, 7 NVA guerrillas (underground), VC base
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7,
+        props: { activity: 'underground' } },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+      // Hue: US troops=3, US base=1, VC guerrilla=1 (underground)
+      { zone: 'hue:none', faction: 'US', type: 'troops', count: 3 },
+      { zone: 'hue:none', faction: 'US', type: 'base', count: 1 },
+      { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1,
+        props: { activity: 'underground' } },
+      // Out-of-play US: 5 troops, 1 base
+      { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 5 },
+      { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 1 },
+      // Saigon: US troops=4
+      { zone: 'saigon:none', faction: 'US', type: 'troops', count: 4 },
+      // Kien Phong: NVA guerrillas=3, VC guerrilla=1
+      { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+      { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      // Kien Giang An Xuyen: NVA guerrillas=4, VC guerrillas=0
+      { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 4 },
+      { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 0 },
+      // Southern Laos: NVA troops=5, NVA guerrillas=0, NVA base=1
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 5 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'base', count: 1 },
+      // North Vietnam: NVA base=1, NVA guerrillas=0
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+      // Source zone residuals
+      { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+      { zone: 'central-laos:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+    ],
     markers: [
       { space: 'hue:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      // Marker persistence from prior turns
+      { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+      { space: 'kien-phong:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+    ],
+    globalMarkers: [
+      { marker: 'activeLeader', expected: 'minh' },
     ],
     zoneVars: [
       { zone: 'hue:none', variable: 'terrorCount', expected: 1 },
     ],
     computedValues: [
+      { label: 'pending free-operation grants', expected: 0, compute: (_def, state) =>
+        state.turnOrderState.type === 'cardDriven'
+          ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
+          : 0 },
       { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+      { label: 'NVA victory marker', expected: 10, compute: computeNvaVictory },
+      { label: 'US victory marker', expected: 42, compute: computeUsVictory },
+      { label: 'ARVN victory marker', expected: 37, compute: computeArvnVictory },
     ],
   },
 };

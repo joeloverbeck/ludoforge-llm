@@ -1,5 +1,7 @@
 # Fire in the Lake - Playbook Turn 5
 
+**Status**: COMPLETED
+
 ## GAME TURN 5, Brinks Hotel
 
 The 1st Eligible VC faction chooses to execute the shaded Event

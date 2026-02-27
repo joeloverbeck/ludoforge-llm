@@ -19,6 +19,13 @@ import {
   type Move,
   type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
+import {
+  CHOICE_OWNER_PLAYER,
+  assertChoiceRuntimeValidationFailed,
+  buildChooserOwnedChoiceEffect,
+  ownershipSelection,
+  type ChoiceOwnershipPrimitive,
+} from '../../helpers/choice-ownership-parity-helpers.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -2114,46 +2121,97 @@ phase: [asPhaseId('main')],
   });
 
   describe('purity invariant', () => {
-    it('annotates chooser-owned pending decisions and rejects cross-seat resolution without override channel', () => {
-      const action: ActionDef = {
-        id: asActionId('crossSeatChoice'),
-        actor: 'active',
-        executor: 'actor',
-        phase: [asPhaseId('main')],
-        params: [],
-        pre: null,
-        cost: [],
-        effects: [
-          {
-            chooseOne: {
-              internalDecisionId: 'decision:$target',
-              bind: '$target',
-              chooser: { id: asPlayerId(1) },
-              options: { query: 'enums', values: ['a', 'b'] },
-            },
-          },
-        ],
-        limits: [],
-      };
-      const def = makeBaseDef({ actions: [action] });
-      const state = makeBaseState();
-      const request = legalChoicesDiscover(def, state, makeMove('crossSeatChoice'));
-      assert.equal(request.kind, 'pending');
-      if (request.kind !== 'pending') {
-        throw new Error('expected pending request');
-      }
-      assert.equal(request.decisionPlayer, asPlayerId(1));
+    const primitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-      assert.throws(
-        () => legalChoicesEvaluate(def, state, makeMove('crossSeatChoice', { 'decision:$target': 'a' })),
-        (error: unknown) => {
-          assert.ok(error instanceof Error);
-          const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
-          assert.equal(details.code, 'EFFECT_RUNTIME');
-          assert.equal(details.context?.reason, 'choiceRuntimeValidationFailed');
-          return true;
-        },
-      );
+    it('annotates chooser-owned pending decisions and rejects cross-seat resolution across choice primitives', () => {
+      for (const primitive of primitives) {
+        const actionId = `crossSeatChoice-${primitive}`;
+        const action: ActionDef = {
+          id: asActionId(actionId),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b', 'c']),
+          ],
+          limits: [],
+        };
+        const def = makeBaseDef({ actions: [action] });
+        const state = makeBaseState();
+        const request = legalChoicesDiscover(def, state, makeMove(actionId));
+        assert.equal(request.kind, 'pending');
+        if (request.kind !== 'pending') {
+          throw new Error(`expected pending request for primitive=${primitive}`);
+        }
+        assert.equal(request.type, primitive);
+        assert.equal(request.decisionPlayer, CHOICE_OWNER_PLAYER);
+
+        assertChoiceRuntimeValidationFailed(() =>
+          legalChoicesEvaluate(def, state, makeMove(actionId, {
+            [request.decisionId]: ownershipSelection(primitive, 'a'),
+          })),
+        );
+      }
+    });
+
+    it('preserves chooser ownership semantics across choice primitives in pipeline stages', () => {
+      for (const primitive of primitives) {
+        const actionId = `crossSeatPipelineChoice-${primitive}`;
+        const action: ActionDef = {
+          id: asActionId(actionId),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        };
+        const profile: ActionPipelineDef = {
+          id: `crossSeatPipelineChoiceProfile-${primitive}`,
+          actionId: asActionId(actionId),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b', 'c']) as EffectAST,
+              ],
+            },
+          ],
+          atomicity: 'partial',
+        };
+
+        const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+        const state = makeBaseState();
+
+        const pending = legalChoicesDiscover(def, state, makeMove(actionId));
+        assert.equal(pending.kind, 'pending');
+        if (pending.kind !== 'pending') {
+          throw new Error(`expected pending request for primitive=${primitive}`);
+        }
+        assert.equal(pending.type, primitive);
+        assert.equal(pending.decisionPlayer, CHOICE_OWNER_PLAYER);
+
+        assertChoiceRuntimeValidationFailed(() =>
+          legalChoicesEvaluate(def, state, makeMove(actionId, {
+            [pending.decisionId]: ownershipSelection(primitive, 'a'),
+          })),
+        );
+
+        const ownerResult = legalChoicesEvaluate(
+          def,
+          { ...state, activePlayer: CHOICE_OWNER_PLAYER },
+          makeMove(actionId, { [pending.decisionId]: ownershipSelection(primitive, 'a') }),
+        );
+        assert.deepStrictEqual(ownerResult, { kind: 'complete', complete: true });
+      }
     });
 
     it('does not mutate state or partialMove', () => {

@@ -21,6 +21,13 @@ import {
   type OperationFreeTraceEntry,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
+import {
+  CHOICE_OWNER_PLAYER,
+  assertIllegalMoveParamsInvalid,
+  buildChooserOwnedChoiceEffect,
+  ownershipSelection,
+  type ChoiceOwnershipPrimitive,
+} from '../helpers/choice-ownership-parity-helpers.js';
 import { requireCardDrivenRuntime, withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
@@ -413,75 +420,144 @@ phase: [asPhaseId('main')],
     assert.equal(applied.globalVars.score, 2);
   });
 
-  it('enforces chooseOne chooser ownership without caller override options', () => {
-    const def: GameDef = {
-      metadata: { id: 'non-pipeline-choice-owner', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
-      constants: {},
-      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
-      perPlayerVars: [],
-      zones: [],
-      tokenTypes: [],
-      setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }] },
-      actions: [
-        {
-          id: asActionId('decide'),
-          actor: 'active',
-          executor: 'actor',
-          phase: [asPhaseId('main')],
-          params: [],
-          pre: null,
-          cost: [],
-          effects: [
-            {
-              chooseOne: {
-                internalDecisionId: 'decision:$pick',
-                bind: '$pick',
-                chooser: { id: asPlayerId(1) },
-                options: { query: 'enums', values: [1, 2] },
-              },
-            },
-            { setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$pick' } } },
-          ],
-          limits: [],
-        },
-      ],
-      triggers: [],
-      terminal: { conditions: [] },
-    } as unknown as GameDef;
-    const state: GameState = {
-      ...createState(),
-      globalVars: { score: 0 },
-      actionUsage: {},
-    };
+  const ownershipPrimitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-    const pending = legalChoicesDiscover(def, state, { actionId: asActionId('decide'), params: {} });
-    assert.equal(pending.kind, 'pending');
-    if (pending.kind !== 'pending') {
-      throw new Error('expected pending decision');
-    }
-    assert.equal(pending.decisionPlayer, asPlayerId(1));
+  it('enforces chooser ownership across choice primitives without caller override options', () => {
+    for (const primitive of ownershipPrimitives) {
+      const actionId = `decide-${primitive}`;
+      const decisionId = 'decision:$pick';
+      const def: GameDef = {
+        metadata: { id: `non-pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+        constants: {},
+        globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
+        perPlayerVars: [],
+        zones: [],
+        tokenTypes: [],
+        setup: [],
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
+        actions: [
+          {
+            id: asActionId(actionId),
+            actor: 'active',
+            executor: 'actor',
+            phase: [asPhaseId('main')],
+            params: [],
+            pre: null,
+            cost: [],
+            effects: [
+              buildChooserOwnedChoiceEffect(primitive, decisionId, '$pick', ['a', 'b']),
+              { setVar: { scope: 'global', var: 'score', value: 2 } },
+            ],
+            limits: [],
+          },
+        ],
+        triggers: [],
+        terminal: { conditions: [] },
+      } as unknown as GameDef;
+      const state: GameState = {
+        ...createState(),
+        globalVars: { score: 0 },
+        actionUsage: {},
+      };
 
-    assert.throws(
-      () =>
+      const pending = legalChoicesDiscover(def, state, { actionId: asActionId(actionId), params: {} });
+      assert.equal(pending.kind, 'pending');
+      if (pending.kind !== 'pending') {
+        throw new Error(`expected pending decision for primitive=${primitive}`);
+      }
+      assert.equal(pending.type, primitive);
+      assert.equal(pending.decisionPlayer, CHOICE_OWNER_PLAYER);
+
+      assertIllegalMoveParamsInvalid(() =>
         applyMove(def, state, {
-          actionId: asActionId('decide'),
-          params: { [pending.decisionId]: 2 },
+          actionId: asActionId(actionId),
+          params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
         }),
-      (error: unknown) => {
-        assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown };
-        assert.equal(details.code, 'ILLEGAL_MOVE');
-        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
-        return true;
-      },
-    );
+      );
 
-    const applied = applyMove(def, { ...state, activePlayer: asPlayerId(1) }, {
-      actionId: asActionId('decide'),
-      params: { [pending.decisionId]: 2 },
-    });
-    assert.equal(applied.state.globalVars.score, 2);
+      const applied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
+        actionId: asActionId(actionId),
+        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+      });
+      assert.equal(applied.state.globalVars.score, 2);
+    }
+  });
+
+  it('enforces chooser ownership for pipeline-generated decisions across choice primitives', () => {
+    for (const primitive of ownershipPrimitives) {
+      const actionId = `pipeline-decide-${primitive}`;
+      const decisionId = 'decision:$pick';
+      const def: GameDef = {
+        metadata: { id: `pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+        constants: {},
+        globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
+        perPlayerVars: [],
+        zones: [],
+        tokenTypes: [],
+        setup: [],
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
+        actionPipelines: [
+          {
+            id: `pipeline-choice-owner-profile-${primitive}`,
+            actionId: asActionId(actionId),
+            legality: null,
+            costValidation: null,
+            costEffects: [],
+            targeting: {},
+            stages: [
+              {
+                effects: [
+                  buildChooserOwnedChoiceEffect(primitive, decisionId, '$pick', ['a', 'b']),
+                  { setVar: { scope: 'global', var: 'score', value: 2 } },
+                ],
+              },
+            ],
+            atomicity: 'partial',
+          },
+        ],
+        actions: [
+          {
+            id: asActionId(actionId),
+            actor: 'active',
+            executor: 'actor',
+            phase: [asPhaseId('main')],
+            params: [],
+            pre: null,
+            cost: [],
+            effects: [],
+            limits: [],
+          },
+        ],
+        triggers: [],
+        terminal: { conditions: [] },
+      } as unknown as GameDef;
+
+      const state: GameState = {
+        ...createState(),
+        globalVars: { score: 0 },
+        actionUsage: {},
+      };
+      const pending = legalChoicesDiscover(def, state, { actionId: asActionId(actionId), params: {} });
+      assert.equal(pending.kind, 'pending');
+      if (pending.kind !== 'pending') {
+        throw new Error(`expected pending decision for primitive=${primitive}`);
+      }
+      assert.equal(pending.type, primitive);
+      assert.equal(pending.decisionPlayer, CHOICE_OWNER_PLAYER);
+
+      assertIllegalMoveParamsInvalid(() =>
+        applyMove(def, state, {
+          actionId: asActionId(actionId),
+          params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+        }),
+      );
+
+      const applied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
+        actionId: asActionId(actionId),
+        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+      });
+      assert.equal(applied.state.globalVars.score, 2);
+    }
   });
 
   it('rejects stale replayed decision params when current pending decision identity changes', () => {

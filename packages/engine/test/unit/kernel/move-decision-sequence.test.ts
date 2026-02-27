@@ -16,6 +16,12 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import {
+  assertDecisionOwnerMismatch,
+  buildChooserOwnedChoiceEffect,
+  ownershipSelection,
+  type ChoiceOwnershipPrimitive,
+} from '../../helpers/choice-ownership-parity-helpers.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -669,39 +675,78 @@ phase: [asPhaseId('main')],
     );
   });
 
-  it('rejects cross-seat chooser-owned decision params without caller authority overrides', () => {
-    const action: ActionDef = {
-      id: asActionId('cross-seat-op'),
-      actor: 'active',
-      executor: 'actor',
-      phase: [asPhaseId('main')],
-      params: [],
-      pre: null,
-      cost: [],
-      effects: [
-        {
-          chooseOne: {
-            internalDecisionId: 'decision:$target',
-            bind: '$target',
-            chooser: { id: asPlayerId(1) },
-            options: { query: 'enums', values: ['a', 'b'] },
-          },
-        } as GameDef['actions'][number]['effects'][number],
-      ],
-      limits: [],
-    };
+  const ownershipPrimitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-    const def = makeBaseDef({ actions: [action] });
-    const state = makeBaseState();
+  it('rejects cross-seat chooser-owned decision params across non-pipeline choice primitives', () => {
+    for (const primitive of ownershipPrimitives) {
+      const actionId = `cross-seat-${primitive}-op`;
+      const action: ActionDef = {
+        id: asActionId(actionId),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']) as GameDef['actions'][number]['effects'][number],
+        ],
+        limits: [],
+      };
 
-    assert.throws(
-      () =>
+      const def = makeBaseDef({ actions: [action] });
+      const state = makeBaseState();
+
+      assertDecisionOwnerMismatch(() =>
         resolveMoveDecisionSequence(def, state, {
-          actionId: asActionId('cross-seat-op'),
-          params: { 'decision:$target': 'a' },
+          actionId: asActionId(actionId),
+          params: { 'decision:$target': ownershipSelection(primitive, 'a') },
         }),
-      (error: unknown) => error instanceof Error && error.message.includes('decision owner mismatch'),
-    );
+      );
+    }
+  });
+
+  it('rejects cross-seat chooser-owned decision params across pipeline choice primitives', () => {
+    for (const primitive of ownershipPrimitives) {
+      const actionId = `cross-seat-pipeline-${primitive}-op`;
+      const action: ActionDef = {
+        id: asActionId(actionId),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+      const profile: ActionPipelineDef = {
+        id: `cross-seat-pipeline-${primitive}-profile`,
+        actionId: asActionId(actionId),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']) as GameDef['actions'][number]['effects'][number],
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      assertDecisionOwnerMismatch(() =>
+        resolveMoveDecisionSequence(def, state, {
+          actionId: asActionId(actionId),
+          params: { 'decision:$target': ownershipSelection(primitive, 'a') },
+        }),
+      );
+    }
   });
 
   it('returns the current pending decision when a stale replayed decision key is supplied', () => {

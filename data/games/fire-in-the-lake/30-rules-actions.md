@@ -1100,7 +1100,7 @@ actions:
     executor: '0'
     phase: [commitment]
     params: []
-    pre: { op: '==', left: { ref: activePlayer }, right: 0 }
+    pre: null
     cost: []
     effects:
       - macro: coup-process-commitment

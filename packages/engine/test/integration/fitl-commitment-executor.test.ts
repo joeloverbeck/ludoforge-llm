@@ -2,17 +2,17 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  asPhaseId,
   asPlayerId,
   initialState,
+  asPhaseId,
   legalMoves,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 
 const compileDef = (): GameDef => {
   const { parsed, compiled } = compileProductionSpec();
@@ -22,20 +22,17 @@ const compileDef = (): GameDef => {
 };
 
 describe('FITL commitment executor semantics', () => {
-  it('declares resolveCommitment with explicit US executor', () => {
+  it('declares resolveCommitment with explicit US executor and no tautological precondition', () => {
     const def = compileDef();
     const resolveCommitment = def.actions.find((action) => String(action.id) === 'resolveCommitment');
     assert.notEqual(resolveCommitment, undefined);
+    assert.equal(resolveCommitment?.actor, 'active');
     assert.equal(typeof resolveCommitment?.executor, 'object');
     assert.equal(String((resolveCommitment?.executor as { id: unknown }).id), '0');
-    assert.deepEqual(resolveCommitment?.pre, {
-      op: '==',
-      left: { ref: 'activePlayer' },
-      right: 0,
-    });
+    assert.equal(resolveCommitment?.pre, null);
   });
 
-  it('resolves commitment even when the active faction is not US', () => {
+  it('resolves commitment when the active faction is not US', () => {
     const def = compileDef();
     const baseState = clearAllZones(initialState(def, 7303, 4).state);
     const setup: GameState = {

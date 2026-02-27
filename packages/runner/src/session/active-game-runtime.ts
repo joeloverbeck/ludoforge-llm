@@ -70,6 +70,12 @@ export function useActiveGameRuntime(
     setRuntime(nextRuntime);
 
     let cancelled = false;
+    const detachFatalErrorListener = bridgeHandle.onFatalError((error) => {
+      if (cancelled) {
+        return;
+      }
+      store.getState().reportBootstrapFailure(error);
+    });
     void (async () => {
       const gameDef = await bootstrapConfig.resolveGameDef();
       if (cancelled) {
@@ -94,6 +100,7 @@ export function useActiveGameRuntime(
 
     return () => {
       cancelled = true;
+      detachFatalErrorListener();
       if (runtimeRef.current === nextRuntime) {
         runtimeRef.current = null;
         setRuntime(null);

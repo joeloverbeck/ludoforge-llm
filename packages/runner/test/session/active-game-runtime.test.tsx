@@ -17,6 +17,7 @@ const testDoubles = vi.hoisted(() => ({
   createGameStore: vi.fn(),
   listBootstrapDescriptors: vi.fn(),
   resolveBootstrapConfig: vi.fn(),
+  detachFatalError: vi.fn(),
   bridge: {} as unknown,
   visualConfigProvider: {} as unknown,
 }));
@@ -60,6 +61,7 @@ describe('useActiveGameRuntime', () => {
     testDoubles.createGameStore.mockReset();
     testDoubles.listBootstrapDescriptors.mockReset();
     testDoubles.resolveBootstrapConfig.mockReset();
+    testDoubles.detachFatalError.mockReset();
 
     testDoubles.listBootstrapDescriptors.mockReturnValue([
       {
@@ -78,6 +80,7 @@ describe('useActiveGameRuntime', () => {
 
     testDoubles.createGameBridge.mockReturnValue({
       bridge: testDoubles.bridge,
+      onFatalError: vi.fn(() => testDoubles.detachFatalError),
       terminate: testDoubles.terminate,
     });
 
@@ -172,7 +175,34 @@ describe('useActiveGameRuntime', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('runtime-null')).toBeTruthy();
+      expect(testDoubles.detachFatalError).toHaveBeenCalledTimes(1);
       expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('reports bootstrap failure when worker startup fails before init resolves', async () => {
+    render(createElement(HookHarness, {
+      sessionState: {
+        screen: 'activeGame',
+        gameId: 'fitl',
+        seed: 17,
+        playerConfig: [{ playerId: 1, type: 'human' }],
+        initialMoveHistory: [],
+      },
+    }));
+
+    const onFatalError = testDoubles.createGameBridge.mock.calls[0]?.[0];
+    const bridgeHandle = testDoubles.createGameBridge.mock.results[0]?.value as {
+      onFatalError: (listener: (error: unknown) => void) => () => void;
+    };
+    expect(onFatalError).toBeUndefined();
+    const subscribeMock = bridgeHandle.onFatalError as unknown as ReturnType<typeof vi.fn>;
+    const fatalErrorListener = subscribeMock.mock.calls[0]?.[0] as ((error: unknown) => void) | undefined;
+    expect(typeof fatalErrorListener).toBe('function');
+    fatalErrorListener?.({ message: 'Worker startup failed.' });
+
+    await waitFor(() => {
+      expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith({ message: 'Worker startup failed.' });
     });
   });
 });

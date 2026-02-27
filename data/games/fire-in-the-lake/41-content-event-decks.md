@@ -1018,7 +1018,15 @@ eventDecks:
               sequence: { chain: aces-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
+          lastingEffects:
+            - id: evt-aces-window
+              duration: turn
+              setupEffects:
+                - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: true }
+              teardownEffects:
+                - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
           effects:
+            - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
             - addVar: { scope: global, var: trail, delta: -2 }
         shaded:
           text: "MiG ace 'Colonel Tomb': 2 Available US Troops to Casualties. Improve Trail by 2 boxes."

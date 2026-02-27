@@ -3337,31 +3337,50 @@ actionPipelines:
               options:
                 query: mapSpaces
                 filter:
-                  op: and
+                  op: or
                   args:
-                    - op: '!='
-                      left: { ref: zoneProp, zone: $zone, prop: country }
-                      right: northVietnam
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                      right: 0
-              min: 0
+                    - op: and
+                      args:
+                        - { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                        - op: or
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                    - op: and
+                      args:
+                        - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                        - op: '!='
+                          left: { ref: zoneProp, zone: $zone, prop: country }
+                          right: northVietnam
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          right: 0
+              min:
+                if:
+                  when: { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                  then: 1
+                  else: 0
               max:
                 if:
-                  when:
-                    op: or
-                    args:
-                      - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
-                      - { op: '==', left: { ref: gvar, var: mom_wildWeasels }, right: true }
+                  when: { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
                   then: 1
-                  else: 6
+                  else:
+                    if:
+                      when:
+                        op: or
+                        args:
+                          - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
+                      then: 1
+                      else: 6
       - stage: remove-active-enemy-pieces
         effects:
           - setVar:
@@ -3467,6 +3486,7 @@ actionPipelines:
                   - { op: '==', left: { ref: binding, name: $degradeTrail }, right: 'yes' }
                   - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
                   - { op: '!=', left: { ref: gvar, var: mom_oriskany }, right: true }
+                  - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
                   - op: or
                     args:
                       - { op: '!=', left: { ref: gvar, var: mom_wildWeasels }, right: true }

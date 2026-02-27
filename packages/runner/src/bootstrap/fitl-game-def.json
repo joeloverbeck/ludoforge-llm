@@ -261,6 +261,11 @@
       "init": false
     },
     {
+      "name": "fitl_acesAirStrikeWindow",
+      "type": "boolean",
+      "init": false
+    },
+    {
       "name": "linebacker11Allowed",
       "type": "boolean",
       "init": false
@@ -32833,39 +32838,106 @@
                   "query": "mapSpaces",
                   "filter": {
                     "condition": {
-                      "op": "and",
+                      "op": "or",
                       "args": [
                         {
-                          "op": "!=",
-                          "left": {
-                            "ref": "zoneProp",
-                            "zone": "$zone",
-                            "prop": "country"
-                          },
-                          "right": "northVietnam"
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "gvar",
+                                "var": "fitl_acesAirStrikeWindow"
+                              },
+                              "right": true
+                            },
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "category"
+                              },
+                              "right": "province"
+                            },
+                            {
+                              "op": "or",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "country"
+                                  },
+                                  "right": "northVietnam"
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "country"
+                                  },
+                                  "right": "laos"
+                                },
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "country"
+                                  },
+                                  "right": "cambodia"
+                                }
+                              ]
+                            }
+                          ]
                         },
                         {
-                          "op": ">",
-                          "left": {
-                            "aggregate": {
-                              "op": "count",
-                              "query": {
-                                "query": "tokensInZone",
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "!=",
+                              "left": {
+                                "ref": "gvar",
+                                "var": "fitl_acesAirStrikeWindow"
+                              },
+                              "right": true
+                            },
+                            {
+                              "op": "!=",
+                              "left": {
+                                "ref": "zoneProp",
                                 "zone": "$zone",
-                                "filter": [
-                                  {
-                                    "prop": "faction",
-                                    "op": "in",
-                                    "value": [
-                                      "US",
-                                      "ARVN"
+                                "prop": "country"
+                              },
+                              "right": "northVietnam"
+                            },
+                            {
+                              "op": ">",
+                              "left": {
+                                "aggregate": {
+                                  "op": "count",
+                                  "query": {
+                                    "query": "tokensInZone",
+                                    "zone": "$zone",
+                                    "filter": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "in",
+                                        "value": [
+                                          "US",
+                                          "ARVN"
+                                        ]
+                                      }
                                     ]
                                   }
-                                ]
-                              }
+                                }
+                              },
+                              "right": 0
                             }
-                          },
-                          "right": 0
+                          ]
                         }
                       ]
                     }
@@ -32874,31 +32946,49 @@
                 "max": {
                   "if": {
                     "when": {
-                      "op": "or",
-                      "args": [
-                        {
-                          "op": "==",
-                          "left": {
-                            "ref": "globalMarkerState",
-                            "marker": "cap_arcLight"
-                          },
-                          "right": "unshaded"
-                        },
-                        {
-                          "op": "==",
-                          "left": {
-                            "ref": "gvar",
-                            "var": "mom_wildWeasels"
-                          },
-                          "right": true
-                        }
-                      ]
+                      "op": "==",
+                      "left": {
+                        "ref": "gvar",
+                        "var": "fitl_acesAirStrikeWindow"
+                      },
+                      "right": true
                     },
                     "then": 1,
-                    "else": 6
+                    "else": {
+                      "if": {
+                        "when": {
+                          "op": "or",
+                          "args": [
+                            {
+                              "op": "==",
+                              "left": {
+                                "ref": "globalMarkerState",
+                                "marker": "cap_arcLight"
+                              },
+                              "right": "unshaded"
+                            }
+                          ]
+                        },
+                        "then": 1,
+                        "else": 6
+                      }
+                    }
                   }
                 },
-                "min": 0
+                "min": {
+                  "if": {
+                    "when": {
+                      "op": "==",
+                      "left": {
+                        "ref": "gvar",
+                        "var": "fitl_acesAirStrikeWindow"
+                      },
+                      "right": true
+                    },
+                    "then": 1,
+                    "else": 0
+                  }
+                }
               }
             }
           ]
@@ -33612,6 +33702,14 @@
                       "left": {
                         "ref": "gvar",
                         "var": "mom_oriskany"
+                      },
+                      "right": true
+                    },
+                    {
+                      "op": "!=",
+                      "left": {
+                        "ref": "gvar",
+                        "var": "fitl_acesAirStrikeWindow"
                       },
                       "right": true
                     },
@@ -49347,6 +49445,13 @@
           }
         },
         {
+          "setVar": {
+            "scope": "global",
+            "var": "fitl_acesAirStrikeWindow",
+            "value": false
+          }
+        },
+        {
           "setGlobalMarker": {
             "marker": "leaderFlipped",
             "state": "normal"
@@ -50876,7 +50981,7 @@
             "flavorText": "Public negotiations mask battlefield pressure."
           },
           "unshaded": {
-            "text": "NVA Resources -9. Linebacker 11 allowed when Support + Available US (Troops + Bases) > 25.",
+            "text": "NVA Resources -9. Linebacker II allowed when Support + Available US (Troops + Bases) > 25.",
             "effects": [
               {
                 "addVar": {
@@ -51098,18 +51203,38 @@
             "flavorText": "Naval aviators sharpen air-superiority tactics."
           },
           "unshaded": {
-            "text": "US capability: Air Strike pressures Trail and suppresses MiG losses.",
+            "text": "Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes. US CAPABILITY.",
             "effects": [
               {
                 "setGlobalMarker": {
                   "marker": "cap_topGun",
                   "state": "unshaded"
                 }
+              },
+              {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "globalMarkerState",
+                      "marker": "cap_migs"
+                    },
+                    "right": "shaded"
+                  },
+                  "then": [
+                    {
+                      "setGlobalMarker": {
+                        "marker": "cap_migs",
+                        "state": "inactive"
+                      }
+                    }
+                  ]
+                }
               }
             ]
           },
           "shaded": {
-            "text": "US capability (shaded): Air Strike effectiveness is reduced by attrition.",
+            "text": "Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -51239,7 +51364,38 @@
                 ]
               }
             ],
+            "lastingEffects": [
+              {
+                "id": "evt-aces-window",
+                "duration": "turn",
+                "setupEffects": [
+                  {
+                    "setVar": {
+                      "scope": "global",
+                      "var": "fitl_acesAirStrikeWindow",
+                      "value": true
+                    }
+                  }
+                ],
+                "teardownEffects": [
+                  {
+                    "setVar": {
+                      "scope": "global",
+                      "var": "fitl_acesAirStrikeWindow",
+                      "value": false
+                    }
+                  }
+                ]
+              }
+            ],
             "effects": [
+              {
+                "setVar": {
+                  "scope": "global",
+                  "var": "fitl_acesAirStrikeWindow",
+                  "value": false
+                }
+              },
               {
                 "addVar": {
                   "scope": "global",
@@ -53155,9 +53311,31 @@
             "text": "NVA capability (shaded): US Air Strike can trigger extra troop costs in affected spaces.",
             "effects": [
               {
-                "setGlobalMarker": {
-                  "marker": "cap_migs",
-                  "state": "shaded"
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "globalMarkerState",
+                      "marker": "cap_topGun"
+                    },
+                    "right": "unshaded"
+                  },
+                  "then": [
+                    {
+                      "setGlobalMarker": {
+                        "marker": "cap_migs",
+                        "state": "inactive"
+                      }
+                    }
+                  ],
+                  "else": [
+                    {
+                      "setGlobalMarker": {
+                        "marker": "cap_migs",
+                        "state": "shaded"
+                      }
+                    }
+                  ]
                 }
               }
             ]
@@ -60614,92 +60792,105 @@
                 "right": 2
               },
               {
-                "op": ">",
-                "left": {
-                  "op": "+",
-                  "left": {
-                    "op": "+",
+                "op": "or",
+                "args": [
+                  {
+                    "op": ">",
                     "left": {
-                      "aggregate": {
-                        "op": "sum",
-                        "query": {
-                          "query": "mapSpaces",
-                          "filter": {
-                            "condition": {
-                              "op": "==",
-                              "left": {
-                                "ref": "markerState",
-                                "space": "$zone",
-                                "marker": "supportOpposition"
-                              },
-                              "right": "passiveSupport"
+                      "op": "+",
+                      "left": {
+                        "op": "+",
+                        "left": {
+                          "aggregate": {
+                            "op": "sum",
+                            "query": {
+                              "query": "mapSpaces",
+                              "filter": {
+                                "condition": {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "markerState",
+                                    "space": "$zone",
+                                    "marker": "supportOpposition"
+                                  },
+                                  "right": "passiveSupport"
+                                }
+                              }
+                            },
+                            "bind": "$zone",
+                            "valueExpr": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "population"
                             }
                           }
                         },
-                        "bind": "$zone",
-                        "valueExpr": {
-                          "ref": "zoneProp",
-                          "zone": "$zone",
-                          "prop": "population"
+                        "right": {
+                          "op": "*",
+                          "left": 2,
+                          "right": {
+                            "aggregate": {
+                              "op": "sum",
+                              "query": {
+                                "query": "mapSpaces",
+                                "filter": {
+                                  "condition": {
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "markerState",
+                                      "space": "$zone",
+                                      "marker": "supportOpposition"
+                                    },
+                                    "right": "activeSupport"
+                                  }
+                                }
+                              },
+                              "bind": "$zone",
+                              "valueExpr": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "population"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "right": {
+                        "aggregate": {
+                          "op": "count",
+                          "query": {
+                            "query": "tokensInZone",
+                            "zone": "available-US:none",
+                            "filter": [
+                              {
+                                "prop": "faction",
+                                "op": "eq",
+                                "value": "US"
+                              },
+                              {
+                                "prop": "type",
+                                "op": "in",
+                                "value": [
+                                  "troops",
+                                  "base"
+                                ]
+                              }
+                            ]
+                          }
                         }
                       }
                     },
-                    "right": {
-                      "op": "*",
-                      "left": 2,
-                      "right": {
-                        "aggregate": {
-                          "op": "sum",
-                          "query": {
-                            "query": "mapSpaces",
-                            "filter": {
-                              "condition": {
-                                "op": "==",
-                                "left": {
-                                  "ref": "markerState",
-                                  "space": "$zone",
-                                  "marker": "supportOpposition"
-                                },
-                                "right": "activeSupport"
-                              }
-                            }
-                          },
-                          "bind": "$zone",
-                          "valueExpr": {
-                            "ref": "zoneProp",
-                            "zone": "$zone",
-                            "prop": "population"
-                          }
-                        }
-                      }
-                    }
+                    "right": 40
                   },
-                  "right": {
-                    "aggregate": {
-                      "op": "count",
-                      "query": {
-                        "query": "tokensInZone",
-                        "zone": "available-US:none",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "US"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "in",
-                            "value": [
-                              "troops",
-                              "base"
-                            ]
-                          }
-                        ]
-                      }
-                    }
+                  {
+                    "op": "==",
+                    "left": {
+                      "ref": "gvar",
+                      "var": "linebacker11Allowed"
+                    },
+                    "right": true
                   }
-                },
-                "right": 40
+                ]
               }
             ]
           },

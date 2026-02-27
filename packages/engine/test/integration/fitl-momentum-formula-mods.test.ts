@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const LOC_SPACE = 'loc-hue-da-nang:none';
@@ -40,6 +41,7 @@ describe('FITL momentum formula modifiers', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = RALLY_SPACE;
+    const secondSpace = ATTACK_SPACE;
 
     const airStrikeProfile = parsed.doc.actionPipelines?.find((profile) => profile.id === 'air-strike-profile');
     assert.ok(airStrikeProfile, 'Expected air-strike-profile in parsed production doc');
@@ -48,6 +50,11 @@ describe('FITL momentum formula modifiers', () => {
     const selectChooseN = stageEffects[0]?.chooseN;
     assert.ok(selectChooseN, 'Expected chooseN selector in Air Strike select-spaces stage');
     assert.equal(typeof selectChooseN?.max, 'object', 'Expected expression-valued chooseN.max in Air Strike select stage');
+    assert.equal(
+      JSON.stringify(selectChooseN?.max).includes('mom_wildWeasels'),
+      false,
+      'Wild Weasels should not change Air Strike selected-space cap',
+    );
 
     const base = withActivePlayer(
       {
@@ -64,6 +71,11 @@ describe('FITL momentum formula modifiers', () => {
             makeToken('ww-nva-g2', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
             makeToken('ww-nva-g3', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
             makeToken('ww-vc-g4', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          ],
+          [secondSpace]: [
+            makeToken('ww-us-2', 'troops', 'US', { type: 'troops' }),
+            makeToken('ww-vc-g5', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+            makeToken('ww-vc-g6', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
           ],
         },
       },
@@ -91,6 +103,24 @@ describe('FITL momentum formula modifiers', () => {
     assert.equal(withWildWeasels.globalVars.trail, 2, 'Wild Weasels should block Trail degrade when a removal space is selected');
     assert.equal(countEnemyGuerrillas(base, space) - countEnemyGuerrillas(withWildWeasels, space), 1, 'Wild Weasels should remove exactly 1 guerrilla');
 
+    const multiSpaceWithWildWeasels = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_wildWeasels: true }), {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [space, secondSpace],
+        $degradeTrail: 'yes',
+      },
+    }).state;
+
+    const removedAcrossBothSpaces = (
+      countEnemyGuerrillas(base, space)
+      + countEnemyGuerrillas(base, secondSpace)
+    ) - (
+      countEnemyGuerrillas(multiSpaceWithWildWeasels, space)
+      + countEnemyGuerrillas(multiSpaceWithWildWeasels, secondSpace)
+    );
+    assert.equal(removedAcrossBothSpaces, 1, 'Wild Weasels should remove only 1 piece total even across multiple selected spaces');
+    assert.equal(multiSpaceWithWildWeasels.globalVars.trail, 2, 'Wild Weasels should block Trail degrade whenever any removal spaces are selected');
+
     const degradeOnly = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_wildWeasels: true }), {
       actionId: asActionId('airStrike'),
       params: {
@@ -100,6 +130,59 @@ describe('FITL momentum formula modifiers', () => {
     }).state;
 
     assert.equal(degradeOnly.globalVars.trail, 1, 'Wild Weasels should still allow Trail degrade when no removal spaces are selected');
+  });
+
+  it('card-5 unshaded removes shaded SA-2s only when executed, otherwise applies fallback penalty', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected FITL event deck');
+
+    const base = withActivePlayer(
+      {
+        ...clearAllZones(initialState(def, 9110, 4).state),
+        zones: {
+          ...clearAllZones(initialState(def, 9110, 4).state).zones,
+          [eventDeck!.discardZone]: [makeToken('card-5', 'card', 'none')],
+        },
+        globalVars: {
+          ...initialState(def, 9110, 4).state.globalVars,
+          trail: 3,
+          nvaResources: 15,
+        },
+      },
+      0,
+    );
+
+    const eventMove = legalMoves(def, base).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(eventMove, undefined, 'Expected card-5 unshaded event move');
+
+    const withSa2sShaded: GameState = {
+      ...base,
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        cap_sa2s: 'shaded',
+      },
+    };
+    const removedSa2s = applyMoveWithResolvedDecisionIds(def, withSa2sShaded, eventMove!).state;
+    assert.equal(removedSa2s.globalMarkers?.cap_sa2s, 'inactive', 'card-5 unshaded should cancel shaded SA-2s immediately');
+    assert.equal(removedSa2s.globalVars.trail, 3, 'card-5 unshaded should not degrade Trail when shaded SA-2s are removed');
+    assert.equal(removedSa2s.globalVars.nvaResources, 15, 'card-5 unshaded should not change NVA Resources when shaded SA-2s are removed');
+
+    const withSa2sUnshaded: GameState = {
+      ...base,
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        cap_sa2s: 'unshaded',
+      },
+    };
+    const fallbackFromUnshadedSa2s = applyMoveWithResolvedDecisionIds(def, withSa2sUnshaded, eventMove!).state;
+    assert.equal(fallbackFromUnshadedSa2s.globalMarkers?.cap_sa2s, 'unshaded', 'card-5 unshaded should not remove non-shaded SA-2s');
+    assert.equal(fallbackFromUnshadedSa2s.globalVars.trail, 1, 'card-5 unshaded fallback should degrade Trail by 2');
+    assert.equal(fallbackFromUnshadedSa2s.globalVars.nvaResources, 6, 'card-5 unshaded fallback should reduce NVA Resources by 9');
   });
 
   it('ADSID applies -6 NVA Resources when Trail changes and does not trigger without Trail change', () => {

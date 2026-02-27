@@ -81,6 +81,7 @@ function createRuntime(replayStore: StoreApi<ReplayStore>): ReplayRuntime {
   return {
     bridgeHandle: {
       bridge: {} as never,
+      onFatalError: vi.fn(() => () => undefined),
       terminate: vi.fn(),
     },
     store: {} as never,

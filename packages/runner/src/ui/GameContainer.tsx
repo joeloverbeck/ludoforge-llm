@@ -9,6 +9,7 @@ import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from '../can
 import type { DiagnosticBuffer } from '../animation/diagnostic-buffer.js';
 import { isEditableTarget } from '../input/editable-target.js';
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
+import type { GameBridge } from '../bridge/game-bridge.js';
 import type { GameStore } from '../store/game-store.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { VisualConfigContext } from '../config/visual-config-context.js';
@@ -44,6 +45,7 @@ import styles from './GameContainer.module.css';
 
 interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
+  readonly bridge: GameBridge;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly readOnlyMode?: boolean;
   readonly onReturnToMenu?: () => void;

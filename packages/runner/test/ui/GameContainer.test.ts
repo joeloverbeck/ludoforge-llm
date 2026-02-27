@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
+import type { GameBridge } from '../../src/bridge/game-bridge.js';
 import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
 import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
@@ -48,6 +49,7 @@ const testDoubles = vi.hoisted(() => ({
   animationControlsProps: null as CapturedAnimationControlsProps | null,
 }));
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
+const TEST_BRIDGE = {} as unknown as GameBridge;
 
 vi.mock('../../src/canvas/GameCanvas.js', () => ({
   GameCanvas: (props: CapturedGameCanvasProps) => {
@@ -246,6 +248,7 @@ describe('GameContainer', () => {
   it('renders LoadingState when lifecycle is idle', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'idle',
           error: null,
@@ -262,6 +265,7 @@ describe('GameContainer', () => {
   it('renders LoadingState when lifecycle is initializing', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'initializing',
           error: null,
@@ -278,6 +282,7 @@ describe('GameContainer', () => {
   it('renders ErrorState when error is non-null', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: {
@@ -301,6 +306,7 @@ describe('GameContainer', () => {
     testDoubles.animationControlsProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -360,6 +366,7 @@ describe('GameContainer', () => {
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'terminal',
           error: null,
@@ -400,6 +407,7 @@ describe('GameContainer', () => {
   it('exposes faction CSS variables for gameDef faction ids on container root', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -421,6 +429,7 @@ describe('GameContainer', () => {
   it('renders actions mode branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -439,6 +448,7 @@ describe('GameContainer', () => {
   it('hides interactive bottom-bar controls in read-only mode', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -460,6 +470,7 @@ describe('GameContainer', () => {
   it('renders choicePending mode branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -492,6 +503,7 @@ describe('GameContainer', () => {
   it('renders choiceConfirm mode branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -514,6 +526,7 @@ describe('GameContainer', () => {
   it('renders choiceInvalid mode branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -535,6 +548,7 @@ describe('GameContainer', () => {
   it('renders aiTurn branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -556,6 +570,7 @@ describe('GameContainer', () => {
   it('keeps aiTurn precedence even with contradictory choice/confirm state', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,
@@ -584,6 +599,7 @@ describe('GameContainer', () => {
 
     renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: {
@@ -654,6 +670,7 @@ describe('GameContainer', () => {
   it('provides visual config context to VariablesPanel', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
         store: createContainerStore({
           gameLifecycle: 'playing',
           error: null,

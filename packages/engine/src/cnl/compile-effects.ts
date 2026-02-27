@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
 import type {
   ConditionAST,
   EffectAST,
@@ -2586,21 +2587,19 @@ const collectFreeOperationSequenceViabilityWarnings = (
         });
       }
 
-      const previousEffectiveActionIds = previous.actionIds ?? defaultActionIds;
-      const currentEffectiveActionIds = current.actionIds ?? defaultActionIds;
-      if (previousEffectiveActionIds !== undefined && currentEffectiveActionIds !== undefined) {
-        const currentActions = new Set(currentEffectiveActionIds);
-        const overlap = previousEffectiveActionIds.some((actionId) => currentActions.has(actionId));
-        if (!overlap) {
-          diagnostics.push({
-            code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
-            path: currentStepPath,
-            severity: 'warning',
-            message:
-              `Free-operation sequence chain "${chain}" has non-overlapping actionIds between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
-            suggestion: 'Ensure the earlier step can be consumed in realistic states, or relax sequence constraints.',
-          });
-        }
+      const previousEffectiveActionIds = resolveEffectiveFreeOperationActionDomain(previous.actionIds, defaultActionIds);
+      const currentEffectiveActionIds = resolveEffectiveFreeOperationActionDomain(current.actionIds, defaultActionIds);
+      const currentActions = new Set(currentEffectiveActionIds);
+      const overlap = previousEffectiveActionIds.some((actionId) => currentActions.has(actionId));
+      if (!overlap) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+          path: currentStepPath,
+          severity: 'warning',
+          message:
+            `Free-operation sequence chain "${chain}" has non-overlapping actionIds between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+          suggestion: 'Ensure the earlier step can be consumed in realistic states, or relax sequence constraints.',
+        });
       }
 
       const previousFilter = previous.zoneFilter === undefined ? null : conditionFingerprint(previous.zoneFilter);

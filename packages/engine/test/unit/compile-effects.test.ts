@@ -1343,6 +1343,39 @@ describe('compile-effects lowering', () => {
     assert.equal(warnings[0]?.path, 'doc.actions.0.effects.1.grantFreeOperation.sequence');
   });
 
+  it('emits sequence viability warning when both effective action domains are absent', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            sequence: { chain: 'absent-domain-chain', step: 0 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            sequence: { chain: 'absent-domain-chain', step: 1 },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.notEqual(result.value, null);
+    const warnings = result.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+        && diagnostic.severity === 'warning'
+        && diagnostic.message.includes('non-overlapping actionIds'),
+    );
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0]?.path, 'doc.actions.0.effects.1.grantFreeOperation.sequence');
+  });
+
   it('does not emit action-domain warning when explicit actionIds overlap turn-flow defaults', () => {
     const result = lowerEffectArray(
       [

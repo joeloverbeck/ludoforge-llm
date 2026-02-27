@@ -14,6 +14,7 @@ import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycl
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
+import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import type {
   ConditionAST,
   EventFreeOperationGrantDef,
@@ -296,7 +297,7 @@ const extractPendingFreeOperationGrants = (
 const grantActionIds = (
   def: GameDef,
   grant: TurnFlowPendingFreeOperationGrant,
-): readonly string[] => grant.actionIds ?? (cardDrivenConfig(def)?.turnFlow.freeOperationActionIds ?? []);
+): readonly string[] => resolveGrantFreeOperationActionDomain(def, grant);
 
 const moveOperationClass = (
   def: GameDef,

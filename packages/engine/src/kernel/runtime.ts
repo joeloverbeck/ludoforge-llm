@@ -57,3 +57,4 @@ export * from './validate-gamedef.js';
 export * from './zobrist.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
+export * from './condition-annotator.js';

@@ -1054,7 +1054,7 @@ eventDecks:
           seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Air-delivered seismic intrusion detector."
         unshaded:
-          text: "Through Coup, -6 NVA Resources at any Trail change. MOMENTUM"
+          text: "Through Coup, -6 NVA Resources at any Trail# change. MOMENTUM"
           lastingEffects:
             - id: mom-adsid
               duration: round

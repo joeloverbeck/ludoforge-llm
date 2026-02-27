@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPhaseId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -271,6 +271,82 @@ describe('FITL momentum formula modifiers', () => {
 
     assert.equal(multiChange.globalVars.trail, 4, 'Two Trail improvements should resolve deterministically in one action');
     assert.equal(multiChange.globalVars.nvaResources, 0, 'ADSID should apply once per Trail change (2 changes => -12 resources)');
+
+    const clearedForCoup = clearAllZones(initialState(def, 9102, 4).state);
+    const coupBase: GameState = {
+      ...clearedForCoup,
+      currentPhase: asPhaseId('coupResources'),
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...clearedForCoup.globalVars,
+        trail: 3,
+        nvaResources: 20,
+      },
+      zones: {
+        ...clearedForCoup.zones,
+        'played:none': [{ id: asTokenId('adsid-coup-played'), type: 'card', props: { isCoup: true } }],
+        'lookahead:none': [{ id: asTokenId('adsid-coup-lookahead'), type: 'card', props: { isCoup: false } }],
+        'deck:none': [{ id: asTokenId('adsid-coup-deck'), type: 'card', props: { isCoup: false } }],
+        [CENTRAL_LAOS]: [makeToken('adsid-coup-us', 'troops', 'US', { type: 'troops' })],
+      },
+    };
+    const coupChangedBaseline = applyMoveWithResolvedDecisionIds(def, coupBase, {
+      actionId: asActionId('coupResourcesResolve'),
+      params: {},
+    }).state;
+    const coupChanged = applyMoveWithResolvedDecisionIds(def, withMom(coupBase, { mom_adsid: true }), {
+      actionId: asActionId('coupResourcesResolve'),
+      params: {},
+    }).state;
+
+    assert.equal(coupChangedBaseline.currentPhase, asPhaseId('coupSupport'));
+    assert.equal(coupChanged.currentPhase, asPhaseId('coupSupport'));
+    assert.equal(coupChanged.globalVars.trail, 2, 'Coup sequence should degrade Trail by 1 when Laos/Cambodia is COIN-controlled');
+    assert.equal(
+      coupChanged.globalVars.nvaResources,
+      Number(coupChangedBaseline.globalVars.nvaResources) - 6,
+      'ADSID should trigger from coup-round Trail change',
+    );
+
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected FITL event deck');
+    const clearedForEvent = clearAllZones(initialState(def, 9110, 4).state);
+    const eventBase = withActivePlayer(
+      {
+        ...clearedForEvent,
+        zones: {
+          ...clearedForEvent.zones,
+          [eventDeck!.discardZone]: [makeToken('card-5', 'card', 'none')],
+        },
+        globalVars: {
+          ...clearedForEvent.globalVars,
+          trail: 3,
+          nvaResources: 15,
+        },
+        globalMarkers: {
+          cap_sa2s: 'unshaded',
+        },
+      },
+      0,
+    );
+    const card5UnshadedMove = legalMoves(def, eventBase).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(card5UnshadedMove, undefined, 'Expected card-5 unshaded event move');
+
+    const eventChangedBaseline = applyMoveWithResolvedDecisionIds(def, eventBase, card5UnshadedMove!).state;
+    const eventChanged = applyMoveWithResolvedDecisionIds(
+      def,
+      withMom(eventBase, { mom_adsid: true }),
+      card5UnshadedMove!,
+    ).state;
+
+    assert.equal(eventChanged.globalVars.trail, 1, 'card-5 fallback should still degrade Trail by 2');
+    assert.equal(
+      eventChanged.globalVars.nvaResources,
+      Number(eventChangedBaseline.globalVars.nvaResources) - 6,
+      'ADSID should trigger from Trail changes caused by Events',
+    );
   });
 
   it('Claymores removes 1 guerrilla from each activated marching group', () => {

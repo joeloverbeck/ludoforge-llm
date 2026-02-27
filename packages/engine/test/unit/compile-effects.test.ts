@@ -776,6 +776,118 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.chooseN'), true);
   });
 
+  it('lowers distributeTokens into chooseN/forEach/chooseOne/moveToken sequence', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          distributeTokens: {
+            tokens: {
+              query: 'tokensInZone',
+              zone: 'deck',
+            },
+            destinations: {
+              query: 'zones',
+            },
+            min: 1,
+            max: 2,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        let: {
+          bind: '$__scope_doc_actions_0_effects_0_distributeTokens',
+          value: true,
+          in: [
+            {
+              chooseN: {
+                internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+                bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+                options: {
+                  query: 'tokensInZone',
+                  zone: 'deck:none',
+                },
+                min: 1,
+                max: 2,
+              },
+            },
+            {
+              forEach: {
+                bind: '$__token_doc_actions_0_effects_0_distributeTokens',
+                over: {
+                  query: 'binding',
+                  name: '$__selected_doc_actions_0_effects_0_distributeTokens',
+                },
+                effects: [
+                  {
+                    chooseOne: {
+                      internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
+                      bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
+                      options: {
+                        query: 'zones',
+                      },
+                    },
+                  },
+                  {
+                    moveToken: {
+                      token: '$__token_doc_actions_0_effects_0_distributeTokens',
+                      from: {
+                        zoneExpr: {
+                          ref: 'tokenZone',
+                          token: '$__token_doc_actions_0_effects_0_distributeTokens',
+                        },
+                      },
+                      to: {
+                        zoneExpr: {
+                          ref: 'binding',
+                          name: '$__destination_doc_actions_0_effects_0_distributeTokens',
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
+  it('rejects distributeTokens cardinality mixes and contradictory ranges', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          distributeTokens: {
+            tokens: { query: 'players' },
+            destinations: { query: 'zones' },
+            n: 2,
+            max: 3,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: { query: 'players' },
+            destinations: { query: 'zones' },
+            min: 3,
+            max: 1,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.distributeTokens'), true);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.distributeTokens'), true);
+  });
+
   it('lowers globalMarkers query and flipGlobalMarker effect with binding marker refs', () => {
     const result = lowerEffectArray(
       [

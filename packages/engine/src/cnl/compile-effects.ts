@@ -162,6 +162,9 @@ function lowerEffectNode(
   if (isRecord(source.chooseN)) {
     return lowerChooseNEffect(source.chooseN, context, scope, `${path}.chooseN`);
   }
+  if (isRecord(source.distributeTokens)) {
+    return lowerDistributeTokensEffect(source.distributeTokens, context, scope, `${path}.distributeTokens`);
+  }
   if (isRecord(source.rollRandom)) {
     return lowerRollRandomEffect(source.rollRandom, context, scope, `${path}.rollRandom`);
   }
@@ -1854,6 +1857,149 @@ function lowerChooseNEffect(
   };
 }
 
+function lowerDistributeTokensEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (!isRecord(source.tokens) || !isRecord(source.destinations)) {
+    return missingCapability(path, 'distributeTokens effect', source, [
+      '{ distributeTokens: { tokens, destinations, n } }',
+      '{ distributeTokens: { tokens, destinations, max, min? } }',
+    ]);
+  }
+
+  const condCtx = makeConditionContext(context, scope);
+  const tokenOptions = lowerQueryNode(source.tokens, condCtx, `${path}.tokens`);
+  const destinationOptions = lowerQueryNode(source.destinations, condCtx, `${path}.destinations`);
+  const diagnostics = [...tokenOptions.diagnostics, ...destinationOptions.diagnostics];
+
+  const hasN = source.n !== undefined;
+  const hasMin = source.min !== undefined;
+  const hasMax = source.max !== undefined;
+
+  if (hasN && (hasMin || hasMax)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      path,
+      severity: 'error',
+      message: 'distributeTokens must use either exact "n" or range "min/max", not both.',
+      suggestion: 'Use { n } for exact cardinality or { max, min? } for range cardinality.',
+      alternatives: ['n', 'max'],
+    });
+  }
+
+  if (!hasN && !hasMax) {
+    diagnostics.push(...missingCapability(path, 'distributeTokens cardinality', source, ['{ n }', '{ max, min? }']).diagnostics);
+  }
+
+  let loweredMin: NumericValueExpr | undefined;
+  let loweredMax: NumericValueExpr | undefined;
+
+  if (hasN && (!isInteger(source.n) || source.n < 0)) {
+    diagnostics.push(...missingCapability(`${path}.n`, 'distributeTokens n', source.n, ['non-negative integer']).diagnostics);
+  }
+  if (hasMax) {
+    const maxResult = lowerNumericValueNode(source.max, condCtx, `${path}.max`);
+    diagnostics.push(...maxResult.diagnostics);
+    if (maxResult.value !== null) {
+      loweredMax = maxResult.value;
+      if (typeof loweredMax === 'number' && (!isInteger(loweredMax) || loweredMax < 0)) {
+        diagnostics.push(...missingCapability(`${path}.max`, 'distributeTokens max', source.max, ['non-negative integer']).diagnostics);
+      }
+    }
+  }
+  if (hasMin) {
+    const minResult = lowerNumericValueNode(source.min, condCtx, `${path}.min`);
+    diagnostics.push(...minResult.diagnostics);
+    if (minResult.value !== null) {
+      loweredMin = minResult.value;
+      if (typeof loweredMin === 'number' && (!isInteger(loweredMin) || loweredMin < 0)) {
+        diagnostics.push(...missingCapability(`${path}.min`, 'distributeTokens min', source.min, ['non-negative integer']).diagnostics);
+      }
+    }
+  }
+
+  if (
+    loweredMax !== undefined
+    && loweredMin !== undefined
+    && typeof loweredMax === 'number'
+    && typeof loweredMin === 'number'
+    && loweredMin > loweredMax
+  ) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      path,
+      severity: 'error',
+      message: 'distributeTokens min cannot exceed max.',
+      suggestion: 'Set distributeTokens.min <= distributeTokens.max.',
+    });
+  }
+
+  if (tokenOptions.value === null || destinationOptions.value === null || diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+    return { value: null, diagnostics };
+  }
+
+  const scopeBind = makeSyntheticBinding(path, 'scope');
+  const selectedBind = makeSyntheticBinding(path, 'selected');
+  const tokenBind = makeSyntheticBinding(path, 'token');
+  const destinationBind = makeSyntheticBinding(path, 'destination');
+
+  const cardinality =
+    hasN && isInteger(source.n)
+      ? { n: source.n }
+      : {
+          max: loweredMax as NumericValueExpr,
+          ...(loweredMin === undefined ? {} : { min: loweredMin }),
+        };
+
+  return {
+    value: {
+      let: {
+        bind: scopeBind,
+        value: true,
+        in: [
+          {
+            chooseN: {
+              internalDecisionId: toInternalDecisionId(`${path}.selectTokens`),
+              bind: selectedBind,
+              options: tokenOptions.value,
+              ...cardinality,
+            },
+          },
+          {
+            forEach: {
+              bind: tokenBind,
+              over: {
+                query: 'binding',
+                name: selectedBind,
+              },
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: toInternalDecisionId(`${path}.chooseDestination`),
+                    bind: destinationBind,
+                    options: destinationOptions.value,
+                  },
+                },
+                {
+                  moveToken: {
+                    token: tokenBind,
+                    from: { zoneExpr: { ref: 'tokenZone', token: tokenBind } },
+                    to: { zoneExpr: { ref: 'binding', name: destinationBind } },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    diagnostics,
+  };
+}
+
 function lowerNestedEffects(
   source: readonly unknown[],
   context: EffectLoweringContext,
@@ -2015,6 +2161,11 @@ function missingCapability<TValue>(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function makeSyntheticBinding(path: string, suffix: string): string {
+  const stem = path.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return `$__${suffix}_${stem}`;
 }
 
 function isInteger(value: unknown): value is number {

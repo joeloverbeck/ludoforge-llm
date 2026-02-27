@@ -22,6 +22,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'evaluateSubset',
   'chooseOne',
   'chooseN',
+  'distributeTokens',
   'rollRandom',
   'setMarker',
   'shiftMarker',

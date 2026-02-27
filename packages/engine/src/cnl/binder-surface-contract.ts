@@ -207,6 +207,13 @@ export const EFFECT_BINDER_SURFACE_CONTRACT = {
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  distributeTokens: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingNameReferencerPaths: NO_REFERENCER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   rollRandom: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: [['bind']],

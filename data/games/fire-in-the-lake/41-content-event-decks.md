@@ -797,16 +797,7 @@ eventDecks:
                                 - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
                             filter:
                               - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, eq: troops }
-                          - query: tokensInMapSpaces
-                            spaceFilter:
-                              op: or
-                              args:
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                            filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, eq: guerrilla }
+                              - { prop: type, op: in, value: [troops, guerrilla] }
                           - query: tokensInMapSpaces
                             spaceFilter:
                               op: or

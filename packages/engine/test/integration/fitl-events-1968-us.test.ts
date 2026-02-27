@@ -157,6 +157,35 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.notEqual(chooseNUnshaded, undefined, 'first inner effect must be chooseN');
     assert.equal(chooseNUnshaded?.bind, '$insurgentPieces');
     assert.equal(chooseNUnshaded?.options?.query, 'concat');
+    const unshadedSources = (chooseNUnshaded?.options as { sources?: Array<{ filter?: Array<{ prop?: string; op?: string; eq?: string; value?: string[] }> }> })?.sources;
+    assert.equal(unshadedSources?.length, 2, 'unshaded insurgent concat must have 2 sources');
+
+    const mixedTypeSource = unshadedSources?.find((source) =>
+      source.filter?.some((predicate) => predicate.prop === 'type' && predicate.op === 'in'),
+    );
+    assert.notEqual(mixedTypeSource, undefined, 'unshaded must include mixed type source for troops + guerrilla');
+    assert.equal(
+      mixedTypeSource?.filter?.some(
+        (predicate) =>
+          predicate.prop === 'type' &&
+          predicate.op === 'in' &&
+          Array.isArray(predicate.value) &&
+          predicate.value.includes('troops') &&
+          predicate.value.includes('guerrilla'),
+      ),
+      true,
+      'mixed type source must include troops and guerrilla',
+    );
+
+    const baseSource = unshadedSources?.find((source) =>
+      source.filter?.some((predicate) => predicate.prop === 'type' && predicate.eq === 'base'),
+    );
+    assert.notEqual(baseSource, undefined, 'unshaded must include dedicated base source');
+    assert.equal(
+      baseSource?.filter?.some((predicate) => predicate.prop === 'tunnel' && predicate.eq === 'untunneled'),
+      true,
+      'base source must preserve untunneled tunnel filter',
+    );
     assert.equal(chooseNUnshaded?.max?.ref, 'binding');
     assert.equal(chooseNUnshaded?.max?.name, '$dieRoll');
 

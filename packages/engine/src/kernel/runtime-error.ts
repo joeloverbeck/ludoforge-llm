@@ -122,6 +122,13 @@ export interface IllegalMoveContextByReason {
 
 export type IllegalMoveContext<R extends IllegalMoveReason = IllegalMoveReason> = IllegalMoveContextByReason[R];
 type IllegalMoveContextInput<R extends IllegalMoveReason> = Omit<IllegalMoveContext<R>, 'actionId' | 'params' | 'reason'>;
+type RequiredKeys<T> = {
+  [K in keyof T]-?: Pick<T, K> extends Required<Pick<T, K>> ? K : never;
+}[keyof T];
+type IllegalMoveReasonsRequiringContext = {
+  [R in IllegalMoveReason]: [RequiredKeys<IllegalMoveContextInput<R>>] extends [never] ? never : R;
+}[IllegalMoveReason];
+type IllegalMoveReasonsWithOptionalContext = Exclude<IllegalMoveReason, IllegalMoveReasonsRequiringContext>;
 
 export interface KernelRuntimeErrorContextByCode {
   readonly ILLEGAL_MOVE: IllegalMoveContext;
@@ -248,20 +255,31 @@ export class IllegalMoveError extends KernelRuntimeError<'ILLEGAL_MOVE'> {
   }
 }
 
-export function illegalMoveError<R extends IllegalMoveReason>(
+export function illegalMoveError<R extends IllegalMoveReasonsRequiringContext>(
+  move: Move,
+  reason: R,
+  context: IllegalMoveContextInput<R>,
+): IllegalMoveError;
+export function illegalMoveError<R extends IllegalMoveReasonsWithOptionalContext>(
   move: Move,
   reason: R,
   context?: IllegalMoveContextInput<R>,
+): IllegalMoveError;
+export function illegalMoveError(
+  move: Move,
+  reason: IllegalMoveReason,
+  context?: IllegalMoveContextInput<IllegalMoveReason>,
 ): IllegalMoveError {
   if (reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED && (context as { freeOperationDenial?: unknown } | undefined)?.freeOperationDenial === undefined) {
     throw new TypeError('FREE_OPERATION_NOT_GRANTED requires freeOperationDenial in ILLEGAL_MOVE context.');
   }
-  return new IllegalMoveError(move, {
+  const resolvedContext = {
     actionId: move.actionId,
     params: move.params,
     reason,
     ...(context ?? {}),
-  } as IllegalMoveContext<R>);
+  } as IllegalMoveContext;
+  return new IllegalMoveError(move, resolvedContext);
 }
 
 export const pipelineApplicabilityEvaluationError = (

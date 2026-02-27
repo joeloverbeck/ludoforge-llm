@@ -130,4 +130,23 @@ describe('runtime error context contracts', () => {
     const context: KernelRuntimeErrorContext<'TERMINAL_MARGIN_NON_NUMERIC'> = error.context!;
     assert.equal(context.seat, 'US');
   });
+
+  it('illegalMoveError type contract requires context for reasons with required payload fields', () => {
+    const move: Move = {
+      actionId: action.id,
+      params: {},
+    };
+    const assertCompileTimeContracts = (): void => {
+      // @ts-expect-error FREE_OPERATION_NOT_GRANTED requires freeOperationDenial context
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      // @ts-expect-error SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED requires operation/specialActivity/profile context
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
+      // @ts-expect-error FREE_OPERATION_NOT_GRANTED context must include freeOperationDenial
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {});
+    };
+    void assertCompileTimeContracts;
+
+    const unknownActionError = illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
+    assert.equal(unknownActionError.reason, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
+  });
 });

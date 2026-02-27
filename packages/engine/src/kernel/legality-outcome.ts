@@ -18,7 +18,7 @@ export interface LegalityOutcomeProjection {
   readonly enumerateLegalMove: boolean;
 }
 
-export const LEGALITY_OUTCOME_PROJECTIONS: Readonly<Record<KernelLegalityOutcome, LegalityOutcomeProjection>> = {
+export const LEGALITY_OUTCOME_PROJECTIONS = {
   phaseMismatch: {
     choiceReason: 'phaseMismatch',
     applyMoveCode: 'ACTION_PHASE_MISMATCH',
@@ -61,16 +61,24 @@ export const LEGALITY_OUTCOME_PROJECTIONS: Readonly<Record<KernelLegalityOutcome
     applyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED,
     enumerateLegalMove: false,
   },
-};
+} as const satisfies Readonly<Record<KernelLegalityOutcome, LegalityOutcomeProjection>>;
 
-export const toChoiceIllegalReason = (outcome: KernelLegalityOutcome): ChoiceIllegalReason =>
+export const toChoiceIllegalReason = <O extends KernelLegalityOutcome>(
+  outcome: O,
+): (typeof LEGALITY_OUTCOME_PROJECTIONS)[O]['choiceReason'] =>
   LEGALITY_OUTCOME_PROJECTIONS[outcome].choiceReason;
 
-export const toApplyMoveIllegalMetadataCode = (outcome: KernelLegalityOutcome): ApplyMoveIllegalMetadataCode =>
+export const toApplyMoveIllegalMetadataCode = <O extends KernelLegalityOutcome>(
+  outcome: O,
+): (typeof LEGALITY_OUTCOME_PROJECTIONS)[O]['applyMoveCode'] =>
   LEGALITY_OUTCOME_PROJECTIONS[outcome].applyMoveCode;
 
-export const toApplyMoveIllegalReason = (outcome: KernelLegalityOutcome): IllegalMoveReason =>
+export const toApplyMoveIllegalReason = <O extends KernelLegalityOutcome>(
+  outcome: O,
+): (typeof LEGALITY_OUTCOME_PROJECTIONS)[O]['applyMoveReason'] =>
   LEGALITY_OUTCOME_PROJECTIONS[outcome].applyMoveReason;
 
-export const shouldEnumerateLegalMoveForOutcome = (outcome: KernelLegalityOutcome): boolean =>
+export const shouldEnumerateLegalMoveForOutcome = <O extends KernelLegalityOutcome>(
+  outcome: O,
+): (typeof LEGALITY_OUTCOME_PROJECTIONS)[O]['enumerateLegalMove'] =>
   LEGALITY_OUTCOME_PROJECTIONS[outcome].enumerateLegalMove;

@@ -1,6 +1,6 @@
 # ENGINEARCH-100: Enforce Required `ILLEGAL_MOVE` Context by Reason at Compile Time
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime error typing + illegal-move emitter contracts
@@ -14,7 +14,9 @@
 
 1. `IllegalMoveContextByReason` defines reason-specific payloads in `runtime-error.ts`, but `illegalMoveError` uses a broad optional `context` parameter.
 2. Current implementation relies on a cast (`as IllegalMoveContext<R>`), so type-level enforcement for required fields is incomplete.
-3. Mismatch: contract intent is strict per-reason typing, but helper signature still permits missing required context. Corrected scope is compile-time requiredness enforcement for all reasons with required fields.
+3. `apply-move.ts` call sites are already mostly context-complete for reasons that require additional payload fields; the main gap is helper signature permissiveness, not widespread call-site defects.
+4. Missing coverage: current tests validate emitted runtime payloads but do not lock compile-time requiredness failures for helper invocations.
+5. Mismatch: contract intent is strict per-reason typing, but helper signature still permits missing required context. Corrected scope is compile-time requiredness enforcement at the helper boundary, plus explicit type-contract tests.
 
 ## Architecture Check
 
@@ -39,9 +41,9 @@ Add tests that lock expected helper call shapes and ensure runtime context paylo
 ## Files to Touch
 
 - `packages/engine/src/kernel/runtime-error.ts` (modify)
-- `packages/engine/src/kernel/apply-move.ts` (modify if call sites require payload shape adjustments)
+- `packages/engine/src/kernel/apply-move.ts` (modify only if stricter helper typing reveals a concrete mismatch)
 - `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts` (modify/add)
-- `packages/engine/test/unit/kernel/apply-move.test.ts` (modify if context assertions need updates)
+- `packages/engine/test/unit/kernel/apply-move.test.ts` (optional; only if helper tightening changes emitted contexts)
 
 ## Out of Scope
 
@@ -65,8 +67,8 @@ Add tests that lock expected helper call shapes and ensure runtime context paylo
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts` — assert stable reason-specific context contracts.
-2. `packages/engine/test/unit/kernel/apply-move.test.ts` — ensure emitted contexts for compound/pipeline/free-op reasons keep expected fields.
+1. `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts` — assert stable reason-specific context contracts and add compile-time guard assertions (`@ts-expect-error`) for missing required reason payloads.
+2. `packages/engine/test/unit/kernel/apply-move.test.ts` — keep existing coverage; only update if signature tightening causes emitted-context behavior changes.
 
 ### Commands
 
@@ -75,3 +77,10 @@ Add tests that lock expected helper call shapes and ensure runtime context paylo
 3. `node --test packages/engine/dist/test/unit/kernel/apply-move.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo lint`
+
+## Outcome
+
+- Implemented strict reason-aware `illegalMoveError` overloads so reasons with required payload fields now require context at compile time.
+- Added compile-time contract guards in `runtime-error-contracts.test.ts` (`@ts-expect-error` assertions) and retained runtime payload assertions.
+- Tightened `legality-outcome.ts` projection helpers with literal-preserving generic return types so downstream call sites keep precise illegal-move reason types.
+- `apply-move.ts` did not require behavioral changes; existing call sites remained architecturally valid once reason typing precision was restored.

@@ -1120,9 +1120,8 @@ describe('applyMove() executor applicability contract', () => {
         const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.profileId, 'costlyProfile');
-        assert.equal(metadata?.partialExecutionMode, 'atomic');
+        assert.equal(details.context?.profileId, 'costlyProfile');
+        assert.equal(details.context?.partialExecutionMode, 'atomic');
         return true;
       },
     );
@@ -1190,9 +1189,8 @@ describe('applyMove() simultaneous commit preflight parity', () => {
         const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.profileId, 'costlyProfile');
-        assert.equal(metadata?.partialExecutionMode, 'atomic');
+        assert.equal(details.context?.profileId, 'costlyProfile');
+        assert.equal(details.context?.partialExecutionMode, 'atomic');
         return true;
       },
     );
@@ -1206,9 +1204,8 @@ describe('applyMove() simultaneous commit preflight parity', () => {
         assert.ok(error instanceof Error);
         const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.profileId, 'costlyProfile');
-        assert.equal(metadata?.partialExecutionMode, 'atomic');
+        assert.equal(details.context?.profileId, 'costlyProfile');
+        assert.equal(details.context?.partialExecutionMode, 'atomic');
         return true;
       },
     );
@@ -1282,11 +1279,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
-        assert.equal(details.metadata?.['timing'], 'before');
+        assert.equal(details.context?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.context?.['timing'], 'before');
         return true;
       },
     );
@@ -1308,11 +1305,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
-        assert.equal(details.metadata?.['timing'], 'after');
+        assert.equal(details.context?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.context?.['timing'], 'after');
         return true;
       },
     );
@@ -1334,11 +1331,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
-        assert.equal(details.metadata?.['timing'], 'before');
+        assert.equal(details.context?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.context?.['timing'], 'before');
         return true;
       },
     );
@@ -1360,11 +1357,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
-        assert.equal(details.metadata?.['timing'], 'before');
+        assert.equal(details.context?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.context?.['timing'], 'before');
         return true;
       },
     );
@@ -1386,11 +1383,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
-        assert.equal(details.metadata?.['timing'], 'after');
+        assert.equal(details.context?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.context?.['timing'], 'after');
         return true;
       },
     );
@@ -1412,11 +1409,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'replaceRemainingStages');
-        assert.equal(details.metadata?.['timing'], 'after');
+        assert.equal(details.context?.['invalidField'], 'replaceRemainingStages');
+        assert.equal(details.context?.['timing'], 'after');
         return true;
       },
     );
@@ -1438,11 +1435,11 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(noPipelineDef, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['timing'], 'during');
-        assert.match(String(details.metadata?.['detail']), /requires a matched staged action pipeline/);
+        assert.equal(details.context?.['timing'], 'during');
+        assert.match(String(details.context?.['detail']), /requires a matched staged action pipeline/);
         return true;
       },
     );
@@ -1478,12 +1475,12 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(def, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
-        assert.equal(details.metadata?.['stageCount'], 0);
-        assert.equal(details.metadata?.['insertAfterStage'], 0);
+        assert.equal(details.context?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.context?.['stageCount'], 0);
+        assert.equal(details.context?.['insertAfterStage'], 0);
         return true;
       },
     );
@@ -1510,12 +1507,12 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
       () => applyMove(def, state, move),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID);
-        assert.equal(details.metadata?.['invalidField'], 'insertAfterStage');
-        assert.equal(details.metadata?.['stageCount'], 3);
-        assert.equal(details.metadata?.['insertAfterStage'], 3);
+        assert.equal(details.context?.['invalidField'], 'insertAfterStage');
+        assert.equal(details.context?.['stageCount'], 3);
+        assert.equal(details.context?.['insertAfterStage'], 3);
         return true;
       },
     );

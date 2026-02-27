@@ -291,8 +291,8 @@ const validateDecisionSequenceForMove = (
       return;
     }
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS, {
-      nextDecisionId: result.nextDecision?.decisionId,
-      nextDecisionName: result.nextDecision?.name,
+      ...(result.nextDecision?.decisionId === undefined ? {} : { nextDecisionId: result.nextDecision.decisionId }),
+      ...(result.nextDecision?.name === undefined ? {} : { nextDecisionName: result.nextDecision.name }),
     });
   } catch (err) {
     if (isEffectErrorCode(err, 'EFFECT_RUNTIME') && err.context?.reason === 'choiceRuntimeValidationFailed') {
@@ -541,7 +541,6 @@ const validateMove = (
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
-      actionId: move.actionId,
       mappedActionClass: classMismatch.mapped,
       submittedActionClass: classMismatch.submitted,
     });
@@ -559,8 +558,7 @@ const validateMove = (
   ) {
     const block = explainFreeOperationBlockForMove(def, state, move);
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
-      actionId: action.id,
-      block,
+      freeOperationDenial: block,
     });
   }
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {

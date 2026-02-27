@@ -1,6 +1,8 @@
 import type { ActionSelectorContractViolation } from './action-selector-contract-registry.js';
 import { ILLEGAL_MOVE_REASON_MESSAGES, PIPELINE_RUNTIME_REASONS } from './runtime-reasons.js';
+import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';
+import type { FreeOperationBlockExplanation } from './turn-flow-eligibility.js';
 import type { ActionDef, GameState, Move } from './types.js';
 
 export type KernelRuntimeErrorCode =
@@ -39,13 +41,90 @@ export interface RuntimeContractInvalidContext {
   readonly selectorContractViolations?: readonly ActionSelectorContractViolation[];
 }
 
+type IllegalMoveBaseContext<R extends IllegalMoveReason> = Readonly<{
+  readonly actionId: Move['actionId'];
+  readonly params: Move['params'];
+  readonly reason: R;
+}>;
+
+export interface IllegalMoveContextByReason {
+  readonly [ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE> & Readonly<{
+      readonly detail?: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS> & Readonly<{
+      readonly nextDecisionId?: string;
+      readonly nextDecisionName?: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID> & Readonly<{
+      readonly detail?: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION>;
+  readonly [ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID>;
+  readonly [ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED> & Readonly<{
+      readonly operationActionId: Move['actionId'];
+      readonly specialActivityActionId: Move['actionId'];
+      readonly profileId: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED> & Readonly<{
+      readonly operationActionId: Move['actionId'];
+      readonly specialActivityActionId: Move['actionId'];
+      readonly profileId: string;
+      readonly relation: 'disjoint' | 'subset';
+      readonly operationParam: string;
+      readonly specialActivityParam: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH> & Readonly<{
+      readonly mappedActionClass: 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity';
+      readonly submittedActionClass: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED> & Readonly<{
+      readonly freeOperationDenial: FreeOperationBlockExplanation;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE>;
+  readonly [ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE>;
+  readonly [ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE> & Readonly<{
+      readonly detail?: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED> & Readonly<{
+      readonly profileId?: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED> & Readonly<{
+      readonly profileId?: string;
+      readonly partialExecutionMode?: 'atomic' | 'partial';
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID> & Readonly<{
+      readonly timing?: 'before' | 'during' | 'after';
+      readonly invalidField?: 'insertAfterStage' | 'replaceRemainingStages';
+      readonly insertAfterStage?: number;
+      readonly stageCount?: number;
+      readonly detail?: string;
+    }>;
+  readonly [ILLEGAL_MOVE_REASONS.SIMULTANEOUS_SUBMISSION_COMPOUND_UNSUPPORTED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.SIMULTANEOUS_SUBMISSION_COMPOUND_UNSUPPORTED>;
+  readonly [ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED]:
+    IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED>;
+}
+
+export type IllegalMoveContext<R extends IllegalMoveReason = IllegalMoveReason> = IllegalMoveContextByReason[R];
+type IllegalMoveContextInput<R extends IllegalMoveReason> = Omit<IllegalMoveContext<R>, 'actionId' | 'params' | 'reason'>;
+
 export interface KernelRuntimeErrorContextByCode {
-  readonly ILLEGAL_MOVE: Readonly<{
-    readonly actionId: Move['actionId'];
-    readonly params: Move['params'];
-    readonly reason: IllegalMoveReason;
-    readonly metadata?: Readonly<Record<string, unknown>>;
-  }>;
+  readonly ILLEGAL_MOVE: IllegalMoveContext;
   readonly RUNTIME_CONTRACT_INVALID: RuntimeContractInvalidContext;
   readonly ACTION_PIPELINE_APPLICABILITY_EVALUATION_FAILED: Readonly<{
     readonly actionId: ActionDef['id'];
@@ -154,35 +233,36 @@ export class IllegalMoveError extends KernelRuntimeError<'ILLEGAL_MOVE'> {
   readonly actionId: Move['actionId'];
   readonly params: Move['params'];
   readonly reason: IllegalMoveReason;
-  readonly metadata?: Readonly<Record<string, unknown>>;
 
-  constructor(move: Move, reason: IllegalMoveReason, metadata?: Readonly<Record<string, unknown>>) {
-    const reasonMessage = ILLEGAL_MOVE_REASON_MESSAGES[reason];
+  constructor(move: Move, context: IllegalMoveContext) {
+    const reasonMessage = ILLEGAL_MOVE_REASON_MESSAGES[context.reason];
     super(
       'ILLEGAL_MOVE',
-      `Illegal move: actionId=${String(move.actionId)} reason=${reason} detail=${reasonMessage} params=${JSON.stringify(move.params)}`,
-      {
-        actionId: move.actionId,
-        params: move.params,
-        reason,
-        ...(metadata === undefined ? {} : { metadata }),
-      },
+      `Illegal move: actionId=${String(move.actionId)} reason=${context.reason} detail=${reasonMessage} params=${JSON.stringify(move.params)}`,
+      context,
     );
     this.name = 'IllegalMoveError';
     this.actionId = move.actionId;
     this.params = move.params;
-    this.reason = reason;
-    if (metadata !== undefined) {
-      this.metadata = metadata;
-    }
+    this.reason = context.reason;
   }
 }
 
-export const illegalMoveError = (
+export function illegalMoveError<R extends IllegalMoveReason>(
   move: Move,
-  reason: IllegalMoveReason,
-  metadata?: Readonly<Record<string, unknown>>,
-): IllegalMoveError => new IllegalMoveError(move, reason, metadata);
+  reason: R,
+  context?: IllegalMoveContextInput<R>,
+): IllegalMoveError {
+  if (reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED && (context as { freeOperationDenial?: unknown } | undefined)?.freeOperationDenial === undefined) {
+    throw new TypeError('FREE_OPERATION_NOT_GRANTED requires freeOperationDenial in ILLEGAL_MOVE context.');
+  }
+  return new IllegalMoveError(move, {
+    actionId: move.actionId,
+    params: move.params,
+    reason,
+    ...(context ?? {}),
+  } as IllegalMoveContext<R>);
+}
 
 export const pipelineApplicabilityEvaluationError = (
   action: ActionDef,

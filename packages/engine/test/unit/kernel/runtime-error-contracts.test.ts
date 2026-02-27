@@ -45,7 +45,41 @@ describe('runtime error context contracts', () => {
     assert.equal(context.actionId, move.actionId);
     assert.deepEqual(context.params, move.params);
     assert.equal(context.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
-    assert.equal(context.metadata, undefined);
+    assert.equal('metadata' in context, false);
+  });
+
+  it('illegalMoveError exposes typed free-operation denial context for FREE_OPERATION_NOT_GRANTED', () => {
+    const move: Move = {
+      actionId: action.id,
+      params: {},
+      freeOperation: true,
+    };
+
+    const error = illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
+      freeOperationDenial: {
+        cause: 'actionIdMismatch',
+        activeSeat: '2',
+        actionClass: 'operation',
+        actionId: 'operate',
+        matchingGrantIds: ['grant-1'],
+      },
+    });
+
+    assert.equal(error.code, 'ILLEGAL_MOVE');
+    assert.equal(error.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+    const context: KernelRuntimeErrorContext<'ILLEGAL_MOVE'> = error.context!;
+    assert.equal(context.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+    if (context.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED) {
+      assert.deepEqual(context.freeOperationDenial, {
+        cause: 'actionIdMismatch',
+        activeSeat: '2',
+        actionClass: 'operation',
+        actionId: 'operate',
+        matchingGrantIds: ['grant-1'],
+      });
+    } else {
+      assert.fail('expected FREE_OPERATION_NOT_GRANTED context');
+    }
   });
 
   it('pipeline applicability helper emits deterministic context contract', () => {

@@ -817,10 +817,10 @@ describe('FITL NVA/VC special activities integration', () => {
         },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly relation?: string }; readonly message?: string };
+        const details = error as { readonly reason?: string; readonly context?: { readonly relation?: string }; readonly message?: string };
         if (details.reason !== undefined) {
           assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
-          assert.equal(details.metadata?.relation, 'subset');
+          assert.equal(details.context?.relation, 'subset');
         } else {
           assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed/);
         }

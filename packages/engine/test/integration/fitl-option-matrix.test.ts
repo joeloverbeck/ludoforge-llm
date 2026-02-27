@@ -329,10 +329,12 @@ describe('FITL option matrix integration', () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { reason?: unknown; metadata?: Record<string, unknown> };
+        const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH);
-        assert.deepEqual(details.metadata, {
+        assert.deepEqual(details.context, {
           actionId: asActionId('operation'),
+          params: {},
+          reason: ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH,
           mappedActionClass: 'operation',
           submittedActionClass: 'limitedOperation',
         });

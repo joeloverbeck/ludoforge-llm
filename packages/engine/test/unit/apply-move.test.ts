@@ -2452,10 +2452,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionId, 'decision:$delta');
         return true;
       },
     );
@@ -2479,10 +2479,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionId, 'decision:$delta');
         return true;
       },
     );
@@ -2496,10 +2496,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        assert.equal(details.context?.nextDecisionId, 'decision:$delta');
         return true;
       },
     );
@@ -2513,10 +2513,10 @@ phase: [asPhaseId('main')],
     assert.throws(
       () => applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly nextDecisionId?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
-        assert.equal(details.metadata?.nextDecisionId, 'decision:$opDelta');
+        assert.equal(details.context?.nextDecisionId, 'decision:$opDelta');
         return true;
       },
     );
@@ -2548,10 +2548,10 @@ phase: [asPhaseId('main')],
           params: { ticket: 'not-ok', 'decision:$delta': 1 },
         }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly context?: { readonly code?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
-        assert.equal(details.metadata, undefined);
+        assert.equal(details.context?.code, undefined);
         return true;
       },
     );
@@ -3151,9 +3151,9 @@ phase: [asPhaseId('main')],
         compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['b'] } }, timing: 'after' },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly relation?: string } };
+        const details = error as { readonly reason?: string; readonly context?: { readonly relation?: string } };
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
-        assert.equal(details.metadata?.relation, 'subset');
+        assert.equal(details.context?.relation, 'subset');
         return true;
       },
     );

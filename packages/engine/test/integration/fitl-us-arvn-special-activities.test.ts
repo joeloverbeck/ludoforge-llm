@@ -657,11 +657,11 @@ describe('FITL US/ARVN special activities integration', () => {
         const details = error as {
           readonly reason?: string;
           readonly message?: string;
-          readonly metadata?: { readonly relation?: string };
+          readonly context?: { readonly relation?: string };
         };
         if (details.reason !== undefined) {
           assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
-          assert.equal(details.metadata?.relation, 'disjoint');
+          assert.equal(details.context?.relation, 'disjoint');
         } else {
           assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed/);
         }

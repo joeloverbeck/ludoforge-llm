@@ -253,6 +253,94 @@ const createClassAwareDedupDef = (): GameDef => {
   return def as unknown as GameDef;
 };
 
+const createActionIdMismatchDef = (): GameDef => {
+  const def = createDef() as unknown as {
+    eventDecks: EventDeckDef[];
+    actions: Array<{
+      id: ReturnType<typeof asActionId>;
+      actor: 'active';
+      executor: 'actor';
+      phase: ReturnType<typeof asPhaseId>[];
+      params: [];
+      pre: null;
+      cost: [];
+      effects: [];
+      limits: [];
+    }>;
+    actionPipelines: Array<{
+      id: string;
+      actionId: ReturnType<typeof asActionId>;
+      legality: null;
+      costValidation: null;
+      costEffects: [];
+      targeting: Record<string, never>;
+      stages: Array<{ effects: [] }>;
+      atomicity: 'atomic';
+    }>;
+  };
+
+  def.actions.push({
+    id: asActionId('operation-alt'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  });
+  def.actionPipelines.push({
+    id: 'operation-alt-profile',
+    actionId: asActionId('operation-alt'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [{ effects: [] }],
+    atomicity: 'atomic',
+  });
+
+  const deck = def.eventDecks[0];
+  if (deck !== undefined) {
+    def.eventDecks[0] = {
+      ...deck,
+      cards: deck.cards.map((card) => {
+        if (card.id !== 'card-1' || card.unshaded?.freeOperationGrants?.[0] === undefined) {
+          return card;
+        }
+        return {
+          ...card,
+          unshaded: {
+            ...card.unshaded,
+            freeOperationGrants: [
+              {
+                ...card.unshaded.freeOperationGrants[0],
+                actionIds: ['operation-alt'],
+              },
+            ],
+          },
+        };
+      }),
+    };
+  }
+  return def as unknown as GameDef;
+};
+
+const assertFreeOperationDenial = (error: unknown, expectedCause: string): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const details = error as Error & {
+    readonly reason?: string;
+    readonly context?: { readonly freeOperationDenial?: { readonly cause?: string } };
+  };
+  return (
+    details.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED
+    && details.context?.freeOperationDenial?.cause === expectedCause
+  );
+};
+
 const createZoneFilteredDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-zone-filter-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
@@ -648,12 +736,7 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true, actionClass: 'operation' }),
-      (error: unknown) =>
-        error instanceof Error &&
-        'reason' in error &&
-        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
-        'metadata' in error &&
-        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'actionClassMismatch'),
+      (error: unknown) => assertFreeOperationDenial(error, 'actionClassMismatch'),
     );
 
     const fourth = applyMove(def, third, {
@@ -679,12 +762,7 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
-      (error: unknown) =>
-        error instanceof Error &&
-        'reason' in error &&
-        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
-        'metadata' in error &&
-        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'actionClassMismatch'),
+      (error: unknown) => assertFreeOperationDenial(error, 'actionClassMismatch'),
     );
 
     const fourth = applyMove(def, third, {
@@ -725,12 +803,42 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () => applyMove(def, second, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
-      (error: unknown) =>
-        error instanceof Error &&
-        'reason' in error &&
-        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
-        'metadata' in error &&
-        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'sequenceLocked'),
+      (error: unknown) => assertFreeOperationDenial(error, 'sequenceLocked'),
+    );
+  });
+
+  it('reports actionIdMismatch when grant actionIds exclude the attempted free action', () => {
+    const def = createActionIdMismatchDef();
+    const start = initialState(def, 41, 4).state;
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-1', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+    assert.equal(third.activePlayer, asPlayerId(3));
+
+    assert.throws(
+      () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) => assertFreeOperationDenial(error, 'actionIdMismatch'),
+    );
+  });
+
+  it('reports noActiveSeatGrant when a different seat holds the pending free-operation grant', () => {
+    const def = createDef();
+    const start = initialState(def, 42, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-1', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    assert.notEqual(afterEvent.activePlayer, asPlayerId(3));
+
+    assert.throws(
+      () => applyMove(def, afterEvent, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) => assertFreeOperationDenial(error, 'noActiveSeatGrant'),
     );
   });
 
@@ -755,12 +863,7 @@ describe('event free-operation grants integration', () => {
           params: { 'decision:$zone': 'boardVietnam:none' },
           freeOperation: true,
         }),
-      (error: unknown) =>
-        error instanceof Error &&
-        'reason' in error &&
-        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
-        'metadata' in error &&
-        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'zoneFilterMismatch'),
+      (error: unknown) => assertFreeOperationDenial(error, 'zoneFilterMismatch'),
     );
 
     const third = applyMove(def, second, {

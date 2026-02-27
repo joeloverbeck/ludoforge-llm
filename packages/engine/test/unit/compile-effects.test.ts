@@ -537,6 +537,35 @@ describe('compile-effects lowering', () => {
     );
   });
 
+  it('rejects authored binder declarations in compiler-owned namespace', () => {
+    const result = lowerEffectArray(
+      [
+        { chooseOne: { bind: '$__choice', options: { query: 'enums', values: ['a'] } } },
+        { forEach: { bind: '$__item', over: { query: 'tokensInZone', zone: 'board' }, effects: [] } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_RESERVED_BINDING_NAMESPACE_FORBIDDEN'
+          && diagnostic.path === 'doc.actions.0.effects.0.chooseOne.bind',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_RESERVED_BINDING_NAMESPACE_FORBIDDEN'
+          && diagnostic.path === 'doc.actions.0.effects.1.forEach.bind',
+      ),
+      true,
+    );
+  });
+
   it('allows reserved-looking keys inside createToken props payload maps', () => {
     const result = lowerEffectArray(
       [

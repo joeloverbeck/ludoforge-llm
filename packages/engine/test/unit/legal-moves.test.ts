@@ -2,16 +2,19 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyMove,
   asActionId,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
+  legalChoicesDiscover,
   legalMoves,
   type GameDef,
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import { applyTurnFlowWindowFilters } from '../../src/kernel/legal-moves-turn-order.js';
 import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-eligibility.js';
 
@@ -1500,5 +1503,104 @@ phase: [asPhaseId('main')],
     });
     assert.equal(moves.some((move) => String(move.actionId) === 'event' && move.params.side !== undefined), false);
     assert.equal(moves.some((move) => String(move.actionId) === 'resolveCard' && move.params.side === 'unshaded'), true);
+  });
+
+  it('keeps distributeTokens decision flow consistent across legalMoves, legalChoicesDiscover, and applyMove', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'legal-moves-distribute-parity', players: { min: 1, max: 1 } },
+      zones: [
+        { id: 'source', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'left', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'right', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+      tokenTypes: [{ id: 'piece', props: {} }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      terminal: { conditions: [] },
+      actions: [
+        {
+          id: 'distribute',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              distributeTokens: {
+                tokens: { query: 'tokensInZone', zone: 'source' },
+                destinations: { query: 'zones' },
+                n: 1,
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+    });
+
+    assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.ok(compiled.gameDef !== null);
+    if (compiled.gameDef === null) {
+      return;
+    }
+
+    const def = compiled.gameDef;
+    const state: GameState = {
+      globalVars: {},
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 1,
+      zones: {
+        'source:none': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],
+        'left:none': [],
+        'right:none': [],
+      },
+      nextTokenOrdinal: 1,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 0,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [3n, 7n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+
+    const template = legalMoves(def, state).find((move) => move.actionId === asActionId('distribute'));
+    assert.deepEqual(template, { actionId: asActionId('distribute'), params: {} });
+
+    const firstChoice = legalChoicesDiscover(def, state, template!);
+    assert.equal(firstChoice.kind, 'pending');
+    if (firstChoice.kind !== 'pending') {
+      return;
+    }
+    assert.equal(firstChoice.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens');
+
+    const withTokens: Move = {
+      ...template!,
+      params: {
+        ...template!.params,
+        'decision:doc.actions.0.effects.0.distributeTokens.selectTokens': ['tok-1'],
+      },
+    };
+    const secondChoice = legalChoicesDiscover(def, state, withTokens);
+    assert.equal(secondChoice.kind, 'pending');
+    if (secondChoice.kind !== 'pending') {
+      return;
+    }
+    assert.equal(secondChoice.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]');
+
+    const applied = applyMove(def, state, {
+      ...withTokens,
+      params: {
+        ...withTokens.params,
+        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'right:none',
+      },
+    });
+
+    assert.deepEqual(applied.state.zones['source:none'], []);
+    assert.deepEqual(applied.state.zones['right:none']?.map((entry) => entry.id), [asTokenId('tok-1')]);
   });
 });

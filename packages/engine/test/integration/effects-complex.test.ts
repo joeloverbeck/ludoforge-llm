@@ -3,13 +3,16 @@ import { describe, it } from 'node:test';
 
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import {
+  applyMove,
   buildAdjacencyGraph,
   applyEffects,
+  asActionId,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
   createRng,
+  legalChoicesDiscover,
   nextInt,
   type EffectAST,
   type EffectContext,
@@ -18,6 +21,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 
 const token = (id: string, rank: number): Token => ({
   id: asTokenId(id),
@@ -205,5 +209,119 @@ describe('effects complex integration chains', () => {
     assert.equal(result.state.globalVars.count, 15);
     assert.deepEqual(result.state.zones, ctx.state.zones);
     assert.equal(result.rng, ctx.rng);
+  });
+
+  it('drives compiled distributeTokens through legalChoicesDiscover and applyMove with deterministic movement', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'effects-complex-distribute-flow', players: { min: 1, max: 1 } },
+      zones: [
+        { id: 'source', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'left', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'right', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+      tokenTypes: [{ id: 'piece', props: {} }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      terminal: { conditions: [] },
+      actions: [
+        {
+          id: 'distribute',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              distributeTokens: {
+                tokens: { query: 'tokensInZone', zone: 'source' },
+                destinations: { query: 'zones' },
+                n: 2,
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+    });
+
+    assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.ok(compiled.gameDef !== null);
+    if (compiled.gameDef === null) {
+      return;
+    }
+    const def = compiled.gameDef;
+
+    const state: GameState = {
+      globalVars: {},
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 1,
+      zones: {
+        'source:none': [
+          { id: asTokenId('tok-1'), type: 'piece', props: {} },
+          { id: asTokenId('tok-2'), type: 'piece', props: {} },
+        ],
+        'left:none': [],
+        'right:none': [],
+      },
+      nextTokenOrdinal: 2,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 0,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [9n, 11n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+
+    const template = { actionId: asActionId('distribute'), params: {} };
+    const first = legalChoicesDiscover(def, state, template);
+    assert.equal(first.kind, 'pending');
+    if (first.kind !== 'pending') {
+      return;
+    }
+    assert.equal(first.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens');
+
+    const withSelected = {
+      ...template,
+      params: {
+        'decision:doc.actions.0.effects.0.distributeTokens.selectTokens': ['tok-1', 'tok-2'],
+      },
+    };
+    const second = legalChoicesDiscover(def, state, withSelected);
+    assert.equal(second.kind, 'pending');
+    if (second.kind !== 'pending') {
+      return;
+    }
+    assert.equal(second.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]');
+
+    const withFirstDestination = {
+      ...withSelected,
+      params: {
+        ...withSelected.params,
+        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'left:none',
+      },
+    };
+    const third = legalChoicesDiscover(def, state, withFirstDestination);
+    assert.equal(third.kind, 'pending');
+    if (third.kind !== 'pending') {
+      return;
+    }
+    assert.equal(third.decisionId, 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[1]');
+
+    const applied = applyMove(def, state, {
+      ...withFirstDestination,
+      params: {
+        ...withFirstDestination.params,
+        'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[1]': 'right:none',
+      },
+    });
+
+    assert.deepEqual(applied.state.zones['source:none'], []);
+    assert.deepEqual(applied.state.zones['left:none']?.map((entry) => entry.id), [asTokenId('tok-1')]);
+    assert.deepEqual(applied.state.zones['right:none']?.map((entry) => entry.id), [asTokenId('tok-2')]);
   });
 });

@@ -13,7 +13,7 @@ import type {
 } from '../kernel/types.js';
 import { inferQueryDomainKinds } from '../kernel/query-domain-kinds.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
-import { collectSequentialBindings } from './binder-surface-registry.js';
+import { collectDeclaredBinderCandidates, collectSequentialBindings } from './binder-surface-registry.js';
 import {
   lowerConditionNode,
   lowerNumericValueNode,
@@ -47,6 +47,8 @@ export interface EffectLoweringResult<TValue> {
 
 const toInternalDecisionId = (path: string): string => `decision:${path}`;
 const EFFECT_KIND_KEYS: ReadonlySet<string> = new Set(SUPPORTED_EFFECT_KINDS as readonly string[]);
+const RESERVED_COMPILER_BINDING_PREFIX = '$__';
+const TRUSTED_COMPILER_BINDING_PREFIXES: readonly string[] = ['$__macro_'];
 
 export function lowerEffectArray(
   source: readonly unknown[],
@@ -107,6 +109,10 @@ function lowerEffectNode(
   }
   if (reservedMetadataDiagnostics.length > 0) {
     return { value: null, diagnostics: reservedMetadataDiagnostics };
+  }
+  const reservedBindingNamespaceDiagnostics = collectReservedCompilerBindingNamespaceDiagnostics(source, path);
+  if (reservedBindingNamespaceDiagnostics.length > 0) {
+    return { value: null, diagnostics: reservedBindingNamespaceDiagnostics };
   }
 
   if (isRecord(source.setVar)) {
@@ -2225,6 +2231,75 @@ function missingCapability<TValue>(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function collectReservedCompilerBindingNamespaceDiagnostics(
+  source: Record<string, unknown>,
+  path: string,
+): readonly Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const candidate of collectDeclaredBinderCandidates(source)) {
+    if (typeof candidate.value !== 'string' || !candidate.value.startsWith(RESERVED_COMPILER_BINDING_PREFIX)) {
+      continue;
+    }
+    const bindingValue = candidate.value;
+    if (TRUSTED_COMPILER_BINDING_PREFIXES.some((prefix) => bindingValue.startsWith(prefix))) {
+      continue;
+    }
+    if (isTrustedCompilerMacroBinderCandidate(source, candidate.path)) {
+      continue;
+    }
+    diagnostics.push({
+      code: 'CNL_COMPILER_RESERVED_BINDING_NAMESPACE_FORBIDDEN',
+      path: `${path}.${candidate.path}`,
+      severity: 'error',
+      message: `Binding "${bindingValue}" uses compiler-owned namespace "${RESERVED_COMPILER_BINDING_PREFIX}".`,
+      suggestion: 'Rename authored binders to a non-reserved identifier such as "$token" or "$choice".',
+    });
+  }
+  return diagnostics;
+}
+
+function isTrustedCompilerMacroBinderCandidate(source: Record<string, unknown>, binderPath: string): boolean {
+  const segments = binderPath.split('.');
+  const kind = segments[0];
+  if (kind === undefined || !isRecord(source[kind])) {
+    return false;
+  }
+  const effectBody = source[kind];
+
+  if (kind === 'forEach') {
+    return isTrustedMacroOriginCarrier(effectBody);
+  }
+  if (kind === 'reduce') {
+    const bindField = segments[1];
+    if (bindField === 'itemBind') {
+      return isTrustedMacroOriginCarrier(effectBody);
+    }
+    if (bindField === 'accBind') {
+      return isTrustedMacroOriginCarrier(effectBody);
+    }
+    if (bindField === 'resultBind') {
+      return isTrustedMacroOriginCarrier(effectBody);
+    }
+    return false;
+  }
+  if (kind === 'removeByPriority') {
+    if (segments[1] !== 'groups') {
+      return false;
+    }
+    const groupIndex = Number.parseInt(segments[2] ?? '', 10);
+    if (!Number.isInteger(groupIndex) || !Array.isArray(effectBody.groups)) {
+      return false;
+    }
+    const group = effectBody.groups[groupIndex];
+    if (!isRecord(group)) {
+      return false;
+    }
+    return isTrustedMacroOriginCarrier(group);
+  }
+
+  return false;
 }
 
 function makeSyntheticBinding(path: string, suffix: string): string {

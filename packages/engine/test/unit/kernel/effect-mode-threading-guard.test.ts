@@ -2,10 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   collectCallExpressionsByIdentifier,
-  collectTopLevelObjectLiteralInitializers,
   parseTypeScriptSource,
-  resolveObjectLiteralFromExpression,
-  resolveStringLiteralObjectPropertyWithSpreads,
 } from '../../helpers/kernel-source-ast-guard.js';
 import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
@@ -18,17 +15,22 @@ const expectedApplyEffectsBoundaryModules = [
   'trigger-dispatch.ts',
 ] as const;
 
-const expectedModeByBoundaryModule = {
-  'apply-move.ts': 'execution',
-  'event-execution.ts': 'execution',
-  'initial-state.ts': 'execution',
-  'legal-choices.ts': 'discovery',
-  'phase-lifecycle.ts': 'execution',
-  'trigger-dispatch.ts': 'execution',
-} as const satisfies Readonly<Record<(typeof expectedApplyEffectsBoundaryModules)[number], 'execution' | 'discovery'>>;
+const expectedConstructorByBoundaryModule = {
+  'apply-move.ts': 'createExecutionEffectContext',
+  'event-execution.ts': 'createExecutionEffectContext',
+  'initial-state.ts': 'createExecutionEffectContext',
+  'legal-choices.ts': 'createDiscoveryEffectContext',
+  'phase-lifecycle.ts': 'createExecutionEffectContext',
+  'trigger-dispatch.ts': 'createExecutionEffectContext',
+} as const satisfies Readonly<Record<
+  (typeof expectedApplyEffectsBoundaryModules)[number],
+  'createExecutionEffectContext' | 'createDiscoveryEffectContext'
+>>;
 
 const fallbackPattern = /\bmode\s*\?\?\s*['"]execution['"]/u;
 const fallbackCtxPattern = /\bctx\s*\.\s*mode\s*\?\?/u;
+const inlineModeLiteralPattern = /\bmode\s*:\s*['"](execution|discovery)['"]/u;
+const inlineDecisionAuthorityPattern = /\bdecisionAuthority\s*:/u;
 
 describe('effect mode threading architecture guard', () => {
   it('keeps kernel applyEffects entry boundary allowlist explicit', () => {
@@ -48,44 +50,37 @@ describe('effect mode threading architecture guard', () => {
     );
   });
 
-  it('requires explicit mode threading at each guarded applyEffects boundary', () => {
+  it('requires canonical effect-context constructors at each guarded applyEffects boundary', () => {
     for (const moduleName of expectedApplyEffectsBoundaryModules) {
       const source = readKernelSource(`src/kernel/${moduleName}`);
       const sourceFile = parseTypeScriptSource(source, moduleName);
-      const objectInitializers = collectTopLevelObjectLiteralInitializers(sourceFile);
       const applyEffectsCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyEffects');
       assert.ok(applyEffectsCalls.length > 0, `${moduleName} must contain applyEffects call(s) for this architecture guard`);
+      const expectedConstructor = expectedConstructorByBoundaryModule[moduleName];
+      const executionCalls = collectCallExpressionsByIdentifier(sourceFile, 'createExecutionEffectContext');
+      const discoveryCalls = collectCallExpressionsByIdentifier(sourceFile, 'createDiscoveryEffectContext');
+      const expectedCalls = collectCallExpressionsByIdentifier(sourceFile, expectedConstructor);
 
-      for (const [callIndex, call] of applyEffectsCalls.entries()) {
-        const contextArg = call.arguments[1];
-        assert.ok(contextArg !== undefined, `${moduleName} applyEffects call #${callIndex + 1} must pass context argument`);
-        if (contextArg === undefined) {
-          continue;
-        }
-        const contextObject = resolveObjectLiteralFromExpression(contextArg, objectInitializers);
-        assert.ok(
-          contextObject !== undefined,
-          `${moduleName} applyEffects call #${callIndex + 1} must pass an object-literal context or identifier bound to one`,
-        );
-        if (contextObject === undefined) {
-          continue;
-        }
-
-        const resolvedMode = resolveStringLiteralObjectPropertyWithSpreads(contextObject, 'mode', objectInitializers);
-        assert.ok(
-          resolvedMode !== undefined,
-          `${moduleName} applyEffects call #${callIndex + 1} must include an explicit mode literal or spread from a mode-bearing context object`,
-        );
-        if (resolvedMode === undefined) {
-          continue;
-        }
-
-        assert.equal(
-          resolvedMode,
-          expectedModeByBoundaryModule[moduleName],
-          `${moduleName} applyEffects call #${callIndex + 1} must preserve boundary mode ${expectedModeByBoundaryModule[moduleName]}`,
-        );
-      }
+      assert.equal(
+        expectedCalls.length,
+        applyEffectsCalls.length,
+        `${moduleName} must construct every applyEffects context via ${expectedConstructor}`,
+      );
+      assert.equal(
+        expectedConstructor === 'createExecutionEffectContext' ? discoveryCalls.length : executionCalls.length,
+        0,
+        `${moduleName} must not mix execution/discovery constructors across a single boundary module`,
+      );
+      assert.doesNotMatch(
+        source,
+        inlineModeLiteralPattern,
+        `${moduleName} must not inline mode literals at applyEffects boundaries`,
+      );
+      assert.doesNotMatch(
+        source,
+        inlineDecisionAuthorityPattern,
+        `${moduleName} must not inline decisionAuthority wiring at applyEffects boundaries`,
+      );
     }
   });
 

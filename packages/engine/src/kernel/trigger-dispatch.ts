@@ -1,4 +1,5 @@
 import { applyEffects } from './effects.js';
+import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -64,16 +65,10 @@ export const dispatchTriggers = (
       continue;
     }
 
-    const effectResult = applyEffects(trigger.effects, {
+    const effectResult = applyEffects(trigger.effects, createExecutionEffectContext({
       ...evalCtx,
       rng: nextRng,
-      decisionAuthority: {
-        source: 'engineRuntime',
-        player: nextState.activePlayer,
-        ownershipEnforcement: 'strict',
-      },
       moveParams: {},
-      mode: 'execution',
       traceContext: {
         eventContext: 'triggerEffect',
         effectPathRoot: `${effectPathRoot}.trigger:${trigger.id}.effects`,
@@ -81,7 +76,7 @@ export const dispatchTriggers = (
       },
       effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
-    });
+    }));
     nextState = effectResult.state;
     nextRng = effectResult.rng;
     nextTriggerLog.push({

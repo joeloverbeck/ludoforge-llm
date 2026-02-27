@@ -41,7 +41,7 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
-import type { PhaseTransitionBudget } from './effect-context.js';
+import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -676,17 +676,9 @@ const executeMoveAction = (
     runtimeTableIndex: shared.runtimeTableIndex,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
-    decisionAuthority: { source: 'engineRuntime' as const, player: executionPlayer, ownershipEnforcement: 'strict' },
     bindings: baseBindings,
     moveParams: move.params,
     collector: shared.collector,
-    mode: 'execution' as const,
-    traceContext: {
-      eventContext: 'actionEffect' as const,
-      actionId: String(action.id),
-      effectPathRoot: `action:${String(action.id)}.effects`,
-    },
-    effectPath: '',
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
   } as const;
   const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
@@ -706,7 +698,7 @@ const executeMoveAction = (
     costValidationPassed);
   const costEffects = executionProfile?.costSpend ?? action.cost;
   const costResult = shouldSpendCost
-    ? applyEffects(costEffects, {
+    ? applyEffects(costEffects, createExecutionEffectContext({
       ...effectCtx,
       state,
       rng,
@@ -716,7 +708,7 @@ const executeMoveAction = (
         effectPathRoot: `action:${String(action.id)}.cost`,
       },
       effectPath: '',
-    })
+    }))
     : { state, rng };
 
   let effectState = costResult.state;
@@ -761,7 +753,7 @@ const executeMoveAction = (
   }
 
   if (executionProfile === undefined) {
-    const effectResult = applyEffects(action.effects, {
+    const effectResult = applyEffects(action.effects, createExecutionEffectContext({
       ...effectCtx,
       state: effectState,
       rng: effectRng,
@@ -771,7 +763,7 @@ const executeMoveAction = (
         effectPathRoot: `action:${String(action.id)}.effects`,
       },
       effectPath: '',
-    });
+    }));
     effectState = effectResult.state;
     effectRng = effectResult.rng;
     if (effectResult.emittedEvents !== undefined) {
@@ -780,7 +772,7 @@ const executeMoveAction = (
   } else {
     const insertAfter = move.compound?.timing === 'during' ? (move.compound.insertAfterStage ?? 0) : -1;
     for (const [stageIdx, stageEffects] of executionProfile.resolutionStages.entries()) {
-      const stageResult = applyEffects(stageEffects, {
+      const stageResult = applyEffects(stageEffects, createExecutionEffectContext({
         ...effectCtx,
         state: effectState,
         rng: effectRng,
@@ -790,7 +782,7 @@ const executeMoveAction = (
           effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
         },
         effectPath: '',
-      });
+      }));
       effectState = stageResult.state;
       effectRng = stageResult.rng;
       if (stageResult.emittedEvents !== undefined) {
@@ -907,7 +899,7 @@ const applyReleasedDeferredEventEffects = (
       );
     }
     const effectPlayer = asPlayerId(actorPlayer);
-    const effectResult = applyEffects(deferredEventEffect.effects, {
+    const effectResult = applyEffects(deferredEventEffect.effects, createExecutionEffectContext({
       def,
       adjacencyGraph: shared.adjacencyGraph,
       runtimeTableIndex: shared.runtimeTableIndex,
@@ -915,11 +907,9 @@ const applyReleasedDeferredEventEffects = (
       rng: nextRng,
       activePlayer: effectPlayer,
       actorPlayer: effectPlayer,
-      decisionAuthority: { source: 'engineRuntime', player: effectPlayer, ownershipEnforcement: 'strict' },
       bindings: { ...deferredEventEffect.moveParams },
       moveParams: deferredEventEffect.moveParams,
       collector: shared.collector,
-      mode: 'execution',
       traceContext: {
         eventContext: 'actionEffect',
         actionId: deferredEventEffect.actionId,
@@ -927,7 +917,7 @@ const applyReleasedDeferredEventEffects = (
       },
       effectPath: '',
       ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
-    });
+    }));
     nextState = effectResult.state;
     nextRng = effectResult.rng;
     for (const emittedEvent of effectResult.emittedEvents ?? []) {

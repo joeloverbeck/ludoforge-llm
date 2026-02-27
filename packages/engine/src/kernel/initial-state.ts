@@ -1,5 +1,6 @@
 import { asPlayerId } from './branded.js';
 import { applyEffects } from './effects.js';
+import { createExecutionEffectContext } from './effect-context.js';
 import { createRng } from './prng.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { initializeTurnFlowEligibilityState } from './turn-flow-eligibility.js';
@@ -61,26 +62,20 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
   };
   const withInitialActivePlayer = resolveInitialActivePlayer(baseState, validatedDef.turnOrder);
 
-  const setupResult = applyEffects(validatedDef.setup, {
+  const setupResult = applyEffects(validatedDef.setup, createExecutionEffectContext({
     def: validatedDef,
     adjacencyGraph,
     state: withInitialActivePlayer,
     rng,
     activePlayer: withInitialActivePlayer.activePlayer,
     actorPlayer: withInitialActivePlayer.activePlayer,
-    decisionAuthority: {
-      source: 'engineRuntime',
-      player: withInitialActivePlayer.activePlayer,
-      ownershipEnforcement: 'strict',
-    },
     bindings: {},
     runtimeTableIndex,
     moveParams: {},
     collector,
-    mode: 'execution',
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
-  });
+  }));
   const lifecycleResult = applyTurnFlowInitialReveal(validatedDef, setupResult.state);
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
     ...lifecycleResult.state,

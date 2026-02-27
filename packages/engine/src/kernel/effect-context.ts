@@ -61,6 +61,49 @@ export interface EffectResult {
   readonly pendingChoice?: ChoicePendingRequest;
 }
 
+interface RuntimeEffectContextOptions extends Omit<EffectContext, 'decisionAuthority' | 'mode'> {
+  readonly decisionAuthorityPlayer?: PlayerId;
+  readonly ownershipEnforcement?: DecisionAuthorityContext['ownershipEnforcement'];
+}
+
+export const createExecutionEffectContext = (options: RuntimeEffectContextOptions): EffectContext => {
+  const {
+    activePlayer,
+    decisionAuthorityPlayer = activePlayer,
+    ownershipEnforcement = 'strict',
+    ...ctx
+  } = options;
+  return {
+    ...ctx,
+    activePlayer,
+    decisionAuthority: {
+      source: 'engineRuntime',
+      player: decisionAuthorityPlayer,
+      ownershipEnforcement,
+    },
+    mode: 'execution',
+  };
+};
+
+export const createDiscoveryEffectContext = (options: RuntimeEffectContextOptions): EffectContext => {
+  const {
+    activePlayer,
+    decisionAuthorityPlayer = activePlayer,
+    ownershipEnforcement = 'strict',
+    ...ctx
+  } = options;
+  return {
+    ...ctx,
+    activePlayer,
+    decisionAuthority: {
+      source: 'engineRuntime',
+      player: decisionAuthorityPlayer,
+      ownershipEnforcement,
+    },
+    mode: 'discovery',
+  };
+};
+
 export function getMaxEffectOps(ctx: Pick<EffectContext, 'maxEffectOps'>): number {
   return ctx.maxEffectOps ?? DEFAULT_MAX_EFFECT_OPS;
 }

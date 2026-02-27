@@ -6,7 +6,7 @@ import {
   isDeclaredActionParamValueInDomain,
   resolveDeclaredActionParamDomainOptions,
 } from './declared-action-param-domain.js';
-import type { EffectContext } from './effect-context.js';
+import { createDiscoveryEffectContext, type EffectContext } from './effect-context.js';
 import type { EvalContext } from './eval-context.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
@@ -67,31 +67,26 @@ const executeDiscoveryEffects = (
   move: Move,
   ownershipEnforcement: 'strict' | 'probe',
 ): ChoiceRequest => {
-  const effectCtx: EffectContext = {
+  const effectCtx: EffectContext = createDiscoveryEffectContext({
     def: evalCtx.def,
     adjacencyGraph: evalCtx.adjacencyGraph,
     state: evalCtx.state,
     rng: { state: evalCtx.state.rng },
     activePlayer: evalCtx.activePlayer,
     actorPlayer: evalCtx.actorPlayer,
-    decisionAuthority: {
-      source: 'engineRuntime',
-      player: evalCtx.activePlayer,
-      ownershipEnforcement,
-    },
+    ownershipEnforcement,
     bindings: evalCtx.bindings,
     moveParams: move.params,
     collector: evalCtx.collector,
     traceContext: { eventContext: 'actionEffect', actionId: String(move.actionId), effectPathRoot: 'legalChoices.effects' },
     effectPath: '',
-    mode: 'discovery',
     ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
     ...(evalCtx.freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter: evalCtx.freeOperationZoneFilter }),
     ...(evalCtx.freeOperationZoneFilterDiagnostics === undefined
       ? {}
       : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
     ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
-  };
+  });
   try {
     const result = applyEffects(effects, effectCtx);
     return result.pendingChoice ?? COMPLETE;

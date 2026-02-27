@@ -39,6 +39,11 @@ describe('effect-context test helper', () => {
   it('uses explicit execution mode when requested', () => {
     const context = makeExecutionEffectContext({ def: makeDef(), state: makeState() });
     assert.equal(context.mode, 'execution');
+    assert.deepEqual(context.decisionAuthority, {
+      source: 'engineRuntime',
+      player: asPlayerId(0),
+      ownershipEnforcement: 'strict',
+    });
   });
 
   it('uses explicit discovery mode when requested', () => {

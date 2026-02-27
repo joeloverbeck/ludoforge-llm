@@ -1,5 +1,6 @@
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyEffects } from './effects.js';
+import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
@@ -378,7 +379,7 @@ const applyEffectList = (
   policy?: MoveExecutionPolicy,
 ): LastingEffectApplyResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
-  const result = applyEffects(effects, {
+  const result = applyEffects(effects, createExecutionEffectContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex,
@@ -386,11 +387,9 @@ const applyEffectList = (
     rng,
     activePlayer,
     actorPlayer: activePlayer,
-    decisionAuthority: { source: 'engineRuntime', player: activePlayer, ownershipEnforcement: 'strict' },
     bindings: { ...moveParams },
     moveParams,
     collector: collector ?? createCollector(),
-    mode: 'execution',
     traceContext: {
       eventContext: 'actionEffect',
       actionId,
@@ -398,7 +397,7 @@ const applyEffectList = (
     },
     effectPath: '',
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
-  });
+  }));
   return {
     state: result.state,
     rng: result.rng,

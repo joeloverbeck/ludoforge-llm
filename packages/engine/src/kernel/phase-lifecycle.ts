@@ -1,4 +1,5 @@
 import { applyEffects } from './effects.js';
+import { createExecutionEffectContext } from './effect-context.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -38,7 +39,7 @@ export const dispatchLifecycleEvent = (
   let currentRng = { state: state.rng };
   const lifecycleEffects = resolveLifecycleEffects(def, event);
   if (lifecycleEffects.length > 0) {
-    const effectResult = applyEffects(lifecycleEffects, {
+    const effectResult = applyEffects(lifecycleEffects, createExecutionEffectContext({
       def,
       adjacencyGraph,
       runtimeTableIndex,
@@ -46,19 +47,13 @@ export const dispatchLifecycleEvent = (
       rng: currentRng,
       activePlayer: currentState.activePlayer,
       actorPlayer: currentState.activePlayer,
-      decisionAuthority: {
-        source: 'engineRuntime',
-        player: currentState.activePlayer,
-        ownershipEnforcement: 'strict',
-      },
       bindings: {},
       moveParams: {},
       collector: runtimeCollector,
-      mode: 'execution',
       traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: `${effectPathRoot}.effects` },
       effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
-    });
+    }));
     currentState = effectResult.state;
     currentRng = effectResult.rng;
     for (const emittedEvent of effectResult.emittedEvents ?? []) {

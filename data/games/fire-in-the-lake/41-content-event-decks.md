@@ -1186,6 +1186,8 @@ eventDecks:
           flavorText: "Sustained bombing."
         unshaded:
           text: "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card."
+          eligibilityOverrides:
+            - { target: { kind: seat, seat: '2' }, eligible: false, windowId: make-ineligible }
           effects:
             - addVar: { scope: global, var: trail, delta: -2 }
             - addVar: { scope: global, var: nvaResources, delta: -9 }

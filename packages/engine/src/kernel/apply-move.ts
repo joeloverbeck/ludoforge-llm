@@ -28,9 +28,10 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
+  explainFreeOperationBlockForMove,
   isFreeOperationGrantedForMove,
-  resolveTurnFlowActionClassMismatch,
   resolveFreeOperationExecutionPlayer,
+  resolveTurnFlowActionClassMismatch,
 } from './turn-flow-eligibility.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -558,8 +559,10 @@ const validateMove = (
     state.turnOrderState.type === 'cardDriven' &&
     !isFreeOperationGrantedForMove(def, state, move)
   ) {
+    const block = explainFreeOperationBlockForMove(def, state, move);
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
       actionId: action.id,
+      block,
     });
   }
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {

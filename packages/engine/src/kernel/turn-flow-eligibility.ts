@@ -650,28 +650,176 @@ export const isActiveSeatEligibleForTurnFlow = (state: GameState): boolean => {
   );
 };
 
-const activePendingFreeOperationGrants = (
-  state: GameState,
-): readonly TurnFlowPendingFreeOperationGrant[] => {
-  if (state.turnOrderState.type !== 'cardDriven') {
-    return [];
-  }
-  const activeSeat = String(state.activePlayer);
-  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
-  return pending.filter((grant) => grant.seat === activeSeat);
-};
+export type FreeOperationBlockCause =
+  | 'notFreeOperationMove'
+  | 'nonCardDrivenTurnOrder'
+  | 'noActiveSeatGrant'
+  | 'sequenceLocked'
+  | 'actionClassMismatch'
+  | 'actionIdMismatch'
+  | 'zoneFilterMismatch'
+  | 'granted';
 
-const applicableActivePendingFreeOperationGrants = (
+export interface FreeOperationBlockExplanation {
+  readonly cause: FreeOperationBlockCause;
+  readonly activeSeat?: string;
+  readonly actionClass?: ResolvedTurnFlowActionClass;
+  readonly actionId?: string;
+  readonly matchingGrantIds?: readonly string[];
+  readonly sequenceLockBlockingGrantIds?: readonly string[];
+}
+
+interface FreeOperationGrantAnalysis {
+  readonly activeSeat: string;
+  readonly actionClass: ResolvedTurnFlowActionClass;
+  readonly actionId: string;
+  readonly pending: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly activeGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly sequenceReadyGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly actionClassMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly actionMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly zoneMatchedGrants: readonly TurnFlowPendingFreeOperationGrant[];
+}
+
+const analyzeFreeOperationGrantMatch = (
   def: GameDef,
   state: GameState,
   move: Move,
-): readonly TurnFlowPendingFreeOperationGrant[] => {
-  const pending = state.turnOrderState.type === 'cardDriven'
-    ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? [])
-    : [];
-  return activePendingFreeOperationGrants(state).filter(
-    (grant) => isPendingFreeOperationGrantSequenceReady(pending, grant) && doesGrantApplyToMove(def, grant, move),
-  );
+  options?: {
+    readonly evaluateZoneFilters?: boolean;
+  },
+): FreeOperationGrantAnalysis | null => {
+  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+  const activeSeat = String(state.activePlayer);
+  const actionClass = moveOperationClass(def, move);
+  const actionId = String(move.actionId);
+  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  const activeGrants = pending.filter((grant) => grant.seat === activeSeat);
+  const sequenceReadyGrants = activeGrants.filter((grant) => isPendingFreeOperationGrantSequenceReady(pending, grant));
+  const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => grant.operationClass === actionClass);
+  const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
+  const zoneMatchedGrants = options?.evaluateZoneFilters === true
+    ? actionMatchedGrants.filter(
+        (grant) => grant.zoneFilter === undefined || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter),
+      )
+    : actionMatchedGrants;
+  return {
+    activeSeat,
+    actionClass,
+    actionId,
+    pending,
+    activeGrants,
+    sequenceReadyGrants,
+    actionClassMatchedGrants,
+    actionMatchedGrants,
+    zoneMatchedGrants,
+  };
+};
+
+const sequenceBlockingGrantIds = (
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  grant: TurnFlowPendingFreeOperationGrant,
+): readonly string[] => {
+  const batchId = grant.sequenceBatchId;
+  const sequenceIndex = grant.sequenceIndex;
+  if (batchId === undefined || sequenceIndex === undefined) {
+    return [];
+  }
+  return pending
+    .filter(
+      (candidate) =>
+        candidate.grantId !== grant.grantId &&
+        candidate.sequenceBatchId === batchId &&
+        (candidate.sequenceIndex ?? Number.POSITIVE_INFINITY) < sequenceIndex,
+    )
+    .map((candidate) => candidate.grantId);
+};
+
+export const explainFreeOperationBlockForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): FreeOperationBlockExplanation => {
+  if (move.freeOperation !== true) {
+    return { cause: 'notFreeOperationMove' };
+  }
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return { cause: 'nonCardDrivenTurnOrder' };
+  }
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, { evaluateZoneFilters: true });
+  if (analysis === null) {
+    return { cause: 'nonCardDrivenTurnOrder' };
+  }
+  const {
+    activeSeat,
+    actionClass,
+    actionId,
+    pending,
+    activeGrants,
+    sequenceReadyGrants,
+    actionClassMatchedGrants,
+    actionMatchedGrants,
+    zoneMatchedGrants,
+  } = analysis;
+
+  if (activeGrants.length === 0) {
+    return { cause: 'noActiveSeatGrant', activeSeat };
+  }
+
+  if (sequenceReadyGrants.length === 0) {
+    const blockers = new Set<string>();
+    for (const grant of activeGrants) {
+      for (const blocker of sequenceBlockingGrantIds(pending, grant)) {
+        blockers.add(blocker);
+      }
+    }
+    return {
+      cause: 'sequenceLocked',
+      activeSeat,
+      matchingGrantIds: activeGrants.map((grant) => grant.grantId),
+      sequenceLockBlockingGrantIds: [...blockers],
+    };
+  }
+
+  if (actionClassMatchedGrants.length === 0) {
+    return {
+      cause: 'actionClassMismatch',
+      activeSeat,
+      actionClass,
+      actionId,
+      matchingGrantIds: sequenceReadyGrants.map((grant) => grant.grantId),
+    };
+  }
+
+  if (actionMatchedGrants.length === 0) {
+    return {
+      cause: 'actionIdMismatch',
+      activeSeat,
+      actionClass,
+      actionId,
+      matchingGrantIds: actionClassMatchedGrants.map((grant) => grant.grantId),
+    };
+  }
+
+  if (zoneMatchedGrants.length === 0) {
+    return {
+      cause: 'zoneFilterMismatch',
+      activeSeat,
+      actionClass,
+      actionId,
+      matchingGrantIds: actionMatchedGrants.map((grant) => grant.grantId),
+    };
+  }
+
+  return {
+    cause: 'granted',
+    activeSeat,
+    actionClass,
+    actionId,
+    matchingGrantIds: zoneMatchedGrants.map((grant) => grant.grantId),
+  };
 };
 
 const parsePlayerId = (
@@ -690,7 +838,8 @@ export const resolveFreeOperationExecutionPlayer = (
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
     return state.activePlayer;
   }
-  const applicable = applicableActivePendingFreeOperationGrants(def, state, move);
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move);
+  const applicable = analysis?.actionMatchedGrants ?? [];
   if (applicable.length === 0) {
     return state.activePlayer;
   }
@@ -707,7 +856,7 @@ export const isFreeOperationApplicableForMove = (
   if (move.freeOperation !== true) {
     return true;
   }
-  return applicableActivePendingFreeOperationGrants(def, state, move).length > 0;
+  return (analyzeFreeOperationGrantMatch(def, state, move)?.actionMatchedGrants.length ?? 0) > 0;
 };
 
 export const resolveFreeOperationZoneFilter = (
@@ -718,7 +867,7 @@ export const resolveFreeOperationZoneFilter = (
   if (move.freeOperation !== true) {
     return undefined;
   }
-  const applicable = applicableActivePendingFreeOperationGrants(def, state, move)
+  const applicable = (analyzeFreeOperationGrantMatch(def, state, move)?.actionMatchedGrants ?? [])
     .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
   if (applicable.length === 0) {
     return undefined;
@@ -734,15 +883,14 @@ export const isFreeOperationGrantedForMove = (
   state: GameState,
   move: Move,
 ): boolean => {
-  if (!isFreeOperationApplicableForMove(def, state, move)) {
-    return false;
-  }
   if (move.freeOperation !== true) {
     return true;
   }
-  const applicable = applicableActivePendingFreeOperationGrants(def, state, move);
-  return applicable.some((grant) =>
-    grant.zoneFilter === undefined || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter));
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, { evaluateZoneFilters: true });
+  if (analysis === null) {
+    return false;
+  }
+  return analysis.zoneMatchedGrants.length > 0;
 };
 
 export const applyTurnFlowEligibilityAfterMove = (

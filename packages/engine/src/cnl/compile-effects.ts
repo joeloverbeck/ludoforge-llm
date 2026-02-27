@@ -64,6 +64,10 @@ export function lowerEffectArray(
     }
   });
 
+  if (!diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+    diagnostics.push(...collectFreeOperationSequenceViabilityWarnings(values, path));
+  }
+
   if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && values.length !== source.length) {
     return { value: null, diagnostics };
   }
@@ -2249,6 +2253,120 @@ function formatValue(value: unknown): string {
     return String(value);
   }
 }
+
+type LoweredGrantSequenceEntry = {
+  readonly effectIndex: number;
+  readonly sequencePath: string;
+  readonly operationClass: string;
+  readonly actionIds?: readonly string[];
+  readonly zoneFilter?: ConditionAST;
+  readonly sequence: {
+    readonly chain: string;
+    readonly step: number;
+  };
+};
+
+const collectFreeOperationSequenceViabilityWarnings = (
+  effects: readonly EffectAST[],
+  basePath: string,
+): readonly Diagnostic[] => {
+  const grants: LoweredGrantSequenceEntry[] = effects.flatMap((effect, effectIndex) =>
+    'grantFreeOperation' in effect && effect.grantFreeOperation.sequence !== undefined
+      ? [{
+          effectIndex,
+          sequencePath: `${basePath}.${effectIndex}.grantFreeOperation.sequence`,
+          operationClass: effect.grantFreeOperation.operationClass,
+          ...(effect.grantFreeOperation.actionIds === undefined ? {} : { actionIds: effect.grantFreeOperation.actionIds }),
+          ...(effect.grantFreeOperation.zoneFilter === undefined ? {} : { zoneFilter: effect.grantFreeOperation.zoneFilter }),
+          sequence: effect.grantFreeOperation.sequence,
+        }]
+      : [],
+  );
+  if (grants.length === 0) {
+    return [];
+  }
+
+  const byChain = new Map<string, LoweredGrantSequenceEntry[]>();
+  for (const grant of grants) {
+    const existing = byChain.get(grant.sequence.chain) ?? [];
+    existing.push(grant);
+    byChain.set(grant.sequence.chain, existing);
+  }
+
+  const diagnostics: Diagnostic[] = [];
+  for (const [chain, chainEntries] of byChain.entries()) {
+    if (chainEntries.length < 2) {
+      continue;
+    }
+    const byStep = new Map<number, LoweredGrantSequenceEntry[]>();
+    for (const entry of chainEntries) {
+      const existing = byStep.get(entry.sequence.step) ?? [];
+      existing.push(entry);
+      byStep.set(entry.sequence.step, existing);
+    }
+    for (const [step, stepEntries] of byStep.entries()) {
+      if (stepEntries.length < 2) {
+        continue;
+      }
+      diagnostics.push({
+        code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+        path: stepEntries[0]!.sequencePath,
+        severity: 'warning',
+        message:
+          `Free-operation sequence chain "${chain}" has duplicate step ${String(step)}, which can lock later steps until one duplicate is consumed.`,
+        suggestion: 'Assign unique `sequence.step` values per chain in event resolution order.',
+      });
+    }
+
+    const ordered = [...chainEntries].sort((left, right) => left.sequence.step - right.sequence.step);
+    for (let index = 1; index < ordered.length; index += 1) {
+      const previous = ordered[index - 1]!;
+      const current = ordered[index]!;
+      const currentStepPath = current.sequencePath;
+
+      if (previous.operationClass !== current.operationClass) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+          path: currentStepPath,
+          severity: 'warning',
+          message:
+            `Free-operation sequence chain "${chain}" changes operationClass between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+          suggestion: 'Confirm earlier sequence steps are reliably playable; otherwise later steps may remain blocked.',
+        });
+      }
+
+      if (previous.actionIds !== undefined && current.actionIds !== undefined) {
+        const currentActions = new Set(current.actionIds);
+        const overlap = previous.actionIds.some((actionId) => currentActions.has(actionId));
+        if (!overlap) {
+          diagnostics.push({
+            code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+            path: currentStepPath,
+            severity: 'warning',
+            message:
+              `Free-operation sequence chain "${chain}" has non-overlapping actionIds between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+            suggestion: 'Ensure the earlier step can be consumed in realistic states, or relax sequence constraints.',
+          });
+        }
+      }
+
+      const previousFilter = previous.zoneFilter === undefined ? null : conditionFingerprint(previous.zoneFilter);
+      const currentFilter = current.zoneFilter === undefined ? null : conditionFingerprint(current.zoneFilter);
+      if (previousFilter !== null && currentFilter !== previousFilter) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+          path: currentStepPath,
+          severity: 'warning',
+          message:
+            `Free-operation sequence chain "${chain}" uses different zoneFilter conditions between step ${String(previous.sequence.step)} and ${String(current.sequence.step)}.`,
+          suggestion: 'Verify earlier step filters are not stricter than later steps in the same chain.',
+        });
+      }
+    }
+  }
+
+  return diagnostics;
+};
 
 function conditionFingerprint(condition: ConditionAST): string | null {
   try {

@@ -995,6 +995,44 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('emits warning diagnostics for risky free-operation sequence transitions', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'limitedOperation',
+            actionIds: ['limitedOp'],
+            sequence: { chain: 'risk-chain', step: 0 },
+            zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            actionIds: ['operation'],
+            sequence: { chain: 'risk-chain', step: 1 },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.notEqual(result.value, null);
+    const warnings = result.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK' &&
+        diagnostic.severity === 'warning',
+    );
+    assert.equal(warnings.length > 0, true);
+    assert.equal(
+      warnings.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.grantFreeOperation.sequence'),
+      true,
+    );
+  });
+
   it('lowers gotoPhaseExact/advancePhase/pushInterruptPhase/popInterruptPhase effects', () => {
     const result = lowerEffectArray(
       [

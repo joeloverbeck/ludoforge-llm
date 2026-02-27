@@ -1280,6 +1280,84 @@ phase: [asPhaseId('main')],
     assert.equal(moves.some((move) => move.freeOperation !== true), true);
   });
 
+  it('does not emit free-operation variants when a matching grant is sequence-locked behind an inapplicable earlier step', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'free-op-template-sequence-lock', players: { min: 2, max: 2 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      actions: [
+        {
+          id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-step-0',
+              seat: '0',
+              operationClass: 'limitedOperation',
+              actionIds: ['operation'],
+              remainingUses: 1,
+              sequenceBatchId: 'batch:chain',
+              sequenceIndex: 0,
+            },
+            {
+              grantId: 'grant-step-1',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              remainingUses: 1,
+              sequenceBatchId: 'batch:chain',
+              sequenceIndex: 1,
+            },
+          ],
+        },
+      },
+    };
+
+    const moves = legalMoves(def, state).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(moves.some((move) => move.freeOperation === true), false);
+    assert.equal(moves.some((move) => move.freeOperation !== true), true);
+  });
+
   it('enumerates dual-use event side/branch selections deterministically for any active faction', () => {
     const def: GameDef = {
       ...createDef(),

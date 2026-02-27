@@ -648,7 +648,12 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true, actionClass: 'operation' }),
-      /free operation is not granted in current state/,
+      (error: unknown) =>
+        error instanceof Error &&
+        'reason' in error &&
+        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
+        'metadata' in error &&
+        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'actionClassMismatch'),
     );
 
     const fourth = applyMove(def, third, {
@@ -674,7 +679,12 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
-      /free operation is not granted in current state/,
+      (error: unknown) =>
+        error instanceof Error &&
+        'reason' in error &&
+        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
+        'metadata' in error &&
+        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'actionClassMismatch'),
     );
 
     const fourth = applyMove(def, third, {
@@ -712,6 +722,16 @@ describe('event free-operation grants integration', () => {
       false,
       'NVA free operation should stay locked until the earlier VC sequence step is consumed',
     );
+
+    assert.throws(
+      () => applyMove(def, second, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) =>
+        error instanceof Error &&
+        'reason' in error &&
+        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
+        'metadata' in error &&
+        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'sequenceLocked'),
+    );
   });
 
   it('enforces Cambodia-only free-operation grants across discovery, decision flow, and final apply', () => {
@@ -738,7 +758,9 @@ describe('event free-operation grants integration', () => {
       (error: unknown) =>
         error instanceof Error &&
         'reason' in error &&
-        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED,
+        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED &&
+        'metadata' in error &&
+        ((error as { metadata?: { block?: { cause?: string } } }).metadata?.block?.cause === 'zoneFilterMismatch'),
     );
 
     const third = applyMove(def, second, {

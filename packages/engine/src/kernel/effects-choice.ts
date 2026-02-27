@@ -136,8 +136,11 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
 
   const selected = ctx.moveParams[decisionId];
   if (providedDecisionPlayer !== choiceDecisionPlayer) {
+    const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe' && ctx.mode === 'discovery'
+      ? 'choiceProbeAuthorityMismatch'
+      : 'choiceRuntimeValidationFailed';
     throw effectRuntimeError(
-      'choiceRuntimeValidationFailed',
+      runtimeReason,
       `chooseOne decision owner mismatch for "${resolvedBind}" (${decisionId})`,
       {
         effectType: 'chooseOne',
@@ -283,8 +286,11 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
 
   const selectedValue = ctx.moveParams[decisionId];
   if (providedDecisionPlayer !== choiceDecisionPlayer) {
+    const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe' && ctx.mode === 'discovery'
+      ? 'choiceProbeAuthorityMismatch'
+      : 'choiceRuntimeValidationFailed';
     throw effectRuntimeError(
-      'choiceRuntimeValidationFailed',
+      runtimeReason,
       `chooseN decision owner mismatch for "${bind}" (${decisionId})`,
       {
         effectType: 'chooseN',

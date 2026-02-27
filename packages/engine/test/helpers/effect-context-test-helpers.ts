@@ -71,7 +71,7 @@ const makeEffectContext = ({
   rng,
   activePlayer,
   actorPlayer,
-  decisionAuthority: { source: 'engineRuntime', player: decisionAuthorityPlayer },
+  decisionAuthority: { source: 'engineRuntime', player: decisionAuthorityPlayer, ownershipEnforcement: 'strict' },
   bindings,
   ...(runtimeTableIndex === undefined ? {} : { runtimeTableIndex }),
   moveParams,

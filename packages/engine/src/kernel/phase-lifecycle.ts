@@ -46,7 +46,11 @@ export const dispatchLifecycleEvent = (
       rng: currentRng,
       activePlayer: currentState.activePlayer,
       actorPlayer: currentState.activePlayer,
-      decisionAuthority: { source: 'engineRuntime', player: currentState.activePlayer },
+      decisionAuthority: {
+        source: 'engineRuntime',
+        player: currentState.activePlayer,
+        ownershipEnforcement: 'strict',
+      },
       bindings: {},
       moveParams: {},
       collector: runtimeCollector,

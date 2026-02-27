@@ -65,6 +65,7 @@ const executeDiscoveryEffects = (
   effects: readonly EffectAST[],
   evalCtx: EvalContext,
   move: Move,
+  ownershipEnforcement: 'strict' | 'probe',
 ): ChoiceRequest => {
   const effectCtx: EffectContext = {
     def: evalCtx.def,
@@ -73,7 +74,11 @@ const executeDiscoveryEffects = (
     rng: { state: evalCtx.state.rng },
     activePlayer: evalCtx.activePlayer,
     actorPlayer: evalCtx.actorPlayer,
-    decisionAuthority: { source: 'engineRuntime', player: evalCtx.activePlayer },
+    decisionAuthority: {
+      source: 'engineRuntime',
+      player: evalCtx.activePlayer,
+      ownershipEnforcement,
+    },
     bindings: evalCtx.bindings,
     moveParams: move.params,
     collector: evalCtx.collector,
@@ -99,6 +104,13 @@ const executeDiscoveryEffects = (
 };
 
 const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
+
+const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
+  if (!isEffectErrorCode(error, 'EFFECT_RUNTIME')) {
+    return false;
+  }
+  return error.context?.reason === 'choiceProbeAuthorityMismatch';
+};
 
 const countCombinationsCapped = (n: number, k: number, cap: number): number => {
   if (k < 0 || k > n) {
@@ -197,18 +209,36 @@ const mapChooseNOptions = (
     enumerateCombinations(uniqueOptions.length, size, (indices) => {
       const selected = indices.map((index) => uniqueOptions[index]!);
       const selectedChoice = selected as Move['params'][string];
-      const probed = evaluateProbeMove(
-        {
-          ...partialMove,
-          params: {
-            ...partialMove.params,
-            [request.decisionId]: selectedChoice,
+      let probed: ChoiceRequest;
+      try {
+        probed = evaluateProbeMove(
+          {
+            ...partialMove,
+            params: {
+              ...partialMove.params,
+              [request.decisionId]: selectedChoice,
+            },
           },
-        },
-      );
+        );
+      } catch (error: unknown) {
+        if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
+          throw error;
+        }
+        for (const option of selected) {
+          const key = optionKey(option);
+          const status = optionLegalityByKey.get(key);
+          if (status !== undefined && status.legality === 'illegal') {
+            status.legality = 'unknown';
+            status.illegalReason = null;
+          }
+        }
+        return;
+      }
 
-      const classification = probed.kind === 'pending'
-        ? classifyProbeMoveSatisfiability(
+      let classification: DecisionSequenceSatisfiability | null = null;
+      if (probed.kind === 'pending') {
+        try {
+          classification = classifyProbeMoveSatisfiability(
             {
               ...partialMove,
               params: {
@@ -216,8 +246,14 @@ const mapChooseNOptions = (
                 [request.decisionId]: selectedChoice,
               },
             },
-          )
-        : null;
+          );
+        } catch (error: unknown) {
+          if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
+            throw error;
+          }
+          classification = 'unknown';
+        }
+      }
 
       for (const option of selected) {
         const key = optionKey(option);
@@ -274,19 +310,33 @@ const mapOptionsForPendingChoice = (
   }
 
   return request.options.map((option) => {
-    const probed = evaluateProbeMove(
-      {
-        ...partialMove,
-        params: {
-          ...partialMove.params,
-          [request.decisionId]: option.value,
+    let probed: ChoiceRequest;
+    try {
+      probed = evaluateProbeMove(
+        {
+          ...partialMove,
+          params: {
+            ...partialMove.params,
+            [request.decisionId]: option.value,
+          },
         },
-      },
-    );
+      );
+    } catch (error: unknown) {
+      if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
+        throw error;
+      }
+      return {
+        value: option.value,
+        legality: 'unknown',
+        illegalReason: null,
+      };
+    }
 
     const illegalReason = probed.kind === 'illegal' ? probed.reason : null;
-    const classification = probed.kind === 'pending'
-      ? classifyProbeMoveSatisfiability(
+    let classification: DecisionSequenceSatisfiability | null = null;
+    if (probed.kind === 'pending') {
+      try {
+        classification = classifyProbeMoveSatisfiability(
           {
             ...partialMove,
             params: {
@@ -294,8 +344,14 @@ const mapOptionsForPendingChoice = (
               [request.decisionId]: option.value,
             },
           },
-        )
-      : null;
+        );
+      } catch (error: unknown) {
+        if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
+          throw error;
+        }
+        classification = 'unknown';
+      }
+    }
     return {
       value: option.value,
       legality: illegalReason !== null
@@ -377,6 +433,7 @@ const legalChoicesWithPreparedContext = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
   shouldEvaluateOptionLegality: boolean,
+  ownershipEnforcement: 'strict' | 'probe' = 'strict',
   options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
@@ -450,12 +507,12 @@ const legalChoicesWithPreparedContext = (
     return {
       ...actionParamRequest,
       options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, options),
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, 'probe', options),
         (probeMove) =>
           classifyDecisionSequenceSatisfiability(
             probeMove,
             (candidateMove, discoverOptions) =>
-              legalChoicesWithPreparedContext(context, candidateMove, false, {
+              legalChoicesWithPreparedContext(context, candidateMove, false, 'probe', {
                 onDeferredPredicatesEvaluated: (count) => {
                   options?.onDeferredPredicatesEvaluated?.(count);
                   discoverOptions?.onDeferredPredicatesEvaluated?.(count);
@@ -488,7 +545,12 @@ const legalChoicesWithPreparedContext = (
       pipeline.stages.length > 0
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
-    const request = executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove);
+    const request = executeDiscoveryEffects(
+      [...resolutionEffects, ...eventEffects],
+      evalCtx,
+      partialMove,
+      ownershipEnforcement,
+    );
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       return request;
     }
@@ -496,12 +558,12 @@ const legalChoicesWithPreparedContext = (
     return {
       ...request,
       options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, options),
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, 'probe', options),
         (probeMove) =>
           classifyDecisionSequenceSatisfiability(
             probeMove,
             (candidateMove, discoverOptions) =>
-              legalChoicesWithPreparedContext(context, candidateMove, false, {
+              legalChoicesWithPreparedContext(context, candidateMove, false, 'probe', {
                 onDeferredPredicatesEvaluated: (count) => {
                   options?.onDeferredPredicatesEvaluated?.(count);
                   discoverOptions?.onDeferredPredicatesEvaluated?.(count);
@@ -514,7 +576,12 @@ const legalChoicesWithPreparedContext = (
     };
   }
 
-  const request = executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove);
+  const request = executeDiscoveryEffects(
+    [...action.effects, ...eventEffects],
+    evalCtx,
+    partialMove,
+    ownershipEnforcement,
+  );
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     return request;
   }
@@ -522,12 +589,12 @@ const legalChoicesWithPreparedContext = (
   return {
     ...request,
     options: mapOptionsForPendingChoice(
-      (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, options),
+      (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, 'probe', options),
       (probeMove) =>
         classifyDecisionSequenceSatisfiability(
           probeMove,
           (candidateMove, discoverOptions) =>
-            legalChoicesWithPreparedContext(context, candidateMove, false, {
+            legalChoicesWithPreparedContext(context, candidateMove, false, 'probe', {
               onDeferredPredicatesEvaluated: (count) => {
                 options?.onDeferredPredicatesEvaluated?.(count);
                 discoverOptions?.onDeferredPredicatesEvaluated?.(count);
@@ -565,7 +632,7 @@ export function legalChoicesDiscover(
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContext(context, partialMove, false, options);
+  return legalChoicesWithPreparedContext(context, partialMove, false, 'strict', options);
 }
 
 export function legalChoicesEvaluate(
@@ -593,5 +660,5 @@ export function legalChoicesEvaluate(
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContext(context, partialMove, true, options);
+  return legalChoicesWithPreparedContext(context, partialMove, true, 'strict', options);
 }

@@ -2277,6 +2277,16 @@ phase: [asPhaseId('main')],
         assert.equal(request.type, primitive);
         assert.equal(request.decisionPlayer, CHOICE_OWNER_PLAYER);
 
+        const evaluatedPending = legalChoicesEvaluate(def, state, makeMove(actionId));
+        assert.equal(evaluatedPending.kind, 'pending');
+        if (evaluatedPending.kind !== 'pending') {
+          throw new Error(`expected evaluated pending request for primitive=${primitive}`);
+        }
+        assert.deepEqual(
+          evaluatedPending.options.map((option) => option.legality),
+          ['unknown', 'unknown', 'unknown'],
+        );
+
         assertChoiceRuntimeValidationFailed(() =>
           legalChoicesEvaluate(def, state, makeMove(actionId, {
             [request.decisionId]: ownershipSelection(primitive, 'a'),
@@ -2326,6 +2336,16 @@ phase: [asPhaseId('main')],
         }
         assert.equal(pending.type, primitive);
         assert.equal(pending.decisionPlayer, CHOICE_OWNER_PLAYER);
+
+        const evaluatedPending = legalChoicesEvaluate(def, state, makeMove(actionId));
+        assert.equal(evaluatedPending.kind, 'pending');
+        if (evaluatedPending.kind !== 'pending') {
+          throw new Error(`expected evaluated pending request for primitive=${primitive}`);
+        }
+        assert.deepEqual(
+          evaluatedPending.options.map((option) => option.legality),
+          ['unknown', 'unknown', 'unknown'],
+        );
 
         assertChoiceRuntimeValidationFailed(() =>
           legalChoicesEvaluate(def, state, makeMove(actionId, {

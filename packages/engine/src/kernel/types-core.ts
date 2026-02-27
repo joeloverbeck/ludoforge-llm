@@ -545,6 +545,7 @@ export interface Move {
 export interface DecisionAuthorityContext {
   readonly source: 'engineRuntime';
   readonly player: PlayerId;
+  readonly ownershipEnforcement: 'strict' | 'probe';
 }
 
 export interface ChoiceCompleteRequest {

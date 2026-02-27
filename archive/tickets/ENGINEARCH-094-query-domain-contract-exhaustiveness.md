@@ -1,6 +1,6 @@
 # ENGINEARCH-094: Exhaustive Query-Domain Contract Enforcement for `OptionsQuery`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel query contract utility and compile-time exhaustiveness guards
@@ -13,8 +13,9 @@
 ## Assumption Reassessment (2026-02-27)
 
 1. Current `packages/engine/src/kernel/query-domain-kinds.ts` uses a catch-all default branch that maps unknown query kinds to `'other'`.
-2. `packages/engine/src/kernel/choice-target-kinds.ts` and `packages/engine/src/cnl/compile-effects.ts` now depend on this shared inference, increasing the blast radius of silent fallback behavior.
-3. Mismatch: current behavior is permissive where architecture should be explicit; corrected scope requires exhaustive handling of query variants with type-level compile-time enforcement.
+2. `packages/engine/src/kernel/choice-target-kinds.ts` and `packages/engine/src/cnl/compile-effects.ts` both consume this shared inference (choice-target derivation and `distributeTokens` domain validation), so silent fallback affects compiler diagnostics and choice-target behavior.
+3. Current unit coverage in `packages/engine/test/unit/kernel/query-domain-kinds.test.ts` does not enumerate every `OptionsQuery` variant; representative checks exist but full explicit classification is not pinned.
+4. Corrected scope: remove permissive fallback and require explicit, exhaustive handling of all current `OptionsQuery` variants with compile-time enforcement.
 
 ## Architecture Check
 
@@ -30,7 +31,7 @@ Refactor `inferQueryDomainKinds` to enumerate all `OptionsQuery` variants explic
 
 ### 2. Keep semantics explicit per query kind
 
-For each query kind, assign domain output intentionally (`token`, `zone`, or `other`) and avoid implicit fallback paths.
+For each query kind, assign domain output intentionally (`token`, `zone`, or `other`) and avoid implicit fallback paths. Variants that are intentionally non-token/non-zone (`assetRows`, `intsInRange`, `intsInVarRange`, `enums`, `globalMarkers`, `players`, `binding`) must still be listed explicitly as `other`.
 
 ### 3. Harden tests for exhaustiveness-sensitive behavior
 
@@ -63,9 +64,13 @@ Add tests that pin representative variants from each query-family bucket and ens
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/query-domain-kinds.test.ts` — representative coverage for each `OptionsQuery` family, including recursive/query-composition variants.
+1. `packages/engine/test/unit/kernel/query-domain-kinds.test.ts` — explicit coverage for every current `OptionsQuery` variant, including recursive/query-composition variants.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test:unit -- --coverage=false`
+1. `pnpm -F @ludoforge/engine test:unit`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Implemented as planned with one scope correction: test command usage was updated to the repository's Node test workflow (removed `--coverage=false` forwarding). `inferQueryDomainKinds` now uses explicit per-variant classification with compile-time exhaustiveness protection, and unit coverage was expanded to exercise every current `OptionsQuery` variant plus recursive composition behavior.

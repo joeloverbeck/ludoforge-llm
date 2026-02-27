@@ -1,6 +1,7 @@
 import type { GameDef, OptionsQuery, RuntimeTableContract, ValueExpr } from './types.js';
+import { inferLeafOptionsQueryContract, type QueryRuntimeShape as SharedQueryRuntimeShape } from './query-kind-contract.js';
 
-export type QueryRuntimeShape = 'token' | 'object' | 'number' | 'string' | 'unknown';
+export type QueryRuntimeShape = SharedQueryRuntimeShape;
 export type ValueRuntimeShape = 'number' | 'string' | 'boolean' | 'unknown';
 
 export interface StaticValueShapeContext {
@@ -23,31 +24,10 @@ export function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRunt
       const nested = query.sources.flatMap((source) => inferQueryRuntimeShapes(source));
       return dedupeQueryRuntimeShapes(nested);
     }
-    case 'tokensInZone':
-    case 'tokensInMapSpaces':
-    case 'tokensInAdjacentZones':
-      return ['token'];
-    case 'assetRows':
-      return ['object'];
-    case 'intsInRange':
-    case 'intsInVarRange':
-    case 'players':
-      return ['number'];
     case 'nextInOrderByCondition':
       return inferQueryRuntimeShapes(query.source);
-    case 'enums':
-    case 'globalMarkers':
-    case 'zones':
-    case 'mapSpaces':
-    case 'adjacentZones':
-    case 'connectedZones':
-      return ['string'];
-    case 'binding':
-      return ['unknown'];
-    default: {
-      const _exhaustive: never = query;
-      return _exhaustive;
-    }
+    default:
+      return [inferLeafOptionsQueryContract(query).runtimeShape];
   }
 }
 

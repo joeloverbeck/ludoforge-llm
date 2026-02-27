@@ -103,8 +103,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(unshadedEffects.length >= 2, true);
     assert.equal('chooseN' in unshadedEffects[0]!, true, 'Expected first unshaded effect to be chooseN');
     assert.equal('forEach' in unshadedEffects[1]!, true, 'Expected second unshaded effect to be forEach');
-    if ('forEach' in unshadedEffects[1]!) {
-      assert.deepEqual(unshadedEffects[1].forEach.over, { query: 'binding', name: '$selectedPieces' });
+    if ('chooseN' in unshadedEffects[0]! && 'forEach' in unshadedEffects[1]!) {
+      assert.deepEqual(unshadedEffects[1].forEach.over, {
+        query: 'binding',
+        name: unshadedEffects[0].chooseN.bind,
+      });
     }
 
     const shadedAid = card?.shaded?.effects?.find((effect) => 'addVar' in effect);
@@ -428,7 +431,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       throw new Error('Expected chooseOne after chooseN selection.');
     }
     assert.equal(nextPending.type, 'chooseOne');
-    assert.equal(nextPending.decisionId.includes('$targetCity'), true);
+    assert.equal(nextPending.decisionId.includes('.chooseDestination'), true);
     const cityOptionIds = nextPending.options.map((option) => String(option.value)).sort();
     assert.deepEqual(cityOptionIds, cityZoneIds);
   });

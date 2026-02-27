@@ -11,7 +11,8 @@ import type {
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
-import { inferQueryDomainKinds } from '../kernel/query-domain-kinds.js';
+import { inferQueryDomainKinds, type QueryDomainKind } from '../kernel/query-domain-kinds.js';
+import { inferQueryRuntimeShapes, type QueryRuntimeShape } from '../kernel/query-runtime-shapes.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
 import { collectDeclaredBinderCandidates, collectSequentialBindings } from './binder-surface-registry.js';
 import {
@@ -50,6 +51,25 @@ const toInternalDecisionId = (path: string): string => `decision:${path}`;
 const EFFECT_KIND_KEYS: ReadonlySet<string> = new Set(SUPPORTED_EFFECT_KINDS as readonly string[]);
 const RESERVED_COMPILER_BINDING_PREFIX = '$__';
 const TRUSTED_COMPILER_BINDING_PREFIXES: readonly string[] = ['$__macro_'];
+type QueryDomainContract = 'agnostic' | 'tokenOnly' | 'zoneOnly';
+type ChoiceOptionsRuntimeShapeContract = 'moveParamEncodable';
+const AGNOSTIC_QUERY_DOMAIN_CONTRACT: QueryDomainContract = 'agnostic';
+const CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT: ChoiceOptionsRuntimeShapeContract = 'moveParamEncodable';
+const EFFECT_QUERY_DOMAIN_CONTRACTS = {
+  chooseOneOptions: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
+  chooseNOptions: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
+  forEachOver: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
+  reduceOver: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
+  evaluateSubsetSource: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
+  distributeTokensTokens: 'tokenOnly' as const,
+  distributeTokensDestinations: 'zoneOnly' as const,
+} as const;
+const MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES: ReadonlySet<QueryRuntimeShape> = new Set([
+  'token',
+  'number',
+  'string',
+  'unknown',
+]);
 
 export function lowerEffectArray(
   source: readonly unknown[],
@@ -946,6 +966,15 @@ function lowerForEachEffect(
   const condCtx = makeConditionContext(context, scope);
   const over = lowerQueryNode(source.over, condCtx, `${path}.over`);
   const diagnostics = [...over.diagnostics];
+  if (over.value !== null) {
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        over.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.forEachOver,
+        `${path}.over`,
+      ),
+    );
+  }
 
   let loweredLimit: NumericValueExpr | undefined;
   if (source.limit !== undefined) {
@@ -1076,6 +1105,15 @@ function lowerReduceEffect(
     ...scope.shadowWarning(accBind, `${path}.accBind`),
     ...scope.shadowWarning(resultBind, `${path}.resultBind`),
   ];
+  if (over.value !== null) {
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        over.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.reduceOver,
+        `${path}.over`,
+      ),
+    );
+  }
 
   let loweredLimit: NumericValueExpr | undefined;
   if (source.limit !== undefined) {
@@ -1335,6 +1373,15 @@ function lowerEvaluateSubsetEffect(
     ...scope.shadowWarning(source.subsetBind, `${path}.subsetBind`),
     ...scope.shadowWarning(source.resultBind, `${path}.resultBind`),
   ];
+  if (loweredSource.value !== null) {
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        loweredSource.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.evaluateSubsetSource,
+        `${path}.source`,
+      ),
+    );
+  }
 
   const bestSubsetBind = typeof source.bestSubsetBind === 'string' ? source.bestSubsetBind : undefined;
   if (source.bestSubsetBind !== undefined && typeof source.bestSubsetBind !== 'string') {
@@ -1767,6 +1814,23 @@ function lowerChooseOneEffect(
     ? { value: undefined, diagnostics: [] }
     : normalizePlayerSelector(source.chooser, `${path}.chooser`);
   const diagnostics = [...options.diagnostics, ...chooser.diagnostics];
+  if (options.value !== null) {
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        options.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.chooseOneOptions,
+        `${path}.options`,
+      ),
+    );
+    diagnostics.push(
+      ...validateChoiceOptionsRuntimeShapeContract(
+        options.value,
+        CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT,
+        `${path}.options`,
+        'chooseOne',
+      ),
+    );
+  }
   if (options.value === null) {
     return { value: null, diagnostics };
   }
@@ -1804,6 +1868,23 @@ function lowerChooseNEffect(
     ? { value: undefined, diagnostics: [] }
     : normalizePlayerSelector(source.chooser, `${path}.chooser`);
   const diagnostics = [...options.diagnostics, ...chooser.diagnostics];
+  if (options.value !== null) {
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        options.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.chooseNOptions,
+        `${path}.options`,
+      ),
+    );
+    diagnostics.push(
+      ...validateChoiceOptionsRuntimeShapeContract(
+        options.value,
+        CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT,
+        `${path}.options`,
+        'chooseN',
+      ),
+    );
+  }
 
   const hasN = source.n !== undefined;
   const hasMin = source.min !== undefined;
@@ -1911,10 +1992,22 @@ function lowerDistributeTokensEffects(
   const destinationOptions = lowerQueryNode(source.destinations, condCtx, `${path}.destinations`);
   const diagnostics = [...tokenOptions.diagnostics, ...destinationOptions.diagnostics];
   if (tokenOptions.value !== null) {
-    diagnostics.push(...validateDistributeTokensDomain(tokenOptions.value, 'token', `${path}.tokens`));
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        tokenOptions.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.distributeTokensTokens,
+        `${path}.tokens`,
+      ),
+    );
   }
   if (destinationOptions.value !== null) {
-    diagnostics.push(...validateDistributeTokensDomain(destinationOptions.value, 'zone', `${path}.destinations`));
+    diagnostics.push(
+      ...validateQueryDomainContract(
+        destinationOptions.value,
+        EFFECT_QUERY_DOMAIN_CONTRACTS.distributeTokensDestinations,
+        `${path}.destinations`,
+      ),
+    );
   }
 
   const hasN = source.n !== undefined;
@@ -2035,23 +2128,25 @@ function lowerDistributeTokensEffects(
   };
 }
 
-type DistributeTokensExpectedDomain = 'token' | 'zone';
-
-function validateDistributeTokensDomain(
+function validateQueryDomainContract(
   query: OptionsQuery,
-  expected: DistributeTokensExpectedDomain,
+  contract: QueryDomainContract,
   path: string,
 ): readonly Diagnostic[] {
+  if (contract === 'agnostic') {
+    return [];
+  }
+
+  const expected: QueryDomainKind = contract === 'tokenOnly' ? 'token' : 'zone';
   const domains = inferQueryDomainKinds(query);
   if (domains.size === 1 && domains.has(expected)) {
     return [];
   }
 
   const expectedLabel = expected === 'token' ? 'token' : 'zone';
-  const code =
-    expected === 'token'
-      ? 'CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID'
-      : 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID';
+  const code = contract === 'tokenOnly'
+    ? 'CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID'
+    : 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID';
 
   return [
     {
@@ -2063,6 +2158,38 @@ function validateDistributeTokensDomain(
         expected === 'token'
           ? 'Use token queries only (tokensInZone, tokensInAdjacentZones, tokensInMapSpaces, or compositions that stay token-only).'
           : 'Use zone queries only (zones, mapSpaces, adjacentZones, connectedZones, or compositions that stay zone-only).',
+    },
+  ];
+}
+
+function validateChoiceOptionsRuntimeShapeContract(
+  query: OptionsQuery,
+  contract: ChoiceOptionsRuntimeShapeContract,
+  path: string,
+  effectName: 'chooseOne' | 'chooseN',
+): readonly Diagnostic[] {
+  if (contract !== 'moveParamEncodable') {
+    return [];
+  }
+
+  const runtimeShapes = inferQueryRuntimeShapes(query);
+  const invalidShapes = [...runtimeShapes]
+    .filter((shape) => !MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES.has(shape))
+    .sort();
+
+  if (invalidShapes.length === 0) {
+    return [];
+  }
+
+  const actualShapes = [...runtimeShapes].sort().join(', ');
+  return [
+    {
+      code: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+      path,
+      severity: 'error',
+      message: `${effectName} options query must produce move-param-encodable values; runtime shape(s) [${actualShapes}] are not fully encodable.`,
+      suggestion: 'Use queries yielding token/string/number values (or binding queries that resolve to encodable values) and avoid object-valued option domains like assetRows.',
+      alternatives: invalidShapes,
     },
   ];
 }

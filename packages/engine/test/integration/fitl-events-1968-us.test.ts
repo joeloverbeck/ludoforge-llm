@@ -427,15 +427,17 @@ describe('FITL 1968 US-first event-card production spec', () => {
     // Effect 1: chooseN for NVA pieces
     const nvaChooseN = (shadedEffects[0] as { chooseN?: { bind?: string; options?: { query?: string; zone?: string }; max?: number } }).chooseN;
     assert.notEqual(nvaChooseN, undefined, 'shaded effect 0 must be chooseN');
-    assert.equal(nvaChooseN?.bind, '$nvaPieces');
+    assert.equal(typeof nvaChooseN?.bind, 'string');
     assert.equal(nvaChooseN?.options?.query, 'tokensInZone');
     assert.equal(nvaChooseN?.options?.zone, 'available-NVA:none');
     assert.equal(nvaChooseN?.max, 2);
 
-    // Effect 2: forEach placing NVA pieces
-    const nvaForEach = (shadedEffects[1] as { forEach?: { bind?: string } }).forEach;
+    // Effect 2: forEach placing NVA pieces over the chooseN binding
+    const nvaForEach = (shadedEffects[1] as { forEach?: { bind?: string; over?: { query?: string; name?: string } } }).forEach;
     assert.notEqual(nvaForEach, undefined, 'shaded effect 1 must be forEach');
-    assert.equal(nvaForEach?.bind, '$nvaPiece');
+    assert.equal(typeof nvaForEach?.bind, 'string');
+    assert.equal(nvaForEach?.over?.query, 'binding');
+    assert.equal(nvaForEach?.over?.name, nvaChooseN?.bind);
 
     // Effect 3: chooseN for US troops (concat of 3 sources)
     const usChooseN = (shadedEffects[2] as { chooseN?: { bind?: string; options?: { query?: string; sources?: unknown[] }; max?: number } }).chooseN;

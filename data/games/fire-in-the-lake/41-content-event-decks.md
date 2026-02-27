@@ -716,37 +716,19 @@ eventDecks:
               operationClass: operation
               actionIds: [airStrike]
           effects:
-            - chooseN:
-                bind: $selectedPieces
-                max: 6
-                options:
+            - distributeTokens:
+                tokens:
                   query: tokensInZone
                   zone: out-of-play-US:none
-                  # faction-only filter: matches troops, bases, AND irregulars
                   filter:
                     - { prop: faction, eq: US }
-            # forEach+chooseOne: each selected piece independently chooses a city
-            # (distributes across ANY cities, not forced to a single city)
-            - forEach:
-                bind: $usOutOfPlayPiece
-                over:
-                  query: binding
-                  name: $selectedPieces
-                effects:
-                  - chooseOne:
-                      bind: '$targetCity@{$usOutOfPlayPiece}'
-                      options:
-                        query: mapSpaces
-                        filter:
-                          op: '=='
-                          left: { ref: zoneProp, zone: $zone, prop: category }
-                          right: 'city'
-                  - moveToken:
-                      token: $usOutOfPlayPiece
-                      from:
-                        zoneExpr: { ref: tokenZone, token: $usOutOfPlayPiece }
-                      to:
-                        zoneExpr: { ref: binding, name: '$targetCity@{$usOutOfPlayPiece}' }
+                destinations:
+                  query: mapSpaces
+                  filter:
+                    op: '=='
+                    left: { ref: zoneProp, zone: $zone, prop: category }
+                    right: 'city'
+                max: 6
         shaded:
           text: "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
           effects:
@@ -822,31 +804,20 @@ eventDecks:
           text: "NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6."
           effects:
             # 1. NVA places 2 pieces from Available into Cambodia
-            - chooseN:
-                bind: $nvaPieces
-                options:
+            - distributeTokens:
+                tokens:
                   query: tokensInZone
                   zone: available-NVA:none
                   filter:
                     - { prop: faction, eq: NVA }
+                destinations:
+                  query: mapSpaces
+                  filter:
+                    op: '=='
+                    left: { ref: zoneProp, zone: $zone, prop: country }
+                    right: cambodia
                 min: 0
                 max: 2
-            - forEach:
-                bind: $nvaPiece
-                over: { query: binding, name: $nvaPieces }
-                effects:
-                  - chooseOne:
-                      bind: '$cambodiaSpace@{$nvaPiece}'
-                      options:
-                        query: mapSpaces
-                        filter:
-                          op: '=='
-                          left: { ref: zoneProp, zone: $zone, prop: country }
-                          right: cambodia
-                  - moveToken:
-                      token: $nvaPiece
-                      from: { zoneExpr: { ref: tokenZone, token: $nvaPiece } }
-                      to: { zoneExpr: { ref: binding, name: '$cambodiaSpace@{$nvaPiece}' } }
             # 2. US moves any 2 US Troops to out of play (map, Available, or Casualties)
             - chooseN:
                 bind: $usTroops

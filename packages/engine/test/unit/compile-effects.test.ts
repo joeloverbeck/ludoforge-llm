@@ -837,6 +837,102 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('keeps non-distribute query contracts explicitly domain-agnostic', () => {
+    const result = lowerEffectArray(
+      [
+        { chooseOne: { bind: '$choice', options: { query: 'tokensInZone', zone: 'deck' } } },
+        { chooseN: { bind: '$choices', options: { query: 'mapSpaces' }, max: 1 } },
+        { forEach: { bind: '$item', over: { query: 'globalMarkers' }, effects: [] } },
+        {
+          reduce: {
+            itemBind: '$item',
+            accBind: '$acc',
+            over: {
+              query: 'concat',
+              sources: [
+                { query: 'tokensInZone', zone: 'deck' },
+                { query: 'zones' },
+              ],
+            },
+            initial: 0,
+            next: { ref: 'binding', name: '$acc' },
+            resultBind: '$reduced',
+            in: [],
+          },
+        },
+        {
+          evaluateSubset: {
+            source: {
+              query: 'concat',
+              sources: [
+                { query: 'players' },
+                { query: 'mapSpaces' },
+              ],
+            },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [],
+            scoreExpr: 1,
+            resultBind: '$result',
+            in: [],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.ok(result.value !== null);
+    assert.equal(result.value.length, 5);
+  });
+
+  it('rejects chooseOne/chooseN options that may evaluate to non-encodable runtime shapes', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          chooseOne: {
+            bind: '$row',
+            options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+          },
+        },
+        {
+          chooseN: {
+            bind: '$mixed',
+            options: {
+              query: 'concat',
+              sources: [
+                { query: 'players' },
+                { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+              ],
+            },
+            max: 1,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.0.chooseOne.options',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.1.chooseN.options',
+      ),
+      true,
+    );
+  });
+
   it('lowers distributeTokens into chooseN/forEach/chooseOne/moveToken sequence', () => {
     const result = lowerEffectArray(
       [

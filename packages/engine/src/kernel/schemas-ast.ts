@@ -572,12 +572,14 @@ effectAstSchemaInternal = z.union([
         .object({
           itemBind: StringSchema,
           accBind: StringSchema,
-          macroOrigin: MacroOriginSchema.optional(),
+          itemMacroOrigin: MacroOriginSchema.optional(),
+          accMacroOrigin: MacroOriginSchema.optional(),
           over: OptionsQuerySchema,
           initial: ValueExprSchema,
           next: ValueExprSchema,
           limit: NumericValueExprSchema.optional(),
           resultBind: StringSchema,
+          resultMacroOrigin: MacroOriginSchema.optional(),
           in: z.array(EffectASTSchema),
         })
         .strict(),

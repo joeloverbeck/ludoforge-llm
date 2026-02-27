@@ -459,7 +459,7 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
     return [
       line(indent, spaced(
         kw('reduce'),
-        ref(bindDisplay(effect.reduce.itemBind, effect.reduce.macroOrigin), 'binding'),
+        ref(bindDisplay(effect.reduce.itemBind, effect.reduce.itemMacroOrigin), 'binding'),
         kw('in'),
         ...optionsQueryToInlineNodes(effect.reduce.over),
         kw('acc'),

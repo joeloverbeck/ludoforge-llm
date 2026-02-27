@@ -359,13 +359,40 @@ function validateEffectNodeForAuthoredCompilerMetadata(
       suggestion: 'Remove forEach.macroOrigin from authored YAML; compiler expansion emits provenance.',
     });
   }
+  if (isRecord(node.reduce) && Object.prototype.hasOwnProperty.call(node.reduce, 'itemMacroOrigin')) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+      path: `${path}.reduce.itemMacroOrigin`,
+      severity: 'error',
+      message: 'reduce.itemMacroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove reduce.itemMacroOrigin from authored YAML; compiler expansion emits provenance.',
+    });
+  }
+  if (isRecord(node.reduce) && Object.prototype.hasOwnProperty.call(node.reduce, 'accMacroOrigin')) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+      path: `${path}.reduce.accMacroOrigin`,
+      severity: 'error',
+      message: 'reduce.accMacroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove reduce.accMacroOrigin from authored YAML; compiler expansion emits provenance.',
+    });
+  }
+  if (isRecord(node.reduce) && Object.prototype.hasOwnProperty.call(node.reduce, 'resultMacroOrigin')) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+      path: `${path}.reduce.resultMacroOrigin`,
+      severity: 'error',
+      message: 'reduce.resultMacroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove reduce.resultMacroOrigin from authored YAML; compiler expansion emits provenance.',
+    });
+  }
   if (isRecord(node.reduce) && Object.prototype.hasOwnProperty.call(node.reduce, 'macroOrigin')) {
     diagnostics.push({
       code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
       path: `${path}.reduce.macroOrigin`,
       severity: 'error',
-      message: 'reduce.macroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
-      suggestion: 'Remove reduce.macroOrigin from authored YAML; compiler expansion emits provenance.',
+      message: 'reduce.macroOrigin has been removed and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove reduce.macroOrigin from authored YAML; compiler emits item/acc/result binder provenance fields.',
     });
   }
   if (isRecord(node.removeByPriority) && Object.prototype.hasOwnProperty.call(node.removeByPriority, 'macroOrigin')) {

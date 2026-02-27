@@ -242,7 +242,9 @@ describe('compile-effects lowering', () => {
     assert.equal((reduceEffect.reduce.itemBind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.equal((reduceEffect.reduce.accBind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.equal((reduceEffect.reduce.resultBind as string).startsWith('$__macro_collect_forced_bets_'), true);
-    assert.deepEqual(reduceEffect.reduce.macroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
+    assert.deepEqual(reduceEffect.reduce.itemMacroOrigin, { macroId: 'collect-forced-bets', stem: 'n' });
+    assert.deepEqual(reduceEffect.reduce.accMacroOrigin, { macroId: 'collect-forced-bets', stem: 'acc' });
+    assert.deepEqual(reduceEffect.reduce.resultMacroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
     assert.deepEqual(reduceEffect.reduce.over, { query: 'intsInRange', min: 1, max: 3 });
     assert.equal(reduceEffect.reduce.initial, 0);
     assert.deepEqual(reduceEffect.reduce.in, []);
@@ -266,7 +268,9 @@ describe('compile-effects lowering', () => {
           reduce: {
             itemBind: '$n',
             accBind: '$acc',
-            macroOrigin: { stem: 'straightHigh' },
+            itemMacroOrigin: { stem: 'n' },
+            accMacroOrigin: { stem: 'acc' },
+            resultMacroOrigin: { stem: 'straightHigh' },
             over: { query: 'intsInRange', min: 1, max: 3 },
             initial: 0,
             next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
@@ -306,7 +310,23 @@ describe('compile-effects lowering', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
-          && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.itemMacroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.accMacroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.resultMacroOrigin',
       ),
       true,
     );
@@ -328,6 +348,37 @@ describe('compile-effects lowering', () => {
     );
   });
 
+  it('rejects removed legacy reduce.macroOrigin payloads', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            macroOrigin: { macroId: 'legacy', stem: 'sum' },
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$sum',
+            in: [],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.0.reduce.macroOrigin',
+      ),
+      true,
+    );
+  });
+
   it('rejects untrusted authored macroOrigin payloads', () => {
     const result = lowerEffectArray(
       [
@@ -343,7 +394,9 @@ describe('compile-effects lowering', () => {
           reduce: {
             itemBind: '$n',
             accBind: '$acc',
-            macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+            itemMacroOrigin: { macroId: 'hand-rank-score', stem: 'n' },
+            accMacroOrigin: { macroId: 'hand-rank-score', stem: 'acc' },
+            resultMacroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
             over: { query: 'intsInRange', min: 1, max: 3 },
             initial: 0,
             next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
@@ -383,7 +436,23 @@ describe('compile-effects lowering', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
-          && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.itemMacroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.accMacroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.resultMacroOrigin',
       ),
       true,
     );

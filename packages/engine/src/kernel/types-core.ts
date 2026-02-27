@@ -662,7 +662,9 @@ export interface EffectTraceReduce {
   readonly itemBind: string;
   readonly accBind: string;
   readonly resultBind: string;
-  readonly macroOrigin?: MacroOrigin;
+  readonly itemMacroOrigin?: MacroOrigin;
+  readonly accMacroOrigin?: MacroOrigin;
+  readonly resultMacroOrigin?: MacroOrigin;
   readonly matchCount: number;
   readonly limit?: number;
   readonly iteratedCount: number;

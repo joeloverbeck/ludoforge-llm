@@ -503,12 +503,12 @@ describe('effectToDisplayNodes', () => {
     assert.ok(texts(header.children).includes('reduce'));
   });
 
-  it('renders reduce with macroOrigin.stem for item bind', () => {
+  it('renders reduce with itemMacroOrigin.stem for item bind', () => {
     const effect: EffectAST = {
       reduce: {
         itemBind: '$__macro_reduce_0_item',
         accBind: 'acc',
-        macroOrigin: { macroId: 'sum', stem: 'item' },
+        itemMacroOrigin: { macroId: 'sum', stem: 'item' },
         over: { query: 'players' },
         initial: 0,
         next: { op: '+', left: { ref: 'binding', name: 'acc' }, right: 1 },

@@ -95,11 +95,14 @@ describe('validateGameSpec structural rules', () => {
               reduce: {
                 itemBind: '$n',
                 accBind: '$acc',
-                macroOrigin: { macroId: 'authored', stem: 'effects' },
+                macroOrigin: { macroId: 'authored', stem: 'legacy' },
+                itemMacroOrigin: { macroId: 'authored', stem: 'item' },
+                accMacroOrigin: { macroId: 'authored', stem: 'acc' },
                 over: { query: 'intsInRange', min: 1, max: 2 },
                 initial: 0,
                 next: 0,
                 resultBind: '$sum',
+                resultMacroOrigin: { macroId: 'authored', stem: 'effects' },
                 in: [],
               },
             },
@@ -125,7 +128,7 @@ describe('validateGameSpec structural rules', () => {
     const macroOriginDiagnostics = diagnostics.filter(
       (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
     );
-    assert.equal(macroOriginDiagnostics.length, 8);
+    assert.equal(macroOriginDiagnostics.length, 11);
     assert.equal(
       macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.removeByPriority.macroOrigin'),
       true,
@@ -147,7 +150,19 @@ describe('validateGameSpec structural rules', () => {
       true,
     );
     assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce.itemMacroOrigin'),
+      true,
+    );
+    assert.equal(
       macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce.accMacroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce.resultMacroOrigin'),
       true,
     );
     assert.equal(

@@ -269,7 +269,9 @@ phase: ['main'],
     assert.equal((expandedForEach.forEach.bind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.equal((expandedReduce.reduce.resultBind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.deepEqual(expandedForEach.forEach.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
-    assert.deepEqual(expandedReduce.reduce.macroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
+    assert.deepEqual(expandedReduce.reduce.itemMacroOrigin, { macroId: 'collect-forced-bets', stem: 'n' });
+    assert.deepEqual(expandedReduce.reduce.accMacroOrigin, { macroId: 'collect-forced-bets', stem: 'acc' });
+    assert.deepEqual(expandedReduce.reduce.resultMacroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
     assert.deepEqual(expandedRemove.removeByPriority.macroOrigin, { macroId: 'collect-forced-bets', stem: 'target' });
     assert.deepEqual(expandedRemove.removeByPriority.groups[0]?.macroOrigin, { macroId: 'collect-forced-bets', stem: 'target' });
     assert.equal(isTrustedMacroOriginCarrier(expandedForEach.forEach), true);

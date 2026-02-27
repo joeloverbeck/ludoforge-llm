@@ -108,7 +108,9 @@ describe('Effect execution trace', () => {
     assert.equal(reduceEntry.itemBind, '$n');
     assert.equal(reduceEntry.accBind, '$acc');
     assert.equal(reduceEntry.resultBind, '$sum');
-    assert.equal(reduceEntry.macroOrigin, undefined);
+    assert.equal(reduceEntry.itemMacroOrigin, undefined);
+    assert.equal(reduceEntry.accMacroOrigin, undefined);
+    assert.equal(reduceEntry.resultMacroOrigin, undefined);
     assert.equal(reduceEntry.provenance.effectPath, 'test.effects[0]');
   });
 
@@ -130,13 +132,15 @@ describe('Effect execution trace', () => {
     assert.deepEqual(forEachEntry.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
   });
 
-  it('traces reduce macroOrigin when annotated by compiler', () => {
+  it('traces reduce binder-specific macro origins when annotated by compiler', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
     const effects: readonly EffectAST[] = [{
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
-        macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+        itemMacroOrigin: { macroId: 'hand-rank-score', stem: 'n' },
+        accMacroOrigin: { macroId: 'hand-rank-score', stem: 'acc' },
+        resultMacroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
         over: { query: 'intsInRange', min: 1, max: 3 },
         initial: 0,
         next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
@@ -148,7 +152,9 @@ describe('Effect execution trace', () => {
     const trace = ctx.collector!.trace!;
     const reduceEntry = trace.find((e) => e.kind === 'reduce');
     assert.ok(reduceEntry);
-    assert.deepEqual(reduceEntry.macroOrigin, { macroId: 'hand-rank-score', stem: 'straightHigh' });
+    assert.deepEqual(reduceEntry.itemMacroOrigin, { macroId: 'hand-rank-score', stem: 'n' });
+    assert.deepEqual(reduceEntry.accMacroOrigin, { macroId: 'hand-rank-score', stem: 'acc' });
+    assert.deepEqual(reduceEntry.resultMacroOrigin, { macroId: 'hand-rank-score', stem: 'straightHigh' });
   });
 
   it('traces moveToken with from and to zones', () => {

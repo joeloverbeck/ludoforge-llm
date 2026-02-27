@@ -996,7 +996,23 @@ function lowerReduceEffect(
   const itemBind = source.itemBind;
   const accBind = source.accBind;
   const resultBind = source.resultBind;
-  const macroOrigin = readMacroOrigin(source.macroOrigin, source, `${path}.macroOrigin`);
+
+  if (Object.prototype.hasOwnProperty.call(source, 'macroOrigin')) {
+    return {
+      value: null,
+      diagnostics: [{
+        code: 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED',
+        path: `${path}.macroOrigin`,
+        severity: 'error',
+        message: 'reduce.macroOrigin has been removed and is no longer accepted.',
+        suggestion: 'Remove reduce.macroOrigin from authored YAML; compiler emits item/acc/result binder provenance fields.',
+      }],
+    };
+  }
+
+  const itemMacroOrigin = readMacroOrigin(source.itemMacroOrigin, source, `${path}.itemMacroOrigin`);
+  const accMacroOrigin = readMacroOrigin(source.accMacroOrigin, source, `${path}.accMacroOrigin`);
+  const resultMacroOrigin = readMacroOrigin(source.resultMacroOrigin, source, `${path}.resultMacroOrigin`);
 
   const duplicateBindings = new Set<string>();
   if (itemBind === accBind) {
@@ -1025,7 +1041,9 @@ function lowerReduceEffect(
   const over = lowerQueryNode(source.over, condCtx, `${path}.over`);
   const initial = lowerValueNode(source.initial, condCtx, `${path}.initial`);
   const diagnostics = [
-    ...macroOrigin.diagnostics,
+    ...itemMacroOrigin.diagnostics,
+    ...accMacroOrigin.diagnostics,
+    ...resultMacroOrigin.diagnostics,
     ...over.diagnostics,
     ...initial.diagnostics,
     ...scope.shadowWarning(itemBind, `${path}.itemBind`),
@@ -1060,7 +1078,9 @@ function lowerReduceEffect(
     || initial.value === null
     || next.value === null
     || loweredIn.value === null
-    || macroOrigin.value === null
+    || itemMacroOrigin.value === null
+    || accMacroOrigin.value === null
+    || resultMacroOrigin.value === null
   ) {
     return { value: null, diagnostics };
   }
@@ -1070,12 +1090,14 @@ function lowerReduceEffect(
       reduce: {
         itemBind,
         accBind,
-        ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
+        ...(itemMacroOrigin.value === undefined ? {} : { itemMacroOrigin: itemMacroOrigin.value }),
+        ...(accMacroOrigin.value === undefined ? {} : { accMacroOrigin: accMacroOrigin.value }),
         over: over.value,
         initial: initial.value,
         next: next.value,
         ...(loweredLimit === undefined ? {} : { limit: loweredLimit }),
         resultBind,
+        ...(resultMacroOrigin.value === undefined ? {} : { resultMacroOrigin: resultMacroOrigin.value }),
         in: loweredIn.value,
       },
     },

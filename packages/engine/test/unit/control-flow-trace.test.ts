@@ -118,12 +118,14 @@ describe('control-flow trace builders', () => {
     });
   });
 
-  it('buildReduceTraceEntry includes macroOrigin when provided', () => {
+  it('buildReduceTraceEntry includes binder-specific macro origins when provided', () => {
     const entry = buildReduceTraceEntry({
       itemBind: '$n',
       accBind: '$acc',
       resultBind: '$__macro_hand_rank_score_path_straightHigh',
-      macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+      itemMacroOrigin: { macroId: 'hand-rank-score', stem: 'n' },
+      accMacroOrigin: { macroId: 'hand-rank-score', stem: 'acc' },
+      resultMacroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
       matchCount: 5,
       iteratedCount: 5,
       explicitLimit: false,
@@ -136,7 +138,9 @@ describe('control-flow trace builders', () => {
       itemBind: '$n',
       accBind: '$acc',
       resultBind: '$__macro_hand_rank_score_path_straightHigh',
-      macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+      itemMacroOrigin: { macroId: 'hand-rank-score', stem: 'n' },
+      accMacroOrigin: { macroId: 'hand-rank-score', stem: 'acc' },
+      resultMacroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
       matchCount: 5,
       iteratedCount: 5,
       provenance,

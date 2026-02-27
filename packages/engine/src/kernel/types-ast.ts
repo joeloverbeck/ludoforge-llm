@@ -338,12 +338,14 @@ export type EffectAST =
       readonly reduce: {
         readonly itemBind: string;
         readonly accBind: string;
-        readonly macroOrigin?: EffectMacroOrigin;
+        readonly itemMacroOrigin?: EffectMacroOrigin;
+        readonly accMacroOrigin?: EffectMacroOrigin;
         readonly over: OptionsQuery;
         readonly initial: ValueExpr;
         readonly next: ValueExpr;
         readonly limit?: NumericValueExpr;
         readonly resultBind: string;
+        readonly resultMacroOrigin?: EffectMacroOrigin;
         readonly in: readonly EffectAST[];
       };
     }

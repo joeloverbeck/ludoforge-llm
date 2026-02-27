@@ -825,7 +825,6 @@ function bindingStem(bindingName: string): string {
 
 const BINDING_ORIGIN_EFFECT_SPECS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['forEach', ['bind']],
-  ['reduce', ['resultBind']],
   ['let', ['bind']],
   ['bindValue', ['bind']],
   ['chooseOne', ['bind']],
@@ -835,6 +834,11 @@ const BINDING_ORIGIN_EFFECT_SPECS: ReadonlyArray<readonly [string, readonly stri
 ];
 
 const EVALUATE_SUBSET_BIND_FIELDS: readonly string[] = ['subsetBind', 'resultBind', 'bestSubsetBind'];
+const REDUCE_BIND_ORIGIN_FIELDS: ReadonlyArray<readonly [string, string]> = [
+  ['itemBind', 'itemMacroOrigin'],
+  ['accBind', 'accMacroOrigin'],
+  ['resultBind', 'resultMacroOrigin'],
+];
 
 function annotateNodeMacroOrigin(
   effectNode: Record<string, unknown>,
@@ -966,6 +970,51 @@ function annotateRemoveByPriorityMacroOrigin(
   };
 }
 
+function annotateReduceMacroOrigins(
+  node: Record<string, unknown>,
+  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
+): { node: Record<string, unknown>; changed: boolean } {
+  if (!isRecord(node.reduce)) {
+    return { node, changed: false };
+  }
+
+  const reduce = node.reduce as Record<string, unknown>;
+  const rewrittenReduce: Record<string, unknown> = { ...reduce };
+  let fieldsChanged = false;
+  let foundAnyOrigin = false;
+
+  for (const [bindField, macroOriginField] of REDUCE_BIND_ORIGIN_FIELDS) {
+    const origin = findFirstMacroOriginByBindFields(reduce, [bindField], originByBinding);
+    if (origin === undefined) {
+      continue;
+    }
+    foundAnyOrigin = true;
+    if (hasSameMacroBindingOrigin(reduce[macroOriginField], origin)) {
+      continue;
+    }
+    rewrittenReduce[macroOriginField] = origin;
+    fieldsChanged = true;
+  }
+
+  if (!foundAnyOrigin) {
+    return { node, changed: false };
+  }
+
+  const trustedReduce = fieldsChanged ? markTrustedMacroOriginByExpansion(rewrittenReduce) : reduce;
+  const trustedChanged = fieldsChanged || !isTrustedMacroOriginCarrier(reduce);
+  if (!trustedChanged) {
+    return { node, changed: false };
+  }
+
+  return {
+    node: {
+      ...node,
+      reduce: fieldsChanged ? trustedReduce : markTrustedMacroOriginByExpansion({ ...reduce }),
+    },
+    changed: true,
+  };
+}
+
 function annotateControlFlowMacroOrigins(
   node: unknown,
   originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
@@ -988,6 +1037,12 @@ function annotateControlFlowMacroOrigins(
 
   let rewrittenNode: Record<string, unknown> = node;
   let changed = false;
+
+  const reduceAnnotation = annotateReduceMacroOrigins(rewrittenNode, originByBinding);
+  if (reduceAnnotation.changed) {
+    rewrittenNode = reduceAnnotation.node;
+    changed = true;
+  }
 
   for (const [effectKey, bindFields] of BINDING_ORIGIN_EFFECT_SPECS) {
     const annotation = annotateEffectMacroOrigin(rewrittenNode, effectKey, bindFields, originByBinding);

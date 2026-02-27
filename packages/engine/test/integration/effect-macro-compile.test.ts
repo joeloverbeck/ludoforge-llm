@@ -642,10 +642,16 @@ actor: 'active',
       macroId: 'collect-forced-bets',
       stem: 'player',
     });
-    assert.deepEqual((effects[1] as { reduce: { macroOrigin?: unknown } }).reduce.macroOrigin, {
-      macroId: 'collect-forced-bets',
-      stem: 'total',
-    });
+    const reduce = (effects[1] as {
+      reduce: {
+        itemMacroOrigin?: unknown;
+        accMacroOrigin?: unknown;
+        resultMacroOrigin?: unknown;
+      };
+    }).reduce;
+    assert.deepEqual(reduce.itemMacroOrigin, { macroId: 'collect-forced-bets', stem: 'n' });
+    assert.deepEqual(reduce.accMacroOrigin, { macroId: 'collect-forced-bets', stem: 'acc' });
+    assert.deepEqual(reduce.resultMacroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
   });
 
   it('rejects authored macroOrigin payloads through full compile pipeline', () => {
@@ -673,11 +679,13 @@ actor: 'active',
               reduce: {
                 itemBind: '$n',
                 accBind: '$acc',
-                macroOrigin: { macroId: 'authored', stem: 'sum' },
+                itemMacroOrigin: { macroId: 'authored', stem: 'n' },
+                accMacroOrigin: { macroId: 'authored', stem: 'acc' },
                 over: { query: 'intsInRange', min: 1, max: 2 },
                 initial: 0,
                 next: 0,
                 resultBind: '$sum',
+                resultMacroOrigin: { macroId: 'authored', stem: 'sum' },
                 in: [],
               },
             },
@@ -701,7 +709,23 @@ actor: 'active',
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
-          && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.itemMacroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.accMacroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.resultMacroOrigin',
       ),
       true,
     );

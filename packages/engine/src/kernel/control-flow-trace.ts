@@ -22,7 +22,9 @@ export const buildReduceTraceEntry = (params: {
   readonly itemBind: string;
   readonly accBind: string;
   readonly resultBind: string;
-  readonly macroOrigin?: MacroOrigin;
+  readonly itemMacroOrigin?: MacroOrigin;
+  readonly accMacroOrigin?: MacroOrigin;
+  readonly resultMacroOrigin?: MacroOrigin;
   readonly matchCount: number;
   readonly iteratedCount: number;
   readonly explicitLimit: boolean;
@@ -33,7 +35,9 @@ export const buildReduceTraceEntry = (params: {
   itemBind: params.itemBind,
   accBind: params.accBind,
   resultBind: params.resultBind,
-  ...(params.macroOrigin === undefined ? {} : { macroOrigin: params.macroOrigin }),
+  ...(params.itemMacroOrigin === undefined ? {} : { itemMacroOrigin: params.itemMacroOrigin }),
+  ...(params.accMacroOrigin === undefined ? {} : { accMacroOrigin: params.accMacroOrigin }),
+  ...(params.resultMacroOrigin === undefined ? {} : { resultMacroOrigin: params.resultMacroOrigin }),
   matchCount: params.matchCount,
   iteratedCount: params.iteratedCount,
   provenance: params.provenance,

@@ -1,7 +1,18 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import {
+  applyMove,
+  asPlayerId,
+  asTokenId,
+  initialState,
+  legalMoves,
+  type GameDef,
+  type GameState,
+  type Token,
+} from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
@@ -18,6 +29,77 @@ const expectedCards = [
   { id: 'card-21', order: 21, title: 'Americal', seatOrder: ['US', 'VC', 'NVA', 'ARVN'] },
   { id: 'card-30', order: 30, title: 'USS New Jersey', seatOrder: ['US', 'VC', 'ARVN', 'NVA'] },
 ] as const;
+
+const compileDef = (): GameDef => {
+  const { parsed, compiled } = compileProductionSpec();
+  assertNoErrors(parsed);
+  assert.notEqual(compiled.gameDef, null);
+  return compiled.gameDef!;
+};
+
+const makeToken = (id: string, type: string, faction: string): Token => ({
+  id: asTokenId(id),
+  type,
+  props: { faction, type },
+});
+
+const setupPeaceTalksState = (
+  def: GameDef,
+  overrides: {
+    readonly nvaResources?: number;
+    readonly trail?: number;
+    readonly availableUsTroops?: number;
+    readonly availableUsBases?: number;
+  },
+): GameState => {
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+  const baseState = clearAllZones(initialState(def, 196803, 4).state);
+  const availableUsTroops = Array.from(
+    { length: overrides.availableUsTroops ?? 0 },
+    (_, index) => makeToken(`us-trp-${index}`, 'troops', 'US'),
+  );
+  const availableUsBases = Array.from(
+    { length: overrides.availableUsBases ?? 0 },
+    (_, index) => makeToken(`us-base-${index}`, 'base', 'US'),
+  );
+  const markersWithNeutralSupport = Object.fromEntries(
+    Object.entries(baseState.markers).map(([zoneId, zoneMarkers]) => [
+      zoneId,
+      zoneMarkers.supportOpposition === undefined
+        ? zoneMarkers
+        : { ...zoneMarkers, supportOpposition: 'neutral' },
+    ]),
+  ) as GameState['markers'];
+
+  return {
+    ...baseState,
+    activePlayer: asPlayerId(0),
+    turnOrderState: { type: 'roundRobin' },
+    globalVars: {
+      ...baseState.globalVars,
+      nvaResources: overrides.nvaResources ?? (baseState.globalVars.nvaResources as number | undefined) ?? 0,
+      trail: overrides.trail ?? (baseState.globalVars.trail as number | undefined) ?? 0,
+      linebacker11Allowed: false,
+      linebacker11SupportAvailable: 0,
+    },
+    markers: markersWithNeutralSupport,
+    zones: {
+      ...baseState.zones,
+      [eventDeck!.discardZone]: [makeToken('card-3', 'card', 'none')],
+      'available-US:none': [...availableUsTroops, ...availableUsBases],
+    },
+  };
+};
+
+const findPeaceTalksMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded') =>
+  legalMoves(def, state).find(
+    (move) =>
+      String(move.actionId) === 'event' &&
+      move.params.side === side &&
+      (move.params.eventCardId === undefined || move.params.eventCardId === 'card-3'),
+  );
 
 describe('FITL 1968 US-first event-card production spec', () => {
   it('compiles all 12 US-first 1968 cards with dual side metadata invariants', () => {
@@ -124,6 +206,52 @@ describe('FITL 1968 US-first event-card production spec', () => {
     });
     assert.equal((card?.shaded?.effects?.[1] as { if?: { when?: { op?: string; right?: number } } })?.if?.when?.op, '<=');
     assert.equal((card?.shaded?.effects?.[1] as { if?: { when?: { right?: number } } })?.if?.when?.right, 2);
+  });
+
+  it('applies Peace Talks unshaded threshold strictly: >25 enables Linebacker flag, 25 does not', () => {
+    const def = compileDef();
+
+    const atThreshold = setupPeaceTalksState(def, {
+      nvaResources: 30,
+      availableUsTroops: 25,
+      availableUsBases: 0,
+    });
+    const atThresholdMove = findPeaceTalksMove(def, atThreshold, 'unshaded');
+    assert.notEqual(atThresholdMove, undefined, 'Expected unshaded Peace Talks event move at threshold');
+    const atThresholdAfter = applyMove(def, atThreshold, atThresholdMove!).state;
+    assert.equal(atThresholdAfter.globalVars.linebacker11SupportAvailable, 25);
+    assert.equal(atThresholdAfter.globalVars.linebacker11Allowed, false);
+    assert.equal(atThresholdAfter.globalVars.nvaResources, 21);
+
+    const aboveThreshold = setupPeaceTalksState(def, {
+      nvaResources: 8,
+      availableUsTroops: 26,
+      availableUsBases: 0,
+    });
+    const aboveThresholdMove = findPeaceTalksMove(def, aboveThreshold, 'unshaded');
+    assert.notEqual(aboveThresholdMove, undefined, 'Expected unshaded Peace Talks event move above threshold');
+    const aboveThresholdAfter = applyMove(def, aboveThreshold, aboveThresholdMove!).state;
+    assert.equal(aboveThresholdAfter.globalVars.linebacker11SupportAvailable, 26);
+    assert.equal(aboveThresholdAfter.globalVars.linebacker11Allowed, true);
+    assert.equal(aboveThresholdAfter.globalVars.nvaResources, 0, 'NVA resources should clamp at minimum 0');
+  });
+
+  it('applies Peace Talks shaded trail floor only when trail is 0..2', () => {
+    const def = compileDef();
+
+    const atFloor = setupPeaceTalksState(def, { trail: 2, nvaResources: 10 });
+    const atFloorMove = findPeaceTalksMove(def, atFloor, 'shaded');
+    assert.notEqual(atFloorMove, undefined, 'Expected shaded Peace Talks move with trail=2');
+    const atFloorAfter = applyMove(def, atFloor, atFloorMove!).state;
+    assert.equal(atFloorAfter.globalVars.trail, 3);
+    assert.equal(atFloorAfter.globalVars.nvaResources, 19);
+
+    const aboveFloor = setupPeaceTalksState(def, { trail: 3, nvaResources: 10 });
+    const aboveFloorMove = findPeaceTalksMove(def, aboveFloor, 'shaded');
+    assert.notEqual(aboveFloorMove, undefined, 'Expected shaded Peace Talks move with trail=3');
+    const aboveFloorAfter = applyMove(def, aboveFloor, aboveFloorMove!).state;
+    assert.equal(aboveFloorAfter.globalVars.trail, 3);
+    assert.equal(aboveFloorAfter.globalVars.nvaResources, 19);
   });
 
   it('encodes card 2 (Kissinger) with rollRandom unshaded and three-part shaded effects', () => {

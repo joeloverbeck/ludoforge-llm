@@ -889,7 +889,7 @@ eventDecks:
           seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Public negotiations mask battlefield pressure."
         unshaded:
-          text: "NVA Resources -9. Linebacker 11 allowed when Support + Available US (Troops + Bases) > 25."
+          text: "NVA Resources -9. Linebacker II allowed when Support + Available US (Troops + Bases) > 25."
           effects:
             - addVar: { scope: global, var: nvaResources, delta: -9 }
             - setVar: { scope: global, var: linebacker11SupportAvailable, value: 0 }
@@ -4343,46 +4343,49 @@ eventDecks:
           op: and
           args:
             - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
-            - op: '>'
-              left:
-                op: '+'
-                left:
-                  op: '+'
+            - op: or
+              args:
+                - op: '>'
                   left:
-                    aggregate:
-                      op: sum
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: '=='
-                          left: { ref: markerState, space: $zone, marker: supportOpposition }
-                          right: passiveSupport
-                      bind: $zone
-                      valueExpr: { ref: zoneProp, zone: $zone, prop: population }
-                  right:
-                    op: '*'
-                    left: 2
+                    op: '+'
+                    left:
+                      op: '+'
+                      left:
+                        aggregate:
+                          op: sum
+                          query:
+                            query: mapSpaces
+                            filter:
+                              op: '=='
+                              left: { ref: markerState, space: $zone, marker: supportOpposition }
+                              right: passiveSupport
+                          bind: $zone
+                          valueExpr: { ref: zoneProp, zone: $zone, prop: population }
+                      right:
+                        op: '*'
+                        left: 2
+                        right:
+                          aggregate:
+                            op: sum
+                            query:
+                              query: mapSpaces
+                              filter:
+                                op: '=='
+                                left: { ref: markerState, space: $zone, marker: supportOpposition }
+                                right: activeSupport
+                            bind: $zone
+                            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
                     right:
                       aggregate:
-                        op: sum
+                        op: count
                         query:
-                          query: mapSpaces
+                          query: tokensInZone
+                          zone: available-US:none
                           filter:
-                            op: '=='
-                            left: { ref: markerState, space: $zone, marker: supportOpposition }
-                            right: activeSupport
-                        bind: $zone
-                        valueExpr: { ref: zoneProp, zone: $zone, prop: population }
-                right:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: available-US:none
-                      filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, op: in, value: [troops, base] }
-              right: 40
+                            - { prop: faction, eq: US }
+                            - { prop: type, op: in, value: [troops, base] }
+                  right: 40
+                - { op: '==', left: { ref: gvar, var: linebacker11Allowed }, right: true }
         unshaded:
           text: "Unrestricted air war: NVA removes 2 Bases, reduces Resources to half (round down), Ineligible through next card. 3 US Casualties to Available."
       - id: card-122

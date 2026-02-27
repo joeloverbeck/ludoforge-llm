@@ -72,7 +72,19 @@ describe('FITL pivotal event-card production spec', () => {
         ),
       ).length >= 1,
     );
-    assert.equal(card121UsesSupportAvailable.length >= 1, true, 'Card 121 should gate on support+available > 40');
+    assert.equal(card121UsesSupportAvailable.length >= 1, true, 'Card 121 should include support+available > 40 gate');
+
+    const card121UsesPeaceTalksOverride = findDeep(card121?.playCondition, (node) =>
+      node?.op === '==' &&
+      node?.left?.ref === 'gvar' &&
+      node?.left?.var === 'linebacker11Allowed' &&
+      node?.right === true,
+    );
+    assert.equal(
+      card121UsesPeaceTalksOverride.length >= 1,
+      true,
+      'Card 121 should include Peace Talks Linebacker eligibility override',
+    );
 
     const card122HasMapTroopComparison = findDeep(card122?.playCondition, (node) =>
       node?.op === '>' &&

@@ -3668,7 +3668,7 @@ eventDecks:
                 - macro: set-global-flag-false
                   args: { varName: mom_typhoonKate }
       - id: card-117
-        title: Corps Commander
+        title: Corps Commanders
         sideMode: dual
         order: 117
         tags: []
@@ -3677,9 +3677,234 @@ eventDecks:
           seatOrder: ["VC", "ARVN", "NVA", "US"]
           flavorText: "Regional command intervention reallocates troops by political roll of the dice."
         unshaded:
-          text: "Place ARVN Troops, then execute free Sweep in one selected region."
+          text: "ARVN places 3 of its Troops from out of play or Available into 1 or 2 adjacent spaces then free Sweeps each."
+          effects:
+            - setActivePlayer:
+                player: "1"
+            - chooseOne:
+                bind: $anchorSpace
+                options:
+                  query: mapSpaces
+            - chooseN:
+                bind: $adjacentSpace
+                max: 1
+                options:
+                  query: adjacentZones
+                  zone: $anchorSpace
+            - chooseN:
+                bind: $selectedTroops
+                min:
+                  op: min
+                  left: 3
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: concat
+                        sources:
+                          - query: tokensInZone
+                            zone: available-ARVN:none
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: troops }
+                          - query: tokensInZone
+                            zone: out-of-play-ARVN:none
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: troops }
+                max:
+                  op: min
+                  left: 3
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: concat
+                        sources:
+                          - query: tokensInZone
+                            zone: available-ARVN:none
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: troops }
+                          - query: tokensInZone
+                            zone: out-of-play-ARVN:none
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: troops }
+                options:
+                  query: concat
+                  sources:
+                    - query: tokensInZone
+                      zone: available-ARVN:none
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: troops }
+                    - query: tokensInZone
+                      zone: out-of-play-ARVN:none
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: troops }
+            - chooseN:
+                bind: $troopsToAnchor
+                max:
+                  aggregate:
+                    op: count
+                    query:
+                      query: binding
+                      name: $selectedTroops
+                options:
+                  query: binding
+                  name: $selectedTroops
+            - forEach:
+                bind: $troopToAnchor
+                over:
+                  query: binding
+                  name: $troopsToAnchor
+                effects:
+                  - moveToken:
+                      token: $troopToAnchor
+                      from:
+                        zoneExpr: { ref: tokenZone, token: $troopToAnchor }
+                      to:
+                        zoneExpr: { ref: binding, name: $anchorSpace }
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: binding
+                        name: $adjacentSpace
+                  right: 0
+                then:
+                  - chooseOne:
+                      bind: $selectedAdjacent
+                      options:
+                        query: binding
+                        name: $adjacentSpace
+                  - forEach:
+                      bind: $troop
+                      over:
+                        query: binding
+                        name: $selectedTroops
+                      effects:
+                        - if:
+                            when:
+                              op: not
+                              arg:
+                                op: in
+                                item: { ref: binding, name: $troop }
+                                set: { ref: binding, name: $troopsToAnchor }
+                            then:
+                              - moveToken:
+                                  token: $troop
+                                  from:
+                                    zoneExpr: { ref: tokenZone, token: $troop }
+                                  to:
+                                    zoneExpr: { ref: binding, name: $selectedAdjacent }
+                            else: []
+                else:
+                  - forEach:
+                      bind: $troop
+                      over:
+                        query: binding
+                        name: $selectedTroops
+                      effects:
+                        - if:
+                            when:
+                              op: not
+                              arg:
+                                op: in
+                                item: { ref: binding, name: $troop }
+                                set: { ref: binding, name: $troopsToAnchor }
+                            then:
+                              - moveToken:
+                                  token: $troop
+                                  from:
+                                    zoneExpr: { ref: tokenZone, token: $troop }
+                                  to:
+                                    zoneExpr: { ref: binding, name: $anchorSpace }
+                            else: []
+            - setActivePlayer:
+                player: actor
+            - grantFreeOperation:
+                seat: "1"
+                operationClass: operation
+                actionIds: [sweep]
+                zoneFilter:
+                  op: '=='
+                  left: $zone
+                  right: '{$anchorSpace}'
+            - forEach:
+                bind: $adjSpace
+                over:
+                  query: binding
+                  name: $adjacentSpace
+                effects:
+                  - grantFreeOperation:
+                      seat: "1"
+                      operationClass: operation
+                      actionIds: [sweep]
+                      zoneFilter:
+                        op: '=='
+                        left: $zone
+                        right: '{$adjSpace}'
         shaded:
-          text: "Roll die and remove ARVN Troops based on command fallout."
+          text: "Remove a die roll of ARVN pieces from 1 or 2 adjacent spaces. ARVN Ineligible through next card."
+          eligibilityOverrides:
+            - { target: { kind: seat, seat: '1' }, eligible: false, windowId: make-ineligible }
+          effects:
+            - chooseOne:
+                bind: $anchorSpace
+                options:
+                  query: mapSpaces
+            - chooseN:
+                bind: $adjacentSpace
+                max: 1
+                options:
+                  query: adjacentZones
+                  zone: $anchorSpace
+            - rollRandom:
+                bind: $lossRoll
+                min: 1
+                max: 6
+                in:
+                  - removeByPriority:
+                      budget: { ref: binding, name: $lossRoll }
+                      remainingBind: $remainingLosses
+                      groups:
+                        - bind: arvnPieceInAnchor
+                          over:
+                            query: tokensInZone
+                            zone: $anchorSpace
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                          to:
+                            zoneExpr: available-ARVN:none
+                      in:
+                        - forEach:
+                            bind: $adjSpace
+                            over:
+                              query: binding
+                              name: $adjacentSpace
+                            effects:
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $remainingLosses }, right: 0 }
+                                  then:
+                                    - removeByPriority:
+                                        budget: { ref: binding, name: $remainingLosses }
+                                        remainingBind: $remainingLosses
+                                        groups:
+                                          - bind: arvnPieceInAdjacent
+                                            over:
+                                              query: tokensInZone
+                                              zone: $adjSpace
+                                              filter:
+                                                - { prop: faction, eq: ARVN }
+                                            to:
+                                              zoneExpr: available-ARVN:none
+                                  else: []
       - id: card-119
         title: My Lai
         sideMode: dual

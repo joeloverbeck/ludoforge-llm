@@ -2,6 +2,7 @@ import { effectRuntimeError } from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
+import { resolveBindingTemplate } from './binding-template.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
@@ -63,6 +64,20 @@ const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): b
 
 const lifecycleBudgetOptions = (ctx: EffectContext): MoveExecutionPolicy | undefined =>
   ctx.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: ctx.phaseTransitionBudget };
+
+const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unknown>>): T => {
+  if (typeof value === 'string') {
+    return resolveBindingTemplate(value, bindings) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveTemplateTree(entry, bindings)) as T;
+  }
+  if (value !== null && typeof value === 'object') {
+    const resolvedEntries = Object.entries(value).map(([key, entry]) => [key, resolveTemplateTree(entry, bindings)] as const);
+    return Object.fromEntries(resolvedEntries) as T;
+  }
+  return value;
+};
 
 export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
@@ -133,7 +148,7 @@ export const applyGrantFreeOperation = (
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-    ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+    ...(grant.zoneFilter === undefined ? {} : { zoneFilter: resolveTemplateTree(grant.zoneFilter, ctx.bindings) }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),

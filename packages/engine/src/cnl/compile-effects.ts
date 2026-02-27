@@ -1610,7 +1610,8 @@ function lowerGrantFreeOperationEffect(
 
   let loweredZoneFilter: ConditionAST | undefined;
   if (source.zoneFilter !== undefined) {
-    const lowered = lowerConditionNode(source.zoneFilter, makeConditionContext(context, scope), `${path}.zoneFilter`);
+    const lowered = scope.withBinding('$zone', () =>
+      lowerConditionNode(source.zoneFilter, makeConditionContext(context, scope), `${path}.zoneFilter`));
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value === null) {
       return { value: null, diagnostics };

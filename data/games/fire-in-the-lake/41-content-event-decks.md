@@ -885,7 +885,7 @@ eventDecks:
                   - moveToken:
                       token: $usTroop
                       from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
-                      to: out-of-play-US:none
+                      to: { zoneExpr: out-of-play-US:none }
             # 3. Aid -6
             - addVar: { scope: global, var: aid, delta: -6 }
       - id: card-3
@@ -3520,7 +3520,7 @@ eventDecks:
                         - moveToken:
                             token: tetCard
                             from: played:none
-                            to: leader:none
+                            to: { zoneExpr: leader:none }
                 else:
                   - grantFreeOperation:
                       seat: "3"

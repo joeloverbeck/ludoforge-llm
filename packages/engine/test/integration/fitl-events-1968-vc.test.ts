@@ -81,7 +81,7 @@ describe('FITL 1968 VC-first event-card production spec', () => {
           forEach?: {
             bind?: string;
             limit?: number;
-            effects?: Array<{ moveToken?: { token?: string; from?: string; to?: string } }>;
+            effects?: Array<{ moveToken?: { token?: string; from?: string; to?: { zoneExpr?: string } } }>;
           };
         }
       | undefined;
@@ -89,7 +89,7 @@ describe('FITL 1968 VC-first event-card production spec', () => {
     assert.equal(tetMove?.forEach?.limit, 1);
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.token, 'tetCard');
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.from, 'played:none');
-    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.to, 'leader:none');
+    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.to?.zoneExpr, 'leader:none');
     assert.equal(
       (conditional?.else?.[0] as { grantFreeOperation?: { seat?: string; operationClass?: string; actionIds?: string[] } })?.grantFreeOperation
         ?.seat,

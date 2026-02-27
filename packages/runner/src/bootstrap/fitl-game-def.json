@@ -50533,13 +50533,368 @@
               "ARVN",
               "VC"
             ],
-            "flavorText": "Backchannel diplomacy reshapes leverage."
+            "flavorText": "Operation Menu."
           },
           "unshaded": {
-            "text": "Diplomatic leverage: US pressures Hanoi for concessions."
+            "text": "Remove a die roll of Insurgent pieces total from Cambodia and Laos.",
+            "effects": [
+              {
+                "rollRandom": {
+                  "bind": "$dieRoll",
+                  "min": 1,
+                  "max": 6,
+                  "in": [
+                    {
+                      "chooseN": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.18.unshaded.effects.0.rollRandom.in.0.chooseN",
+                        "bind": "$insurgentPieces",
+                        "options": {
+                          "query": "concat",
+                          "sources": [
+                            {
+                              "query": "tokensInMapSpaces",
+                              "spaceFilter": {
+                                "condition": {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "cambodia"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "laos"
+                                    }
+                                  ]
+                                }
+                              },
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "in",
+                                  "value": [
+                                    "NVA",
+                                    "VC"
+                                  ]
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            },
+                            {
+                              "query": "tokensInMapSpaces",
+                              "spaceFilter": {
+                                "condition": {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "cambodia"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "laos"
+                                    }
+                                  ]
+                                }
+                              },
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "in",
+                                  "value": [
+                                    "NVA",
+                                    "VC"
+                                  ]
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "guerrilla"
+                                }
+                              ]
+                            },
+                            {
+                              "query": "tokensInMapSpaces",
+                              "spaceFilter": {
+                                "condition": {
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "cambodia"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "laos"
+                                    }
+                                  ]
+                                }
+                              },
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "in",
+                                  "value": [
+                                    "NVA",
+                                    "VC"
+                                  ]
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "base"
+                                },
+                                {
+                                  "prop": "tunnel",
+                                  "op": "eq",
+                                  "value": "untunneled"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "max": {
+                          "ref": "binding",
+                          "name": "$dieRoll"
+                        },
+                        "min": 0
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$piece",
+                        "over": {
+                          "query": "binding",
+                          "name": "$insurgentPieces"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$piece",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$piece"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": {
+                                  "concat": [
+                                    "available-",
+                                    {
+                                      "ref": "tokenProp",
+                                      "token": "$piece",
+                                      "prop": "faction"
+                                    },
+                                    ":none"
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Negotiation stall: Insurgents exploit political maneuvering."
+            "text": "NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6.",
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.0.chooseN",
+                  "bind": "$nvaPieces",
+                  "options": {
+                    "query": "tokensInZone",
+                    "zone": "available-NVA:none",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "NVA"
+                      }
+                    ]
+                  },
+                  "max": 2,
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$nvaPiece",
+                  "over": {
+                    "query": "binding",
+                    "name": "$nvaPieces"
+                  },
+                  "effects": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.1.forEach.effects.0.chooseOne",
+                        "bind": "$cambodiaSpace@{$nvaPiece}",
+                        "options": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "==",
+                              "left": {
+                                "ref": "zoneProp",
+                                "zone": "$zone",
+                                "prop": "country"
+                              },
+                              "right": "cambodia"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "moveToken": {
+                        "token": "$nvaPiece",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$nvaPiece"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": {
+                            "ref": "binding",
+                            "name": "$cambodiaSpace@{$nvaPiece}"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.2.chooseN",
+                  "bind": "$usTroops",
+                  "options": {
+                    "query": "concat",
+                    "sources": [
+                      {
+                        "query": "tokensInMapSpaces",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      },
+                      {
+                        "query": "tokensInZone",
+                        "zone": "available-US:none",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      },
+                      {
+                        "query": "tokensInZone",
+                        "zone": "casualties-US:none",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "max": 2,
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usTroop",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usTroops"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$usTroop",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$usTroop"
+                          }
+                        },
+                        "to": "out-of-play-US:none"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "aid",
+                  "delta": -6
+                }
+              }
+            ]
           }
         },
         {

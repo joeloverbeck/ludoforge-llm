@@ -4,6 +4,15 @@ import { describe, it } from 'node:test';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
+const minimalCardDrivenTurnFlow = {
+  cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+  eligibility: { seats: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
+  actionClassByActionId: { pass: 'pass' } as const,
+  optionMatrix: [],
+  passRewards: [],
+  durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+};
+
 describe('compile actions', () => {
   it('lowers action actor/params/pre/cost/effects/limits into GameDef', () => {
     const doc = {
@@ -65,6 +74,74 @@ describe('compile actions', () => {
     const result = compileGameSpecToGameDef(doc);
     assert.equal(result.gameDef, null);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_ACTION_PHASE_DUPLICATE'), true);
+  });
+
+  it('threads freeOperationActionIds through action-effect lowering sequence checks', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-free-op-sequence-context', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            actionClassByActionId: {
+              pass: 'pass' as const,
+              operation: 'operation' as const,
+              limitedOp: 'limitedOperation' as const,
+              grantOps: 'operation' as const,
+            },
+            freeOperationActionIds: ['operation'],
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'operation', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'limitedOp', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        {
+          id: 'grantOps',
+          actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '1',
+                operationClass: 'operation',
+                actionIds: ['limitedOp'],
+                sequence: { chain: 'action-sequence', step: 0 },
+              },
+            },
+            {
+              grantFreeOperation: {
+                seat: '1',
+                operationClass: 'operation',
+                sequence: { chain: 'action-sequence', step: 1 },
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.actions.3.effects.1.grantFreeOperation.sequence',
+      ),
+      true,
+    );
   });
 
   it('fails compile when actor uses non-canonical alias selector token', () => {

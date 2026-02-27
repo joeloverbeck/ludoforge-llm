@@ -1,7 +1,15 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import type { Diagnostic } from '../../src/kernel/diagnostics.js';
+import { lowerConditionNode } from '../../src/cnl/compile-conditions.js';
 import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
+import {
+  buildConditionLoweringContext,
+  buildEffectLoweringContext,
+  lowerEffectsWithDiagnostics,
+  lowerOptionalCondition,
+} from '../../src/cnl/compile-lowering.js';
 import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
@@ -18,6 +26,41 @@ const context: EffectLoweringContext = {
 };
 
 describe('compile-effects lowering', () => {
+  it('builds canonical condition-lowering context and preserves lowering parity', () => {
+    const diagnostics: Diagnostic[] = [];
+    const source = { op: '==', left: { ref: 'binding', name: '$actor' }, right: { ref: 'binding', name: '$actor' } };
+    const sharedContext = {
+      ownershipByBase: context.ownershipByBase,
+      tokenTraitVocabulary: { faction: ['US', 'NVA'] },
+      namedSets: { safeActions: ['pass'] },
+    };
+
+    const loweredViaAdapter = lowerOptionalCondition(source, diagnostics, 'doc.actions.0.pre', sharedContext, ['$actor']);
+    const loweredDirect = lowerConditionNode(source, buildConditionLoweringContext(sharedContext, ['$actor']), 'doc.actions.0.pre');
+
+    assert.deepEqual(loweredViaAdapter, loweredDirect.value);
+    assert.equal(diagnostics.length, 0);
+    assertNoDiagnostics(loweredDirect);
+  });
+
+  it('builds canonical effect-lowering context and preserves lowering parity', () => {
+    const diagnostics: Diagnostic[] = [];
+    const source = [{ draw: { from: 'deck', to: 'hand:$actor', count: 1 } }];
+    const sharedContext = {
+      ownershipByBase: context.ownershipByBase,
+      tokenTraitVocabulary: { faction: ['US', 'NVA'] },
+      namedSets: { safeActions: ['pass'] },
+      freeOperationActionIds: ['limitedOp'],
+    };
+
+    const loweredViaAdapter = lowerEffectsWithDiagnostics(source, diagnostics, 'doc.actions.0.effects', sharedContext, ['$actor']);
+    const loweredDirect = lowerEffectArray(source, buildEffectLoweringContext(sharedContext, ['$actor']), 'doc.actions.0.effects');
+
+    assert.deepEqual(loweredViaAdapter, loweredDirect.value);
+    assert.equal(diagnostics.length, 0);
+    assertNoDiagnostics(loweredDirect);
+  });
+
   it('lowers supported effect nodes deterministically', () => {
     const source = [
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },

@@ -11,6 +11,7 @@ import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, s
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
 import {
+  type EffectLoweringSharedContext,
   lowerActions,
   lowerConstants,
   lowerDerivedMetrics,
@@ -354,18 +355,23 @@ function compileExpandedDoc(
   }
   const freeOperationActionIds =
     sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.freeOperationActionIds : undefined;
+  const loweringContext: EffectLoweringSharedContext = {
+    ownershipByBase,
+    ...(derivedFromAssets.tokenTraitVocabulary == null
+      ? {}
+      : { tokenTraitVocabulary: derivedFromAssets.tokenTraitVocabulary }),
+    ...(namedSets === undefined ? {} : { namedSets }),
+    ...(typeInference === undefined ? {} : { typeInference }),
+    ...(freeOperationActionIds === undefined ? {} : { freeOperationActionIds }),
+  };
 
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(
       resolvedTableRefDoc.setup ?? [],
-      ownershipByBase,
       diagnostics,
       'doc.setup',
+      loweringContext,
       [],
-      derivedFromAssets.tokenTraitVocabulary ?? undefined,
-      namedSets,
-      typeInference,
-      freeOperationActionIds,
     ),
   );
 
@@ -377,12 +383,8 @@ function compileExpandedDoc(
     const turnStructureSection = compileSection(diagnostics, () =>
       lowerTurnStructure(
         rawTurnStructure,
-        ownershipByBase,
         diagnostics,
-        derivedFromAssets.tokenTraitVocabulary ?? undefined,
-        namedSets,
-        typeInference,
-        freeOperationActionIds,
+        loweringContext,
       ),
     );
     turnStructure = turnStructureSection.value;
@@ -394,12 +396,8 @@ function compileExpandedDoc(
       lowerActionPipelines(
         resolvedTableRefDoc.actionPipelines,
         resolvedTableRefDoc.actions,
-        ownershipByBase,
         diagnostics,
-        derivedFromAssets.tokenTraitVocabulary ?? undefined,
-        namedSets,
-        typeInference,
-        freeOperationActionIds,
+        loweringContext,
       ),
     );
     sections.actionPipelines =
@@ -421,12 +419,8 @@ function compileExpandedDoc(
     const actionsSection = compileSection(diagnostics, () =>
       lowerActions(
         rawActions,
-        ownershipByBase,
         diagnostics,
-        derivedFromAssets.tokenTraitVocabulary ?? undefined,
-        namedSets,
-        typeInference,
-        freeOperationActionIds,
+        loweringContext,
       ),
     );
     actions = actionsSection.value;
@@ -436,12 +430,8 @@ function compileExpandedDoc(
   const triggers = compileSection(diagnostics, () =>
     lowerTriggers(
       resolvedTableRefDoc.triggers ?? [],
-      ownershipByBase,
       diagnostics,
-      derivedFromAssets.tokenTraitVocabulary ?? undefined,
-      namedSets,
-      typeInference,
-      freeOperationActionIds,
+      loweringContext,
     ),
   );
   sections.triggers = triggers.failed ? null : triggers.value;
@@ -477,12 +467,9 @@ function compileExpandedDoc(
     const eventDecks = compileSection(diagnostics, () =>
       lowerEventDecks(
         rawEventDecks,
-        ownershipByBase,
         diagnostics,
         'doc.eventDecks',
-        derivedFromAssets.tokenTraitVocabulary ?? undefined,
-        namedSets,
-        freeOperationActionIds,
+        loweringContext,
       ),
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;

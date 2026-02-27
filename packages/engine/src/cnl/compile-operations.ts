@@ -9,13 +9,14 @@ import type {
 import { collectSequentialBindings } from './binder-surface-registry.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
+  type ConditionLoweringSharedContext,
+  type EffectLoweringSharedContext,
   isRecord,
   lowerEffectsWithDiagnostics,
   lowerOptionalCondition,
   missingCapabilityDiagnostic,
   normalizeIdentifier,
 } from './compile-lowering.js';
-import type { TypeInferenceContext } from './type-inference.js';
 
 /** Bindings injected at runtime by the kernel into every action pipeline. */
 const ACTION_PIPELINE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '__freeOperation'];
@@ -23,13 +24,10 @@ const ACTION_PIPELINE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '_
 export function lowerActionPipelines(
   rawPipelines: GameSpecDoc['actionPipelines'],
   rawActions: GameSpecDoc['actions'],
-  ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
-  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
-  namedSets?: Readonly<Record<string, readonly string[]>>,
-  typeInference?: TypeInferenceContext,
-  freeOperationActionIds?: readonly string[],
+  context: EffectLoweringSharedContext,
 ): readonly ActionPipelineDef[] | undefined {
+  const conditionContext: ConditionLoweringSharedContext = context;
   if (rawPipelines === null) {
     return undefined;
   }
@@ -164,13 +162,10 @@ export function lowerActionPipelines(
     if (rawPipeline.applicability !== undefined) {
       const loweredApplicability = lowerOptionalCondition(
         rawPipeline.applicability,
-        ownershipByBase,
-        runtimeBindings,
         diagnostics,
         `${basePath}.applicability`,
-        tokenTraitVocabulary,
-        namedSets,
-        typeInference,
+        conditionContext,
+        runtimeBindings,
       );
       if (loweredApplicability !== undefined && loweredApplicability !== null) {
         applicability = loweredApplicability;
@@ -181,13 +176,10 @@ export function lowerActionPipelines(
     if (rawPipeline.legality !== undefined) {
       const loweredLegality = lowerOptionalCondition(
         rawPipeline.legality,
-        ownershipByBase,
-        runtimeBindings,
         diagnostics,
         `${basePath}.legality`,
-        tokenTraitVocabulary,
-        namedSets,
-        typeInference,
+        conditionContext,
+        runtimeBindings,
       );
       if (loweredLegality !== undefined) {
         legality = loweredLegality;
@@ -198,13 +190,10 @@ export function lowerActionPipelines(
     if (rawPipeline.costValidation !== undefined) {
       const loweredValidate = lowerOptionalCondition(
         rawPipeline.costValidation,
-        ownershipByBase,
-        runtimeBindings,
         diagnostics,
         `${basePath}.costValidation`,
-        tokenTraitVocabulary,
-        namedSets,
-        typeInference,
+        conditionContext,
+        runtimeBindings,
       );
       if (loweredValidate !== undefined) {
         costValidation = loweredValidate;
@@ -270,14 +259,10 @@ export function lowerActionPipelines(
 
     const costEffects = lowerEffectsWithDiagnostics(
       rawPipeline.costEffects,
-      ownershipByBase,
       diagnostics,
       `${basePath}.costEffects`,
+      context,
       runtimeBindings,
-      tokenTraitVocabulary,
-      namedSets,
-      typeInference,
-      freeOperationActionIds,
     );
 
     const rawTargeting = rawPipeline.targeting;
@@ -285,13 +270,10 @@ export function lowerActionPipelines(
     if (rawTargeting.filter !== undefined) {
       const loweredFilter = lowerOptionalCondition(
         rawTargeting.filter,
-        ownershipByBase,
-        runtimeBindings,
         diagnostics,
         `${basePath}.targeting.filter`,
-        tokenTraitVocabulary,
-        namedSets,
-        typeInference,
+        conditionContext,
+        runtimeBindings,
       );
       if (loweredFilter !== undefined && loweredFilter !== null) {
         targetingFilter = loweredFilter;
@@ -311,14 +293,10 @@ export function lowerActionPipelines(
       const stagePath = `${basePath}.stages[${stageIdx}]`;
       const loweredEffects = lowerEffectsWithDiagnostics(
         rawStage.effects ?? [],
-        ownershipByBase,
         diagnostics,
         `${stagePath}.effects`,
+        context,
         accumulatedBindings,
-        tokenTraitVocabulary,
-        namedSets,
-        typeInference,
-        freeOperationActionIds,
       );
       const stageBindings: string[] = [];
       for (const eff of loweredEffects) {

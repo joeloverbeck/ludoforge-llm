@@ -13,6 +13,7 @@ export function lowerEventCards(
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  freeOperationActionIds?: readonly string[],
 ): readonly EventCardDef[] {
   const idFirstIndexByNormalized = new Map<string, number>();
   const explicitOrderFirstIndex = new Map<number, number>();
@@ -67,11 +68,27 @@ export function lowerEventCards(
     const unshaded =
       card.unshaded === undefined
         ? undefined
-        : lowerEventCardSide(card.unshaded, ownershipByBase, diagnostics, `${cardPath}.unshaded`, tokenTraitVocabulary, namedSets);
+        : lowerEventCardSide(
+            card.unshaded,
+            ownershipByBase,
+            diagnostics,
+            `${cardPath}.unshaded`,
+            tokenTraitVocabulary,
+            namedSets,
+            freeOperationActionIds,
+          );
     const shaded =
       card.shaded === undefined
         ? undefined
-        : lowerEventCardSide(card.shaded, ownershipByBase, diagnostics, `${cardPath}.shaded`, tokenTraitVocabulary, namedSets);
+        : lowerEventCardSide(
+            card.shaded,
+            ownershipByBase,
+            diagnostics,
+            `${cardPath}.shaded`,
+            tokenTraitVocabulary,
+            namedSets,
+            freeOperationActionIds,
+          );
 
     return {
       index,
@@ -115,6 +132,7 @@ export function lowerEventDecks(
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  freeOperationActionIds?: readonly string[],
 ): readonly EventDeckDef[] {
   const idFirstIndexByNormalized = new Map<string, number>();
   const lowered = decks.map((deck, index) => {
@@ -137,7 +155,15 @@ export function lowerEventDecks(
       index,
       deck: {
         ...deck,
-        cards: lowerEventCards(deck.cards, ownershipByBase, diagnostics, `${deckPath}.cards`, tokenTraitVocabulary, namedSets),
+        cards: lowerEventCards(
+          deck.cards,
+          ownershipByBase,
+          diagnostics,
+          `${deckPath}.cards`,
+          tokenTraitVocabulary,
+          namedSets,
+          freeOperationActionIds,
+        ),
       },
     };
   });
@@ -160,6 +186,7 @@ export function lowerEventCardSide(
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  freeOperationActionIds?: readonly string[],
 ): NonNullable<EventCardDef['unshaded']> {
   const loweredTargets = lowerEventTargets(
     side.targets,
@@ -180,6 +207,7 @@ export function lowerEventCardSide(
     `${pathPrefix}.effects`,
     tokenTraitVocabulary,
     namedSets,
+    freeOperationActionIds,
   );
   const loweredFreeOperationGrants = lowerEventFreeOperationGrants(
     side.freeOperationGrants,
@@ -198,6 +226,7 @@ export function lowerEventCardSide(
     `${pathPrefix}.lastingEffects`,
     tokenTraitVocabulary,
     namedSets,
+    freeOperationActionIds,
   );
 
   if (side.branches === undefined) {
@@ -262,6 +291,7 @@ export function lowerEventCardSide(
       `${branchPath}.effects`,
       tokenTraitVocabulary,
       namedSets,
+      freeOperationActionIds,
     );
     const loweredBranchFreeOperationGrants = lowerEventFreeOperationGrants(
       branch.freeOperationGrants,
@@ -280,6 +310,7 @@ export function lowerEventCardSide(
       `${branchPath}.lastingEffects`,
       tokenTraitVocabulary,
       namedSets,
+      freeOperationActionIds,
     );
 
     return {
@@ -434,6 +465,7 @@ function lowerOptionalEffects(
   path: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  freeOperationActionIds?: readonly string[],
 ): NonNullable<EventCardDef['unshaded']>['effects'] {
   if (effects === undefined) {
     return undefined;
@@ -444,6 +476,7 @@ function lowerOptionalEffects(
     {
       ownershipByBase,
       bindingScope,
+      ...(freeOperationActionIds === undefined ? {} : { freeOperationActionIds }),
       ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
       ...(namedSets === undefined ? {} : { namedSets }),
     },
@@ -461,6 +494,7 @@ function lowerEventLastingEffects(
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
+  freeOperationActionIds?: readonly string[],
 ): NonNullable<EventCardDef['unshaded']>['lastingEffects'] {
   if (lastingEffects === undefined) {
     return undefined;
@@ -473,6 +507,7 @@ function lowerEventLastingEffects(
       {
         ownershipByBase,
         bindingScope,
+        ...(freeOperationActionIds === undefined ? {} : { freeOperationActionIds }),
         ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
         ...(namedSets === undefined ? {} : { namedSets }),
       },
@@ -488,6 +523,7 @@ function lowerEventLastingEffects(
             {
               ownershipByBase,
               bindingScope,
+              ...(freeOperationActionIds === undefined ? {} : { freeOperationActionIds }),
               ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
               ...(namedSets === undefined ? {} : { namedSets }),
             },

@@ -2,6 +2,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
+import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
+import type { EventCardDef } from '../../src/kernel/types.js';
 import { TURN_FLOW_REQUIRED_KEYS } from '../../src/kernel/turn-flow-contract.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
@@ -13,6 +15,104 @@ const minimalCardDrivenTurnFlow = {
   passRewards: [],
   durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
 };
+
+function createEventDeckSequenceParityDoc(freeOperationActionIds: readonly string[]): GameSpecDoc {
+  const riskySequenceEffects = [
+    {
+      grantFreeOperation: {
+        seat: '1',
+        operationClass: 'operation' as const,
+        actionIds: ['limitedOp'],
+        sequence: { chain: 'event-deck-chain', step: 0 },
+      },
+    },
+    {
+      grantFreeOperation: {
+        seat: '1',
+        operationClass: 'operation' as const,
+        sequence: { chain: 'event-deck-chain', step: 1 },
+      },
+    },
+  ];
+
+  return {
+    ...createEmptyGameSpecDoc(),
+    metadata: { id: 'event-deck-free-op-sequence-parity', players: { min: 2, max: 4 } },
+    zones: [
+      { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: 'discard:none', owner: 'none', visibility: 'public', ordering: 'stack' },
+    ],
+    turnStructure: { phases: [{ id: 'main' }] },
+    turnOrder: {
+      type: 'cardDriven' as const,
+      config: {
+        turnFlow: {
+          ...minimalCardDrivenTurnFlow,
+          actionClassByActionId: {
+            pass: 'pass' as const,
+            operation: 'operation' as const,
+            limitedOp: 'limitedOperation' as const,
+            playEvent: 'event' as const,
+          },
+          freeOperationActionIds,
+        },
+      },
+    },
+    actions: [
+      { id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      { id: 'operation', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      { id: 'limitedOp', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      {
+        id: 'playEvent',
+        actor: 'active',
+        executor: 'actor',
+        phase: ['main'],
+        capabilities: ['cardEvent'],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    eventDecks: [
+      {
+        id: 'core',
+        drawZone: 'deck:none',
+        discardZone: 'discard:none',
+        cards: [
+          {
+            id: 'c1',
+            title: 'C1',
+            sideMode: 'single' as const,
+            unshaded: {
+              effects: riskySequenceEffects,
+            },
+          },
+        ],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+  };
+}
+
+function createEventDeckSequenceParityDocForCard(freeOperationActionIds: readonly string[], card: EventCardDef): GameSpecDoc {
+  const doc = createEventDeckSequenceParityDoc(freeOperationActionIds);
+  const deck = doc.eventDecks?.[0];
+  if (deck === undefined) {
+    throw new Error('Expected eventDecks[0] to exist in parity fixture');
+  }
+  return {
+    ...doc,
+    eventDecks: [
+      {
+        ...deck,
+        cards: [card],
+      },
+    ],
+  };
+}
 
 describe('compile top-level actions/triggers/end conditions', () => {
   it('supports action phase lists for multi-phase action declarations', () => {
@@ -611,6 +711,217 @@ describe('compile top-level actions/triggers/end conditions', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING'
           && diagnostic.path === 'doc.turnOrder.config.turnFlow.freeOperationActionIds.2',
+      ),
+      true,
+    );
+  });
+
+  it('emits sequence viability warning for disjoint event-deck explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(createEventDeckSequenceParityDoc(['operation']));
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.severity === 'warning'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.effects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
+      ),
+      true,
+    );
+  });
+
+  it('does not emit sequence viability warning for overlapping event-deck explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(createEventDeckSequenceParityDoc(['operation', 'limitedOp']));
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.effects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
+      ),
+      false,
+    );
+  });
+
+  it('emits sequence viability warning for shaded event-deck effects with disjoint explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'dual' as const,
+        unshaded: { effects: [] },
+        shaded: {
+          effects: [
+            {
+              grantFreeOperation: {
+                seat: '1',
+                operationClass: 'operation' as const,
+                actionIds: ['limitedOp'],
+                sequence: { chain: 'event-deck-chain-shaded', step: 0 },
+              },
+            },
+            {
+              grantFreeOperation: {
+                seat: '1',
+                operationClass: 'operation' as const,
+                sequence: { chain: 'event-deck-chain-shaded', step: 1 },
+              },
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.shaded.effects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
+      ),
+      true,
+    );
+  });
+
+  it('emits sequence viability warning for branch event-deck effects with disjoint explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          branches: [
+            {
+              id: 'branch-a',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: '1',
+                    operationClass: 'operation' as const,
+                    actionIds: ['limitedOp'],
+                    sequence: { chain: 'event-deck-chain-branch', step: 0 },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: '1',
+                    operationClass: 'operation' as const,
+                    sequence: { chain: 'event-deck-chain-branch', step: 1 },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.branches.0.effects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
+      ),
+      true,
+    );
+  });
+
+  it('emits sequence viability warning for event-deck lasting setupEffects with disjoint explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          lastingEffects: [
+            {
+              id: 'lasting-a',
+              duration: 'nextTurn' as const,
+              setupEffects: [
+                {
+                  grantFreeOperation: {
+                    seat: '1',
+                    operationClass: 'operation' as const,
+                    actionIds: ['limitedOp'],
+                    sequence: { chain: 'event-deck-chain-lasting-setup', step: 0 },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: '1',
+                    operationClass: 'operation' as const,
+                    sequence: { chain: 'event-deck-chain-lasting-setup', step: 1 },
+                  },
+                },
+              ],
+              teardownEffects: [],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.lastingEffects.0.setupEffects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
+      ),
+      true,
+    );
+  });
+
+  it('emits sequence viability warning for event-deck lasting teardownEffects with disjoint explicit/default action domains', () => {
+    const result = compileGameSpecToGameDef(
+      createEventDeckSequenceParityDocForCard(['operation'], {
+        id: 'c1',
+        title: 'C1',
+        sideMode: 'single' as const,
+        unshaded: {
+          lastingEffects: [
+            {
+              id: 'lasting-a',
+              duration: 'nextTurn' as const,
+              setupEffects: [],
+              teardownEffects: [
+                {
+                  grantFreeOperation: {
+                    seat: '1',
+                    operationClass: 'operation' as const,
+                    actionIds: ['limitedOp'],
+                    sequence: { chain: 'event-deck-chain-lasting-teardown', step: 0 },
+                  },
+                },
+                {
+                  grantFreeOperation: {
+                    seat: '1',
+                    operationClass: 'operation' as const,
+                    sequence: { chain: 'event-deck-chain-lasting-teardown', step: 1 },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.lastingEffects.0.teardownEffects.1.grantFreeOperation.sequence'
+          && diagnostic.message.includes('non-overlapping actionIds'),
       ),
       true,
     );

@@ -482,6 +482,7 @@ function compileExpandedDoc(
         'doc.eventDecks',
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
+        freeOperationActionIds,
       ),
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;

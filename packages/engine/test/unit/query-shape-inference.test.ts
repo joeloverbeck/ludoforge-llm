@@ -1,24 +1,68 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import type { OptionsQuery } from '../../src/kernel/types.js';
 import {
   areSourceAndAnchorShapesCompatible,
   inferQueryRuntimeShapes,
+  type QueryRuntimeShape,
   inferValueRuntimeShapes,
 } from '../../src/kernel/query-shape-inference.js';
+import { inferQueryRuntimeShapes as inferCanonicalQueryRuntimeShapesSet } from '../../src/kernel/query-runtime-shapes.js';
 
 describe('query shape inference', () => {
-  it('infers query runtime shapes deterministically for nested queries', () => {
-    const shapes = inferQueryRuntimeShapes({
+  it('classifies every leaf OptionsQuery variant runtime shape', () => {
+    const cases: readonly [OptionsQuery, readonly QueryRuntimeShape[]][] = [
+      [{ query: 'tokensInZone', zone: 'deck:none' }, ['token']],
+      [{ query: 'assetRows', tableId: 'scores' }, ['object']],
+      [{ query: 'tokensInMapSpaces' }, ['token']],
+      [{ query: 'intsInRange', min: 1, max: 3 }, ['number']],
+      [{ query: 'intsInVarRange', var: 'moves' }, ['number']],
+      [{ query: 'enums', values: ['a'] }, ['string']],
+      [{ query: 'globalMarkers' }, ['string']],
+      [{ query: 'players' }, ['number']],
+      [{ query: 'zones' }, ['string']],
+      [{ query: 'mapSpaces' }, ['string']],
+      [{ query: 'adjacentZones', zone: 'deck:none' }, ['string']],
+      [{ query: 'tokensInAdjacentZones', zone: 'deck:none' }, ['token']],
+      [{ query: 'connectedZones', zone: 'deck:none' }, ['string']],
+      [{ query: 'binding', name: '$picked' }, ['unknown']],
+    ];
+
+    for (const [query, expected] of cases) {
+      assert.deepEqual(inferQueryRuntimeShapes(query), expected);
+    }
+  });
+
+  it('infers query runtime shapes deterministically for recursive queries with first-seen dedupe', () => {
+    const query = {
       query: 'concat',
       sources: [
+        {
+          query: 'nextInOrderByCondition',
+          source: { query: 'tokensInMapSpaces' },
+          from: 1,
+          bind: '$token',
+          where: { op: '==', left: 1, right: 1 },
+        },
+        { query: 'assetRows', tableId: 'scores' },
+        {
+          query: 'concat',
+          sources: [
+            { query: 'zones' },
+            { query: 'tokensInZone', zone: 'deck:none' },
+            { query: 'binding', name: '$picked' },
+          ],
+        },
         { query: 'players' },
-        { query: 'enums', values: ['a'] },
-        { query: 'players' },
+        { query: 'assetRows', tableId: 'scores' },
       ],
-    });
+    } as const satisfies OptionsQuery;
 
-    assert.deepEqual(shapes, ['number', 'string']);
+    const shapes = inferQueryRuntimeShapes(query);
+
+    assert.deepEqual(shapes, ['token', 'object', 'string', 'unknown', 'number']);
+    assert.deepEqual(shapes, [...inferCanonicalQueryRuntimeShapesSet(query)]);
   });
 
   it('infers value runtime shapes for refs and conditional expressions', () => {

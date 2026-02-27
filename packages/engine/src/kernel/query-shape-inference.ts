@@ -1,7 +1,7 @@
 import type { GameDef, OptionsQuery, RuntimeTableContract, ValueExpr } from './types.js';
-import { inferLeafOptionsQueryContract, type QueryRuntimeShape as SharedQueryRuntimeShape } from './query-kind-contract.js';
+import { inferQueryRuntimeShapes as inferCanonicalQueryRuntimeShapesSet, type QueryRuntimeShape } from './query-runtime-shapes.js';
 
-export type QueryRuntimeShape = SharedQueryRuntimeShape;
+export type { QueryRuntimeShape } from './query-runtime-shapes.js';
 export type ValueRuntimeShape = 'number' | 'string' | 'boolean' | 'unknown';
 
 export interface StaticValueShapeContext {
@@ -19,16 +19,7 @@ export function dedupeValueRuntimeShapes(shapes: readonly ValueRuntimeShape[]): 
 }
 
 export function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShape[] {
-  switch (query.query) {
-    case 'concat': {
-      const nested = query.sources.flatMap((source) => inferQueryRuntimeShapes(source));
-      return dedupeQueryRuntimeShapes(nested);
-    }
-    case 'nextInOrderByCondition':
-      return inferQueryRuntimeShapes(query.source);
-    default:
-      return [inferLeafOptionsQueryContract(query).runtimeShape];
-  }
+  return [...inferCanonicalQueryRuntimeShapesSet(query)];
 }
 
 export function inferValueRuntimeShapes(

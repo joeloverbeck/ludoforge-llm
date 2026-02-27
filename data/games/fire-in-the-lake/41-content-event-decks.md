@@ -1102,9 +1102,79 @@ eventDecks:
           seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Field improvisation expands helicopter mobility."
         unshaded:
-          text: "US mobility surge: redeploy Troops to contested spaces."
+          text: "US moves up to 3 US Troops from out of play to Available or South Vietnam, or from the map to Available."
+          effects:
+            - chooseN:
+                bind: $usTroops
+                options:
+                  query: concat
+                  sources:
+                    - query: tokensInZone
+                      zone: out-of-play-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    - query: tokensInMapSpaces
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                min: 0
+                max: 3
+            - forEach:
+                bind: $usTroop
+                over: { query: binding, name: $usTroops }
+                effects:
+                  - if:
+                      when: { op: '==', left: { ref: tokenZone, token: $usTroop }, right: out-of-play-US:none }
+                      then:
+                        - chooseOne:
+                            bind: '$oopTroopDestination@{$usTroop}'
+                            options: { query: enums, values: ['available-US:none', 'south-vietnam-map'] }
+                        - if:
+                            when: { op: '==', left: { ref: binding, name: '$oopTroopDestination@{$usTroop}' }, right: 'available-US:none' }
+                            then:
+                              - moveToken:
+                                  token: $usTroop
+                                  from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                                  to: { zoneExpr: available-US:none }
+                            else:
+                              - chooseOne:
+                                  bind: '$southVietnamSpace@{$usTroop}'
+                                  options:
+                                    query: mapSpaces
+                                    filter:
+                                      op: '=='
+                                      left: { ref: zoneProp, zone: $zone, prop: country }
+                                      right: southVietnam
+                              - moveToken:
+                                  token: $usTroop
+                                  from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                                  to: { zoneExpr: { ref: binding, name: '$southVietnamSpace@{$usTroop}' } }
+                      else:
+                        - moveToken:
+                            token: $usTroop
+                            from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                            to: { zoneExpr: available-US:none }
         shaded:
-          text: "Operational overreach: movement strains local control."
+          text: "US takes 3 of its Troops from the map out of play."
+          effects:
+            - chooseN:
+                bind: $usMapTroops
+                options:
+                  query: tokensInMapSpaces
+                  filter:
+                    - { prop: faction, eq: US }
+                    - { prop: type, eq: troops }
+                min: 0
+                max: 3
+            - forEach:
+                bind: $usTroop
+                over: { query: binding, name: $usMapTroops }
+                effects:
+                  - moveToken:
+                      token: $usTroop
+                      from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                      to: { zoneExpr: out-of-play-US:none }
       - id: card-10
         title: Rolling Thunder
         sideMode: dual

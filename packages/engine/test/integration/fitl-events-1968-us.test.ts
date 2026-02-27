@@ -12,6 +12,10 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import {
+  applyMoveWithResolvedDecisionIds,
+  type DecisionOverrideRule,
+} from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -43,6 +47,16 @@ const makeToken = (id: string, type: string, faction: string): Token => ({
   props: { faction, type },
 });
 
+const withNeutralSupportMarkers = (state: GameState): GameState['markers'] =>
+  Object.fromEntries(
+    Object.entries(state.markers).map(([zoneId, zoneMarkers]) => [
+      zoneId,
+      zoneMarkers.supportOpposition === undefined
+        ? zoneMarkers
+        : { ...zoneMarkers, supportOpposition: 'neutral' },
+    ]),
+  ) as GameState['markers'];
+
 const setupPeaceTalksState = (
   def: GameDef,
   overrides: {
@@ -64,15 +78,6 @@ const setupPeaceTalksState = (
     { length: overrides.availableUsBases ?? 0 },
     (_, index) => makeToken(`us-base-${index}`, 'base', 'US'),
   );
-  const markersWithNeutralSupport = Object.fromEntries(
-    Object.entries(baseState.markers).map(([zoneId, zoneMarkers]) => [
-      zoneId,
-      zoneMarkers.supportOpposition === undefined
-        ? zoneMarkers
-        : { ...zoneMarkers, supportOpposition: 'neutral' },
-    ]),
-  ) as GameState['markers'];
-
   return {
     ...baseState,
     activePlayer: asPlayerId(0),
@@ -84,11 +89,34 @@ const setupPeaceTalksState = (
       linebacker11Allowed: false,
       linebacker11SupportAvailable: 0,
     },
-    markers: markersWithNeutralSupport,
+    markers: withNeutralSupportMarkers(baseState),
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-3', 'card', 'none')],
       'available-US:none': [...availableUsTroops, ...availableUsBases],
+    },
+  };
+};
+
+const setupPsychedelicCookieState = (
+  def: GameDef,
+  overrides: {
+    readonly zoneTokens?: Readonly<Record<string, readonly Token[]>>;
+  },
+): GameState => {
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+  const baseState = clearAllZones(initialState(def, 196809, 4).state);
+  return {
+    ...baseState,
+    activePlayer: asPlayerId(0),
+    turnOrderState: { type: 'roundRobin' },
+    markers: withNeutralSupportMarkers(baseState),
+    zones: {
+      ...baseState.zones,
+      [eventDeck!.discardZone]: [makeToken('card-9', 'card', 'none')],
+      ...overrides.zoneTokens,
     },
   };
 };
@@ -100,6 +128,23 @@ const findPeaceTalksMove = (def: GameDef, state: GameState, side: 'unshaded' | '
       move.params.side === side &&
       (move.params.eventCardId === undefined || move.params.eventCardId === 'card-3'),
   );
+
+const findPsychedelicCookieMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded') =>
+  legalMoves(def, state).find(
+    (move) =>
+      String(move.actionId) === 'event' &&
+      move.params.side === side &&
+      (move.params.eventCardId === undefined || move.params.eventCardId === 'card-9'),
+  );
+
+const countTokens = (
+  state: GameState,
+  zoneId: string,
+  predicate: (token: Token) => boolean,
+): number => (state.zones[zoneId] ?? []).filter((token) => predicate(token)).length;
+
+const usSupportAvailableScoreWithNeutralSupport = (state: GameState): number =>
+  countTokens(state, 'available-US:none', (token) => token.props.faction === 'US' && (token.type === 'troops' || token.type === 'base'));
 
 describe('FITL 1968 US-first event-card production spec', () => {
   it('compiles all 12 US-first 1968 cards with dual side metadata invariants', () => {
@@ -407,6 +452,160 @@ describe('FITL 1968 US-first event-card production spec', () => {
 
     // Effect 5: addVar for Aid -6
     assert.deepEqual(shadedEffects[4], { addVar: { scope: 'global', var: 'aid', delta: -6 } });
+  });
+
+  it('encodes card 9 (Psychedelic Cookie) with explicit unshaded/shaded troop-routing effects', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-9');
+    assert.notEqual(card, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      'US moves up to 3 US Troops from out of play to Available or South Vietnam, or from the map to Available.',
+    );
+    assert.equal(card?.shaded?.text, 'US takes 3 of its Troops from the map out of play.');
+
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.equal(unshadedEffects.length, 2, 'card-9 unshaded should define choose+forEach routing');
+    const unshadedChooseN = (unshadedEffects[0] as { chooseN?: { bind?: string; options?: { query?: string; sources?: unknown[] }; max?: number } }).chooseN;
+    assert.notEqual(unshadedChooseN, undefined);
+    assert.equal(unshadedChooseN?.bind, '$usTroops');
+    assert.equal(unshadedChooseN?.options?.query, 'concat');
+    assert.equal(unshadedChooseN?.options?.sources?.length, 2);
+    assert.equal(unshadedChooseN?.max, 3);
+
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.equal(shadedEffects.length, 2, 'card-9 shaded should define choose+forEach routing');
+    const shadedChooseN = (shadedEffects[0] as { chooseN?: { bind?: string; options?: { query?: string }; max?: number } }).chooseN;
+    assert.notEqual(shadedChooseN, undefined);
+    assert.equal(shadedChooseN?.bind, '$usMapTroops');
+    assert.equal(shadedChooseN?.options?.query, 'tokensInMapSpaces');
+    assert.equal(shadedChooseN?.max, 3);
+  });
+
+  it('applies card-9 unshaded with mixed routing and updates Support+Available score when troops enter Available', () => {
+    const def = compileDef();
+    const setup = setupPsychedelicCookieState(def, {
+      zoneTokens: {
+        'out-of-play-US:none': [
+          makeToken('us-oop-a', 'troops', 'US'),
+          makeToken('us-oop-b', 'troops', 'US'),
+        ],
+        'available-US:none': [makeToken('us-av-0', 'troops', 'US')],
+        'hue:none': [makeToken('us-map-a', 'troops', 'US')],
+        'saigon:none': [makeToken('us-map-b', 'troops', 'US')],
+      },
+    });
+    const move = findPsychedelicCookieMove(def, setup, 'unshaded');
+    assert.notEqual(move, undefined, 'Expected unshaded Psychedelic Cookie event move');
+
+    const scoreBefore = usSupportAvailableScoreWithNeutralSupport(setup);
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$usTroops' || request.decisionId.includes('usTroops'),
+        value: [asTokenId('us-oop-a'), asTokenId('us-oop-b'), asTokenId('us-map-a')],
+      },
+      {
+        when: (request) => request.name.includes('oopTroopDestination') && request.decisionId.includes('us-oop-a'),
+        value: 'available-US:none',
+      },
+      {
+        when: (request) => request.name.includes('oopTroopDestination') && request.decisionId.includes('us-oop-b'),
+        value: 'south-vietnam-map',
+      },
+      {
+        when: (request) => request.name.includes('southVietnamSpace') && request.decisionId.includes('us-oop-b'),
+        value: 'saigon:none',
+      },
+    ];
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+    const scoreAfter = usSupportAvailableScoreWithNeutralSupport(final);
+
+    assert.equal(
+      countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      3,
+      'Available US troops should increase by exactly 2',
+    );
+    assert.equal(
+      countTokens(final, 'out-of-play-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Out-of-play US troops should be emptied by selected moves',
+    );
+    assert.equal(
+      countTokens(final, 'hue:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected map troop should move from map to Available',
+    );
+    assert.equal(
+      countTokens(final, 'saigon:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      2,
+      'One out-of-play troop should move into selected South Vietnam map space',
+    );
+    assert.equal(scoreAfter - scoreBefore, 2, 'Support+Available score should rise by troops moved into Available');
+  });
+
+  it('applies card-9 shaded from map only and leaves Support+Available score unchanged', () => {
+    const def = compileDef();
+    const setup = setupPsychedelicCookieState(def, {
+      zoneTokens: {
+        'out-of-play-US:none': [makeToken('us-oop-0', 'troops', 'US')],
+        'available-US:none': [makeToken('us-av-0', 'troops', 'US'), makeToken('us-av-1', 'troops', 'US')],
+        'hue:none': [makeToken('us-map-a', 'troops', 'US'), makeToken('us-map-b', 'troops', 'US')],
+        'saigon:none': [makeToken('us-map-c', 'troops', 'US'), makeToken('us-map-d', 'troops', 'US')],
+      },
+    });
+    const move = findPsychedelicCookieMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected shaded Psychedelic Cookie event move');
+
+    const scoreBefore = usSupportAvailableScoreWithNeutralSupport(setup);
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$usMapTroops' || request.decisionId.includes('usMapTroops'),
+        value: [asTokenId('us-map-a'), asTokenId('us-map-b'), asTokenId('us-map-c')],
+      },
+    ];
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+    const scoreAfter = usSupportAvailableScoreWithNeutralSupport(final);
+
+    assert.equal(
+      countTokens(final, 'out-of-play-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      4,
+      'Out-of-play US troops should increase by exactly 3 from map removals',
+    );
+    assert.equal(
+      countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      2,
+      'Available US troops should remain unchanged for shaded map-to-out-of-play routing',
+    );
+    assert.equal(
+      countTokens(final, 'hue:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected map troops should be removed from originating map spaces',
+    );
+    assert.equal(
+      countTokens(final, 'saigon:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      1,
+      'Only one unselected US map troop should remain',
+    );
+    assert.equal(scoreAfter, scoreBefore, 'Support+Available score should not change when no troop enters/exits Available');
+  });
+
+  it('gracefully resolves card-9 when no eligible US troops exist for either side', () => {
+    const def = compileDef();
+    const setup = setupPsychedelicCookieState(def, { zoneTokens: {} });
+    const unshaded = findPsychedelicCookieMove(def, setup, 'unshaded');
+    const shaded = findPsychedelicCookieMove(def, setup, 'shaded');
+    assert.notEqual(unshaded, undefined, 'Expected unshaded event move even with no eligible troops');
+    assert.notEqual(shaded, undefined, 'Expected shaded event move even with no eligible troops');
+
+    const afterUnshaded = applyMoveWithResolvedDecisionIds(def, setup, unshaded!).state;
+    const afterShaded = applyMoveWithResolvedDecisionIds(def, setup, shaded!).state;
+    assert.deepEqual(afterUnshaded.zones, setup.zones, 'Unshaded should be a no-op when no US troops are eligible');
+    assert.deepEqual(afterShaded.zones, setup.zones, 'Shaded should be a no-op when no US troops are eligible');
   });
 
   it('keeps card 27 (Phoenix Program) unchanged as a non-regression anchor', () => {

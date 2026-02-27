@@ -433,3 +433,32 @@ function collectSequentialBindingsFromEffectArray(effects: readonly unknown[]): 
 export const DECLARED_BINDER_EFFECT_KINDS: readonly SupportedEffectKind[] = SUPPORTED_EFFECT_KINDS.filter(
   (kind) => EFFECT_BINDER_SURFACES[kind].declaredBinderPaths.length > 0,
 );
+
+export interface MacroOriginNodeBindingAnnotationSpec {
+  readonly effectKind: SupportedEffectKind;
+  readonly bindFields: readonly string[];
+}
+
+export interface ReduceMacroOriginBindingAnnotationSpec {
+  readonly bindField: string;
+  readonly macroOriginField: string;
+}
+
+export const MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS = [
+  { effectKind: 'forEach', bindFields: ['bind'] },
+  { effectKind: 'let', bindFields: ['bind'] },
+  { effectKind: 'bindValue', bindFields: ['bind'] },
+  { effectKind: 'chooseOne', bindFields: ['bind'] },
+  { effectKind: 'chooseN', bindFields: ['bind'] },
+  { effectKind: 'rollRandom', bindFields: ['bind'] },
+  { effectKind: 'transferVar', bindFields: ['actualBind'] },
+  { effectKind: 'evaluateSubset', bindFields: ['subsetBind', 'resultBind', 'bestSubsetBind'] },
+] as const satisfies readonly MacroOriginNodeBindingAnnotationSpec[];
+
+export const REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS = [
+  { bindField: 'itemBind', macroOriginField: 'itemMacroOrigin' },
+  { bindField: 'accBind', macroOriginField: 'accMacroOrigin' },
+  { bindField: 'resultBind', macroOriginField: 'resultMacroOrigin' },
+] as const satisfies readonly ReduceMacroOriginBindingAnnotationSpec[];
+
+export const REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS = ['bind'] as const;

@@ -2,6 +2,9 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
   collectBinderSurfaceStringSites,
   collectDeclaredBinderCandidates,
+  MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS,
+  REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS,
+  REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS,
   rewriteBinderSurfaceStringsInNode,
   type StringSite,
 } from './binder-surface-registry.js';
@@ -823,23 +826,6 @@ function bindingStem(bindingName: string): string {
   return bindingName.startsWith('$') ? bindingName.slice(1) : bindingName;
 }
 
-const BINDING_ORIGIN_EFFECT_SPECS: ReadonlyArray<readonly [string, readonly string[]]> = [
-  ['forEach', ['bind']],
-  ['let', ['bind']],
-  ['bindValue', ['bind']],
-  ['chooseOne', ['bind']],
-  ['chooseN', ['bind']],
-  ['rollRandom', ['bind']],
-  ['transferVar', ['actualBind']],
-];
-
-const EVALUATE_SUBSET_BIND_FIELDS: readonly string[] = ['subsetBind', 'resultBind', 'bestSubsetBind'];
-const REDUCE_BIND_ORIGIN_FIELDS: ReadonlyArray<readonly [string, string]> = [
-  ['itemBind', 'itemMacroOrigin'],
-  ['accBind', 'accMacroOrigin'],
-  ['resultBind', 'resultMacroOrigin'],
-];
-
 function annotateNodeMacroOrigin(
   effectNode: Record<string, unknown>,
   origin: MacroBindingOrigin,
@@ -905,7 +891,11 @@ function annotateRemoveByPriorityMacroOrigin(
       if (!isRecord(group)) {
         return group;
       }
-      const origin = findFirstMacroOriginByBindFields(group, ['bind'], originByBinding);
+      const origin = findFirstMacroOriginByBindFields(
+        group,
+        REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS,
+        originByBinding,
+      );
       if (origin === undefined) {
         return group;
       }
@@ -983,7 +973,7 @@ function annotateReduceMacroOrigins(
   let fieldsChanged = false;
   let foundAnyOrigin = false;
 
-  for (const [bindField, macroOriginField] of REDUCE_BIND_ORIGIN_FIELDS) {
+  for (const { bindField, macroOriginField } of REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS) {
     const origin = findFirstMacroOriginByBindFields(reduce, [bindField], originByBinding);
     if (origin === undefined) {
       continue;
@@ -1044,8 +1034,8 @@ function annotateControlFlowMacroOrigins(
     changed = true;
   }
 
-  for (const [effectKey, bindFields] of BINDING_ORIGIN_EFFECT_SPECS) {
-    const annotation = annotateEffectMacroOrigin(rewrittenNode, effectKey, bindFields, originByBinding);
+  for (const spec of MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS) {
+    const annotation = annotateEffectMacroOrigin(rewrittenNode, spec.effectKind, spec.bindFields, originByBinding);
     if (annotation.changed) {
       rewrittenNode = annotation.node;
       changed = true;
@@ -1055,17 +1045,6 @@ function annotateControlFlowMacroOrigins(
   const removeByPriorityAnnotation = annotateRemoveByPriorityMacroOrigin(rewrittenNode, originByBinding);
   if (removeByPriorityAnnotation.changed) {
     rewrittenNode = removeByPriorityAnnotation.node;
-    changed = true;
-  }
-
-  const evaluateSubsetAnnotation = annotateEffectMacroOrigin(
-    rewrittenNode,
-    'evaluateSubset',
-    EVALUATE_SUBSET_BIND_FIELDS,
-    originByBinding,
-  );
-  if (evaluateSubsetAnnotation.changed) {
-    rewrittenNode = evaluateSubsetAnnotation.node;
     changed = true;
   }
 

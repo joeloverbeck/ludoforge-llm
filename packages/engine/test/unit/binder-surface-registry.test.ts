@@ -9,7 +9,9 @@ import {
   collectSequentialBindings,
   DECLARED_BINDER_EFFECT_KINDS,
   EFFECT_BINDER_SURFACES,
+  MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS,
   NON_EFFECT_BINDER_REFERENCER_SURFACES,
+  REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS,
   rewriteBinderSurfaceStringsInNode,
 } from '../../src/cnl/binder-surface-registry.js';
 import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/cnl/binder-surface-contract.js';
@@ -90,6 +92,48 @@ describe('binder-surface-registry', () => {
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
       ['bindValue', 'chooseN', 'chooseOne', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom', 'transferVar'],
     );
+  });
+
+  it('tracks node-level macro-origin annotation effect kinds explicitly', () => {
+    assert.deepEqual(
+      [...MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS]
+        .map((spec) => spec.effectKind)
+        .sort(),
+      ['bindValue', 'chooseN', 'chooseOne', 'evaluateSubset', 'forEach', 'let', 'rollRandom', 'transferVar'],
+    );
+  });
+
+  it('keeps node-level macro-origin annotation bind fields aligned with declared binder paths', () => {
+    for (const spec of MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS) {
+      const declaredLeafFields = new Set(
+        EFFECT_BINDER_SURFACES[spec.effectKind].declaredBinderPaths
+          .map((path) => path[path.length - 1])
+          .filter((segment): segment is string => typeof segment === 'string'),
+      );
+      for (const bindField of spec.bindFields) {
+        assert.equal(
+          declaredLeafFields.has(bindField),
+          true,
+          `${spec.effectKind}.${bindField} must be declared in EFFECT_BINDER_SURFACES`,
+        );
+      }
+    }
+  });
+
+  it('keeps reduce macro-origin binder mappings aligned with declared binder paths', () => {
+    const reduceDeclaredLeafFields = new Set(
+      EFFECT_BINDER_SURFACES.reduce.declaredBinderPaths
+        .map((path) => path[path.length - 1])
+        .filter((segment): segment is string => typeof segment === 'string'),
+    );
+    for (const spec of REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS) {
+      assert.equal(
+        reduceDeclaredLeafFields.has(spec.bindField),
+        true,
+        `reduce.${spec.bindField} must be declared in EFFECT_BINDER_SURFACES`,
+      );
+      assert.equal(spec.macroOriginField.endsWith('MacroOrigin'), true);
+    }
   });
 
   it('defines nested sequential scope metadata for scoped exporters', () => {

@@ -40,11 +40,17 @@ describe('validateGameSpec structural rules', () => {
       ...createStructurallyValidDoc(),
       setup: [
         {
-          forEach: {
-            bind: '$p',
-            macroOrigin: { macroId: 'authored', stem: 'setup' },
-            over: { query: 'players' },
-            effects: [],
+          removeByPriority: {
+            budget: 1,
+            macroOrigin: { macroId: 'authored', stem: 'setup-root' },
+            groups: [
+              {
+                bind: '$setupTarget',
+                macroOrigin: { macroId: 'authored', stem: 'setup-group' },
+                over: { query: 'tokensInZone', zone: 'board' },
+                to: 'discard',
+              },
+            ],
           },
         },
       ],
@@ -54,11 +60,17 @@ describe('validateGameSpec structural rules', () => {
             id: 'main',
             onEnter: [
               {
-                forEach: {
-                  bind: '$p',
-                  macroOrigin: { macroId: 'authored', stem: 'onEnter' },
-                  over: { query: 'players' },
-                  effects: [],
+                removeByPriority: {
+                  budget: 1,
+                  macroOrigin: { macroId: 'authored', stem: 'on-enter-root' },
+                  groups: [
+                    {
+                      bind: '$turnTarget',
+                      macroOrigin: { macroId: 'authored', stem: 'on-enter-group' },
+                      over: { query: 'tokensInZone', zone: 'board' },
+                      to: 'discard',
+                    },
+                  ],
                 },
               },
             ],
@@ -113,13 +125,21 @@ describe('validateGameSpec structural rules', () => {
     const macroOriginDiagnostics = diagnostics.filter(
       (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
     );
-    assert.equal(macroOriginDiagnostics.length, 6);
+    assert.equal(macroOriginDiagnostics.length, 8);
     assert.equal(
-      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.forEach.macroOrigin'),
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.removeByPriority.macroOrigin'),
       true,
     );
     assert.equal(
-      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.turnStructure.phases.0.onEnter.0.forEach.macroOrigin'),
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.removeByPriority.groups.0.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.turnStructure.phases.0.onEnter.0.removeByPriority.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.turnStructure.phases.0.onEnter.0.removeByPriority.groups.0.macroOrigin'),
       true,
     );
     assert.equal(

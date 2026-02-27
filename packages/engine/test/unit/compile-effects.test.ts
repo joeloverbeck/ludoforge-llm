@@ -277,6 +277,7 @@ describe('compile-effects lowering', () => {
         {
           removeByPriority: {
             budget: 1,
+            macroOrigin: { stem: 'target' },
             groups: [
               {
                 bind: '$target',
@@ -306,6 +307,14 @@ describe('compile-effects lowering', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
           && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.2.removeByPriority.macroOrigin',
       ),
       true,
     );
@@ -345,6 +354,7 @@ describe('compile-effects lowering', () => {
         {
           removeByPriority: {
             budget: 1,
+            macroOrigin: { macroId: 'cleanup', stem: 'target' },
             groups: [
               {
                 bind: '$target',
@@ -374,6 +384,14 @@ describe('compile-effects lowering', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
           && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.2.removeByPriority.macroOrigin',
       ),
       true,
     );

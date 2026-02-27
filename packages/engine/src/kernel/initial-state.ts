@@ -68,6 +68,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
     rng,
     activePlayer: withInitialActivePlayer.activePlayer,
     actorPlayer: withInitialActivePlayer.activePlayer,
+    decisionAuthority: { source: 'engineRuntime', player: withInitialActivePlayer.activePlayer },
     bindings: {},
     runtimeTableIndex,
     moveParams: {},

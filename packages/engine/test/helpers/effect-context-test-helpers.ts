@@ -23,6 +23,7 @@ interface EffectContextTestOptions {
   readonly rng?: Rng;
   readonly activePlayer?: PlayerId;
   readonly actorPlayer?: PlayerId;
+  readonly decisionAuthorityPlayer?: PlayerId;
   readonly bindings?: Readonly<Record<string, unknown>>;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams?: Readonly<Record<string, MoveParamValue>>;
@@ -48,6 +49,7 @@ const makeEffectContext = ({
   rng = createRng(1n),
   activePlayer = asPlayerId(0),
   actorPlayer = activePlayer,
+  decisionAuthorityPlayer = activePlayer,
   bindings = {},
   moveParams = {},
   mode,
@@ -69,6 +71,7 @@ const makeEffectContext = ({
   rng,
   activePlayer,
   actorPlayer,
+  decisionAuthority: { source: 'engineRuntime', player: decisionAuthorityPlayer },
   bindings,
   ...(runtimeTableIndex === undefined ? {} : { runtimeTableIndex }),
   moveParams,

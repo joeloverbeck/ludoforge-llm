@@ -542,6 +542,11 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
+export interface DecisionAuthorityContext {
+  readonly source: 'engineRuntime';
+  readonly player: PlayerId;
+}
+
 export interface ChoiceCompleteRequest {
   readonly kind: 'complete';
   readonly complete: true;
@@ -805,7 +810,6 @@ export interface ExecutionOptions {
   readonly trace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
-  readonly decisionPlayer?: PlayerId;
 }
 
 export interface ExecutionCollector {

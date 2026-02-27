@@ -89,7 +89,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const chooser = effect.chooseOne.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionId);
-  const providedDecisionPlayer = ctx.decisionPlayer ?? ctx.activePlayer;
+  const providedDecisionPlayer = ctx.decisionAuthority.player;
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
     throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
@@ -183,7 +183,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const chooser = chooseN.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionId);
-  const providedDecisionPlayer = ctx.decisionPlayer ?? ctx.activePlayer;
+  const providedDecisionPlayer = ctx.decisionAuthority.player;
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
       throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN must use either exact n or range max/min cardinality', {

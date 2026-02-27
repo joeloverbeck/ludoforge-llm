@@ -273,12 +273,11 @@ const validateDecisionSequenceForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  options?: { readonly allowIncomplete?: boolean; readonly decisionPlayer?: GameState['activePlayer'] },
+  options?: { readonly allowIncomplete?: boolean },
 ): void => {
   try {
     const result = resolveMoveDecisionSequence(def, state, move, {
       choose: () => undefined,
-      ...(options?.decisionPlayer === undefined ? {} : { decisionPlayer: options.decisionPlayer }),
     });
     if (result.complete) {
       return;
@@ -538,7 +537,6 @@ const validateMove = (
   state: GameState,
   move: Move,
   cachedRuntime?: GameDefRuntime,
-  options?: ExecutionOptions,
 ): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
@@ -573,7 +571,6 @@ const validateMove = (
   }
   validateDecisionSequenceForMove(def, state, move, {
     allowIncomplete,
-    decisionPlayer: options?.decisionPlayer ?? preflight.executionPlayer,
   });
   validateTurnFlowWindowAccess(def, state, move);
   return {
@@ -655,7 +652,7 @@ const executeMoveAction = (
   shared: SharedMoveExecutionContext,
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
-  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime, options);
+  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
   const preflight = validated?.preflight ?? resolveMovePreflightContext(
     def,
     state,
@@ -681,7 +678,7 @@ const executeMoveAction = (
     runtimeTableIndex: shared.runtimeTableIndex,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
-    decisionPlayer: options?.decisionPlayer ?? executionPlayer,
+    decisionAuthority: { source: 'engineRuntime' as const, player: executionPlayer },
     bindings: baseBindings,
     moveParams: move.params,
     collector: shared.collector,
@@ -920,6 +917,7 @@ const applyReleasedDeferredEventEffects = (
       rng: nextRng,
       activePlayer: effectPlayer,
       actorPlayer: effectPlayer,
+      decisionAuthority: { source: 'engineRuntime', player: effectPlayer },
       bindings: { ...deferredEventEffect.moveParams },
       moveParams: deferredEventEffect.moveParams,
       collector: shared.collector,

@@ -668,4 +668,39 @@ phase: [asPhaseId('main')],
       (error: unknown) => error instanceof Error && error.message.includes('invalid selection for chooseOne'),
     );
   });
+
+  it('rejects cross-seat chooser-owned decision params without caller authority overrides', () => {
+    const action: ActionDef = {
+      id: asActionId('cross-seat-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            chooser: { id: asPlayerId(1) },
+            options: { query: 'enums', values: ['a', 'b'] },
+          },
+        } as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () =>
+        resolveMoveDecisionSequence(def, state, {
+          actionId: asActionId('cross-seat-op'),
+          params: { 'decision:$target': 'a' },
+        }),
+      (error: unknown) => error instanceof Error && error.message.includes('decision owner mismatch'),
+    );
+  });
 });

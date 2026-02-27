@@ -386,6 +386,7 @@ const applyEffectList = (
     rng,
     activePlayer,
     actorPlayer: activePlayer,
+    decisionAuthority: { source: 'engineRuntime', player: activePlayer },
     bindings: { ...moveParams },
     moveParams,
     collector: collector ?? createCollector(),

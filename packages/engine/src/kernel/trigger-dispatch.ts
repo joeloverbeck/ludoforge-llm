@@ -67,6 +67,7 @@ export const dispatchTriggers = (
     const effectResult = applyEffects(trigger.effects, {
       ...evalCtx,
       rng: nextRng,
+      decisionAuthority: { source: 'engineRuntime', player: nextState.activePlayer },
       moveParams: {},
       mode: 'execution',
       traceContext: {

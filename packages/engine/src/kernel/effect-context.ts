@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import type { DecisionAuthorityContext } from './types-core.js';
 import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
 import type { InterpreterMode } from './interpreter-mode.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
@@ -34,7 +35,7 @@ export interface EffectContext {
   readonly rng: Rng;
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
-  readonly decisionPlayer?: PlayerId;
+  readonly decisionAuthority: DecisionAuthorityContext;
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;

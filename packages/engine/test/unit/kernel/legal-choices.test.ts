@@ -2072,7 +2072,7 @@ phase: [asPhaseId('main')],
   });
 
   describe('purity invariant', () => {
-    it('annotates chooser-owned pending decisions and enforces decisionPlayer override for resolution', () => {
+    it('annotates chooser-owned pending decisions and rejects cross-seat resolution without override channel', () => {
       const action: ActionDef = {
         id: asActionId('crossSeatChoice'),
         actor: 'active',
@@ -2112,14 +2112,6 @@ phase: [asPhaseId('main')],
           return true;
         },
       );
-
-      const resolved = legalChoicesEvaluate(
-        def,
-        state,
-        makeMove('crossSeatChoice', { 'decision:$target': 'a' }),
-        { decisionPlayer: asPlayerId(1) },
-      );
-      assert.deepEqual(resolved, { kind: 'complete', complete: true });
     });
 
     it('does not mutate state or partialMove', () => {

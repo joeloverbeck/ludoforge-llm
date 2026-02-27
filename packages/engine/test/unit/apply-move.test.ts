@@ -413,7 +413,7 @@ phase: [asPhaseId('main')],
     assert.equal(applied.globalVars.score, 2);
   });
 
-  it('enforces chooseOne chooser ownership unless decisionPlayer execution option matches', () => {
+  it('enforces chooseOne chooser ownership without caller override options', () => {
     const def: GameDef = {
       metadata: { id: 'non-pipeline-choice-owner', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
@@ -477,15 +477,10 @@ phase: [asPhaseId('main')],
       },
     );
 
-    const applied = applyMove(
-      def,
-      state,
-      {
-        actionId: asActionId('decide'),
-        params: { [pending.decisionId]: 2 },
-      },
-      { decisionPlayer: asPlayerId(1) },
-    );
+    const applied = applyMove(def, { ...state, activePlayer: asPlayerId(1) }, {
+      actionId: asActionId('decide'),
+      params: { [pending.decisionId]: 2 },
+    });
     assert.equal(applied.state.globalVars.score, 2);
   });
 

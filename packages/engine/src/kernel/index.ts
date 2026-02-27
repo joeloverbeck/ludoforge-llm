@@ -30,6 +30,7 @@ export * from './map-model.js';
 export * from './piece-catalog.js';
 export * from './effect-context.js';
 export * from './effect-error.js';
+export * from './free-operation-denial-contract.js';
 export * from './runtime-error.js';
 export * from './runtime-reasons.js';
 export * from './execution-collector.js';

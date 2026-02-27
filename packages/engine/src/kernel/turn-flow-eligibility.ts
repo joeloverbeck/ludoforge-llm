@@ -13,6 +13,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import type { FreeOperationActionClass, FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type {
   ConditionAST,
   EventFreeOperationGrantDef,
@@ -61,12 +62,7 @@ const isTurnFlowActionClass = (
   value === 'limitedOperation' ||
   value === 'operationPlusSpecialActivity';
 
-export type ResolvedTurnFlowActionClass =
-  | 'pass'
-  | 'event'
-  | 'operation'
-  | 'limitedOperation'
-  | 'operationPlusSpecialActivity';
+export type ResolvedTurnFlowActionClass = FreeOperationActionClass;
 
 const resolveMappedTurnFlowActionClass = (
   def: GameDef,
@@ -649,25 +645,6 @@ export const isActiveSeatEligibleForTurnFlow = (state: GameState): boolean => {
     activeSeat === runtime.currentCard.secondEligible
   );
 };
-
-export type FreeOperationBlockCause =
-  | 'notFreeOperationMove'
-  | 'nonCardDrivenTurnOrder'
-  | 'noActiveSeatGrant'
-  | 'sequenceLocked'
-  | 'actionClassMismatch'
-  | 'actionIdMismatch'
-  | 'zoneFilterMismatch'
-  | 'granted';
-
-export interface FreeOperationBlockExplanation {
-  readonly cause: FreeOperationBlockCause;
-  readonly activeSeat?: string;
-  readonly actionClass?: ResolvedTurnFlowActionClass;
-  readonly actionId?: string;
-  readonly matchingGrantIds?: readonly string[];
-  readonly sequenceLockBlockingGrantIds?: readonly string[];
-}
 
 interface FreeOperationGrantAnalysis {
   readonly activeSeat: string;

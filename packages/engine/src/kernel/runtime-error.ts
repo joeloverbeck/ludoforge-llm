@@ -2,7 +2,7 @@ import type { ActionSelectorContractViolation } from './action-selector-contract
 import { ILLEGAL_MOVE_REASON_MESSAGES, PIPELINE_RUNTIME_REASONS } from './runtime-reasons.js';
 import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';
-import type { FreeOperationBlockExplanation } from './turn-flow-eligibility.js';
+import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { ActionDef, GameState, Move } from './types.js';
 
 export type KernelRuntimeErrorCode =

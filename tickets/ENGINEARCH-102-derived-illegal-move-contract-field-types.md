@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — runtime error context type cleanup + shared type reuse
-**Deps**: tickets/ENGINEARCH-101-runtime-error-contract-layer-decoupling.md
+**Deps**: archive/tickets/ENGINEARCH-101-runtime-error-contract-layer-decoupling.md
 
 ## Problem
 

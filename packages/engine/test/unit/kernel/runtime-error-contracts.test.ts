@@ -13,6 +13,7 @@ import {
   pipelinePredicateEvaluationError,
   runtimeContractInvalidError,
   type ActionDef,
+  type FreeOperationBlockExplanation,
   type KernelRuntimeErrorContext,
   type Move,
 } from '../../../src/kernel/index.js';
@@ -55,14 +56,16 @@ describe('runtime error context contracts', () => {
       freeOperation: true,
     };
 
+    const freeOperationDenial: FreeOperationBlockExplanation = {
+      cause: 'actionIdMismatch',
+      activeSeat: '2',
+      actionClass: 'operation',
+      actionId: 'operate',
+      matchingGrantIds: ['grant-1'],
+    };
+
     const error = illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
-      freeOperationDenial: {
-        cause: 'actionIdMismatch',
-        activeSeat: '2',
-        actionClass: 'operation',
-        actionId: 'operate',
-        matchingGrantIds: ['grant-1'],
-      },
+      freeOperationDenial,
     });
 
     assert.equal(error.code, 'ILLEGAL_MOVE');
@@ -70,13 +73,7 @@ describe('runtime error context contracts', () => {
     const context: KernelRuntimeErrorContext<'ILLEGAL_MOVE'> = error.context!;
     assert.equal(context.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
     if (context.reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED) {
-      assert.deepEqual(context.freeOperationDenial, {
-        cause: 'actionIdMismatch',
-        activeSeat: '2',
-        actionClass: 'operation',
-        actionId: 'operate',
-        matchingGrantIds: ['grant-1'],
-      });
+      assert.deepEqual(context.freeOperationDenial, freeOperationDenial);
     } else {
       assert.fail('expected FREE_OPERATION_NOT_GRANTED context');
     }

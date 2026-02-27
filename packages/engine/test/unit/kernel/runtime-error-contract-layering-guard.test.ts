@@ -39,15 +39,18 @@ describe('runtime error contract layering guard', () => {
     );
   });
 
-  it('keeps free-operation-denial-contract.ts as a pure contract module', () => {
+  it('keeps free-operation-denial-contract.ts bound to canonical shared type contracts', () => {
     const source = readKernelSource('src/kernel/free-operation-denial-contract.ts');
     const sourceFile = parseTypeScriptSource(source, 'free-operation-denial-contract.ts');
     const imports = collectImportSpecifiers(sourceFile);
 
-    assert.deepEqual(imports, [], 'free-operation-denial-contract.ts must remain import-free and implementation-agnostic');
+    assert.deepEqual(
+      imports,
+      ['./types-turn-flow.js'],
+      'free-operation-denial-contract.ts must only import canonical shared turn-flow type contracts',
+    );
     assertModuleExportContract(sourceFile, 'free-operation-denial-contract.ts', {
       expectedNamedExports: [
-        'FreeOperationActionClass',
         'FreeOperationBlockCause',
         'FreeOperationBlockExplanation',
       ],

@@ -13,13 +13,14 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
-import type { FreeOperationActionClass, FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
+import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type {
   ConditionAST,
   EventFreeOperationGrantDef,
   GameDef,
   GameState,
   Move,
+  TurnFlowActionClass,
   TriggerLogEntry,
   TurnFlowDuration,
   TurnFlowDeferredEventEffectPayload,
@@ -62,7 +63,7 @@ const isTurnFlowActionClass = (
   value === 'limitedOperation' ||
   value === 'operationPlusSpecialActivity';
 
-export type ResolvedTurnFlowActionClass = FreeOperationActionClass;
+export type ResolvedTurnFlowActionClass = TurnFlowActionClass;
 
 const resolveMappedTurnFlowActionClass = (
   def: GameDef,

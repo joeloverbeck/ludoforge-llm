@@ -13,9 +13,11 @@ import {
   pipelinePredicateEvaluationError,
   runtimeContractInvalidError,
   type ActionDef,
+  type ActionPipelineDef,
   type FreeOperationBlockExplanation,
   type KernelRuntimeErrorContext,
   type Move,
+  type TurnFlowActionClass,
 } from '../../../src/kernel/index.js';
 
 describe('runtime error context contracts', () => {
@@ -145,5 +147,46 @@ describe('runtime error context contracts', () => {
 
     const unknownActionError = illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
     assert.equal(unknownActionError.reason, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
+  });
+
+  it('illegalMoveError context fields are assignable from canonical kernel contract types', () => {
+    const move: Move = {
+      actionId: action.id,
+      params: {},
+    };
+    const assertCompileTimeDerivedContracts = (): void => {
+      const mappedActionClass: TurnFlowActionClass = 'event';
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
+        mappedActionClass,
+        submittedActionClass: 'custom-action-class',
+      });
+      // @ts-expect-error mappedActionClass must be a canonical turn-flow action class
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, { mappedActionClass: 'custom', submittedActionClass: 'x' });
+
+      const atomicity: ActionPipelineDef['atomicity'] = 'partial';
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED, {
+        partialExecutionMode: atomicity,
+      });
+      // @ts-expect-error partialExecutionMode must be ActionPipelineDef atomicity
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED, { partialExecutionMode: 'bestEffort' });
+
+      const timing: NonNullable<Move['compound']>['timing'] = 'during';
+      const invalidField: keyof Pick<NonNullable<Move['compound']>, 'insertAfterStage' | 'replaceRemainingStages'> = 'insertAfterStage';
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, {
+        timing,
+        invalidField,
+      });
+      // @ts-expect-error timing must come from CompoundMovePayload timing contract
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, { timing: 'midway' });
+      // @ts-expect-error invalidField must come from CompoundMovePayload compound override fields
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID, { invalidField: 'timing' });
+    };
+    void assertCompileTimeDerivedContracts;
+
+    const error = illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
+      mappedActionClass: 'operation',
+      submittedActionClass: 'legacy-operation',
+    });
+    assert.equal(error.reason, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH);
   });
 });

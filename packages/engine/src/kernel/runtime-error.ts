@@ -3,7 +3,7 @@ import { ILLEGAL_MOVE_REASON_MESSAGES, PIPELINE_RUNTIME_REASONS } from './runtim
 import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
-import type { ActionDef, GameState, Move } from './types.js';
+import type { ActionDef, ActionPipelineDef, GameState, Move, TurnFlowActionClass } from './types.js';
 
 export type KernelRuntimeErrorCode =
   | 'ILLEGAL_MOVE'
@@ -46,6 +46,8 @@ type IllegalMoveBaseContext<R extends IllegalMoveReason> = Readonly<{
   readonly params: Move['params'];
   readonly reason: R;
 }>;
+type CompoundMovePayload = NonNullable<Move['compound']>;
+type CompoundMoveInvalidField = keyof Pick<CompoundMovePayload, 'insertAfterStage' | 'replaceRemainingStages'>;
 
 export interface IllegalMoveContextByReason {
   readonly [ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE]:
@@ -82,7 +84,7 @@ export interface IllegalMoveContextByReason {
     }>;
   readonly [ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH]:
     IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH> & Readonly<{
-      readonly mappedActionClass: 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity';
+      readonly mappedActionClass: TurnFlowActionClass;
       readonly submittedActionClass: string;
     }>;
   readonly [ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED]:
@@ -104,12 +106,12 @@ export interface IllegalMoveContextByReason {
   readonly [ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED]:
     IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED> & Readonly<{
       readonly profileId?: string;
-      readonly partialExecutionMode?: 'atomic' | 'partial';
+      readonly partialExecutionMode?: ActionPipelineDef['atomicity'];
     }>;
   readonly [ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID]:
     IllegalMoveBaseContext<typeof ILLEGAL_MOVE_REASONS.COMPOUND_TIMING_CONFIGURATION_INVALID> & Readonly<{
-      readonly timing?: 'before' | 'during' | 'after';
-      readonly invalidField?: 'insertAfterStage' | 'replaceRemainingStages';
+      readonly timing?: CompoundMovePayload['timing'];
+      readonly invalidField?: CompoundMoveInvalidField;
       readonly insertAfterStage?: number;
       readonly stageCount?: number;
       readonly detail?: string;

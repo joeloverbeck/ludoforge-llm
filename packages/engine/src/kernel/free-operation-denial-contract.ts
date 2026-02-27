@@ -1,9 +1,4 @@
-export type FreeOperationActionClass =
-  | 'pass'
-  | 'event'
-  | 'operation'
-  | 'limitedOperation'
-  | 'operationPlusSpecialActivity';
+import type { TurnFlowActionClass } from './types-turn-flow.js';
 
 export type FreeOperationBlockCause =
   | 'notFreeOperationMove'
@@ -18,7 +13,7 @@ export type FreeOperationBlockCause =
 export interface FreeOperationBlockExplanation {
   readonly cause: FreeOperationBlockCause;
   readonly activeSeat?: string;
-  readonly actionClass?: FreeOperationActionClass;
+  readonly actionClass?: TurnFlowActionClass;
   readonly actionId?: string;
   readonly matchingGrantIds?: readonly string[];
   readonly sequenceLockBlockingGrantIds?: readonly string[];

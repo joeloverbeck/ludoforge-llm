@@ -457,6 +457,21 @@ describe('effectToDisplayNodes', () => {
     assert.ok(refs.some((n) => n.text === 'val'));
   });
 
+  it('renders bindValue with macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      bindValue: {
+        bind: '$__macro_calc_0_value',
+        macroOrigin: { macroId: 'calc', stem: 'value' },
+        value: 7,
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const header = asLine(nodes[0]!);
+    const refs = findByKind(header.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'value'));
+    assert.ok(!refs.some((n) => n.text === '$__macro_calc_0_value'));
+  });
+
   it('renders let with body', () => {
     const effect: EffectAST = {
       let: {
@@ -486,6 +501,26 @@ describe('effectToDisplayNodes', () => {
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     assert.ok(texts(header.children).includes('reduce'));
+  });
+
+  it('renders reduce with macroOrigin.stem for item bind', () => {
+    const effect: EffectAST = {
+      reduce: {
+        itemBind: '$__macro_reduce_0_item',
+        accBind: 'acc',
+        macroOrigin: { macroId: 'sum', stem: 'item' },
+        over: { query: 'players' },
+        initial: 0,
+        next: { op: '+', left: { ref: 'binding', name: 'acc' }, right: 1 },
+        resultBind: '$__macro_reduce_0_total',
+        in: [],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const header = asLine(nodes[0]!);
+    const refs = findByKind(header.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'item'));
+    assert.ok(!refs.some((n) => n.text === '$__macro_reduce_0_item'));
   });
 
   it('renders removeByPriority group bind with macroOrigin.stem', () => {
@@ -557,6 +592,40 @@ describe('effectToDisplayNodes', () => {
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('choose'));
+  });
+
+  it('renders chooseN with macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'd2',
+        bind: '$__macro_pick_0_group',
+        macroOrigin: { macroId: 'pick', stem: 'group' },
+        options: { query: 'players' },
+        n: 1,
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const ln = asLine(nodes[0]!);
+    const refs = findByKind(ln.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'group'));
+    assert.ok(!refs.some((n) => n.text === '$__macro_pick_0_group'));
+  });
+
+  it('renders rollRandom with macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$__macro_roll_0_die',
+        macroOrigin: { macroId: 'roll', stem: 'die' },
+        min: 1,
+        max: 6,
+        in: [],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const ln = asLine(nodes[0]!);
+    const refs = findByKind(ln.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'die'));
+    assert.ok(!refs.some((n) => n.text === '$__macro_roll_0_die'));
   });
 
   it('renders setMarker', () => {

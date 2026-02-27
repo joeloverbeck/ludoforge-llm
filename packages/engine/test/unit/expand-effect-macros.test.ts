@@ -1430,4 +1430,115 @@ phase: ['main'],
     assert.equal(chooseOne.chooseOne.macroOrigin?.stem, 'pick');
     assert.ok(isTrustedMacroOriginCarrier(chooseOne.chooseOne));
   });
+
+  it('annotates additional bind-bearing effects with macroOrigin', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-extra-origin',
+      params: [],
+      exports: [],
+      effects: [
+        { bindValue: { bind: '$value', value: 3 } },
+        { chooseN: { internalDecisionId: 'd-choose-n', bind: '$pick', options: { query: 'players' }, n: 1 } },
+        { rollRandom: { bind: '$roll', min: 1, max: 6, in: [] } },
+        {
+          transferVar: {
+            from: { scope: 'global', var: 'bank' },
+            to: { scope: 'global', var: 'pot' },
+            amount: 1,
+            actualBind: '$moved',
+          },
+        },
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [],
+            scoreExpr: 1,
+            resultBind: '$bestScore',
+            bestSubsetBind: '$bestSubset',
+            in: [],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-extra-origin', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const bindValue = result.doc.setup?.[0] as { bindValue: { bind: string; macroOrigin?: { macroId: string; stem: string } } };
+    const chooseN = result.doc.setup?.[1] as { chooseN: { bind: string; macroOrigin?: { macroId: string; stem: string } } };
+    const rollRandom = result.doc.setup?.[2] as { rollRandom: { bind: string; macroOrigin?: { macroId: string; stem: string } } };
+    const transferVar = result.doc.setup?.[3] as { transferVar: { actualBind?: string; macroOrigin?: { macroId: string; stem: string } } };
+    const evaluateSubset = result.doc.setup?.[4] as { evaluateSubset: { subsetBind: string; macroOrigin?: { macroId: string; stem: string } } };
+
+    assert.ok(bindValue.bindValue.bind.startsWith('$__macro_'));
+    assert.deepEqual(bindValue.bindValue.macroOrigin, { macroId: 'test-extra-origin', stem: 'value' });
+    assert.equal(isTrustedMacroOriginCarrier(bindValue.bindValue), true);
+
+    assert.ok(chooseN.chooseN.bind.startsWith('$__macro_'));
+    assert.deepEqual(chooseN.chooseN.macroOrigin, { macroId: 'test-extra-origin', stem: 'pick' });
+    assert.equal(isTrustedMacroOriginCarrier(chooseN.chooseN), true);
+
+    assert.ok(rollRandom.rollRandom.bind.startsWith('$__macro_'));
+    assert.deepEqual(rollRandom.rollRandom.macroOrigin, { macroId: 'test-extra-origin', stem: 'roll' });
+    assert.equal(isTrustedMacroOriginCarrier(rollRandom.rollRandom), true);
+
+    assert.ok((transferVar.transferVar.actualBind ?? '').startsWith('$__macro_'));
+    assert.deepEqual(transferVar.transferVar.macroOrigin, { macroId: 'test-extra-origin', stem: 'moved' });
+    assert.equal(isTrustedMacroOriginCarrier(transferVar.transferVar), true);
+
+    assert.ok(evaluateSubset.evaluateSubset.subsetBind.startsWith('$__macro_'));
+    assert.deepEqual(evaluateSubset.evaluateSubset.macroOrigin, { macroId: 'test-extra-origin', stem: 'subset' });
+    assert.equal(isTrustedMacroOriginCarrier(evaluateSubset.evaluateSubset), true);
+  });
+
+  it('prefers remainingBind macroOrigin for removeByPriority parent annotation', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-remove-origin-precedence',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          removeByPriority: {
+            budget: 1,
+            remainingBind: '$remaining',
+            groups: [
+              { bind: '$candidate', over: { query: 'tokensInZone', zone: 'board' }, to: 'discard' },
+            ],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-remove-origin-precedence', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const remove = result.doc.setup?.[0] as {
+      removeByPriority: {
+        remainingBind?: string;
+        macroOrigin?: { macroId: string; stem: string };
+        groups: Array<{ bind: string; macroOrigin?: { macroId: string; stem: string } }>;
+      };
+    };
+    assert.ok((remove.removeByPriority.remainingBind ?? '').startsWith('$__macro_'));
+    assert.deepEqual(remove.removeByPriority.macroOrigin, {
+      macroId: 'test-remove-origin-precedence',
+      stem: 'remaining',
+    });
+    assert.deepEqual(remove.removeByPriority.groups[0]?.macroOrigin, {
+      macroId: 'test-remove-origin-precedence',
+      stem: 'candidate',
+    });
+    assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority), true);
+    assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority.groups[0] ?? {}), true);
+  });
 });

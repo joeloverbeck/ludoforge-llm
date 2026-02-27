@@ -18,6 +18,7 @@ import type {
   AddVarPayload,
   ConditionAST,
   EffectAST,
+  EffectMacroOrigin,
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
@@ -45,6 +46,8 @@ const line = (indent: number, children: readonly DisplayInlineNode[]): DisplayLi
   indent,
   children,
 });
+
+const bindDisplay = (bind: string, macroOrigin?: EffectMacroOrigin): string => macroOrigin?.stem ?? bind;
 
 const group = (label: string, children: readonly DisplayNode[], icon?: string): DisplayGroupNode =>
   icon === undefined ? { kind: 'group', label, children } : { kind: 'group', label, icon, children };
@@ -448,7 +451,7 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
   }
   if ('forEach' in effect) {
     return [
-      line(indent, spaced(kw('forEach'), ref(effect.forEach.macroOrigin?.stem ?? effect.forEach.bind, 'binding'), kw('in'), ...optionsQueryToInlineNodes(effect.forEach.over))),
+      line(indent, spaced(kw('forEach'), ref(bindDisplay(effect.forEach.bind, effect.forEach.macroOrigin), 'binding'), kw('in'), ...optionsQueryToInlineNodes(effect.forEach.over))),
       ...effectsToDisplayNodes(effect.forEach.effects, indent + 1),
     ];
   }
@@ -456,7 +459,7 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
     return [
       line(indent, spaced(
         kw('reduce'),
-        ref(effect.reduce.macroOrigin?.stem ?? effect.reduce.itemBind, 'binding'),
+        ref(bindDisplay(effect.reduce.itemBind, effect.reduce.macroOrigin), 'binding'),
         kw('in'),
         ...optionsQueryToInlineNodes(effect.reduce.over),
         kw('acc'),
@@ -474,7 +477,7 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
     ];
     for (const g of effect.removeByPriority.groups) {
       nodes.push(line(indent + 1, spaced(
-        ref(g.macroOrigin?.stem ?? effect.removeByPriority.macroOrigin?.stem ?? g.bind, 'binding'),
+        ref(bindDisplay(g.bind, g.macroOrigin ?? effect.removeByPriority.macroOrigin), 'binding'),
         kw('in'),
         ...optionsQueryToInlineNodes(g.over),
         kw('to'),
@@ -488,12 +491,12 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
   }
   if ('let' in effect) {
     return [
-      line(indent, spaced(kw('let'), ref(effect.let.macroOrigin?.stem ?? effect.let.bind, 'binding'), op('='), ...valueExprToInlineNodes(effect.let.value))),
+      line(indent, spaced(kw('let'), ref(bindDisplay(effect.let.bind, effect.let.macroOrigin), 'binding'), op('='), ...valueExprToInlineNodes(effect.let.value))),
       ...effectsToDisplayNodes(effect.let.in, indent + 1),
     ];
   }
   if ('bindValue' in effect) {
-    return [line(indent, spaced(kw('bind'), ref(effect.bindValue.macroOrigin?.stem ?? effect.bindValue.bind, 'binding'), op('='), ...valueExprToInlineNodes(effect.bindValue.value)))];
+    return [line(indent, spaced(kw('bind'), ref(bindDisplay(effect.bindValue.bind, effect.bindValue.macroOrigin), 'binding'), op('='), ...valueExprToInlineNodes(effect.bindValue.value)))];
   }
   if ('evaluateSubset' in effect) {
     return [
@@ -505,16 +508,16 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
 
   // --- Choice effects ---
   if ('chooseOne' in effect) {
-    return [line(indent, spaced(kw('choose'), ref(effect.chooseOne.macroOrigin?.stem ?? effect.chooseOne.bind, 'binding'), kw('from'), ...optionsQueryToInlineNodes(effect.chooseOne.options)))];
+    return [line(indent, spaced(kw('choose'), ref(bindDisplay(effect.chooseOne.bind, effect.chooseOne.macroOrigin), 'binding'), kw('from'), ...optionsQueryToInlineNodes(effect.chooseOne.options)))];
   }
   if ('chooseN' in effect) {
-    return [line(indent, spaced(kw('chooseN'), ref(effect.chooseN.macroOrigin?.stem ?? effect.chooseN.bind, 'binding'), kw('from'), ...optionsQueryToInlineNodes(effect.chooseN.options)))];
+    return [line(indent, spaced(kw('chooseN'), ref(bindDisplay(effect.chooseN.bind, effect.chooseN.macroOrigin), 'binding'), kw('from'), ...optionsQueryToInlineNodes(effect.chooseN.options)))];
   }
   if ('rollRandom' in effect) {
     return [
       line(indent, spaced(
         kw('roll'),
-        ref(effect.rollRandom.macroOrigin?.stem ?? effect.rollRandom.bind, 'binding'),
+        ref(bindDisplay(effect.rollRandom.bind, effect.rollRandom.macroOrigin), 'binding'),
         kw('in'),
         ...numericValueExprToInlineNodes(effect.rollRandom.min),
         op('..'),

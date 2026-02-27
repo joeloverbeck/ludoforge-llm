@@ -822,6 +822,183 @@ function bindingStem(bindingName: string): string {
   return bindingName.startsWith('$') ? bindingName.slice(1) : bindingName;
 }
 
+const BINDING_ORIGIN_EFFECT_SPECS: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['forEach', ['bind']],
+  ['reduce', ['resultBind']],
+  ['let', ['bind']],
+  ['bindValue', ['bind']],
+  ['chooseOne', ['bind']],
+  ['chooseN', ['bind']],
+  ['rollRandom', ['bind']],
+  ['transferVar', ['actualBind']],
+];
+
+const EVALUATE_SUBSET_BIND_FIELDS: readonly string[] = ['subsetBind', 'resultBind', 'bestSubsetBind'];
+
+function hasSameMacroOrigin(existing: unknown, origin: MacroBindingOrigin): boolean {
+  return isRecord(existing) && existing.macroId === origin.macroId && existing.stem === origin.stem;
+}
+
+function annotateNodeMacroOrigin(
+  effectNode: Record<string, unknown>,
+  origin: MacroBindingOrigin,
+): { effectNode: Record<string, unknown>; changed: boolean } {
+  const hasSameOrigin = hasSameMacroOrigin(effectNode.macroOrigin, origin);
+  const isTrusted = isTrustedMacroOriginCarrier(effectNode);
+  if (hasSameOrigin && isTrusted) {
+    return { effectNode, changed: false };
+  }
+  return {
+    effectNode: markTrustedMacroOriginByExpansion({
+      ...effectNode,
+      macroOrigin: origin,
+    }),
+    changed: true,
+  };
+}
+
+function findFirstMacroOriginByBindFields(
+  effectNode: Record<string, unknown>,
+  bindFields: readonly string[],
+  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
+): MacroBindingOrigin | undefined {
+  for (const bindField of bindFields) {
+    const bindValue = effectNode[bindField];
+    if (typeof bindValue !== 'string') {
+      continue;
+    }
+    const origin = originByBinding.get(bindValue);
+    if (origin !== undefined) {
+      return origin;
+    }
+  }
+  return undefined;
+}
+
+function annotateEffectMacroOrigin(
+  node: Record<string, unknown>,
+  effectKey: string,
+  bindFields: readonly string[],
+  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
+): { node: Record<string, unknown>; changed: boolean } {
+  if (!isRecord(node[effectKey])) {
+    return { node, changed: false };
+  }
+
+  const effectNode = node[effectKey] as Record<string, unknown>;
+  const origin = findFirstMacroOriginByBindFields(effectNode, bindFields, originByBinding);
+  if (origin === undefined) {
+    return { node, changed: false };
+  }
+
+  const annotation = annotateNodeMacroOrigin(effectNode, origin);
+  if (!annotation.changed) {
+    return { node, changed: false };
+  }
+
+  return {
+    node: {
+      ...node,
+      [effectKey]: annotation.effectNode,
+    },
+    changed: true,
+  };
+}
+
+function annotateRemoveByPriorityMacroOrigin(
+  node: Record<string, unknown>,
+  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
+): { node: Record<string, unknown>; changed: boolean } {
+  if (!isRecord(node.removeByPriority)) {
+    return { node, changed: false };
+  }
+
+  const rbp = node.removeByPriority as Record<string, unknown>;
+  const groupsArr = rbp.groups;
+  let groupsChanged = false;
+  let rewrittenGroups: readonly unknown[] | undefined;
+  if (Array.isArray(groupsArr)) {
+    rewrittenGroups = groupsArr.map((group) => {
+      if (!isRecord(group)) {
+        return group;
+      }
+      const origin = findFirstMacroOriginByBindFields(group, ['bind'], originByBinding);
+      if (origin === undefined) {
+        return group;
+      }
+      const annotation = annotateNodeMacroOrigin(group, origin);
+      if (!annotation.changed) {
+        return group;
+      }
+      groupsChanged = true;
+      return annotation.effectNode;
+    });
+  }
+
+  let foundOrigin: MacroBindingOrigin | undefined;
+  if (typeof rbp.remainingBind === 'string') {
+    foundOrigin = originByBinding.get(rbp.remainingBind);
+  }
+  if (foundOrigin === undefined && Array.isArray(rewrittenGroups)) {
+    for (const group of rewrittenGroups) {
+      if (!isRecord(group)) {
+        continue;
+      }
+      const groupOrigin = findFirstMacroOriginByBindFields(group, ['bind'], originByBinding);
+      if (groupOrigin !== undefined) {
+        foundOrigin = groupOrigin;
+        break;
+      }
+    }
+  }
+
+  if (foundOrigin === undefined) {
+    if (!groupsChanged) {
+      return { node, changed: false };
+    }
+    return {
+      node: {
+        ...node,
+        removeByPriority: {
+          ...rbp,
+          groups: rewrittenGroups!,
+        },
+      },
+      changed: true,
+    };
+  }
+
+  const parentAnnotation = annotateNodeMacroOrigin(rbp, foundOrigin);
+  if (parentAnnotation.changed) {
+    return {
+      node: {
+        ...node,
+        removeByPriority: groupsChanged
+          ? {
+            ...parentAnnotation.effectNode,
+            groups: rewrittenGroups!,
+          }
+          : parentAnnotation.effectNode,
+      },
+      changed: true,
+    };
+  }
+
+  if (!groupsChanged) {
+    return { node, changed: false };
+  }
+  return {
+    node: {
+      ...node,
+      removeByPriority: {
+        ...rbp,
+        groups: rewrittenGroups!,
+      },
+    },
+    changed: true,
+  };
+}
+
 function annotateControlFlowMacroOrigins(
   node: unknown,
   originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
@@ -845,190 +1022,29 @@ function annotateControlFlowMacroOrigins(
   let rewrittenNode: Record<string, unknown> = node;
   let changed = false;
 
-  if (isRecord(rewrittenNode.forEach) && typeof rewrittenNode.forEach.bind === 'string') {
-    const origin = originByBinding.get(rewrittenNode.forEach.bind);
-    if (origin !== undefined) {
-      const existing = rewrittenNode.forEach.macroOrigin;
-      const hasSameOrigin = isRecord(existing)
-        && existing.macroId === origin.macroId
-        && existing.stem === origin.stem;
-      const isTrusted = isTrustedMacroOriginCarrier(rewrittenNode.forEach);
-      if (!hasSameOrigin || !isTrusted) {
-        rewrittenNode = {
-          ...rewrittenNode,
-          forEach: markTrustedMacroOriginByExpansion({
-            ...rewrittenNode.forEach,
-            macroOrigin: origin,
-          }),
-        };
-        changed = true;
-      }
-    }
-  }
-
-  if (isRecord(rewrittenNode.reduce) && typeof rewrittenNode.reduce.resultBind === 'string') {
-    const origin = originByBinding.get(rewrittenNode.reduce.resultBind);
-    if (origin !== undefined) {
-      const existing = rewrittenNode.reduce.macroOrigin;
-      const hasSameOrigin = isRecord(existing)
-        && existing.macroId === origin.macroId
-        && existing.stem === origin.stem;
-      const isTrusted = isTrustedMacroOriginCarrier(rewrittenNode.reduce);
-      if (!hasSameOrigin || !isTrusted) {
-        rewrittenNode = {
-          ...rewrittenNode,
-          reduce: markTrustedMacroOriginByExpansion({
-            ...rewrittenNode.reduce,
-            macroOrigin: origin,
-          }),
-        };
-        changed = true;
-      }
-    }
-  }
-
-  // Annotate additional binding effect types with macroOrigin
-  const bindFieldEffectKeys: readonly (readonly [string, string])[] = [
-    ['let', 'bind'],
-    ['bindValue', 'bind'],
-    ['chooseOne', 'bind'],
-    ['chooseN', 'bind'],
-    ['rollRandom', 'bind'],
-    ['transferVar', 'actualBind'],
-  ];
-
-  for (const [effectKey, bindField] of bindFieldEffectKeys) {
-    if (isRecord(rewrittenNode[effectKey]) && typeof (rewrittenNode[effectKey] as Record<string, unknown>)[bindField] === 'string') {
-      const innerNode = rewrittenNode[effectKey] as Record<string, unknown>;
-      const origin = originByBinding.get(innerNode[bindField] as string);
-      if (origin !== undefined) {
-        const existing = innerNode.macroOrigin;
-        const hasSameOrigin = isRecord(existing)
-          && existing.macroId === origin.macroId
-          && existing.stem === origin.stem;
-        const isTrusted = isTrustedMacroOriginCarrier(innerNode);
-        if (!hasSameOrigin || !isTrusted) {
-          rewrittenNode = {
-            ...rewrittenNode,
-            [effectKey]: markTrustedMacroOriginByExpansion({
-              ...innerNode,
-              macroOrigin: origin,
-            }),
-          };
-          changed = true;
-        }
-      }
-    }
-  }
-
-  // removeByPriority: check groups[].bind and remainingBind
-  if (isRecord(rewrittenNode.removeByPriority)) {
-    const rbp = rewrittenNode.removeByPriority as Record<string, unknown>;
-    const remainingBind = rbp.remainingBind;
-    const groupsArr = rbp.groups;
-    let groupsChanged = false;
-    let rewrittenGroups: readonly unknown[] | undefined;
-    if (Array.isArray(groupsArr)) {
-      rewrittenGroups = groupsArr.map((group) => {
-        if (!isRecord(group) || typeof group.bind !== 'string') {
-          return group;
-        }
-        const origin = originByBinding.get(group.bind);
-        if (origin === undefined) {
-          return group;
-        }
-        const existing = group.macroOrigin;
-        const hasSameOrigin = isRecord(existing)
-          && existing.macroId === origin.macroId
-          && existing.stem === origin.stem;
-        const isTrusted = isTrustedMacroOriginCarrier(group);
-        if (hasSameOrigin && isTrusted) {
-          return group;
-        }
-        groupsChanged = true;
-        return markTrustedMacroOriginByExpansion({
-          ...group,
-          macroOrigin: origin,
-        });
-      });
-    }
-    let foundOrigin: MacroBindingOrigin | undefined;
-    if (typeof remainingBind === 'string') {
-      foundOrigin = originByBinding.get(remainingBind);
-    }
-    if (foundOrigin === undefined && Array.isArray(rewrittenGroups)) {
-      for (const g of rewrittenGroups) {
-        if (isRecord(g) && typeof g.bind === 'string') {
-          foundOrigin = originByBinding.get(g.bind);
-          if (foundOrigin !== undefined) break;
-        }
-      }
-    }
-    if (foundOrigin !== undefined) {
-      const existing = rbp.macroOrigin;
-      const hasSameOrigin = isRecord(existing)
-        && existing.macroId === foundOrigin.macroId
-        && existing.stem === foundOrigin.stem;
-      const isTrusted = isTrustedMacroOriginCarrier(rbp);
-      if (!hasSameOrigin || !isTrusted) {
-        rewrittenNode = {
-          ...rewrittenNode,
-          removeByPriority: markTrustedMacroOriginByExpansion({
-            ...rbp,
-            ...(groupsChanged ? { groups: rewrittenGroups! } : {}),
-            macroOrigin: foundOrigin,
-          }),
-        };
-        changed = true;
-      } else if (groupsChanged) {
-        rewrittenNode = {
-          ...rewrittenNode,
-          removeByPriority: {
-            ...rbp,
-            groups: rewrittenGroups!,
-          },
-        };
-        changed = true;
-      }
-    } else if (groupsChanged) {
-      rewrittenNode = {
-        ...rewrittenNode,
-        removeByPriority: {
-          ...rbp,
-          groups: rewrittenGroups!,
-        },
-      };
+  for (const [effectKey, bindFields] of BINDING_ORIGIN_EFFECT_SPECS) {
+    const annotation = annotateEffectMacroOrigin(rewrittenNode, effectKey, bindFields, originByBinding);
+    if (annotation.changed) {
+      rewrittenNode = annotation.node;
       changed = true;
     }
   }
 
-  // evaluateSubset: check subsetBind, resultBind, bestSubsetBind
-  if (isRecord(rewrittenNode.evaluateSubset)) {
-    const es = rewrittenNode.evaluateSubset as Record<string, unknown>;
-    let foundOrigin: MacroBindingOrigin | undefined;
-    for (const bindField of ['subsetBind', 'resultBind', 'bestSubsetBind']) {
-      if (typeof es[bindField] === 'string') {
-        foundOrigin = originByBinding.get(es[bindField] as string);
-        if (foundOrigin !== undefined) break;
-      }
-    }
-    if (foundOrigin !== undefined) {
-      const existing = es.macroOrigin;
-      const hasSameOrigin = isRecord(existing)
-        && existing.macroId === foundOrigin.macroId
-        && existing.stem === foundOrigin.stem;
-      const isTrusted = isTrustedMacroOriginCarrier(es);
-      if (!hasSameOrigin || !isTrusted) {
-        rewrittenNode = {
-          ...rewrittenNode,
-          evaluateSubset: markTrustedMacroOriginByExpansion({
-            ...es,
-            macroOrigin: foundOrigin,
-          }),
-        };
-        changed = true;
-      }
-    }
+  const removeByPriorityAnnotation = annotateRemoveByPriorityMacroOrigin(rewrittenNode, originByBinding);
+  if (removeByPriorityAnnotation.changed) {
+    rewrittenNode = removeByPriorityAnnotation.node;
+    changed = true;
+  }
+
+  const evaluateSubsetAnnotation = annotateEffectMacroOrigin(
+    rewrittenNode,
+    'evaluateSubset',
+    EVALUATE_SUBSET_BIND_FIELDS,
+    originByBinding,
+  );
+  if (evaluateSubsetAnnotation.changed) {
+    rewrittenNode = evaluateSubsetAnnotation.node;
+    changed = true;
   }
 
   const recursivelyRewritten: Record<string, unknown> = changed ? { ...rewrittenNode } : rewrittenNode;

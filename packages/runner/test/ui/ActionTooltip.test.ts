@@ -273,6 +273,24 @@ describe('ActionTooltip', () => {
     expect(tooltipBlock).toContain('pointer-events: auto;');
   });
 
+  it('enforces overflow-x: hidden via CSS contract', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/ui/ActionTooltip.module.css'),
+      'utf-8',
+    );
+    const tooltipBlock = css.match(/\.tooltip\s*\{[^}]*\}/u)?.[0] ?? '';
+    expect(tooltipBlock).toContain('overflow-x: hidden;');
+  });
+
+  it('enforces long-token wrapping on tooltip inline spans via CSS contract', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/ui/ActionTooltip.module.css'),
+      'utf-8',
+    );
+    const spanWrapBlock = css.match(/\.line\s*>\s*span\s*\{[^}]*\}/u)?.[0] ?? '';
+    expect(spanWrapBlock).toContain('overflow-wrap: anywhere;');
+  });
+
   it('returns null when description has no displayable content', () => {
     const desc = makeDescription({ sections: [], limitUsage: [] });
 

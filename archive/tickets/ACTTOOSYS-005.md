@@ -1,6 +1,6 @@
 # ACTTOOSYS-005: Bridge Prop Threading — GameContainer Receives bridge
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -98,3 +98,17 @@ If `packages/runner/test/ui/GameContainer.test.tsx` or similar tests render `Gam
 1. `pnpm -F @ludoforge/runner typecheck`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm turbo build`
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**:
+  - `GameContainer.tsx`: Added `GameBridge` import and `readonly bridge: GameBridge` to `GameContainerProps`. Prop accepted but not destructured (deferred to ACTTOOSYS-008 to avoid ESLint unused-var error).
+  - `App.tsx`: Passes `bridge={activeRuntime.bridgeHandle.bridge}` to `<GameContainer>`.
+  - `ReplayScreen.tsx`: Passes `bridge={runtime.bridgeHandle.bridge}` to `<GameContainer>`.
+  - `GameContainer.test.ts`: Added `GameBridge` import, `TEST_BRIDGE` mock, and `bridge: TEST_BRIDGE` to all 15 test invocations.
+  - `App.test.ts`: Added `bridgeHandle: { bridge: {} }` to the mock `activeRuntime`.
+- **Deviations from plan**:
+  - `ReplayScreen.tsx` also renders `<GameContainer>` — not in original ticket but discovered during verification and fixed.
+  - `bridge` is not destructured in the component signature — the ESLint config (`**/*.ts` only, not `**/*.tsx`) doesn't apply the `argsIgnorePattern: "^_"` override to `.tsx` files, so any destructured-but-unused variable causes a lint error. ACTTOOSYS-008 will destructure it when adding `useActionTooltip(bridge)`.
+- **Verification**: `pnpm -F @ludoforge/runner typecheck` clean, `pnpm -F @ludoforge/runner test` 142 files / 1316 tests all pass, `pnpm -F @ludoforge/runner lint` clean, `pnpm turbo build` succeeds.

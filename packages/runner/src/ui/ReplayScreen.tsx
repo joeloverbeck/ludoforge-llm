@@ -80,6 +80,7 @@ export function ReplayScreen({ runtime, onBackToMenu }: ReplayScreenProps): Reac
     <main className={styles.screen} data-testid="replay-screen">
       <GameContainer
         store={runtime.store}
+        bridge={runtime.bridgeHandle.bridge}
         visualConfigProvider={runtime.visualConfigProvider}
         readOnlyMode
       />

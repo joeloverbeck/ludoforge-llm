@@ -9,6 +9,7 @@ import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from '../can
 import type { DiagnosticBuffer } from '../animation/diagnostic-buffer.js';
 import { isEditableTarget } from '../input/editable-target.js';
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
+import type { GameBridge } from '../bridge/game-bridge.js';
 import type { GameStore } from '../store/game-store.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { VisualConfigContext } from '../config/visual-config-context.js';
@@ -30,6 +31,8 @@ import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
+import { useActionTooltip } from './useActionTooltip.js';
+import { ActionTooltip } from './ActionTooltip.js';
 import { PhaseBannerOverlay } from './PhaseBannerOverlay.js';
 import { ShowdownOverlay } from './ShowdownOverlay.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
@@ -44,6 +47,7 @@ import styles from './GameContainer.module.css';
 
 interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
+  readonly bridge: GameBridge;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly readOnlyMode?: boolean;
   readonly onReturnToMenu?: () => void;
@@ -104,6 +108,7 @@ export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): Tool
 
 export function GameContainer({
   store,
+  bridge,
   visualConfigProvider,
   readOnlyMode = false,
   onReturnToMenu,
@@ -122,6 +127,7 @@ export function GameContainer({
   const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
   const [animationDiagnosticBuffer, setAnimationDiagnosticBuffer] = useState<DiagnosticBuffer | undefined>(undefined);
   const eventLogEntries = useEventLogEntries(store, visualConfigProvider);
+  const { tooltipState: actionTooltipState, onActionHoverStart, onActionHoverEnd } = useActionTooltip(bridge);
   const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
     () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
@@ -163,6 +169,10 @@ export function GameContainer({
     setAnimationDiagnosticBuffer(undefined);
   }, [store]);
 
+  const bottomBarKind = readOnlyMode
+    ? ('hidden' as const)
+    : deriveBottomBarState(renderModel).kind;
+
   const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null): void => {
     setHoverAnchor(anchor);
   }, []);
@@ -186,9 +196,7 @@ export function GameContainer({
     );
   }
 
-  const bottomBarState = readOnlyMode
-    ? { kind: 'hidden' as const }
-    : deriveBottomBarState(renderModel);
+  const bottomBarState = { kind: bottomBarKind };
   const factionCssVariableStyle = buildFactionCssVariableStyle(
     gameDefFactions?.map((seat) => seat.id),
     (factionId) => visualConfigProvider.getFactionColor(factionId),
@@ -227,7 +235,11 @@ export function GameContainer({
       case 'actions':
         return (
           <>
-            <ActionToolbar store={store} />
+            <ActionToolbar
+              store={store}
+              onActionHoverStart={onActionHoverStart}
+              onActionHoverEnd={onActionHoverEnd}
+            />
             <UndoControl store={store} />
           </>
         );
@@ -322,6 +334,12 @@ export function GameContainer({
                 hoverTarget={tooltipAnchorState.hoverTarget}
                 anchorRect={tooltipAnchorState.anchorRect}
               />
+              {bottomBarKind === 'actions' && actionTooltipState.description !== null && actionTooltipState.anchorElement !== null && (
+                <ActionTooltip
+                  description={actionTooltipState.description}
+                  anchorElement={actionTooltipState.anchorElement}
+                />
+              )}
             </>
           )}
         />

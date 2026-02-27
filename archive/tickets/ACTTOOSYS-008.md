@@ -1,6 +1,6 @@
 # ACTTOOSYS-008: ActionToolbar + GameContainer Integration
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -130,3 +130,16 @@ const { tooltipState, onActionHoverStart, onActionHoverEnd } = useActionTooltip(
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm turbo build`
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**:
+  - `ActionToolbar.tsx`: Added optional `onActionHoverStart`/`onActionHoverEnd` callback props; wired `onPointerEnter`/`onPointerLeave` on each action button
+  - `GameContainer.tsx`: Added `bridge` to destructuring (was declared but omitted), imported and called `useActionTooltip(bridge)`, passed callbacks to `<ActionToolbar>`, conditionally renders `<ActionTooltip>` in floating content section
+  - `ActionToolbar.test.ts`: +4 tests for pointer event prop wiring and backwards compatibility
+  - `GameContainer.test.ts`: Updated ActionToolbar mock to capture props, added `useActionTooltip`/`ActionTooltip` mocks, +3 integration tests for callback passing and conditional tooltip rendering
+- **Deviations from original plan**:
+  - Test files remained `.test.ts` (not `.test.tsx` as ticket suggested) — consistent with existing codebase convention
+  - `bridge` destructuring fix was folded into this ticket (not called out as a separate fix)
+- **Verification results**: 1341 tests pass, typecheck clean, build clean

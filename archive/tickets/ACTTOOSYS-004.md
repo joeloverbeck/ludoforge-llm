@@ -1,6 +1,6 @@
 # ACTTOOSYS-004: Worker API — describeAction Method
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -104,3 +104,16 @@ Add to the existing engine imports at the top of the file. `createGameDefRuntime
 1. `pnpm -F @ludoforge/runner typecheck`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm turbo build`
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**:
+  - `packages/runner/src/worker/game-worker-api.ts` — added `describeAction(actionId: string)` to `GameWorkerAPI` interface and implemented it in `createGameWorker()`. Imports added: `describeAction as engineDescribeAction`, `AnnotatedActionDescription`, `AnnotationContext`.
+  - `packages/runner/test/worker/game-worker.test.ts` — added `describeAction` to NOT_INITIALIZED operation list (+1 case), plus 2 dedicated tests (valid action ID, unknown action ID).
+  - `packages/runner/test/store/game-store.test.ts` — added `describeAction` to mock `GameWorkerAPI` object literal to satisfy type constraint.
+- **Deviations from ticket**:
+  - Ticket's code sketch omitted `actorPlayer` field from `AnnotationContext`; implementation includes it (set to `state.activePlayer`), matching the actual interface from ACTTOOSYS-003.
+  - Ticket referenced wrong test file name (`game-worker-api.test.ts`); actual file is `game-worker.test.ts`.
+  - Store test mock required updating (not mentioned in ticket).
+- **Verification**: `pnpm -F @ludoforge/engine build` pass, `pnpm -F @ludoforge/runner typecheck` pass, `pnpm -F @ludoforge/runner test` 142 files / 1316 tests all pass, `pnpm turbo build` 2/2 tasks pass.

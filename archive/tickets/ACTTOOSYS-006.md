@@ -1,6 +1,6 @@
 # ACTTOOSYS-006: useActionTooltip Hook
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -107,3 +107,10 @@ function useActionTooltip(bridge: GameBridge): {
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+- Created `packages/runner/src/ui/useActionTooltip.ts` — exports `ActionTooltipState` interface and `useActionTooltip` hook with debounce (200ms), stale response discard via request counter, and cleanup on unmount.
+- Created `packages/runner/test/ui/useActionTooltip.test.ts` — 7 tests covering all acceptance criteria (debounce, fetch after debounce, stale discard, hover end reset, loading state, null response, error handling).
+- `description` field is `string | null` (flattened from `AnnotatedActionDescription.sections`) for simpler consumption by the renderer component.
+- All runner tests pass (143 files, 1323 tests). Typecheck and lint clean.

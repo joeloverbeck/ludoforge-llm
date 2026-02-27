@@ -116,6 +116,7 @@ export function App(): ReactElement {
           <>
             <GameContainer
               store={activeRuntime.store}
+              bridge={activeRuntime.bridgeHandle.bridge}
               visualConfigProvider={activeRuntime.visualConfigProvider}
               onSave={() => {
                 setSaveDialogOpen(true);

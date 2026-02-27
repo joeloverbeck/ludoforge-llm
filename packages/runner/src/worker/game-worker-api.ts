@@ -3,6 +3,7 @@ import {
   assertValidatedGameDefInput,
   completeTemplateMove,
   createGameDefRuntime,
+  describeAction as engineDescribeAction,
   enumerateLegalMoves,
   initialState,
   legalChoicesEvaluate,
@@ -11,6 +12,8 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import type {
+  AnnotatedActionDescription,
+  AnnotationContext,
   ApplyMoveResult,
   ChoiceRequest,
   EffectTraceEntry,
@@ -94,6 +97,7 @@ export interface GameWorkerAPI {
     stamp: OperationStamp,
     onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
   ): Promise<readonly ApplyMoveResult[]>;
+  describeAction(actionId: string): Promise<AnnotatedActionDescription | null>;
   terminalResult(): Promise<TerminalResult | null>;
   getState(): Promise<GameState>;
   getMetadata(): Promise<GameMetadata>;
@@ -363,6 +367,23 @@ export function createGameWorker(): GameWorkerAPI {
         }
 
         return results;
+      });
+    },
+
+    async describeAction(actionId: string): Promise<AnnotatedActionDescription | null> {
+      return withInternalErrorMapping(() => {
+        const current = assertInitialized(def, state);
+        const actionDef = current.def.actions.find((a) => String(a.id) === actionId);
+        if (!actionDef) return null;
+        const currentRuntime = runtime ?? createGameDefRuntime(current.def);
+        const context: AnnotationContext = {
+          def: current.def,
+          state: current.state,
+          activePlayer: current.state.activePlayer,
+          actorPlayer: current.state.activePlayer,
+          runtime: currentRuntime,
+        };
+        return engineDescribeAction(actionDef, context);
       });
     },
 

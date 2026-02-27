@@ -1,6 +1,6 @@
 # ACTTOOSYS-007: ActionTooltip Component and Styles
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -126,3 +126,16 @@ CSS classes for:
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+Implemented the `ActionTooltip` React component and CSS Module styles.
+
+### Files Created
+- `packages/runner/src/ui/ActionTooltip.module.css` — CSS classes for tooltip container (pointer-events: none, dark background, monospace font, scrollable overflow), display node kind classes (keyword purple, value green, reference blue, operator gray, punctuation dim), annotation subclasses (pass/fail/value/usage), and limit usage footer.
+- `packages/runner/src/ui/ActionTooltip.tsx` — Pure presentational component that recursively renders the `AnnotatedActionDescription` display tree. Uses Floating UI (`useFloating` with offset/flip/shift) for positioning relative to anchor element. Internal renderer functions dispatch by node kind (group, line, inline). Limit usage footer shown when non-empty.
+- `packages/runner/test/ui/ActionTooltip.test.ts` — 11 tests covering all acceptance criteria: section rendering, inline node CSS classes, pass/fail annotation classes, limit footer presence/absence, nested recursive groups, Floating UI positioning styles, anchor reference setup, CSS contract (pointer-events: none), and empty sections.
+
+### Verification
+- `pnpm -F @ludoforge/runner typecheck` — clean
+- `pnpm -F @ludoforge/runner test` — 144 test files, 1334 tests pass, zero regressions

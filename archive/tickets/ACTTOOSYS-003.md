@@ -1,6 +1,6 @@
 # ACTTOOSYS-003: Live Condition Annotator
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new module in `packages/engine/src/kernel/`
@@ -127,3 +127,19 @@ export * from './condition-annotator.js';
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**:
+  - Created `packages/engine/src/kernel/condition-annotator.ts` — exports `AnnotationContext` interface and `describeAction` function
+  - Added barrel export to both `runtime.ts` and `index.ts` (plan noted only `runtime.ts` but tests import from `index.ts`)
+  - Created `packages/engine/test/unit/kernel/condition-annotator.test.ts` with 10 test cases covering all acceptance criteria and invariants
+- **Deviations from ticket**:
+  - Ticket said to export from `runtime.ts` only; also exported from `index.ts` since test imports use that barrel
+  - `AnnotationContext` includes `actorPlayer` field (not in ticket's interface sketch) to properly construct `EvalContext`
+  - `createCollector()` called without `{ trace: false }` since the no-arg form already creates a collector with `trace: null` (equivalent behavior)
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` — clean, no errors
+  - `pnpm -F @ludoforge/engine test` — 2832 tests pass, 0 failures (10 new condition-annotator tests)
+  - `pnpm turbo typecheck` — 3/3 tasks successful across both packages

@@ -170,6 +170,7 @@ function createBridgeStub(overrides: BridgeOverrides): GameWorkerAPI {
     applyMove: resolveOverride('applyMove'),
     applyTemplateMove: resolveOverride('applyTemplateMove'),
     playSequence: resolveOverride('playSequence'),
+    describeAction: resolveOverride('describeAction'),
     terminalResult: resolveOverride('terminalResult'),
     getState: resolveOverride('getState'),
     getMetadata: resolveOverride('getMetadata'),

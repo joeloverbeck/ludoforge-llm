@@ -371,6 +371,7 @@ describe('App', () => {
       }
       return {
         store: testDoubles.runtimeStore,
+        bridgeHandle: { bridge: {} },
         visualConfigProvider: testDoubles.visualConfigProvider,
       };
     });

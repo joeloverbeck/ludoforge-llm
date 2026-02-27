@@ -7,6 +7,8 @@ import styles from './ActionToolbar.module.css';
 
 interface ActionToolbarProps {
   readonly store: StoreApi<GameStore>;
+  readonly onActionHoverStart?: (actionId: string, element: HTMLElement) => void;
+  readonly onActionHoverEnd?: () => void;
 }
 
 type SelectActionId = Parameters<GameStore['selectAction']>[0];
@@ -19,7 +21,7 @@ function canRenderToolbar(renderModel: GameStore['renderModel']): boolean {
   return renderModel.actionGroups.some((group) => group.actions.length > 0);
 }
 
-export function ActionToolbar({ store }: ActionToolbarProps): ReactElement | null {
+export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: ActionToolbarProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
 
   if (!canRenderToolbar(renderModel)) {
@@ -54,6 +56,8 @@ export function ActionToolbar({ store }: ActionToolbarProps): ReactElement | nul
                     }
                     void store.getState().selectAction(actionId);
                   }}
+                  onPointerEnter={(e) => onActionHoverStart?.(action.actionId, e.currentTarget)}
+                  onPointerLeave={() => onActionHoverEnd?.()}
                 >
                   <span className={styles.hint}>{displayHint}</span>
                   <span className={styles.label}>{action.displayName}</span>

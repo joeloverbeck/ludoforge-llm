@@ -1,0 +1,94 @@
+.tooltip {
+  pointer-events: none;
+  z-index: var(--z-tooltip);
+  max-width: 420px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(6, 10, 20, 0.95);
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.group {
+  margin-bottom: var(--space-sm);
+}
+
+.group:last-child {
+  margin-bottom: 0;
+}
+
+.groupLabel {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  line-height: 1.4;
+}
+
+.keyword {
+  color: #c792ea;
+}
+
+.operator {
+  color: var(--text-secondary);
+}
+
+.value {
+  color: #c3e88d;
+}
+
+.reference {
+  color: #82aaff;
+}
+
+.punctuation {
+  color: var(--text-muted);
+}
+
+.annotation {
+  font-style: italic;
+}
+
+.annotationPass {
+  composes: annotation;
+  color: var(--success);
+}
+
+.annotationFail {
+  composes: annotation;
+  color: var(--danger);
+}
+
+.annotationValue {
+  composes: annotation;
+  color: var(--text-muted);
+}
+
+.annotationUsage {
+  composes: annotation;
+  color: var(--accent);
+}
+
+.limitFooter {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.limitRow {
+  line-height: 1.4;
+}

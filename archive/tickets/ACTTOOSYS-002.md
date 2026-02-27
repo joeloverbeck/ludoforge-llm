@@ -1,6 +1,6 @@
 # ACTTOOSYS-002: Static AST-to-DisplayNode Renderer
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new pure-function module in `packages/engine/src/kernel/`
@@ -72,16 +72,19 @@ Implement the following exported functions:
 - `playerSelToInlineNodes(sel: PlayerSel): DisplayInlineNode[]`
 - `zoneRefToInlineNodes(zone: ZoneRef): DisplayInlineNode[]`
 
-### 2. Export from `packages/engine/src/kernel/runtime.ts`
+### 2. Export from both kernel barrel files
 
-Append one line:
+The kernel has two barrel files: `index.ts` (used by tests and internal imports) and `runtime.ts` (used by the runner via `@ludoforge/engine/runtime`). Both need the export:
+
 ```typescript
+// Append to both index.ts and runtime.ts:
 export * from './ast-to-display.js';
 ```
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/ast-to-display.ts` (new)
+- `packages/engine/src/kernel/index.ts` (modify — add one export line)
 - `packages/engine/src/kernel/runtime.ts` (modify — add one export line)
 
 ## Out of Scope
@@ -125,3 +128,24 @@ export * from './ast-to-display.js';
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+### What Changed vs Originally Planned
+
+**Implemented as planned:**
+- Created `packages/engine/src/kernel/ast-to-display.ts` (~400 lines) with all exported functions:
+  - `actionDefToDisplayTree` — top-level entry point producing 5 section groups (Parameters, Preconditions, Costs, Effects, Limits) with empty-section omission
+  - `conditionToDisplayNodes` — all ConditionAST variants (boolean, and, or, not, 6 comparison ops, in, adjacent, connected, zonePropIncludes)
+  - `effectToDisplayNodes` — all 34 EffectAST variants with exhaustive `never` check, using canonical `'key' in effect` discrimination pattern from `effect-dispatch.ts`
+  - `valueExprToInlineNodes` — literals, 12 Reference sub-variants, binary ops, aggregates (count/sum/min/max), concat, conditional
+  - `optionsQueryToInlineNodes` — all 16 OptionsQuery variants
+  - `playerSelToInlineNodes`, `zoneRefToInlineNodes` — helper renderers
+- Exported from both `index.ts` and `runtime.ts` barrel files
+- Created comprehensive test file (`ast-to-display.test.ts`) with 56 tests across 7 suites
+
+**Deviations from ticket:**
+1. **Barrel file assumption corrected**: Ticket originally only mentioned `runtime.ts`. Updated to include both `index.ts` and `runtime.ts` (same correction as ACTTOOSYS-001).
+2. **Inline node factories**: Added `kw()`, `op()`, `val()`, `ref()`, `punc()` factory helpers for concise node construction — not in ticket but necessary for readable code.
+3. **ScopedVarPayloadContract handling**: Required `scopedVarTarget()` and `transferEndpointToInlineNodes()` internal helpers to properly narrow the generic discriminated union types for setVar/addVar/transferVar effects.
+4. **No `DisplayAnnotationNode` usage**: The `ann()` factory was initially created but removed since annotation nodes belong to ACTTOOSYS-003 (live annotator), keeping this module purely static.

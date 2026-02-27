@@ -775,11 +775,119 @@ eventDecks:
         metadata:
           period: "1968"
           seatOrder: ["US", "NVA", "ARVN", "VC"]
-          flavorText: "Backchannel diplomacy reshapes leverage."
+          flavorText: "Operation Menu."
         unshaded:
-          text: "Diplomatic leverage: US pressures Hanoi for concessions."
+          text: "Remove a die roll of Insurgent pieces total from Cambodia and Laos."
+          effects:
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - chooseN:
+                      bind: $insurgentPieces
+                      options:
+                        query: concat
+                        sources:
+                          - query: tokensInMapSpaces
+                            spaceFilter:
+                              op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: troops }
+                          - query: tokensInMapSpaces
+                            spaceFilter:
+                              op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: guerrilla }
+                          - query: tokensInMapSpaces
+                            spaceFilter:
+                              op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: base }
+                              - { prop: tunnel, eq: untunneled }
+                      min: 0
+                      max: { ref: binding, name: $dieRoll }
+                  - forEach:
+                      bind: $piece
+                      over: { query: binding, name: $insurgentPieces }
+                      effects:
+                        - moveToken:
+                            token: $piece
+                            from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                            to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $piece, prop: faction }, ':none'] } }
         shaded:
-          text: "Negotiation stall: Insurgents exploit political maneuvering."
+          text: "NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6."
+          effects:
+            # 1. NVA places 2 pieces from Available into Cambodia
+            - chooseN:
+                bind: $nvaPieces
+                options:
+                  query: tokensInZone
+                  zone: available-NVA:none
+                  filter:
+                    - { prop: faction, eq: NVA }
+                min: 0
+                max: 2
+            - forEach:
+                bind: $nvaPiece
+                over: { query: binding, name: $nvaPieces }
+                effects:
+                  - chooseOne:
+                      bind: '$cambodiaSpace@{$nvaPiece}'
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: '=='
+                          left: { ref: zoneProp, zone: $zone, prop: country }
+                          right: cambodia
+                  - moveToken:
+                      token: $nvaPiece
+                      from: { zoneExpr: { ref: tokenZone, token: $nvaPiece } }
+                      to: { zoneExpr: { ref: binding, name: '$cambodiaSpace@{$nvaPiece}' } }
+            # 2. US moves any 2 US Troops to out of play (map, Available, or Casualties)
+            - chooseN:
+                bind: $usTroops
+                options:
+                  query: concat
+                  sources:
+                    - query: tokensInMapSpaces
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    - query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    - query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                min: 0
+                max: 2
+            - forEach:
+                bind: $usTroop
+                over: { query: binding, name: $usTroops }
+                effects:
+                  - moveToken:
+                      token: $usTroop
+                      from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                      to: out-of-play-US:none
+            # 3. Aid -6
+            - addVar: { scope: global, var: aid, delta: -6 }
       - id: card-3
         title: Peace Talks
         sideMode: dual

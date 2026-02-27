@@ -126,6 +126,78 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.equal((card?.shaded?.effects?.[1] as { if?: { when?: { right?: number } } })?.if?.when?.right, 2);
   });
 
+  it('encodes card 2 (Kissinger) with rollRandom unshaded and three-part shaded effects', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-2');
+    assert.notEqual(card, undefined);
+
+    // Metadata
+    assert.equal(card?.metadata?.flavorText, 'Operation Menu.');
+    assert.equal(card?.unshaded?.text, 'Remove a die roll of Insurgent pieces total from Cambodia and Laos.');
+    assert.equal(
+      card?.shaded?.text,
+      'NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6.',
+    );
+
+    // Unshaded: single top-level rollRandom
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.equal(unshadedEffects.length, 1, 'unshaded must have exactly 1 top-level effect');
+    const rollRandom = (unshadedEffects[0] as { rollRandom?: { bind?: string; min?: number; max?: number; in?: unknown[] } }).rollRandom;
+    assert.notEqual(rollRandom, undefined, 'top-level effect must be rollRandom');
+    assert.equal(rollRandom?.bind, '$dieRoll');
+    assert.equal(rollRandom?.min, 1);
+    assert.equal(rollRandom?.max, 6);
+    assert.equal(rollRandom?.in?.length, 2, 'rollRandom.in must contain chooseN + forEach');
+
+    const chooseNUnshaded = (rollRandom?.in?.[0] as { chooseN?: { bind?: string; options?: { query?: string }; max?: { ref?: string; name?: string } } }).chooseN;
+    assert.notEqual(chooseNUnshaded, undefined, 'first inner effect must be chooseN');
+    assert.equal(chooseNUnshaded?.bind, '$insurgentPieces');
+    assert.equal(chooseNUnshaded?.options?.query, 'concat');
+    assert.equal(chooseNUnshaded?.max?.ref, 'binding');
+    assert.equal(chooseNUnshaded?.max?.name, '$dieRoll');
+
+    const forEachUnshaded = (rollRandom?.in?.[1] as { forEach?: { bind?: string } }).forEach;
+    assert.notEqual(forEachUnshaded, undefined, 'second inner effect must be forEach');
+    assert.equal(forEachUnshaded?.bind, '$piece');
+
+    // Shaded: 5 effects total (chooseN, forEach, chooseN, forEach, addVar)
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.equal(shadedEffects.length, 5, 'shaded must have exactly 5 top-level effects');
+
+    // Effect 1: chooseN for NVA pieces
+    const nvaChooseN = (shadedEffects[0] as { chooseN?: { bind?: string; options?: { query?: string; zone?: string }; max?: number } }).chooseN;
+    assert.notEqual(nvaChooseN, undefined, 'shaded effect 0 must be chooseN');
+    assert.equal(nvaChooseN?.bind, '$nvaPieces');
+    assert.equal(nvaChooseN?.options?.query, 'tokensInZone');
+    assert.equal(nvaChooseN?.options?.zone, 'available-NVA:none');
+    assert.equal(nvaChooseN?.max, 2);
+
+    // Effect 2: forEach placing NVA pieces
+    const nvaForEach = (shadedEffects[1] as { forEach?: { bind?: string } }).forEach;
+    assert.notEqual(nvaForEach, undefined, 'shaded effect 1 must be forEach');
+    assert.equal(nvaForEach?.bind, '$nvaPiece');
+
+    // Effect 3: chooseN for US troops (concat of 3 sources)
+    const usChooseN = (shadedEffects[2] as { chooseN?: { bind?: string; options?: { query?: string; sources?: unknown[] }; max?: number } }).chooseN;
+    assert.notEqual(usChooseN, undefined, 'shaded effect 2 must be chooseN');
+    assert.equal(usChooseN?.bind, '$usTroops');
+    assert.equal(usChooseN?.options?.query, 'concat');
+    assert.equal(usChooseN?.options?.sources?.length, 3, 'US troops concat must have 3 sources');
+    assert.equal(usChooseN?.max, 2);
+
+    // Effect 4: forEach moving US troops
+    const usForEach = (shadedEffects[3] as { forEach?: { bind?: string } }).forEach;
+    assert.notEqual(usForEach, undefined, 'shaded effect 3 must be forEach');
+    assert.equal(usForEach?.bind, '$usTroop');
+
+    // Effect 5: addVar for Aid -6
+    assert.deepEqual(shadedEffects[4], { addVar: { scope: 'global', var: 'aid', delta: -6 } });
+  });
+
   it('keeps card 27 (Phoenix Program) unchanged as a non-regression anchor', () => {
     const { parsed, compiled } = compileProductionSpec();
 

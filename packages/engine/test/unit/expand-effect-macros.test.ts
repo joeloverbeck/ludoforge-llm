@@ -1544,6 +1544,49 @@ phase: ['main'],
     assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority.groups[0] ?? {}), true);
   });
 
+  it('annotates removeByPriority group macroOrigin from countBind when bind is exported', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-remove-origin-countbind-group',
+      params: [],
+      exports: ['$candidate'],
+      effects: [
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [
+              {
+                bind: '$candidate',
+                countBind: '$removed',
+                over: { query: 'tokensInZone', zone: 'board' },
+                to: 'discard',
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-remove-origin-countbind-group', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const remove = result.doc.setup?.[0] as {
+      removeByPriority: {
+        groups: Array<{ bind: string; countBind?: string; macroOrigin?: { macroId: string; stem: string } }>;
+      };
+    };
+    assert.equal(remove.removeByPriority.groups[0]?.bind, '$candidate');
+    assert.ok((remove.removeByPriority.groups[0]?.countBind ?? '').startsWith('$__macro_'));
+    assert.deepEqual(remove.removeByPriority.groups[0]?.macroOrigin, {
+      macroId: 'test-remove-origin-countbind-group',
+      stem: 'removed',
+    });
+    assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority.groups[0] ?? {}), true);
+  });
+
   it('omits removeByPriority parent macroOrigin when group origins are mixed', () => {
     const macroDef: EffectMacroDef = {
       id: 'test-remove-origin-mixed-groups',

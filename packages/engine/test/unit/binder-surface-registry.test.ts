@@ -116,7 +116,7 @@ describe('binder-surface-registry', () => {
     const invalidReduceBindField = [{ bindField: 'bind', macroOriginField: 'itemMacroOrigin' }] as const satisfies readonly ReduceMacroOriginBindingAnnotationSpec[];
     void invalidReduceBindField;
 
-    const validRemoveByPriorityGroupPolicy = ['bind'] as const satisfies readonly RemoveByPriorityMacroOriginGroupBindField[];
+    const validRemoveByPriorityGroupPolicy = ['bind', 'countBind'] as const satisfies readonly RemoveByPriorityMacroOriginGroupBindField[];
     void validRemoveByPriorityGroupPolicy;
 
     // @ts-expect-error removeByPriority group policy fields must be declared in groups.* binder paths.
@@ -189,20 +189,31 @@ describe('binder-surface-registry', () => {
   });
 
   it('keeps removeByPriority group macro-origin bind fields aligned with declared group binder paths', () => {
-    const removeByPriorityGroupDeclaredLeafFields = new Set(
+    const removeByPriorityGroupDeclaredLeafFields = new Set<string>(
       EFFECT_BINDER_SURFACES.removeByPriority.declaredBinderPaths
         .filter((path) => path[0] === 'groups' && path[1] === '*')
         .map((path) => path[path.length - 1])
         .filter((segment): segment is NonNullable<typeof segment> => typeof segment === 'string'),
     );
+    const macroOriginPolicyFields = new Set<string>(REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS);
+    const missingFromDeclaredPaths = [...macroOriginPolicyFields].filter(
+      (field) => !removeByPriorityGroupDeclaredLeafFields.has(field),
+    );
+    const missingFromPolicy = [...removeByPriorityGroupDeclaredLeafFields].filter(
+      (field) => !macroOriginPolicyFields.has(field),
+    );
 
-    for (const bindField of REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS) {
-      assert.equal(
-        removeByPriorityGroupDeclaredLeafFields.has(bindField),
-        true,
-        `removeByPriority.groups.*.${bindField} must be declared in EFFECT_BINDER_SURFACES`,
-      );
-    }
+    assert.deepEqual(missingFromDeclaredPaths, [], [
+      'removeByPriority macro-origin policy includes non-declared groups.* binder fields.',
+      `Policy-only fields: ${missingFromDeclaredPaths.join(', ') || '(none)'}`,
+      `Declared groups.* fields: ${[...removeByPriorityGroupDeclaredLeafFields].join(', ') || '(none)'}`,
+    ].join(' '));
+
+    assert.deepEqual(missingFromPolicy, [], [
+      'removeByPriority groups.* declared binder fields are missing from macro-origin policy.',
+      `Declared-only fields: ${missingFromPolicy.join(', ') || '(none)'}`,
+      `Policy fields: ${[...macroOriginPolicyFields].join(', ') || '(none)'}`,
+    ].join(' '));
   });
 
   it('defines nested sequential scope metadata for scoped exporters', () => {

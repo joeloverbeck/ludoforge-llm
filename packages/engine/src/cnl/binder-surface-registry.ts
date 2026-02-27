@@ -518,4 +518,5 @@ export const REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS = [
 
 export const REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS = [
   'bind',
+  'countBind',
 ] as const satisfies readonly RemoveByPriorityMacroOriginGroupBindField[];

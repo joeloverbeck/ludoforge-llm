@@ -50589,51 +50589,11 @@
                                 },
                                 {
                                   "prop": "type",
-                                  "op": "eq",
-                                  "value": "troops"
-                                }
-                              ]
-                            },
-                            {
-                              "query": "tokensInMapSpaces",
-                              "spaceFilter": {
-                                "condition": {
-                                  "op": "or",
-                                  "args": [
-                                    {
-                                      "op": "==",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "country"
-                                      },
-                                      "right": "cambodia"
-                                    },
-                                    {
-                                      "op": "==",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "country"
-                                      },
-                                      "right": "laos"
-                                    }
-                                  ]
-                                }
-                              },
-                              "filter": [
-                                {
-                                  "prop": "faction",
                                   "op": "in",
                                   "value": [
-                                    "NVA",
-                                    "VC"
+                                    "troops",
+                                    "guerrilla"
                                   ]
-                                },
-                                {
-                                  "prop": "type",
-                                  "op": "eq",
-                                  "value": "guerrilla"
                                 }
                               ]
                             },
@@ -50881,7 +50841,9 @@
                             "token": "$usTroop"
                           }
                         },
-                        "to": "out-of-play-US:none"
+                        "to": {
+                          "zoneExpr": "out-of-play-US:none"
+                        }
                       }
                     }
                   ]
@@ -58117,7 +58079,9 @@
                             "moveToken": {
                               "token": "tetCard",
                               "from": "played:none",
-                              "to": "leader:none"
+                              "to": {
+                                "zoneExpr": "leader:none"
+                              }
                             }
                           }
                         ],

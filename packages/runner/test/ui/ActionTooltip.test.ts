@@ -273,13 +273,28 @@ describe('ActionTooltip', () => {
     expect(tooltipBlock).toContain('pointer-events: none;');
   });
 
-  it('renders empty sections without error', () => {
+  it('returns null when description has no displayable content', () => {
     const desc = makeDescription({ sections: [], limitUsage: [] });
+
+    const { container } = render(
+      createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }),
+    );
+
+    expect(screen.queryByTestId('action-tooltip')).toBeNull();
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('renders tooltip when sections are present but limitUsage is empty', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+      limitUsage: [],
+    });
 
     render(createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }));
 
     const tooltip = screen.getByTestId('action-tooltip');
     expect(tooltip).toBeTruthy();
     expect(tooltip.getAttribute('role')).toBe('tooltip');
+    expect(tooltip.textContent).toContain('Effects');
   });
 });

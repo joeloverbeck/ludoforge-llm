@@ -8,6 +8,7 @@ import type {
   DisplayNode,
 } from '@ludoforge/engine/runtime';
 
+import { hasDisplayableContent } from './has-displayable-content.js';
 import styles from './ActionTooltip.module.css';
 
 const INDENT_PX = 12;
@@ -79,7 +80,7 @@ interface ActionTooltipProps {
   readonly anchorElement: HTMLElement;
 }
 
-export function ActionTooltip({ description, anchorElement }: ActionTooltipProps): ReactElement {
+export function ActionTooltip({ description, anchorElement }: ActionTooltipProps): ReactElement | null {
   const { x, y, strategy, refs } = useFloating({
     placement: 'top',
     middleware: [offset(12), flip(), shift({ padding: 8 })],
@@ -88,6 +89,10 @@ export function ActionTooltip({ description, anchorElement }: ActionTooltipProps
   useEffect(() => {
     refs.setReference(anchorElement);
   }, [refs, anchorElement]);
+
+  if (!hasDisplayableContent(description)) {
+    return null;
+  }
 
   return (
     <div

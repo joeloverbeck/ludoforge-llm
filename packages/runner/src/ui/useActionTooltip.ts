@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnnotatedActionDescription } from '@ludoforge/engine/runtime';
 
 import type { GameBridge } from '../bridge/game-bridge.js';
+import { hasDisplayableContent } from './has-displayable-content.js';
 
 export interface ActionTooltipState {
   readonly actionId: string | null;
@@ -67,7 +68,7 @@ export function useActionTooltip(bridge: GameBridge): {
           }
           setTooltipState((previous) => ({
             ...previous,
-            description: result ?? null,
+            description: result != null && hasDisplayableContent(result) ? result : null,
             loading: false,
           }));
         },

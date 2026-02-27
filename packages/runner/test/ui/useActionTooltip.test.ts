@@ -202,6 +202,25 @@ describe('useActionTooltip', () => {
     expect(result.current.tooltipState.actionId).toBe('action-1');
   });
 
+  it('normalizes empty description to null', async () => {
+    const emptyDescription = { sections: [], limitUsage: [] };
+    const describeAction = vi.fn(async () => emptyDescription);
+    const bridge = createMockBridge(describeAction);
+
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.tooltipState.description).toBeNull();
+    expect(result.current.tooltipState.loading).toBe(false);
+  });
+
   it('handles describeAction rejection without crashing', async () => {
     const describeAction = vi.fn(async () => {
       throw new Error('Worker error');

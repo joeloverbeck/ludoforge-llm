@@ -1,5 +1,7 @@
 # Fire in the Lake - Playbook Turn 6
 
+**Status**: ✅ COMPLETED
+
 ## Turn 6 - Henry Cabot Lodge
 
 By previously Passing and now being 1st Eligible, the ARVN are
@@ -93,3 +95,10 @@ The turn is over, so reset Eligibility tokens and remove the pawn from
 the map. Henry Cabot Lodge is covered by Booby Traps which then
 becomes the current card. Reveal the next card from the deck as the
 next preview card – it is a Coup! (Nguyen Khan, an RVN leader).
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**: Enriched `fitl-playbook-golden.test.ts` Turn 6 with ~116 individual assertions covering all 3 moves and the end-of-turn state. Added expectedState to Move 2 (NVA pass) which previously had none. Expanded expectedEndState from 9 zone checks to 34 across 16 zones, added available-box counts, marker/globalMarker/zoneVar persistence, and all 4 victory markers.
+- **Deviations**: NVA available guerrilla count was 6 (not 4 as initially estimated in the plan) because Turn 4's Infiltrate already changed the available count from 2→4 before Turn 6's raid added +2.
+- **Verification**: All 44 E2E tests pass (0 failures, 1 skipped). All 10 playbook turns pass including the enriched Turn 6.

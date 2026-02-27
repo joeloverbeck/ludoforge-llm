@@ -27,6 +27,7 @@ const createDef = (): GameDef =>
       { name: 'branchNoGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'branchSideCounter', type: 'int', init: 0, min: 0, max: 99 },
       { name: 'branchSideNoGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'selfGrantCounter', type: 'int', init: 0, min: 0, max: 99 },
     ],
     perPlayerVars: [],
     zones: [],
@@ -70,6 +71,7 @@ const createDef = (): GameDef =>
                     'card-batch',
                     'card-branch',
                     'card-branch-no-grant',
+                    'card-self-grant',
                   ],
                 },
               },
@@ -252,21 +254,41 @@ const createDef = (): GameDef =>
               ],
             },
           },
+          {
+            id: 'card-self-grant',
+            title: 'Same-seat grant deferred',
+            sideMode: 'single',
+            unshaded: {
+              effectTiming: 'afterGrants',
+              freeOperationGrants: [
+                {
+                  seat: '0',
+                  sequence: { chain: 'self-grant', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+              ],
+              effects: [{ addVar: { scope: 'global', var: 'selfGrantCounter', delta: 1 } }],
+            },
+          },
         ],
       } as EventDeckDef,
     ],
   }) as unknown as GameDef;
 
-const advanceToVc = (def: GameDef, state: ReturnType<typeof initialState>['state']) => {
+const advanceToSeat = (def: GameDef, state: ReturnType<typeof initialState>['state'], targetSeat: number) => {
   let next = state;
-  for (let step = 0; step < 8; step += 1) {
-    if (next.activePlayer === asPlayerId(3)) {
+  for (let step = 0; step < 16; step += 1) {
+    if (next.activePlayer === asPlayerId(targetSeat)) {
       return next;
     }
     next = applyMove(def, next, { actionId: asActionId('operation'), params: {} }).state;
   }
-  assert.fail('expected to rotate active seat to VC within 8 operation moves');
+  assert.fail(`expected to rotate active seat to ${targetSeat} within 16 operation moves`);
 };
+
+const advanceToVc = (def: GameDef, state: ReturnType<typeof initialState>['state']) =>
+  advanceToSeat(def, state, 3);
 
 const deferredLifecycleEntries = (
   triggerFirings: readonly { readonly kind: string }[],
@@ -491,5 +513,44 @@ describe('event effect timing integration', () => {
     for (const stages of lifecycleByDeferredId.values()) {
       assert.deepEqual(stages, ['queued', 'released', 'executed']);
     }
+  });
+
+  it('resolves deferred effects when the grant is assigned to the same seat that played the event', () => {
+    const def = createDef();
+    const start = initialState(def, 40, 4).state;
+
+    const afterEventResult = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-self-grant', side: 'unshaded', branch: 'none' },
+    });
+    const afterEvent = afterEventResult.state;
+    assert.equal(afterEvent.globalVars.selfGrantCounter, 0, 'deferred effect must not fire immediately');
+    const queued = deferredLifecycleEntries(afterEventResult.triggerFirings);
+    assert.equal(queued.length, 1, 'exactly one deferred payload should be queued');
+    assert.equal(queued[0]?.stage, 'queued');
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants?.length, 1);
+    assert.equal(requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants?.[0]?.seat, '0');
+
+    const seat0Window = advanceToSeat(def, afterEvent, 0);
+    assert.equal(seat0Window.activePlayer, asPlayerId(0), 'seat 0 must become active again through natural rotation');
+    assert.equal(seat0Window.globalVars.selfGrantCounter, 0, 'deferred effect must still be pending before free op');
+    assert.equal(
+      (requireCardDrivenRuntime(seat0Window).pendingFreeOperationGrants ?? []).length,
+      1,
+      'grant must persist across card boundaries',
+    );
+
+    const afterFreeOpResult = applyMove(def, seat0Window, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    });
+    const afterFreeOp = afterFreeOpResult.state;
+    assert.equal(afterFreeOp.globalVars.selfGrantCounter, 1, 'deferred effect must fire after same-seat grant consumption');
+    assert.equal(requireCardDrivenRuntime(afterFreeOp).pendingFreeOperationGrants, undefined, 'grant must be consumed');
+    assert.equal(requireCardDrivenRuntime(afterFreeOp).pendingDeferredEventEffects, undefined, 'no deferred effects must remain');
+    const lifecycle = deferredLifecycleEntries(afterFreeOpResult.triggerFirings);
+    assert.deepEqual(lifecycle.map((entry) => entry.stage), ['released', 'executed']);
+    assert.equal(lifecycle[0]?.deferredId, queued[0]?.deferredId);
   });
 });

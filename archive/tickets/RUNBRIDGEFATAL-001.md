@@ -1,6 +1,6 @@
 # RUNBRIDGEFATAL-001: Replay Runtime Fatal Worker Error Parity
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -71,3 +71,13 @@ Add/extend session tests to cover worker startup/message-channel failure reporti
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-02-27
+
+**What changed**:
+- `packages/runner/src/session/replay-runtime.ts`: Added `bridgeHandle.onFatalError` subscription (mirroring active-game-runtime.ts pattern) and `detachFatalErrorListener()` call in cleanup.
+- `packages/runner/test/session/replay-runtime.test.tsx`: Added `onFatalError` mock to bridge handle, added two new tests: fatal error subscription during replay and detach on teardown.
+
+**Deviations**: None. Implementation matched the ticket plan exactly.

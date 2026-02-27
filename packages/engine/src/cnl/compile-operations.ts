@@ -28,6 +28,7 @@ export function lowerActionPipelines(
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   namedSets?: Readonly<Record<string, readonly string[]>>,
   typeInference?: TypeInferenceContext,
+  freeOperationActionIds?: readonly string[],
 ): readonly ActionPipelineDef[] | undefined {
   if (rawPipelines === null) {
     return undefined;
@@ -276,6 +277,7 @@ export function lowerActionPipelines(
       tokenTraitVocabulary,
       namedSets,
       typeInference,
+      freeOperationActionIds,
     );
 
     const rawTargeting = rawPipeline.targeting;
@@ -316,6 +318,7 @@ export function lowerActionPipelines(
         tokenTraitVocabulary,
         namedSets,
         typeInference,
+        freeOperationActionIds,
       );
       const stageBindings: string[] = [];
       for (const eff of loweredEffects) {

@@ -35,6 +35,7 @@ type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 export interface EffectLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
   readonly bindingScope?: readonly string[];
+  readonly freeOperationActionIds?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
@@ -73,7 +74,7 @@ export function lowerEffectArray(
   });
 
   if (!diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
-    diagnostics.push(...collectFreeOperationSequenceViabilityWarnings(values, path));
+    diagnostics.push(...collectFreeOperationSequenceViabilityWarnings(values, path, context.freeOperationActionIds));
   }
 
   if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && loweredEntryCount !== source.length) {
@@ -2391,6 +2392,7 @@ type LoweredGrantSequenceEntry = {
 const collectFreeOperationSequenceViabilityWarnings = (
   effects: readonly EffectAST[],
   basePath: string,
+  defaultActionIds: readonly string[] | undefined,
 ): readonly Diagnostic[] => {
   const grants: LoweredGrantSequenceEntry[] = effects.flatMap((effect, effectIndex) =>
     'grantFreeOperation' in effect && effect.grantFreeOperation.sequence !== undefined
@@ -2457,9 +2459,11 @@ const collectFreeOperationSequenceViabilityWarnings = (
         });
       }
 
-      if (previous.actionIds !== undefined && current.actionIds !== undefined) {
-        const currentActions = new Set(current.actionIds);
-        const overlap = previous.actionIds.some((actionId) => currentActions.has(actionId));
+      const previousEffectiveActionIds = previous.actionIds ?? defaultActionIds;
+      const currentEffectiveActionIds = current.actionIds ?? defaultActionIds;
+      if (previousEffectiveActionIds !== undefined && currentEffectiveActionIds !== undefined) {
+        const currentActions = new Set(currentEffectiveActionIds);
+        const overlap = previousEffectiveActionIds.some((actionId) => currentActions.has(actionId));
         if (!overlap) {
           diagnostics.push({
             code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',

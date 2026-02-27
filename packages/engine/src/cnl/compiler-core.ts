@@ -348,6 +348,13 @@ function compileExpandedDoc(
     derivedFromAssets.tableContracts,
   );
 
+  if (resolvedTableRefDoc.turnOrder !== null) {
+    const turnOrder = compileSection(diagnostics, () => lowerTurnOrder(resolvedTableRefDoc.turnOrder, diagnostics));
+    sections.turnOrder = turnOrder.failed || turnOrder.value === undefined ? null : turnOrder.value;
+  }
+  const freeOperationActionIds =
+    sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.freeOperationActionIds : undefined;
+
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(
       resolvedTableRefDoc.setup ?? [],
@@ -358,6 +365,7 @@ function compileExpandedDoc(
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
       namedSets,
       typeInference,
+      freeOperationActionIds,
     ),
   );
 
@@ -374,15 +382,11 @@ function compileExpandedDoc(
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
         typeInference,
+        freeOperationActionIds,
       ),
     );
     turnStructure = turnStructureSection.value;
     sections.turnStructure = turnStructureSection.failed ? null : turnStructureSection.value;
-  }
-
-  if (resolvedTableRefDoc.turnOrder !== null) {
-    const turnOrder = compileSection(diagnostics, () => lowerTurnOrder(resolvedTableRefDoc.turnOrder, diagnostics));
-    sections.turnOrder = turnOrder.failed || turnOrder.value === undefined ? null : turnOrder.value;
   }
 
   if (resolvedTableRefDoc.actionPipelines !== null) {
@@ -395,6 +399,7 @@ function compileExpandedDoc(
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
         typeInference,
+        freeOperationActionIds,
       ),
     );
     sections.actionPipelines =
@@ -421,6 +426,7 @@ function compileExpandedDoc(
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
         namedSets,
         typeInference,
+        freeOperationActionIds,
       ),
     );
     actions = actionsSection.value;
@@ -435,6 +441,7 @@ function compileExpandedDoc(
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
       namedSets,
       typeInference,
+      freeOperationActionIds,
     ),
   );
   sections.triggers = triggers.failed ? null : triggers.value;

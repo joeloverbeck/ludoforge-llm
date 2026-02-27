@@ -1116,6 +1116,79 @@ describe('compile-effects lowering', () => {
     );
   });
 
+  it('emits sequence viability warning when explicit and default effective action domains are disjoint', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            actionIds: ['limitedOp'],
+            sequence: { chain: 'mixed-domain-chain', step: 0 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            sequence: { chain: 'mixed-domain-chain', step: 1 },
+          },
+        },
+      ],
+      {
+        ...context,
+        freeOperationActionIds: ['operation'],
+      },
+      'doc.actions.0.effects',
+    );
+
+    assert.notEqual(result.value, null);
+    const warnings = result.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+        && diagnostic.severity === 'warning'
+        && diagnostic.message.includes('non-overlapping actionIds'),
+    );
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0]?.path, 'doc.actions.0.effects.1.grantFreeOperation.sequence');
+  });
+
+  it('does not emit action-domain warning when explicit actionIds overlap turn-flow defaults', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            actionIds: ['operation'],
+            sequence: { chain: 'mixed-domain-overlap-chain', step: 0 },
+          },
+        },
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            sequence: { chain: 'mixed-domain-overlap-chain', step: 1 },
+          },
+        },
+      ],
+      {
+        ...context,
+        freeOperationActionIds: ['operation', 'limitedOp'],
+      },
+      'doc.actions.0.effects',
+    );
+
+    assert.notEqual(result.value, null);
+    const actionDomainWarnings = result.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK'
+        && diagnostic.severity === 'warning'
+        && diagnostic.message.includes('non-overlapping actionIds'),
+    );
+    assert.equal(actionDomainWarnings.length, 0);
+  });
+
   it('lowers gotoPhaseExact/advancePhase/pushInterruptPhase/popInterruptPhase effects', () => {
     const result = lowerEffectArray(
       [

@@ -42,11 +42,30 @@ interface CapturedAnimationControlsProps {
   };
 }
 
+interface CapturedActionToolbarProps {
+  readonly store: unknown;
+  readonly onActionHoverStart?: (actionId: string, element: HTMLElement) => void;
+  readonly onActionHoverEnd?: () => void;
+}
+
+interface CapturedActionTooltipProps {
+  readonly description: unknown;
+  readonly anchorElement: HTMLElement;
+}
+
 const testDoubles = vi.hoisted(() => ({
   errorStateProps: null as CapturedErrorStateProps | null,
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
   animationControlsProps: null as CapturedAnimationControlsProps | null,
+  actionToolbarProps: null as CapturedActionToolbarProps | null,
+  actionTooltipProps: null as CapturedActionTooltipProps | null,
+  actionTooltipHookState: {
+    actionId: null as string | null,
+    description: null as unknown,
+    loading: false,
+    anchorElement: null as HTMLElement | null,
+  },
 }));
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 const TEST_BRIDGE = {} as unknown as GameBridge;
@@ -59,7 +78,10 @@ vi.mock('../../src/canvas/GameCanvas.js', () => ({
 }));
 
 vi.mock('../../src/ui/ActionToolbar.js', () => ({
-  ActionToolbar: () => createElement('div', { 'data-testid': 'action-toolbar' }),
+  ActionToolbar: (props: CapturedActionToolbarProps) => {
+    testDoubles.actionToolbarProps = props;
+    return createElement('div', { 'data-testid': 'action-toolbar' });
+  },
 }));
 
 vi.mock('../../src/ui/UndoControl.js', () => ({
@@ -144,6 +166,21 @@ vi.mock('../../src/ui/TooltipLayer.js', () => ({
     testDoubles.tooltipLayerProps = props;
     return createElement('div', { 'data-testid': 'tooltip-layer' });
   },
+}));
+
+vi.mock('../../src/ui/ActionTooltip.js', () => ({
+  ActionTooltip: (props: CapturedActionTooltipProps) => {
+    testDoubles.actionTooltipProps = props;
+    return createElement('div', { 'data-testid': 'action-tooltip' });
+  },
+}));
+
+vi.mock('../../src/ui/useActionTooltip.js', () => ({
+  useActionTooltip: () => ({
+    tooltipState: testDoubles.actionTooltipHookState,
+    onActionHoverStart: vi.fn(),
+    onActionHoverEnd: vi.fn(),
+  }),
 }));
 
 vi.mock('../../src/ui/ErrorState.js', () => ({
@@ -681,5 +718,120 @@ describe('GameContainer', () => {
 
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-has-visual-config="true"');
+  });
+
+  it('passes onActionHoverStart and onActionHoverEnd to ActionToolbar', () => {
+    testDoubles.actionToolbarProps = null;
+    testDoubles.actionTooltipHookState = {
+      actionId: null,
+      description: null,
+      loading: false,
+      anchorElement: null,
+    };
+
+    renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    const capturedProps = testDoubles.actionToolbarProps as CapturedActionToolbarProps | null;
+    expect(capturedProps).not.toBeNull();
+    if (capturedProps === null) {
+      throw new Error('Expected ActionToolbar props to be captured.');
+    }
+    expect(capturedProps.onActionHoverStart).toEqual(expect.any(Function));
+    expect(capturedProps.onActionHoverEnd).toEqual(expect.any(Function));
+  });
+
+  it('does not render ActionTooltip when tooltip state has no description', () => {
+    testDoubles.actionTooltipProps = null;
+    testDoubles.actionTooltipHookState = {
+      actionId: null,
+      description: null,
+      loading: false,
+      anchorElement: null,
+    };
+
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="action-tooltip"');
+    expect(testDoubles.actionTooltipProps).toBeNull();
+  });
+
+  it('renders ActionTooltip when tooltip state has description and anchorElement', () => {
+    testDoubles.actionTooltipProps = null;
+    const fakeAnchor = {} as HTMLElement;
+    testDoubles.actionTooltipHookState = {
+      actionId: 'pass',
+      description: { sections: [], limitUsage: [] },
+      loading: false,
+      anchorElement: fakeAnchor,
+    };
+
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).toContain('data-testid="action-tooltip"');
+    const capturedProps = testDoubles.actionTooltipProps as CapturedActionTooltipProps | null;
+    expect(capturedProps).not.toBeNull();
+    if (capturedProps === null) {
+      throw new Error('Expected ActionTooltip props to be captured.');
+    }
+    expect(capturedProps.description).toEqual({ sections: [], limitUsage: [] });
+    expect(capturedProps.anchorElement).toBe(fakeAnchor);
+  });
+
+  it('does not render ActionTooltip when bottom bar is not in actions mode even with tooltip state', () => {
+    testDoubles.actionTooltipProps = null;
+    testDoubles.actionTooltipHookState = {
+      actionId: 'pass',
+      description: { sections: [], limitUsage: [] },
+      loading: false,
+      anchorElement: {} as HTMLElement,
+    };
+
+    // AI turn → bottomBarState is 'aiTurn', not 'actions'
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            activePlayerID: asPlayerId(1),
+          }),
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="action-tooltip"');
+    expect(testDoubles.actionTooltipProps).toBeNull();
   });
 });

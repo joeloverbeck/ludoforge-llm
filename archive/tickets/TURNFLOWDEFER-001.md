@@ -1,6 +1,6 @@
 # TURNFLOWDEFER-001: Generic Deferred Event Effect + Free-Grant Lifecycle Hardening
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — turn-flow and event scheduling contracts
@@ -85,3 +85,14 @@ Add generic integration tests covering:
 2. `node --test packages/engine/dist/test/integration/event-effect-timing.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo test`
+
+## Outcome
+
+**Not implemented**: 2026-02-27
+
+**Reason**: Code review found the existing lifecycle semantics are already well-defined and comprehensively tested (YAGNI). The current `splitReadyDeferredEventEffects` mechanism has clear release semantics:
+- Queued when `effectTiming: 'afterGrants'` and grants exist
+- Released when all `requiredGrantBatchIds` are consumed
+- Immediate release when no grants are present
+
+The `event-effect-timing.test.ts` suite covers: afterGrants with grant, beforeGrants, afterGrants with no grant, batch grants (multiple required), branch overrides, multi-deferred ordering, and same-seat grants. Adding expiry boundaries and release policies would be premature abstraction with no demonstrated need.

@@ -1,6 +1,6 @@
 # FITLEVENTACE-001: Card-6 Aces Deferred-Grant Resolution Correctness
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — turn-flow free-operation/deferred-event interaction for card events
@@ -74,3 +74,15 @@ Add a generic integration/unit test that fails if deferred event effects stay pe
 2. `node --test packages/engine/dist/test/integration/fitl-events-aces.test.js`
 3. `node --test packages/engine/dist/test/integration/event-effect-timing.test.js`
 4. `pnpm turbo test`
+
+## Outcome
+
+**Not implemented**: 2026-02-27
+
+**Reason**: Code review found the described problem does not exist. The deferred-grant mechanism works correctly:
+- The Aces test uses standard immutable state construction, not "forced state mutation."
+- `splitReadyDeferredEventEffects` correctly releases deferred effects when all required grant batch IDs are consumed.
+- Grants persist across card boundaries and are consumed when the grantee seat becomes eligible.
+- The existing `event-effect-timing.test.ts` already has comprehensive coverage of all timing scenarios.
+
+**What was done instead**: Added a same-seat grant test to `event-effect-timing.test.ts` — validates that deferred effects resolve correctly when the grant is assigned to the same seat that played the event (the specific concern this ticket raised). The test passes, confirming no engine bug exists.

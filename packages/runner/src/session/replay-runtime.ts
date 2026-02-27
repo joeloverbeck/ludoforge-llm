@@ -64,6 +64,12 @@ export function useReplayRuntime(sessionState: SessionState): ReplayRuntime | nu
     const store = createGameStore(bridgeHandle.bridge, bootstrapConfig.visualConfigProvider);
 
     let cancelled = false;
+    const detachFatalErrorListener = bridgeHandle.onFatalError((error) => {
+      if (cancelled) {
+        return;
+      }
+      store.getState().reportBootstrapFailure(error);
+    });
     let teardownController: (() => void) | null = null;
     let syncQueue: Promise<void> = Promise.resolve();
 
@@ -128,6 +134,7 @@ export function useReplayRuntime(sessionState: SessionState): ReplayRuntime | nu
 
     return () => {
       cancelled = true;
+      detachFatalErrorListener();
       teardownController?.();
       if (runtimeRef.current?.bridgeHandle === bridgeHandle) {
         runtimeRef.current = null;

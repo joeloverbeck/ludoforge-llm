@@ -19,6 +19,7 @@ const testDoubles = vi.hoisted(() => ({
   hydrateFromReplayStep: vi.fn(),
   reportBootstrapFailure: vi.fn(),
   terminate: vi.fn(),
+  detachFatalError: vi.fn(),
   syncFromController: vi.fn(),
   destroyReplayStore: vi.fn(),
   bridgeGetState: vi.fn(),
@@ -76,6 +77,7 @@ describe('useReplayRuntime', () => {
     testDoubles.hydrateFromReplayStep.mockReset();
     testDoubles.reportBootstrapFailure.mockReset();
     testDoubles.terminate.mockReset();
+    testDoubles.detachFatalError.mockReset();
     testDoubles.syncFromController.mockReset();
     testDoubles.destroyReplayStore.mockReset();
     testDoubles.bridgeGetState.mockReset();
@@ -108,6 +110,7 @@ describe('useReplayRuntime', () => {
         enumerateLegalMoves: testDoubles.bridgeEnumerateLegalMoves,
         terminalResult: testDoubles.bridgeTerminalResult,
       },
+      onFatalError: vi.fn(() => testDoubles.detachFatalError),
       terminate: testDoubles.terminate,
     });
 
@@ -209,6 +212,53 @@ describe('useReplayRuntime', () => {
     await waitFor(() => {
       expect(testDoubles.syncFromController).toHaveBeenCalledTimes(1);
       expect(testDoubles.hydrateFromReplayStep).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('reports bootstrap failure when bridge fatal error fires during replay', async () => {
+    render(createElement(HookHarness, {
+      sessionState: {
+        screen: 'replay',
+        gameId: 'fitl',
+        seed: 17,
+        moveHistory: [],
+        playerConfig: [{ playerId: 1, type: 'human' as const }],
+      },
+    }));
+
+    const bridgeHandle = testDoubles.createGameBridge.mock.results[0]?.value as {
+      onFatalError: ReturnType<typeof vi.fn>;
+    };
+    const fatalErrorListener = bridgeHandle.onFatalError.mock.calls[0]?.[0] as ((error: unknown) => void) | undefined;
+    expect(typeof fatalErrorListener).toBe('function');
+    fatalErrorListener?.({ message: 'Worker startup failed.' });
+
+    await waitFor(() => {
+      expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith({ message: 'Worker startup failed.' });
+    });
+  });
+
+  it('detaches fatal error listener on replay teardown', async () => {
+    const { rerender } = render(createElement(HookHarness, {
+      sessionState: {
+        screen: 'replay',
+        gameId: 'fitl',
+        seed: 17,
+        moveHistory: [],
+        playerConfig: [{ playerId: 1, type: 'human' as const }],
+      },
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('replay-runtime-ready')).toBeTruthy();
+    });
+
+    rerender(createElement(HookHarness, { sessionState: { screen: 'gameSelection' } }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('replay-runtime-null')).toBeTruthy();
+      expect(testDoubles.detachFatalError).toHaveBeenCalledTimes(1);
+      expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
     });
   });
 

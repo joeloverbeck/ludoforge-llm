@@ -1534,14 +1534,30 @@ const TURN_6: PlaybookTurn = {
           { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5 },
           { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
             props: { activity: 'active' } },
+          // Quang Tri: 4 VC = 3 guerrillas + 1 base (untouched by raid)
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+          // Quang Tri: 2 US = 1 troop + 1 SF irregular (untouched by raid)
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 1 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'irregular', count: 1 },
           // Sweep: Binh Dinh — 2 VC guerrillas flipped active
           { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2,
             props: { activity: 'active' } },
+          // Binh Dinh: total VC guerrillas = 2 (all active, none underground)
+          { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2 },
           { zone: 'binh-dinh:none', faction: 'ARVN', type: 'troops', count: 2 },
           // Sweep: Pleiku — 4 VC guerrillas flipped active, 6 ARVN troops arrived
           { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4,
             props: { activity: 'active' } },
+          // Pleiku: total VC guerrillas = 4 (all active, none underground)
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 4 },
+          // Pleiku: 5 VC = 4 guerrillas + 1 base
+          { zone: 'pleiku-darlac:none', faction: 'VC', type: 'base', count: 1 },
           { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
+          // Pleiku: US pieces (1 troop, 1 SF irregular, 1 base) — untouched by sweep
+          { zone: 'pleiku-darlac:none', faction: 'US', type: 'troops', count: 1 },
+          { zone: 'pleiku-darlac:none', faction: 'US', type: 'irregular', count: 1 },
+          { zone: 'pleiku-darlac:none', faction: 'US', type: 'base', count: 1 },
           // Saigon: 2 ARVN troops remain (8 - 6)
           { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 2 },
           // Quang Nam: Ranger moved out
@@ -1549,10 +1565,15 @@ const TURN_6: PlaybookTurn = {
           // Qui Nhon: troops moved out
           { zone: 'qui-nhon:none', faction: 'ARVN', type: 'troops', count: 0 },
         ],
+        markers: [
+          // Quang Tri: passive opposition persists from Turn 4
+          { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+        ],
         computedValues: [
           { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
           { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
           { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+          { label: 'US victory marker', expected: 42, compute: computeUsVictory },
         ],
       },
     },
@@ -1562,6 +1583,18 @@ const TURN_6: PlaybookTurn = {
       move: {
         actionId: asActionId('pass'),
         params: {},
+      },
+      expectedState: {
+        globalVars: {
+          nvaResources: 3,
+          arvnResources: 21,
+        },
+        computedValues: [
+          { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
+          { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
+          { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+          { label: 'US victory marker', expected: 42, compute: computeUsVictory },
+        ],
       },
     },
     {
@@ -1590,6 +1623,16 @@ const TURN_6: PlaybookTurn = {
           { zone: 'pleiku-darlac:none', faction: 'VC', type: 'base', count: 1 },
           { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
           { zone: 'pleiku-darlac:none', faction: 'US', type: 'troops', count: 1 },
+          // US SF irregular cannot participate in assault — still present
+          { zone: 'pleiku-darlac:none', faction: 'US', type: 'irregular', count: 1 },
+          // US base grants bonus but is not consumed
+          { zone: 'pleiku-darlac:none', faction: 'US', type: 'base', count: 1 },
+        ],
+        computedValues: [
+          { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
+          { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
+          { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+          { label: 'US victory marker', expected: 42, compute: computeUsVictory },
         ],
       },
     },
@@ -1602,6 +1645,10 @@ const TURN_6: PlaybookTurn = {
       trail: 1,
       aid: 14,
       patronage: 15,
+      // Persistence from Turn 4
+      infiltrateCount: 1,
+      // Persistence from Turn 5
+      terrorSabotageMarkersPlaced: 1,
     },
     eligibility: { '0': false, '1': false, '2': true, '3': true },
     activePlayer: 3,
@@ -1613,26 +1660,82 @@ const TURN_6: PlaybookTurn = {
     secondEligible: '2',
     nonPassCount: 0,
     zoneTokenCounts: [
-      // Quang Tri: NVA lost control (5 NVA vs 7 others)
+      // ── Available boxes ──
+      // VC available: was 11, +4 removed from Pleiku by US + ARVN assaults
+      { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 15 },
+      // NVA available: was 4 after Turn 4 Infiltrate (+2 net), +2 from Quang Tri raid
+      { zone: 'available-NVA:none', faction: 'NVA', type: 'guerrilla', count: 6 },
+      // ── Quang Tri: NVA lost control (5 NVA vs 7 others) ──
       { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 5 },
       { zone: 'quang-tri-thua-thien:none', faction: 'ARVN', type: 'ranger', count: 1,
         props: { activity: 'active' } },
-      // Binh Dinh: 2 VC guerrillas activated by sweep
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 1 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'irregular', count: 1 },
+      // ── Binh Dinh: 2 VC guerrillas activated by sweep ──
       { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2,
         props: { activity: 'active' } },
+      { zone: 'binh-dinh:none', faction: 'VC', type: 'guerrilla', count: 2 },
       { zone: 'binh-dinh:none', faction: 'ARVN', type: 'troops', count: 2 },
-      // Pleiku: all VC guerrillas removed by assault, base remains
+      // ── Pleiku: all VC guerrillas removed by assault, base remains ──
       { zone: 'pleiku-darlac:none', faction: 'VC', type: 'guerrilla', count: 0 },
       { zone: 'pleiku-darlac:none', faction: 'VC', type: 'base', count: 1 },
       { zone: 'pleiku-darlac:none', faction: 'ARVN', type: 'troops', count: 6 },
       { zone: 'pleiku-darlac:none', faction: 'US', type: 'troops', count: 1 },
-      // Saigon: 2 ARVN troops remain
+      { zone: 'pleiku-darlac:none', faction: 'US', type: 'irregular', count: 1 },
+      { zone: 'pleiku-darlac:none', faction: 'US', type: 'base', count: 1 },
+      // ── Saigon: 2 ARVN troops remain, US troops unchanged ──
       { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 2 },
+      { zone: 'saigon:none', faction: 'US', type: 'troops', count: 4 },
+      // ── Quang Nam: Ranger moved out ──
+      { zone: 'quang-nam:none', faction: 'ARVN', type: 'ranger', count: 0 },
+      // ── Qui Nhon: troops moved out ──
+      { zone: 'qui-nhon:none', faction: 'ARVN', type: 'troops', count: 0 },
+      // ── Hue: board persistence from prior turns ──
+      { zone: 'hue:none', faction: 'US', type: 'troops', count: 3 },
+      { zone: 'hue:none', faction: 'US', type: 'base', count: 1 },
+      { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      { zone: 'hue:none', faction: 'VC', type: 'guerrilla', count: 1,
+        props: { activity: 'underground' } },
+      // ── Out-of-play US: board persistence ──
+      { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 5 },
+      { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 1 },
+      // ── Kien Phong: board persistence ──
+      { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+      { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
+      // ── Kien Giang An Xuyen: board persistence ──
+      { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 4 },
+      // ── Southern Laos: board persistence ──
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 5 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'base', count: 1 },
+      // ── North Vietnam: board persistence ──
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
+      // ── Source zone residuals: board persistence ──
+      { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+      { zone: 'central-laos:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+    ],
+    markers: [
+      { space: 'hue:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+      { space: 'kien-phong:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+      { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
+    ],
+    globalMarkers: [
+      { marker: 'activeLeader', expected: 'minh' },
+    ],
+    zoneVars: [
+      { zone: 'hue:none', variable: 'terrorCount', expected: 1 },
     ],
     computedValues: [
+      { label: 'pending free-operation grants', expected: 0, compute: (_def, state) =>
+        state.turnOrderState.type === 'cardDriven'
+          ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
+          : 0 },
       { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
       { label: 'ARVN victory marker', expected: 38, compute: computeArvnVictory },
       { label: 'VC victory marker', expected: 27, compute: computeVcVictory },
+      { label: 'US victory marker', expected: 42, compute: computeUsVictory },
     ],
   },
 };

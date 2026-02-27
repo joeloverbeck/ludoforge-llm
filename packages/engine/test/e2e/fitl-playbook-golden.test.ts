@@ -68,11 +68,15 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
     {
       when: (request: ChoicePendingRequest) =>
         request.type === 'chooseN' && request.name.includes('$selectedPieces'),
-      value: (request: ChoicePendingRequest) =>
-        request.options
+      value: (request: ChoicePendingRequest) => {
+        const allValues = request.options
           .map((option) => option.value)
-          .filter((value): value is string => typeof value === 'string')
-          .slice(0, 6),
+          .filter((value): value is string => typeof value === 'string');
+        const troops = allValues.filter((v) => v.includes('us-troops'));
+        const bases = allValues.filter((v) => v.includes('us-bases'));
+        // Narrative: "1 Base and 5 Troop cubes" — base at end sends it to Hue (index >= 2)
+        return [...troops.slice(0, 5), ...bases.slice(0, 1)];
+      },
     },
     {
       when: (request: ChoicePendingRequest) => request.name.includes('$targetCity@'),
@@ -1019,6 +1023,8 @@ const TURN_4: PlaybookTurn = {
                 ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
                 : 0,
           },
+          { label: 'VC victory marker unchanged', expected: 23, compute: computeVcVictory },
+          { label: 'NVA victory marker unchanged', expected: 4, compute: computeNvaVictory },
         ],
       },
     },
@@ -1044,16 +1050,36 @@ const TURN_4: PlaybookTurn = {
           patronage: 15,
         },
         zoneTokenCounts: [
-          { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 10 },
+          // Quang Tri after Air Strike: 2 active VC removed, 3 underground remain
           { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
-          { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 4 },
-          { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 2 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 0,
+            props: { activity: 'active' } },
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3,
+            props: { activity: 'underground' } },
+          // VC base survives Air Strike
+          { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+          // US pieces in Quang Tri unchanged by Air Strike
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'troops', count: 1 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'US', type: 'irregular', count: 1,
+            props: { activity: 'underground' } },
+          // Available VC guerrillas: 8 (Turn 3) + 2 removed = 10
+          { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 10 },
+          // OoP after deployment: 10-5 troops, 2-1 bases
+          { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 5 },
+          { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 1 },
+          // Deployment targets: 2 troops to Saigon (2+2=4), 3 troops + 1 base to Hue
+          { zone: 'saigon:none', faction: 'US', type: 'troops', count: 4 },
+          { zone: 'hue:none', faction: 'US', type: 'troops', count: 3 },
+          { zone: 'hue:none', faction: 'US', type: 'base', count: 1 },
         ],
         markers: [
           { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
         ],
         computedValues: [
           { label: 'VC victory marker', expected: 25, compute: computeVcVictory },
+          { label: 'US victory marker unchanged', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN victory marker unchanged', expected: 37, compute: computeArvnVictory },
+          { label: 'NVA victory marker unchanged', expected: 4, compute: computeNvaVictory },
         ],
       },
     },
@@ -1076,6 +1102,45 @@ const TURN_4: PlaybookTurn = {
       options: {
         overrides: createTurn4NvaReportBranchDecisionOverrides(),
       },
+      expectedOperationState: {
+        globalVars: {
+          nvaResources: 2,
+          trail: 1,
+          vcResources: 10,
+          arvnResources: 24,
+          aid: 14,
+          patronage: 15,
+        },
+        zoneTokenCounts: [
+          // March destinations — all guerrillas arrive underground
+          { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+          { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3,
+            props: { activity: 'underground' } },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 3,
+            props: { activity: 'underground' } },
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7,
+            props: { activity: 'underground' } },
+          // Source zone departures
+          { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
+          { zone: 'central-laos:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+          { zone: 'central-laos:none', faction: 'NVA', type: 'base', count: 1 },
+          // Unchanged zones
+          { zone: 'southern-laos:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+          { zone: 'southern-laos:none', faction: 'NVA', type: 'base', count: 1 },
+          { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
+          { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 1 },
+        ],
+        computedValues: [
+          { label: 'NVA victory marker', expected: 10, compute: computeNvaVictory },
+          { label: 'VC victory marker unchanged', expected: 25, compute: computeVcVictory },
+          { label: 'US victory marker unchanged', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN victory marker unchanged', expected: 37, compute: computeArvnVictory },
+        ],
+      },
       expectedState: {
         globalVars: {
           nvaResources: 2,
@@ -1087,18 +1152,36 @@ const TURN_4: PlaybookTurn = {
           patronage: 15,
         },
         zoneTokenCounts: [
+          // March + Infiltrate final positions
           { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7 },
+          { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7,
+            props: { activity: 'underground' } },
           { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
+          { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3,
+            props: { activity: 'underground' } },
           { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 4 },
           { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 0 },
+          // Infiltrate build-up: Southern Laos guerrillas replaced by NVA troops
           { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 5 },
           { zone: 'southern-laos:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+          { zone: 'southern-laos:none', faction: 'NVA', type: 'base', count: 1 },
+          // Source zone departures persisted
+          { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+          { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
+          { zone: 'central-laos:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+          { zone: 'central-laos:none', faction: 'NVA', type: 'base', count: 1 },
+          // VC guerrilla in Kien Phong NOT replaced by Infiltrate (2 space max)
+          { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
         ],
         markers: [
           { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
         ],
         computedValues: [
           { label: 'VC victory marker', expected: 23, compute: computeVcVictory },
+          { label: 'NVA victory marker', expected: 10, compute: computeNvaVictory },
+          { label: 'US victory marker unchanged', expected: 42, compute: computeUsVictory },
+          { label: 'ARVN victory marker unchanged', expected: 37, compute: computeArvnVictory },
         ],
       },
     },
@@ -1124,20 +1207,44 @@ const TURN_4: PlaybookTurn = {
     nonPassCount: 0,
     zoneTokenCounts: [
       { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 11 },
+      // Quang Tri: 3 VC guerrillas (underground), 7 NVA guerrillas (underground)
       { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'guerrilla', count: 3 },
       { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7 },
-      { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 4 },
-      { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 2 },
+      { zone: 'quang-tri-thua-thien:none', faction: 'NVA', type: 'guerrilla', count: 7,
+        props: { activity: 'underground' } },
+      // VC base in Quang Tri survives all Turn 4 actions
+      { zone: 'quang-tri-thua-thien:none', faction: 'VC', type: 'base', count: 1 },
+      // OoP after Gulf of Tonkin deployment: 5 troops, 1 base
+      { zone: 'out-of-play-US:none', faction: 'US', type: 'troops', count: 5 },
+      { zone: 'out-of-play-US:none', faction: 'US', type: 'base', count: 1 },
+      // US deployment targets from Gulf of Tonkin event
+      { zone: 'saigon:none', faction: 'US', type: 'troops', count: 4 },
+      { zone: 'hue:none', faction: 'US', type: 'troops', count: 3 },
+      { zone: 'hue:none', faction: 'US', type: 'base', count: 1 },
+      // NVA March destinations
       { zone: 'kien-phong:none', faction: 'NVA', type: 'guerrilla', count: 3 },
       { zone: 'kien-giang-an-xuyen:none', faction: 'NVA', type: 'guerrilla', count: 4 },
       { zone: 'kien-giang-an-xuyen:none', faction: 'VC', type: 'guerrilla', count: 0 },
+      // Infiltrate build-up: Southern Laos
       { zone: 'southern-laos:none', faction: 'NVA', type: 'troops', count: 5 },
       { zone: 'southern-laos:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+      { zone: 'southern-laos:none', faction: 'NVA', type: 'base', count: 1 },
+      // NVA bases in source zones persist
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'base', count: 1 },
+      { zone: 'north-vietnam:none', faction: 'NVA', type: 'guerrilla', count: 0 },
+      // Source zone residuals
+      { zone: 'the-parrots-beak:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+      { zone: 'central-laos:none', faction: 'NVA', type: 'guerrilla', count: 1 },
+      // VC guerrilla in Kien Phong persists (not replaced by Infiltrate)
+      { zone: 'kien-phong:none', faction: 'VC', type: 'guerrilla', count: 1 },
     ],
     markers: [
       { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
       { space: 'kien-giang-an-xuyen:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
       { space: 'kien-phong:none', marker: 'supportOpposition', expected: 'activeOpposition' },
+    ],
+    globalMarkers: [
+      { marker: 'activeLeader', expected: 'minh' },
     ],
     computedValues: [
       { label: 'pending free-operation grants', expected: 0, compute: (_def, state) =>
@@ -1145,6 +1252,9 @@ const TURN_4: PlaybookTurn = {
           ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
           : 0 },
       { label: 'VC victory marker', expected: 23, compute: computeVcVictory },
+      { label: 'NVA victory marker', expected: 10, compute: computeNvaVictory },
+      { label: 'US victory marker', expected: 42, compute: computeUsVictory },
+      { label: 'ARVN victory marker', expected: 37, compute: computeArvnVictory },
     ],
   },
 };

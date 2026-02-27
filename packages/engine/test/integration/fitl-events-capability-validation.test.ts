@@ -6,26 +6,47 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type CapabilitySide = 'unshaded' | 'shaded';
 
-function getSingleCapabilityMarkerEffect(
+interface MarkerEffectRef {
+  readonly setGlobalMarker: { readonly marker: string; readonly state: string };
+}
+
+const collectMarkerEffects = (node: unknown): MarkerEffectRef[] => {
+  if (Array.isArray(node)) {
+    return node.flatMap((entry) => collectMarkerEffects(entry));
+  }
+  if (node === null || typeof node !== 'object') {
+    return [];
+  }
+
+  const current = node as { readonly setGlobalMarker?: unknown };
+  const here = (
+    typeof current.setGlobalMarker === 'object' &&
+    current.setGlobalMarker !== null
+  )
+    ? [{ setGlobalMarker: current.setGlobalMarker as MarkerEffectRef['setGlobalMarker'] }]
+    : [];
+
+  return [
+    ...here,
+    ...Object.values(node).flatMap((value) => collectMarkerEffects(value)),
+  ];
+};
+
+function getCapabilityMarkerEffectForSide(
   effects: readonly unknown[] | undefined,
   side: CapabilitySide,
   label: string,
 ): { readonly setGlobalMarker: { readonly marker: string; readonly state: CapabilitySide } } {
-  const markerEffects = (effects ?? []).filter(
+  const markerEffects = collectMarkerEffects(effects ?? []);
+  const matchingSide = markerEffects.filter(
     (effect): effect is { readonly setGlobalMarker: { readonly marker: string; readonly state: CapabilitySide } } =>
-      typeof effect === 'object' &&
-      effect !== null &&
-      'setGlobalMarker' in effect &&
-      typeof (effect as { readonly setGlobalMarker?: unknown }).setGlobalMarker === 'object' &&
-      (effect as { readonly setGlobalMarker?: unknown }).setGlobalMarker !== null,
+      effect.setGlobalMarker.state === side,
   );
-
-  assert.equal(markerEffects.length, 1, `Expected exactly one setGlobalMarker effect for ${label}`);
-  const markerEffect = markerEffects[0];
+  assert.ok(matchingSide.length >= 1, `Expected at least one setGlobalMarker effect with state=${side} for ${label}`);
+  const markerEffect = matchingSide[0];
   if (markerEffect === undefined) {
     assert.fail(`Expected marker effect for ${label}`);
   }
-  assert.equal(markerEffect.setGlobalMarker.state, side, `Expected ${label} marker state ${side}`);
   return markerEffect;
 }
 
@@ -60,8 +81,8 @@ describe('FITL capability event-card marker validation', () => {
       assert.equal(card.sideMode, 'dual', `Capability card ${card.id} should be dual-sided`);
       assert.equal(card.tags !== undefined && card.tags.some((tag) => allowedFactionTags.has(tag)), true, `Capability card ${card.id} should include a faction tag`);
 
-      const unshadedEffect = getSingleCapabilityMarkerEffect(card.unshaded?.effects, 'unshaded', `${card.id} unshaded`);
-      const shadedEffect = getSingleCapabilityMarkerEffect(card.shaded?.effects, 'shaded', `${card.id} shaded`);
+      const unshadedEffect = getCapabilityMarkerEffectForSide(card.unshaded?.effects, 'unshaded', `${card.id} unshaded`);
+      const shadedEffect = getCapabilityMarkerEffectForSide(card.shaded?.effects, 'shaded', `${card.id} shaded`);
       const marker = unshadedEffect.setGlobalMarker.marker;
 
       assert.equal(shadedEffect.setGlobalMarker.marker, marker, `Capability card ${card.id} should target one marker across both sides`);

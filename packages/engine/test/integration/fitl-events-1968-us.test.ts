@@ -129,7 +129,6 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.notEqual(compiled.gameDef, null);
 
     const expectedCapabilities = [
-      { id: 'card-4', marker: 'cap_topGun' },
       { id: 'card-11', marker: 'cap_abrams' },
       { id: 'card-13', marker: 'cap_cobras' },
       { id: 'card-19', marker: 'cap_cords' },
@@ -144,6 +143,61 @@ describe('FITL 1968 US-first event-card production spec', () => {
       assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]);
       assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]);
     }
+  });
+
+  it('encodes Top Gun unshaded as MiGs shaded cancellation plus marker activation', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-4');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.unshaded?.text, 'Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes. US CAPABILITY.');
+    assert.equal(card?.shaded?.text, 'Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6.');
+    assert.deepEqual((card?.unshaded?.effects?.[0] as { setGlobalMarker?: unknown })?.setGlobalMarker, {
+      marker: 'cap_topGun',
+      state: 'unshaded',
+    });
+    assert.equal((card?.unshaded?.effects?.[1] as { if?: unknown })?.if !== undefined, true);
+    assert.deepEqual((card?.shaded?.effects?.[0] as { setGlobalMarker?: unknown })?.setGlobalMarker, {
+      marker: 'cap_topGun',
+      state: 'shaded',
+    });
+  });
+
+  it('resolves Top Gun unshaded by canceling already-executed shaded MiGs', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    const start = clearAllZones(initialState(def, 196804, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_migs: 'shaded',
+      },
+      zones: {
+        ...start.zones,
+        [eventDeck!.discardZone]: [makeToken('card-4', 'card', 'none')],
+      },
+    };
+
+    const move = legalMoves(def, configured).find(
+      (candidate) =>
+        String(candidate.actionId) === 'event' &&
+        candidate.params.eventCardId === 'card-4' &&
+        candidate.params.side === 'unshaded',
+    );
+    assert.notEqual(move, undefined, 'Expected legal Top Gun unshaded event move');
+
+    const after = applyMove(def, configured, move!).state;
+    assert.notEqual(after.globalMarkers, undefined);
+    assert.equal(after.globalMarkers?.cap_topGun, 'unshaded');
+    assert.equal(after.globalMarkers?.cap_migs, 'inactive');
   });
 
   it('encodes card 16 (Blowtorch Komer) as unshaded round momentum toggle', () => {

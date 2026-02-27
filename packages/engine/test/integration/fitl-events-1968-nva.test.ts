@@ -1,7 +1,18 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import {
+  applyMove,
+  asPlayerId,
+  asTokenId,
+  initialState,
+  legalMoves,
+  type GameDef,
+  type GameState,
+  type Token,
+} from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const expectedCards = [
@@ -21,6 +32,19 @@ const expectedCards = [
   { id: 'card-58', order: 58, title: 'Pathet Lao', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
   { id: 'card-60', order: 60, title: 'War Photographer', seatOrder: ['NVA', 'VC', 'ARVN', 'US'] },
 ] as const;
+
+const compileDef = (): GameDef => {
+  const { parsed, compiled } = compileProductionSpec();
+  assertNoErrors(parsed);
+  assert.notEqual(compiled.gameDef, null);
+  return compiled.gameDef!;
+};
+
+const makeToken = (id: string, type: string, faction: string): Token => ({
+  id: asTokenId(id),
+  type,
+  props: { faction, type },
+});
 
 describe('FITL 1968 NVA-first event-card production spec', () => {
   it('compiles all 15 NVA-first 1968 cards with dual-side metadata invariants', () => {
@@ -51,7 +75,6 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
 
     const expectedCapabilities = [
       { id: 'card-32', marker: 'cap_longRangeGuns' },
-      { id: 'card-33', marker: 'cap_migs' },
       { id: 'card-45', marker: 'cap_pt76' },
     ] as const;
 
@@ -63,6 +86,64 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]);
       assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]);
     }
+  });
+
+  it('encodes MiGs shaded with Top Gun unshaded cancellation guard', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-33');
+    assert.notEqual(card, undefined);
+    assert.deepEqual((card?.unshaded?.effects?.[0] as { setGlobalMarker?: unknown })?.setGlobalMarker, {
+      marker: 'cap_migs',
+      state: 'unshaded',
+    });
+    const shadedIf = (card?.shaded?.effects?.[0] as { if?: { then?: unknown[]; else?: unknown[] } })?.if;
+    assert.notEqual(shadedIf, undefined);
+    assert.deepEqual((shadedIf?.then?.[0] as { setGlobalMarker?: unknown })?.setGlobalMarker, {
+      marker: 'cap_migs',
+      state: 'inactive',
+    });
+    assert.deepEqual((shadedIf?.else?.[0] as { setGlobalMarker?: unknown })?.setGlobalMarker, {
+      marker: 'cap_migs',
+      state: 'shaded',
+    });
+  });
+
+  it('blocks MiGs shaded execution when Top Gun unshaded is already active', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    const start = clearAllZones(initialState(def, 196833, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      turnOrderState: { type: 'roundRobin' },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_topGun: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [eventDeck!.discardZone]: [makeToken('card-33', 'card', 'none')],
+      },
+    };
+
+    const move = legalMoves(def, configured).find(
+      (candidate) =>
+        String(candidate.actionId) === 'event' &&
+        candidate.params.eventCardId === 'card-33' &&
+        candidate.params.side === 'shaded',
+    );
+    assert.notEqual(move, undefined, 'Expected legal MiGs shaded event move');
+
+    const after = applyMove(def, configured, move!).state;
+    assert.notEqual(after.globalMarkers, undefined);
+    assert.equal(after.globalMarkers?.cap_topGun, 'unshaded');
+    assert.equal(after.globalMarkers?.cap_migs, 'inactive');
   });
 
   it('encodes card 41 (Bombing Pause) as unshaded round momentum toggle', () => {

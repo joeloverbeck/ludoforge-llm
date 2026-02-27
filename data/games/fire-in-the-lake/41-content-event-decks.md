@@ -956,12 +956,17 @@ eventDecks:
           seatOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Naval aviators sharpen air-superiority tactics."
         unshaded:
-          text: "US capability: Air Strike pressures Trail and suppresses MiG losses."
+          text: "Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes. US CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_topGun, markerState: unshaded }
+            - if:
+                when: { op: '==', left: { ref: globalMarkerState, marker: cap_migs }, right: shaded }
+                then:
+                  - macro: set-global-marker
+                    args: { markerId: cap_migs, markerState: inactive }
         shaded:
-          text: "US capability (shaded): Air Strike effectiveness is reduced by attrition."
+          text: "Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_topGun, markerState: shaded }
@@ -3082,8 +3087,14 @@ eventDecks:
         shaded:
           text: "NVA capability (shaded): US Air Strike can trigger extra troop costs in affected spaces."
           effects:
-            - macro: set-global-marker
-              args: { markerId: cap_migs, markerState: shaded }
+            - if:
+                when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
+                then:
+                  - macro: set-global-marker
+                    args: { markerId: cap_migs, markerState: inactive }
+                else:
+                  - macro: set-global-marker
+                    args: { markerId: cap_migs, markerState: shaded }
       - id: card-35
         title: Thanh Hoa
         sideMode: dual

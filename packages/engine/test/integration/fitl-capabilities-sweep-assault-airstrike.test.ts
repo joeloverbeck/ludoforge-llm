@@ -297,6 +297,94 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       'cap_topGun unshaded should suppress cap_migs shaded troop loss branch',
     );
   });
+
+  it('Air Strike cap_topGun shaded degrades Trail by 1 only on roll 4-6 when degrade is declared', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'saigon:none';
+
+    const runFromSeed = (seed: number): number => {
+      const start = initialState(def, seed, 4).state;
+      const configured: GameState = {
+        ...start,
+        activePlayer: asPlayerId(0),
+        globalVars: {
+          ...start.globalVars,
+          trail: 3,
+        },
+        globalMarkers: {
+          ...start.globalMarkers,
+          cap_topGun: 'shaded',
+        },
+        zones: {
+          ...start.zones,
+          [space]: [
+            makeToken(`topgun-shaded-us-${seed}`, 'troops', 'US', { type: 'troops' }),
+            makeToken(`topgun-shaded-nva-a-${seed}`, 'troops', 'NVA', { type: 'troops' }),
+            makeToken(`topgun-shaded-nva-b-${seed}`, 'troops', 'NVA', { type: 'troops' }),
+          ],
+        },
+      };
+
+      return applyMoveWithResolvedDecisionIds(def, configured, {
+        actionId: asActionId('airStrike'),
+        params: {
+          spaces: [space],
+          $degradeTrail: 'yes',
+        },
+      }).state.globalVars.trail as number;
+    };
+
+    let successTrail: number | undefined;
+    let failTrail: number | undefined;
+    for (let seed = 1; seed <= 100 && (successTrail === undefined || failTrail === undefined); seed += 1) {
+      const trailAfter = runFromSeed(seed);
+      if (trailAfter === 2) successTrail = trailAfter;
+      if (trailAfter === 3) failTrail = trailAfter;
+    }
+
+    assert.equal(successTrail, 2, 'Expected at least one deterministic seed with topGun shaded roll success (4-6)');
+    assert.equal(failTrail, 3, 'Expected at least one deterministic seed with topGun shaded roll failure (1-3)');
+  });
+
+  it('Air Strike cap_topGun shaded does not attempt Trail degrade when $degradeTrail is no', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'saigon:none';
+
+    const start = initialState(def, 21002, 4).state;
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...start.globalVars,
+        trail: 2,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_topGun: 'shaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('topgun-shaded-no-degrade-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('topgun-shaded-no-degrade-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const result = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [space],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(result.globalVars.trail, 2, 'Declining degrade should bypass topGun shaded roll gate entirely');
+  });
 });
 
 /* eslint-enable @typescript-eslint/no-explicit-any */

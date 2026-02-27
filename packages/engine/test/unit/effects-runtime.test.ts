@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
+import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
 import {
   buildAdjacencyGraph,
   EffectBudgetExceededError,
@@ -9,6 +10,7 @@ import {
   applyEffects,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   createRng,
   getMaxEffectOps,
@@ -17,6 +19,7 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
+  type Token,
   createCollector,
 } from '../../src/kernel/index.js';
 
@@ -107,6 +110,13 @@ const moveTokenAdjacentEffect: EffectAST = {
   moveTokenAdjacent: {
     token: '$token',
     from: 'board:none',
+  },
+};
+
+const loweringContext: EffectLoweringContext = {
+  ownershipByBase: {
+    board: 'none',
+    adjacent: 'none',
   },
 };
 
@@ -235,6 +245,89 @@ describe('effects runtime foundation', () => {
     const effect: EffectAST = { gotoPhaseExact: { phase: 'commitment' } };
     assert.throws(() => applyEffect(effect, makeCtx({ def, state })), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cannot cross a turn boundary');
+    });
+  });
+
+  it('matches budget pass/fail behavior between lowered distributeTokens and equivalent manual primitives', () => {
+    const lowered = lowerEffectArray(
+      [
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'board' },
+            destinations: { query: 'zones' },
+            n: 1,
+          },
+        },
+      ],
+      loweringContext,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(lowered.diagnostics.length, 0);
+    assert.ok(lowered.value !== null);
+    if (lowered.value === null) {
+      return;
+    }
+    const loweredEffects = lowered.value;
+
+    const manual: EffectAST[] = [
+      {
+        chooseN: {
+          internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+          bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+          options: { query: 'tokensInZone', zone: 'board:none' },
+          n: 1,
+        },
+      },
+      {
+        forEach: {
+          bind: '$__token_doc_actions_0_effects_0_distributeTokens',
+          over: { query: 'binding', name: '$__selected_doc_actions_0_effects_0_distributeTokens' },
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
+                bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
+                options: { query: 'zones' },
+              },
+            },
+            {
+              moveToken: {
+                token: '$__token_doc_actions_0_effects_0_distributeTokens',
+                from: { zoneExpr: { ref: 'tokenZone', token: '$__token_doc_actions_0_effects_0_distributeTokens' } },
+                to: { zoneExpr: { ref: 'binding', name: '$__destination_doc_actions_0_effects_0_distributeTokens' } },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    const token: Token = { id: asTokenId('t1'), type: 'piece', props: {} };
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        ...makeState().zones,
+        'board:none': [token],
+        'adjacent:none': [],
+      },
+    };
+    const moveParams = {
+      'decision:doc.actions.0.effects.0.distributeTokens.selectTokens': ['t1'],
+      'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination[0]': 'adjacent:none',
+    };
+
+    const loweredPass = applyEffects(loweredEffects, makeCtx({ state, moveParams, maxEffectOps: 4 }));
+    const manualPass = applyEffects(manual, makeCtx({ state, moveParams, maxEffectOps: 4 }));
+    assert.deepEqual(loweredPass.state.zones, manualPass.state.zones);
+
+    assert.throws(() => applyEffects(loweredEffects, makeCtx({ state, moveParams, maxEffectOps: 3 })), (error: unknown) => {
+      assert.ok(error instanceof EffectBudgetExceededError);
+      return true;
+    });
+    assert.throws(() => applyEffects(manual, makeCtx({ state, moveParams, maxEffectOps: 3 })), (error: unknown) => {
+      assert.ok(error instanceof EffectBudgetExceededError);
+      return true;
     });
   });
 });

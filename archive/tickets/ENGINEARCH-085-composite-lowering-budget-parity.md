@@ -1,6 +1,6 @@
 # ENGINEARCH-085: Composite Effect Lowering Budget-Parity for Runtime Semantics
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — CNL lowering shape and runtime budget-behavior parity tests
@@ -15,6 +15,8 @@ Compiler-level composite effects can currently be lowered by wrapping generated 
 1. Runtime budget accounting is per dispatched `EffectAST` node, including control wrappers such as `let`.
 2. Current `distributeTokens` lowering uses a synthetic `let` wrapper that is not semantically required for gameplay logic.
 3. Mismatch: current lowering shape can consume extra budget ops compared to equivalent authored primitive sequences; corrected scope is to preserve budget/trace semantics while keeping compiler-level abstraction.
+4. `lowerEffectNode` currently returns a single `EffectAST`, so wrapper-free composite lowering requires introducing multi-effect expansion at array-lowering boundaries (`lowerEffectArray` + nested array lowering), not only changing one helper function.
+5. Existing tests do not yet assert `maxEffectOps` parity for lowered `distributeTokens` versus equivalent primitive sequences.
 
 ## Architecture Check
 
@@ -26,7 +28,7 @@ Compiler-level composite effects can currently be lowered by wrapping generated 
 
 ### 1. Add compiler lowering path for multi-effect expansion without synthetic wrappers
 
-Refactor effect lowering so CNL composite forms (starting with `distributeTokens`) can emit a deterministic sequence of sibling primitive effects directly.
+Refactor effect-array lowering so CNL composite forms (starting with `distributeTokens`) can emit a deterministic sequence of sibling primitive effects directly, while preserving sequential binding registration and deterministic output order.
 
 ### 2. Remove synthetic wrapper from `distributeTokens` lowering
 
@@ -40,7 +42,6 @@ Add tests proving equivalent authored primitives and lowered composite forms con
 
 - `packages/engine/src/cnl/compile-effects.ts` (modify)
 - `packages/engine/test/unit/compile-effects.test.ts` (modify)
-- `packages/engine/test/unit/kernel/effect-mode-threading-guard.test.ts` (modify/add if needed)
 - `packages/engine/test/unit/effects-runtime.test.ts` (modify/add)
 
 ## Out of Scope
@@ -70,5 +71,22 @@ Add tests proving equivalent authored primitives and lowered composite forms con
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test:unit -- --coverage=false`
-2. `pnpm -F @ludoforge/engine test`
+1. `pnpm turbo build --filter=@ludoforge/engine`
+2. `pnpm -F @ludoforge/engine test:unit`
+3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion Date**: 2026-02-27
+- **What Changed**:
+  - Refactored effect-array lowering to support composite expansion (`1 input -> N lowered effects`) at both top-level and nested effect arrays.
+  - Updated `distributeTokens` lowering to emit sibling `chooseN` + `forEach` effects directly (removed synthetic `let` wrapper).
+  - Updated compile-lowering expectations for `distributeTokens` shape.
+  - Added runtime budget-parity coverage proving lowered `distributeTokens` and equivalent manual primitive sequences pass/fail identically under tight `maxEffectOps`.
+- **Deviations From Original Plan**:
+  - No changes were needed in `packages/engine/test/unit/kernel/effect-mode-threading-guard.test.ts`; this file was removed from scope during assumption reassessment.
+  - Unit test command in the original ticket (`test:unit -- --coverage=false`) was corrected to repo-valid command shapes.
+- **Verification Results**:
+  - `pnpm turbo build --filter=@ludoforge/engine` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine test` passed.

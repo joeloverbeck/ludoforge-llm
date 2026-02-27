@@ -832,57 +832,49 @@ describe('compile-effects lowering', () => {
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, [
       {
-        let: {
-          bind: '$__scope_doc_actions_0_effects_0_distributeTokens',
-          value: true,
-          in: [
+        chooseN: {
+          internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
+          bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+          options: {
+            query: 'tokensInZone',
+            zone: 'deck:none',
+          },
+          min: 1,
+          max: 2,
+        },
+      },
+      {
+        forEach: {
+          bind: '$__token_doc_actions_0_effects_0_distributeTokens',
+          over: {
+            query: 'binding',
+            name: '$__selected_doc_actions_0_effects_0_distributeTokens',
+          },
+          effects: [
             {
-              chooseN: {
-                internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
-                bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
+              chooseOne: {
+                internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
+                bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
                 options: {
-                  query: 'tokensInZone',
-                  zone: 'deck:none',
+                  query: 'zones',
                 },
-                min: 1,
-                max: 2,
               },
             },
             {
-              forEach: {
-                bind: '$__token_doc_actions_0_effects_0_distributeTokens',
-                over: {
-                  query: 'binding',
-                  name: '$__selected_doc_actions_0_effects_0_distributeTokens',
+              moveToken: {
+                token: '$__token_doc_actions_0_effects_0_distributeTokens',
+                from: {
+                  zoneExpr: {
+                    ref: 'tokenZone',
+                    token: '$__token_doc_actions_0_effects_0_distributeTokens',
+                  },
                 },
-                effects: [
-                  {
-                    chooseOne: {
-                      internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
-                      bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
-                      options: {
-                        query: 'zones',
-                      },
-                    },
+                to: {
+                  zoneExpr: {
+                    ref: 'binding',
+                    name: '$__destination_doc_actions_0_effects_0_distributeTokens',
                   },
-                  {
-                    moveToken: {
-                      token: '$__token_doc_actions_0_effects_0_distributeTokens',
-                      from: {
-                        zoneExpr: {
-                          ref: 'tokenZone',
-                          token: '$__token_doc_actions_0_effects_0_distributeTokens',
-                        },
-                      },
-                      to: {
-                        zoneExpr: {
-                          ref: 'binding',
-                          name: '$__destination_doc_actions_0_effects_0_distributeTokens',
-                        },
-                      },
-                    },
-                  },
-                ],
+                },
               },
             },
           ],

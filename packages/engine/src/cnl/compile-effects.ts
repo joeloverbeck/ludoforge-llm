@@ -53,14 +53,18 @@ export function lowerEffectArray(
 ): EffectLoweringResult<readonly EffectAST[]> {
   const diagnostics: Diagnostic[] = [];
   const values: EffectAST[] = [];
+  let loweredEntryCount = 0;
   const scope = new BindingScope(context.bindingScope ?? []);
 
   source.forEach((entry, index) => {
     const lowered = lowerEffectNode(entry, context, scope, `${path}.${index}`);
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value !== null) {
-      values.push(lowered.value);
-      registerSequentialBinding(lowered.value, scope);
+      loweredEntryCount += 1;
+      for (const loweredEffect of lowered.value) {
+        values.push(loweredEffect);
+        registerSequentialBinding(loweredEffect, scope);
+      }
     }
   });
 
@@ -68,21 +72,27 @@ export function lowerEffectArray(
     diagnostics.push(...collectFreeOperationSequenceViabilityWarnings(values, path));
   }
 
-  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && values.length !== source.length) {
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && loweredEntryCount !== source.length) {
     return { value: null, diagnostics };
   }
 
   return { value: values, diagnostics };
 }
 
+const wrapSingleEffectLowering = (result: EffectLoweringResult<EffectAST>): EffectLoweringResult<readonly EffectAST[]> => (
+  result.value === null
+    ? { value: null, diagnostics: result.diagnostics }
+    : { value: [result.value], diagnostics: result.diagnostics }
+);
+
 function lowerEffectNode(
   source: unknown,
   context: EffectLoweringContext,
   scope: BindingScope,
   path: string,
-): EffectLoweringResult<EffectAST> {
+): EffectLoweringResult<readonly EffectAST[]> {
   if (!isRecord(source)) {
-    return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
+    return wrapSingleEffectLowering(missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS));
   }
   const reservedMetadataDiagnostics: Diagnostic[] = [
     ...collectReservedCompilerMetadataDiagnostics(source, path),
@@ -98,112 +108,112 @@ function lowerEffectNode(
   }
 
   if (isRecord(source.setVar)) {
-    return lowerSetVarEffect(source.setVar, context, scope, `${path}.setVar`);
+    return wrapSingleEffectLowering(lowerSetVarEffect(source.setVar, context, scope, `${path}.setVar`));
   }
   if (isRecord(source.setActivePlayer)) {
-    return lowerSetActivePlayerEffect(source.setActivePlayer, scope, `${path}.setActivePlayer`);
+    return wrapSingleEffectLowering(lowerSetActivePlayerEffect(source.setActivePlayer, scope, `${path}.setActivePlayer`));
   }
   if (isRecord(source.addVar)) {
-    return lowerAddVarEffect(source.addVar, context, scope, `${path}.addVar`);
+    return wrapSingleEffectLowering(lowerAddVarEffect(source.addVar, context, scope, `${path}.addVar`));
   }
   if (isRecord(source.transferVar)) {
-    return lowerTransferVarEffect(source.transferVar, context, scope, `${path}.transferVar`);
+    return wrapSingleEffectLowering(lowerTransferVarEffect(source.transferVar, context, scope, `${path}.transferVar`));
   }
   if (isRecord(source.moveToken)) {
-    return lowerMoveTokenEffect(source.moveToken, context, scope, `${path}.moveToken`);
+    return wrapSingleEffectLowering(lowerMoveTokenEffect(source.moveToken, context, scope, `${path}.moveToken`));
   }
   if (isRecord(source.moveAll)) {
-    return lowerMoveAllEffect(source.moveAll, context, scope, `${path}.moveAll`);
+    return wrapSingleEffectLowering(lowerMoveAllEffect(source.moveAll, context, scope, `${path}.moveAll`));
   }
   if (isRecord(source.moveTokenAdjacent)) {
-    return lowerMoveTokenAdjacentEffect(source.moveTokenAdjacent, context, scope, `${path}.moveTokenAdjacent`);
+    return wrapSingleEffectLowering(lowerMoveTokenAdjacentEffect(source.moveTokenAdjacent, context, scope, `${path}.moveTokenAdjacent`));
   }
   if (isRecord(source.draw)) {
-    return lowerDrawEffect(source.draw, context, scope, `${path}.draw`);
+    return wrapSingleEffectLowering(lowerDrawEffect(source.draw, context, scope, `${path}.draw`));
   }
   if (isRecord(source.reveal)) {
-    return lowerRevealEffect(source.reveal, context, scope, `${path}.reveal`);
+    return wrapSingleEffectLowering(lowerRevealEffect(source.reveal, context, scope, `${path}.reveal`));
   }
   if (isRecord(source.conceal)) {
-    return lowerConcealEffect(source.conceal, context, scope, `${path}.conceal`);
+    return wrapSingleEffectLowering(lowerConcealEffect(source.conceal, context, scope, `${path}.conceal`));
   }
   if (isRecord(source.shuffle)) {
-    return lowerShuffleEffect(source.shuffle, context, scope, `${path}.shuffle`);
+    return wrapSingleEffectLowering(lowerShuffleEffect(source.shuffle, context, scope, `${path}.shuffle`));
   }
   if (isRecord(source.createToken)) {
-    return lowerCreateTokenEffect(source.createToken, context, scope, `${path}.createToken`);
+    return wrapSingleEffectLowering(lowerCreateTokenEffect(source.createToken, context, scope, `${path}.createToken`));
   }
   if (isRecord(source.destroyToken)) {
-    return lowerDestroyTokenEffect(source.destroyToken, scope, `${path}.destroyToken`);
+    return wrapSingleEffectLowering(lowerDestroyTokenEffect(source.destroyToken, scope, `${path}.destroyToken`));
   }
   if (isRecord(source.setTokenProp)) {
-    return lowerSetTokenPropEffect(source.setTokenProp, context, scope, `${path}.setTokenProp`);
+    return wrapSingleEffectLowering(lowerSetTokenPropEffect(source.setTokenProp, context, scope, `${path}.setTokenProp`));
   }
   if (isRecord(source.if)) {
-    return lowerIfEffect(source.if, context, scope, `${path}.if`);
+    return wrapSingleEffectLowering(lowerIfEffect(source.if, context, scope, `${path}.if`));
   }
   if (isRecord(source.forEach)) {
-    return lowerForEachEffect(source.forEach, context, scope, `${path}.forEach`);
+    return wrapSingleEffectLowering(lowerForEachEffect(source.forEach, context, scope, `${path}.forEach`));
   }
   if (isRecord(source.reduce)) {
-    return lowerReduceEffect(source.reduce, context, scope, `${path}.reduce`);
+    return wrapSingleEffectLowering(lowerReduceEffect(source.reduce, context, scope, `${path}.reduce`));
   }
   if (isRecord(source.removeByPriority)) {
-    return lowerRemoveByPriorityEffect(source.removeByPriority, context, scope, `${path}.removeByPriority`);
+    return wrapSingleEffectLowering(lowerRemoveByPriorityEffect(source.removeByPriority, context, scope, `${path}.removeByPriority`));
   }
   if (isRecord(source.let)) {
-    return lowerLetEffect(source.let, context, scope, `${path}.let`);
+    return wrapSingleEffectLowering(lowerLetEffect(source.let, context, scope, `${path}.let`));
   }
   if (isRecord(source.bindValue)) {
-    return lowerBindValueEffect(source.bindValue, context, scope, `${path}.bindValue`);
+    return wrapSingleEffectLowering(lowerBindValueEffect(source.bindValue, context, scope, `${path}.bindValue`));
   }
   if (isRecord(source.evaluateSubset)) {
-    return lowerEvaluateSubsetEffect(source.evaluateSubset, context, scope, `${path}.evaluateSubset`);
+    return wrapSingleEffectLowering(lowerEvaluateSubsetEffect(source.evaluateSubset, context, scope, `${path}.evaluateSubset`));
   }
   if (isRecord(source.chooseOne)) {
-    return lowerChooseOneEffect(source.chooseOne, context, scope, `${path}.chooseOne`);
+    return wrapSingleEffectLowering(lowerChooseOneEffect(source.chooseOne, context, scope, `${path}.chooseOne`));
   }
   if (isRecord(source.chooseN)) {
-    return lowerChooseNEffect(source.chooseN, context, scope, `${path}.chooseN`);
+    return wrapSingleEffectLowering(lowerChooseNEffect(source.chooseN, context, scope, `${path}.chooseN`));
   }
   if (isRecord(source.distributeTokens)) {
-    return lowerDistributeTokensEffect(source.distributeTokens, context, scope, `${path}.distributeTokens`);
+    return lowerDistributeTokensEffects(source.distributeTokens, context, scope, `${path}.distributeTokens`);
   }
   if (isRecord(source.rollRandom)) {
-    return lowerRollRandomEffect(source.rollRandom, context, scope, `${path}.rollRandom`);
+    return wrapSingleEffectLowering(lowerRollRandomEffect(source.rollRandom, context, scope, `${path}.rollRandom`));
   }
   if (isRecord(source.setMarker)) {
-    return lowerSetMarkerEffect(source.setMarker, context, scope, `${path}.setMarker`);
+    return wrapSingleEffectLowering(lowerSetMarkerEffect(source.setMarker, context, scope, `${path}.setMarker`));
   }
   if (isRecord(source.shiftMarker)) {
-    return lowerShiftMarkerEffect(source.shiftMarker, context, scope, `${path}.shiftMarker`);
+    return wrapSingleEffectLowering(lowerShiftMarkerEffect(source.shiftMarker, context, scope, `${path}.shiftMarker`));
   }
   if (isRecord(source.setGlobalMarker)) {
-    return lowerSetGlobalMarkerEffect(source.setGlobalMarker, context, scope, `${path}.setGlobalMarker`);
+    return wrapSingleEffectLowering(lowerSetGlobalMarkerEffect(source.setGlobalMarker, context, scope, `${path}.setGlobalMarker`));
   }
   if (isRecord(source.flipGlobalMarker)) {
-    return lowerFlipGlobalMarkerEffect(source.flipGlobalMarker, context, scope, `${path}.flipGlobalMarker`);
+    return wrapSingleEffectLowering(lowerFlipGlobalMarkerEffect(source.flipGlobalMarker, context, scope, `${path}.flipGlobalMarker`));
   }
   if (isRecord(source.shiftGlobalMarker)) {
-    return lowerShiftGlobalMarkerEffect(source.shiftGlobalMarker, context, scope, `${path}.shiftGlobalMarker`);
+    return wrapSingleEffectLowering(lowerShiftGlobalMarkerEffect(source.shiftGlobalMarker, context, scope, `${path}.shiftGlobalMarker`));
   }
   if (isRecord(source.grantFreeOperation)) {
-    return lowerGrantFreeOperationEffect(source.grantFreeOperation, context, scope, `${path}.grantFreeOperation`);
+    return wrapSingleEffectLowering(lowerGrantFreeOperationEffect(source.grantFreeOperation, context, scope, `${path}.grantFreeOperation`));
   }
   if (isRecord(source.gotoPhaseExact)) {
-    return lowerGotoPhaseExactEffect(source.gotoPhaseExact, `${path}.gotoPhaseExact`);
+    return wrapSingleEffectLowering(lowerGotoPhaseExactEffect(source.gotoPhaseExact, `${path}.gotoPhaseExact`));
   }
   if (isRecord(source.advancePhase)) {
-    return lowerAdvancePhaseEffect(source.advancePhase, `${path}.advancePhase`);
+    return wrapSingleEffectLowering(lowerAdvancePhaseEffect(source.advancePhase, `${path}.advancePhase`));
   }
   if (isRecord(source.pushInterruptPhase)) {
-    return lowerPushInterruptPhaseEffect(source.pushInterruptPhase, `${path}.pushInterruptPhase`);
+    return wrapSingleEffectLowering(lowerPushInterruptPhaseEffect(source.pushInterruptPhase, `${path}.pushInterruptPhase`));
   }
   if (isRecord(source.popInterruptPhase)) {
-    return lowerPopInterruptPhaseEffect(source.popInterruptPhase, `${path}.popInterruptPhase`);
+    return wrapSingleEffectLowering(lowerPopInterruptPhaseEffect(source.popInterruptPhase, `${path}.popInterruptPhase`));
   }
 
-  return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
+  return wrapSingleEffectLowering(missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS));
 }
 
 function lowerSetVarEffect(
@@ -1874,12 +1884,12 @@ function lowerChooseNEffect(
   };
 }
 
-function lowerDistributeTokensEffect(
+function lowerDistributeTokensEffects(
   source: Record<string, unknown>,
   context: EffectLoweringContext,
   scope: BindingScope,
   path: string,
-): EffectLoweringResult<EffectAST> {
+): EffectLoweringResult<readonly EffectAST[]> {
   if (!isRecord(source.tokens) || !isRecord(source.destinations)) {
     return missingCapability(path, 'distributeTokens effect', source, [
       '{ distributeTokens: { tokens, destinations, n } }',
@@ -1958,7 +1968,6 @@ function lowerDistributeTokensEffect(
     return { value: null, diagnostics };
   }
 
-  const scopeBind = makeSyntheticBinding(path, 'scope');
   const selectedBind = makeSyntheticBinding(path, 'selected');
   const tokenBind = makeSyntheticBinding(path, 'token');
   const destinationBind = makeSyntheticBinding(path, 'destination');
@@ -1972,47 +1981,41 @@ function lowerDistributeTokensEffect(
         };
 
   return {
-    value: {
-      let: {
-        bind: scopeBind,
-        value: true,
-        in: [
-          {
-            chooseN: {
-              internalDecisionId: toInternalDecisionId(`${path}.selectTokens`),
-              bind: selectedBind,
-              options: tokenOptions.value,
-              ...cardinality,
-            },
-          },
-          {
-            forEach: {
-              bind: tokenBind,
-              over: {
-                query: 'binding',
-                name: selectedBind,
-              },
-              effects: [
-                {
-                  chooseOne: {
-                    internalDecisionId: toInternalDecisionId(`${path}.chooseDestination`),
-                    bind: destinationBind,
-                    options: destinationOptions.value,
-                  },
-                },
-                {
-                  moveToken: {
-                    token: tokenBind,
-                    from: { zoneExpr: { ref: 'tokenZone', token: tokenBind } },
-                    to: { zoneExpr: { ref: 'binding', name: destinationBind } },
-                  },
-                },
-              ],
-            },
-          },
-        ],
+    value: [
+      {
+        chooseN: {
+          internalDecisionId: toInternalDecisionId(`${path}.selectTokens`),
+          bind: selectedBind,
+          options: tokenOptions.value,
+          ...cardinality,
+        },
       },
-    },
+      {
+        forEach: {
+          bind: tokenBind,
+          over: {
+            query: 'binding',
+            name: selectedBind,
+          },
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: toInternalDecisionId(`${path}.chooseDestination`),
+                bind: destinationBind,
+                options: destinationOptions.value,
+              },
+            },
+            {
+              moveToken: {
+                token: tokenBind,
+                from: { zoneExpr: { ref: 'tokenZone', token: tokenBind } },
+                to: { zoneExpr: { ref: 'binding', name: destinationBind } },
+              },
+            },
+          ],
+        },
+      },
+    ],
     diagnostics,
   };
 }
@@ -2025,15 +2028,19 @@ function lowerNestedEffects(
 ): EffectLoweringResult<readonly EffectAST[]> {
   const diagnostics: Diagnostic[] = [];
   const values: EffectAST[] = [];
+  let loweredEntryCount = 0;
   source.forEach((entry, index) => {
     const lowered = lowerEffectNode(entry, context, scope, `${path}.${index}`);
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value !== null) {
-      values.push(lowered.value);
-      registerSequentialBinding(lowered.value, scope);
+      loweredEntryCount += 1;
+      for (const loweredEffect of lowered.value) {
+        values.push(loweredEffect);
+        registerSequentialBinding(loweredEffect, scope);
+      }
     }
   });
-  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && values.length !== source.length) {
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && loweredEntryCount !== source.length) {
     return { value: null, diagnostics };
   }
   return { value: values, diagnostics };

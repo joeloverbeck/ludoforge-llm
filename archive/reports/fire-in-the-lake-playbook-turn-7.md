@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Fire in the Lake - Playbook Turn 7
 
 ## GAME TURN 7, Booby Traps
@@ -43,3 +45,10 @@ pawns from the map, and set the Booby Traps card in front of the
 VC as a handy reference for its lasting effect. A Coup Round (6.0)
 will now interrupt the normal Sequence of Play. Before doing so,
 reveal the following Event card, Sihanouk.
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **Changes**: Enriched FITL playbook golden test Turn 7 assertions in `packages/engine/test/e2e/fitl-playbook-golden.test.ts`. Added comprehensive assertions for Move 1 (VC shaded Booby Traps event), Move 2 (NVA Attack + Ambush in Quang Tri), and end state — including global var persistence (infiltrateCount, terrorSabotageMarkersPlaced), zone token counts (Quang Tri pieces, US irregular, VC base, casualties), all 4 support/opposition markers, activeLeader global marker, Hue zone vars, all 4 victory computed values, available box counts, pending free-operation grants, and full board persistence from Turn 6 across 13+ zones.
+- **Deviations**: None
+- **Verification**: All 44 e2e tests pass (0 failures)

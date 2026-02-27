@@ -4,12 +4,14 @@ import type {
   EffectAST,
   MacroOrigin,
   NumericValueExpr,
+  OptionsQuery,
   PlayerSel,
   TransferVarEndpoint,
   TokenFilterPredicate,
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
+import { inferQueryDomainKinds } from '../kernel/query-domain-kinds.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
 import { collectSequentialBindings } from './binder-surface-registry.js';
 import {
@@ -1901,6 +1903,12 @@ function lowerDistributeTokensEffects(
   const tokenOptions = lowerQueryNode(source.tokens, condCtx, `${path}.tokens`);
   const destinationOptions = lowerQueryNode(source.destinations, condCtx, `${path}.destinations`);
   const diagnostics = [...tokenOptions.diagnostics, ...destinationOptions.diagnostics];
+  if (tokenOptions.value !== null) {
+    diagnostics.push(...validateDistributeTokensDomain(tokenOptions.value, 'token', `${path}.tokens`));
+  }
+  if (destinationOptions.value !== null) {
+    diagnostics.push(...validateDistributeTokensDomain(destinationOptions.value, 'zone', `${path}.destinations`));
+  }
 
   const hasN = source.n !== undefined;
   const hasMin = source.min !== undefined;
@@ -2018,6 +2026,38 @@ function lowerDistributeTokensEffects(
     ],
     diagnostics,
   };
+}
+
+type DistributeTokensExpectedDomain = 'token' | 'zone';
+
+function validateDistributeTokensDomain(
+  query: OptionsQuery,
+  expected: DistributeTokensExpectedDomain,
+  path: string,
+): readonly Diagnostic[] {
+  const domains = inferQueryDomainKinds(query);
+  if (domains.size === 1 && domains.has(expected)) {
+    return [];
+  }
+
+  const expectedLabel = expected === 'token' ? 'token' : 'zone';
+  const code =
+    expected === 'token'
+      ? 'CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID'
+      : 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID';
+
+  return [
+    {
+      code,
+      path,
+      severity: 'error',
+      message: `distributeTokens ${path.endsWith('.tokens') ? 'tokens' : 'destinations'} query must resolve to ${expectedLabel}-domain options.`,
+      suggestion:
+        expected === 'token'
+          ? 'Use token queries only (tokensInZone, tokensInAdjacentZones, tokensInMapSpaces, or compositions that stay token-only).'
+          : 'Use zone queries only (zones, mapSpaces, adjacentZones, connectedZones, or compositions that stay zone-only).',
+    },
+  ];
 }
 
 function lowerNestedEffects(

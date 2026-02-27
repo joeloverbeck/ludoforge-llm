@@ -42,6 +42,7 @@ export * from './eval-error-defer-class.js';
 export * from './eval-error.js';
 export * from './eval-error-classification.js';
 export * from './eval-query.js';
+export * from './query-domain-kinds.js';
 export * from './eval-value.js';
 export * from './interpreter-mode.js';
 export * from './value-membership.js';

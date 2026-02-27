@@ -888,7 +888,7 @@ describe('compile-effects lowering', () => {
       [
         {
           distributeTokens: {
-            tokens: { query: 'players' },
+            tokens: { query: 'tokensInZone', zone: 'deck' },
             destinations: { query: 'zones' },
             n: 2,
             max: 3,
@@ -896,7 +896,7 @@ describe('compile-effects lowering', () => {
         },
         {
           distributeTokens: {
-            tokens: { query: 'players' },
+            tokens: { query: 'tokensInZone', zone: 'deck' },
             destinations: { query: 'zones' },
             min: 3,
             max: 1,
@@ -910,6 +910,68 @@ describe('compile-effects lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.distributeTokens'), true);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.distributeTokens'), true);
+  });
+
+  it('rejects distributeTokens token/zone domain mismatches at compile time', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          distributeTokens: {
+            tokens: { query: 'players' },
+            destinations: { query: 'zones' },
+            n: 1,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: { query: 'players' },
+            n: 1,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: {
+              query: 'concat',
+              sources: [
+                { query: 'tokensInZone', zone: 'deck' },
+                { query: 'zones' },
+              ],
+            },
+            destinations: { query: 'zones' },
+            n: 1,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.0.distributeTokens.tokens',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.1.distributeTokens.destinations',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.2.distributeTokens.tokens',
+      ),
+      true,
+    );
   });
 
   it('lowers globalMarkers query and flipGlobalMarker effect with binding marker refs', () => {

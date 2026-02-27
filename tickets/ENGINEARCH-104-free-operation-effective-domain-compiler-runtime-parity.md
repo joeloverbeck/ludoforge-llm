@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler diagnostics contract alignment with runtime turn-flow eligibility semantics
-**Deps**: specs/17-fitl-turn-sequence-eligibility-and-card-flow.md
+**Deps**: archive/specs/17-fitl-turn-sequence-eligibility-and-card-flow.md
 
 ## Problem
 

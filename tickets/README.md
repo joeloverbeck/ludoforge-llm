@@ -25,7 +25,7 @@ To keep architecture clean, robust, and extensible, every new ticket must be cre
 
 ## Mandatory Pre-Implementation Checks
 
-1. Dependency references point to existing, non-archived tickets/spec deliverables.
+1. Dependency references point to existing repository files (active or archived paths are both valid when explicit).
 2. Type and data contracts match current code (for example seed type, move shape, store API).
 3. Files-to-touch list matches current file layout and ownership.
 4. Scope does not duplicate already-delivered architecture.
@@ -36,4 +36,3 @@ Follow `docs/archival-workflow.md` as the canonical process.
 
 For active tickets, archive with:
 `node scripts/archive-ticket.mjs tickets/<ticket-file>.md archive/tickets/`
-

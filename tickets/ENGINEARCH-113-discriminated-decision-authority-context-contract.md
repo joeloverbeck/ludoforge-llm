@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel `EffectContext`/authority typing and constructor paths
-**Deps**: tickets/ENGINEARCH-098-effect-context-authority-constructor-hardening.md
+**Deps**: archive/tickets/ENGINEARCH-098-effect-context-authority-constructor-hardening.md
 
 ## Problem
 

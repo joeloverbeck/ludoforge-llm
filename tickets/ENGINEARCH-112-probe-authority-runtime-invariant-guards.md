@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel choice-effect runtime reason invariants + unit coverage
-**Deps**: tickets/ENGINEARCH-098-effect-context-authority-constructor-hardening.md
+**Deps**: archive/tickets/ENGINEARCH-098-effect-context-authority-constructor-hardening.md
 
 ## Problem
 

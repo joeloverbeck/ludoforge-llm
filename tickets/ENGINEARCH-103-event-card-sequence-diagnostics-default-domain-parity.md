@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler event-card effect lowering context plumbing
-**Deps**: specs/17-fitl-turn-sequence-eligibility-and-card-flow.md
+**Deps**: archive/specs/17-fitl-turn-sequence-eligibility-and-card-flow.md
 
 ## Problem
 

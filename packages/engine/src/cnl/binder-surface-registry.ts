@@ -455,6 +455,18 @@ export const MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS = [
   { effectKind: 'evaluateSubset', bindFields: ['subsetBind', 'resultBind', 'bestSubsetBind'] },
 ] as const satisfies readonly MacroOriginNodeBindingAnnotationSpec[];
 
+export const MACRO_ORIGIN_SPECIALIZED_BINDER_EFFECT_KINDS = [
+  'reduce',
+  'removeByPriority',
+] as const satisfies readonly SupportedEffectKind[];
+
+export const MACRO_ORIGIN_CLASSIFIED_BINDER_EFFECT_KINDS: readonly SupportedEffectKind[] = [
+  ...new Set<SupportedEffectKind>([
+    ...MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS.map((spec) => spec.effectKind),
+    ...MACRO_ORIGIN_SPECIALIZED_BINDER_EFFECT_KINDS,
+  ]),
+];
+
 export const REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS = [
   { bindField: 'itemBind', macroOriginField: 'itemMacroOrigin' },
   { bindField: 'accBind', macroOriginField: 'accMacroOrigin' },

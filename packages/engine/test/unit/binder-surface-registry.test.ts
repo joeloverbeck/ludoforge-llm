@@ -9,9 +9,11 @@ import {
   collectSequentialBindings,
   DECLARED_BINDER_EFFECT_KINDS,
   EFFECT_BINDER_SURFACES,
+  MACRO_ORIGIN_CLASSIFIED_BINDER_EFFECT_KINDS,
   MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS,
   NON_EFFECT_BINDER_REFERENCER_SURFACES,
   REDUCE_MACRO_ORIGIN_BINDING_ANNOTATION_SPECS,
+  REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS,
   rewriteBinderSurfaceStringsInNode,
 } from '../../src/cnl/binder-surface-registry.js';
 import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/cnl/binder-surface-contract.js';
@@ -103,6 +105,14 @@ describe('binder-surface-registry', () => {
     );
   });
 
+  it('classifies every binder-declaring effect kind in macro-origin annotation policy', () => {
+    assert.deepEqual(
+      [...DECLARED_BINDER_EFFECT_KINDS].sort(),
+      [...MACRO_ORIGIN_CLASSIFIED_BINDER_EFFECT_KINDS].sort(),
+      'Every binder-declaring effect kind must be explicitly classified: node-level annotation spec or specialized macro-origin handling.',
+    );
+  });
+
   it('keeps node-level macro-origin annotation bind fields aligned with declared binder paths', () => {
     for (const spec of MACRO_ORIGIN_NODE_BINDING_ANNOTATION_SPECS) {
       const declaredLeafFields = new Set(
@@ -133,6 +143,23 @@ describe('binder-surface-registry', () => {
         `reduce.${spec.bindField} must be declared in EFFECT_BINDER_SURFACES`,
       );
       assert.equal(spec.macroOriginField.endsWith('MacroOrigin'), true);
+    }
+  });
+
+  it('keeps removeByPriority group macro-origin bind fields aligned with declared group binder paths', () => {
+    const removeByPriorityGroupDeclaredLeafFields = new Set(
+      EFFECT_BINDER_SURFACES.removeByPriority.declaredBinderPaths
+        .filter((path) => path[0] === 'groups' && path[1] === '*')
+        .map((path) => path[path.length - 1])
+        .filter((segment): segment is string => typeof segment === 'string'),
+    );
+
+    for (const bindField of REMOVE_BY_PRIORITY_MACRO_ORIGIN_GROUP_BIND_FIELDS) {
+      assert.equal(
+        removeByPriorityGroupDeclaredLeafFields.has(bindField),
+        true,
+        `removeByPriority.groups.*.${bindField} must be declared in EFFECT_BINDER_SURFACES`,
+      );
     }
   });
 

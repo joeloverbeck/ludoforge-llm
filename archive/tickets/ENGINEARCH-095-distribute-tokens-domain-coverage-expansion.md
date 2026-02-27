@@ -1,6 +1,6 @@
 # ENGINEARCH-095: Expand `distributeTokens` Domain-Contract Coverage Across Zone Query Families
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — test-surface hardening for compiler domain diagnostics
@@ -12,9 +12,9 @@
 
 ## Assumption Reassessment (2026-02-27)
 
-1. Current `compile-effects` tests assert invalid domains (`players`) and mixed `concat` for `tokens`, but do not cover all valid zone-domain destination families.
-2. Shared query-domain utility includes recursive propagation semantics; however, `distributeTokens` tests do not currently pin those recursive paths end-to-end.
-3. Mismatch: feature exists but coverage is incomplete; corrected scope is targeted contract coverage expansion only.
+1. Verified: current `compile-effects` tests assert invalid domains (`players`) and mixed `concat` for `tokens`, but only cover a `zones` happy path for `distributeTokens.destinations`.
+2. Verified discrepancy: recursive domain propagation is implemented in `inferQueryDomainKinds` and already unit-tested in `kernel/query-domain-kinds.test.ts`, but `distributeTokens` tests do not currently pin those recursive paths end-to-end.
+3. Corrected scope: this ticket is test-only contract hardening for `distributeTokens` destination-domain validation (no runtime architecture changes expected).
 
 ## Architecture Check
 
@@ -28,7 +28,7 @@
 
 Add compile tests proving `distributeTokens.destinations` accepts `zones`, `mapSpaces`, `adjacentZones`, and `connectedZones` as zone-domain queries.
 
-### 2. Add recursive domain-propagation coverage
+### 2. Add recursive domain-propagation coverage in `distributeTokens`
 
 Add compile tests for `nextInOrderByCondition` with zone-domain source (valid destination) and token-domain source (invalid destination).
 
@@ -69,3 +69,18 @@ Assert targeted diagnostics for invalid recursive/mismatched destination domains
 
 1. `pnpm -F @ludoforge/engine test:unit -- --coverage=false`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion Date**: 2026-02-27
+- **What Changed**:
+  - Updated assumption reassessment to reflect current code/tests accurately, including the existing recursive domain inference unit coverage and the missing `distributeTokens`-specific coverage.
+  - Expanded `distributeTokens` compile-effect tests to cover all supported zone-domain destination query families (`zones`, `mapSpaces`, `adjacentZones`, `connectedZones`).
+  - Added recursive propagation coverage for `nextInOrderByCondition` destinations, including a valid zone-domain source case and an invalid token-domain source case with targeted diagnostics.
+- **Deviations From Original Plan**:
+  - No scope deviation in implementation. Clarified assumptions before implementation to correct nuance about where recursive behavior was already tested.
+- **Verification Results**:
+  - `pnpm turbo build` ✅
+  - `pnpm -F @ludoforge/engine test:unit -- --coverage=false` ✅ (183 passed, 0 failed)
+  - `pnpm -F @ludoforge/engine test` ✅ (308 passed, 0 failed)
+  - `pnpm -F @ludoforge/engine lint` ✅

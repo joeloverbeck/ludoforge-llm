@@ -912,6 +912,100 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('accepts all zone-domain destination query families for distributeTokens', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: { query: 'zones' },
+            n: 1,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: { query: 'mapSpaces' },
+            n: 1,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: { query: 'adjacentZones', zone: 'board' },
+            n: 1,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: { query: 'connectedZones', zone: 'board', includeStart: true, maxDepth: 2 },
+            n: 1,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.ok(result.value !== null);
+    assert.equal(result.value.length, 8);
+  });
+
+  it('validates recursive destination-domain propagation for distributeTokens', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: {
+              query: 'nextInOrderByCondition',
+              source: { query: 'mapSpaces' },
+              from: 'board:none',
+              bind: '$zone',
+              where: { op: '==', left: 1, right: 1 },
+            },
+            n: 1,
+          },
+        },
+        {
+          distributeTokens: {
+            tokens: { query: 'tokensInZone', zone: 'deck' },
+            destinations: {
+              query: 'nextInOrderByCondition',
+              source: { query: 'tokensInMapSpaces' },
+              from: 'tok-1',
+              bind: '$token',
+              where: { op: '==', left: 1, right: 1 },
+            },
+            n: 1,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.1.distributeTokens.destinations',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.0.distributeTokens.destinations',
+      ),
+      false,
+    );
+  });
+
   it('rejects distributeTokens cardinality mixes and contradictory ranges', () => {
     const result = lowerEffectArray(
       [

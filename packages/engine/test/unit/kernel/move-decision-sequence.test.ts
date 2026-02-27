@@ -664,15 +664,17 @@ phase: [asPhaseId('main')],
       },
     });
 
-    assert.throws(
-      () =>
-        resolveMoveDecisionSequence(def, state, {
-          actionId: asActionId('operation'),
-          params: { 'decision:$zone': 'board:vietnam' },
-          freeOperation: true,
-        }),
-      (error: unknown) => error instanceof Error && error.message.includes('invalid selection for chooseOne'),
-    );
+    const result = resolveMoveDecisionSequence(def, state, {
+      actionId: asActionId('operation'),
+      params: { 'decision:$zone': 'board:vietnam' },
+      freeOperation: true,
+    });
+    assert.equal(result.complete, false);
+    assert.deepEqual(result.illegal, {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationZoneFilterMismatch',
+    });
   });
 
   const ownershipPrimitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];

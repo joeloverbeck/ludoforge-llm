@@ -6,6 +6,7 @@ import {
   resolveEventFreeOperationGrants,
 } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
+import { isEvalErrorCode } from './eval-error.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { normalizeSeatOrder, parseNumericSeatPlayer } from './seat-resolution.js';
@@ -344,7 +345,10 @@ const doesGrantAuthorizeMove = (
 ): boolean =>
   isPendingFreeOperationGrantSequenceReady(pending, grant) &&
   doesGrantApplyToMove(def, grant, move) &&
-  (grant.zoneFilter === undefined || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter));
+  (
+    grant.zoneFilter === undefined
+    || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter, 'turnFlowEligibility')
+  );
 
 const moveZoneCandidates = (def: GameDef, move: Move): readonly string[] => {
   const zoneIdSet = new Set(def.zones.map((zone) => String(zone.id)));
@@ -370,6 +374,7 @@ const evaluateZoneFilterForMove = (
   state: GameState,
   move: Move,
   zoneFilter: ConditionAST,
+  surface: 'turnFlowEligibility' | 'legalChoices',
 ): boolean => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const baseBindings: Readonly<Record<string, unknown>> = buildMoveRuntimeBindings(move);
@@ -386,8 +391,13 @@ const evaluateZoneFilterForMove = (
         collector: createCollector(),
       });
     } catch (cause) {
+      if (surface === 'legalChoices' && isEvalErrorCode(cause, 'MISSING_BINDING') && cause.context?.binding === '$zone') {
+        // During discovery template probing, zone decisions may be unresolved.
+        // Defer grant denial until concrete zone bindings exist.
+        return true;
+      }
       throw freeOperationZoneFilterEvaluationError({
-        surface: 'turnFlowEligibility',
+        surface,
         actionId: String(move.actionId),
         moveParams: move.params,
         zoneFilter,
@@ -414,7 +424,7 @@ const evaluateZoneFilterForMove = (
       }
     } catch (cause) {
       throw freeOperationZoneFilterEvaluationError({
-        surface: 'turnFlowEligibility',
+        surface,
         actionId: String(move.actionId),
         moveParams: move.params,
         zoneFilter,
@@ -666,6 +676,7 @@ const analyzeFreeOperationGrantMatch = (
   move: Move,
   options?: {
     readonly evaluateZoneFilters?: boolean;
+    readonly zoneFilterErrorSurface?: 'turnFlowEligibility' | 'legalChoices';
   },
 ): FreeOperationGrantAnalysis | null => {
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
@@ -681,7 +692,13 @@ const analyzeFreeOperationGrantMatch = (
   const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
   const zoneMatchedGrants = options?.evaluateZoneFilters === true
     ? actionMatchedGrants.filter(
-        (grant) => grant.zoneFilter === undefined || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter),
+        (grant) => grant.zoneFilter === undefined || evaluateZoneFilterForMove(
+          def,
+          state,
+          move,
+          grant.zoneFilter,
+          options.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+        ),
       )
     : actionMatchedGrants;
   return {
@@ -722,6 +739,7 @@ export const explainFreeOperationBlockForMove = (
   move: Move,
   options?: {
     readonly evaluateZoneFilters?: boolean;
+    readonly zoneFilterErrorSurface?: 'turnFlowEligibility' | 'legalChoices';
   },
 ): FreeOperationBlockExplanation => {
   if (move.freeOperation !== true) {
@@ -732,6 +750,7 @@ export const explainFreeOperationBlockForMove = (
   }
   const analysis = analyzeFreeOperationGrantMatch(def, state, move, {
     evaluateZoneFilters: options?.evaluateZoneFilters ?? true,
+    ...(options?.zoneFilterErrorSurface === undefined ? {} : { zoneFilterErrorSurface: options.zoneFilterErrorSurface }),
   });
   if (analysis === null) {
     return { cause: 'nonCardDrivenTurnOrder' };

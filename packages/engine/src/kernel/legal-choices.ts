@@ -24,6 +24,7 @@ import {
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import type { FreeOperationBlockCause } from './free-operation-denial-contract.js';
 import {
   explainFreeOperationBlockForMove,
   resolveFreeOperationExecutionPlayer,
@@ -60,6 +61,32 @@ interface LegalChoicesPreparedContext {
   readonly adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
   readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
 }
+
+type FreeOperationDeniedCauseForChoice = Exclude<
+  FreeOperationBlockCause,
+  'granted' | 'nonCardDrivenTurnOrder' | 'notFreeOperationMove'
+>;
+
+const toFreeOperationChoiceIllegalReason = (
+  cause: FreeOperationDeniedCauseForChoice,
+): Extract<ChoiceRequest, { kind: 'illegal' }>['reason'] => {
+  switch (cause) {
+    case 'noActiveSeatGrant':
+      return 'freeOperationNoActiveSeatGrant';
+    case 'sequenceLocked':
+      return 'freeOperationSequenceLocked';
+    case 'actionClassMismatch':
+      return 'freeOperationActionClassMismatch';
+    case 'actionIdMismatch':
+      return 'freeOperationActionIdMismatch';
+    case 'zoneFilterMismatch':
+      return 'freeOperationZoneFilterMismatch';
+    default: {
+      const unreachable: never = cause;
+      return unreachable;
+    }
+  }
+};
 
 const executeDiscoveryEffects = (
   effects: readonly EffectAST[],
@@ -433,20 +460,15 @@ const legalChoicesWithPreparedContext = (
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
   if (partialMove.freeOperation === true) {
-    const denial = explainFreeOperationBlockForMove(def, state, partialMove, { evaluateZoneFilters: false });
-    if (denial.cause !== 'granted' && denial.cause !== 'nonCardDrivenTurnOrder') {
+    const denial = explainFreeOperationBlockForMove(def, state, partialMove, {
+      evaluateZoneFilters: true,
+      zoneFilterErrorSurface: 'legalChoices',
+    });
+    if (denial.cause !== 'granted' && denial.cause !== 'nonCardDrivenTurnOrder' && denial.cause !== 'notFreeOperationMove') {
       return {
         kind: 'illegal',
         complete: false,
-        reason: denial.cause === 'noActiveSeatGrant'
-          ? 'freeOperationNoActiveSeatGrant'
-          : denial.cause === 'sequenceLocked'
-            ? 'freeOperationSequenceLocked'
-              : denial.cause === 'actionClassMismatch'
-                ? 'freeOperationActionClassMismatch'
-                : denial.cause === 'actionIdMismatch'
-                  ? 'freeOperationActionIdMismatch'
-                  : 'freeOperationZoneFilterMismatch',
+        reason: toFreeOperationChoiceIllegalReason(denial.cause),
       };
     }
   }

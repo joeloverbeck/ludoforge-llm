@@ -33,6 +33,7 @@ describe('createGameWorker', () => {
       () => worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
       () => worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
       () => worker.playSequence([LEGAL_TICK_MOVE], undefined, nextStamp(), undefined),
+      () => worker.describeAction('tick'),
       () => worker.terminalResult(),
       () => worker.getState(),
       () => worker.getMetadata(),
@@ -566,5 +567,25 @@ describe('createGameWorker', () => {
     } catch (error) {
       expectWorkerError(error, 'NOT_INITIALIZED');
     }
+  });
+
+  it('describeAction returns annotated description for a valid action ID', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 60, undefined, nextStamp());
+
+    const result = await worker.describeAction('tick');
+    expect(result).not.toBeNull();
+    expect(result!.sections).toBeDefined();
+    expect(Array.isArray(result!.sections)).toBe(true);
+  });
+
+  it('describeAction returns null for an unknown action ID', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 61, undefined, nextStamp());
+
+    const result = await worker.describeAction('nonexistent');
+    expect(result).toBeNull();
   });
 });

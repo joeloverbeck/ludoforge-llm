@@ -1,6 +1,6 @@
 # ACTTOOLTIP-002: Use macroOrigin.stem for removeByPriority group bind rendering
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/ast-to-display.ts`
@@ -22,24 +22,26 @@ When the bind name is a hygienic macro-expanded name (e.g. `$__macro_betting_rou
 2. `macroOrigin` was added to the parent `removeByPriority` node (line 360), not to individual groups — confirmed.
 3. The current `annotateControlFlowMacroOrigins` in `expand-effect-macros.ts` (lines 924-957) sets `macroOrigin` on the parent by looking up `remainingBind` and then falling back to the first group's `bind` — confirmed.
 4. Groups do not have their own `macroOrigin` field in the type system. The parent's `macroOrigin.stem` is a single stem derived from whichever bind was found first.
+5. Existing tests already cover macro-origin stem rendering for `forEach`, `chooseOne`, and `let`, but there is no test for `removeByPriority` group bind rendering — confirmed in `ast-to-display.test.ts`.
 
 ## Architecture Check
 
-1. Using the parent's `macroOrigin?.stem` as a fallback for group bind display is the simplest approach and consistent with how other effects work. An alternative (adding per-group `macroOrigin`) would require type/schema changes for marginal benefit since in practice all groups within a single `removeByPriority` come from the same macro expansion.
-2. This is a rendering-only change in the generic display layer. No game-specific logic.
-3. No backwards-compatibility shims.
+1. Using the parent's `macroOrigin?.stem` as a fallback for group bind display is the smallest correct change for the current type shape and aligns this effect with existing display behavior.
+2. Architectural caveat: a single parent `macroOrigin` cannot represent mixed-origin group binds. The ideal long-term model is per-group binding display metadata (for example per-group `macroOrigin` or canonical `displayName` on bind references). That structural redesign is out of scope for this ticket.
+3. This is a rendering-only change in the generic display layer. No game-specific logic.
+4. No backwards-compatibility shims.
 
 ## What to Change
 
 ### 1. Use parent macroOrigin.stem for group bind display
 
-In `packages/engine/src/kernel/ast-to-display.ts`, the `removeByPriority` rendering block (line 476), change:
+In `packages/engine/src/kernel/ast-to-display.ts`, the `removeByPriority` rendering block, change:
 
 ```typescript
 ref(g.bind, 'binding')
 ```
 
-to use the `bindDisplay` helper (see ACTTOOLTIP-004) or inline:
+to inline:
 
 ```typescript
 ref(effect.removeByPriority.macroOrigin?.stem ?? g.bind, 'binding')
@@ -84,3 +86,21 @@ Add a test in `ast-to-display.test.ts` that creates a `removeByPriority` effect 
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/kernel/ast-to-display.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion Date**: 2026-02-27
+- **What changed**
+  - Updated `packages/engine/src/kernel/ast-to-display.ts` so `removeByPriority` group bind rendering uses `effect.removeByPriority.macroOrigin?.stem ?? g.bind`.
+  - Added tests in `packages/engine/test/unit/kernel/ast-to-display.test.ts`:
+    - `renders removeByPriority group bind with macroOrigin.stem`
+    - `renders removeByPriority group bind raw when macroOrigin is absent`
+  - Updated this ticket's assumptions/scope before implementation to reflect actual code/test state and explicit architecture caveat.
+- **Deviations from original plan**
+  - Added one extra invariant test (raw bind fallback when `macroOrigin` is absent) beyond the original single new test.
+  - Kept change inline (did not introduce a shared helper), consistent with this ticket's scope.
+- **Verification results**
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/ast-to-display.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`303` tests, `0` failures).
+  - `pnpm -F @ludoforge/engine lint` passed.

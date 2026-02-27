@@ -596,6 +596,7 @@ effectAstSchemaInternal = z.union([
                 to: z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]),
                 from: z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]).optional(),
                 countBind: StringSchema.optional(),
+                macroOrigin: MacroOriginSchema.optional(),
               })
               .strict(),
           ),

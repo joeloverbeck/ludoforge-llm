@@ -221,7 +221,7 @@ phase: ['main'],
     ]);
   });
 
-  it('annotates macro-expanded forEach/reduce bindings with macroOrigin metadata', () => {
+  it('annotates macro-expanded control-flow bindings with macroOrigin metadata', () => {
     const macroDef: EffectMacroDef = {
       id: 'collect-forced-bets',
       params: [],
@@ -245,6 +245,12 @@ phase: ['main'],
             in: [],
           },
         },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [{ bind: '$target', over: { query: 'tokensInZone', zone: 'board' }, to: 'discard' }],
+          },
+        },
       ],
     };
     const doc = makeDoc({
@@ -257,14 +263,19 @@ phase: ['main'],
 
     const expandedForEach = result.doc.setup?.[0] as { forEach: Record<string, unknown> };
     const expandedReduce = result.doc.setup?.[1] as { reduce: Record<string, unknown> };
+    const expandedRemove = result.doc.setup?.[2] as { removeByPriority: { macroOrigin?: { macroId: string; stem: string }; groups: Array<Record<string, unknown>> } };
     assert.ok(typeof expandedForEach.forEach.bind === 'string');
     assert.ok(typeof expandedReduce.reduce.resultBind === 'string');
     assert.equal((expandedForEach.forEach.bind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.equal((expandedReduce.reduce.resultBind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.deepEqual(expandedForEach.forEach.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
     assert.deepEqual(expandedReduce.reduce.macroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
+    assert.deepEqual(expandedRemove.removeByPriority.macroOrigin, { macroId: 'collect-forced-bets', stem: 'target' });
+    assert.deepEqual(expandedRemove.removeByPriority.groups[0]?.macroOrigin, { macroId: 'collect-forced-bets', stem: 'target' });
     assert.equal(isTrustedMacroOriginCarrier(expandedForEach.forEach), true);
     assert.equal(isTrustedMacroOriginCarrier(expandedReduce.reduce), true);
+    assert.equal(isTrustedMacroOriginCarrier(expandedRemove.removeByPriority), true);
+    assert.equal(isTrustedMacroOriginCarrier(expandedRemove.removeByPriority.groups[0] ?? {}), true);
   });
 
   it('nested macro expansion (macro A invokes macro B)', () => {

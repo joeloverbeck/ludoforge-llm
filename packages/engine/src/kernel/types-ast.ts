@@ -356,6 +356,7 @@ export type EffectAST =
           readonly to: ZoneRef;
           readonly from?: ZoneRef;
           readonly countBind?: string;
+          readonly macroOrigin?: EffectMacroOrigin;
         }[];
         readonly remainingBind?: string;
         readonly in?: readonly EffectAST[];

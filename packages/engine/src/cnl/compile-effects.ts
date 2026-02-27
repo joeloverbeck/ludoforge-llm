@@ -1097,12 +1097,15 @@ function lowerRemoveByPriorityEffect(
 
   const budgetResult = lowerNumericValueNode(source.budget, makeConditionContext(context, scope), `${path}.budget`);
   const diagnostics: Diagnostic[] = [...budgetResult.diagnostics];
+  const macroOrigin = readMacroOrigin(source.macroOrigin, source, `${path}.macroOrigin`);
+  diagnostics.push(...macroOrigin.diagnostics);
   const loweredGroups: Array<{
     bind: string;
     over: NonNullable<ReturnType<typeof lowerQueryNode>['value']>;
     to: NonNullable<ReturnType<typeof lowerZoneSelector>['value']>;
     from?: NonNullable<ReturnType<typeof lowerZoneSelector>['value']>;
     countBind?: string;
+    macroOrigin?: MacroOrigin;
   }> = [];
 
   source.groups.forEach((entry, index) => {
@@ -1134,7 +1137,9 @@ function lowerRemoveByPriorityEffect(
     }
 
     const countBind = typeof entry.countBind === 'string' ? entry.countBind : undefined;
-    if (over.value === null || toResult.value === null || fromResult?.value === null) {
+    const groupMacroOrigin = readMacroOrigin(entry.macroOrigin, entry, `${groupPath}.macroOrigin`);
+    diagnostics.push(...groupMacroOrigin.diagnostics);
+    if (over.value === null || toResult.value === null || fromResult?.value === null || groupMacroOrigin.value === null) {
       return;
     }
 
@@ -1144,6 +1149,7 @@ function lowerRemoveByPriorityEffect(
       to: toResult.value,
       ...(fromResult?.value === undefined ? {} : { from: fromResult.value }),
       ...(countBind === undefined ? {} : { countBind }),
+      ...(groupMacroOrigin.value === undefined ? {} : { macroOrigin: groupMacroOrigin.value }),
     });
   });
 
@@ -1179,7 +1185,7 @@ function lowerRemoveByPriorityEffect(
     loweredIn = inResult.value;
   }
 
-  if (budgetResult.value === null || diagnostics.some((d) => d.severity === 'error')) {
+  if (budgetResult.value === null || macroOrigin.value === null || diagnostics.some((d) => d.severity === 'error')) {
     return { value: null, diagnostics };
   }
 
@@ -1190,6 +1196,7 @@ function lowerRemoveByPriorityEffect(
         groups: loweredGroups,
         ...(remainingBind === undefined ? {} : { remainingBind }),
         ...(loweredIn === undefined ? {} : { in: loweredIn }),
+        ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
       },
     },
     diagnostics,

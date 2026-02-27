@@ -91,6 +91,20 @@ describe('validateGameSpec structural rules', () => {
                 in: [],
               },
             },
+            {
+              removeByPriority: {
+                budget: 1,
+                macroOrigin: { macroId: 'authored', stem: 'removal' },
+                groups: [
+                  {
+                    bind: '$t',
+                    macroOrigin: { macroId: 'authored', stem: 'target' },
+                    over: { query: 'tokensInZone', zone: 'board' },
+                    to: 'discard',
+                  },
+                ],
+              },
+            },
           ],
         },
       ],
@@ -99,7 +113,7 @@ describe('validateGameSpec structural rules', () => {
     const macroOriginDiagnostics = diagnostics.filter(
       (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
     );
-    assert.equal(macroOriginDiagnostics.length, 4);
+    assert.equal(macroOriginDiagnostics.length, 6);
     assert.equal(
       macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.forEach.macroOrigin'),
       true,
@@ -114,6 +128,14 @@ describe('validateGameSpec structural rules', () => {
     );
     assert.equal(
       macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.removeByPriority.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.removeByPriority.groups.0.macroOrigin'),
       true,
     );
   });

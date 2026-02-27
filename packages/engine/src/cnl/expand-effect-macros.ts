@@ -926,12 +926,38 @@ function annotateControlFlowMacroOrigins(
     const rbp = rewrittenNode.removeByPriority as Record<string, unknown>;
     const remainingBind = rbp.remainingBind;
     const groupsArr = rbp.groups;
+    let groupsChanged = false;
+    let rewrittenGroups: readonly unknown[] | undefined;
+    if (Array.isArray(groupsArr)) {
+      rewrittenGroups = groupsArr.map((group) => {
+        if (!isRecord(group) || typeof group.bind !== 'string') {
+          return group;
+        }
+        const origin = originByBinding.get(group.bind);
+        if (origin === undefined) {
+          return group;
+        }
+        const existing = group.macroOrigin;
+        const hasSameOrigin = isRecord(existing)
+          && existing.macroId === origin.macroId
+          && existing.stem === origin.stem;
+        const isTrusted = isTrustedMacroOriginCarrier(group);
+        if (hasSameOrigin && isTrusted) {
+          return group;
+        }
+        groupsChanged = true;
+        return markTrustedMacroOriginByExpansion({
+          ...group,
+          macroOrigin: origin,
+        });
+      });
+    }
     let foundOrigin: MacroBindingOrigin | undefined;
     if (typeof remainingBind === 'string') {
       foundOrigin = originByBinding.get(remainingBind);
     }
-    if (foundOrigin === undefined && Array.isArray(groupsArr)) {
-      for (const g of groupsArr) {
+    if (foundOrigin === undefined && Array.isArray(rewrittenGroups)) {
+      for (const g of rewrittenGroups) {
         if (isRecord(g) && typeof g.bind === 'string') {
           foundOrigin = originByBinding.get(g.bind);
           if (foundOrigin !== undefined) break;
@@ -949,11 +975,30 @@ function annotateControlFlowMacroOrigins(
           ...rewrittenNode,
           removeByPriority: markTrustedMacroOriginByExpansion({
             ...rbp,
+            ...(groupsChanged ? { groups: rewrittenGroups! } : {}),
             macroOrigin: foundOrigin,
           }),
         };
         changed = true;
+      } else if (groupsChanged) {
+        rewrittenNode = {
+          ...rewrittenNode,
+          removeByPriority: {
+            ...rbp,
+            groups: rewrittenGroups!,
+          },
+        };
+        changed = true;
       }
+    } else if (groupsChanged) {
+      rewrittenNode = {
+        ...rewrittenNode,
+        removeByPriority: {
+          ...rbp,
+          groups: rewrittenGroups!,
+        },
+      };
+      changed = true;
     }
   }
 

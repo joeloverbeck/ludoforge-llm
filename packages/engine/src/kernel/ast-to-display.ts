@@ -473,7 +473,13 @@ export const effectToDisplayNodes = (effect: EffectAST, indent: number): Display
       line(indent, spaced(kw('removeByPriority'), kw('budget'), ...numericValueExprToInlineNodes(effect.removeByPriority.budget))),
     ];
     for (const g of effect.removeByPriority.groups) {
-      nodes.push(line(indent + 1, spaced(ref(g.bind, 'binding'), kw('in'), ...optionsQueryToInlineNodes(g.over), kw('to'), ...zoneRefToInlineNodes(g.to))));
+      nodes.push(line(indent + 1, spaced(
+        ref(g.macroOrigin?.stem ?? effect.removeByPriority.macroOrigin?.stem ?? g.bind, 'binding'),
+        kw('in'),
+        ...optionsQueryToInlineNodes(g.over),
+        kw('to'),
+        ...zoneRefToInlineNodes(g.to),
+      )));
     }
     if (effect.removeByPriority.in !== undefined) {
       nodes.push(...effectsToDisplayNodes(effect.removeByPriority.in, indent + 1));

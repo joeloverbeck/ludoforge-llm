@@ -488,6 +488,68 @@ describe('effectToDisplayNodes', () => {
     assert.ok(texts(header.children).includes('reduce'));
   });
 
+  it('renders removeByPriority group bind with macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 1,
+        macroOrigin: { macroId: 'cleanup', stem: 'target' },
+        groups: [
+          {
+            bind: '$__macro_cleanup_0_target',
+            over: { query: 'tokensInZone', zone: 'board' },
+            to: 'discard',
+          },
+        ],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const groupLine = asLine(nodes[1]!);
+    const refs = findByKind(groupLine.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'target'));
+    assert.ok(!refs.some((n) => n.text === '$__macro_cleanup_0_target'));
+  });
+
+  it('renders removeByPriority group macroOrigin.stem over parent macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 1,
+        macroOrigin: { macroId: 'cleanup', stem: 'fallback' },
+        groups: [
+          {
+            bind: '$__macro_cleanup_0_target',
+            macroOrigin: { macroId: 'cleanup', stem: 'target' },
+            over: { query: 'tokensInZone', zone: 'board' },
+            to: 'discard',
+          },
+        ],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const groupLine = asLine(nodes[1]!);
+    const refs = findByKind(groupLine.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'target'));
+    assert.ok(!refs.some((n) => n.text === 'fallback'));
+  });
+
+  it('renders removeByPriority group bind raw when macroOrigin is absent', () => {
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 1,
+        groups: [
+          {
+            bind: 'candidate',
+            over: { query: 'tokensInZone', zone: 'board' },
+            to: 'discard',
+          },
+        ],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const groupLine = asLine(nodes[1]!);
+    const refs = findByKind(groupLine.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'candidate'));
+  });
+
   it('renders chooseOne', () => {
     const effect: EffectAST = {
       chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } },

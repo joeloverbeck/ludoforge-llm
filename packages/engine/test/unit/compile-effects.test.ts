@@ -173,7 +173,7 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce'), true);
   });
 
-  it('preserves trusted compiler macroOrigin on forEach and reduce during lowering', () => {
+  it('preserves trusted compiler macroOrigin on control-flow binders during lowering', () => {
     const macroDef: EffectMacroDef = {
       id: 'collect-forced-bets',
       params: [],
@@ -197,6 +197,14 @@ describe('compile-effects lowering', () => {
             in: [],
           },
         },
+        {
+          removeByPriority: {
+            budget: 2,
+            groups: [
+              { bind: '$target', over: { query: 'tokensInZone', zone: 'board' }, to: 'discard' },
+            ],
+          },
+        },
       ],
     };
     const expansion = expandEffectMacros({
@@ -214,10 +222,13 @@ describe('compile-effects lowering', () => {
 
     assertNoDiagnostics(result);
     assert.ok(result.value !== null);
-    assert.equal(result.value.length, 2);
+    assert.equal(result.value.length, 3);
 
     const forEachEffect = result.value[0] as { forEach: Record<string, unknown> };
     const reduceEffect = result.value[1] as { reduce: Record<string, unknown> };
+    const removeByPriorityEntry = result.value[2];
+    assert.ok(removeByPriorityEntry !== undefined && 'removeByPriority' in removeByPriorityEntry);
+    const removeByPriorityEffect = removeByPriorityEntry.removeByPriority as { macroOrigin?: { macroId: string; stem: string }; groups: readonly Record<string, unknown>[] };
 
     assert.equal(typeof forEachEffect.forEach.bind, 'string');
     assert.equal((forEachEffect.forEach.bind as string).startsWith('$__macro_collect_forced_bets_'), true);
@@ -235,6 +246,9 @@ describe('compile-effects lowering', () => {
     assert.deepEqual(reduceEffect.reduce.over, { query: 'intsInRange', min: 1, max: 3 });
     assert.equal(reduceEffect.reduce.initial, 0);
     assert.deepEqual(reduceEffect.reduce.in, []);
+
+    assert.deepEqual(removeByPriorityEffect.macroOrigin, { macroId: 'collect-forced-bets', stem: 'target' });
+    assert.deepEqual(removeByPriorityEffect.groups[0]?.macroOrigin, { macroId: 'collect-forced-bets', stem: 'target' });
   });
 
   it('rejects malformed macroOrigin payloads on control-flow effects', () => {
@@ -260,6 +274,19 @@ describe('compile-effects lowering', () => {
             in: [],
           },
         },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [
+              {
+                bind: '$target',
+                macroOrigin: { macroId: 'cleanup' },
+                over: { query: 'tokensInZone', zone: 'board' },
+                to: 'discard',
+              },
+            ],
+          },
+        },
       ],
       context,
       'doc.actions.0.effects',
@@ -279,6 +306,14 @@ describe('compile-effects lowering', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
           && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.2.removeByPriority.groups.0.macroOrigin',
       ),
       true,
     );
@@ -307,6 +342,19 @@ describe('compile-effects lowering', () => {
             in: [],
           },
         },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [
+              {
+                bind: '$target',
+                macroOrigin: { macroId: 'cleanup', stem: 'target' },
+                over: { query: 'tokensInZone', zone: 'board' },
+                to: 'discard',
+              },
+            ],
+          },
+        },
       ],
       context,
       'doc.actions.0.effects',
@@ -326,6 +374,14 @@ describe('compile-effects lowering', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
           && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.2.removeByPriority.groups.0.macroOrigin',
       ),
       true,
     );

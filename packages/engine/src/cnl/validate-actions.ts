@@ -368,6 +368,28 @@ function validateEffectNodeForAuthoredCompilerMetadata(
       suggestion: 'Remove reduce.macroOrigin from authored YAML; compiler expansion emits provenance.',
     });
   }
+  if (isRecord(node.removeByPriority) && Object.prototype.hasOwnProperty.call(node.removeByPriority, 'macroOrigin')) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+      path: `${path}.removeByPriority.macroOrigin`,
+      severity: 'error',
+      message: 'removeByPriority.macroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove removeByPriority.macroOrigin from authored YAML; compiler expansion emits provenance.',
+    });
+  }
+  if (isRecord(node.removeByPriority) && Array.isArray(node.removeByPriority.groups)) {
+    node.removeByPriority.groups.forEach((group, index) => {
+      if (isRecord(group) && Object.prototype.hasOwnProperty.call(group, 'macroOrigin')) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+          path: `${path}.removeByPriority.groups.${index}.macroOrigin`,
+          severity: 'error',
+          message: 'removeByPriority.groups[].macroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+          suggestion: 'Remove removeByPriority.groups[].macroOrigin from authored YAML; compiler expansion emits provenance.',
+        });
+      }
+    });
+  }
 
   for (const [key, value] of Object.entries(node)) {
     if (!EFFECT_KIND_KEYS.has(key) || !isRecord(value)) {

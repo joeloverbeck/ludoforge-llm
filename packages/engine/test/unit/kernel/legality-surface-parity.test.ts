@@ -14,6 +14,7 @@ import {
   type ActionDef,
   type ActionPipelineDef,
   type ChoiceIllegalRequest,
+  type FreeOperationBlockCause,
   type GameDef,
   type GameState,
   type Move,
@@ -283,262 +284,229 @@ describe('legality surface parity', () => {
     });
   }
 
-  it('projects actionIdMismatch parity for denied free-operation probes', () => {
-    const operationActionId = asActionId('operation');
-    const def = makeCardDrivenFreeOpDef(operationActionId);
-    const state = makeState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation-alt'],
-              remainingUses: 1,
-            },
-          ],
-        },
-      },
-    });
-    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+  type FreeOperationDeniedCauseForParity = Exclude<
+    FreeOperationBlockCause,
+    'granted' | 'nonCardDrivenTurnOrder' | 'notFreeOperationMove'
+  >;
 
-    assert.deepEqual(legalChoicesDiscover(def, state, move), {
-      kind: 'illegal',
-      complete: false,
-      reason: 'freeOperationActionIdMismatch',
-    });
-    assert.equal(legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId), false);
-    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
-      assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; reason?: unknown; context?: { freeOperationDenial?: { cause?: string } } };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
-      assert.equal(details.context?.freeOperationDenial?.cause, 'actionIdMismatch');
-      return true;
-    });
-  });
-
-  it('projects noActiveSeatGrant parity for denied free-operation probes', () => {
-    const operationActionId = asActionId('operation');
-    const def = makeCardDrivenFreeOpDef(operationActionId);
-    const state = makeState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-1',
-              seat: '1',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              remainingUses: 1,
-            },
-          ],
-        },
-      },
-    });
-    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
-
-    assert.deepEqual(legalChoicesDiscover(def, state, move), {
-      kind: 'illegal',
-      complete: false,
-      reason: 'freeOperationNoActiveSeatGrant',
-    });
-    assert.equal(legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId), false);
-    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
-      assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; reason?: unknown; context?: { freeOperationDenial?: { cause?: string } } };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
-      assert.equal(details.context?.freeOperationDenial?.cause, 'noActiveSeatGrant');
-      return true;
-    });
-  });
-
-  it('projects sequenceLocked parity for denied free-operation probes', () => {
-    const operationActionId = asActionId('operation');
-    const def = makeCardDrivenFreeOpDef(operationActionId);
-    const state = makeState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-blocker',
-              seat: '1',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              sequenceBatchId: 'batch-0',
-              sequenceIndex: 0,
-              remainingUses: 1,
-            },
-            {
-              grantId: 'grant-active-seat',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              sequenceBatchId: 'batch-0',
-              sequenceIndex: 1,
-              remainingUses: 1,
-            },
-          ],
-        },
-      },
-    });
-    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
-
-    assert.deepEqual(legalChoicesDiscover(def, state, move), {
-      kind: 'illegal',
-      complete: false,
-      reason: 'freeOperationSequenceLocked',
-    });
-    assert.equal(legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId), false);
-    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
-      assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; reason?: unknown; context?: { freeOperationDenial?: { cause?: string } } };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
-      assert.equal(details.context?.freeOperationDenial?.cause, 'sequenceLocked');
-      return true;
-    });
-  });
-
-  it('projects actionClassMismatch parity for denied free-operation probes', () => {
-    const operationActionId = asActionId('operation');
-    const def = makeCardDrivenFreeOpDef(operationActionId);
-    const state = makeState({
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'limitedOperation',
-              actionIds: ['operation'],
-              remainingUses: 1,
-            },
-          ],
-        },
-      },
-    });
-    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
-
-    assert.deepEqual(legalChoicesDiscover(def, state, move), {
-      kind: 'illegal',
-      complete: false,
-      reason: 'freeOperationActionClassMismatch',
-    });
-    assert.equal(legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId), false);
-    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
-      assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; reason?: unknown; context?: { freeOperationDenial?: { cause?: string } } };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
-      assert.equal(details.context?.freeOperationDenial?.cause, 'actionClassMismatch');
-      return true;
-    });
-  });
-
-  it('projects zoneFilterMismatch parity for denied free-operation probes', () => {
-    const operationActionId = asActionId('operation');
-    const def = makeCardDrivenFreeOpDef(operationActionId);
-    const state = makeState({
-      globalVars: { resources: 0 },
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
-          currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
-            actedSeats: [],
-            passedSeats: [],
-            nonPassCount: 0,
-            firstActionClass: null,
-          },
-          pendingEligibilityOverrides: [],
-          pendingFreeOperationGrants: [
-            {
-              grantId: 'grant-0',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
-              zoneFilter: {
-                op: '==',
-                left: { ref: 'gvar', var: 'resources' },
-                right: 1,
+  const freeOperationDeniedMatrix: Readonly<Record<
+    FreeOperationDeniedCauseForParity,
+    {
+      readonly choiceReason: Extract<ChoiceIllegalRequest['reason'],
+      | 'freeOperationNoActiveSeatGrant'
+      | 'freeOperationSequenceLocked'
+      | 'freeOperationActionClassMismatch'
+      | 'freeOperationActionIdMismatch'
+      | 'freeOperationZoneFilterMismatch'>;
+      readonly buildState: () => GameState;
+    }
+  >> = {
+    noActiveSeatGrant: {
+      choiceReason: 'freeOperationNoActiveSeatGrant',
+      buildState: () =>
+        makeState({
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
               },
-              remainingUses: 1,
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-1',
+                  seat: '1',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  remainingUses: 1,
+                },
+              ],
             },
-          ],
-        },
-      },
-    });
-    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+          },
+        }),
+    },
+    sequenceLocked: {
+      choiceReason: 'freeOperationSequenceLocked',
+      buildState: () =>
+        makeState({
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
+              },
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-blocker',
+                  seat: '1',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceBatchId: 'batch-0',
+                  sequenceIndex: 0,
+                  remainingUses: 1,
+                },
+                {
+                  grantId: 'grant-active-seat',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  sequenceBatchId: 'batch-0',
+                  sequenceIndex: 1,
+                  remainingUses: 1,
+                },
+              ],
+            },
+          },
+        }),
+    },
+    actionClassMismatch: {
+      choiceReason: 'freeOperationActionClassMismatch',
+      buildState: () =>
+        makeState({
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
+              },
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-0',
+                  seat: '0',
+                  operationClass: 'limitedOperation',
+                  actionIds: ['operation'],
+                  remainingUses: 1,
+                },
+              ],
+            },
+          },
+        }),
+    },
+    actionIdMismatch: {
+      choiceReason: 'freeOperationActionIdMismatch',
+      buildState: () =>
+        makeState({
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
+              },
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-0',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation-alt'],
+                  remainingUses: 1,
+                },
+              ],
+            },
+          },
+        }),
+    },
+    zoneFilterMismatch: {
+      choiceReason: 'freeOperationZoneFilterMismatch',
+      buildState: () =>
+        makeState({
+          globalVars: { resources: 0 },
+          turnOrderState: {
+            type: 'cardDriven',
+            runtime: {
+              seatOrder: ['0', '1'],
+              eligibility: { '0': true, '1': true },
+              currentCard: {
+                firstEligible: '0',
+                secondEligible: '1',
+                actedSeats: [],
+                passedSeats: [],
+                nonPassCount: 0,
+                firstActionClass: null,
+              },
+              pendingEligibilityOverrides: [],
+              pendingFreeOperationGrants: [
+                {
+                  grantId: 'grant-0',
+                  seat: '0',
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  zoneFilter: {
+                    op: '==',
+                    left: { ref: 'gvar', var: 'resources' },
+                    right: 1,
+                  },
+                  remainingUses: 1,
+                },
+              ],
+            },
+          },
+        }),
+    },
+  };
 
-    assert.deepEqual(legalChoicesDiscover(def, state, move), {
-      kind: 'illegal',
-      complete: false,
-      reason: 'freeOperationZoneFilterMismatch',
+  for (const [cause, scenario] of Object.entries(freeOperationDeniedMatrix) as ReadonlyArray<
+    readonly [FreeOperationDeniedCauseForParity, (typeof freeOperationDeniedMatrix)[FreeOperationDeniedCauseForParity]]
+  >) {
+    it(`projects ${cause} parity for denied free-operation probes`, () => {
+      const operationActionId = asActionId('operation');
+      const def = makeCardDrivenFreeOpDef(operationActionId);
+      const state = scenario.buildState();
+      const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+
+      assert.deepEqual(legalChoicesDiscover(def, state, move), {
+        kind: 'illegal',
+        complete: false,
+        reason: scenario.choiceReason,
+      });
+      assert.equal(
+        legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
+        false,
+      );
+      assert.throws(() => applyMove(def, state, move), (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & {
+          code?: unknown;
+          reason?: unknown;
+          context?: { freeOperationDenial?: { cause?: string } };
+        };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+        assert.equal(details.context?.freeOperationDenial?.cause, cause);
+        return true;
+      });
     });
-    assert.equal(legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId), false);
-    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
-      assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; reason?: unknown; context?: { freeOperationDenial?: { cause?: string } } };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
-      assert.equal(details.context?.freeOperationDenial?.cause, 'zoneFilterMismatch');
-      return true;
-    });
-  });
+  }
 
   const selectorContractCases: ReadonlyArray<{
     readonly name: string;

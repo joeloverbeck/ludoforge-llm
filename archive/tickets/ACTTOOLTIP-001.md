@@ -1,6 +1,6 @@
 # ACTTOOLTIP-001: Fix stale tooltipHoveredRef on new action hover
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -16,6 +16,9 @@ When the user is hovering the action tooltip (`tooltipHoveredRef = true`) and th
 2. `onActionHoverStart` (line 58) calls `clearPendingTimer()` and `clearGraceTimer()` but does NOT reset `tooltipHoveredRef` — confirmed.
 3. `onActionHoverEnd` (line 107) bails out early when `tooltipHoveredRef.current` is `true` — confirmed at line 111.
 4. `dismiss()` (line 52) does reset `tooltipHoveredRef` to `false`, but it is only called from grace timer callbacks, not from `onActionHoverStart`.
+5. Existing tests covered tooltip grace/hover behavior, but did not cover the specific transition "tooltip hovered -> direct hover of a different action button -> hover end". This gap allowed the stale-ref bug to survive.
+
+Discrepancies vs original assumptions: no functional discrepancies in code paths; one scope correction was needed in tests (missing transition case).
 
 ## Architecture Check
 
@@ -61,3 +64,15 @@ In `packages/runner/src/ui/useActionTooltip.ts`, inside `onActionHoverStart`, ad
 
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose test/ui/useActionTooltip.test.ts`
 2. `pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**:
+  - Added `tooltipHoveredRef.current = false;` at the start of `onActionHoverStart` in `packages/runner/src/ui/useActionTooltip.ts`.
+  - Added regression test `dismisses via grace period after moving from hovered tooltip to a different action button` in `packages/runner/test/ui/useActionTooltip.test.ts`.
+- **Deviations from original plan**:
+  - No architecture or scope deviation. Planned one-line fix + one regression test was sufficient and correct.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.

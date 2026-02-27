@@ -357,6 +357,75 @@ describe('useActionTooltip', () => {
     expect(result.current.tooltipState.actionId).toBe('action-1');
   });
 
+  it('dismisses via grace period after moving from hovered tooltip to a different action button', async () => {
+    const describeAction = vi.fn(async () => ({
+      sections: [{ kind: 'group' as const, label: 'Test', children: [{ kind: 'keyword' as const, text: 'x' }] }],
+      limitUsage: [],
+    }));
+    const bridge = createMockBridge(describeAction);
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-A', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      result.current.onActionHoverEnd();
+      result.current.onTooltipPointerEnter();
+      result.current.onActionHoverStart('action-B', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.tooltipState.actionId).toBe('action-B');
+
+    act(() => {
+      result.current.onActionHoverEnd();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.description).toBeNull();
+  });
+
+  it('keeps tooltip visible when action hover end fires after tooltip pointer enter', async () => {
+    const describeAction = vi.fn(async () => ({
+      sections: [{ kind: 'group' as const, label: 'Test', children: [{ kind: 'keyword' as const, text: 'x' }] }],
+      limitUsage: [],
+    }));
+    const bridge = createMockBridge(describeAction);
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      result.current.onTooltipPointerEnter();
+      result.current.onActionHoverEnd();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.description).not.toBeNull();
+  });
+
   it('exposes onTooltipPointerEnter and onTooltipPointerLeave callbacks', () => {
     const bridge = createMockBridge();
     const { result } = renderHook(() => useActionTooltip(bridge));

@@ -1,5 +1,7 @@
 # Fire in the Lake - Playbook Turn 4
 
+**Status**: COMPLETED
+
 GAME TURN 4, Gulf of Tonkin
 The US is first up on the card and they are Eligible, so they will
 execute the Event. Move the US Eligibility token to the Event portion
@@ -91,3 +93,10 @@ antagonize the NVA’s southern ally, at least not yet.
 The current turn is complete. Remove pawns and then adjust Eligibility tokens (VC and ARVN Eligible, US and NVA Ineligible).
 Gulf of Tonkin is covered by Brinks Hotel which is now the current
 card. Reveal the next preview card for Turn 6, Henry Cabot Lodge.
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**: Turn 4 assertions in `fitl-playbook-golden.test.ts` enriched with ~40 new checks covering all numerical details from this narrative. Override bug fixed ($selectedPieces blind slice replaced with type-filtered selection: 5 troops + 1 base). All 4 victory markers validated at every move boundary. Zone token counts expanded with active/underground status, source zone departures, deployment targets, and base persistence.
+- **Deviations**: OoP counts corrected from plan assumptions (troops 10→5, bases 2→1 after deployment). NVA VP confirmed at 10 after March (4 bases + 3 controlled provinces with pop 2+2+2). No production code bugs were uncovered — the override fix was test-only.
+- **Verification**: Full E2E suite passes (44/44), full engine test suite passes (2753/2753).

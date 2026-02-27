@@ -1740,8 +1740,15 @@ function lowerChooseOneEffect(
     return missingCapability(path, 'chooseOne effect', source, ['{ chooseOne: { bind, options } }']);
   }
   const options = lowerQueryNode(source.options, makeConditionContext(context, scope), `${path}.options`);
+  const chooser = source.chooser === undefined
+    ? { value: undefined, diagnostics: [] }
+    : normalizePlayerSelector(source.chooser, `${path}.chooser`);
+  const diagnostics = [...options.diagnostics, ...chooser.diagnostics];
   if (options.value === null) {
-    return { value: null, diagnostics: options.diagnostics };
+    return { value: null, diagnostics };
+  }
+  if (chooser.value === null) {
+    return { value: null, diagnostics };
   }
   return {
     value: {
@@ -1749,9 +1756,10 @@ function lowerChooseOneEffect(
         internalDecisionId: toInternalDecisionId(path),
         bind: source.bind,
         options: options.value,
+        ...(chooser.value === undefined ? {} : { chooser: chooser.value }),
       },
     },
-    diagnostics: options.diagnostics,
+    diagnostics,
   };
 }
 
@@ -1769,7 +1777,10 @@ function lowerChooseNEffect(
   }
   const options = lowerQueryNode(source.options, makeConditionContext(context, scope), `${path}.options`);
   const condCtx = makeConditionContext(context, scope);
-  const diagnostics = [...options.diagnostics];
+  const chooser = source.chooser === undefined
+    ? { value: undefined, diagnostics: [] }
+    : normalizePlayerSelector(source.chooser, `${path}.chooser`);
+  const diagnostics = [...options.diagnostics, ...chooser.diagnostics];
 
   const hasN = source.n !== undefined;
   const hasMin = source.min !== undefined;
@@ -1836,6 +1847,7 @@ function lowerChooseNEffect(
   if (options.value === null || diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
     return { value: null, diagnostics };
   }
+  const normalizedChooser = chooser.value ?? undefined;
 
   const cardinality =
     hasN && isInteger(source.n)
@@ -1850,6 +1862,7 @@ function lowerChooseNEffect(
         internalDecisionId: toInternalDecisionId(path),
         bind: source.bind,
         options: options.value,
+        ...(normalizedChooser === undefined ? {} : { chooser: normalizedChooser }),
         ...cardinality,
       },
     },

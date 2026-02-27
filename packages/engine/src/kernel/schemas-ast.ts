@@ -656,6 +656,7 @@ effectAstSchemaInternal = z.union([
           internalDecisionId: StringSchema,
           bind: StringSchema,
           options: OptionsQuerySchema,
+          chooser: PlayerSelSchema.optional(),
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
@@ -669,6 +670,7 @@ effectAstSchemaInternal = z.union([
             internalDecisionId: StringSchema,
             bind: StringSchema,
             options: OptionsQuerySchema,
+            chooser: PlayerSelSchema.optional(),
             n: NumberSchema,
             macroOrigin: MacroOriginSchema.optional(),
           })
@@ -678,6 +680,7 @@ effectAstSchemaInternal = z.union([
             internalDecisionId: StringSchema,
             bind: StringSchema,
             options: OptionsQuerySchema,
+            chooser: PlayerSelSchema.optional(),
             min: NumericValueExprSchema.optional(),
             max: NumericValueExprSchema,
             macroOrigin: MacroOriginSchema.optional(),

@@ -272,11 +272,12 @@ const validateDecisionSequenceForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  options?: { readonly allowIncomplete?: boolean },
+  options?: { readonly allowIncomplete?: boolean; readonly decisionPlayer?: GameState['activePlayer'] },
 ): void => {
   try {
     const result = resolveMoveDecisionSequence(def, state, move, {
       choose: () => undefined,
+      ...(options?.decisionPlayer === undefined ? {} : { decisionPlayer: options.decisionPlayer }),
     });
     if (result.complete) {
       return;
@@ -531,7 +532,13 @@ const resolveMovePreflightContext = (
   };
 };
 
-const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?: GameDefRuntime): ValidatedMoveContext => {
+const validateMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  cachedRuntime?: GameDefRuntime,
+  options?: ExecutionOptions,
+): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
@@ -561,7 +568,10 @@ const validateMove = (def: GameDef, state: GameState, move: Move, cachedRuntime?
   if (preflight.actionPipeline === undefined) {
     validateDeclaredActionParams(action, preflight.evalCtx, move);
   }
-  validateDecisionSequenceForMove(def, state, move, { allowIncomplete });
+  validateDecisionSequenceForMove(def, state, move, {
+    allowIncomplete,
+    decisionPlayer: options?.decisionPlayer ?? preflight.executionPlayer,
+  });
   validateTurnFlowWindowAccess(def, state, move);
   return {
     preflight,
@@ -642,7 +652,7 @@ const executeMoveAction = (
   shared: SharedMoveExecutionContext,
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
-  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
+  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime, options);
   const preflight = validated?.preflight ?? resolveMovePreflightContext(
     def,
     state,
@@ -668,6 +678,7 @@ const executeMoveAction = (
     runtimeTableIndex: shared.runtimeTableIndex,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
+    decisionPlayer: options?.decisionPlayer ?? executionPlayer,
     bindings: baseBindings,
     moveParams: move.params,
     collector: shared.collector,
@@ -1097,7 +1108,7 @@ const applySimultaneousSubmission = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
-  validateMove(def, state, move, cachedRuntime);
+  validateMove(def, state, move, cachedRuntime, options);
 
   const currentPlayer = Number(state.activePlayer);
   const submittedBefore = state.turnOrderState.submitted;

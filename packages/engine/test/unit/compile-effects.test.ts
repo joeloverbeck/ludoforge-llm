@@ -776,6 +776,38 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.chooseN'), true);
   });
 
+  it('lowers explicit chooser selectors for chooseOne/chooseN', () => {
+    const result = lowerEffectArray(
+      [
+        { chooseOne: { bind: '$target', chooser: { id: 1 }, options: { query: 'players' } } },
+        { chooseN: { bind: '$targets', chooser: 'active', options: { query: 'players' }, max: 2 } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:doc.actions.0.effects.0.chooseOne',
+          bind: '$target',
+          chooser: { id: 1 },
+          options: { query: 'players' },
+        },
+      },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:doc.actions.0.effects.1.chooseN',
+          bind: '$targets',
+          chooser: 'active',
+          options: { query: 'players' },
+          max: 2,
+        },
+      },
+    ]);
+  });
+
   it('lowers distributeTokens into chooseN/forEach/chooseOne/moveToken sequence', () => {
     const result = lowerEffectArray(
       [

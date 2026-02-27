@@ -545,6 +545,7 @@ export interface Move {
 export interface ChoiceCompleteRequest {
   readonly kind: 'complete';
   readonly complete: true;
+  readonly decisionPlayer?: PlayerId;
   readonly decisionId?: string;
   readonly name?: string;
   readonly type?: 'chooseOne' | 'chooseN';
@@ -565,6 +566,7 @@ export interface ChoiceOption {
 export interface ChoicePendingRequest {
   readonly kind: 'pending';
   readonly complete: false;
+  readonly decisionPlayer?: PlayerId;
   readonly decisionId: string;
   readonly name: string;
   readonly type: 'chooseOne' | 'chooseN';
@@ -578,6 +580,7 @@ export interface ChoicePendingRequest {
 export interface ChoiceIllegalRequest {
   readonly kind: 'illegal';
   readonly complete: false;
+  readonly decisionPlayer?: PlayerId;
   readonly decisionId?: string;
   readonly name?: string;
   readonly type?: 'chooseOne' | 'chooseN';
@@ -802,6 +805,7 @@ export interface ExecutionOptions {
   readonly trace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
+  readonly decisionPlayer?: PlayerId;
 }
 
 export interface ExecutionCollector {

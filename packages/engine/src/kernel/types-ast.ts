@@ -398,6 +398,7 @@ export type EffectAST =
         readonly internalDecisionId: string;
         readonly bind: string;
         readonly options: OptionsQuery;
+        readonly chooser?: PlayerSel;
         readonly macroOrigin?: EffectMacroOrigin;
       };
     }
@@ -406,6 +407,7 @@ export type EffectAST =
         readonly internalDecisionId: string;
         readonly bind: string;
         readonly options: OptionsQuery;
+        readonly chooser?: PlayerSel;
         readonly macroOrigin?: EffectMacroOrigin;
       } & (
         | {

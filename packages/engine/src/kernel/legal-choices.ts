@@ -44,6 +44,7 @@ const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
 export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   readonly onProbeContextPrepared?: () => void;
+  readonly decisionPlayer?: GameState['activePlayer'];
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
@@ -61,6 +62,7 @@ const executeDiscoveryEffects = (
   effects: readonly EffectAST[],
   evalCtx: EvalContext,
   move: Move,
+  decisionPlayer: GameState['activePlayer'],
 ): ChoiceRequest => {
   const effectCtx: EffectContext = {
     def: evalCtx.def,
@@ -69,6 +71,7 @@ const executeDiscoveryEffects = (
     rng: { state: evalCtx.state.rng },
     activePlayer: evalCtx.activePlayer,
     actorPlayer: evalCtx.actorPlayer,
+    decisionPlayer,
     bindings: evalCtx.bindings,
     moveParams: move.params,
     collector: evalCtx.collector,
@@ -309,6 +312,7 @@ const resolveActionParamPendingChoice = (
   action: ActionDef,
   evalCtx: EvalContext,
   partialMove: Move,
+  decisionPlayer?: GameState['activePlayer'],
 ): ChoicePendingRequest | null => {
   let bindings: Readonly<Record<string, unknown>> = evalCtx.bindings;
 
@@ -352,6 +356,7 @@ const resolveActionParamPendingChoice = (
     return {
       kind: 'pending',
       complete: false,
+      ...(decisionPlayer === undefined ? {} : { decisionPlayer }),
       decisionId: param.name,
       name: param.name,
       type: 'chooseOne',
@@ -415,8 +420,10 @@ const legalChoicesWithPreparedContext = (
     );
   }
   const evalCtx = preflight.evalCtx;
+  const decisionPlayer = options?.decisionPlayer;
+  const resolvedDecisionPlayer = decisionPlayer ?? evalCtx.activePlayer;
   const pipelineDispatch = preflight.pipelineDispatch;
-  const actionParamRequest = resolveActionParamPendingChoice(action, evalCtx, partialMove);
+  const actionParamRequest = resolveActionParamPendingChoice(action, evalCtx, partialMove, decisionPlayer);
   if (actionParamRequest !== null) {
     if (!shouldEvaluateOptionLegality) {
       return actionParamRequest;
@@ -425,12 +432,13 @@ const legalChoicesWithPreparedContext = (
     return {
       ...actionParamRequest,
       options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, options),
         (probeMove) =>
           classifyDecisionSequenceSatisfiability(
             probeMove,
             (candidateMove, discoverOptions) =>
               legalChoicesWithPreparedContext(context, candidateMove, false, {
+                ...(options?.decisionPlayer === undefined ? {} : { decisionPlayer: options.decisionPlayer }),
                 onDeferredPredicatesEvaluated: (count) => {
                   options?.onDeferredPredicatesEvaluated?.(count);
                   discoverOptions?.onDeferredPredicatesEvaluated?.(count);
@@ -463,7 +471,7 @@ const legalChoicesWithPreparedContext = (
       pipeline.stages.length > 0
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
-    const request = executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove);
+    const request = executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove, resolvedDecisionPlayer);
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       return request;
     }
@@ -471,12 +479,13 @@ const legalChoicesWithPreparedContext = (
     return {
       ...request,
       options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, options),
         (probeMove) =>
           classifyDecisionSequenceSatisfiability(
             probeMove,
             (candidateMove, discoverOptions) =>
               legalChoicesWithPreparedContext(context, candidateMove, false, {
+                ...(options?.decisionPlayer === undefined ? {} : { decisionPlayer: options.decisionPlayer }),
                 onDeferredPredicatesEvaluated: (count) => {
                   options?.onDeferredPredicatesEvaluated?.(count);
                   discoverOptions?.onDeferredPredicatesEvaluated?.(count);
@@ -489,7 +498,7 @@ const legalChoicesWithPreparedContext = (
     };
   }
 
-  const request = executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove);
+  const request = executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove, resolvedDecisionPlayer);
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     return request;
   }
@@ -497,12 +506,13 @@ const legalChoicesWithPreparedContext = (
   return {
     ...request,
     options: mapOptionsForPendingChoice(
-      (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
+      (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, options),
       (probeMove) =>
         classifyDecisionSequenceSatisfiability(
           probeMove,
           (candidateMove, discoverOptions) =>
             legalChoicesWithPreparedContext(context, candidateMove, false, {
+              ...(options?.decisionPlayer === undefined ? {} : { decisionPlayer: options.decisionPlayer }),
               onDeferredPredicatesEvaluated: (count) => {
                 options?.onDeferredPredicatesEvaluated?.(count);
                 discoverOptions?.onDeferredPredicatesEvaluated?.(count);

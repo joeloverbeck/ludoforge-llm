@@ -20,6 +20,7 @@ export interface ResolveMoveDecisionSequenceOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
+  readonly decisionPlayer?: GameState['activePlayer'];
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -56,6 +57,7 @@ export const resolveMoveDecisionSequence = (
 
   for (let step = 0; step < maxSteps; step += 1) {
     const request = legalChoicesDiscover(def, state, move, {
+      ...(options?.decisionPlayer === undefined ? {} : { decisionPlayer: options.decisionPlayer }),
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },

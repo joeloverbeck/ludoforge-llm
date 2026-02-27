@@ -6,11 +6,12 @@ import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
+import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST } from './types.js';
+import type { EffectAST, PlayerSel } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
@@ -57,6 +58,26 @@ const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effect
   return lattice;
 };
 
+const resolveChoiceDecisionPlayer = (
+  effectType: 'chooseOne' | 'chooseN',
+  chooser: PlayerSel,
+  evalCtx: EffectContext,
+  bind: string,
+  decisionId: string,
+) => {
+  try {
+    return resolveSinglePlayerSel(chooser, evalCtx);
+  } catch (error) {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `${effectType}.chooser must resolve to exactly one player`, {
+      effectType,
+      chooser,
+      bind,
+      decisionId,
+      cause: error,
+    });
+  }
+};
+
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
   const decisionId = composeScopedDecisionId(
@@ -66,6 +87,9 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
     ctx.iterationPath,
   );
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const chooser = effect.chooseOne.chooser ?? 'active';
+  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionId);
+  const providedDecisionPlayer = ctx.decisionPlayer ?? ctx.activePlayer;
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
     throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
@@ -88,6 +112,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
         pendingChoice: {
           kind: 'pending',
           complete: false,
+          ...(effect.chooseOne.chooser === undefined ? {} : { decisionPlayer: choiceDecisionPlayer }),
           decisionId,
           name: resolvedBind,
           type: 'chooseOne',
@@ -110,6 +135,20 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   }
 
   const selected = ctx.moveParams[decisionId];
+  if (providedDecisionPlayer !== choiceDecisionPlayer) {
+    throw effectRuntimeError(
+      'choiceRuntimeValidationFailed',
+      `chooseOne decision owner mismatch for "${resolvedBind}" (${decisionId})`,
+      {
+        effectType: 'chooseOne',
+        bind: resolvedBind,
+        decisionId,
+        chooser,
+        expectedDecisionPlayer: choiceDecisionPlayer,
+        providedDecisionPlayer,
+      },
+    );
+  }
 
   const selectedComparable = toChoiceComparableValue(selected);
   if (selectedComparable === null || !normalizedOptions.includes(selectedComparable)) {
@@ -142,6 +181,9 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
   const decisionId = composeScopedDecisionId(chooseN.internalDecisionId, bindTemplate, bind, ctx.iterationPath);
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const chooser = chooseN.chooser ?? 'active';
+  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionId);
+  const providedDecisionPlayer = ctx.decisionPlayer ?? ctx.activePlayer;
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
       throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN must use either exact n or range max/min cardinality', {
@@ -216,6 +258,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         pendingChoice: {
           kind: 'pending',
           complete: false,
+          ...(chooseN.chooser === undefined ? {} : { decisionPlayer: choiceDecisionPlayer }),
           decisionId,
           name: bind,
           type: 'chooseN',
@@ -239,6 +282,20 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   }
 
   const selectedValue = ctx.moveParams[decisionId];
+  if (providedDecisionPlayer !== choiceDecisionPlayer) {
+    throw effectRuntimeError(
+      'choiceRuntimeValidationFailed',
+      `chooseN decision owner mismatch for "${bind}" (${decisionId})`,
+      {
+        effectType: 'chooseN',
+        bind,
+        decisionId,
+        chooser,
+        expectedDecisionPlayer: choiceDecisionPlayer,
+        providedDecisionPlayer,
+      },
+    );
+  }
   if (!Array.isArray(selectedValue)) {
     throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN move param must be an array: ${bind}`, {
       effectType: 'chooseN',

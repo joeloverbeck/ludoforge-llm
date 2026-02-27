@@ -2072,6 +2072,56 @@ phase: [asPhaseId('main')],
   });
 
   describe('purity invariant', () => {
+    it('annotates chooser-owned pending decisions and enforces decisionPlayer override for resolution', () => {
+      const action: ActionDef = {
+        id: asActionId('crossSeatChoice'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              chooser: { id: asPlayerId(1) },
+              options: { query: 'enums', values: ['a', 'b'] },
+            },
+          },
+        ],
+        limits: [],
+      };
+      const def = makeBaseDef({ actions: [action] });
+      const state = makeBaseState();
+      const request = legalChoicesDiscover(def, state, makeMove('crossSeatChoice'));
+      assert.equal(request.kind, 'pending');
+      if (request.kind !== 'pending') {
+        throw new Error('expected pending request');
+      }
+      assert.equal(request.decisionPlayer, asPlayerId(1));
+
+      assert.throws(
+        () => legalChoicesEvaluate(def, state, makeMove('crossSeatChoice', { 'decision:$target': 'a' })),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+          assert.equal(details.code, 'EFFECT_RUNTIME');
+          assert.equal(details.context?.reason, 'choiceRuntimeValidationFailed');
+          return true;
+        },
+      );
+
+      const resolved = legalChoicesEvaluate(
+        def,
+        state,
+        makeMove('crossSeatChoice', { 'decision:$target': 'a' }),
+        { decisionPlayer: asPlayerId(1) },
+      );
+      assert.deepEqual(resolved, { kind: 'complete', complete: true });
+    });
+
     it('does not mutate state or partialMove', () => {
       const action: ActionDef = {
         id: asActionId('pureTest'),

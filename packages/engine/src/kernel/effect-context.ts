@@ -34,6 +34,7 @@ export interface EffectContext {
   readonly rng: Rng;
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
+  readonly decisionPlayer?: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;

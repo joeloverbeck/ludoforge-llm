@@ -1541,4 +1541,114 @@ phase: ['main'],
     assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority), true);
     assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority.groups[0] ?? {}), true);
   });
+
+  it('omits removeByPriority parent macroOrigin when group origins are mixed', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-remove-origin-mixed-groups',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$alpha',
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          chooseOne: {
+            bind: '$beta',
+            options: { query: 'players' },
+          },
+        },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [
+              { bind: '$alpha', over: { query: 'tokensInZone', zone: 'board' }, to: 'discard' },
+              { bind: '$beta', over: { query: 'tokensInZone', zone: 'board' }, to: 'discard' },
+            ],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-remove-origin-mixed-groups', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const remove = result.doc.setup?.[2] as {
+      removeByPriority: {
+        macroOrigin?: { macroId: string; stem: string };
+        groups: Array<{ macroOrigin?: { macroId: string; stem: string } }>;
+      };
+    };
+    assert.equal(remove.removeByPriority.macroOrigin, undefined);
+    assert.deepEqual(remove.removeByPriority.groups[0]?.macroOrigin, {
+      macroId: 'test-remove-origin-mixed-groups',
+      stem: 'alpha',
+    });
+    assert.deepEqual(remove.removeByPriority.groups[1]?.macroOrigin, {
+      macroId: 'test-remove-origin-mixed-groups',
+      stem: 'beta',
+    });
+    assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority.groups[0] ?? {}), true);
+    assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority.groups[1] ?? {}), true);
+  });
+
+  it('sets removeByPriority parent macroOrigin when all group origins are uniform', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-remove-origin-uniform-groups',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$candidate',
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [
+              { bind: '$candidate', over: { query: 'tokensInZone', zone: 'board' }, to: 'discard' },
+              { bind: '$candidate', over: { query: 'tokensInZone', zone: 'reserve' }, to: 'discard' },
+            ],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-remove-origin-uniform-groups', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const remove = result.doc.setup?.[1] as {
+      removeByPriority: {
+        macroOrigin?: { macroId: string; stem: string };
+        groups: Array<{ macroOrigin?: { macroId: string; stem: string } }>;
+      };
+    };
+    assert.deepEqual(remove.removeByPriority.macroOrigin, {
+      macroId: 'test-remove-origin-uniform-groups',
+      stem: 'candidate',
+    });
+    assert.deepEqual(remove.removeByPriority.groups[0]?.macroOrigin, {
+      macroId: 'test-remove-origin-uniform-groups',
+      stem: 'candidate',
+    });
+    assert.deepEqual(remove.removeByPriority.groups[1]?.macroOrigin, {
+      macroId: 'test-remove-origin-uniform-groups',
+      stem: 'candidate',
+    });
+    assert.equal(isTrustedMacroOriginCarrier(remove.removeByPriority), true);
+  });
 });

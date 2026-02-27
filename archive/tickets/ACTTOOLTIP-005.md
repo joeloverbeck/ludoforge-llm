@@ -1,6 +1,6 @@
 # ACTTOOLTIP-005: Canonicalize removeByPriority macroOrigin aggregation semantics
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/expand-effect-macros.ts`, `packages/engine/src/kernel/ast-to-display.ts`, tests
@@ -17,7 +17,8 @@ That makes provenance non-canonical and weakens long-term architecture for gener
 1. `annotateControlFlowMacroOrigins` currently annotates `removeByPriority.groups[i].macroOrigin` and parent `removeByPriority.macroOrigin` independently — confirmed in `expand-effect-macros.ts`.
 2. Parent `removeByPriority.macroOrigin` is selected by single-origin fallback logic and does not validate consistency across all groups — confirmed.
 3. Display currently prefers group stem, then parent stem, then raw bind — confirmed in `ast-to-display.ts`.
-4. Existing active tickets (`ACTTOOLTIP-003`, `ACTTOOLTIP-004`) do not define canonical parent-origin semantics for mixed-origin `removeByPriority` groups — confirmed.
+4. `ACTTOOLTIP-003` and `ACTTOOLTIP-004` are archived (not active) and do not establish canonical parent-origin semantics for mixed-origin `removeByPriority` groups — confirmed.
+5. Current tests already cover `remainingBind` parent-origin precedence and renderer fallback ordering; this ticket must extend coverage for mixed/uniform group-origin aggregation semantics without regressing those invariants — confirmed.
 
 ## Architecture Check
 
@@ -43,12 +44,12 @@ In `ast-to-display.ts`, preserve precedence:
 - else `parent.macroOrigin.stem` (now authoritative only)
 - else `group.bind`
 
-No semantic renderer behavior change is expected when group provenance exists.
+No semantic renderer behavior change is expected when group provenance exists. The display-layer scope is verification-first; code change is only needed if tests reveal non-determinism.
 
 ## Files to Touch
 
 - `packages/engine/src/cnl/expand-effect-macros.ts` (modify)
-- `packages/engine/src/kernel/ast-to-display.ts` (verify/no-op or small adjust)
+- `packages/engine/src/kernel/ast-to-display.ts` (verify, no-op expected)
 - `packages/engine/test/unit/expand-effect-macros.test.ts` (modify)
 - `packages/engine/test/unit/kernel/ast-to-display.test.ts` (modify)
 
@@ -84,3 +85,24 @@ No semantic renderer behavior change is expected when group provenance exists.
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-27
+- **What changed**:
+  - Implemented canonical parent-origin aggregation for `removeByPriority` in `expand-effect-macros.ts`:
+    - Parent `macroOrigin` now resolves from `remainingBind` when available.
+    - Otherwise parent `macroOrigin` is set only when all group binds resolve to the same origin (`macroId` + `stem`).
+    - Mixed or partial group-origin cases now omit parent `macroOrigin`.
+  - Follow-up architecture hardening extracted provenance resolution into a dedicated pure policy module (`packages/engine/src/cnl/macro-origin-policy.ts`) and rewired `expand-effect-macros.ts` to consume it.
+  - Follow-up tests added dedicated policy-level coverage in `packages/engine/test/unit/macro-origin-policy.test.ts`.
+  - Added/updated tests:
+    - Mixed-origin group case omitting parent origin.
+    - Uniform-origin group case preserving parent origin.
+    - Renderer regression case for mixed groups (group-origin stem + raw bind fallback without parent dependency).
+- **Deviations from original plan**:
+  - `packages/engine/src/kernel/ast-to-display.ts` required no production-code changes after verification; only test coverage was expanded.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`303` tests, `0` failures).
+  - `pnpm -F @ludoforge/engine lint` passed.

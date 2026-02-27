@@ -10,6 +10,12 @@ import {
   isTrustedMacroOriginCarrier,
   markTrustedMacroOriginByExpansion,
 } from './macro-origin-trust.js';
+import {
+  findFirstMacroOriginByBindFields,
+  hasSameMacroBindingOrigin,
+  resolveRemoveByPriorityParentMacroOrigin,
+  type MacroBindingOrigin,
+} from './macro-origin-policy.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -56,11 +62,6 @@ interface IndexedMacroDef {
   readonly params: readonly IndexedMacroParam[];
   readonly declaredBindings: ReadonlySet<string>;
   readonly exportedBindings: ReadonlySet<string>;
-}
-
-interface MacroBindingOrigin {
-  readonly macroId: string;
-  readonly stem: string;
 }
 
 const STRING_PARAM_TYPES = new Set([
@@ -835,15 +836,11 @@ const BINDING_ORIGIN_EFFECT_SPECS: ReadonlyArray<readonly [string, readonly stri
 
 const EVALUATE_SUBSET_BIND_FIELDS: readonly string[] = ['subsetBind', 'resultBind', 'bestSubsetBind'];
 
-function hasSameMacroOrigin(existing: unknown, origin: MacroBindingOrigin): boolean {
-  return isRecord(existing) && existing.macroId === origin.macroId && existing.stem === origin.stem;
-}
-
 function annotateNodeMacroOrigin(
   effectNode: Record<string, unknown>,
   origin: MacroBindingOrigin,
 ): { effectNode: Record<string, unknown>; changed: boolean } {
-  const hasSameOrigin = hasSameMacroOrigin(effectNode.macroOrigin, origin);
+  const hasSameOrigin = hasSameMacroBindingOrigin(effectNode.macroOrigin, origin);
   const isTrusted = isTrustedMacroOriginCarrier(effectNode);
   if (hasSameOrigin && isTrusted) {
     return { effectNode, changed: false };
@@ -855,24 +852,6 @@ function annotateNodeMacroOrigin(
     }),
     changed: true,
   };
-}
-
-function findFirstMacroOriginByBindFields(
-  effectNode: Record<string, unknown>,
-  bindFields: readonly string[],
-  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
-): MacroBindingOrigin | undefined {
-  for (const bindField of bindFields) {
-    const bindValue = effectNode[bindField];
-    if (typeof bindValue !== 'string') {
-      continue;
-    }
-    const origin = originByBinding.get(bindValue);
-    if (origin !== undefined) {
-      return origin;
-    }
-  }
-  return undefined;
 }
 
 function annotateEffectMacroOrigin(
@@ -935,22 +914,10 @@ function annotateRemoveByPriorityMacroOrigin(
     });
   }
 
-  let foundOrigin: MacroBindingOrigin | undefined;
-  if (typeof rbp.remainingBind === 'string') {
-    foundOrigin = originByBinding.get(rbp.remainingBind);
-  }
-  if (foundOrigin === undefined && Array.isArray(rewrittenGroups)) {
-    for (const group of rewrittenGroups) {
-      if (!isRecord(group)) {
-        continue;
-      }
-      const groupOrigin = findFirstMacroOriginByBindFields(group, ['bind'], originByBinding);
-      if (groupOrigin !== undefined) {
-        foundOrigin = groupOrigin;
-        break;
-      }
-    }
-  }
+  const foundOrigin = resolveRemoveByPriorityParentMacroOrigin(
+    Array.isArray(rewrittenGroups) ? { ...rbp, groups: rewrittenGroups } : rbp,
+    originByBinding,
+  );
 
   if (foundOrigin === undefined) {
     if (!groupsChanged) {

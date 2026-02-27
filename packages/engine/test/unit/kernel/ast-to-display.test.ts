@@ -585,6 +585,34 @@ describe('effectToDisplayNodes', () => {
     assert.ok(refs.some((n) => n.text === 'candidate'));
   });
 
+  it('renders removeByPriority mixed groups with per-group origin and raw fallback', () => {
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 1,
+        groups: [
+          {
+            bind: '$__macro_cleanup_0_target',
+            macroOrigin: { macroId: 'cleanup', stem: 'target' },
+            over: { query: 'tokensInZone', zone: 'board' },
+            to: 'discard',
+          },
+          {
+            bind: 'rawCandidate',
+            over: { query: 'tokensInZone', zone: 'reserve' },
+            to: 'discard',
+          },
+        ],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const firstGroupLine = asLine(nodes[1]!);
+    const secondGroupLine = asLine(nodes[2]!);
+    const firstRefs = findByKind(firstGroupLine.children, 'reference');
+    const secondRefs = findByKind(secondGroupLine.children, 'reference');
+    assert.ok(firstRefs.some((n) => n.text === 'target'));
+    assert.ok(secondRefs.some((n) => n.text === 'rawCandidate'));
+  });
+
   it('renders chooseOne', () => {
     const effect: EffectAST = {
       chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } },

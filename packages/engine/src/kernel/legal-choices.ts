@@ -24,7 +24,11 @@ import {
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
+import {
+  explainFreeOperationBlockForMove,
+  resolveFreeOperationExecutionPlayer,
+  resolveFreeOperationZoneFilter,
+} from './turn-flow-eligibility.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import type {
@@ -376,6 +380,25 @@ const legalChoicesWithPreparedContext = (
   options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
+  if (partialMove.freeOperation === true) {
+    const denial = explainFreeOperationBlockForMove(def, state, partialMove, { evaluateZoneFilters: false });
+    if (denial.cause !== 'granted' && denial.cause !== 'nonCardDrivenTurnOrder') {
+      return {
+        kind: 'illegal',
+        complete: false,
+        reason: denial.cause === 'noActiveSeatGrant'
+          ? 'freeOperationNoActiveSeatGrant'
+          : denial.cause === 'sequenceLocked'
+            ? 'freeOperationSequenceLocked'
+              : denial.cause === 'actionClassMismatch'
+                ? 'freeOperationActionClassMismatch'
+                : denial.cause === 'actionIdMismatch'
+                  ? 'freeOperationActionIdMismatch'
+                  : 'freeOperationZoneFilterMismatch',
+      };
+    }
+  }
+
   const baseBindings: Record<string, unknown> = {
     ...buildMoveRuntimeBindings(partialMove),
   };

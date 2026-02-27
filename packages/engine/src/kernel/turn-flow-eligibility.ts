@@ -741,6 +741,9 @@ export const explainFreeOperationBlockForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  options?: {
+    readonly evaluateZoneFilters?: boolean;
+  },
 ): FreeOperationBlockExplanation => {
   if (move.freeOperation !== true) {
     return { cause: 'notFreeOperationMove' };
@@ -748,7 +751,9 @@ export const explainFreeOperationBlockForMove = (
   if (state.turnOrderState.type !== 'cardDriven') {
     return { cause: 'nonCardDrivenTurnOrder' };
   }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, { evaluateZoneFilters: true });
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, {
+    evaluateZoneFilters: options?.evaluateZoneFilters ?? true,
+  });
   if (analysis === null) {
     return { cause: 'nonCardDrivenTurnOrder' };
   }

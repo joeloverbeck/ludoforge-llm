@@ -15,4 +15,14 @@ export const KERNEL_LEGALITY_OUTCOMES = [
 ] as const;
 
 export type KernelLegalityOutcome = (typeof KERNEL_LEGALITY_OUTCOMES)[number];
-export type ChoiceIllegalReason = KernelLegalityOutcome;
+
+export const FREE_OPERATION_CHOICE_ILLEGAL_REASONS = [
+  'freeOperationNoActiveSeatGrant',
+  'freeOperationSequenceLocked',
+  'freeOperationActionClassMismatch',
+  'freeOperationActionIdMismatch',
+  'freeOperationZoneFilterMismatch',
+] as const;
+
+export type FreeOperationChoiceIllegalReason = (typeof FREE_OPERATION_CHOICE_ILLEGAL_REASONS)[number];
+export type ChoiceIllegalReason = KernelLegalityOutcome | FreeOperationChoiceIllegalReason;

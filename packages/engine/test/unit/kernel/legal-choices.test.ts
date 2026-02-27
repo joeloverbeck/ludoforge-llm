@@ -2118,6 +2118,134 @@ phase: [asPhaseId('main')],
         },
       );
     });
+
+    it('returns illegal with freeOperationActionIdMismatch when grant actionIds exclude the attempted action', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({ actions: [action] }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                seat: '0',
+                operationClass: 'operation',
+                actionIds: ['operation-alt'],
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      assert.deepEqual(
+        legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+        { kind: 'illegal', complete: false, reason: 'freeOperationActionIdMismatch' },
+      );
+    });
+
+    it('returns illegal with freeOperationNoActiveSeatGrant when active seat has no pending grant', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({ actions: [action] }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                seat: '1',
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      assert.deepEqual(
+        legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+        { kind: 'illegal', complete: false, reason: 'freeOperationNoActiveSeatGrant' },
+      );
+    });
   });
 
   describe('purity invariant', () => {

@@ -803,7 +803,26 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () => applyMove(def, second, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
-      (error: unknown) => assertFreeOperationDenial(error, 'sequenceLocked'),
+      (error: unknown) => {
+        assert.equal(assertFreeOperationDenial(error, 'sequenceLocked'), true);
+        if (!(error instanceof Error)) {
+          return false;
+        }
+        const details = error as Error & {
+          readonly context?: {
+            readonly freeOperationDenial?: {
+              readonly matchingGrantIds?: readonly string[];
+              readonly sequenceLockBlockingGrantIds?: readonly string[];
+            };
+          };
+        };
+        const matchingGrantIds = details.context?.freeOperationDenial?.matchingGrantIds ?? [];
+        const blockingGrantIds = details.context?.freeOperationDenial?.sequenceLockBlockingGrantIds ?? [];
+        assert.equal(matchingGrantIds.length > 0, true);
+        assert.equal(blockingGrantIds.length > 0, true);
+        assert.equal(blockingGrantIds.some((id) => matchingGrantIds.includes(id)), false);
+        return true;
+      },
     );
   });
 

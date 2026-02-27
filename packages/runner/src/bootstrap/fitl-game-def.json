@@ -16119,7 +16119,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -16159,7 +16163,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -16199,7 +16207,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   }
                                                                 ],
                                                                 "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -16424,7 +16436,11 @@
                                                                       ]
                                                                     }
                                                                   }
-                                                                ]
+                                                                ],
+                                                                "macroOrigin": {
+                                                                  "macroId": "piece-removal-ordering",
+                                                                  "stem": "remainingDamage"
+                                                                }
                                                               }
                                                             }
                                                           ]
@@ -17168,7 +17184,11 @@
                                                                   ]
                                                                 }
                                                               },
-                                                              "countBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                              "countBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                              "macroOrigin": {
+                                                                "macroId": "piece-removal-ordering",
+                                                                "stem": "target"
+                                                              }
                                                             },
                                                             {
                                                               "bind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -17208,7 +17228,11 @@
                                                                   ]
                                                                 }
                                                               },
-                                                              "countBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                              "countBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                              "macroOrigin": {
+                                                                "macroId": "piece-removal-ordering",
+                                                                "stem": "target"
+                                                              }
                                                             },
                                                             {
                                                               "bind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -17248,7 +17272,11 @@
                                                                   ]
                                                                 }
                                                               },
-                                                              "countBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                              "countBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                              "macroOrigin": {
+                                                                "macroId": "piece-removal-ordering",
+                                                                "stem": "target"
+                                                              }
                                                             }
                                                           ],
                                                           "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -17473,7 +17501,11 @@
                                                                 ]
                                                               }
                                                             }
-                                                          ]
+                                                          ],
+                                                          "macroOrigin": {
+                                                            "macroId": "piece-removal-ordering",
+                                                            "stem": "remainingDamage"
+                                                          }
                                                         }
                                                       }
                                                     ]
@@ -18214,6 +18246,10 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "cap-sweep-cobras-unshaded-removal",
+                                  "stem": "target"
                                 }
                               },
                               {
@@ -18254,6 +18290,10 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "cap-sweep-cobras-unshaded-removal",
+                                  "stem": "target"
                                 }
                               },
                               {
@@ -18294,9 +18334,17 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "cap-sweep-cobras-unshaded-removal",
+                                  "stem": "target"
                                 }
                               }
-                            ]
+                            ],
+                            "macroOrigin": {
+                              "macroId": "cap-sweep-cobras-unshaded-removal",
+                              "stem": "target"
+                            }
                           }
                         }
                       ]
@@ -19098,6 +19146,10 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "cap-sweep-cobras-unshaded-removal",
+                                  "stem": "target"
                                 }
                               },
                               {
@@ -19138,6 +19190,10 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "cap-sweep-cobras-unshaded-removal",
+                                  "stem": "target"
                                 }
                               },
                               {
@@ -19178,9 +19234,17 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "cap-sweep-cobras-unshaded-removal",
+                                  "stem": "target"
                                 }
                               }
-                            ]
+                            ],
+                            "macroOrigin": {
+                              "macroId": "cap-sweep-cobras-unshaded-removal",
+                              "stem": "target"
+                            }
                           }
                         }
                       ]
@@ -19880,7 +19944,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -19920,7 +19988,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -19960,7 +20032,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   }
                                                                 ],
                                                                 "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -20185,7 +20261,11 @@
                                                                       ]
                                                                     }
                                                                   }
-                                                                ]
+                                                                ],
+                                                                "macroOrigin": {
+                                                                  "macroId": "piece-removal-ordering",
+                                                                  "stem": "remainingDamage"
+                                                                }
                                                               }
                                                             }
                                                           ]
@@ -20682,7 +20762,11 @@
                                                             ]
                                                           }
                                                         },
-                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                        "macroOrigin": {
+                                                          "macroId": "piece-removal-ordering",
+                                                          "stem": "target"
+                                                        }
                                                       },
                                                       {
                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -20722,7 +20806,11 @@
                                                             ]
                                                           }
                                                         },
-                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                        "macroOrigin": {
+                                                          "macroId": "piece-removal-ordering",
+                                                          "stem": "target"
+                                                        }
                                                       },
                                                       {
                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -20762,7 +20850,11 @@
                                                             ]
                                                           }
                                                         },
-                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                        "macroOrigin": {
+                                                          "macroId": "piece-removal-ordering",
+                                                          "stem": "target"
+                                                        }
                                                       }
                                                     ],
                                                     "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -20987,7 +21079,11 @@
                                                           ]
                                                         }
                                                       }
-                                                    ]
+                                                    ],
+                                                    "macroOrigin": {
+                                                      "macroId": "piece-removal-ordering",
+                                                      "stem": "remainingDamage"
+                                                    }
                                                   }
                                                 }
                                               ]
@@ -21339,7 +21435,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -21379,7 +21479,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -21419,7 +21523,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   }
                                                                 ],
                                                                 "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -21644,7 +21752,11 @@
                                                                       ]
                                                                     }
                                                                   }
-                                                                ]
+                                                                ],
+                                                                "macroOrigin": {
+                                                                  "macroId": "piece-removal-ordering",
+                                                                  "stem": "remainingDamage"
+                                                                }
                                                               }
                                                             }
                                                           ]
@@ -22444,7 +22556,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -22484,7 +22600,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   },
                                                                   {
                                                                     "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -22524,7 +22644,11 @@
                                                                         ]
                                                                       }
                                                                     },
-                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                                    "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "piece-removal-ordering",
+                                                                      "stem": "target"
+                                                                    }
                                                                   }
                                                                 ],
                                                                 "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -22749,7 +22873,11 @@
                                                                       ]
                                                                     }
                                                                   }
-                                                                ]
+                                                                ],
+                                                                "macroOrigin": {
+                                                                  "macroId": "piece-removal-ordering",
+                                                                  "stem": "remainingDamage"
+                                                                }
                                                               }
                                                             }
                                                           ]
@@ -23246,7 +23374,11 @@
                                                             ]
                                                           }
                                                         },
-                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                        "macroOrigin": {
+                                                          "macroId": "piece-removal-ordering",
+                                                          "stem": "target"
+                                                        }
                                                       },
                                                       {
                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -23286,7 +23418,11 @@
                                                             ]
                                                           }
                                                         },
-                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                        "macroOrigin": {
+                                                          "macroId": "piece-removal-ordering",
+                                                          "stem": "target"
+                                                        }
                                                       },
                                                       {
                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -23326,7 +23462,11 @@
                                                             ]
                                                           }
                                                         },
-                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                        "countBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                        "macroOrigin": {
+                                                          "macroId": "piece-removal-ordering",
+                                                          "stem": "target"
+                                                        }
                                                       }
                                                     ],
                                                     "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -23551,7 +23691,11 @@
                                                           ]
                                                         }
                                                       }
-                                                    ]
+                                                    ],
+                                                    "macroOrigin": {
+                                                      "macroId": "piece-removal-ordering",
+                                                      "stem": "remainingDamage"
+                                                    }
                                                   }
                                                 }
                                               ]
@@ -28564,6 +28708,10 @@
                                                         },
                                                         "to": {
                                                           "zoneExpr": "casualties-US:none"
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "insurgent-attack-removal-order",
+                                                          "stem": "target"
                                                         }
                                                       },
                                                       {
@@ -28586,6 +28734,10 @@
                                                         },
                                                         "to": {
                                                           "zoneExpr": "available-ARVN:none"
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "insurgent-attack-removal-order",
+                                                          "stem": "target"
                                                         }
                                                       },
                                                       {
@@ -28608,6 +28760,10 @@
                                                         },
                                                         "to": {
                                                           "zoneExpr": "casualties-US:none"
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "insurgent-attack-removal-order",
+                                                          "stem": "target"
                                                         }
                                                       },
                                                       {
@@ -28630,9 +28786,17 @@
                                                         },
                                                         "to": {
                                                           "zoneExpr": "available-ARVN:none"
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "insurgent-attack-removal-order",
+                                                          "stem": "target"
                                                         }
                                                       }
-                                                    ]
+                                                    ],
+                                                    "macroOrigin": {
+                                                      "macroId": "insurgent-attack-removal-order",
+                                                      "stem": "target"
+                                                    }
                                                   }
                                                 },
                                                 {
@@ -28857,6 +29021,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -28879,6 +29047,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -28901,6 +29073,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -28923,9 +29099,17 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "insurgent-attack-removal-order",
+                                                "stem": "target"
+                                              }
                                             }
                                           },
                                           {
@@ -29411,6 +29595,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -29433,6 +29621,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -29455,6 +29647,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -29477,9 +29673,17 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-attack-removal-order",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "insurgent-attack-removal-order",
+                                                "stem": "target"
+                                              }
                                             }
                                           },
                                           {
@@ -31539,7 +31743,11 @@
                                                                               ]
                                                                             }
                                                                           },
-                                                                          "countBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved"
+                                                                          "countBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__troopsRemoved",
+                                                                          "macroOrigin": {
+                                                                            "macroId": "piece-removal-ordering",
+                                                                            "stem": "target"
+                                                                          }
                                                                         },
                                                                         {
                                                                           "bind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -31579,7 +31787,11 @@
                                                                               ]
                                                                             }
                                                                           },
-                                                                          "countBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed"
+                                                                          "countBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas1Removed",
+                                                                          "macroOrigin": {
+                                                                            "macroId": "piece-removal-ordering",
+                                                                            "stem": "target"
+                                                                          }
                                                                         },
                                                                         {
                                                                           "bind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__target",
@@ -31619,7 +31831,11 @@
                                                                               ]
                                                                             }
                                                                           },
-                                                                          "countBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed"
+                                                                          "countBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__guerrillas2Removed",
+                                                                          "macroOrigin": {
+                                                                            "macroId": "piece-removal-ordering",
+                                                                            "stem": "target"
+                                                                          }
                                                                         }
                                                                       ],
                                                                       "remainingBind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__remainingDamage",
@@ -31844,7 +32060,11 @@
                                                                             ]
                                                                           }
                                                                         }
-                                                                      ]
+                                                                      ],
+                                                                      "macroOrigin": {
+                                                                        "macroId": "piece-removal-ordering",
+                                                                        "stem": "remainingDamage"
+                                                                      }
                                                                     }
                                                                   }
                                                                 ]
@@ -32090,6 +32310,10 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -32130,9 +32354,17 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "us-sa-remove-insurgents",
+                                                "stem": "target"
+                                              }
                                             }
                                           }
                                         ],
@@ -32174,6 +32406,10 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -32214,6 +32450,10 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -32254,9 +32494,17 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "us-sa-remove-insurgents",
+                                                "stem": "target"
+                                              }
                                             }
                                           }
                                         ]
@@ -32304,6 +32552,10 @@
                                             ":none"
                                           ]
                                         }
+                                      },
+                                      "macroOrigin": {
+                                        "macroId": "us-sa-remove-insurgents",
+                                        "stem": "target"
                                       }
                                     },
                                     {
@@ -32339,6 +32591,10 @@
                                             ":none"
                                           ]
                                         }
+                                      },
+                                      "macroOrigin": {
+                                        "macroId": "us-sa-remove-insurgents",
+                                        "stem": "target"
                                       }
                                     },
                                     {
@@ -32379,9 +32635,17 @@
                                             ":none"
                                           ]
                                         }
+                                      },
+                                      "macroOrigin": {
+                                        "macroId": "us-sa-remove-insurgents",
+                                        "stem": "target"
                                       }
                                     }
-                                  ]
+                                  ],
+                                  "macroOrigin": {
+                                    "macroId": "us-sa-remove-insurgents",
+                                    "stem": "target"
+                                  }
                                 }
                               }
                             ]
@@ -33265,6 +33529,10 @@
                                                               ":none"
                                                             ]
                                                           }
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "us-sa-remove-insurgents",
+                                                          "stem": "target"
                                                         }
                                                       },
                                                       {
@@ -33305,9 +33573,17 @@
                                                               ":none"
                                                             ]
                                                           }
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "us-sa-remove-insurgents",
+                                                          "stem": "target"
                                                         }
                                                       }
-                                                    ]
+                                                    ],
+                                                    "macroOrigin": {
+                                                      "macroId": "us-sa-remove-insurgents",
+                                                      "stem": "target"
+                                                    }
                                                   }
                                                 }
                                               ],
@@ -33352,6 +33628,10 @@
                                                               ":none"
                                                             ]
                                                           }
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "us-sa-remove-insurgents",
+                                                          "stem": "target"
                                                         }
                                                       },
                                                       {
@@ -33392,6 +33672,10 @@
                                                               ":none"
                                                             ]
                                                           }
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "us-sa-remove-insurgents",
+                                                          "stem": "target"
                                                         }
                                                       },
                                                       {
@@ -33432,9 +33716,17 @@
                                                               ":none"
                                                             ]
                                                           }
+                                                        },
+                                                        "macroOrigin": {
+                                                          "macroId": "us-sa-remove-insurgents",
+                                                          "stem": "target"
                                                         }
                                                       }
-                                                    ]
+                                                    ],
+                                                    "macroOrigin": {
+                                                      "macroId": "us-sa-remove-insurgents",
+                                                      "stem": "target"
+                                                    }
                                                   }
                                                 }
                                               ]
@@ -33485,6 +33777,10 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -33520,6 +33816,10 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -33560,9 +33860,17 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           }
-                                        ]
+                                        ],
+                                        "macroOrigin": {
+                                          "macroId": "us-sa-remove-insurgents",
+                                          "stem": "target"
+                                        }
                                       }
                                     }
                                   ]
@@ -35524,6 +35832,10 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -35564,9 +35876,17 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           }
-                                        ]
+                                        ],
+                                        "macroOrigin": {
+                                          "macroId": "us-sa-remove-insurgents",
+                                          "stem": "target"
+                                        }
                                       }
                                     }
                                   ],
@@ -35608,6 +35928,10 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -35648,6 +35972,10 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -35688,9 +36016,17 @@
                                                   ":none"
                                                 ]
                                               }
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "us-sa-remove-insurgents",
+                                              "stem": "target"
                                             }
                                           }
-                                        ]
+                                        ],
+                                        "macroOrigin": {
+                                          "macroId": "us-sa-remove-insurgents",
+                                          "stem": "target"
+                                        }
                                       }
                                     }
                                   ]
@@ -35738,6 +36074,10 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "us-sa-remove-insurgents",
+                                  "stem": "target"
                                 }
                               },
                               {
@@ -35773,6 +36113,10 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "us-sa-remove-insurgents",
+                                  "stem": "target"
                                 }
                               },
                               {
@@ -35813,9 +36157,17 @@
                                       ":none"
                                     ]
                                   }
+                                },
+                                "macroOrigin": {
+                                  "macroId": "us-sa-remove-insurgents",
+                                  "stem": "target"
                                 }
                               }
-                            ]
+                            ],
+                            "macroOrigin": {
+                              "macroId": "us-sa-remove-insurgents",
+                              "stem": "target"
+                            }
                           }
                         }
                       ]
@@ -36182,6 +36534,10 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -36222,9 +36578,17 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "us-sa-remove-insurgents",
+                                                "stem": "target"
+                                              }
                                             }
                                           }
                                         ],
@@ -36266,6 +36630,10 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -36306,6 +36674,10 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -36346,9 +36718,17 @@
                                                         ":none"
                                                       ]
                                                     }
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "us-sa-remove-insurgents",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "us-sa-remove-insurgents",
+                                                "stem": "target"
+                                              }
                                             }
                                           }
                                         ]
@@ -36396,6 +36776,10 @@
                                             ":none"
                                           ]
                                         }
+                                      },
+                                      "macroOrigin": {
+                                        "macroId": "us-sa-remove-insurgents",
+                                        "stem": "target"
                                       }
                                     },
                                     {
@@ -36431,6 +36815,10 @@
                                             ":none"
                                           ]
                                         }
+                                      },
+                                      "macroOrigin": {
+                                        "macroId": "us-sa-remove-insurgents",
+                                        "stem": "target"
                                       }
                                     },
                                     {
@@ -36471,9 +36859,17 @@
                                             ":none"
                                           ]
                                         }
+                                      },
+                                      "macroOrigin": {
+                                        "macroId": "us-sa-remove-insurgents",
+                                        "stem": "target"
                                       }
                                     }
-                                  ]
+                                  ],
+                                  "macroOrigin": {
+                                    "macroId": "us-sa-remove-insurgents",
+                                    "stem": "target"
+                                  }
                                 }
                               }
                             ]
@@ -39888,6 +40284,10 @@
                                             },
                                             "to": {
                                               "zoneExpr": "casualties-US:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -39910,6 +40310,10 @@
                                             },
                                             "to": {
                                               "zoneExpr": "available-ARVN:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -39932,6 +40336,10 @@
                                             },
                                             "to": {
                                               "zoneExpr": "casualties-US:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -39954,9 +40362,17 @@
                                             },
                                             "to": {
                                               "zoneExpr": "available-ARVN:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           }
-                                        ]
+                                        ],
+                                        "macroOrigin": {
+                                          "macroId": "insurgent-ambush-remove-coin-piece",
+                                          "stem": "target"
+                                        }
                                       }
                                     }
                                   ]
@@ -40054,6 +40470,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -40076,6 +40496,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -40098,6 +40522,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -40120,9 +40548,17 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "insurgent-ambush-remove-coin-piece",
+                                                "stem": "target"
+                                              }
                                             }
                                           }
                                         ]
@@ -42204,6 +42640,10 @@
                                             },
                                             "to": {
                                               "zoneExpr": "casualties-US:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -42226,6 +42666,10 @@
                                             },
                                             "to": {
                                               "zoneExpr": "available-ARVN:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -42248,6 +42692,10 @@
                                             },
                                             "to": {
                                               "zoneExpr": "casualties-US:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           },
                                           {
@@ -42270,9 +42718,17 @@
                                             },
                                             "to": {
                                               "zoneExpr": "available-ARVN:none"
+                                            },
+                                            "macroOrigin": {
+                                              "macroId": "insurgent-ambush-remove-coin-piece",
+                                              "stem": "target"
                                             }
                                           }
-                                        ]
+                                        ],
+                                        "macroOrigin": {
+                                          "macroId": "insurgent-ambush-remove-coin-piece",
+                                          "stem": "target"
+                                        }
                                       }
                                     }
                                   ]
@@ -42383,6 +42839,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -42405,6 +42865,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -42427,6 +42891,10 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "casualties-US:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 },
                                                 {
@@ -42449,9 +42917,17 @@
                                                   },
                                                   "to": {
                                                     "zoneExpr": "available-ARVN:none"
+                                                  },
+                                                  "macroOrigin": {
+                                                    "macroId": "insurgent-ambush-remove-coin-piece",
+                                                    "stem": "target"
                                                   }
                                                 }
-                                              ]
+                                              ],
+                                              "macroOrigin": {
+                                                "macroId": "insurgent-ambush-remove-coin-piece",
+                                                "stem": "target"
+                                              }
                                             }
                                           }
                                         ]
@@ -46462,9 +46938,17 @@
                       },
                       "to": {
                         "zoneExpr": "out-of-play-US:none"
+                      },
+                      "macroOrigin": {
+                        "macroId": "coup-process-commitment",
+                        "stem": "casualtyTroop"
                       }
                     }
-                  ]
+                  ],
+                  "macroOrigin": {
+                    "macroId": "coup-process-commitment",
+                    "stem": "casualtyTroop"
+                  }
                 }
               }
             ]
@@ -48179,9 +48663,17 @@
                       },
                       "to": {
                         "zoneExpr": "out-of-play-US:none"
+                      },
+                      "macroOrigin": {
+                        "macroId": "coup-process-commitment",
+                        "stem": "casualtyTroop"
                       }
                     }
-                  ]
+                  ],
+                  "macroOrigin": {
+                    "macroId": "coup-process-commitment",
+                    "stem": "casualtyTroop"
+                  }
                 }
               }
             ]

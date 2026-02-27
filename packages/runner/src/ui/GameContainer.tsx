@@ -127,7 +127,13 @@ export function GameContainer({
   const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
   const [animationDiagnosticBuffer, setAnimationDiagnosticBuffer] = useState<DiagnosticBuffer | undefined>(undefined);
   const eventLogEntries = useEventLogEntries(store, visualConfigProvider);
-  const { tooltipState: actionTooltipState, onActionHoverStart, onActionHoverEnd } = useActionTooltip(bridge);
+  const {
+    tooltipState: actionTooltipState,
+    onActionHoverStart,
+    onActionHoverEnd,
+    onTooltipPointerEnter,
+    onTooltipPointerLeave,
+  } = useActionTooltip(bridge);
   const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
     () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
@@ -338,6 +344,8 @@ export function GameContainer({
                 <ActionTooltip
                   description={actionTooltipState.description}
                   anchorElement={actionTooltipState.anchorElement}
+                  onPointerEnter={onTooltipPointerEnter}
+                  onPointerLeave={onTooltipPointerLeave}
                 />
               )}
             </>

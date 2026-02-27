@@ -3,7 +3,7 @@
 import { createElement } from 'react';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   AnnotatedActionDescription,
@@ -264,13 +264,13 @@ describe('ActionTooltip', () => {
     expect(floatingMocks.setReference).toHaveBeenCalledWith(anchor);
   });
 
-  it('enforces pointer-events: none via CSS contract', () => {
+  it('enforces pointer-events: auto via CSS contract', () => {
     const css = readFileSync(
       resolve(process.cwd(), 'src/ui/ActionTooltip.module.css'),
       'utf-8',
     );
     const tooltipBlock = css.match(/\.tooltip\s*\{[^}]*\}/u)?.[0] ?? '';
-    expect(tooltipBlock).toContain('pointer-events: none;');
+    expect(tooltipBlock).toContain('pointer-events: auto;');
   });
 
   it('returns null when description has no displayable content', () => {
@@ -296,5 +296,37 @@ describe('ActionTooltip', () => {
     expect(tooltip).toBeTruthy();
     expect(tooltip.getAttribute('role')).toBe('tooltip');
     expect(tooltip.textContent).toContain('Effects');
+  });
+
+  it('fires onPointerEnter when pointer enters tooltip', () => {
+    const onPointerEnter = vi.fn();
+    const desc = makeDescription({ sections: [makeEffectsGroup()] });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+      onPointerEnter,
+    }));
+
+    const tooltip = screen.getByTestId('action-tooltip');
+    fireEvent.pointerEnter(tooltip);
+
+    expect(onPointerEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires onPointerLeave when pointer leaves tooltip', () => {
+    const onPointerLeave = vi.fn();
+    const desc = makeDescription({ sections: [makeEffectsGroup()] });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+      onPointerLeave,
+    }));
+
+    const tooltip = screen.getByTestId('action-tooltip');
+    fireEvent.pointerLeave(tooltip);
+
+    expect(onPointerLeave).toHaveBeenCalledTimes(1);
   });
 });

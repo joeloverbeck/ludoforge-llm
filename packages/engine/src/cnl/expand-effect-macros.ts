@@ -887,9 +887,163 @@ function annotateControlFlowMacroOrigins(
     }
   }
 
+  // Annotate additional binding effect types with macroOrigin
+  const bindFieldEffectKeys: readonly (readonly [string, string])[] = [
+    ['let', 'bind'],
+    ['bindValue', 'bind'],
+    ['chooseOne', 'bind'],
+    ['chooseN', 'bind'],
+    ['rollRandom', 'bind'],
+    ['transferVar', 'actualBind'],
+  ];
+
+  for (const [effectKey, bindField] of bindFieldEffectKeys) {
+    if (isRecord(rewrittenNode[effectKey]) && typeof (rewrittenNode[effectKey] as Record<string, unknown>)[bindField] === 'string') {
+      const innerNode = rewrittenNode[effectKey] as Record<string, unknown>;
+      const origin = originByBinding.get(innerNode[bindField] as string);
+      if (origin !== undefined) {
+        const existing = innerNode.macroOrigin;
+        const hasSameOrigin = isRecord(existing)
+          && existing.macroId === origin.macroId
+          && existing.stem === origin.stem;
+        const isTrusted = isTrustedMacroOriginCarrier(innerNode);
+        if (!hasSameOrigin || !isTrusted) {
+          rewrittenNode = {
+            ...rewrittenNode,
+            [effectKey]: markTrustedMacroOriginByExpansion({
+              ...innerNode,
+              macroOrigin: origin,
+            }),
+          };
+          changed = true;
+        }
+      }
+    }
+  }
+
+  // removeByPriority: check groups[].bind and remainingBind
+  if (isRecord(rewrittenNode.removeByPriority)) {
+    const rbp = rewrittenNode.removeByPriority as Record<string, unknown>;
+    const remainingBind = rbp.remainingBind;
+    const groupsArr = rbp.groups;
+    let foundOrigin: MacroBindingOrigin | undefined;
+    if (typeof remainingBind === 'string') {
+      foundOrigin = originByBinding.get(remainingBind);
+    }
+    if (foundOrigin === undefined && Array.isArray(groupsArr)) {
+      for (const g of groupsArr) {
+        if (isRecord(g) && typeof g.bind === 'string') {
+          foundOrigin = originByBinding.get(g.bind);
+          if (foundOrigin !== undefined) break;
+        }
+      }
+    }
+    if (foundOrigin !== undefined) {
+      const existing = rbp.macroOrigin;
+      const hasSameOrigin = isRecord(existing)
+        && existing.macroId === foundOrigin.macroId
+        && existing.stem === foundOrigin.stem;
+      const isTrusted = isTrustedMacroOriginCarrier(rbp);
+      if (!hasSameOrigin || !isTrusted) {
+        rewrittenNode = {
+          ...rewrittenNode,
+          removeByPriority: markTrustedMacroOriginByExpansion({
+            ...rbp,
+            macroOrigin: foundOrigin,
+          }),
+        };
+        changed = true;
+      }
+    }
+  }
+
+  // evaluateSubset: check subsetBind, resultBind, bestSubsetBind
+  if (isRecord(rewrittenNode.evaluateSubset)) {
+    const es = rewrittenNode.evaluateSubset as Record<string, unknown>;
+    let foundOrigin: MacroBindingOrigin | undefined;
+    for (const bindField of ['subsetBind', 'resultBind', 'bestSubsetBind']) {
+      if (typeof es[bindField] === 'string') {
+        foundOrigin = originByBinding.get(es[bindField] as string);
+        if (foundOrigin !== undefined) break;
+      }
+    }
+    if (foundOrigin !== undefined) {
+      const existing = es.macroOrigin;
+      const hasSameOrigin = isRecord(existing)
+        && existing.macroId === foundOrigin.macroId
+        && existing.stem === foundOrigin.stem;
+      const isTrusted = isTrustedMacroOriginCarrier(es);
+      if (!hasSameOrigin || !isTrusted) {
+        rewrittenNode = {
+          ...rewrittenNode,
+          evaluateSubset: markTrustedMacroOriginByExpansion({
+            ...es,
+            macroOrigin: foundOrigin,
+          }),
+        };
+        changed = true;
+      }
+    }
+  }
+
   const recursivelyRewritten: Record<string, unknown> = changed ? { ...rewrittenNode } : rewrittenNode;
   for (const [key, value] of Object.entries(rewrittenNode)) {
     const nextValue = annotateControlFlowMacroOrigins(value, originByBinding);
+    if (nextValue !== value) {
+      if (!changed) {
+        changed = true;
+      }
+      recursivelyRewritten[key] = nextValue;
+    }
+  }
+
+  return changed ? recursivelyRewritten : node;
+}
+
+function annotateBindingDisplayNames(
+  node: unknown,
+  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
+): unknown {
+  if (originByBinding.size === 0) {
+    return node;
+  }
+  if (Array.isArray(node)) {
+    let changed = false;
+    const rewritten = node.map((item) => {
+      const next = annotateBindingDisplayNames(item, originByBinding);
+      changed = changed || next !== item;
+      return next;
+    });
+    return changed ? rewritten : node;
+  }
+  if (!isRecord(node)) {
+    return node;
+  }
+
+  let rewrittenNode: Record<string, unknown> = node;
+  let changed = false;
+
+  // Annotate { ref: 'binding', name } nodes
+  if (node.ref === 'binding' && typeof node.name === 'string') {
+    const origin = originByBinding.get(node.name);
+    if (origin !== undefined && node.displayName === undefined) {
+      rewrittenNode = { ...node, displayName: origin.stem };
+      changed = true;
+    }
+  }
+
+  // Annotate { query: 'binding', name } nodes
+  if (node.query === 'binding' && typeof node.name === 'string') {
+    const origin = originByBinding.get(node.name);
+    if (origin !== undefined && node.displayName === undefined) {
+      rewrittenNode = { ...node, displayName: origin.stem };
+      changed = true;
+    }
+  }
+
+  const recursivelyRewritten: Record<string, unknown> = changed ? { ...rewrittenNode } : rewrittenNode;
+  for (const [key, value] of Object.entries(rewrittenNode)) {
+    const nextValue = annotateBindingDisplayNames(value, originByBinding);
     if (nextValue !== value) {
       if (!changed) {
         changed = true;
@@ -1073,8 +1227,11 @@ function expandEffect(
     renameMap.size === 0
       ? substitutedTemplates
       : substitutedTemplates.map((templateEffect) => rewriteBindings(templateEffect, index, renameMap) as GameSpecEffect);
-  const annotatedSubstituted = hygienicSubstituted.map((templateEffect) =>
+  const controlFlowAnnotated = hygienicSubstituted.map((templateEffect) =>
     annotateControlFlowMacroOrigins(templateEffect, originByBinding) as GameSpecEffect,
+  );
+  const annotatedSubstituted = controlFlowAnnotated.map((templateEffect) =>
+    annotateBindingDisplayNames(templateEffect, originByBinding) as GameSpecEffect,
   );
 
   const nestedVisited = new Set(visitedStack);

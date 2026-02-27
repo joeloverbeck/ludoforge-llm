@@ -20,15 +20,20 @@ const INITIAL_STATE: ActionTooltipState = {
 };
 
 const DEBOUNCE_MS = 200;
+const GRACE_MS = 100;
 
 export function useActionTooltip(bridge: GameBridge): {
   readonly tooltipState: ActionTooltipState;
   readonly onActionHoverStart: (actionId: string, element: HTMLElement) => void;
   readonly onActionHoverEnd: () => void;
+  readonly onTooltipPointerEnter: () => void;
+  readonly onTooltipPointerLeave: () => void;
 } {
   const [tooltipState, setTooltipState] = useState<ActionTooltipState>(INITIAL_STATE);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestCounterRef = useRef(0);
+  const tooltipHoveredRef = useRef(false);
 
   const clearPendingTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -37,8 +42,22 @@ export function useActionTooltip(bridge: GameBridge): {
     }
   }, []);
 
+  const clearGraceTimer = useCallback(() => {
+    if (graceTimerRef.current !== null) {
+      clearTimeout(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
+  }, []);
+
+  const dismiss = useCallback(() => {
+    requestCounterRef.current += 1;
+    tooltipHoveredRef.current = false;
+    setTooltipState(INITIAL_STATE);
+  }, []);
+
   const onActionHoverStart = useCallback((actionId: string, element: HTMLElement) => {
     clearPendingTimer();
+    clearGraceTimer();
     requestCounterRef.current += 1;
     const capturedCounter = requestCounterRef.current;
 
@@ -83,19 +102,51 @@ export function useActionTooltip(bridge: GameBridge): {
         },
       );
     }, DEBOUNCE_MS);
-  }, [bridge, clearPendingTimer]);
+  }, [bridge, clearPendingTimer, clearGraceTimer]);
 
   const onActionHoverEnd = useCallback(() => {
     clearPendingTimer();
-    requestCounterRef.current += 1;
-    setTooltipState(INITIAL_STATE);
-  }, [clearPendingTimer]);
+    clearGraceTimer();
+
+    if (tooltipHoveredRef.current) {
+      return;
+    }
+
+    graceTimerRef.current = setTimeout(() => {
+      graceTimerRef.current = null;
+      if (!tooltipHoveredRef.current) {
+        dismiss();
+      }
+    }, GRACE_MS);
+  }, [clearPendingTimer, clearGraceTimer, dismiss]);
+
+  const onTooltipPointerEnter = useCallback(() => {
+    tooltipHoveredRef.current = true;
+    clearGraceTimer();
+  }, [clearGraceTimer]);
+
+  const onTooltipPointerLeave = useCallback(() => {
+    tooltipHoveredRef.current = false;
+    clearGraceTimer();
+
+    graceTimerRef.current = setTimeout(() => {
+      graceTimerRef.current = null;
+      dismiss();
+    }, GRACE_MS);
+  }, [clearGraceTimer, dismiss]);
 
   useEffect(() => {
     return () => {
       clearPendingTimer();
+      clearGraceTimer();
     };
-  }, [clearPendingTimer]);
+  }, [clearPendingTimer, clearGraceTimer]);
 
-  return { tooltipState, onActionHoverStart, onActionHoverEnd };
+  return {
+    tooltipState,
+    onActionHoverStart,
+    onActionHoverEnd,
+    onTooltipPointerEnter,
+    onTooltipPointerLeave,
+  };
 }

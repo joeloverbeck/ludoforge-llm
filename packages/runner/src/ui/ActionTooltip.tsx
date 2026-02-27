@@ -78,9 +78,11 @@ function renderGroup(group: DisplayGroupNode, key: string): ReactElement {
 interface ActionTooltipProps {
   readonly description: AnnotatedActionDescription;
   readonly anchorElement: HTMLElement;
+  readonly onPointerEnter?: () => void;
+  readonly onPointerLeave?: () => void;
 }
 
-export function ActionTooltip({ description, anchorElement }: ActionTooltipProps): ReactElement | null {
+export function ActionTooltip({ description, anchorElement, onPointerEnter, onPointerLeave }: ActionTooltipProps): ReactElement | null {
   const { x, y, strategy, refs } = useFloating({
     placement: 'top',
     middleware: [offset(12), flip(), shift({ padding: 8 })],
@@ -105,6 +107,8 @@ export function ActionTooltip({ description, anchorElement }: ActionTooltipProps
         left: x ?? 0,
         top: y ?? 0,
       }}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
     >
       {description.sections.map((section, i) =>
         renderGroup(section, `s${i}`),

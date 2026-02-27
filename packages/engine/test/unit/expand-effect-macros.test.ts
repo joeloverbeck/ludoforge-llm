@@ -1330,4 +1330,93 @@ phase: ['main'],
     assert.equal(unresolved?.macroOrigin?.expanded?.path, unresolved?.path);
     assert.deepEqual(result.doc.setup, []);
   });
+
+  it('annotates binding references with displayName from macroOrigin', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-display',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$player',
+            over: { query: 'players' },
+            effects: [
+              { setVar: { scope: 'pvar', player: { chosen: '$player' }, var: 'x', value: { ref: 'binding', name: '$player' } } },
+            ],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-display', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    // The binding reference in the setVar value should have displayName = 'player'
+    const forEach = result.doc.setup?.[0] as unknown as { forEach: { effects: readonly Record<string, unknown>[] } };
+    const setVar = forEach.forEach.effects[0] as { setVar: { value: { ref: string; name: string; displayName?: string } } };
+    assert.equal(setVar.setVar.value.ref, 'binding');
+    assert.ok(setVar.setVar.value.name.startsWith('$__macro_'));
+    assert.equal(setVar.setVar.value.displayName, 'player');
+  });
+
+  it('annotates let effect with macroOrigin', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-let-origin',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          let: {
+            bind: '$val',
+            value: 42,
+            in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$val' } } }],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-let-origin', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const letEffect = result.doc.setup?.[0] as unknown as { let: { bind: string; macroOrigin?: { macroId: string; stem: string } } };
+    assert.ok(letEffect.let.bind.startsWith('$__macro_'));
+    assert.ok(letEffect.let.macroOrigin !== undefined);
+    assert.equal(letEffect.let.macroOrigin?.macroId, 'test-let-origin');
+    assert.equal(letEffect.let.macroOrigin?.stem, 'val');
+    assert.ok(isTrustedMacroOriginCarrier(letEffect.let));
+  });
+
+  it('annotates chooseOne effect with macroOrigin', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'test-choose-origin',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$pick', options: { query: 'enums', values: ['a', 'b'] } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'test-choose-origin', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const chooseOne = result.doc.setup?.[0] as unknown as { chooseOne: { bind: string; macroOrigin?: { macroId: string; stem: string } } };
+    assert.ok(chooseOne.chooseOne.bind.startsWith('$__macro_'));
+    assert.ok(chooseOne.chooseOne.macroOrigin !== undefined);
+    assert.equal(chooseOne.chooseOne.macroOrigin?.macroId, 'test-choose-origin');
+    assert.equal(chooseOne.chooseOne.macroOrigin?.stem, 'pick');
+    assert.ok(isTrustedMacroOriginCarrier(chooseOne.chooseOne));
+  });
 });

@@ -33,7 +33,7 @@ export type Reference =
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
   | { readonly ref: 'assetField'; readonly row: string; readonly tableId: string; readonly field: string }
-  | { readonly ref: 'binding'; readonly name: string }
+  | { readonly ref: 'binding'; readonly name: string; readonly displayName?: string }
   | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string }
   | { readonly ref: 'globalMarkerState'; readonly marker: string }
   | { readonly ref: 'tokenZone'; readonly token: TokenSel }
@@ -197,7 +197,7 @@ export type OptionsQuery =
       readonly includeStart?: boolean;
       readonly maxDepth?: number;
     }
-  | { readonly query: 'binding'; readonly name: string };
+  | { readonly query: 'binding'; readonly name: string; readonly displayName?: string };
 
 export type TransferVarEndpoint = ScopedVarEndpointContract<
   'global',
@@ -254,6 +254,7 @@ export type EffectAST =
         readonly min?: NumericValueExpr;
         readonly max?: NumericValueExpr;
         readonly actualBind?: string;
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {
@@ -358,6 +359,7 @@ export type EffectAST =
         }[];
         readonly remainingBind?: string;
         readonly in?: readonly EffectAST[];
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {
@@ -365,12 +367,14 @@ export type EffectAST =
         readonly bind: string;
         readonly value: ValueExpr;
         readonly in: readonly EffectAST[];
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {
       readonly bindValue: {
         readonly bind: string;
         readonly value: ValueExpr;
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {
@@ -383,6 +387,7 @@ export type EffectAST =
         readonly resultBind: string;
         readonly bestSubsetBind?: string;
         readonly in: readonly EffectAST[];
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {
@@ -390,6 +395,7 @@ export type EffectAST =
         readonly internalDecisionId: string;
         readonly bind: string;
         readonly options: OptionsQuery;
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {
@@ -397,6 +403,7 @@ export type EffectAST =
         readonly internalDecisionId: string;
         readonly bind: string;
         readonly options: OptionsQuery;
+        readonly macroOrigin?: EffectMacroOrigin;
       } & (
         | {
             readonly n: number;
@@ -416,6 +423,7 @@ export type EffectAST =
         readonly min: NumericValueExpr;
         readonly max: NumericValueExpr;
         readonly in: readonly EffectAST[];
+        readonly macroOrigin?: EffectMacroOrigin;
       };
     }
   | {

@@ -217,6 +217,13 @@ describe('valueExprToInlineNodes', () => {
     assert.equal(nodes[0]!.text, 'x');
   });
 
+  it('renders binding reference with displayName', () => {
+    const expr: ValueExpr = { ref: 'binding', name: '$__macro_foo_0_player', displayName: 'player' };
+    const nodes = valueExprToInlineNodes(expr);
+    assert.equal(nodes[0]!.kind, 'reference');
+    assert.equal(nodes[0]!.text, 'player');
+  });
+
   it('renders binary op', () => {
     const expr: ValueExpr = { op: '+', left: 1, right: 2 };
     const nodes = valueExprToInlineNodes(expr);
@@ -281,6 +288,13 @@ describe('optionsQueryToInlineNodes', () => {
     const nodes = optionsQueryToInlineNodes(query);
     assert.equal(nodes[0]!.kind, 'reference');
     assert.equal(nodes[0]!.text, 'selected');
+  });
+
+  it('renders binding with displayName', () => {
+    const query: OptionsQuery = { query: 'binding', name: '$__macro_foo_0_items', displayName: 'items' };
+    const nodes = optionsQueryToInlineNodes(query);
+    assert.equal(nodes[0]!.kind, 'reference');
+    assert.equal(nodes[0]!.text, 'items');
   });
 });
 
@@ -395,6 +409,52 @@ describe('effectToDisplayNodes', () => {
     // Nested effects are indented
     const nested = asLine(nodes[1]!);
     assert.equal(nested.indent, 1);
+  });
+
+  it('renders forEach with macroOrigin.stem instead of hygienic bind', () => {
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$__macro_deal_0_card',
+        macroOrigin: { macroId: 'deal', stem: 'card' },
+        over: { query: 'tokensInZone', zone: 'deck' },
+        effects: [],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const header = asLine(nodes[0]!);
+    const refs = findByKind(header.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'card'));
+    assert.ok(!refs.some((n) => n.text === '$__macro_deal_0_card'));
+  });
+
+  it('renders chooseOne with macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'd1',
+        bind: '$__macro_pick_0_choice',
+        macroOrigin: { macroId: 'pick', stem: 'choice' },
+        options: { query: 'players' },
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const ln = asLine(nodes[0]!);
+    const refs = findByKind(ln.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'choice'));
+  });
+
+  it('renders let with macroOrigin.stem', () => {
+    const effect: EffectAST = {
+      let: {
+        bind: '$__macro_calc_0_val',
+        macroOrigin: { macroId: 'calc', stem: 'val' },
+        value: 42,
+        in: [],
+      },
+    };
+    const nodes = effectToDisplayNodes(effect, 0);
+    const header = asLine(nodes[0]!);
+    const refs = findByKind(header.children, 'reference');
+    assert.ok(refs.some((n) => n.text === 'val'));
   });
 
   it('renders let with body', () => {

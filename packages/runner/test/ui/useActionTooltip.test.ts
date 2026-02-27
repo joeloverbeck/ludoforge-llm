@@ -147,6 +147,11 @@ describe('useActionTooltip', () => {
       result.current.onActionHoverEnd();
     });
 
+    // Advance past the grace period (100ms)
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
     expect(result.current.tooltipState.actionId).toBeNull();
     expect(result.current.tooltipState.description).toBeNull();
     expect(result.current.tooltipState.loading).toBe(false);
@@ -239,5 +244,124 @@ describe('useActionTooltip', () => {
 
     expect(result.current.tooltipState.loading).toBe(false);
     expect(result.current.tooltipState.actionId).toBe('action-1');
+  });
+
+  it('keeps tooltip visible during grace period when pointer enters tooltip', async () => {
+    const describeAction = vi.fn(async () => ({
+      sections: [{ kind: 'group' as const, label: 'Test', children: [{ kind: 'keyword' as const, text: 'x' }] }],
+      limitUsage: [],
+    }));
+    const bridge = createMockBridge(describeAction);
+
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Leave button — starts grace period
+    act(() => {
+      result.current.onActionHoverEnd();
+    });
+
+    // Enter tooltip during grace period — pins tooltip
+    act(() => {
+      result.current.onTooltipPointerEnter();
+    });
+
+    // Advance past grace period
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Tooltip should still be visible
+    expect(result.current.tooltipState.description).not.toBeNull();
+    expect(result.current.tooltipState.actionId).toBe('action-1');
+  });
+
+  it('dismisses tooltip after pointer leaves tooltip', async () => {
+    const describeAction = vi.fn(async () => ({
+      sections: [{ kind: 'group' as const, label: 'Test', children: [{ kind: 'keyword' as const, text: 'x' }] }],
+      limitUsage: [],
+    }));
+    const bridge = createMockBridge(describeAction);
+
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Leave button, enter tooltip
+    act(() => {
+      result.current.onActionHoverEnd();
+    });
+    act(() => {
+      result.current.onTooltipPointerEnter();
+    });
+
+    // Leave tooltip
+    act(() => {
+      result.current.onTooltipPointerLeave();
+    });
+
+    // Advance past grace period
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.description).toBeNull();
+  });
+
+  it('does not dismiss during grace period if button is re-entered', async () => {
+    const describeAction = vi.fn(async () => ({
+      sections: [{ kind: 'group' as const, label: 'Test', children: [{ kind: 'keyword' as const, text: 'x' }] }],
+      limitUsage: [],
+    }));
+    const bridge = createMockBridge(describeAction);
+
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Leave button (starts grace)
+    act(() => {
+      result.current.onActionHoverEnd();
+    });
+
+    // Re-enter same button during grace
+    act(() => {
+      result.current.onActionHoverStart('action-1', createAnchorElement());
+    });
+
+    // Grace period expires — should NOT dismiss because we re-entered
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.tooltipState.actionId).toBe('action-1');
+  });
+
+  it('exposes onTooltipPointerEnter and onTooltipPointerLeave callbacks', () => {
+    const bridge = createMockBridge();
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    expect(typeof result.current.onTooltipPointerEnter).toBe('function');
+    expect(typeof result.current.onTooltipPointerLeave).toBe('function');
   });
 });

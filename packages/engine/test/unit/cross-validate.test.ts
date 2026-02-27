@@ -444,6 +444,79 @@ describe('crossValidateSpec', () => {
     );
   });
 
+  it('monsoon restrictions validate action and parameter references for maxParam/maxParamsTotal', () => {
+    const sections = compileRichSections();
+    const action = requireValue(sections.actions?.[0]);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      actions: [
+        {
+          ...action,
+          params: [
+            { name: 'spaces', domain: { query: 'intsInRange', min: 0, max: 3 } },
+            { name: '$bonusSpaces', domain: { query: 'intsInRange', min: 0, max: 1 } },
+          ],
+        },
+      ],
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            monsoon: {
+              restrictedActions: [
+                {
+                  actionId: 'acx',
+                },
+                {
+                  actionId: 'act',
+                  maxParam: { name: 'spcaes', max: 2 },
+                  maxParamsTotal: { names: ['spaces', '$bonuz', 'spaces'], max: 2 },
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_MONSOON_RESTRICTION_ACTION_MISSING'
+          && entry.path === 'doc.turnOrder.config.turnFlow.monsoon.restrictedActions.0.actionId',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAM_MISSING'
+          && entry.path === 'doc.turnOrder.config.turnFlow.monsoon.restrictedActions.1.maxParam.name',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_MISSING'
+          && entry.path === 'doc.turnOrder.config.turnFlow.monsoon.restrictedActions.1.maxParamsTotal.names.1',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_DUPLICATE'
+          && entry.path === 'doc.turnOrder.config.turnFlow.monsoon.restrictedActions.1.maxParamsTotal.names.2',
+      ),
+      true,
+    );
+  });
+
   it('setup createToken referencing nonexistent tokenType emits CNL_XREF_SETUP_TOKEN_TYPE_MISSING', () => {
     const sections = compileRichSections();
     const diagnostics = crossValidateSpec({

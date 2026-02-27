@@ -12,6 +12,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { applyTurnFlowWindowFilters } from '../../src/kernel/legal-moves-turn-order.js';
 import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-eligibility.js';
 
 const createDef = (): GameDef =>
@@ -699,6 +700,198 @@ phase: [asPhaseId('main')],
       { actionId: asActionId('airLift'), params: { spaces: 1 } },
       { actionId: asActionId('airLift'), params: { spaces: 2 } },
       { actionId: asActionId('pivotalEvent'), params: { override: 'monsoonPivotalAllowed' } },
+    ]);
+  });
+
+  it('supports monsoon maxParamsTotal restrictions across multiple move params', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-monsoon-multi-param-cap', players: { min: 2, max: 2 } },
+      zones: [
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            monsoon: {
+              restrictedActions: [
+                {
+                  actionId: 'airStrike',
+                  maxParam: { name: 'spaces', max: 2 },
+                  maxParamsTotal: { names: ['spaces', '$bonusSpaces'], max: 2 },
+                },
+              ],
+              blockPivotal: true,
+            },
+          },
+        },
+      },
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      actions: [
+        {
+          id: asActionId('pass'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('airStrike'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+          params: [
+            { name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 2 } },
+            { name: '$bonusSpaces', domain: { query: 'intsInRange', min: 0, max: 1 } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      zones: {
+        'played:none': [],
+        'lookahead:none': [{ id: asTokenId('tok_coup'), type: 'card', props: { isCoup: true } }],
+        'leader:none': [],
+      },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+        seatOrder: ['0', '1'],
+        eligibility: { '0': true, '1': true },
+        currentCard: {
+          firstEligible: '0',
+          secondEligible: '1',
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [],
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(def, state), [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('airStrike'), params: { spaces: 1, $bonusSpaces: 0 } },
+      { actionId: asActionId('airStrike'), params: { spaces: 1, $bonusSpaces: 1 } },
+      { actionId: asActionId('airStrike'), params: { spaces: 2, $bonusSpaces: 0 } },
+    ]);
+  });
+
+  it('counts array-valued params in monsoon maxParamsTotal restrictions', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-monsoon-array-param-cap', players: { min: 2, max: 2 } },
+      zones: [
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            monsoon: {
+              restrictedActions: [
+                {
+                  actionId: 'airStrike',
+                  maxParamsTotal: { names: ['spaces', '$bonusSpaces'], max: 2 },
+                },
+              ],
+              blockPivotal: true,
+            },
+          },
+        },
+      },
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      actions: [
+        {
+          id: asActionId('pass'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('airStrike'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      zones: {
+        'played:none': [],
+        'lookahead:none': [{ id: asTokenId('tok_coup'), type: 'card', props: { isCoup: true } }],
+        'leader:none': [],
+      },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    };
+
+    const filtered = applyTurnFlowWindowFilters(def, state, [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] } },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] } },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: ['c'] } },
+    ]);
+
+    assert.deepEqual(filtered, [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] } },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] } },
     ]);
   });
 

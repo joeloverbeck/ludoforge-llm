@@ -5,6 +5,7 @@ import { asActionId, asPlayerId, asTokenId, initialState, type GameState, type T
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -17,6 +18,28 @@ const makeToken = (id: string, type: string, faction: string, extra?: Record<str
 
 const countTokens = (state: GameState, space: string, predicate: (token: Token) => boolean): number =>
   (state.zones[space] ?? []).filter(predicate).length;
+const LOOKAHEAD_ZONE = 'lookahead:none';
+
+const withMonsoonLookahead = (state: GameState): GameState => {
+  const lookahead = state.zones[LOOKAHEAD_ZONE] ?? [];
+  const [top, ...rest] = lookahead;
+  const coupTop: Token = top === undefined
+    ? makeToken('monsoon-lookahead', 'card', 'none', { isCoup: true })
+    : {
+      ...top,
+      props: {
+        ...top.props,
+        isCoup: true,
+      },
+    };
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      [LOOKAHEAD_ZONE]: [coupTop, ...rest],
+    },
+  };
+};
 
 describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
   const getParsedProfile = (profileId: string): any => {
@@ -203,6 +226,29 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assertProfileUsesM48Macro('assault-arvn-profile');
   });
 
+  it('models Arc Light with dedicated no-COIN Province slot and per-space >1 removal shaded shift trigger', () => {
+    const profile = getParsedProfile('air-strike-profile');
+
+    const arcSlotSelector = findDeep(profile.stages, (node: any) => node?.chooseN?.bind === '$arcLightNoCoinProvinces');
+    assert.ok(arcSlotSelector.length >= 1, 'Expected explicit Arc Light no-COIN Province selector');
+
+    const mainSelectorUsesReducedCap = findDeep(profile.stages, (node: any) =>
+      node?.chooseN?.bind === 'spaces' &&
+      node?.chooseN?.max?.if?.else?.op === '-' &&
+      node?.chooseN?.max?.if?.else?.left === 6 &&
+      node?.chooseN?.max?.if?.else?.right?.aggregate?.query?.name === '$arcLightNoCoinProvinces',
+    );
+    assert.ok(mainSelectorUsesReducedCap.length >= 1, 'Expected main Air Strike selector max to subtract selected Arc Light no-COIN Provinces');
+
+    const shadedShiftTrigger = findDeep(profile.stages, (node: any) =>
+      node?.shiftMarker?.marker === 'supportOpposition' &&
+      node?.shiftMarker?.delta?.if?.when?.args?.some(
+        (clause: any) => clause?.left?.ref === 'binding' && clause?.left?.name === '$removedInSpace' && clause?.right === 1,
+      ),
+    );
+    assert.ok(shadedShiftTrigger.length >= 1, 'Expected Arc Light shaded shift trigger to key off removed-in-space count');
+  });
+
   it('Air Strike cap_lgbs shaded reduces removal budget to 4 at runtime', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
@@ -384,6 +430,310 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     }).state;
 
     assert.equal(result.globalVars.trail, 2, 'Declining degrade should bypass topGun shaded roll gate entirely');
+  });
+
+  it('Arc Light unshaded allows exactly 1 no-COIN Province (including foreign Provinces) without reducing normal Air Strike space cap', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const regularSpace = 'saigon:none';
+    const arcSpace = 'central-laos:none';
+    const secondArcSpace = 'north-vietnam:none';
+
+    const base = clearAllZones(initialState(def, 21003, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_arcLight: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+        [regularSpace]: [
+          makeToken('arc-regular-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-regular-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        [arcSpace]: [makeToken('arc-foreign-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+        [secondArcSpace]: [makeToken('arc-foreign-nva', 'troops', 'NVA', { type: 'troops' })],
+      },
+    };
+
+    const legal = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [regularSpace],
+        $arcLightNoCoinProvinces: [arcSpace],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(legal, regularSpace, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
+      0,
+      'Regular Air Strike space should still resolve normally',
+    );
+    assert.equal(
+      countTokens(legal, arcSpace, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
+      0,
+      'Arc Light space without COIN pieces should be legal and resolve removals',
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, setup, {
+          actionId: asActionId('airStrike'),
+          params: {
+            spaces: [regularSpace],
+            $arcLightNoCoinProvinces: [arcSpace, secondArcSpace],
+            $degradeTrail: 'no',
+          },
+        }),
+      /chooseN/,
+      'Arc Light unshaded must allow at most one no-COIN Province',
+    );
+  });
+
+  it('Arc Light unshaded no-COIN exception is Province-only and Base still counts as a COIN piece', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const provinceWithBase = 'quang-nam:none';
+    const arcProvince = 'the-fishhook:none';
+    const cityWithoutCoin = 'hue:none';
+
+    const base = clearAllZones(initialState(def, 21004, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_arcLight: 'unshaded',
+      },
+      markers: {
+        ...base.markers,
+        [provinceWithBase]: {
+          ...(base.markers[provinceWithBase] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zones: {
+        ...base.zones,
+        [provinceWithBase]: [
+          makeToken('arc-base-us', 'base', 'US', { type: 'base' }),
+          makeToken('arc-base-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [arcProvince]: [makeToken('arc-province-nva', 'troops', 'NVA', { type: 'troops' })],
+        [cityWithoutCoin]: [makeToken('arc-city-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+      },
+    };
+
+    const legal = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [provinceWithBase],
+        $arcLightNoCoinProvinces: [arcProvince],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(legal, provinceWithBase, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
+      0,
+      'US Base should satisfy the normal COIN-piece target requirement',
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, setup, {
+          actionId: asActionId('airStrike'),
+          params: {
+            spaces: [provinceWithBase],
+            $arcLightNoCoinProvinces: [cityWithoutCoin],
+            $degradeTrail: 'no',
+          },
+        }),
+      /chooseN/,
+      'Arc Light no-COIN exception must not apply to cities',
+    );
+  });
+
+  it('Arc Light shaded shifts each qualifying Air Strike space by 2 only when that space removes more than 1 piece', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const twoHitSpace = 'quang-nam:none';
+    const oneHitSpace = 'saigon:none';
+
+    const base = clearAllZones(initialState(def, 21005, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_arcLight: 'shaded',
+      },
+      markers: {
+        ...base.markers,
+        [twoHitSpace]: {
+          ...(base.markers[twoHitSpace] ?? {}),
+          supportOpposition: 'neutral',
+        },
+        [oneHitSpace]: {
+          ...(base.markers[oneHitSpace] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zones: {
+        ...base.zones,
+        [twoHitSpace]: [
+          makeToken('arc-shaded-us-a', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-shaded-vc-a1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('arc-shaded-vc-a2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [oneHitSpace]: [
+          makeToken('arc-shaded-us-b', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-shaded-vc-b1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [twoHitSpace, oneHitSpace],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(final.markers[twoHitSpace]?.supportOpposition, 'activeOpposition', 'Space removing 2 pieces should shift by 2');
+    assert.equal(final.markers[oneHitSpace]?.supportOpposition, 'passiveOpposition', 'Space removing 1 piece should shift by 1');
+  });
+
+  it('Arc Light shaded applies 2-level shift even when only one space is selected', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const target = 'quang-duc-long-khanh:none';
+    const base = clearAllZones(initialState(def, 21006, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_arcLight: 'shaded',
+      },
+      markers: {
+        ...base.markers,
+        [target]: {
+          ...(base.markers[target] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zones: {
+        ...base.zones,
+        [target]: [
+          makeToken('arc-shaded-single-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-shaded-single-vc1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('arc-shaded-single-vc2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [target],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(final.markers[target]?.supportOpposition, 'activeOpposition');
+  });
+
+  it('Monsoon allows Arc Light no-COIN Province only when total Air Strike spaces stay at 2', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const regularSpace = 'saigon:none';
+    const arcSpace = 'the-fishhook:none';
+    const base = withMonsoonLookahead(clearAllZones(initialState(def, 21007, 4).state));
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_arcLight: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+        [regularSpace]: [
+          makeToken('arc-monsoon-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-monsoon-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        [arcSpace]: [makeToken('arc-monsoon-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+      },
+    };
+
+    assert.doesNotThrow(() =>
+      applyMoveWithResolvedDecisionIds(def, setup, {
+        actionId: asActionId('airStrike'),
+        params: {
+          spaces: [regularSpace],
+          $arcLightNoCoinProvinces: [arcSpace],
+          $degradeTrail: 'no',
+        },
+      }),
+    );
+  });
+
+  it('Monsoon rejects Arc Light selections that exceed 2 total Air Strike spaces', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const spaceA = 'saigon:none';
+    const spaceB = 'hue:none';
+    const arcSpace = 'the-fishhook:none';
+    const base = withMonsoonLookahead(clearAllZones(initialState(def, 21008, 4).state));
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_arcLight: 'unshaded',
+      },
+      zones: {
+        ...base.zones,
+        [spaceA]: [
+          makeToken('arc-monsoon-a-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-monsoon-a-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        [spaceB]: [
+          makeToken('arc-monsoon-b-us', 'troops', 'US', { type: 'troops' }),
+          makeToken('arc-monsoon-b-nva', 'troops', 'NVA', { type: 'troops' }),
+        ],
+        [arcSpace]: [makeToken('arc-monsoon-c-vc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+      },
+    };
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, setup, {
+          actionId: asActionId('airStrike'),
+          params: {
+            spaces: [spaceA, spaceB],
+            $arcLightNoCoinProvinces: [arcSpace],
+            $degradeTrail: 'no',
+          },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+    );
   });
 });
 

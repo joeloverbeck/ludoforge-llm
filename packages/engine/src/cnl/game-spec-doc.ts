@@ -204,6 +204,10 @@ export interface GameSpecTurnFlowMonsoonRestriction {
     readonly name: string;
     readonly max: number;
   };
+  readonly maxParamsTotal?: {
+    readonly names: readonly string[];
+    readonly max: number;
+  };
   readonly overrideToken?: string;
 }
 

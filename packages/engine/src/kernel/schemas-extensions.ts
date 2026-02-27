@@ -263,6 +263,13 @@ export const TurnFlowMonsoonRestrictionSchema = z
       })
       .strict()
       .optional(),
+    maxParamsTotal: z
+      .object({
+        names: z.array(StringSchema.min(1)).min(1),
+        max: NumberSchema,
+      })
+      .strict()
+      .optional(),
     overrideToken: StringSchema.min(1).optional(),
   })
   .strict();

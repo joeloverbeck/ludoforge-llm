@@ -137,4 +137,15 @@ describe('template-completion chooseN bounds', () => {
       }
     }
   });
+
+  it('auto-fills empty chooseN decisions when min=0 and options are empty', () => {
+    const action = createChooseNAction('empty-choose-n');
+    const profile = createChooseNProfile('empty-choose-n', 0, 0, []);
+    const def = createDef(action, profile);
+    const templateMove: Move = { actionId: asActionId('empty-choose-n'), params: {} };
+
+    const result = completeTemplateMove(def, baseState, templateMove, createRng(7n));
+    assert.notEqual(result, null);
+    assert.deepEqual(result?.move.params['decision:$targets'], []);
+  });
 });

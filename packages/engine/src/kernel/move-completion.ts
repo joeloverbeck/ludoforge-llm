@@ -76,6 +76,11 @@ export const completeTemplateMove = (
     const optionCount = options.length;
     const min = choices.min ?? 0;
     if (optionCount === 0) {
+      if (choices.type === 'chooseN' && min === 0) {
+        current = { ...current, params: { ...current.params, [choices.decisionId]: [] } };
+        choices = legalChoicesEvaluate(def, state, current, undefined, runtime);
+        continue;
+      }
       return null;
     }
 

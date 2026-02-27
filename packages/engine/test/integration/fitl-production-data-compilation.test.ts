@@ -91,7 +91,11 @@ describe('FITL production data integration compilation', () => {
         restrictedActions: [
           { actionId: 'sweep' },
           { actionId: 'march' },
-          { actionId: 'airStrike', maxParam: { name: 'spaces', max: 2 } },
+          {
+            actionId: 'airStrike',
+            maxParam: { name: 'spaces', max: 2 },
+            maxParamsTotal: { names: ['spaces', '$arcLightNoCoinProvinces'], max: 2 },
+          },
           { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
         ],
         blockPivotal: true,

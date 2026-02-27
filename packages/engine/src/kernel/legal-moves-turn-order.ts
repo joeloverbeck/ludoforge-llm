@@ -127,6 +127,13 @@ function toConstrainedNumericValue(paramValue: MoveParamValue | undefined): numb
   return null;
 }
 
+function toConstrainedNumericValueOrZero(paramValue: MoveParamValue | undefined): number | null {
+  if (paramValue === undefined) {
+    return 0;
+  }
+  return toConstrainedNumericValue(paramValue);
+}
+
 function resolveEventCardForMove(def: GameDef, move: Move): { readonly id: string; readonly tags: readonly string[] } | null {
   const explicitCardId = move.params.eventCardId;
   if (typeof explicitCardId !== 'string' || explicitCardId.length === 0) {
@@ -245,11 +252,30 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
     if (hasOverrideToken(move, restriction.overrideToken)) {
       return true;
     }
+    const hasQuantitativeRule = restriction.maxParam !== undefined || restriction.maxParamsTotal !== undefined;
+    if (!hasQuantitativeRule) {
+      return false;
+    }
     if (restriction.maxParam !== undefined) {
       const constrained = toConstrainedNumericValue(move.params[restriction.maxParam.name]);
-      return constrained !== null && constrained <= restriction.maxParam.max;
+      if (constrained === null || constrained > restriction.maxParam.max) {
+        return false;
+      }
     }
-    return false;
+    if (restriction.maxParamsTotal !== undefined) {
+      let total = 0;
+      for (const name of restriction.maxParamsTotal.names) {
+        const constrained = toConstrainedNumericValueOrZero(move.params[name]);
+        if (constrained === null) {
+          return false;
+        }
+        total += constrained;
+      }
+      if (total > restriction.maxParamsTotal.max) {
+        return false;
+      }
+    }
+    return true;
   });
 
   const cancellationRules = turnFlow.pivotal?.interrupt?.cancellation;

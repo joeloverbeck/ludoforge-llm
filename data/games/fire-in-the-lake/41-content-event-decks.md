@@ -1083,12 +1083,12 @@ eventDecks:
           seatOrder: ["US", "NVA", "VC", "ARVN"]
           flavorText: "Guided B-52 tactical bombing."
         unshaded:
-          text: "1 space each Air Strike may be a Province without COIN pieces."
+          text: "1 space each Air Strike may be a Province without COIN pieces. US CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_arcLight, markerState: unshaded }
         shaded:
-          text: "Moonscape: Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition."
+          text: "Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_arcLight, markerState: shaded }

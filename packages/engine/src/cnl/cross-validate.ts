@@ -6,7 +6,7 @@ import {
   getActionSelectorContract,
 } from '../kernel/action-selector-contract-registry.js';
 import type { CompileSectionResults } from './compiler-core.js';
-import { normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
+import { isRecord, normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 
 export function crossValidateSpec(sections: CompileSectionResults): readonly Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -112,6 +112,16 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   }
 
   if (cardDrivenTurnFlow !== null) {
+    const pipelineDecisionParamsByActionId = new Map<string, Set<string>>();
+    for (const profile of sections.actionPipelines ?? []) {
+      const actionId = String(profile.actionId);
+      const existing = pipelineDecisionParamsByActionId.get(actionId) ?? new Set<string>();
+      for (const bindName of collectChoiceBindingNames(profile.stages as unknown)) {
+        existing.add(bindName);
+      }
+      pipelineDecisionParamsByActionId.set(actionId, existing);
+    }
+
     for (const [actionId, mappedClass] of Object.entries(cardDrivenTurnFlow.actionClassByActionId)) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
@@ -134,6 +144,71 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         `turnFlow.freeOperationActionIds references unknown action "${actionId}".`,
         'Use one of the declared action ids.',
       );
+    }
+
+    const actionsById = new Map<string, { readonly params: readonly { readonly name: string }[] }>();
+    for (const action of sections.actions ?? []) {
+      actionsById.set(String(action.id), action);
+    }
+    for (const [restrictionIndex, restriction] of (cardDrivenTurnFlow.monsoon?.restrictedActions ?? []).entries()) {
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_TURN_FLOW_MONSOON_RESTRICTION_ACTION_MISSING',
+        `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.actionId`,
+        restriction.actionId,
+        actionTargets,
+        `turnFlow.monsoon.restrictedActions[${restrictionIndex}] references unknown action "${restriction.actionId}".`,
+        'Use one of the declared action ids.',
+      );
+
+      const action = actionsById.get(restriction.actionId);
+      if (action === undefined) {
+        continue;
+      }
+      const knownParamNames = [
+        ...action.params.map((param) => param.name),
+        ...[...(pipelineDecisionParamsByActionId.get(restriction.actionId) ?? new Set<string>())],
+      ];
+      const actionParamTargets = collectIdentifierTargets(knownParamNames);
+
+      if (restriction.maxParam !== undefined) {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAM_MISSING',
+          `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.maxParam.name`,
+          restriction.maxParam.name,
+          actionParamTargets,
+          `Monsoon restriction for action "${restriction.actionId}" references unknown maxParam "${restriction.maxParam.name}".`,
+          'Use one of the action parameter names declared for that action.',
+        );
+      }
+
+      if (restriction.maxParamsTotal !== undefined) {
+        const seenNames = new Set<string>();
+        for (const [nameIndex, name] of restriction.maxParamsTotal.names.entries()) {
+          pushMissingIdentifierDiagnostic(
+            diagnostics,
+            'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_MISSING',
+            `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.maxParamsTotal.names.${nameIndex}`,
+            name,
+            actionParamTargets,
+            `Monsoon restriction for action "${restriction.actionId}" references unknown maxParamsTotal parameter "${name}".`,
+            'Use one of the action parameter names declared for that action.',
+          );
+
+          if (!seenNames.has(name)) {
+            seenNames.add(name);
+            continue;
+          }
+          diagnostics.push({
+            code: 'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_DUPLICATE',
+            path: `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.maxParamsTotal.names.${nameIndex}`,
+            severity: 'error',
+            message: `Monsoon restriction for action "${restriction.actionId}" repeats maxParamsTotal parameter "${name}".`,
+            suggestion: 'List each parameter at most once in maxParamsTotal.names.',
+          });
+        }
+      }
     }
 
     const cancellationRules = cardDrivenTurnFlow.pivotal?.interrupt?.cancellation ?? [];
@@ -455,6 +530,36 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   });
 
   return diagnostics;
+}
+
+function collectChoiceBindingNames(root: unknown): readonly string[] {
+  const binds = new Set<string>();
+
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        visit(item);
+      }
+      return;
+    }
+    if (!isRecord(value)) {
+      return;
+    }
+
+    if (isRecord(value.chooseN) && typeof value.chooseN.bind === 'string' && value.chooseN.bind.length > 0) {
+      binds.add(value.chooseN.bind);
+    }
+    if (isRecord(value.chooseOne) && typeof value.chooseOne.bind === 'string' && value.chooseOne.bind.length > 0) {
+      binds.add(value.chooseOne.bind);
+    }
+
+    for (const nested of Object.values(value)) {
+      visit(nested);
+    }
+  };
+
+  visit(root);
+  return [...binds];
 }
 
 function collectIdentifierTargets(values: readonly (string | null | undefined)[] | null | undefined): {

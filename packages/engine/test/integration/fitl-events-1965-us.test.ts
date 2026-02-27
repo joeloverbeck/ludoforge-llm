@@ -65,6 +65,18 @@ describe('FITL 1965 US-first event-card production spec', () => {
     }
   });
 
+  it('encodes card-8 Arc Light text exactly as rules text', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-8');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.unshaded?.text, '1 space each Air Strike may be a Province without COIN pieces. US CAPABILITY.');
+    assert.equal(card?.shaded?.text, 'Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition.');
+  });
+
   it('encodes 1965 US momentum cards using round-lasting setup/teardown toggles', () => {
     const { parsed, compiled } = compileProductionSpec();
 

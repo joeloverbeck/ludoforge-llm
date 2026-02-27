@@ -81,7 +81,9 @@ turnOrder:
         restrictedActions:
           - { actionId: sweep }
           - { actionId: march }
-          - { actionId: airStrike, maxParam: { name: spaces, max: 2 } }
+          - actionId: airStrike
+            maxParam: { name: spaces, max: 2 }
+            maxParamsTotal: { names: [spaces, $arcLightNoCoinProvinces], max: 2 }
           - { actionId: airLift, maxParam: { name: spaces, max: 2 } }
         blockPivotal: true
       pivotal:
@@ -3333,6 +3335,36 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - chooseN:
+              bind: $arcLightNoCoinProvinces
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                    - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - op: '=='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                      right: 0
+              min: 0
+              max:
+                if:
+                  when:
+                    op: and
+                    args:
+                      - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
+                      - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
+                  then: 1
+                  else: 0
+          - chooseN:
               bind: spaces
               options:
                 query: mapSpaces
@@ -3374,13 +3406,9 @@ actionPipelines:
                   when: { op: '==', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }
                   then: 1
                   else:
-                    if:
-                      when:
-                        op: or
-                        args:
-                          - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
-                      then: 1
-                      else: 6
+                    op: '-'
+                    left: 6
+                    right: { aggregate: { op: count, query: { query: binding, name: $arcLightNoCoinProvinces } } }
       - stage: remove-active-enemy-pieces
         effects:
           - setVar:
@@ -3395,16 +3423,35 @@ actionPipelines:
                       when: { op: '==', left: { ref: globalMarkerState, marker: cap_lgbs }, right: shaded }
                       then: 4
                       else: 6
-          - let:
-              bind: $spaceCount
-              value: { aggregate: { op: count, query: { query: binding, name: spaces } } }
-              in:
-                - forEach:
-                    bind: $space
-                    over: { query: binding, name: spaces }
-                    effects:
+          - forEach:
+              bind: $space
+              over:
+                query: concat
+                sources:
+                  - { query: binding, name: spaces }
+                  - { query: binding, name: $arcLightNoCoinProvinces }
+              effects:
+                - let:
+                    bind: $enemyBefore
+                    value:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    in:
+                      - if:
+                          when: { op: '>', left: { ref: gvar, var: airStrikeRemaining }, right: 0 }
+                          then:
+                            - macro: us-sa-remove-insurgents
+                              args:
+                                space: $space
+                                budgetExpr: { ref: gvar, var: airStrikeRemaining }
+                                activeGuerrillasOnly: true
                       - let:
-                          bind: $enemyBefore
+                          bind: $enemyAfter
                           value:
                             aggregate:
                               op: count
@@ -3414,66 +3461,47 @@ actionPipelines:
                                 filter:
                                   - { prop: faction, op: in, value: ['NVA', 'VC'] }
                           in:
-                            - if:
-                                when: { op: '>', left: { ref: gvar, var: airStrikeRemaining }, right: 0 }
-                                then:
-                                  - macro: us-sa-remove-insurgents
-                                    args:
-                                      space: $space
-                                      budgetExpr: { ref: gvar, var: airStrikeRemaining }
-                                      activeGuerrillasOnly: true
+                            - addVar:
+                                scope: global
+                                var: airStrikeRemaining
+                                delta:
+                                  op: "-"
+                                  left: { ref: binding, name: $enemyAfter }
+                                  right: { ref: binding, name: $enemyBefore }
                             - let:
-                                bind: $enemyAfter
+                                bind: $removedInSpace
                                 value:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $space
-                                      filter:
-                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                  op: "-"
+                                  left: { ref: binding, name: $enemyBefore }
+                                  right: { ref: binding, name: $enemyAfter }
                                 in:
-                                  - addVar:
-                                      scope: global
-                                      var: airStrikeRemaining
-                                      delta:
-                                        op: "-"
-                                        left: { ref: binding, name: $enemyAfter }
-                                        right: { ref: binding, name: $enemyBefore }
-                                  - let:
-                                      bind: $removedInSpace
-                                      value:
-                                        op: "-"
-                                        left: { ref: binding, name: $enemyBefore }
-                                        right: { ref: binding, name: $enemyAfter }
-                                      in:
-                                        - if:
-                                            when:
-                                              op: and
-                                              args:
-                                                - op: or
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - op: or
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: city }
+                                          - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
+                                          - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
+                                          - op: or
+                                            args:
+                                              - { op: '!=', left: { ref: globalMarkerState, marker: cap_lgbs }, right: unshaded }
+                                              - { op: '!=', left: { ref: binding, name: $removedInSpace }, right: 1 }
+                                      then:
+                                        - shiftMarker:
+                                            space: $space
+                                            marker: supportOpposition
+                                            delta:
+                                              if:
+                                                when:
+                                                  op: and
                                                   args:
-                                                    - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
-                                                    - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: city }
-                                                - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
-                                                - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
-                                                - op: or
-                                                  args:
-                                                    - { op: '!=', left: { ref: globalMarkerState, marker: cap_lgbs }, right: unshaded }
-                                                    - { op: '!=', left: { ref: binding, name: $removedInSpace }, right: 1 }
-                                            then:
-                                              - shiftMarker:
-                                                  space: $space
-                                                  marker: supportOpposition
-                                                  delta:
-                                                    if:
-                                                      when:
-                                                        op: and
-                                                        args:
-                                                          - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: shaded }
-                                                          - { op: '>', left: { ref: binding, name: $spaceCount }, right: 1 }
-                                                      then: -2
-                                                      else: -1
+                                                    - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: shaded }
+                                                    - { op: '>', left: { ref: binding, name: $removedInSpace }, right: 1 }
+                                                then: -2
+                                                else: -1
       - stage: optional-trail-degrade
         effects:
           - chooseOne:
@@ -3491,7 +3519,14 @@ actionPipelines:
                     args:
                       - { op: '!=', left: { ref: gvar, var: mom_wildWeasels }, right: true }
                       - op: '=='
-                        left: { aggregate: { op: count, query: { query: binding, name: spaces } } }
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - { query: binding, name: spaces }
+                                - { query: binding, name: $arcLightNoCoinProvinces }
                         right: 0
               then:
                 - if:
@@ -3533,7 +3568,11 @@ actionPipelines:
                                       then:
                                         - chooseN:
                                             bind: $migsCostSpaces
-                                            options: { query: binding, name: spaces }
+                                            options:
+                                              query: concat
+                                              sources:
+                                                - { query: binding, name: spaces }
+                                                - { query: binding, name: $arcLightNoCoinProvinces }
                                             min: 0
                                             max: 1
                                         - forEach:
@@ -3557,7 +3596,11 @@ actionPipelines:
                                       then:
                                         - chooseN:
                                             bind: $sa2sCostSpaces
-                                            options: { query: binding, name: spaces }
+                                            options:
+                                              query: concat
+                                              sources:
+                                                - { query: binding, name: spaces }
+                                                - { query: binding, name: $arcLightNoCoinProvinces }
                                             min: 0
                                             max: 1
                                         - forEach:
@@ -3605,7 +3648,11 @@ actionPipelines:
                           then:
                             - chooseN:
                                 bind: $migsCostSpaces
-                                options: { query: binding, name: spaces }
+                                options:
+                                  query: concat
+                                  sources:
+                                    - { query: binding, name: spaces }
+                                    - { query: binding, name: $arcLightNoCoinProvinces }
                                 min: 0
                                 max: 1
                             - forEach:
@@ -3629,7 +3676,11 @@ actionPipelines:
                           then:
                             - chooseN:
                                 bind: $sa2sCostSpaces
-                                options: { query: binding, name: spaces }
+                                options:
+                                  query: concat
+                                  sources:
+                                    - { query: binding, name: spaces }
+                                    - { query: binding, name: $arcLightNoCoinProvinces }
                                 min: 0
                                 max: 1
                             - forEach:

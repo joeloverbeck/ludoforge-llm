@@ -123,16 +123,21 @@ export interface IllegalMoveContextByReason {
 }
 
 export type IllegalMoveContext<R extends IllegalMoveReason = IllegalMoveReason> = IllegalMoveContextByReason[R];
-type IllegalMoveContextInput<R extends IllegalMoveReason> = Omit<IllegalMoveContext<R>, 'actionId' | 'params' | 'reason'>;
+export type IllegalMoveContextInput<R extends IllegalMoveReason> =
+  Omit<IllegalMoveContext<R>, 'actionId' | 'params' | 'reason'>;
 type RequiredKeys<T> = {
   [K in keyof T]-?: Pick<T, K> extends Required<Pick<T, K>> ? K : never;
 }[keyof T];
-type IllegalMoveReasonsWithNoContext = {
+export type IllegalMoveReasonsWithNoContext = {
   [R in IllegalMoveReason]: [keyof IllegalMoveContextInput<R>] extends [never] ? R : never;
 }[IllegalMoveReason];
-type IllegalMoveReasonsRequiringContext = {
+export type IllegalMoveReasonsRequiringContext = {
   [R in IllegalMoveReason]: [RequiredKeys<IllegalMoveContextInput<R>>] extends [never] ? never : R;
 }[IllegalMoveReason];
+export type IllegalMoveReasonsWithOptionalContext = Exclude<
+  IllegalMoveReason,
+  IllegalMoveReasonsWithNoContext | IllegalMoveReasonsRequiringContext
+>;
 type IllegalMoveContextArgs<R extends IllegalMoveReason> =
   R extends IllegalMoveReasonsRequiringContext
     ? [context: IllegalMoveContextInput<R>]

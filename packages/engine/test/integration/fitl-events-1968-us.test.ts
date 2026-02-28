@@ -47,6 +47,12 @@ const makeToken = (id: string, type: string, faction: string): Token => ({
   props: { faction, type },
 });
 
+const makeGuerrilla = (id: string, faction: 'NVA' | 'VC', activity: 'active' | 'underground'): Token => ({
+  id: asTokenId(id),
+  type: 'guerrilla',
+  props: { faction, type: 'guerrilla', activity },
+});
+
 const withNeutralSupportMarkers = (state: GameState): GameState['markers'] =>
   Object.fromEntries(
     Object.entries(state.markers).map(([zoneId, zoneMarkers]) => [
@@ -137,6 +143,14 @@ const findPsychedelicCookieMove = (def: GameDef, state: GameState, side: 'unshad
       (move.params.eventCardId === undefined || move.params.eventCardId === 'card-9'),
   );
 
+const findBuckAdamsMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded') =>
+  legalMoves(def, state).find(
+    (move) =>
+      String(move.actionId) === 'event' &&
+      move.params.side === side &&
+      (move.params.eventCardId === undefined || move.params.eventCardId === 'card-12'),
+  );
+
 const countTokens = (
   state: GameState,
   zoneId: string,
@@ -145,6 +159,30 @@ const countTokens = (
 
 const usSupportAvailableScoreWithNeutralSupport = (state: GameState): number =>
   countTokens(state, 'available-US:none', (token) => token.props.faction === 'US' && (token.type === 'troops' || token.type === 'base'));
+
+const setupBuckAdamsState = (
+  def: GameDef,
+  overrides: {
+    readonly zoneTokens?: Readonly<Record<string, readonly Token[]>>;
+    readonly activePlayer?: number;
+  },
+): GameState => {
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+  const baseState = clearAllZones(initialState(def, 196812, 4).state);
+  return {
+    ...baseState,
+    activePlayer: asPlayerId(overrides.activePlayer ?? 0),
+    turnOrderState: { type: 'roundRobin' },
+    markers: withNeutralSupportMarkers(baseState),
+    zones: {
+      ...baseState.zones,
+      [eventDeck!.discardZone]: [makeToken('card-12', 'card', 'none')],
+      ...overrides.zoneTokens,
+    },
+  };
+};
 
 describe('FITL 1968 US-first event-card production spec', () => {
   it('compiles all 12 US-first 1968 cards with dual side metadata invariants', () => {
@@ -608,6 +646,268 @@ describe('FITL 1968 US-first event-card production spec', () => {
     const afterShaded = applyMoveWithResolvedDecisionIds(def, setup, shaded!).state;
     assert.deepEqual(afterUnshaded.zones, setup.zones, 'Unshaded should be a no-op when no US troops are eligible');
     assert.deepEqual(afterShaded.zones, setup.zones, 'Shaded should be a no-op when no US troops are eligible');
+  });
+
+  it('encodes card-12 (Capt Buck Adams) with outside-South insurgent flipping and constrained NVA base placement', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-12');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.metadata?.flavorText, 'Strategic reconnaissance.');
+    assert.equal(card?.unshaded?.text, 'Outside the South, flip all Insurgents Active and remove 1 NVA Base.');
+    assert.equal(
+      card?.shaded?.text,
+      'SR-71 pilot must outrun SA-2s. Place 1 NVA Base at NVA Control outside the South and flip any 3 NVA Guerrillas Underground.',
+    );
+
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.equal(unshadedEffects.length, 3, 'card-12 unshaded should include flip, choose base, remove selected base');
+    assert.notEqual((unshadedEffects[0] as { forEach?: unknown }).forEach, undefined);
+    assert.notEqual((unshadedEffects[1] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((unshadedEffects[2] as { forEach?: unknown }).forEach, undefined);
+
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.equal(shadedEffects.length, 4, 'card-12 shaded should include base select/place + guerrilla select/flip');
+    assert.notEqual((shadedEffects[0] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((shadedEffects[1] as { if?: unknown }).if, undefined);
+    assert.notEqual((shadedEffects[2] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((shadedEffects[3] as { forEach?: unknown }).forEach, undefined);
+  });
+
+  it('applies card-12 unshaded by flipping only outside-South insurgents and removing exactly one selected outside-South NVA base', () => {
+    const def = compileDef();
+    const setup = setupBuckAdamsState(def, {
+      zoneTokens: {
+        'north-vietnam:none': [
+          makeGuerrilla('nva-g-nv', 'NVA', 'active'),
+          makeGuerrilla('vc-g-nv', 'VC', 'active'),
+          makeToken('nva-b-nv', 'base', 'NVA'),
+        ],
+        'central-laos:none': [
+          makeGuerrilla('nva-g-laos', 'NVA', 'active'),
+          makeToken('nva-b-laos', 'base', 'NVA'),
+        ],
+        'quang-nam:none': [
+          makeGuerrilla('vc-g-south', 'VC', 'active'),
+          makeToken('nva-b-south', 'base', 'NVA'),
+        ],
+      },
+    });
+    const move = findBuckAdamsMove(def, setup, 'unshaded');
+    assert.notEqual(move, undefined, 'Expected unshaded Capt Buck Adams event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$nvaBaseToRemove' || request.decisionId.includes('nvaBaseToRemove'),
+        value: [asTokenId('nva-b-laos')],
+      },
+    ];
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    const northVietnamTokens = final.zones['north-vietnam:none'] ?? [];
+    const centralLaosTokens = final.zones['central-laos:none'] ?? [];
+    const quangNamTokens = final.zones['quang-nam:none'] ?? [];
+    const availableNva = final.zones['available-NVA:none'] ?? [];
+
+    const nvaNvGuerrilla = northVietnamTokens.find((token) => token.id === asTokenId('nva-g-nv'));
+    const vcNvGuerrilla = northVietnamTokens.find((token) => token.id === asTokenId('vc-g-nv'));
+    const nvaLaosGuerrilla = centralLaosTokens.find((token) => token.id === asTokenId('nva-g-laos'));
+    const vcSouthGuerrilla = quangNamTokens.find((token) => token.id === asTokenId('vc-g-south'));
+
+    assert.equal(nvaNvGuerrilla?.props.activity, 'underground');
+    assert.equal(vcNvGuerrilla?.props.activity, 'underground');
+    assert.equal(nvaLaosGuerrilla?.props.activity, 'underground');
+    assert.equal(vcSouthGuerrilla?.props.activity, 'active', 'South Vietnam insurgents should not flip');
+
+    assert.equal(
+      centralLaosTokens.some((token) => token.id === asTokenId('nva-b-laos')),
+      false,
+      'Selected outside-South NVA base should be removed from map',
+    );
+    assert.equal(
+      availableNva.some((token) => token.id === asTokenId('nva-b-laos')),
+      true,
+      'Selected outside-South NVA base should move to available',
+    );
+    assert.equal(
+      quangNamTokens.some((token) => token.id === asTokenId('nva-b-south')),
+      true,
+      'South Vietnam NVA bases must not be eligible for unshaded removal',
+    );
+  });
+
+  it('applies card-12 shaded with NVA-control outside-South base placement constraints and flips up to 3 active NVA guerrillas', () => {
+    const def = compileDef();
+    const setup = setupBuckAdamsState(def, {
+      zoneTokens: {
+        'available-NVA:none': [makeToken('nva-b-av-1', 'base', 'NVA')],
+        'central-laos:none': [
+          makeToken('nva-t-laos', 'troops', 'NVA'),
+          makeToken('nva-b-laos-existing', 'base', 'NVA'),
+        ],
+        'north-vietnam:none': [
+          makeToken('nva-b-nv-1', 'base', 'NVA'),
+          makeToken('nva-b-nv-2', 'base', 'NVA'),
+          makeToken('nva-t-nv', 'troops', 'NVA'),
+        ],
+        'northeast-cambodia:none': [
+          makeToken('nva-t-cam', 'troops', 'NVA'),
+          makeToken('us-t-cam', 'troops', 'US'),
+          makeToken('vc-g-cam', 'guerrilla', 'VC'),
+        ],
+        'quang-nam:none': [
+          makeToken('nva-t-south', 'troops', 'NVA'),
+          makeToken('us-t-south', 'troops', 'US'),
+        ],
+        'hue:none': [
+          makeGuerrilla('nva-g-1', 'NVA', 'active'),
+          makeGuerrilla('nva-g-2', 'NVA', 'active'),
+        ],
+        'da-nang:none': [
+          makeGuerrilla('nva-g-3', 'NVA', 'active'),
+          makeGuerrilla('nva-g-4', 'NVA', 'active'),
+        ],
+      },
+    });
+    const move = findBuckAdamsMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected shaded Capt Buck Adams event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$nvaBaseFromAvailable' || request.decisionId.includes('nvaBaseFromAvailable'),
+        value: [asTokenId('nva-b-av-1')],
+      },
+      {
+        when: (request) => request.name === '$nvaBaseDestination' || request.decisionId.includes('nvaBaseDestination'),
+        value: 'central-laos:none',
+      },
+      {
+        when: (request) => request.name === '$nvaGuerrillasToHide' || request.decisionId.includes('nvaGuerrillasToHide'),
+        value: [asTokenId('nva-g-1'), asTokenId('nva-g-2'), asTokenId('nva-g-3')],
+      },
+    ];
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+    const centralLaosTokens = final.zones['central-laos:none'] ?? [];
+    const northVietnamTokens = final.zones['north-vietnam:none'] ?? [];
+    const availableNvaTokens = final.zones['available-NVA:none'] ?? [];
+    const hueTokens = final.zones['hue:none'] ?? [];
+    const daNangTokens = final.zones['da-nang:none'] ?? [];
+
+    assert.equal(
+      centralLaosTokens.some((token) => token.id === asTokenId('nva-b-av-1')),
+      true,
+      'Base should be placed into selected eligible outside-South NVA-control province',
+    );
+    assert.equal(
+      availableNvaTokens.some((token) => token.id === asTokenId('nva-b-av-1')),
+      false,
+      'Placed base should leave available',
+    );
+    assert.equal(
+      northVietnamTokens.filter((token) => token.type === 'base').length,
+      2,
+      'North Vietnam remains at base cap and should not be used as destination',
+    );
+
+    const nvaG1 = hueTokens.find((token) => token.id === asTokenId('nva-g-1'));
+    const nvaG2 = hueTokens.find((token) => token.id === asTokenId('nva-g-2'));
+    const nvaG3 = daNangTokens.find((token) => token.id === asTokenId('nva-g-3'));
+    const nvaG4 = daNangTokens.find((token) => token.id === asTokenId('nva-g-4'));
+    assert.equal(nvaG1?.props.activity, 'underground');
+    assert.equal(nvaG2?.props.activity, 'underground');
+    assert.equal(nvaG3?.props.activity, 'underground');
+    assert.equal(nvaG4?.props.activity, 'active', 'Unselected active guerrilla should stay active');
+  });
+
+  it('resolves card-12 shaded edge cases: no base placement opportunity and fewer than 3 active NVA guerrillas', () => {
+    const def = compileDef();
+    const setup = setupBuckAdamsState(def, {
+      zoneTokens: {
+        'available-NVA:none': [],
+        'hue:none': [
+          makeGuerrilla('nva-g-edge-1', 'NVA', 'active'),
+          makeGuerrilla('nva-g-edge-2', 'NVA', 'active'),
+        ],
+      },
+    });
+    const move = findBuckAdamsMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected shaded Capt Buck Adams event move even without available base');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$nvaGuerrillasToHide' || request.decisionId.includes('nvaGuerrillasToHide'),
+        value: [asTokenId('nva-g-edge-1'), asTokenId('nva-g-edge-2')],
+      },
+    ];
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    const hueTokens = final.zones['hue:none'] ?? [];
+    const availableNvaTokens = final.zones['available-NVA:none'] ?? [];
+    const g1 = hueTokens.find((token) => token.id === asTokenId('nva-g-edge-1'));
+    const g2 = hueTokens.find((token) => token.id === asTokenId('nva-g-edge-2'));
+
+    assert.equal(g1?.props.activity, 'underground');
+    assert.equal(g2?.props.activity, 'underground');
+    assert.equal(availableNvaTokens.length, 0, 'No base should be created or moved when none is available');
+  });
+
+  it('resolves card-12 shaded when an available NVA base exists but no legal destination satisfies control-plus-cap constraints', () => {
+    const def = compileDef();
+    const setup = setupBuckAdamsState(def, {
+      zoneTokens: {
+        'available-NVA:none': [makeToken('nva-b-edge', 'base', 'NVA')],
+        'north-vietnam:none': [
+          makeToken('nva-b-nv-edge-1', 'base', 'NVA'),
+          makeToken('nva-b-nv-edge-2', 'base', 'NVA'),
+          makeToken('nva-t-nv-edge', 'troops', 'NVA'),
+        ],
+        'central-laos:none': [
+          makeToken('nva-t-laos-edge', 'troops', 'NVA'),
+          makeToken('us-t-laos-edge', 'troops', 'US'),
+        ],
+        'hue:none': [
+          makeGuerrilla('nva-g-edge-a', 'NVA', 'active'),
+          makeGuerrilla('nva-g-edge-b', 'NVA', 'active'),
+        ],
+      },
+    });
+    const move = findBuckAdamsMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected shaded Capt Buck Adams event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$nvaGuerrillasToHide' || request.decisionId.includes('nvaGuerrillasToHide'),
+        value: [asTokenId('nva-g-edge-a'), asTokenId('nva-g-edge-b')],
+      },
+    ];
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    const availableNvaTokens = final.zones['available-NVA:none'] ?? [];
+    const northVietnamTokens = final.zones['north-vietnam:none'] ?? [];
+    const centralLaosTokens = final.zones['central-laos:none'] ?? [];
+    const hueTokens = final.zones['hue:none'] ?? [];
+
+    assert.equal(
+      availableNvaTokens.some((token) => token.id === asTokenId('nva-b-edge')),
+      true,
+      'Base should remain available when no legal destination exists',
+    );
+    assert.equal(
+      northVietnamTokens.filter((token) => token.type === 'base').length,
+      2,
+      'North Vietnam stays capped at 2 bases',
+    );
+    assert.equal(
+      centralLaosTokens.filter((token) => token.type === 'base').length,
+      0,
+      'No base should be placed into non-NVA-controlled Laos space',
+    );
+    assert.equal(hueTokens.find((token) => token.id === asTokenId('nva-g-edge-a'))?.props.activity, 'underground');
+    assert.equal(hueTokens.find((token) => token.id === asTokenId('nva-g-edge-b'))?.props.activity, 'underground');
   });
 
   it('keeps card 27 (Phoenix Program) unchanged as a non-regression anchor', () => {

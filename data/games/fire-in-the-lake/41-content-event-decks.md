@@ -1202,11 +1202,186 @@ eventDecks:
         metadata:
           period: "1968"
           seatOrder: ["US", "ARVN", "NVA", "VC"]
-          flavorText: "Aggressive river command disrupts entrenched cells."
+          flavorText: "Strategic reconnaissance."
         unshaded:
-          text: "River assault: flip guerrillas and remove exposed insurgents."
+          text: "Outside the South, flip all Insurgents Active and remove 1 NVA Base."
+          effects:
+            - forEach:
+                bind: $insurgentGuerrilla
+                over:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                  filter:
+                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    - { prop: type, eq: guerrilla }
+                    - { prop: activity, eq: active }
+                effects:
+                  - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: underground }
+            - chooseN:
+                bind: $nvaBaseToRemove
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: base }
+                min: 0
+                max: 1
+            - forEach:
+                bind: $nvaBase
+                over: { query: binding, name: $nvaBaseToRemove }
+                effects:
+                  - moveToken:
+                      token: $nvaBase
+                      from: { zoneExpr: { ref: tokenZone, token: $nvaBase } }
+                      to: { zoneExpr: available-NVA:none }
         shaded:
-          text: "Counter-ambushes force US attrition and tactical withdrawal."
+          text: "SR-71 pilot must outrun SA-2s. Place 1 NVA Base at NVA Control outside the South and flip any 3 NVA Guerrillas Underground."
+          effects:
+            - chooseN:
+                bind: $nvaBaseFromAvailable
+                options:
+                  query: tokensInZone
+                  zone: available-NVA:none
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: base }
+                min: 0
+                max: 1
+            - if:
+                when:
+                  op: and
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: binding
+                            name: $nvaBaseFromAvailable
+                      right: 0
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: mapSpaces
+                            filter:
+                              op: and
+                              args:
+                                - op: or
+                                  args:
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                - op: '=='
+                                  left: { ref: zoneProp, zone: $zone, prop: category }
+                                  right: province
+                                - op: '>'
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, op: eq, value: NVA }
+                                  right:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                                - op: '<'
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: type, op: eq, value: base }
+                                  right: 2
+                      right: 0
+                then:
+                  - chooseOne:
+                      bind: $nvaBaseDestination
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                            - op: '=='
+                              left: { ref: zoneProp, zone: $zone, prop: category }
+                              right: province
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, op: eq, value: NVA }
+                              right:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                            - op: '<'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: type, op: eq, value: base }
+                              right: 2
+                  - forEach:
+                      bind: $nvaBase
+                      over: { query: binding, name: $nvaBaseFromAvailable }
+                      effects:
+                        - moveToken:
+                            token: $nvaBase
+                            from: { zoneExpr: available-NVA:none }
+                            to: { zoneExpr: $nvaBaseDestination }
+                else: []
+            - chooseN:
+                bind: $nvaGuerrillasToHide
+                options:
+                  query: tokensInMapSpaces
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: guerrilla }
+                    - { prop: activity, eq: active }
+                min: 0
+                max: 3
+            - forEach:
+                bind: $nvaGuerrilla
+                over: { query: binding, name: $nvaGuerrillasToHide }
+                effects:
+                  - setTokenProp: { token: $nvaGuerrilla, prop: activity, value: underground }
       - id: card-13
         title: Cobras
         sideMode: dual

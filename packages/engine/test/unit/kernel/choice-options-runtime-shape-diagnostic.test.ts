@@ -69,4 +69,50 @@ describe('choice options runtime-shape shared diagnostic builder', () => {
     assert.ok(validatorDiagnostic);
     assert.equal(validatorDiagnostic.code, EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID);
   });
+
+  it('emits full deterministic payloads for compiler and validator surfaces', () => {
+    const invalidQuery = {
+      query: 'concat' as const,
+      sources: [
+        { query: 'players' as const },
+        { query: 'assetRows' as const, tableId: 'tournament-standard::blindSchedule.levels' },
+      ] as const,
+    };
+    const cases: ReadonlyArray<{
+      readonly code: BuildChoiceOptionsRuntimeShapeDiagnosticArgs['code'];
+      readonly path: string;
+      readonly effectName: BuildChoiceOptionsRuntimeShapeDiagnosticArgs['effectName'];
+    }> = [
+      {
+        code: CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+        path: 'doc.actions.0.effects.0.chooseOne.options',
+        effectName: 'chooseOne',
+      },
+      {
+        code: EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+        path: 'actions[0].effects[0].chooseN.options',
+        effectName: 'chooseN',
+      },
+    ];
+
+    for (const testCase of cases) {
+      const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
+        code: testCase.code,
+        path: testCase.path,
+        effectName: testCase.effectName,
+        query: invalidQuery,
+      });
+
+      assert.ok(diagnostic);
+      assert.deepEqual(diagnostic, {
+        code: testCase.code,
+        path: testCase.path,
+        severity: 'error',
+        message: `${testCase.effectName} options query must produce move-param-encodable values; runtime shape(s) [number, object] are not fully encodable.`,
+        suggestion:
+          'Use queries yielding token/string/number values (or binding queries that resolve to encodable values) and avoid object-valued option domains like assetRows.',
+        alternatives: ['object'],
+      });
+    }
+  });
 });

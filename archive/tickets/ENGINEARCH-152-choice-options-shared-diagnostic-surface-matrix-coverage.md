@@ -1,6 +1,6 @@
 # ENGINEARCH-152: Expand Shared Choice-Options Diagnostic Surface Matrix Coverage
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — test coverage hardening for shared kernel diagnostic helper
@@ -12,9 +12,12 @@ The shared choice-options runtime-shape diagnostic helper has focused unit cover
 
 ## Assumption Reassessment (2026-02-28)
 
-1. `choice-options-runtime-shape-diagnostic.test.ts` validates a null path and one non-null path.
-2. Current non-null coverage does not explicitly assert both surface code variants in one matrix (`CNL_COMPILER_*` and `EFFECT_*`) with full payload checks.
-3. Mismatch: coverage exists but does not fully lock the cross-surface output contract of the shared helper. Corrected scope is to add a compact matrix test for both surfaces.
+1. `choice-options-runtime-shape-diagnostic.test.ts` already validates:
+   - a null return for encodable query shapes,
+   - deterministic output for a non-encodable query,
+   - canonical code literals for both supported surfaces.
+2. The remaining gap is narrower than originally phrased: current tests do not lock the complete emitted payload (`code`, `path`, `severity`, `message`, `suggestion`, `alternatives`) for both surfaces in one table-driven matrix.
+3. Corrected scope: strengthen shared-helper unit coverage with a compact full-payload surface matrix; keep parity test focused as a cross-layer guardrail.
 
 ## Architecture Check
 
@@ -26,11 +29,11 @@ The shared choice-options runtime-shape diagnostic helper has focused unit cover
 
 ### 1. Add two-surface matrix assertions in shared-helper unit tests
 
-Extend shared-helper tests to validate deterministic payload fields for both compiler and validator code paths.
+Extend shared-helper tests to validate exact, deterministic payload fields for both compiler and validator code paths in one table-driven assertion matrix.
 
 ### 2. Preserve existing parity tests as integration guardrail
 
-Keep `choice-options-runtime-shape-diagnostic-parity.test.ts` unchanged unless small alignment updates are needed.
+Keep `choice-options-runtime-shape-diagnostic-parity.test.ts` unchanged unless minimal assertion alignment is required by helper-test hardening.
 
 ## Files to Touch
 
@@ -72,3 +75,20 @@ Keep `choice-options-runtime-shape-diagnostic-parity.test.ts` unchanged unless s
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine lint`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- **Completion Date**: 2026-02-28
+- **What Changed**:
+  - Reassessed and corrected ticket assumptions/scope before implementation to reflect that two-surface code-literal checks already existed.
+  - Added a new table-driven shared-helper unit test that locks full emitted payloads across compiler and validator surfaces (`code`, `path`, `severity`, `message`, `suggestion`, `alternatives`).
+  - Preserved parity coverage as-is; no parity test changes were required.
+- **Deviations From Original Plan**:
+  - `packages/engine/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.ts` did not require changes after helper-test hardening.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-diagnostic.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅
+  - `pnpm run check:ticket-deps` ✅

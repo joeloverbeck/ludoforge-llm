@@ -11,6 +11,7 @@ import {
   type SerializedGameTrace,
   validateGameDef,
 } from '../../src/kernel/index.js';
+import { createValidGameDef } from '../helpers/gamedef-fixtures.js';
 
 const readGameDefFixture = (name: string): GameDef => {
   const raw = readFileSync(join(process.cwd(), 'test', 'fixtures', 'gamedef', name), 'utf8');
@@ -45,6 +46,69 @@ describe('core-types validation integration', () => {
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING'));
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_ZONE_MISSING'));
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING'));
+  });
+
+  it('suppresses secondary choose-options runtime-shape diagnostics when options query validation already fails', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              chooseOne: {
+                bind: '$row',
+                options: { query: 'assetRows', tableId: 'missing-table' },
+              },
+            },
+            {
+              chooseN: {
+                bind: '$rows',
+                options: { query: 'assetRows', tableId: 'missing-table' },
+                max: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_MISSING'
+          && diag.path === 'actions[0].effects[0].chooseOne.options.tableId'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_MISSING'
+          && diag.path === 'actions[0].effects[1].chooseN.options.tableId'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'actions[0].effects[0].chooseOne.options',
+      ),
+      false,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'actions[0].effects[1].chooseN.options',
+      ),
+      false,
+    );
   });
 
   it('round-trips serialized traces deterministically through serde codecs', () => {

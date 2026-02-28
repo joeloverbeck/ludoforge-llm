@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — applyMove strict validation ordering + legality surface parity coverage
-**Deps**: archive/tickets/ENGINEARCH-135-apply-move-free-operation-preflight-zone-filter-contract-parity.md, tickets/ENGINEARCH-136-canonical-free-operation-analysis-api-without-legacy-overlaps.md
+**Deps**: archive/tickets/ENGINEARCH-135-apply-move-free-operation-preflight-zone-filter-contract-parity.md, archive/tickets/ENGINEARCH-136-canonical-free-operation-analysis-api-without-legacy-overlaps.md
 
 ## Problem
 

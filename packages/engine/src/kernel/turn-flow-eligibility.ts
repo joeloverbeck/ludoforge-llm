@@ -738,31 +738,6 @@ const sequenceBlockingGrantIds = (
     .map((candidate) => candidate.grantId);
 };
 
-export const explainFreeOperationBlockForMove = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  options?: {
-    readonly evaluateZoneFilters?: boolean;
-    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
-  },
-): FreeOperationBlockExplanation => {
-  if (move.freeOperation !== true) {
-    return { cause: 'notFreeOperationMove' };
-  }
-  if (state.turnOrderState.type !== 'cardDriven') {
-    return { cause: 'nonCardDrivenTurnOrder' };
-  }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, {
-    evaluateZoneFilters: options?.evaluateZoneFilters ?? true,
-    ...(options?.zoneFilterErrorSurface === undefined ? {} : { zoneFilterErrorSurface: options.zoneFilterErrorSurface }),
-  });
-  if (analysis === null) {
-    return { cause: 'nonCardDrivenTurnOrder' };
-  }
-  return explainFreeOperationBlockFromAnalysis(analysis);
-};
-
 const explainFreeOperationBlockFromAnalysis = (
   analysis: FreeOperationGrantAnalysis,
 ): FreeOperationBlockExplanation => {
@@ -898,24 +873,6 @@ const parsePlayerId = (
   return parsed === null ? null : asPlayerId(parsed);
 };
 
-export const resolveFreeOperationExecutionPlayer = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): ReturnType<typeof asPlayerId> => {
-  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
-    return state.activePlayer;
-  }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move);
-  const applicable = analysis?.actionMatchedGrants ?? [];
-  if (applicable.length === 0) {
-    return state.activePlayer;
-  }
-  const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0]!;
-  const executionSeat = prioritized.executeAsSeat ?? prioritized.seat;
-  return parsePlayerId(executionSeat, state.playerCount) ?? state.activePlayer;
-};
-
 export const isFreeOperationApplicableForMove = (
   def: GameDef,
   state: GameState,
@@ -925,25 +882,6 @@ export const isFreeOperationApplicableForMove = (
     return true;
   }
   return (analyzeFreeOperationGrantMatch(def, state, move)?.actionMatchedGrants.length ?? 0) > 0;
-};
-
-export const resolveFreeOperationZoneFilter = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): ConditionAST | undefined => {
-  if (move.freeOperation !== true) {
-    return undefined;
-  }
-  const applicable = (analyzeFreeOperationGrantMatch(def, state, move)?.actionMatchedGrants ?? [])
-    .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
-  if (applicable.length === 0) {
-    return undefined;
-  }
-  if (applicable.length === 1) {
-    return applicable[0];
-  }
-  return { op: 'or', args: applicable };
 };
 
 export const isFreeOperationGrantedForMove = (

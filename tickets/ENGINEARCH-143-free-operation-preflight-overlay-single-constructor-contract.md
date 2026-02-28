@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel free-operation preflight context construction ownership
-**Deps**: archive/tickets/ENGINEARCH-135-apply-move-free-operation-preflight-zone-filter-contract-parity.md, tickets/ENGINEARCH-136-canonical-free-operation-analysis-api-without-legacy-overlaps.md, tickets/ENGINEARCH-142-free-operation-denial-precedence-parity-before-pipeline-preflight.md
+**Deps**: archive/tickets/ENGINEARCH-135-apply-move-free-operation-preflight-zone-filter-contract-parity.md, archive/tickets/ENGINEARCH-136-canonical-free-operation-analysis-api-without-legacy-overlaps.md, tickets/ENGINEARCH-142-free-operation-denial-precedence-parity-before-pipeline-preflight.md
 
 ## Problem
 

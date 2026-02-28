@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   collectCallExpressionsByIdentifier,
+  expressionToText,
   parseTypeScriptSource,
+  resolveCallIdentifierFromExpression,
 } from '../../helpers/kernel-source-ast-guard.js';
 import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
@@ -29,9 +31,6 @@ const expectedConstructorByBoundaryModule = {
 
 const fallbackPattern = /\bmode\s*\?\?\s*['"]execution['"]/u;
 const fallbackCtxPattern = /\bctx\s*\.\s*mode\s*\?\?/u;
-const inlineModeLiteralPattern = /\bmode\s*:\s*['"](execution|discovery)['"]/u;
-const inlineDecisionAuthorityPattern = /\bdecisionAuthority\s*:/u;
-
 describe('effect mode threading architecture guard', () => {
   it('keeps kernel applyEffects entry boundary allowlist explicit', () => {
     const kernelModules = listKernelModulesByPrefix('');
@@ -57,31 +56,91 @@ describe('effect mode threading architecture guard', () => {
       const applyEffectsCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyEffects');
       assert.ok(applyEffectsCalls.length > 0, `${moduleName} must contain applyEffects call(s) for this architecture guard`);
       const expectedConstructor = expectedConstructorByBoundaryModule[moduleName];
-      const executionCalls = collectCallExpressionsByIdentifier(sourceFile, 'createExecutionEffectContext');
-      const discoveryCalls = collectCallExpressionsByIdentifier(sourceFile, 'createDiscoveryEffectContext');
-      const expectedCalls = collectCallExpressionsByIdentifier(sourceFile, expectedConstructor);
 
-      assert.equal(
-        expectedCalls.length,
-        applyEffectsCalls.length,
-        `${moduleName} must construct every applyEffects context via ${expectedConstructor}`,
-      );
-      assert.equal(
-        expectedConstructor === 'createExecutionEffectContext' ? discoveryCalls.length : executionCalls.length,
-        0,
-        `${moduleName} must not mix execution/discovery constructors across a single boundary module`,
-      );
-      assert.doesNotMatch(
-        source,
-        inlineModeLiteralPattern,
-        `${moduleName} must not inline mode literals at applyEffects boundaries`,
-      );
-      assert.doesNotMatch(
-        source,
-        inlineDecisionAuthorityPattern,
-        `${moduleName} must not inline decisionAuthority wiring at applyEffects boundaries`,
-      );
+      for (const applyEffectsCall of applyEffectsCalls) {
+        const contextArgument = applyEffectsCall.arguments[1];
+        assert.notEqual(
+          contextArgument,
+          undefined,
+          `${moduleName} must pass an explicit effect context as the second applyEffects argument`,
+        );
+        if (contextArgument === undefined) {
+          continue;
+        }
+
+        const resolvedConstructor = resolveCallIdentifierFromExpression(contextArgument, sourceFile, applyEffectsCall);
+        assert.equal(
+          resolvedConstructor,
+          expectedConstructor,
+          `${moduleName} applyEffects context must resolve to ${expectedConstructor}; got ${
+            resolvedConstructor ?? 'non-constructor expression'
+          } from ${expressionToText(sourceFile, contextArgument)}`,
+        );
+      }
     }
+  });
+
+  it('does not over-fail on unrelated literals when applyEffects context wiring is canonical', () => {
+    const source = `
+      const unrelated = { mode: 'execution', decisionAuthority: { source: 'fixture' } };
+      const ctx = createExecutionEffectContext({ state, rng });
+      applyEffects(effects, ctx);
+    `;
+    const sourceFile = parseTypeScriptSource(source, 'guard-fixture.ts');
+    const applyEffectsCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyEffects');
+    assert.equal(applyEffectsCalls.length, 1, 'fixture must include exactly one applyEffects call');
+    const applyEffectsCall = applyEffectsCalls[0];
+    assert.notEqual(applyEffectsCall, undefined, 'fixture must provide applyEffects call');
+    if (applyEffectsCall === undefined) {
+      return;
+    }
+
+    const contextArgument = applyEffectsCall.arguments[1];
+    assert.notEqual(contextArgument, undefined, 'fixture applyEffects call must provide context argument');
+    if (contextArgument === undefined) {
+      return;
+    }
+
+    const resolvedConstructor = resolveCallIdentifierFromExpression(contextArgument, sourceFile, applyEffectsCall);
+    assert.equal(
+      resolvedConstructor,
+      'createExecutionEffectContext',
+      'constructor resolution should ignore unrelated object literals elsewhere in the module',
+    );
+  });
+
+  it('resolves constructor source by nearest lexical scope when context identifiers are shadowed', () => {
+    const source = `
+      const ctx = createDiscoveryEffectContext({ state, rng });
+      {
+        const ctx = createExecutionEffectContext({ state, rng });
+        applyEffects(effects, ctx);
+      }
+      applyEffects(effects, ctx);
+    `;
+    const sourceFile = parseTypeScriptSource(source, 'shadow-fixture.ts');
+    const applyEffectsCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyEffects');
+    assert.equal(applyEffectsCalls.length, 2, 'fixture must include two applyEffects calls');
+
+    const resolved: string[] = applyEffectsCalls.map((call) => {
+      const contextArgument = call.arguments[1];
+      assert.notEqual(contextArgument, undefined, 'fixture applyEffects call must provide context argument');
+      if (contextArgument === undefined) {
+        throw new Error('fixture applyEffects call must provide context argument');
+      }
+      const constructor = resolveCallIdentifierFromExpression(contextArgument, sourceFile, call);
+      assert.notEqual(constructor, undefined, 'fixture applyEffects call should resolve to a constructor');
+      if (constructor === undefined) {
+        throw new Error('fixture applyEffects call should resolve to a constructor');
+      }
+      return constructor;
+    });
+
+    assert.deepEqual(
+      resolved.sort(),
+      ['createDiscoveryEffectContext', 'createExecutionEffectContext'].sort(),
+      'scope-aware resolution must follow the nearest visible binding for each applyEffects usage',
+    );
   });
 
   it('forbids implicit execution fallback in kernel mode plumbing', () => {

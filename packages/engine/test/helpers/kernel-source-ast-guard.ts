@@ -397,3 +397,109 @@ export const resolveStringLiteralObjectPropertyWithSpreads = (
 
 export const expressionToText = (sourceFile: ts.SourceFile, expression: ts.Expression): string =>
   expression.getText(sourceFile);
+
+const collectIdentifierVariableDeclarations = (
+  node: ts.Node,
+): readonly (ts.VariableDeclaration & { name: ts.Identifier })[] => {
+  if (ts.isVariableStatement(node)) {
+    return node.declarationList.declarations.filter(
+      (declaration): declaration is ts.VariableDeclaration & { name: ts.Identifier } => ts.isIdentifier(declaration.name),
+    );
+  }
+
+  return [];
+};
+
+const findLastMatchingVariableDeclarationBeforePosition = (
+  scopeNode: ts.SourceFile | ts.Block | ts.ModuleBlock | ts.CaseClause | ts.DefaultClause,
+  identifier: string,
+  limitPosition: number,
+): ts.VariableDeclaration | undefined => {
+  const statements = scopeNode.statements;
+  let match: ts.VariableDeclaration | undefined;
+  for (const statement of statements) {
+    if (statement.getStart(scopeNode.getSourceFile()) >= limitPosition) {
+      break;
+    }
+    for (const declaration of collectIdentifierVariableDeclarations(statement)) {
+      if (declaration.name.text === identifier && declaration.initializer !== undefined) {
+        match = declaration;
+      }
+    }
+  }
+  return match;
+};
+
+const findIdentifierInitializerAtUsage = (
+  sourceFile: ts.SourceFile,
+  identifier: string,
+  usageNode: ts.Node,
+): ts.Expression | undefined => {
+  let current: ts.Node | undefined = usageNode;
+
+  while (current !== undefined) {
+    const parent: ts.Node | undefined = current.parent;
+    if (parent === undefined) {
+      return undefined;
+    }
+
+    if (
+      ts.isSourceFile(parent) ||
+      ts.isBlock(parent) ||
+      ts.isModuleBlock(parent) ||
+      ts.isCaseClause(parent) ||
+      ts.isDefaultClause(parent)
+    ) {
+      const declaration = findLastMatchingVariableDeclarationBeforePosition(parent, identifier, current.getStart(sourceFile));
+      if (declaration?.initializer !== undefined) {
+        return declaration.initializer;
+      }
+    }
+
+    if ((ts.isForStatement(parent) || ts.isForInStatement(parent) || ts.isForOfStatement(parent)) && parent.initializer !== undefined) {
+      const initializer = parent.initializer;
+      if (ts.isVariableDeclarationList(initializer)) {
+        for (const declaration of initializer.declarations) {
+          if (ts.isIdentifier(declaration.name) && declaration.name.text === identifier && declaration.initializer !== undefined) {
+            return declaration.initializer;
+          }
+        }
+      }
+    }
+
+    if (ts.isCatchClause(parent) && parent.variableDeclaration !== undefined) {
+      const declaration = parent.variableDeclaration;
+      if (ts.isIdentifier(declaration.name) && declaration.name.text === identifier && declaration.initializer !== undefined) {
+        return declaration.initializer;
+      }
+    }
+
+    current = parent;
+  }
+
+  return undefined;
+};
+
+export const resolveCallIdentifierFromExpression = (
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  usageNode: ts.Node,
+  visitedIdentifiers: ReadonlySet<string> = new Set<string>(),
+): string | undefined => {
+  const unwrapped = unwrapTypeScriptExpression(expression);
+  if (ts.isCallExpression(unwrapped) && ts.isIdentifier(unwrapped.expression)) {
+    return unwrapped.expression.text;
+  }
+  if (!ts.isIdentifier(unwrapped) || visitedIdentifiers.has(unwrapped.text)) {
+    return undefined;
+  }
+
+  const initializer = findIdentifierInitializerAtUsage(sourceFile, unwrapped.text, usageNode);
+  if (initializer === undefined) {
+    return undefined;
+  }
+
+  const nextVisited = new Set(visitedIdentifiers);
+  nextVisited.add(unwrapped.text);
+  return resolveCallIdentifierFromExpression(initializer, sourceFile, initializer, nextVisited);
+};

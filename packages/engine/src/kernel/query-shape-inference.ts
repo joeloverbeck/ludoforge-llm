@@ -3,6 +3,12 @@ import { inferQueryRuntimeShapes as inferCanonicalQueryRuntimeShapesSet, type Qu
 
 export type { QueryRuntimeShape } from './query-runtime-shapes.js';
 export type ValueRuntimeShape = 'number' | 'string' | 'boolean' | 'unknown';
+const MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES: ReadonlySet<QueryRuntimeShape> = new Set([
+  'token',
+  'number',
+  'string',
+  'unknown',
+]);
 
 export interface StaticValueShapeContext {
   readonly globalVarTypesByName: ReadonlyMap<string, GameDef['globalVars'][number]['type']>;
@@ -20,6 +26,10 @@ export function dedupeValueRuntimeShapes(shapes: readonly ValueRuntimeShape[]): 
 
 export function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShape[] {
   return [...inferCanonicalQueryRuntimeShapesSet(query)];
+}
+
+export function isMoveParamEncodableQueryRuntimeShape(shape: QueryRuntimeShape): boolean {
+  return MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES.has(shape);
 }
 
 export function inferValueRuntimeShapes(

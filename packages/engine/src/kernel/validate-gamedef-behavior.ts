@@ -1,4 +1,5 @@
 import type { Diagnostic } from './diagnostics.js';
+import { createChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-contract.js';
 import type {
   ConditionAST,
   EffectAST,
@@ -435,6 +436,24 @@ const validateTokenFilterPredicates = (
       validateValueExpr(diagnostics, filterValue as ValueExpr, `${path}[${i}].value`, context);
     }
   }
+};
+
+const validateChoiceOptionsRuntimeShape = (
+  diagnostics: Diagnostic[],
+  query: OptionsQuery,
+  path: string,
+  effectName: 'chooseOne' | 'chooseN',
+): void => {
+  const diagnostic = createChoiceOptionsRuntimeShapeDiagnostic(
+    query,
+    path,
+    effectName,
+    'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+  );
+  if (diagnostic === null) {
+    return;
+  }
+  diagnostics.push(diagnostic);
 };
 
 const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;
@@ -1346,6 +1365,7 @@ export const validateEffectAst = (
 
   if ('chooseOne' in effect) {
     validateOptionsQuery(diagnostics, effect.chooseOne.options, `${path}.chooseOne.options`, context);
+    validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseOne.options, `${path}.chooseOne.options`, 'chooseOne');
     return;
   }
 
@@ -1639,6 +1659,7 @@ export const validateEffectAst = (
   }
 
   validateOptionsQuery(diagnostics, effect.chooseN.options, `${path}.chooseN.options`, context);
+  validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseN.options, `${path}.chooseN.options`, 'chooseN');
 };
 
 export const validatePostAdjacencyBehavior = (

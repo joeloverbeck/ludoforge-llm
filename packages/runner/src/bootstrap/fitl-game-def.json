@@ -51143,8 +51143,8 @@
             "effects": [
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.chooseN",
-                  "bind": "$selectedPieces",
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.distributeTokens.selectTokens",
+                  "bind": "$__selected_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens",
                   "options": {
                     "query": "tokensInZone",
                     "zone": "out-of-play-US:none",
@@ -51161,16 +51161,16 @@
               },
               {
                 "forEach": {
-                  "bind": "$usOutOfPlayPiece",
+                  "bind": "$__token_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens",
                   "over": {
                     "query": "binding",
-                    "name": "$selectedPieces"
+                    "name": "$__selected_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens"
                   },
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.1.forEach.effects.0.chooseOne",
-                        "bind": "$targetCity@{$usOutOfPlayPiece}",
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.17.unshaded.effects.0.distributeTokens.chooseDestination",
+                        "bind": "$__destination_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens",
                         "options": {
                           "query": "mapSpaces",
                           "filter": {
@@ -51189,17 +51189,17 @@
                     },
                     {
                       "moveToken": {
-                        "token": "$usOutOfPlayPiece",
+                        "token": "$__token_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens",
                         "from": {
                           "zoneExpr": {
                             "ref": "tokenZone",
-                            "token": "$usOutOfPlayPiece"
+                            "token": "$__token_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens"
                           }
                         },
                         "to": {
                           "zoneExpr": {
                             "ref": "binding",
-                            "name": "$targetCity@{$usOutOfPlayPiece}"
+                            "name": "$__destination_doc_eventDecks_0_cards_17_unshaded_effects_0_distributeTokens"
                           }
                         }
                       }
@@ -51427,8 +51427,8 @@
             "effects": [
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.0.chooseN",
-                  "bind": "$nvaPieces",
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.0.distributeTokens.selectTokens",
+                  "bind": "$__selected_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens",
                   "options": {
                     "query": "tokensInZone",
                     "zone": "available-NVA:none",
@@ -51446,16 +51446,16 @@
               },
               {
                 "forEach": {
-                  "bind": "$nvaPiece",
+                  "bind": "$__token_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens",
                   "over": {
                     "query": "binding",
-                    "name": "$nvaPieces"
+                    "name": "$__selected_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens"
                   },
                   "effects": [
                     {
                       "chooseOne": {
-                        "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.1.forEach.effects.0.chooseOne",
-                        "bind": "$cambodiaSpace@{$nvaPiece}",
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.0.distributeTokens.chooseDestination",
+                        "bind": "$__destination_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens",
                         "options": {
                           "query": "mapSpaces",
                           "filter": {
@@ -51474,17 +51474,17 @@
                     },
                     {
                       "moveToken": {
-                        "token": "$nvaPiece",
+                        "token": "$__token_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens",
                         "from": {
                           "zoneExpr": {
                             "ref": "tokenZone",
-                            "token": "$nvaPiece"
+                            "token": "$__token_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens"
                           }
                         },
                         "to": {
                           "zoneExpr": {
                             "ref": "binding",
-                            "name": "$cambodiaSpace@{$nvaPiece}"
+                            "name": "$__destination_doc_eventDecks_0_cards_18_shaded_effects_0_distributeTokens"
                           }
                         }
                       }
@@ -51494,7 +51494,7 @@
               },
               {
                 "chooseN": {
-                  "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.2.chooseN",
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.18.shaded.effects.1.chooseN",
                   "bind": "$usTroops",
                   "options": {
                     "query": "concat",
@@ -52215,10 +52215,227 @@
             "flavorText": "Field improvisation expands helicopter mobility."
           },
           "unshaded": {
-            "text": "US mobility surge: redeploy Troops to contested spaces."
+            "text": "US moves up to 3 US Troops from out of play to Available or South Vietnam, or from the map to Available.",
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.25.unshaded.effects.0.chooseN",
+                  "bind": "$usTroops",
+                  "options": {
+                    "query": "concat",
+                    "sources": [
+                      {
+                        "query": "tokensInZone",
+                        "zone": "out-of-play-US:none",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      },
+                      {
+                        "query": "tokensInMapSpaces",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "US"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "max": 3,
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usTroop",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usTroops"
+                  },
+                  "effects": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "tokenZone",
+                            "token": "$usTroop"
+                          },
+                          "right": "out-of-play-US:none"
+                        },
+                        "then": [
+                          {
+                            "chooseOne": {
+                              "internalDecisionId": "decision:doc.eventDecks.0.cards.25.unshaded.effects.1.forEach.effects.0.if.then.0.chooseOne",
+                              "bind": "$oopTroopDestination@{$usTroop}",
+                              "options": {
+                                "query": "enums",
+                                "values": [
+                                  "available-US:none",
+                                  "south-vietnam-map"
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "if": {
+                              "when": {
+                                "op": "==",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$oopTroopDestination@{$usTroop}"
+                                },
+                                "right": "available-US:none"
+                              },
+                              "then": [
+                                {
+                                  "moveToken": {
+                                    "token": "$usTroop",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$usTroop"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": "available-US:none"
+                                    }
+                                  }
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "chooseOne": {
+                                    "internalDecisionId": "decision:doc.eventDecks.0.cards.25.unshaded.effects.1.forEach.effects.0.if.then.1.if.else.0.chooseOne",
+                                    "bind": "$southVietnamSpace@{$usTroop}",
+                                    "options": {
+                                      "query": "mapSpaces",
+                                      "filter": {
+                                        "condition": {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "country"
+                                          },
+                                          "right": "southVietnam"
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "moveToken": {
+                                    "token": "$usTroop",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$usTroop"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": {
+                                        "ref": "binding",
+                                        "name": "$southVietnamSpace@{$usTroop}"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "else": [
+                          {
+                            "moveToken": {
+                              "token": "$usTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$usTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-US:none"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Operational overreach: movement strains local control."
+            "text": "US takes 3 of its Troops from the map out of play.",
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.25.shaded.effects.0.chooseN",
+                  "bind": "$usMapTroops",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "US"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "troops"
+                      }
+                    ]
+                  },
+                  "max": 3,
+                  "min": 0
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$usTroop",
+                  "over": {
+                    "query": "binding",
+                    "name": "$usMapTroops"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$usTroop",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$usTroop"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": "out-of-play-US:none"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -52241,6 +52458,16 @@
           },
           "unshaded": {
             "text": "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "seat",
+                  "seat": "2"
+                },
+                "eligible": false,
+                "windowId": "make-ineligible"
+              }
+            ],
             "effects": [
               {
                 "addVar": {
@@ -61153,7 +61380,7 @@
         },
         {
           "id": "card-117",
-          "title": "Corps Commander",
+          "title": "Corps Commanders",
           "sideMode": "dual",
           "order": 117,
           "tags": [],
@@ -61168,10 +61395,519 @@
             "flavorText": "Regional command intervention reallocates troops by political roll of the dice."
           },
           "unshaded": {
-            "text": "Place ARVN Troops, then execute free Sweep in one selected region."
+            "text": "ARVN places 3 of its Troops from out of play or Available into 1 or 2 adjacent spaces then free Sweeps each.",
+            "effects": [
+              {
+                "setActivePlayer": {
+                  "player": {
+                    "id": 1
+                  }
+                }
+              },
+              {
+                "chooseOne": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.102.unshaded.effects.1.chooseOne",
+                  "bind": "$anchorSpace",
+                  "options": {
+                    "query": "mapSpaces"
+                  }
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.102.unshaded.effects.2.chooseN",
+                  "bind": "$adjacentSpace",
+                  "options": {
+                    "query": "adjacentZones",
+                    "zone": "$anchorSpace"
+                  },
+                  "max": 1
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.102.unshaded.effects.3.chooseN",
+                  "bind": "$selectedTroops",
+                  "options": {
+                    "query": "concat",
+                    "sources": [
+                      {
+                        "query": "tokensInZone",
+                        "zone": "available-ARVN:none",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "ARVN"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      },
+                      {
+                        "query": "tokensInZone",
+                        "zone": "out-of-play-ARVN:none",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "ARVN"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "troops"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "concat",
+                          "sources": [
+                            {
+                              "query": "tokensInZone",
+                              "zone": "available-ARVN:none",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "ARVN"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            },
+                            {
+                              "query": "tokensInZone",
+                              "zone": "out-of-play-ARVN:none",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "ARVN"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 3,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "concat",
+                          "sources": [
+                            {
+                              "query": "tokensInZone",
+                              "zone": "available-ARVN:none",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "ARVN"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            },
+                            {
+                              "query": "tokensInZone",
+                              "zone": "out-of-play-ARVN:none",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "ARVN"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.102.unshaded.effects.4.chooseN",
+                  "bind": "$troopsToAnchor",
+                  "options": {
+                    "query": "binding",
+                    "name": "$selectedTroops"
+                  },
+                  "max": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "binding",
+                        "name": "$selectedTroops"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$troopToAnchor",
+                  "over": {
+                    "query": "binding",
+                    "name": "$troopsToAnchor"
+                  },
+                  "effects": [
+                    {
+                      "moveToken": {
+                        "token": "$troopToAnchor",
+                        "from": {
+                          "zoneExpr": {
+                            "ref": "tokenZone",
+                            "token": "$troopToAnchor"
+                          }
+                        },
+                        "to": {
+                          "zoneExpr": {
+                            "ref": "binding",
+                            "name": "$anchorSpace"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "when": {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "binding",
+                          "name": "$adjacentSpace"
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  "then": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.102.unshaded.effects.6.if.then.0.chooseOne",
+                        "bind": "$selectedAdjacent",
+                        "options": {
+                          "query": "binding",
+                          "name": "$adjacentSpace"
+                        }
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$troop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$selectedTroops"
+                        },
+                        "effects": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": "not",
+                                "arg": {
+                                  "op": "in",
+                                  "item": {
+                                    "ref": "binding",
+                                    "name": "$troop"
+                                  },
+                                  "set": {
+                                    "ref": "binding",
+                                    "name": "$troopsToAnchor"
+                                  }
+                                }
+                              },
+                              "then": [
+                                {
+                                  "moveToken": {
+                                    "token": "$troop",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$troop"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": {
+                                        "ref": "binding",
+                                        "name": "$selectedAdjacent"
+                                      }
+                                    }
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "else": [
+                    {
+                      "forEach": {
+                        "bind": "$troop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$selectedTroops"
+                        },
+                        "effects": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": "not",
+                                "arg": {
+                                  "op": "in",
+                                  "item": {
+                                    "ref": "binding",
+                                    "name": "$troop"
+                                  },
+                                  "set": {
+                                    "ref": "binding",
+                                    "name": "$troopsToAnchor"
+                                  }
+                                }
+                              },
+                              "then": [
+                                {
+                                  "moveToken": {
+                                    "token": "$troop",
+                                    "from": {
+                                      "zoneExpr": {
+                                        "ref": "tokenZone",
+                                        "token": "$troop"
+                                      }
+                                    },
+                                    "to": {
+                                      "zoneExpr": {
+                                        "ref": "binding",
+                                        "name": "$anchorSpace"
+                                      }
+                                    }
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "setActivePlayer": {
+                  "player": "actor"
+                }
+              },
+              {
+                "grantFreeOperation": {
+                  "seat": "1",
+                  "operationClass": "operation",
+                  "actionIds": [
+                    "sweep"
+                  ],
+                  "zoneFilter": {
+                    "op": "==",
+                    "left": "$zone",
+                    "right": "{$anchorSpace}"
+                  }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$adjSpace",
+                  "over": {
+                    "query": "binding",
+                    "name": "$adjacentSpace"
+                  },
+                  "effects": [
+                    {
+                      "grantFreeOperation": {
+                        "seat": "1",
+                        "operationClass": "operation",
+                        "actionIds": [
+                          "sweep"
+                        ],
+                        "zoneFilter": {
+                          "op": "==",
+                          "left": "$zone",
+                          "right": "{$adjSpace}"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Roll die and remove ARVN Troops based on command fallout."
+            "text": "Remove a die roll of ARVN pieces from 1 or 2 adjacent spaces. ARVN Ineligible through next card.",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "seat",
+                  "seat": "1"
+                },
+                "eligible": false,
+                "windowId": "make-ineligible"
+              }
+            ],
+            "effects": [
+              {
+                "chooseOne": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.102.shaded.effects.0.chooseOne",
+                  "bind": "$anchorSpace",
+                  "options": {
+                    "query": "mapSpaces"
+                  }
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.102.shaded.effects.1.chooseN",
+                  "bind": "$adjacentSpace",
+                  "options": {
+                    "query": "adjacentZones",
+                    "zone": "$anchorSpace"
+                  },
+                  "max": 1
+                }
+              },
+              {
+                "rollRandom": {
+                  "bind": "$lossRoll",
+                  "min": 1,
+                  "max": 6,
+                  "in": [
+                    {
+                      "removeByPriority": {
+                        "budget": {
+                          "ref": "binding",
+                          "name": "$lossRoll"
+                        },
+                        "groups": [
+                          {
+                            "bind": "arvnPieceInAnchor",
+                            "over": {
+                              "query": "tokensInZone",
+                              "zone": "$anchorSpace",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "ARVN"
+                                }
+                              ]
+                            },
+                            "to": {
+                              "zoneExpr": "available-ARVN:none"
+                            }
+                          }
+                        ],
+                        "remainingBind": "$remainingLosses",
+                        "in": [
+                          {
+                            "forEach": {
+                              "bind": "$adjSpace",
+                              "over": {
+                                "query": "binding",
+                                "name": "$adjacentSpace"
+                              },
+                              "effects": [
+                                {
+                                  "if": {
+                                    "when": {
+                                      "op": ">",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "$remainingLosses"
+                                      },
+                                      "right": 0
+                                    },
+                                    "then": [
+                                      {
+                                        "removeByPriority": {
+                                          "budget": {
+                                            "ref": "binding",
+                                            "name": "$remainingLosses"
+                                          },
+                                          "groups": [
+                                            {
+                                              "bind": "arvnPieceInAdjacent",
+                                              "over": {
+                                                "query": "tokensInZone",
+                                                "zone": "$adjSpace",
+                                                "filter": [
+                                                  {
+                                                    "prop": "faction",
+                                                    "op": "eq",
+                                                    "value": "ARVN"
+                                                  }
+                                                ]
+                                              },
+                                              "to": {
+                                                "zoneExpr": "available-ARVN:none"
+                                              }
+                                            }
+                                          ],
+                                          "remainingBind": "$remainingLosses"
+                                        }
+                                      }
+                                    ],
+                                    "else": []
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {

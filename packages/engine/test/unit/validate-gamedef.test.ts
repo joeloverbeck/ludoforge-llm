@@ -2721,6 +2721,84 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
+  it('rejects chooseOne/chooseN options queries with non-encodable runtime shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [{ field: 'bigBlind', type: 'int' }],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              chooseOne: {
+                bind: '$row',
+                options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+              },
+            },
+            {
+              chooseN: {
+                bind: '$rows',
+                options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+                max: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'actions[0].effects[0].chooseOne.options'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'actions[0].effects[1].chooseN.options'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('accepts chooseOne/chooseN options queries with move-param-encodable runtime shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            { chooseOne: { bind: '$seat', options: { query: 'players' } } },
+            { chooseN: { bind: '$tokens', options: { query: 'tokensInZone', zone: 'deck:none' }, max: 1 } },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'),
+      false,
+    );
+  });
+
   it('accepts chooseN expression-valued range bounds in behavior validation', () => {
     const base = createValidGameDef();
     const def = {

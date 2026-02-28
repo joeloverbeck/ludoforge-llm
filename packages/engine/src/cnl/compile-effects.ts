@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
+import { createChoiceOptionsRuntimeShapeDiagnostic } from '../kernel/choice-options-runtime-shape-contract.js';
 import type {
   ConditionAST,
   EffectAST,
@@ -13,7 +14,6 @@ import type {
   ZoneRef,
 } from '../kernel/types.js';
 import { inferQueryDomainKinds, type QueryDomainKind } from '../kernel/query-domain-kinds.js';
-import { inferQueryRuntimeShapes, type QueryRuntimeShape } from '../kernel/query-runtime-shapes.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
 import { collectDeclaredBinderCandidates, collectSequentialBindings } from './binder-surface-registry.js';
 import {
@@ -65,13 +65,6 @@ const EFFECT_QUERY_DOMAIN_CONTRACTS = {
   distributeTokensTokens: 'tokenOnly' as const,
   distributeTokensDestinations: 'zoneOnly' as const,
 } as const;
-const MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES: ReadonlySet<QueryRuntimeShape> = new Set([
-  'token',
-  'number',
-  'string',
-  'unknown',
-]);
-
 export function lowerEffectArray(
   source: readonly unknown[],
   context: EffectLoweringContext,
@@ -2173,26 +2166,17 @@ function validateChoiceOptionsRuntimeShapeContract(
     return [];
   }
 
-  const runtimeShapes = inferQueryRuntimeShapes(query);
-  const invalidShapes = [...runtimeShapes]
-    .filter((shape) => !MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES.has(shape))
-    .sort();
-
-  if (invalidShapes.length === 0) {
+  const diagnostic = createChoiceOptionsRuntimeShapeDiagnostic(
+    query,
+    path,
+    effectName,
+    'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+  );
+  if (diagnostic === null) {
     return [];
   }
 
-  const actualShapes = [...runtimeShapes].sort().join(', ');
-  return [
-    {
-      code: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
-      path,
-      severity: 'error',
-      message: `${effectName} options query must produce move-param-encodable values; runtime shape(s) [${actualShapes}] are not fully encodable.`,
-      suggestion: 'Use queries yielding token/string/number values (or binding queries that resolve to encodable values) and avoid object-valued option domains like assetRows.',
-      alternatives: invalidShapes,
-    },
-  ];
+  return [diagnostic];
 }
 
 function lowerNestedEffects(

@@ -9,10 +9,11 @@
   "scripts": {
     "build": "turbo build",
     "clean": "turbo clean",
+    "check:ticket-deps": "node scripts/check-ticket-deps.mjs",
     "guard:worktree-pointers": "node scripts/check-worktree-pointers.mjs",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "test": "turbo test",
+    "test": "pnpm run check:ticket-deps && turbo test",
     "test:engine:unit": "pnpm -F @ludoforge/engine test:unit",
     "test:engine:integration": "pnpm -F @ludoforge/engine test:integration",
     "test:engine:performance": "pnpm -F @ludoforge/engine test:performance",

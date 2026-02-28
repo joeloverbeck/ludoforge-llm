@@ -30,6 +30,11 @@ To keep architecture clean, robust, and extensible, every new ticket must be cre
 3. Files-to-touch list matches current file layout and ownership.
 4. Scope does not duplicate already-delivered architecture.
 
+## Dependency Integrity Command
+
+- Run `pnpm run check:ticket-deps` to validate all active ticket `**Deps**` paths.
+- Root `pnpm test` runs this check before workspace tests, so broken ticket dependencies fail the default quality gate.
+
 ## Archival Reminder
 
 Follow `docs/archival-workflow.md` as the canonical process.

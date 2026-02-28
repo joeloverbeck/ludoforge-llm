@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel/CNL diagnostic contract layering and validator diagnostic policy
-**Deps**: tickets/ENGINEARCH-111-unify-query-runtime-shape-inference-surface.md, archive/tickets/ENGINEARCH-110-choice-options-runtime-shape-contract-parity.md
+**Deps**: archive/tickets/ENGINEARCH-111-unify-query-runtime-shape-inference-surface.md, archive/tickets/ENGINEARCH-110-choice-options-runtime-shape-contract-parity.md
 
 ## Problem
 

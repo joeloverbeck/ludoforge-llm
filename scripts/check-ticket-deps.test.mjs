@@ -79,3 +79,24 @@ test('accepts "None" dependencies', () => {
     assert.equal(result.status, 0, result.stderr);
   });
 });
+
+test('passes with mixed active and archived dependency paths', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'tickets'), { recursive: true });
+    mkdirSync(join(tempRoot, 'archive', 'tickets'), { recursive: true });
+    writeFileSync(join(tempRoot, 'tickets', 'ENGINEARCH-210-active.md'), '# Active dep\n\n**Deps**: None\n', 'utf8');
+    writeFileSync(join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-111-archived.md'), '# Archived dep\n', 'utf8');
+    writeFileSync(
+      join(tempRoot, 'tickets', 'ENGINEARCH-211-mixed.md'),
+      [
+        '# Mixed deps',
+        '',
+        '**Deps**: tickets/ENGINEARCH-210-active.md, archive/tickets/ENGINEARCH-111-archived.md',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = runCheck(tempRoot);
+    assert.equal(result.status, 0, result.stderr);
+  });
+});

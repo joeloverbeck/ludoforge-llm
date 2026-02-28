@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — query evaluation + turn-flow free-operation zone-filter policy wiring
-**Deps**: archive/tickets/ENGINEARCH-122-free-operation-zone-filter-deferral-generic-binding-classifier.md, tickets/ENGINEARCH-123-free-operation-zone-filter-deferral-path-completeness.md, tickets/ENGINEARCH-124-unify-free-operation-denial-analysis-single-pass.md
+**Deps**: archive/tickets/ENGINEARCH-122-free-operation-zone-filter-deferral-generic-binding-classifier.md, archive/tickets/ENGINEARCH-123-free-operation-zone-filter-deferral-path-completeness.md, archive/tickets/ENGINEARCH-124-unify-free-operation-denial-analysis-single-pass.md
 
 ## Problem
 

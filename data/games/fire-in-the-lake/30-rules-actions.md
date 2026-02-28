@@ -2405,9 +2405,6 @@ actionPipelines:
                         - { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
                     then:
                       - addVar: { scope: global, var: arvnResources, delta: -3 }
-                - macro: cap-assault-cobras-shaded-cost
-                  args:
-                    space: $space
                 - let:
                     bind: $isProvince
                     value:

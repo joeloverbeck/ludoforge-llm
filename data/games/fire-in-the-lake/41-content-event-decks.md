@@ -1392,12 +1392,12 @@ eventDecks:
           seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Gunship support amplifies Sweep and complicates Assault."
         unshaded:
-          text: "US capability: up to 2 Sweep spaces each remove 1 active/untunneled enemy."
+          text: "2 US/ ARVN Sweep spaces each remove 1 Active unTunneled enemy (Troops first, Bases last). US CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_cobras, markerState: unshaded }
         shaded:
-          text: "US capability (shaded): each Assault space may lose 1 US Troop on low die roll."
+          text: "Each US Assault space, 1 US Troop to Casualties on a die roll of 1-3."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_cobras, markerState: shaded }

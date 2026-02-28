@@ -68,7 +68,6 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       { profileId: 'assault-us-profile', marker: 'cap_m48Patton', side: 'unshaded' },
       { profileId: 'assault-us-profile', marker: 'cap_searchAndDestroy', side: 'unshaded' },
       { profileId: 'assault-us-profile', marker: 'cap_searchAndDestroy', side: 'shaded' },
-      { profileId: 'assault-arvn-profile', marker: 'cap_cobras', side: 'shaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_m48Patton', side: 'unshaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_searchAndDestroy', side: 'unshaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_searchAndDestroy', side: 'shaded' },

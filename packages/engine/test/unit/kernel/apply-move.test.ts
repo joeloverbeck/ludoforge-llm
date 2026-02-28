@@ -966,6 +966,92 @@ phase: [asPhaseId('main')],
   });
 });
 
+describe('applyMove() free-operation execution seat threading', () => {
+  it('uses executeAsSeat override when evaluating pipeline applicability', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile',
+      actionId: asActionId('operation'),
+      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              executeAsSeat: '1',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('operation'), params: {} }, { advanceToDecisionPoint: false }),
+      (error: unknown) =>
+        error instanceof Error
+        && 'reason' in error
+        && (error as { reason?: unknown }).reason === ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE,
+    );
+
+    assert.doesNotThrow(() =>
+      applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }, { advanceToDecisionPoint: false }));
+  });
+});
+
 describe('applyMove() executor applicability contract', () => {
   it('returns illegal move when actor does not include active player', () => {
     const action: ActionDef = {

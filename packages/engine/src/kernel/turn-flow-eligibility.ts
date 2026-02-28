@@ -752,6 +752,12 @@ export const explainFreeOperationBlockForMove = (
   if (analysis === null) {
     return { cause: 'nonCardDrivenTurnOrder' };
   }
+  return explainFreeOperationBlockFromAnalysis(analysis);
+};
+
+const explainFreeOperationBlockFromAnalysis = (
+  analysis: FreeOperationGrantAnalysis,
+): FreeOperationBlockExplanation => {
   const {
     activeSeat,
     actionClass,
@@ -819,6 +825,60 @@ export const explainFreeOperationBlockForMove = (
     actionClass,
     actionId,
     matchingGrantIds: zoneMatchedGrants.map((grant) => grant.grantId),
+  };
+};
+
+export interface FreeOperationDiscoveryAnalysisResult {
+  readonly denial: FreeOperationBlockExplanation;
+  readonly executionPlayer: ReturnType<typeof asPlayerId>;
+  readonly zoneFilter?: ConditionAST;
+}
+
+export const resolveFreeOperationDiscoveryAnalysis = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: {
+    readonly zoneFilterErrorSurface?: 'turnFlowEligibility' | 'legalChoices';
+  },
+): FreeOperationDiscoveryAnalysisResult => {
+  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
+    return {
+      denial: move.freeOperation === true ? { cause: 'nonCardDrivenTurnOrder' } : { cause: 'notFreeOperationMove' },
+      executionPlayer: state.activePlayer,
+    };
+  }
+
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, {
+    evaluateZoneFilters: true,
+    zoneFilterErrorSurface: options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+  });
+  if (analysis === null) {
+    return {
+      denial: { cause: 'nonCardDrivenTurnOrder' },
+      executionPlayer: state.activePlayer,
+    };
+  }
+
+  const applicable = analysis.actionMatchedGrants;
+  const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0];
+  const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
+  const executionPlayer = executionSeat === undefined
+    ? state.activePlayer
+    : parsePlayerId(executionSeat, state.playerCount) ?? state.activePlayer;
+
+  const zoneFilters: ConditionAST[] = applicable
+    .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
+  const zoneFilter: ConditionAST | undefined = zoneFilters.length === 0
+    ? undefined
+    : zoneFilters.length === 1
+      ? zoneFilters[0]
+      : { op: 'or', args: zoneFilters };
+
+  return {
+    denial: explainFreeOperationBlockFromAnalysis(analysis),
+    executionPlayer,
+    ...(zoneFilter === undefined ? {} : { zoneFilter }),
   };
 };
 

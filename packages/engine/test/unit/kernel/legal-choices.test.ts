@@ -2118,6 +2118,82 @@ phase: [asPhaseId('main')],
       assert.deepEqual(request.options.map((option) => option.value), ['board:cambodia']);
     });
 
+    it('applies free-operation executeAsSeat to discovery preflight pipeline applicability', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'operation-profile',
+        actionId: asActionId('operation'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [],
+        atomicity: 'partial',
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        activePlayer: asPlayerId(0),
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                seat: '0',
+                executeAsSeat: '1',
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      const request = legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true });
+      assert.deepEqual(request, { kind: 'complete', complete: true });
+    });
+
     it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {
       const action: ActionDef = {
         id: asActionId('operation'),

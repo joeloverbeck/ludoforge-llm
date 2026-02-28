@@ -28,9 +28,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
-  explainFreeOperationBlockForMove,
-  isFreeOperationGrantedForMove,
-  resolveFreeOperationExecutionPlayer,
+  resolveFreeOperationDiscoveryAnalysis,
   resolveTurnFlowActionClassMismatch,
 } from './turn-flow-eligibility.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
@@ -111,9 +109,12 @@ const resolveMatchedPipelineForMove = (
   }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const executionPlayer = move.freeOperation === true
-    ? resolveFreeOperationExecutionPlayer(def, state, move)
-    : (() => {
+  const freeOperationAnalysis = move.freeOperation === true
+    ? resolveFreeOperationDiscoveryAnalysis(def, state, move, {
+      zoneFilterErrorSurface: 'turnFlowEligibility',
+    })
+    : null;
+  const executionPlayer = freeOperationAnalysis?.executionPlayer ?? (() => {
       const resolution = resolveActionExecutor({
         def,
         state,
@@ -149,6 +150,19 @@ const resolveMatchedPipelineForMove = (
   }
   return dispatch.profile;
 };
+
+type MoveFreeOperationAnalysis = ReturnType<typeof resolveFreeOperationDiscoveryAnalysis>;
+
+const resolveMoveFreeOperationAnalysis = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): MoveFreeOperationAnalysis | null =>
+  move.freeOperation === true
+    ? resolveFreeOperationDiscoveryAnalysis(def, state, move, {
+      zoneFilterErrorSurface: 'turnFlowEligibility',
+    })
+    : null;
 
 const operationAllowsSpecialActivity = (
   operationActionId: Move['actionId'],
@@ -422,11 +436,15 @@ const resolveMovePreflightContext = (
   runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>,
   mode: 'validation' | 'execution',
   cachedRuntime?: GameDefRuntime,
+  freeOperationAnalysis?: MoveFreeOperationAnalysis | null,
 ): MovePreflightContext => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
+  const resolvedFreeOperationAnalysis = move.freeOperation === true
+    ? (freeOperationAnalysis ?? resolveMoveFreeOperationAnalysis(def, state, move))
+    : null;
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const preflightEvalCtx = mode === 'validation'
     ? (() => {
@@ -438,9 +456,9 @@ const resolveMovePreflightContext = (
         decisionPlayer: state.activePlayer,
         bindings: baseBindings,
         runtimeTableIndex,
-        ...(move.freeOperation === true
-          ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, move) }
-          : {}),
+        ...(resolvedFreeOperationAnalysis === null
+          ? {}
+          : { executionPlayerOverride: resolvedFreeOperationAnalysis.executionPlayer }),
       });
       if (preflight.kind === 'invalidSpec') {
         throw selectorInvalidSpecError(
@@ -464,7 +482,7 @@ const resolveMovePreflightContext = (
     })()
     : (() => {
       const executionPlayer = move.freeOperation === true
-        ? resolveFreeOperationExecutionPlayer(def, state, move)
+        ? resolvedFreeOperationAnalysis?.executionPlayer ?? state.activePlayer
         : (() => {
           const resolution = resolveActionExecutor({
             def,
@@ -547,18 +565,28 @@ const validateMove = (
   }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const preflight = resolveMovePreflightContext(def, state, move, adjacencyGraph, runtimeTableIndex, 'validation', cachedRuntime);
+  const freeOperationAnalysis = resolveMoveFreeOperationAnalysis(def, state, move);
+  const preflight = resolveMovePreflightContext(
+    def,
+    state,
+    move,
+    adjacencyGraph,
+    runtimeTableIndex,
+    'validation',
+    cachedRuntime,
+    freeOperationAnalysis,
+  );
   const action = preflight.action;
   const allowIncomplete = shouldDeferIncompleteDecisionValidationForMove(def, state, move);
 
   if (
     move.freeOperation === true &&
     state.turnOrderState.type === 'cardDriven' &&
-    !isFreeOperationGrantedForMove(def, state, move)
+    freeOperationAnalysis !== null &&
+    freeOperationAnalysis.denial.cause !== 'granted'
   ) {
-    const block = explainFreeOperationBlockForMove(def, state, move);
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
-      freeOperationDenial: block,
+      freeOperationDenial: freeOperationAnalysis.denial,
     });
   }
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
@@ -651,6 +679,9 @@ const executeMoveAction = (
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
   const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
+  const freeOperationAnalysis = validated === null
+    ? resolveMoveFreeOperationAnalysis(def, state, move)
+    : null;
   const preflight = validated?.preflight ?? resolveMovePreflightContext(
     def,
     state,
@@ -659,6 +690,7 @@ const executeMoveAction = (
     shared.runtimeTableIndex,
     'execution',
     cachedRuntime,
+    freeOperationAnalysis,
   );
   const {
     action,

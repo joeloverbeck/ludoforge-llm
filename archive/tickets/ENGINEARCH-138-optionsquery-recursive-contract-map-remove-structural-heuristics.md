@@ -1,6 +1,6 @@
 # ENGINEARCH-138: OptionsQuery Recursive Contract Map Without Structural Heuristics
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel query typing contract hardening
@@ -14,7 +14,8 @@
 
 1. `packages/engine/src/kernel/query-partition-types.ts` currently derives coverage via `StructuredRecursiveOptionsQuery` field-shape extraction.
 2. Structural heuristics are less robust than explicit canonical maps keyed by query kind because they encode implicit assumptions about field names.
-3. Corrected scope: replace structural recursion inference with explicit kind-based contract mapping that cannot be perturbed by unrelated leaf field changes.
+3. `packages/engine/src/kernel/query-walk.ts` already uses an explicit recursive dispatch map keyed by recursive kind; traversal dispatch is not the architectural weak point for this ticket.
+4. Corrected scope: replace structural recursion inference with explicit kind-based contract mapping in the partition-typing module, while preserving existing walker behavior.
 
 ## Architecture Check
 
@@ -31,6 +32,7 @@ Delete `StructuredRecursiveOptionsQuery`-style field-shape inference and replace
 ### 2. Encode leaf/recursive partition from canonical kind map
 
 Derive partition checks from explicit kind ownership so recursive/leaf boundaries are driven by one contract authority.
+Use an explicit query-kind partition map (covering all `OptionsQuery['query']` kinds) to keep completeness checks compile-time enforceable without structural heuristics.
 
 ### 3. Tighten compile-time type tests
 
@@ -40,7 +42,7 @@ Add compile-time tests that guarantee: no overlap between partitions, no missing
 
 - `packages/engine/src/kernel/query-partition-types.ts` (modify)
 - `packages/engine/test/unit/types-exhaustive.test.ts` (modify)
-- `packages/engine/test/unit/kernel/query-kind-contract.test.ts` (modify if assertions move)
+- `packages/engine/test/unit/kernel/query-kind-contract.test.ts` (optional; touch only if imports/contracts change)
 
 ## Out of Scope
 
@@ -72,3 +74,22 @@ Add compile-time tests that guarantee: no overlap between partitions, no missing
 1. `pnpm -F @ludoforge/engine typecheck`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine test`
+4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-28
+- **What actually changed**:
+  - Replaced structural recursive-kind inference in `packages/engine/src/kernel/query-partition-types.ts` with an explicit canonical `OptionsQueryKindPartitionMap` that enumerates all query kinds and partitions them as `recursive` vs `leaf`.
+  - Added compile-time coverage contract `OptionsQueryKindPartitionCoverage` to guarantee partition-map keys stay aligned with `OptionsQuery['query']`.
+  - Updated `RecursiveOptionsQueryKindCoverage` to validate kind/type alignment from explicit kind ownership rather than structural field extraction.
+  - Strengthened `packages/engine/test/unit/types-exhaustive.test.ts` to assert the new partition-map coverage contract.
+- **Deviations from original plan**:
+  - `packages/engine/test/unit/kernel/query-kind-contract.test.ts` did not need changes because contract assertions remained valid after partition ownership changes.
+  - Scope was corrected before implementation to reflect that `query-walk.ts` already had explicit recursive dispatch mapping and was not the architectural weak point.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine typecheck` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

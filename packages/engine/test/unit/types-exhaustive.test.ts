@@ -11,9 +11,11 @@ import type {
   ScenarioPayload,
   ScenarioPiecePlacement,
 } from '../../src/kernel/index.js';
+import { OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
 import type {
   LeafOptionsQuery,
   LeafOptionsQueryKind,
+  OptionsQueryKindPartitionCoverage,
   RecursiveOptionsQuery,
   RecursiveOptionsQueryKind,
   RecursiveOptionsQueryKindCoverage,
@@ -171,8 +173,16 @@ describe('exhaustive kernel unions', () => {
   });
 
   it('keeps recursive and leaf OptionsQuery kind partitions aligned', () => {
+    type ContractMapCoverage = [
+      Exclude<keyof typeof OPTIONS_QUERY_KIND_CONTRACT_MAP, OptionsQuery['query']>,
+      Exclude<OptionsQuery['query'], keyof typeof OPTIONS_QUERY_KIND_CONTRACT_MAP>,
+    ] extends [never, never]
+      ? true
+      : false;
     const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
     const leafKinds: UnionSize<LeafOptionsQueryKind> = 14;
+    const contractMapCoverage: ContractMapCoverage = true;
+    const partitionCoverage: OptionsQueryKindPartitionCoverage = true;
     const recursiveCoverage: RecursiveOptionsQueryKindCoverage = true;
     const recursiveDispatchCoverage: RecursiveOptionsQueryDispatchCoverage = true;
     type Overlap = Extract<LeafOptionsQuery, RecursiveOptionsQuery>;
@@ -180,6 +190,8 @@ describe('exhaustive kernel unions', () => {
 
     assert.equal(recursiveKinds, 2);
     assert.equal(leafKinds, 14);
+    assert.equal(contractMapCoverage, true);
+    assert.equal(partitionCoverage, true);
     assert.equal(recursiveCoverage, true);
     assert.equal(recursiveDispatchCoverage, true);
     assert.equal(overlapVariants, 0);

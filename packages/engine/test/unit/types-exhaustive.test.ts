@@ -12,6 +12,7 @@ import type {
   ScenarioPiecePlacement,
 } from '../../src/kernel/index.js';
 import { OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
+import type { LeafOptionsQueryKindFromContractMap } from '../../src/kernel/query-kind-map.js';
 import type {
   LeafOptionsQuery,
   LeafOptionsQueryKind,
@@ -179,9 +180,17 @@ describe('exhaustive kernel unions', () => {
     ] extends [never, never]
       ? true
       : false;
+    type LeafContractViewCoverage = [
+      Exclude<LeafOptionsQueryKindFromContractMap, LeafOptionsQueryKind>,
+      Exclude<LeafOptionsQueryKind, LeafOptionsQueryKindFromContractMap>,
+    ] extends [never, never]
+      ? true
+      : false;
     const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
     const leafKinds: UnionSize<LeafOptionsQueryKind> = 14;
+    const leafContractKinds: UnionSize<LeafOptionsQueryKindFromContractMap> = 14;
     const contractMapCoverage: ContractMapCoverage = true;
+    const leafContractViewCoverage: LeafContractViewCoverage = true;
     const partitionCoverage: OptionsQueryKindPartitionCoverage = true;
     const recursiveCoverage: RecursiveOptionsQueryKindCoverage = true;
     const recursiveDispatchCoverage: RecursiveOptionsQueryDispatchCoverage = true;
@@ -190,7 +199,9 @@ describe('exhaustive kernel unions', () => {
 
     assert.equal(recursiveKinds, 2);
     assert.equal(leafKinds, 14);
+    assert.equal(leafContractKinds, 14);
     assert.equal(contractMapCoverage, true);
+    assert.equal(leafContractViewCoverage, true);
     assert.equal(partitionCoverage, true);
     assert.equal(recursiveCoverage, true);
     assert.equal(recursiveDispatchCoverage, true);

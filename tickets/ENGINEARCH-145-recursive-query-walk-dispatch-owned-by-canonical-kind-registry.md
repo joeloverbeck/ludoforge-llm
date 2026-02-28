@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel query traversal ownership cleanup
-**Deps**: archive/tickets/ENGINEARCH-138-optionsquery-recursive-contract-map-remove-structural-heuristics.md, tickets/ENGINEARCH-144-leaf-query-contract-map-total-no-runtime-assertions.md
+**Deps**: archive/tickets/ENGINEARCH-138-optionsquery-recursive-contract-map-remove-structural-heuristics.md, archive/tickets/ENGINEARCH-144-leaf-query-contract-map-total-no-runtime-assertions.md
 
 ## Problem
 

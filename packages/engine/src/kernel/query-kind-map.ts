@@ -21,6 +21,13 @@ type OptionsQueryKindContractMap = {
   readonly [Kind in OptionsQuery['query']]: OptionsQueryKindContract;
 };
 
+type LeafQueryKindContractView<Contracts extends OptionsQueryKindContractMap> = {
+  readonly [Kind in keyof Contracts as Contracts[Kind] extends LeafQueryKindContract ? Kind : never]: Extract<
+    Contracts[Kind],
+    LeafQueryKindContract
+  >;
+};
+
 export const OPTIONS_QUERY_KIND_CONTRACT_MAP = {
   concat: { partition: 'recursive' },
   tokensInZone: { partition: 'leaf', domain: 'token', runtimeShape: 'token' },
@@ -39,3 +46,13 @@ export const OPTIONS_QUERY_KIND_CONTRACT_MAP = {
   connectedZones: { partition: 'leaf', domain: 'zone', runtimeShape: 'string' },
   binding: { partition: 'leaf', domain: 'other', runtimeShape: 'unknown' },
 } as const satisfies OptionsQueryKindContractMap;
+
+export type LeafOptionsQueryKindFromContractMap = keyof LeafQueryKindContractView<typeof OPTIONS_QUERY_KIND_CONTRACT_MAP>;
+
+export type LeafOptionsQueryKindContractFromMap<
+  Kind extends LeafOptionsQueryKindFromContractMap = LeafOptionsQueryKindFromContractMap,
+> = LeafQueryKindContractView<typeof OPTIONS_QUERY_KIND_CONTRACT_MAP>[Kind];
+
+export const getLeafOptionsQueryKindContract = <Kind extends LeafOptionsQueryKindFromContractMap>(
+  kind: Kind,
+): LeafOptionsQueryKindContractFromMap<Kind> => OPTIONS_QUERY_KIND_CONTRACT_MAP[kind];

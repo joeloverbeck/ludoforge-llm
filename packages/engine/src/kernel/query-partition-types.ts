@@ -1,4 +1,4 @@
-import { OPTIONS_QUERY_KIND_CONTRACT_MAP } from './query-kind-map.js';
+import type { OPTIONS_QUERY_KIND_CONTRACT_MAP } from './query-kind-map.js';
 import type { OptionsQuery } from './types.js';
 
 type QueryPartition = (typeof OPTIONS_QUERY_KIND_CONTRACT_MAP)[keyof typeof OPTIONS_QUERY_KIND_CONTRACT_MAP]['partition'];

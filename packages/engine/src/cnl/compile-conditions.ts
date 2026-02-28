@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type {
   AssetRowsCardinality,
   AssetRowPredicate,
@@ -122,7 +123,7 @@ export function lowerConditionNode(
         const rightType = inferValueExprType(right.value, context.typeInference);
         if (!areTypesCompatible(leftType, rightType)) {
           diagnostics.push({
-            code: 'CNL_COMPILER_CONDITION_TYPE_MISMATCH',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONDITION_TYPE_MISMATCH,
             path,
             severity: 'warning',
             message: `Comparison operands have incompatible types: left is ${leftType}, right is ${rightType}. Strict equality will always evaluate to ${source.op === '==' ? 'false' : 'true'}.`,
@@ -188,7 +189,7 @@ export function lowerConditionNode(
           ? []
           : [
               {
-                code: 'CNL_COMPILER_MISSING_CAPABILITY',
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
                 path: `${path}.maxDepth`,
                 severity: 'error' as const,
                 message: 'connected.maxDepth must be an integer literal >= 0.',
@@ -363,7 +364,7 @@ function lowerTokenFilterEntry(
         return {
           value: null,
           diagnostics: [{
-            code: 'CNL_COMPILER_UNKNOWN_NAMED_SET',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_UNKNOWN_NAMED_SET,
             path: `${path}.value.name`,
             severity: 'error',
             message: `Unknown metadata.namedSets entry "${namedSetReference.name}".`,
@@ -509,7 +510,7 @@ function validateCanonicalTokenTraitLiteral(
   }
   return [
     {
-      code: 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL,
       path,
       severity: 'error',
       message: `Token filter uses non-canonical value "${value}" for prop "${prop}".`,
@@ -738,7 +739,7 @@ export function lowerQueryNode(
           value: null,
           diagnostics: [
             {
-              code: 'CNL_COMPILER_NEXT_IN_ORDER_BIND_INVALID',
+              code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_NEXT_IN_ORDER_BIND_INVALID,
               path: `${path}.bind`,
               severity: 'error',
               message: `nextInOrderByCondition.bind "${source.bind}" must be a canonical "$name" token.`,
@@ -1023,7 +1024,7 @@ export function lowerQueryNode(
           ? []
           : [
               {
-                code: 'CNL_COMPILER_MISSING_CAPABILITY',
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
                 path: `${path}.includeStart`,
                 severity: 'error' as const,
                 message: 'connectedZones.includeStart must be a boolean literal.',
@@ -1037,7 +1038,7 @@ export function lowerQueryNode(
           ? []
           : [
               {
-                code: 'CNL_COMPILER_MISSING_CAPABILITY',
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
                 path: `${path}.maxDepth`,
                 severity: 'error' as const,
                 message: 'connectedZones.maxDepth must be an integer literal >= 0.',
@@ -1094,7 +1095,7 @@ function lowerZoneRef(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: 'Zone selector must be a string or { zoneExpr: <ValueExpr> }.',
@@ -1281,7 +1282,7 @@ function lowerReference(
             value: null,
             diagnostics: [
               {
-                code: 'CNL_COMPILER_BINDING_UNBOUND',
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_UNBOUND,
                 path: `${path}.row`,
                 severity: 'error',
                 message: `Unbound binding reference "${source.row}".`,
@@ -1361,7 +1362,7 @@ function lowerReference(
             value: null,
             diagnostics: [
               {
-                code: 'CNL_COMPILER_BINDING_UNBOUND',
+                code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_UNBOUND,
                 path: `${path}.name`,
                 severity: 'error',
                 message: `Unbound binding reference "${source.name}".`,
@@ -1407,7 +1408,7 @@ function missingCapability<TValue>(
     value: null,
     diagnostics: [
       {
-        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
         path,
         severity: 'error',
         message: `Cannot lower ${construct} to kernel AST: ${formatValue(actual)}.`,

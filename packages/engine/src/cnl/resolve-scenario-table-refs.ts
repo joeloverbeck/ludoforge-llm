@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { RuntimeTableContract } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 interface ResolveScenarioTableRefsOptions {
   readonly selectedScenarioAssetId?: string;
@@ -30,7 +31,7 @@ export function resolveScenarioTableRefsInDoc(
     if (normalized.includes('::')) {
       const pathOnly = normalized.includes('::') ? normalized.split('::').slice(1).join('::') : normalized;
       options.diagnostics.push({
-        code: 'CNL_COMPILER_TABLE_REF_LEGACY_LITERAL',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TABLE_REF_LEGACY_LITERAL,
         path,
         severity: 'error',
         message: `Legacy table reference "${tableId}" is not allowed in GameSpec.`,
@@ -44,7 +45,7 @@ export function resolveScenarioTableRefsInDoc(
 
     if (options.selectedScenarioAssetId === undefined) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_TABLE_REF_SCENARIO_REQUIRED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TABLE_REF_SCENARIO_REQUIRED,
         path,
         severity: 'error',
         message: `Cannot resolve scenario-relative table reference "${tableId}" because no scenario is selected.`,
@@ -55,7 +56,7 @@ export function resolveScenarioTableRefsInDoc(
 
     if (!tablePathsForSelectedScenario.has(normalized)) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_TABLE_REF_PATH_UNKNOWN',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TABLE_REF_PATH_UNKNOWN,
         path,
         severity: 'error',
         message: `Scenario table path "${tableId}" not found in selected scenario "${options.selectedScenarioAssetId}".`,

@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   buildChoiceOptionsRuntimeShapeDiagnostic,
   CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES,
@@ -559,7 +560,7 @@ function lowerMoveTokenEffect(
   ];
   if (position === null) {
     diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path: `${path}.position`,
       severity: 'error',
       message: `Cannot lower moveToken.position to kernel AST: ${formatValue(source.position)}.`,
@@ -1055,7 +1056,7 @@ function lowerReduceEffect(
     return {
       value: null,
       diagnostics: [{
-        code: 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED,
         path: `${path}.macroOrigin`,
         severity: 'error',
         message: 'reduce.macroOrigin has been removed and is no longer accepted.',
@@ -1082,7 +1083,7 @@ function lowerReduceEffect(
     return {
       value: null,
       diagnostics: [{
-        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
         path,
         severity: 'error',
         message: 'reduce binders itemBind, accBind, and resultBind must be distinct.',
@@ -1197,7 +1198,7 @@ function lowerRemoveByPriorityEffect(
     const groupPath = `${path}.groups.${index}`;
     if (!isRecord(entry) || typeof entry.bind !== 'string') {
       diagnostics.push({
-        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
         path: groupPath,
         severity: 'error',
         message:
@@ -1879,7 +1880,7 @@ function lowerChooseNEffect(
 
   if (hasN && (hasMin || hasMax)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path,
       severity: 'error',
       message: 'chooseN must use either exact "n" or range "min/max", not both.',
@@ -1927,7 +1928,7 @@ function lowerChooseNEffect(
     && loweredMin > loweredMax
   ) {
     diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path,
       severity: 'error',
       message: 'chooseN min cannot exceed max.',
@@ -2003,7 +2004,7 @@ function lowerDistributeTokensEffects(
 
   if (hasN && (hasMin || hasMax)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path,
       severity: 'error',
       message: 'distributeTokens must use either exact "n" or range "min/max", not both.',
@@ -2051,7 +2052,7 @@ function lowerDistributeTokensEffects(
     && loweredMin > loweredMax
   ) {
     diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path,
       severity: 'error',
       message: 'distributeTokens min cannot exceed max.',
@@ -2132,8 +2133,8 @@ function validateQueryDomainContract(
 
   const expectedLabel = expected === 'token' ? 'token' : 'zone';
   const code = contract === 'tokenOnly'
-    ? 'CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID'
-    : 'CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID';
+    ? CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DISTRIBUTE_TOKENS_TOKEN_DOMAIN_INVALID
+    : CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DISTRIBUTE_TOKENS_DESTINATION_DOMAIN_INVALID;
 
   return [
     {
@@ -2216,7 +2217,7 @@ function lowerZoneSelector(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: 'Zone selector must be a string or { zoneExpr: <ValueExpr> }.',
@@ -2231,7 +2232,7 @@ function lowerZoneSelector(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: 'Dynamic zone selectors must use explicit { zoneExpr: <ValueExpr> }.',
@@ -2281,7 +2282,7 @@ function validateBindingReference(value: string, scope: BindingScope, path: stri
   }
   return [
     {
-      code: 'CNL_COMPILER_BINDING_UNBOUND',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_UNBOUND,
       path,
       severity: 'error',
       message: `Unbound binding reference "${value}".`,
@@ -2318,7 +2319,7 @@ function missingCapability<TValue>(
     value: null,
     diagnostics: [
       {
-        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
         path,
         severity: 'error',
         message: `Cannot lower ${construct} to kernel AST: ${formatValue(actual)}.`,
@@ -2350,7 +2351,7 @@ function collectReservedCompilerBindingNamespaceDiagnostics(
       continue;
     }
     diagnostics.push({
-      code: 'CNL_COMPILER_RESERVED_BINDING_NAMESPACE_FORBIDDEN',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RESERVED_BINDING_NAMESPACE_FORBIDDEN,
       path: `${path}.${candidate.path}`,
       severity: 'error',
       message: `Binding "${bindingValue}" uses compiler-owned namespace "${RESERVED_COMPILER_BINDING_PREFIX}".`,
@@ -2423,7 +2424,7 @@ function readMacroOrigin(
     return {
       value: null,
       diagnostics: [{
-        code: 'CNL_COMPILER_MACRO_ORIGIN_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MACRO_ORIGIN_INVALID,
         path,
         severity: 'error',
         message: 'macroOrigin must be { macroId: string, stem: string } when present.',
@@ -2435,7 +2436,7 @@ function readMacroOrigin(
     return {
       value: null,
       diagnostics: [{
-        code: 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED,
         path,
         severity: 'error',
         message: 'macroOrigin is compiler-owned metadata and cannot be authored directly.',
@@ -2457,7 +2458,7 @@ function collectReservedCompilerMetadataDiagnostics(
   path: string,
 ): readonly Diagnostic[] {
   return collectReservedCompilerMetadataKeyOccurrencesOnRecord(value, path).map((occurrence) => ({
-    code: 'CNL_COMPILER_RESERVED_COMPILER_METADATA_FORBIDDEN',
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RESERVED_COMPILER_METADATA_FORBIDDEN,
     path: occurrence.path,
     severity: 'error',
     message: `${occurrence.key} is reserved compiler metadata and cannot be authored directly.`,
@@ -2532,7 +2533,7 @@ const collectFreeOperationSequenceViabilityWarnings = (
         continue;
       }
       diagnostics.push({
-        code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK,
         path: stepEntries[0]!.sequencePath,
         severity: 'warning',
         message:
@@ -2549,7 +2550,7 @@ const collectFreeOperationSequenceViabilityWarnings = (
 
       if (previous.operationClass !== current.operationClass) {
         diagnostics.push({
-          code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK,
           path: currentStepPath,
           severity: 'warning',
           message:
@@ -2564,7 +2565,7 @@ const collectFreeOperationSequenceViabilityWarnings = (
       const overlap = previousEffectiveActionIds.some((actionId) => currentActions.has(actionId));
       if (!overlap) {
         diagnostics.push({
-          code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK,
           path: currentStepPath,
           severity: 'warning',
           message:
@@ -2577,7 +2578,7 @@ const collectFreeOperationSequenceViabilityWarnings = (
       const currentFilter = current.zoneFilter === undefined ? null : conditionFingerprint(current.zoneFilter);
       if (previousFilter !== null && currentFilter !== previousFilter) {
         diagnostics.push({
-          code: 'CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FREE_OPERATION_SEQUENCE_VIABILITY_RISK,
           path: currentStepPath,
           severity: 'warning',
           message:

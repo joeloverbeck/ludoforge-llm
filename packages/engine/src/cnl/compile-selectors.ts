@@ -3,6 +3,7 @@ import { asPlayerId } from '../kernel/branded.js';
 import { getActionSelectorContract } from '../kernel/action-selector-contract-registry.js';
 import { PLAYER_SELECTOR_SUGGESTION, ZONE_OWNER_QUALIFIER_SUGGESTION } from '../kernel/player-selector-vocabulary.js';
 import type { ActionExecutorSel, PlayerSel } from '../kernel/types.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 const ACTION_EXECUTOR_SELECTOR_SUGGESTION = getActionSelectorContract('executor').invalidSelectorSuggestion;
 
@@ -72,7 +73,7 @@ export function normalizeActionExecutorSelector(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PLAYER_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: 'Action executor selector must resolve to exactly one player.',
@@ -96,7 +97,7 @@ export function normalizeZoneOwnerQualifier(value: string, path: string): Select
       value: null,
       diagnostics: normalizedPlayer.diagnostics.map((diagnostic) => ({
         ...diagnostic,
-        code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
       })),
     };
   }
@@ -110,7 +111,7 @@ export function normalizeZoneOwnerQualifier(value: string, path: string): Select
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: `Zone owner qualifier "${value}" is not supported.`,
@@ -133,7 +134,7 @@ export function normalizeZoneOwnerQualifier(value: string, path: string): Select
     value: null,
     diagnostics: [
       {
-        code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
         path,
         severity: 'error',
         message: `Zone owner qualifier "${value}" is not supported.`,
@@ -171,7 +172,7 @@ function nonCanonicalPlayerSelector(path: string, actual: string, canonical: str
     value: null,
     diagnostics: [
       {
-        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PLAYER_SELECTOR_INVALID,
         path,
         severity: 'error',
         message: `Non-canonical player selector: "${actual}".`,
@@ -186,7 +187,7 @@ function invalidPlayerSelector(path: string, actual: unknown): SelectorCompileRe
     value: null,
     diagnostics: [
       {
-        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PLAYER_SELECTOR_INVALID,
         path,
         severity: 'error',
         message: `Invalid player selector: ${formatValue(actual)}.`,

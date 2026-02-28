@@ -2,6 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import { expandBoardMacro } from './expand-macros.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 export function expandZoneMacros(
   zones: GameSpecDoc['zones'],
@@ -32,7 +33,7 @@ export function expandZoneMacros(
     const nextGeneratedZones = generatedZones + expansion.zones.length;
     if (nextGeneratedZones > maxGeneratedZones) {
       diagnostics.push({
-        code: 'CNL_COMPILER_LIMIT_EXCEEDED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_LIMIT_EXCEEDED,
         path: macroPath,
         severity: 'error',
         message: `Macro expansion exceeded maxGeneratedZones (${nextGeneratedZones} > ${maxGeneratedZones}).`,
@@ -275,7 +276,7 @@ function expandRefillToSize(
 
   if (!isValidMacroSize(refillNode.size)) {
     state.diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path: `${path}.refillToSize.size`,
       severity: 'error',
       message: 'refillToSize requires compile-time integer literal size >= 0.',
@@ -324,7 +325,7 @@ function expandDiscardDownTo(
 
   if (!isValidMacroSize(discardNode.size)) {
     state.diagnostics.push({
-      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
       path: `${path}.discardDownTo.size`,
       severity: 'error',
       message: 'discardDownTo requires compile-time integer literal size >= 0.',
@@ -450,7 +451,7 @@ function consumeExpandedEffects(
   const nextExpandedEffects = state.expandedEffects + count;
   if (nextExpandedEffects > state.maxExpandedEffects) {
     state.diagnostics.push({
-      code: 'CNL_COMPILER_LIMIT_EXCEEDED',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_LIMIT_EXCEEDED,
       path: diagnosticPath,
       severity: 'error',
       message: `Macro expansion exceeded maxExpandedEffects (${nextExpandedEffects} > ${state.maxExpandedEffects}).`,

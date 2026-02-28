@@ -1847,6 +1847,69 @@ actor: 'active',
     );
   });
 
+  it('emits missing-capability diagnostics when an event target id is missing', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-event-card-missing-target-id',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'eventDecks:',
+      '  - id: fitl-events-foundation',
+      '    drawZone: board:none',
+      '    discardZone: board:none',
+      '    cards:',
+      '      - id: card-a',
+      '        title: A Card',
+      '        sideMode: single',
+      '        unshaded:',
+      '          targets:',
+      '            - selector: { query: activePlayer }',
+      '              cardinality: { max: 1 }',
+      '          effects: [{ shuffle: { zone: board:none } }]',
+      '```',
+      '```yaml',
+      'zones:',
+      '  - id: board:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'
+          && diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.targets.0.id',
+      ),
+      true,
+    );
+  });
+
   it('rejects non-canonical token filter trait literals against selected piece-catalog vocabulary', () => {
     const markdown = [
       '```yaml',

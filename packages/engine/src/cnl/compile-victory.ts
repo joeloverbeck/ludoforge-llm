@@ -2,6 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { CoupPlanDef, TerminalEvaluationDef } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 export function lowerCoupPlan(
   rawCoupPlan: unknown,
@@ -14,7 +15,7 @@ export function lowerCoupPlan(
 
   if (!isRecord(rawCoupPlan)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_COUP_PLAN_INVALID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_INVALID,
       path: pathPrefix,
       severity: 'error',
       message: 'coupPlan must be an object when declared.',
@@ -25,7 +26,7 @@ export function lowerCoupPlan(
 
   if (!Array.isArray(rawCoupPlan.phases)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_COUP_PLAN_REQUIRED_FIELD_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_REQUIRED_FIELD_MISSING,
       path: `${pathPrefix}.phases`,
       severity: 'error',
       message: 'coupPlan.phases is required and must be an array.',
@@ -36,7 +37,7 @@ export function lowerCoupPlan(
 
   if (rawCoupPlan.phases.length === 0) {
     diagnostics.push({
-      code: 'CNL_COMPILER_COUP_PLAN_PHASES_EMPTY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_PHASES_EMPTY,
       path: `${pathPrefix}.phases`,
       severity: 'error',
       message: 'coupPlan.phases must include at least one phase definition.',
@@ -50,7 +51,7 @@ export function lowerCoupPlan(
     const phasePath = `${pathPrefix}.phases.${index}`;
     if (!isRecord(phase)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_COUP_PLAN_PHASE_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_PHASE_INVALID,
         path: phasePath,
         severity: 'error',
         message: 'coupPlan phase entries must be objects.',
@@ -61,7 +62,7 @@ export function lowerCoupPlan(
 
     if (typeof phase.id !== 'string' || phase.id.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_COUP_PLAN_PHASE_ID_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_PHASE_ID_INVALID,
         path: `${phasePath}.id`,
         severity: 'error',
         message: 'coupPlan phase id must be a non-empty string.',
@@ -69,7 +70,7 @@ export function lowerCoupPlan(
       });
     } else if (seenPhaseIds.has(phase.id)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_COUP_PLAN_PHASE_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_PHASE_DUPLICATE,
         path: `${phasePath}.id`,
         severity: 'error',
         message: `Duplicate coupPlan phase id "${phase.id}".`,
@@ -85,7 +86,7 @@ export function lowerCoupPlan(
       phase.steps.some((step) => typeof step !== 'string' || step.trim() === '')
     ) {
       diagnostics.push({
-        code: 'CNL_COMPILER_COUP_PLAN_PHASE_STEPS_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_PHASE_STEPS_INVALID,
         path: `${phasePath}.steps`,
         severity: 'error',
         message: 'coupPlan phase steps must be a non-empty array of non-empty strings.',
@@ -100,7 +101,7 @@ export function lowerCoupPlan(
     (typeof maxConsecutiveRounds !== 'number' || !Number.isInteger(maxConsecutiveRounds) || maxConsecutiveRounds < 1)
   ) {
     diagnostics.push({
-      code: 'CNL_COMPILER_COUP_PLAN_MAX_CONSECUTIVE_INVALID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_MAX_CONSECUTIVE_INVALID,
       path: `${pathPrefix}.maxConsecutiveRounds`,
       severity: 'error',
       message: 'coupPlan.maxConsecutiveRounds must be an integer >= 1 when declared.',
@@ -117,7 +118,7 @@ export function lowerCoupPlan(
   if (rawCoupPlan.finalRoundOmitPhases !== undefined) {
     if (!Array.isArray(rawCoupPlan.finalRoundOmitPhases)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_INVALID,
         path: `${pathPrefix}.finalRoundOmitPhases`,
         severity: 'error',
         message: 'coupPlan.finalRoundOmitPhases must be an array of phase ids when declared.',
@@ -127,7 +128,7 @@ export function lowerCoupPlan(
       for (const [index, phaseId] of rawCoupPlan.finalRoundOmitPhases.entries()) {
         if (typeof phaseId !== 'string' || phaseId.trim() === '') {
           diagnostics.push({
-            code: 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_INVALID,
             path: `${pathPrefix}.finalRoundOmitPhases.${index}`,
             severity: 'error',
             message: 'finalRoundOmitPhases entries must be non-empty strings.',
@@ -138,7 +139,7 @@ export function lowerCoupPlan(
 
         if (!declaredPhaseIds.has(phaseId)) {
           diagnostics.push({
-            code: 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE,
             path: `${pathPrefix}.finalRoundOmitPhases.${index}`,
             severity: 'error',
             message: `Unknown coupPlan phase id "${phaseId}" in finalRoundOmitPhases.`,
@@ -176,7 +177,7 @@ export function lowerVictory(
 
   if (!Array.isArray(rawVictory.checkpoints)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_VICTORY_REQUIRED_FIELD_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_REQUIRED_FIELD_MISSING,
       path: 'doc.terminal.checkpoints',
       severity: 'error',
       message: 'terminal.checkpoints must be an array when declared.',
@@ -190,7 +191,7 @@ export function lowerVictory(
     const checkpointPath = `doc.terminal.checkpoints.${index}`;
     if (!isRecord(checkpoint)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_INVALID,
         path: checkpointPath,
         severity: 'error',
         message: 'victory checkpoint entries must be objects.',
@@ -201,7 +202,7 @@ export function lowerVictory(
 
     if (typeof checkpoint.id !== 'string' || checkpoint.id.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_ID_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_ID_INVALID,
         path: `${checkpointPath}.id`,
         severity: 'error',
         message: 'victory checkpoint id must be a non-empty string.',
@@ -209,7 +210,7 @@ export function lowerVictory(
       });
     } else if (seenCheckpointIds.has(checkpoint.id)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_DUPLICATE,
         path: `${checkpointPath}.id`,
         severity: 'error',
         message: `Duplicate victory checkpoint id "${checkpoint.id}".`,
@@ -221,7 +222,7 @@ export function lowerVictory(
 
     if (typeof checkpoint.seat !== 'string' || checkpoint.seat.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_SEAT_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_SEAT_INVALID,
         path: `${checkpointPath}.seat`,
         severity: 'error',
         message: 'victory checkpoint seat must be a non-empty string.',
@@ -231,7 +232,7 @@ export function lowerVictory(
 
     if (checkpoint.timing !== 'duringCoup' && checkpoint.timing !== 'finalCoup') {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_TIMING_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_TIMING_INVALID,
         path: `${checkpointPath}.timing`,
         severity: 'error',
         message: 'victory checkpoint timing must be "duringCoup" or "finalCoup".',
@@ -241,7 +242,7 @@ export function lowerVictory(
 
     if (!isRecord(checkpoint.when)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_CHECKPOINT_WHEN_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_WHEN_INVALID,
         path: `${checkpointPath}.when`,
         severity: 'error',
         message: 'victory checkpoint when must be a condition object.',
@@ -253,7 +254,7 @@ export function lowerVictory(
   if (rawVictory.margins !== undefined) {
     if (!Array.isArray(rawVictory.margins)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_MARGINS_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_MARGINS_INVALID,
         path: 'doc.terminal.margins',
         severity: 'error',
         message: 'victory.margins must be an array when declared.',
@@ -264,7 +265,7 @@ export function lowerVictory(
         const marginPath = `doc.terminal.margins.${index}`;
         if (!isRecord(margin)) {
           diagnostics.push({
-            code: 'CNL_COMPILER_VICTORY_MARGIN_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_MARGIN_INVALID,
             path: marginPath,
             severity: 'error',
             message: 'victory margin entries must be objects.',
@@ -275,7 +276,7 @@ export function lowerVictory(
 
         if (typeof margin.seat !== 'string' || margin.seat.trim() === '') {
           diagnostics.push({
-            code: 'CNL_COMPILER_VICTORY_MARGIN_SEAT_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_MARGIN_SEAT_INVALID,
             path: `${marginPath}.seat`,
             severity: 'error',
             message: 'victory margin seat must be a non-empty string.',
@@ -290,7 +291,7 @@ export function lowerVictory(
           (valueType !== 'number' && valueType !== 'boolean' && valueType !== 'string' && !isRecord(margin.value))
         ) {
           diagnostics.push({
-            code: 'CNL_COMPILER_VICTORY_MARGIN_VALUE_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_MARGIN_VALUE_INVALID,
             path: `${marginPath}.value`,
             severity: 'error',
             message: 'victory margin value must be a ValueExpr-compatible literal or object.',
@@ -304,7 +305,7 @@ export function lowerVictory(
   if (rawVictory.ranking !== undefined) {
     if (!isRecord(rawVictory.ranking)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_RANKING_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_RANKING_INVALID,
         path: 'doc.terminal.ranking',
         severity: 'error',
         message: 'victory.ranking must be an object when declared.',
@@ -312,7 +313,7 @@ export function lowerVictory(
       });
     } else if (rawVictory.ranking.order !== 'desc' && rawVictory.ranking.order !== 'asc') {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_RANKING_ORDER_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_RANKING_ORDER_INVALID,
         path: 'doc.terminal.ranking.order',
         severity: 'error',
         message: 'victory.ranking.order must be "desc" or "asc".',
@@ -324,7 +325,7 @@ export function lowerVictory(
         !rawVictory.ranking.tieBreakOrder.every((value) => typeof value === 'string' && value.trim().length > 0))
     ) {
       diagnostics.push({
-        code: 'CNL_COMPILER_VICTORY_RANKING_TIEBREAK_ORDER_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_RANKING_TIEBREAK_ORDER_INVALID,
         path: 'doc.terminal.ranking.tieBreakOrder',
         severity: 'error',
         message: 'victory.ranking.tieBreakOrder must be an array of non-empty seat ids when declared.',

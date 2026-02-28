@@ -7,6 +7,7 @@ import type {
   ActionTargetingDef,
 } from '../kernel/types.js';
 import { collectSequentialBindings } from './binder-surface-registry.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
   type ConditionLoweringSharedContext,
@@ -47,7 +48,7 @@ export function lowerActionPipelines(
     const basePath = `doc.actionPipelines.${index}`;
     if (!isRecord(rawPipeline)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_INVALID,
         path: basePath,
         severity: 'error',
         message: 'action pipeline must be an object.',
@@ -59,7 +60,7 @@ export function lowerActionPipelines(
     const id = typeof rawPipeline.id === 'string' ? normalizeIdentifier(rawPipeline.id) : '';
     if (id.length === 0) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING,
         path: `${basePath}.id`,
         severity: 'error',
         message: 'action pipeline id is required and must be a non-empty string.',
@@ -69,7 +70,7 @@ export function lowerActionPipelines(
     }
     if (seenPipelineIds.has(id)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_DUPLICATE_ID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_DUPLICATE_ID,
         path: `${basePath}.id`,
         severity: 'error',
         message: `Duplicate action pipeline id "${id}" creates ambiguous pipeline lookup.`,
@@ -82,7 +83,7 @@ export function lowerActionPipelines(
     const actionId = typeof rawPipeline.actionId === 'string' ? normalizeIdentifier(rawPipeline.actionId) : '';
     if (actionId.length === 0) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING,
         path: `${basePath}.actionId`,
         severity: 'error',
         message: 'action pipeline actionId is required and must be a non-empty string.',
@@ -92,7 +93,7 @@ export function lowerActionPipelines(
     }
     if (!knownActionIds.has(actionId)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_UNKNOWN_ACTION',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_UNKNOWN_ACTION,
         path: `${basePath}.actionId`,
         severity: 'error',
         message: `action pipeline references unknown action "${actionId}".`,
@@ -123,7 +124,7 @@ export function lowerActionPipelines(
 
     if (rawPipeline.atomicity !== 'atomic' && rawPipeline.atomicity !== 'partial') {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING,
         path: `${basePath}.atomicity`,
         severity: 'error',
         message: 'action pipeline atomicity is required and must be "atomic" or "partial".',
@@ -146,7 +147,7 @@ export function lowerActionPipelines(
         rawPipeline.linkedWindows.some((entry) => typeof entry !== 'string' || entry.trim() === '')
       ) {
         diagnostics.push({
-          code: 'CNL_COMPILER_ACTION_PIPELINE_LINKED_WINDOWS_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_LINKED_WINDOWS_INVALID,
           path: `${basePath}.linkedWindows`,
           severity: 'error',
           message: 'linkedWindows must be an array of non-empty strings when provided.',
@@ -211,7 +212,7 @@ export function lowerActionPipelines(
         accompanyingOps = rawPipeline.accompanyingOps.map((entry) => normalizeIdentifier(entry));
       } else {
         diagnostics.push({
-          code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING,
           path: `${basePath}.accompanyingOps`,
           severity: 'error',
           message: 'action pipeline accompanyingOps must be "any" or an array of non-empty operation ids.',
@@ -242,7 +243,7 @@ export function lowerActionPipelines(
         )
       ) {
         diagnostics.push({
-          code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING,
           path: `${basePath}.compoundParamConstraints`,
           severity: 'error',
           message: 'action pipeline compoundParamConstraints must be an array of { relation:\"disjoint\"|\"subset\", operationParam, specialActivityParam }.',
@@ -333,7 +334,7 @@ export function lowerActionPipelines(
     const missingApplicability = pipelinesForAction.some((pipeline) => pipeline.applicability === undefined);
     if (missingApplicability) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS,
         path: 'doc.actionPipelines',
         severity: 'error',
         message: `Multiple action pipelines map to action "${actionId}" but not all have an applicability condition.`,

@@ -2,6 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import { hasTurnFlowInterruptSelectorMatchField } from '../kernel/turn-flow-interrupt-selector-contract.js';
 import type { TurnFlowDef, TurnOrderStrategy } from '../kernel/types.js';
 import { TURN_FLOW_ACTION_CLASS_VALUES } from '../kernel/turn-flow-action-class-contract.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   TURN_FLOW_REQUIRED_KEYS,
 } from '../kernel/turn-flow-contract.js';
@@ -21,7 +22,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
 
   if (!isRecord(rawTurnOrder) || typeof rawTurnOrder.type !== 'string') {
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_ORDER_INVALID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_ORDER_INVALID,
       path: 'doc.turnOrder',
       severity: 'error',
       message: 'turnOrder must be an object with a valid type when declared.',
@@ -35,7 +36,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
       return { type: 'roundRobin' };
     case 'simultaneous':
       diagnostics.push({
-        code: 'CNL_COMPILER_SIMULTANEOUS_NOT_IMPLEMENTED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SIMULTANEOUS_NOT_IMPLEMENTED,
         path: 'doc.turnOrder.type',
         severity: 'warning',
         message: 'turnOrder.type="simultaneous" compiles but runtime resolution is not yet fully implemented.',
@@ -48,7 +49,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
         for (const [index, entry] of rawTurnOrder.order.entries()) {
           if (typeof entry !== 'string' || entry.trim() === '') {
             diagnostics.push({
-              code: 'CNL_COMPILER_FIXED_ORDER_ENTRY_INVALID',
+              code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FIXED_ORDER_ENTRY_INVALID,
               path: `doc.turnOrder.order.${index}`,
               severity: 'error',
               message: 'fixedOrder entries must be non-empty player id strings.',
@@ -65,7 +66,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
 
       if (orderEntries.length === 0) {
         diagnostics.push({
-          code: 'CNL_COMPILER_FIXED_ORDER_EMPTY',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FIXED_ORDER_EMPTY,
           path: 'doc.turnOrder.order',
           severity: 'error',
           message: 'fixedOrder requires a non-empty order array.',
@@ -77,7 +78,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
       for (const { sourceIndex, value: playerId } of orderEntries) {
         if (seen.has(playerId)) {
           diagnostics.push({
-            code: 'CNL_COMPILER_FIXED_ORDER_DUPLICATE',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_FIXED_ORDER_DUPLICATE,
             path: `doc.turnOrder.order.${sourceIndex}`,
             severity: 'warning',
             message: `Duplicate fixedOrder player id "${playerId}".`,
@@ -96,7 +97,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
     case 'cardDriven': {
       if (!isRecord(rawTurnOrder.config)) {
         diagnostics.push({
-          code: 'CNL_COMPILER_TURN_ORDER_CARD_DRIVEN_CONFIG_REQUIRED',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_ORDER_CARD_DRIVEN_CONFIG_REQUIRED,
           path: 'doc.turnOrder.config',
           severity: 'error',
           message: 'cardDriven turnOrder requires a config object.',
@@ -127,7 +128,7 @@ export function lowerTurnOrder(rawTurnOrder: GameSpecDoc['turnOrder'], diagnosti
   }
   const unsupportedType = (rawTurnOrder as { readonly type?: unknown }).type;
   diagnostics.push({
-    code: 'CNL_COMPILER_TURN_ORDER_UNSUPPORTED_TYPE',
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_ORDER_UNSUPPORTED_TYPE,
     path: 'doc.turnOrder.type',
     severity: 'error',
     message: `Unsupported turnOrder type "${String(unsupportedType)}".`,
@@ -142,7 +143,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
 
   if (!isRecord(rawTurnFlow)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_INVALID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_INVALID,
       path: 'doc.turnOrder.config.turnFlow',
       severity: 'error',
       message: 'cardDriven turnFlow must be an object when declared.',
@@ -195,7 +196,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       continue;
     }
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING,
       path: `doc.turnOrder.config.turnFlow.${key}`,
       severity: 'error',
       message: spec.message,
@@ -229,7 +230,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         continue;
       }
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING,
         path: `doc.turnOrder.config.turnFlow.freeOperationActionIds.${index}`,
         severity: 'error',
         message: 'turnFlow.freeOperationActionIds entries must be non-empty strings.',
@@ -240,7 +241,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
   for (const [actionId, actionClass] of Object.entries(rawTurnFlow.actionClassByActionId)) {
     if (actionId.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ACTION_CLASS_MAP_INVALID,
         path: 'doc.turnOrder.config.turnFlow.actionClassByActionId',
         severity: 'error',
         message: 'turnFlow.actionClassByActionId keys must be non-empty action ids.',
@@ -249,7 +250,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     }
     if (!isTurnFlowActionClass(actionClass)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ACTION_CLASS_MAP_INVALID,
         path: `doc.turnOrder.config.turnFlow.actionClassByActionId.${actionId}`,
         severity: 'error',
         message: 'turnFlow.actionClassByActionId contains an invalid action class.',
@@ -262,7 +263,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
   for (const [index, seat] of eligibility.seats.entries()) {
     if (typeof seat !== 'string' || seat.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_ORDERING_SEAT_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_SEAT_INVALID,
         path: `doc.turnOrder.config.turnFlow.eligibility.seats.${index}`,
         severity: 'error',
         message: 'eligibility.seats entries must be non-empty seat id strings.',
@@ -283,7 +284,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       continue;
     }
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_SEAT',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_SEAT,
       path: `doc.turnOrder.config.turnFlow.eligibility.seats.${sourceIndex}`,
       severity: 'error',
       message: `Duplicate seat id "${seat}" creates unresolved deterministic ordering.`,
@@ -301,7 +302,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       continue;
     }
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_OPTION_ROW',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_OPTION_ROW,
       path: `doc.turnOrder.config.turnFlow.optionMatrix.${index}.first`,
       severity: 'error',
       message: `Duplicate optionMatrix.first "${row.first}" creates ambiguous second-eligible ordering.`,
@@ -315,7 +316,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       for (const [index, actionId] of rawTurnFlow.pivotal.actionIds.entries()) {
         if (typeof actionId !== 'string' || actionId.trim() === '') {
           diagnostics.push({
-            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PIVOTAL_ACTION_ID_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_PIVOTAL_ACTION_ID_INVALID,
             path: `doc.turnOrder.config.turnFlow.pivotal.actionIds.${index}`,
             severity: 'error',
             message: 'pivotal.actionIds entries must be non-empty action id strings.',
@@ -335,7 +336,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       for (const [index, entry] of interrupt.precedence.entries()) {
         if (typeof entry !== 'string' || entry.trim() === '') {
           diagnostics.push({
-            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_INVALID_SEAT',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_INVALID_SEAT,
             path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${index}`,
             severity: 'error',
             message: 'pivotal.interrupt.precedence entries must be non-empty seat id strings.',
@@ -353,7 +354,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
 
     if (interrupt !== null && interrupt.cancellation !== undefined && !Array.isArray(interrupt.cancellation)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_INVALID,
         path: 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation',
         severity: 'error',
         message: 'Interrupt cancellation must be an array of winner/canceled selector objects.',
@@ -363,7 +364,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
 
     if (actionIdEntries.length > 1 && precedenceEntries.length === 0) {
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_REQUIRED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_REQUIRED,
         path: 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence',
         severity: 'error',
         message: 'Multiple pivotal actions require explicit interrupt precedence for deterministic ordering.',
@@ -375,7 +376,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     for (const { sourceIndex, value: seat } of precedenceEntries) {
       if (!seatOrder.includes(seat)) {
         diagnostics.push({
-          code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_SEAT',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_SEAT,
           path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${sourceIndex}`,
           severity: 'error',
           message: `Interrupt precedence seat "${seat}" is not declared in eligibility.seats.`,
@@ -389,7 +390,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       }
 
       diagnostics.push({
-        code: 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE,
         path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.${sourceIndex}`,
         severity: 'error',
         message: `Duplicate interrupt precedence seat "${seat}" creates unresolved ordering.`,
@@ -400,7 +401,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     for (const [index, rule] of cancellationRules.entries()) {
       if (!isRecord(rule)) {
         diagnostics.push({
-          code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_INVALID,
           path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${index}`,
           severity: 'error',
           message: 'Interrupt cancellation entries must be objects with winner/canceled selectors.',
@@ -414,7 +415,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         const selectorPath = `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${index}.${selectorKey}`;
         if (!isRecord(selector)) {
           diagnostics.push({
-            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_INVALID,
             path: selectorPath,
             severity: 'error',
             message: `Interrupt cancellation ${selectorKey} selector must be an object.`,
@@ -426,7 +427,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         const hasAnyField = hasTurnFlowInterruptSelectorMatchField(selector);
         if (!hasAnyField) {
           diagnostics.push({
-            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_EMPTY',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_EMPTY,
             path: selectorPath,
             severity: 'error',
             message: `Interrupt cancellation ${selectorKey} selector must declare at least one matching field.`,

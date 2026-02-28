@@ -10,6 +10,7 @@ import type { GameSpecSourceMap } from './source-map.js';
 import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   type EffectLoweringSharedContext,
   lowerActions,
@@ -635,7 +636,7 @@ function normalizeDiagnosticPath(path: string): string {
 
 function requiredSectionDiagnostic(path: string, section: string): Diagnostic {
   return {
-    code: 'CNL_COMPILER_REQUIRED_SECTION_MISSING',
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_REQUIRED_SECTION_MISSING,
     path,
     severity: 'error',
     message: `Required section "${section}" is missing.`,
@@ -781,7 +782,7 @@ function synthesizeCardDrivenEventAction(
   const eventCapableActions = actions.filter((action) => isCardEventAction(action));
   if (eventCapableActions.length > 1) {
     diagnostics.push({
-      code: 'CNL_COMPILER_EVENT_ACTION_CAPABILITY_AMBIGUOUS',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_EVENT_ACTION_CAPABILITY_AMBIGUOUS,
       path: 'doc.actions',
       severity: 'error',
       message: `Multiple actions declare "${ACTION_CAPABILITY_CARD_EVENT}" capability.`,
@@ -892,7 +893,7 @@ function buildScenarioDeckSetupEffects(options: {
   const duplicateIncluded = findDuplicateEntries(includedCardIds);
   for (const duplicateId of duplicateIncluded) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_ID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_ID,
       path: `${deckBasePath}.includedCardIds`,
       severity: 'error',
       message: `Scenario deckComposition.includedCardIds contains duplicate id "${duplicateId}".`,
@@ -902,7 +903,7 @@ function buildScenarioDeckSetupEffects(options: {
   const duplicateExcluded = findDuplicateEntries(excludedCardIds);
   for (const duplicateId of duplicateExcluded) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_ID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_ID,
       path: `${deckBasePath}.excludedCardIds`,
       severity: 'error',
       message: `Scenario deckComposition.excludedCardIds contains duplicate id "${duplicateId}".`,
@@ -912,7 +913,7 @@ function buildScenarioDeckSetupEffects(options: {
   const duplicateIncludedTags = findDuplicateEntries(includedCardTags);
   for (const duplicateTag of duplicateIncludedTags) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_TAG',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_TAG,
       path: `${deckBasePath}.includedCardTags`,
       severity: 'error',
       message: `Scenario deckComposition.includedCardTags contains duplicate tag "${duplicateTag}".`,
@@ -922,7 +923,7 @@ function buildScenarioDeckSetupEffects(options: {
   const duplicateExcludedTags = findDuplicateEntries(excludedCardTags);
   for (const duplicateTag of duplicateExcludedTags) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_TAG',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_DUPLICATE_TAG,
       path: `${deckBasePath}.excludedCardTags`,
       severity: 'error',
       message: `Scenario deckComposition.excludedCardTags contains duplicate tag "${duplicateTag}".`,
@@ -937,7 +938,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD,
       path: `${deckBasePath}.includedCardIds.${index}`,
       severity: 'error',
       message: `Scenario includedCardIds references unknown event card "${cardId}" in deck "${eventDeck.id}".`,
@@ -949,7 +950,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD,
       path: `${deckBasePath}.excludedCardIds.${index}`,
       severity: 'error',
       message: `Scenario excludedCardIds references unknown event card "${cardId}" in deck "${eventDeck.id}".`,
@@ -961,7 +962,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG,
       path: `${deckBasePath}.includedCardTags.${index}`,
       severity: 'error',
       message: `Scenario includedCardTags references unknown event card tag "${tag}" in deck "${eventDeck.id}".`,
@@ -973,7 +974,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG,
       path: `${deckBasePath}.excludedCardTags.${index}`,
       severity: 'error',
       message: `Scenario excludedCardTags references unknown event card tag "${tag}" in deck "${eventDeck.id}".`,
@@ -987,7 +988,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS,
       path: `${deckBasePath}.includedCardIds.${index}`,
       severity: 'error',
       message: `Scenario deckComposition includes and excludes card "${cardId}".`,
@@ -1000,7 +1001,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS,
       path: `${deckBasePath}.includedCardTags.${index}`,
       severity: 'error',
       message: `Scenario deckComposition includes and excludes tag "${tag}".`,
@@ -1038,7 +1039,7 @@ function buildScenarioDeckSetupEffects(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_CONFLICTING_FILTERS,
       path: deckBasePath,
       severity: 'error',
       message: `Scenario deckComposition includes and excludes card "${cardId}".`,
@@ -1053,7 +1054,7 @@ function buildScenarioDeckSetupEffects(options: {
   const strategy = SCENARIO_DECK_MATERIALIZATION_STRATEGIES[strategyId];
   if (strategy === undefined) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_STRATEGY_UNKNOWN',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_STRATEGY_UNKNOWN,
       path: `${deckBasePath}.materializationStrategy`,
       severity: 'error',
       message: `Unknown scenario deckComposition.materializationStrategy "${strategyId}".`,
@@ -1083,7 +1084,7 @@ function buildScenarioDeckSetupEffects(options: {
     const card = cardsById.get(placement.cardId);
     if (card === undefined) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_CARD_PLACEMENT_UNKNOWN_CARD',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_CARD_PLACEMENT_UNKNOWN_CARD,
         path: `${scenarioDeck.path}.payload.cardPlacements.${index}.cardId`,
         severity: 'error',
         message: `Scenario cardPlacements references unknown event card "${placement.cardId}" in deck "${eventDeck.id}".`,
@@ -1093,7 +1094,7 @@ function buildScenarioDeckSetupEffects(options: {
     }
     if (candidateCardIds.has(placement.cardId)) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_CARD_PLACEMENT_DUPLICATE_CARD_SOURCE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_CARD_PLACEMENT_DUPLICATE_CARD_SOURCE,
         path: `${scenarioDeck.path}.payload.cardPlacements.${index}.cardId`,
         severity: 'error',
         message: `Scenario cardPlacements card "${placement.cardId}" is also materialized into the scenario draw deck.`,
@@ -1103,7 +1104,7 @@ function buildScenarioDeckSetupEffects(options: {
     }
     if (!placementZoneIds.has(placement.zoneId)) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_CARD_PLACEMENT_UNKNOWN_ZONE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_CARD_PLACEMENT_UNKNOWN_ZONE,
         path: `${scenarioDeck.path}.payload.cardPlacements.${index}.zoneId`,
         severity: 'error',
         message: `Scenario cardPlacements references unknown zone "${placement.zoneId}".`,
@@ -1147,7 +1148,7 @@ function materializePileCoupMixDeck(options: {
   const neededCoups = deckComposition.pileCount * deckComposition.coupsPerPile;
   if (coupCards.length < neededCoups) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_COUPS',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_COUPS,
       path: `${options.deckBasePath}.coupsPerPile`,
       severity: 'error',
       message: `Scenario deckComposition requires ${neededCoups} coup cards, but ${coupCards.length} are available after filters.`,
@@ -1270,7 +1271,7 @@ function resolvePileFilterPlan(options: {
   if (pileFilters === undefined || pileFilters.length === 0) {
     if (options.eventCards.length < neededEvents) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS,
         path: `${options.deckBasePath}.eventsPerPile`,
         severity: 'error',
         message: `Scenario deckComposition requires ${neededEvents} non-coup cards, but ${options.eventCards.length} are available after filters.`,
@@ -1320,7 +1321,7 @@ function resolvePileFilterPlan(options: {
       + (Object.keys(pileFilter.metadataEquals ?? {}).length ?? 0);
     if (selectorCount === 0) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_SELECTOR_REQUIRED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_SELECTOR_REQUIRED,
         path: filterPath,
         severity: 'error',
         message: 'Scenario pile filter must declare at least one include selector (includedCardIds, includedCardTags, or metadataEquals).',
@@ -1331,7 +1332,7 @@ function resolvePileFilterPlan(options: {
     for (const pile of pileFilter.piles) {
       if (pile < 1 || pile > deckComposition.pileCount) {
         options.diagnostics.push({
-          code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_PILE_OUT_OF_RANGE',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_PILE_OUT_OF_RANGE,
           path: `${filterPath}.piles`,
           severity: 'error',
           message: `Scenario pile filter references pile ${pile}, but pileCount is ${deckComposition.pileCount}.`,
@@ -1342,7 +1343,7 @@ function resolvePileFilterPlan(options: {
       const pileIndex = pile - 1;
       if (perPilePoolIndex[pileIndex] !== -1) {
         options.diagnostics.push({
-          code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_PILE_DUPLICATE',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_PILE_DUPLICATE,
           path: `${filterPath}.piles`,
           severity: 'error',
           message: `Scenario pile ${pile} is assigned by more than one pile filter.`,
@@ -1360,14 +1361,14 @@ function resolvePileFilterPlan(options: {
         continue;
       }
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_OVERLAP',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_OVERLAP,
         path: filterPath,
         severity: 'error',
         message: `Card "${selected.id}" is selected by multiple pile filters.`,
         suggestion: 'Make pile filter selectors disjoint by card id.',
       });
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_OVERLAP',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_OVERLAP,
         path: `${options.deckBasePath}.pileFilters.${existingPoolIndex}`,
         severity: 'error',
         message: `Card "${selected.id}" is selected by multiple pile filters.`,
@@ -1378,7 +1379,7 @@ function resolvePileFilterPlan(options: {
     const requiredEventsForFilter = deckComposition.eventsPerPile * pileFilter.piles.length;
     if (selectedCards.length < requiredEventsForFilter) {
       options.diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_INSUFFICIENT_EVENTS,
         path: `${filterPath}.piles`,
         severity: 'error',
         message: `Pile filter requires ${requiredEventsForFilter} non-coup cards across piles [${pileFilter.piles.join(', ')}], but ${selectedCards.length} are available after filters.`,
@@ -1398,7 +1399,7 @@ function resolvePileFilterPlan(options: {
     .filter((value): value is number => value !== null);
   if (uncoveredPiles.length > 0) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_COVERAGE_INCOMPLETE',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_COVERAGE_INCOMPLETE,
       path: `${options.deckBasePath}.pileFilters`,
       severity: 'error',
       message: `Scenario pile filters must assign every pile exactly once; missing piles: [${uncoveredPiles.join(', ')}].`,
@@ -1436,7 +1437,7 @@ function selectCardsForPileFilter(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD,
       path: `${options.path}.includedCardIds.${index}`,
       severity: 'error',
       message: `Scenario pile filter includes unknown event card "${cardId}".`,
@@ -1448,7 +1449,7 @@ function selectCardsForPileFilter(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_CARD,
       path: `${options.path}.excludedCardIds.${index}`,
       severity: 'error',
       message: `Scenario pile filter excludes unknown event card "${cardId}".`,
@@ -1461,7 +1462,7 @@ function selectCardsForPileFilter(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG,
       path: `${options.path}.includedCardTags.${index}`,
       severity: 'error',
       message: `Scenario pile filter includes unknown event tag "${tag}".`,
@@ -1473,7 +1474,7 @@ function selectCardsForPileFilter(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_UNKNOWN_TAG,
       path: `${options.path}.excludedCardTags.${index}`,
       severity: 'error',
       message: `Scenario pile filter excludes unknown event tag "${tag}".`,
@@ -1486,7 +1487,7 @@ function selectCardsForPileFilter(options: {
       continue;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_UNKNOWN_METADATA_KEY',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_PILE_FILTER_UNKNOWN_METADATA_KEY,
       path: `${options.path}.metadataEquals.${key}`,
       severity: 'error',
       message: `Scenario pile filter references unknown metadata key "${key}".`,
@@ -1587,7 +1588,7 @@ function resolveScenarioEventDeck(options: {
   const decks = options.eventDecks ?? [];
   if (decks.length === 0) {
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_MISSING,
       path: options.deckBasePath,
       severity: 'error',
       message: 'Scenario deckComposition is declared, but no eventDecks are available.',
@@ -1602,7 +1603,7 @@ function resolveScenarioEventDeck(options: {
       return matched;
     }
     options.diagnostics.push({
-      code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_UNKNOWN',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_UNKNOWN,
       path: options.path,
       severity: 'error',
       message: `Scenario eventDeckAssetId "${options.eventDeckAssetId}" does not match any compiled eventDeck id.`,
@@ -1617,7 +1618,7 @@ function resolveScenarioEventDeck(options: {
   }
 
   options.diagnostics.push({
-    code: 'CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_AMBIGUOUS',
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_DECK_COMPOSITION_EVENT_DECK_AMBIGUOUS,
     path: options.deckBasePath,
     severity: 'error',
     message: `Scenario deckComposition is ambiguous across ${decks.length} eventDecks.`,

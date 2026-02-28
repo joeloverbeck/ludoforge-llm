@@ -1,12 +1,14 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EventCardDef, EventDeckDef, EventEligibilityOverrideDef, EventFreeOperationGrantDef } from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerEffectArray } from './compile-effects.js';
 import {
   buildConditionLoweringContext,
   buildEffectLoweringContext,
   type ConditionLoweringSharedContext,
   type EffectLoweringSharedContext,
+  missingCapabilityDiagnostic,
   normalizeIdentifier,
 } from './compile-lowering.js';
 
@@ -26,7 +28,7 @@ export function lowerEventCards(
     const existingIdIndex = idFirstIndexByNormalized.get(normalizedId);
     if (existingIdIndex !== undefined) {
       diagnostics.push({
-        code: 'CNL_COMPILER_EVENT_CARD_ID_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_EVENT_CARD_ID_DUPLICATE,
         path: `${cardPath}.id`,
         severity: 'error',
         message: `Duplicate event card id "${card.id}".`,
@@ -40,7 +42,7 @@ export function lowerEventCards(
       const existingOrderIndex = explicitOrderFirstIndex.get(card.order);
       if (existingOrderIndex !== undefined) {
         diagnostics.push({
-          code: 'CNL_COMPILER_EVENT_CARD_ORDER_AMBIGUOUS',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_EVENT_CARD_ORDER_AMBIGUOUS,
           path: `${cardPath}.order`,
           severity: 'error',
           message: `Event card order ${card.order} is declared more than once in the same event deck.`,
@@ -130,7 +132,7 @@ export function lowerEventDecks(
     const existingIdIndex = idFirstIndexByNormalized.get(normalizedId);
     if (existingIdIndex !== undefined) {
       diagnostics.push({
-        code: 'CNL_COMPILER_EVENT_DECK_ID_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_EVENT_DECK_ID_DUPLICATE,
         path: `${deckPath}.id`,
         severity: 'error',
         message: `Duplicate event deck id "${deck.id}".`,
@@ -220,7 +222,7 @@ export function lowerEventCardSide(
     const existingIdIndex = idFirstIndexByNormalized.get(normalizedId);
     if (existingIdIndex !== undefined) {
       diagnostics.push({
-        code: 'CNL_COMPILER_EVENT_CARD_BRANCH_ID_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_EVENT_CARD_BRANCH_ID_DUPLICATE,
         path: `${branchPath}.id`,
         severity: 'error',
         message: `Duplicate event card branch id "${branch.id}" within one side.`,
@@ -234,7 +236,7 @@ export function lowerEventCardSide(
       const existingOrderIndex = explicitOrderFirstIndex.get(branch.order);
       if (existingOrderIndex !== undefined) {
         diagnostics.push({
-          code: 'CNL_COMPILER_EVENT_CARD_BRANCH_ORDER_AMBIGUOUS',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_EVENT_CARD_BRANCH_ORDER_AMBIGUOUS,
           path: `${branchPath}.order`,
           severity: 'error',
           message: `Event card branch order ${branch.order} is declared more than once within one side.`,
@@ -480,34 +482,4 @@ function collectBindingScopeFromTargets(
   return targets
     .map((target) => target.id)
     .filter((id): id is string => typeof id === 'string' && id.length > 0);
-}
-
-function missingCapabilityDiagnostic(
-  path: string,
-  construct: string,
-  actual: unknown,
-  alternatives?: readonly string[],
-): Diagnostic {
-  return {
-    code: 'CNL_COMPILER_MISSING_CAPABILITY',
-    path,
-    severity: 'error',
-    message: `Cannot lower ${construct} to kernel AST: ${formatValue(actual)}.`,
-    suggestion: 'Rewrite this node to a supported kernel-compatible shape.',
-    ...(alternatives === undefined ? {} : { alternatives: [...alternatives] }),
-  };
-}
-
-function formatValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return `"${value}"`;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
-    return String(value);
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return Object.prototype.toString.call(value);
-  }
 }

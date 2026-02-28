@@ -3,6 +3,7 @@ import { asZoneId } from '../kernel/branded.js';
 import type { ZoneDef } from '../kernel/types.js';
 import type { GameSpecZoneDef } from './game-spec-doc.js';
 import { normalizeZoneOwnerQualifier } from './compile-selectors.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
@@ -30,7 +31,7 @@ export function materializeZoneDefs(
     const base = extractZoneBase(zone.id);
     if (base === null) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_ID_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ID_INVALID,
         path: `${zonePath}.id`,
         severity: 'error',
         message: `Zone id "${zone.id}" must be a non-empty string.`,
@@ -42,7 +43,7 @@ export function materializeZoneDefs(
     const owner = zone.owner;
     if (owner !== 'none' && owner !== 'player') {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_OWNER_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_OWNER_INVALID,
         path: `${zonePath}.owner`,
         severity: 'error',
         message: `Zone owner "${zone.owner}" is invalid.`,
@@ -54,7 +55,7 @@ export function materializeZoneDefs(
     const visibility = normalizeZoneVisibility(zone.visibility);
     if (visibility === null) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_VISIBILITY_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_VISIBILITY_INVALID,
         path: `${zonePath}.visibility`,
         severity: 'error',
         message: `Zone visibility "${zone.visibility}" is invalid.`,
@@ -66,7 +67,7 @@ export function materializeZoneDefs(
     const ordering = normalizeZoneOrdering(zone.ordering);
     if (ordering === null) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_ORDERING_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ORDERING_INVALID,
         path: `${zonePath}.ordering`,
         severity: 'error',
         message: `Zone ordering "${zone.ordering}" is invalid.`,
@@ -78,7 +79,7 @@ export function materializeZoneDefs(
     const zoneKind = normalizeZoneKind(zone.zoneKind);
     if (zoneKind === null) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_KIND_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_KIND_INVALID,
         path: `${zonePath}.zoneKind`,
         severity: 'error',
         message: `Zone kind "${String(zone.zoneKind)}" is invalid.`,
@@ -152,7 +153,7 @@ export function canonicalizeZoneSelector(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: 'Zone selector must be a non-empty string.',
@@ -178,7 +179,7 @@ export function canonicalizeZoneSelector(
         value: null,
         diagnostics: [
           {
-            code: 'CNL_COMPILER_ZONE_SELECTOR_AMBIGUOUS',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_AMBIGUOUS,
             path,
             severity: 'error',
             message: `Bare zone selector "${selector}" is ambiguous.`,
@@ -191,7 +192,7 @@ export function canonicalizeZoneSelector(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_UNKNOWN_BASE',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_UNKNOWN_BASE,
           path,
           severity: 'error',
           message: `Unknown zone base "${selector}".`,
@@ -209,7 +210,7 @@ export function canonicalizeZoneSelector(
       value: null,
       diagnostics: [
         {
-          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_SELECTOR_INVALID,
           path,
           severity: 'error',
           message: `Zone selector "${selector}" must use "zoneBase:qualifier" format.`,
@@ -290,7 +291,7 @@ function normalizeAdjacentTo(
   for (const [index, adjacency] of value.entries()) {
     if (typeof adjacency.to !== 'string' || adjacency.to.trim() === '') {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_ADJACENCY_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ADJACENCY_INVALID,
         path: `${path}.${index}.to`,
         severity: 'error',
         message: 'Zone adjacency entries must define a non-empty "to" string.',
@@ -305,7 +306,7 @@ function normalizeAdjacentTo(
       && adjacency.direction !== 'unidirectional'
     ) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_ADJACENCY_DIRECTION_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_ADJACENCY_DIRECTION_INVALID,
         path: `${path}.${index}.direction`,
         severity: 'error',
         message: 'Zone adjacency direction must be "bidirectional" or "unidirectional".',

@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type {
   EffectAST,
   SeatDef,
@@ -27,21 +28,21 @@ import {
 
 const COMPILER_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvariantDiagnosticDialect = {
   unknownPieceType: {
-    initialPlacementsCode: 'CNL_COMPILER_SCENARIO_PLACEMENT_PIECE_INVALID',
-    outOfPlayCode: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_PIECE_INVALID',
+    initialPlacementsCode: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_PLACEMENT_PIECE_INVALID,
+    outOfPlayCode: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_OUT_OF_PLAY_PIECE_INVALID,
     initialPlacementsMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario placement.`,
     outOfPlayMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario outOfPlay.`,
     suggestion: 'Use a pieceTypeId declared in the selected piece catalog.',
   },
   seatMismatch: {
-    initialPlacementsCode: 'CNL_COMPILER_SCENARIO_PLACEMENT_SEAT_MISMATCH',
-    outOfPlayCode: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH',
+    initialPlacementsCode: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_PLACEMENT_SEAT_MISMATCH,
+    outOfPlayCode: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_OUT_OF_PLAY_SEAT_MISMATCH,
     message: (actualSeat, pieceTypeId, expectedSeat) =>
       `Seat "${actualSeat}" does not match piece type "${pieceTypeId}" (expected "${expectedSeat}").`,
     suggestion: (expectedSeat) => `Set seat to "${expectedSeat}" or use a different piece type.`,
   },
   conservationViolation: {
-    code: 'CNL_COMPILER_SCENARIO_PIECE_CONSERVATION_VIOLATED',
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_PIECE_CONSERVATION_VIOLATED,
     message: (pieceTypeId, usedCount, totalInventory) =>
       `Piece type "${pieceTypeId}" uses ${usedCount} but inventory has only ${totalInventory}.`,
     suggestion: (pieceTypeId, totalInventory) =>
@@ -358,7 +359,7 @@ function selectScenarioRef(
     }
 
     diagnostics.push({
-      code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING,
       path: 'doc.metadata.defaultScenarioAssetId',
       severity: 'error',
       message: `metadata.defaultScenarioAssetId references unknown scenario asset "${selectedScenarioAssetId}".`,
@@ -379,7 +380,7 @@ function selectScenarioRef(
   }
 
   diagnostics.push({
-    code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS',
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS,
     path: 'doc.dataAssets',
     severity: 'error',
     message: `Multiple scenario assets found (${scenarios.length}); explicit metadata.defaultScenarioAssetId is required.`,
@@ -449,7 +450,7 @@ const buildScenarioSetupEffects = ({
   if ((scenario.seatPools ?? []).length === 0) {
     if (hasProjectionInputs) {
       diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_SEAT_POOLS_REQUIRED',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_SEAT_POOLS_REQUIRED,
         path: `${selectedScenario.path}.seatPools`,
         severity: 'error',
         message: 'Scenario defines initialPlacements/outOfPlay but payload.seatPools is missing or empty.',
@@ -546,7 +547,7 @@ const buildScenarioSetupEffects = ({
     const pool = poolBySeat.get(outOfPlay.seat);
     if (pool?.outOfPlayZoneId === undefined) {
       diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_POOL_MISSING',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_OUT_OF_PLAY_POOL_MISSING,
         path: `${selectedScenario.path}.outOfPlay.${index}.seat`,
         severity: 'error',
         message: `Scenario outOfPlay entry references seat "${outOfPlay.seat}" without an out-of-play zone mapping.`,
@@ -584,7 +585,7 @@ const buildScenarioSetupEffects = ({
     const pool = poolBySeat.get(pieceType.seat);
     if (pool?.availableZoneId === undefined) {
       diagnostics.push({
-        code: 'CNL_COMPILER_SCENARIO_AVAILABLE_POOL_MISSING',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SCENARIO_AVAILABLE_POOL_MISSING,
         path: `${selectedScenario.path}.seatPools`,
         severity: 'error',
         message: `Scenario is missing available pool mapping for seat "${pieceType.seat}" (pieceType "${pieceTypeId}").`,
@@ -624,7 +625,7 @@ function readDeclaredRuntimeTableContracts(
   }
   if (!Array.isArray(rawContracts)) {
     diagnostics.push({
-      code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACTS_INVALID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONTRACTS_INVALID,
       path,
       severity: 'error',
       message: 'tableContracts must be an array when provided.',
@@ -639,7 +640,7 @@ function readDeclaredRuntimeTableContracts(
     const contractPath = `${path}.${index}`;
     if (!isRecord(contract)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONTRACT_INVALID,
         path: contractPath,
         severity: 'error',
         message: 'tableContracts entries must be objects.',
@@ -651,7 +652,7 @@ function readDeclaredRuntimeTableContracts(
     const tablePath = typeof contract.tablePath === 'string' ? contract.tablePath.trim() : '';
     if (tablePath.length === 0) {
       diagnostics.push({
-        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_INVALID',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_INVALID,
         path: `${contractPath}.tablePath`,
         severity: 'error',
         message: 'tableContracts[].tablePath must be a non-empty string.',
@@ -661,7 +662,7 @@ function readDeclaredRuntimeTableContracts(
     }
     if (seenTablePaths.has(tablePath)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_DUPLICATE,
         path: `${contractPath}.tablePath`,
         severity: 'error',
         message: `Duplicate tableContracts entry for tablePath "${tablePath}".`,
@@ -675,7 +676,7 @@ function readDeclaredRuntimeTableContracts(
     if (contract.uniqueBy !== undefined) {
       if (!Array.isArray(contract.uniqueBy)) {
         diagnostics.push({
-          code: 'CNL_COMPILER_RUNTIME_TABLE_UNIQUE_BY_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_UNIQUE_BY_INVALID,
           path: `${contractPath}.uniqueBy`,
           severity: 'error',
           message: 'tableContracts[].uniqueBy must be an array of non-empty string tuples.',
@@ -689,7 +690,7 @@ function readDeclaredRuntimeTableContracts(
         const tuplePath = `${contractPath}.uniqueBy.${tupleIndex}`;
         if (!Array.isArray(tuple) || tuple.length === 0 || tuple.some((field) => typeof field !== 'string' || field.trim().length === 0)) {
           diagnostics.push({
-            code: 'CNL_COMPILER_RUNTIME_TABLE_UNIQUE_BY_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_UNIQUE_BY_INVALID,
             path: tuplePath,
             severity: 'error',
             message: 'Each uniqueBy tuple must be a non-empty array of non-empty field names.',
@@ -710,7 +711,7 @@ function readDeclaredRuntimeTableContracts(
     if (contract.constraints !== undefined) {
       if (!Array.isArray(contract.constraints)) {
         diagnostics.push({
-          code: 'CNL_COMPILER_RUNTIME_TABLE_CONSTRAINTS_INVALID',
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONSTRAINTS_INVALID,
           path: `${contractPath}.constraints`,
           severity: 'error',
           message: 'tableContracts[].constraints must be an array when provided.',
@@ -725,7 +726,7 @@ function readDeclaredRuntimeTableContracts(
         const parsed = RuntimeTableConstraintSchema.safeParse(rawConstraint);
         if (!parsed.success) {
           diagnostics.push({
-            code: 'CNL_COMPILER_RUNTIME_TABLE_CONSTRAINT_INVALID',
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONSTRAINT_INVALID,
             path: `${contractPath}.constraints.${constraintIndex}`,
             severity: 'error',
             message: parsed.error.issues[0]?.message ?? 'Invalid runtime table constraint.',
@@ -820,7 +821,7 @@ function deriveRuntimeTableContracts(
     const target = contractsByTablePath.get(declared.tablePath);
     if (target === undefined) {
       diagnostics.push({
-        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_UNKNOWN',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_UNKNOWN,
         path: `${declarationPath}.${index}.tablePath`,
         severity: 'error',
         message: `tableContracts entry references unknown tablePath "${declared.tablePath}" for asset "${assetId}".`,
@@ -962,7 +963,7 @@ function selectAssetById<TPayload>(
     }
 
     diagnostics.push({
-      code: 'CNL_COMPILER_DATA_ASSET_REF_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_REF_MISSING,
       path: `${selectedPath}.${kind}AssetId`,
       severity: 'error',
       message: `Scenario references unknown ${kind} asset "${selectedId}".`,
@@ -985,7 +986,7 @@ function selectAssetById<TPayload>(
 
   if (assets.length > 1) {
     diagnostics.push({
-      code: 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_AMBIGUOUS,
       path: 'doc.dataAssets',
       severity: 'error',
       message: `Multiple ${kind} assets found (${assets.length}); compiler cannot infer which one to use.`,

@@ -970,6 +970,8 @@ describe('compile-effects lowering', () => {
     );
     assert.ok(chooseOneDiagnostic);
     assert.ok(chooseNDiagnostic);
+    assert.match(chooseOneDiagnostic.message, /^chooseOne options query must produce move-param-encodable values;/);
+    assert.match(chooseNDiagnostic.message, /^chooseN options query must produce move-param-encodable values;/);
     assert.deepEqual(chooseOneDiagnostic.alternatives, ['object']);
     assert.deepEqual(chooseNDiagnostic.alternatives, ['object']);
   });

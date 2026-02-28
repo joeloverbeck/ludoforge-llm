@@ -1,6 +1,6 @@
 # ENGINEARCH-151: Simplify Choice-Options Runtime-Shape Contract Branching in Compiler
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — compiler contract path simplification in `compile-effects`
@@ -13,8 +13,9 @@
 ## Assumption Reassessment (2026-02-28)
 
 1. `ChoiceOptionsRuntimeShapeContract` is currently a single-literal type (`moveParamEncodable`) in `compile-effects.ts`.
-2. `validateChoiceOptionsRuntimeShapeContract(...)` retains a runtime guard `if (contract !== 'moveParamEncodable') return []`.
-3. Mismatch: runtime branching suggests extensibility not present in current architecture. Corrected scope is to collapse dead branch logic or encode true extensibility explicitly.
+2. `compile-effects.ts` defines both `ChoiceOptionsRuntimeShapeContract` and `CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT`, and every caller passes the same literal (`moveParamEncodable`).
+3. `validateChoiceOptionsRuntimeShapeContract(...)` retains a runtime guard `if (contract !== 'moveParamEncodable') return []`.
+4. Mismatch: runtime branching and pass-through contract plumbing suggest extensibility not present in current architecture. Corrected scope is to collapse dead branch logic and remove unused contract indirection.
 
 ## Architecture Check
 
@@ -24,9 +25,9 @@
 
 ## What to Change
 
-### 1. Remove dead runtime guard or convert to explicit extension map
+### 1. Remove dead runtime guard and contract plumbing
 
-Prefer direct unconditional validation for current single-contract ownership. If future extension is desired, represent it as explicit compile-time mapping rather than a no-op runtime guard.
+Use direct unconditional choice-options runtime-shape validation in `compile-effects` for current single-contract ownership. Do not keep no-op runtime contract branches or pass-through contract arguments.
 
 ### 2. Keep diagnostics behavior unchanged
 
@@ -35,7 +36,7 @@ Ensure emitted diagnostics, paths, and alternatives remain byte-for-byte stable 
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-effects.ts` (modify)
-- `packages/engine/test/unit/compile-effects.test.ts` (modify only if assertion paths need updates)
+- `packages/engine/test/unit/compile-effects.test.ts` (modify/add assertions to lock simplified behavior)
 - `packages/engine/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.ts` (modify only if needed)
 
 ## Out of Scope
@@ -62,8 +63,8 @@ Ensure emitted diagnostics, paths, and alternatives remain byte-for-byte stable 
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/compile-effects.test.ts` — retain/extend assertions that chooseOne/chooseN shape-invalid diagnostics are still emitted with canonical payload.
-2. `packages/engine/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.ts` — retain parity lock after branch simplification.
+1. `packages/engine/test/unit/compile-effects.test.ts` — retain/extend assertions that chooseOne/chooseN shape-invalid diagnostics are still emitted with canonical payload after contract-branch removal.
+2. `packages/engine/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.ts` — keep parity lock; touch only if the simplification changes test setup needs.
 
 ### Commands
 
@@ -73,3 +74,9 @@ Ensure emitted diagnostics, paths, and alternatives remain byte-for-byte stable 
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine lint`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Implemented as planned: removed `ChoiceOptionsRuntimeShapeContract` runtime indirection in `compile-effects` by deleting the single-value contract type/constant plumbing and dead guard branch, while preserving diagnostic behavior.
+- Added test strengthening in `compile-effects.test.ts` to assert choice-options runtime-shape diagnostics still emit canonical move-param-encodable messaging for `chooseOne` and `chooseN`.
+- `choice-options-runtime-shape-diagnostic-parity.test.ts` required no code changes; existing parity coverage remained valid and passing.

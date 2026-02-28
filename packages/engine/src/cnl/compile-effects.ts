@@ -60,9 +60,7 @@ const EFFECT_KIND_KEYS: ReadonlySet<string> = new Set(SUPPORTED_EFFECT_KINDS as 
 const RESERVED_COMPILER_BINDING_PREFIX = '$__';
 const TRUSTED_COMPILER_BINDING_PREFIXES: readonly string[] = ['$__macro_'];
 type QueryDomainContract = 'agnostic' | 'tokenOnly' | 'zoneOnly';
-type ChoiceOptionsRuntimeShapeContract = 'moveParamEncodable';
 const AGNOSTIC_QUERY_DOMAIN_CONTRACT: QueryDomainContract = 'agnostic';
-const CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT: ChoiceOptionsRuntimeShapeContract = 'moveParamEncodable';
 const EFFECT_QUERY_DOMAIN_CONTRACTS = {
   chooseOneOptions: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
   chooseNOptions: AGNOSTIC_QUERY_DOMAIN_CONTRACT,
@@ -1814,9 +1812,8 @@ function lowerChooseOneEffect(
       ),
     );
     diagnostics.push(
-      ...validateChoiceOptionsRuntimeShapeContract(
+      ...validateChoiceOptionsRuntimeShape(
         options.value,
-        CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT,
         `${path}.options`,
         'chooseOne',
       ),
@@ -1868,9 +1865,8 @@ function lowerChooseNEffect(
       ),
     );
     diagnostics.push(
-      ...validateChoiceOptionsRuntimeShapeContract(
+      ...validateChoiceOptionsRuntimeShape(
         options.value,
-        CHOICE_OPTIONS_RUNTIME_SHAPE_CONTRACT,
         `${path}.options`,
         'chooseN',
       ),
@@ -2153,16 +2149,11 @@ function validateQueryDomainContract(
   ];
 }
 
-function validateChoiceOptionsRuntimeShapeContract(
+function validateChoiceOptionsRuntimeShape(
   query: OptionsQuery,
-  contract: ChoiceOptionsRuntimeShapeContract,
   path: string,
   effectName: 'chooseOne' | 'chooseN',
 ): readonly Diagnostic[] {
-  if (contract !== 'moveParamEncodable') {
-    return [];
-  }
-
   const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
     code: CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
     path,

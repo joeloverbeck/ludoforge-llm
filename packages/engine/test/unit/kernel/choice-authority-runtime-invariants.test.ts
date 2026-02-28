@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   EFFECT_RUNTIME_REASONS,
   applyEffect,
+  applyEffects,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -155,5 +156,41 @@ describe('choice authority runtime invariants', () => {
       const result = applyEffect(effect, context);
       assert.ok(result.bindings?.$target !== undefined);
     }
+  });
+
+  it('rejects execution mode with probe authority at applyEffect entry', () => {
+    const effect = buildChooserOwnedChoiceEffect('chooseOne', 'decision:$target', '$target', ['a', 'b']);
+    const probeDiscoveryContext = makeDiscoveryProbeEffectContext({
+      def: makeDef([effect]),
+      state: makeState(),
+      collector: createCollector(),
+    });
+    const malformedExecutionContext = {
+      ...probeDiscoveryContext,
+      mode: 'execution',
+    } as unknown as typeof probeDiscoveryContext;
+
+    assertEffectRuntimeReason(
+      () => applyEffect(effect, malformedExecutionContext),
+      EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
+    );
+  });
+
+  it('rejects execution mode with probe authority at applyEffects entry', () => {
+    const effect = buildChooserOwnedChoiceEffect('chooseN', 'decision:$target', '$target', ['a', 'b']);
+    const probeDiscoveryContext = makeDiscoveryProbeEffectContext({
+      def: makeDef([effect]),
+      state: makeState(),
+      collector: createCollector(),
+    });
+    const malformedExecutionContext = {
+      ...probeDiscoveryContext,
+      mode: 'execution',
+    } as unknown as typeof probeDiscoveryContext;
+
+    assertEffectRuntimeReason(
+      () => applyEffects([effect], malformedExecutionContext),
+      EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
+    );
   });
 });

@@ -29,6 +29,7 @@ export * from './derived-values.js';
 export * from './map-model.js';
 export * from './piece-catalog.js';
 export * from './effect-context.js';
+export * from './effect-context-invariants.js';
 export * from './effect-error.js';
 export * from './free-operation-denial-contract.js';
 export * from './runtime-error.js';

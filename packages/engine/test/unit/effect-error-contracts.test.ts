@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import {
   applyEffect,
+  applyEffects,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -169,5 +170,30 @@ describe('effect error context contracts', () => {
         return true;
       },
     );
+  });
+
+  it('effect entry invariant violations emit internalInvariantViolation with mode/ownership context', () => {
+    const malformedContext = {
+      ...makeContext(),
+      mode: 'execution',
+      decisionAuthority: {
+        source: 'engineRuntime',
+        player: asPlayerId(0),
+        ownershipEnforcement: 'probe',
+      },
+    } as unknown as EffectContext;
+
+    for (const invoke of [
+      () => applyEffect({ bindValue: { bind: '$noop', value: 1 } }, malformedContext),
+      () => applyEffects([{ bindValue: { bind: '$noop', value: 1 } }], malformedContext),
+    ]) {
+      assert.throws(invoke, (error: unknown) => {
+        assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
+        assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION);
+        assert.equal(error.context?.mode, 'execution');
+        assert.equal(error.context?.ownershipEnforcement, 'probe');
+        return true;
+      });
+    }
   });
 });

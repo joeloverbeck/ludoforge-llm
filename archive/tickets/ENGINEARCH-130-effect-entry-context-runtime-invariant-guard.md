@@ -1,6 +1,6 @@
 # ENGINEARCH-130: Effect Entry Context Runtime Invariant Guard
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel effect-dispatch runtime context validation
@@ -14,7 +14,8 @@
 
 1. `EffectContext` is now discriminated by mode and authority in type space.
 2. Runtime entry points in `effect-dispatch.ts` do not assert authority/mode coherence before execution.
-3. Existing pending tickets (`ENGINEARCH-114/115/116`) do not add runtime entry invariant checks. Corrected scope: add fast-fail runtime contract validation at effect entry boundaries.
+3. `ENGINEARCH-114/115/116` are completed (archived) and strengthened constructor-routing guard tests only; they do not add runtime entry invariant checks in `applyEffect`/`applyEffects`.
+4. Corrected scope: add fast-fail runtime contract validation at effect entry boundaries for malformed untyped contexts.
 
 ## Architecture Check
 
@@ -35,6 +36,10 @@ Call validator in both `applyEffect` and `applyEffects` before budget creation.
 ### 3. Add focused runtime invariant tests
 
 Add unit tests that pass malformed contexts via casts and assert deterministic runtime errors.
+
+### 4. Keep canonical architecture guard ownership unchanged
+
+Do not duplicate constructor-routing policy checks already covered by `effect-mode-threading-guard.test.ts`; this ticket only adds runtime entry contract enforcement.
 
 ## Files to Touch
 
@@ -76,3 +81,19 @@ Add unit tests that pass malformed contexts via casts and assert deterministic r
 3. `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-28
+- **What changed vs originally planned**:
+  - Added runtime entry invariant validation in `effect-dispatch.ts` for `applyEffect` and `applyEffects`, rejecting malformed mode/authority combinations before budget creation and effect execution.
+  - Added malformed-context assertions in `choice-authority-runtime-invariants.test.ts` covering both entry points.
+  - Added deterministic error-contract coverage in `effect-error-contracts.test.ts` for invariant-violation reason/context payload.
+- **Scope correction applied first**:
+  - Updated assumption text to reflect that `ENGINEARCH-114/115/116` were already completed/archived and did not provide runtime entry-point guards.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/choice-authority-runtime-invariants.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (320/320).
+  - `pnpm -F @ludoforge/engine lint` passed.

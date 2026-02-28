@@ -4,6 +4,7 @@ import {
   effectRuntimeError,
   effectNotImplementedError,
 } from './effect-error.js';
+import { assertEffectContextEntryInvariant } from './effect-context-invariants.js';
 import {
   applyChooseN,
   applyChooseOne,
@@ -279,6 +280,7 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
 };
 
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
+  assertEffectContextEntryInvariant(ctx);
   const budget = createBudgetState(ctx);
   const result = applyEffectWithBudget(effect, ctx, budget);
   return {
@@ -291,6 +293,7 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
 }
 
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
+  assertEffectContextEntryInvariant(ctx);
   const budget = createBudgetState(ctx);
   const result = applyEffectsWithBudget(effects, ctx, budget);
   return {

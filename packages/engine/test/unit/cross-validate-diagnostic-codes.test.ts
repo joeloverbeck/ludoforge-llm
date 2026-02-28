@@ -12,6 +12,11 @@ describe('cross-validate diagnostic codes', () => {
     for (const [key, value] of Object.entries(CNL_XREF_DIAGNOSTIC_CODES)) {
       assert.equal(value, key);
     }
+
+    assert.equal(
+      CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED,
+      'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
+    );
   });
 
   it('exposes deterministic xref code normalization helpers', () => {

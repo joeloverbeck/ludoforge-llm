@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { ActionSelectorContractViolation } from '../kernel/action-selector-contract-registry.js';
-import { ACTION_SELECTOR_CONTRACT_DIAGNOSTIC_CODES } from './action-selector-diagnostic-codes.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import { CNL_XREF_DIAGNOSTIC_CODES } from './cross-validate-diagnostic-codes.js';
 
 export type ActionSelectorDiagnosticSurface = 'compileLowering' | 'crossValidate';
 
@@ -15,6 +16,18 @@ function unsupportedActionSelectorViolation(violation: ActionSelectorContractVio
   throw new Error(`Unsupported action selector contract violation: role=${violation.role} kind=${violation.kind}`);
 }
 
+const ACTION_SELECTOR_VIOLATION_CODES = Object.freeze({
+  actor: {
+    bindingMalformed: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_ACTOR_BINDING_INVALID,
+    bindingNotDeclared: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING,
+  },
+  executor: {
+    bindingMalformed: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_EXECUTOR_BINDING_INVALID,
+    bindingNotDeclared: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING,
+    bindingWithPipelineUnsupported: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED,
+  },
+} as const);
+
 export const buildActionSelectorContractViolationDiagnostic = ({
   violation,
   path,
@@ -25,7 +38,7 @@ export const buildActionSelectorContractViolationDiagnostic = ({
 
   if (violation.kind === 'bindingMalformed') {
     return {
-      code: ACTION_SELECTOR_CONTRACT_DIAGNOSTIC_CODES[violation.role].bindingMalformed,
+      code: ACTION_SELECTOR_VIOLATION_CODES[violation.role].bindingMalformed,
       path,
       severity,
       message:
@@ -38,7 +51,7 @@ export const buildActionSelectorContractViolationDiagnostic = ({
 
   if (violation.kind === 'bindingNotDeclared') {
     return {
-      code: ACTION_SELECTOR_CONTRACT_DIAGNOSTIC_CODES[violation.role].bindingNotDeclared,
+      code: ACTION_SELECTOR_VIOLATION_CODES[violation.role].bindingNotDeclared,
       path,
       severity,
       message:
@@ -54,7 +67,7 @@ export const buildActionSelectorContractViolationDiagnostic = ({
   }
 
   return {
-    code: ACTION_SELECTOR_CONTRACT_DIAGNOSTIC_CODES.executor.bindingWithPipelineUnsupported,
+    code: ACTION_SELECTOR_VIOLATION_CODES.executor.bindingWithPipelineUnsupported,
     path,
     severity,
     message: `Action "${actionId}" uses binding-derived ${violation.role} "${violation.binding}" with action pipelines.`,

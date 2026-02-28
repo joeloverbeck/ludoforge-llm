@@ -15,7 +15,7 @@ const DIAGNOSTIC_LITERAL_POLICIES = [
   },
   {
     namespace: 'CNL_XREF_*',
-    allowedLiteralFiles: new Set<string>(['cross-validate-diagnostic-codes.ts', 'action-selector-diagnostic-codes.ts']),
+    allowedLiteralFiles: new Set<string>(['cross-validate-diagnostic-codes.ts']),
     literalPattern: /(['"`])(?:\\.|(?!\1)[^\\\r\n])*CNL_XREF_[A-Z0-9_]*(?:\\.|(?!\1)[^\\\r\n])*\1/g,
   },
 ] as const;

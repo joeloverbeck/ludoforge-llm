@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
+import { CNL_XREF_DIAGNOSTIC_CODES } from '../../src/cnl/cross-validate-diagnostic-codes.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const minimalCardDrivenTurnFlow = {
@@ -365,7 +366,7 @@ describe('compile actions', () => {
                   [
                     'CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING',
                     'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
-                    'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
+                    CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED,
                   ].includes(d.code),
                 )
                 .map((d) => `${d.path}:${d.code}`);
@@ -383,7 +384,9 @@ describe('compile actions', () => {
                 (!actorUsesBinding || actorDeclared) &&
                 executorDeclared
               ) {
-                expected.push('doc.actions.0.executor:CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED');
+                expected.push(
+                  `doc.actions.0.executor:${CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED}`,
+                );
               }
 
               assert.deepEqual(
@@ -434,7 +437,10 @@ describe('compile actions', () => {
 
     const result = compileGameSpecToGameDef(doc);
     assert.equal(result.gameDef, null);
-    assert.equal(result.diagnostics.some((d) => d.code === 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED'), true);
+    assert.equal(
+      result.diagnostics.some((d) => d.code === CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED),
+      true,
+    );
   });
 
   it('accepts non-prefixed action param bindings in pre/effects without implicit $ aliasing', () => {

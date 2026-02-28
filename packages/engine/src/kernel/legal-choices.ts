@@ -24,7 +24,10 @@ import {
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import type { FreeOperationBlockCause } from './free-operation-denial-contract.js';
+import {
+  toFreeOperationChoiceIllegalReason,
+  toFreeOperationDeniedCauseForLegality,
+} from './free-operation-legality-policy.js';
 import {
   resolveFreeOperationDiscoveryAnalysis,
 } from './turn-flow-eligibility.js';
@@ -65,32 +68,6 @@ interface DiscoveryFreeOperationAnalysis {
   readonly zoneFilter?: EvalContext['freeOperationZoneFilter'];
   readonly zoneFilterDiagnostics?: EvalContext['freeOperationZoneFilterDiagnostics'];
 }
-
-type FreeOperationDeniedCauseForChoice = Exclude<
-  FreeOperationBlockCause,
-  'granted' | 'nonCardDrivenTurnOrder' | 'notFreeOperationMove'
->;
-
-const toFreeOperationChoiceIllegalReason = (
-  cause: FreeOperationDeniedCauseForChoice,
-): Extract<ChoiceRequest, { kind: 'illegal' }>['reason'] => {
-  switch (cause) {
-    case 'noActiveSeatGrant':
-      return 'freeOperationNoActiveSeatGrant';
-    case 'sequenceLocked':
-      return 'freeOperationSequenceLocked';
-    case 'actionClassMismatch':
-      return 'freeOperationActionClassMismatch';
-    case 'actionIdMismatch':
-      return 'freeOperationActionIdMismatch';
-    case 'zoneFilterMismatch':
-      return 'freeOperationZoneFilterMismatch';
-    default: {
-      const unreachable: never = cause;
-      return unreachable;
-    }
-  }
-};
 
 const buildDiscoveryEffectContextBase = (
   evalCtx: EvalContext,
@@ -526,12 +503,12 @@ const legalChoicesWithPreparedContextInternal = (
     const analysis = resolveFreeOperationDiscoveryAnalysis(def, state, partialMove, {
       zoneFilterErrorSurface: 'legalChoices',
     });
-    const denial = analysis.denial;
-    if (denial.cause !== 'granted' && denial.cause !== 'nonCardDrivenTurnOrder' && denial.cause !== 'notFreeOperationMove') {
+    const deniedCause = toFreeOperationDeniedCauseForLegality(analysis.denial.cause);
+    if (deniedCause !== null) {
       return {
         kind: 'illegal',
         complete: false,
-        reason: toFreeOperationChoiceIllegalReason(denial.cause),
+        reason: toFreeOperationChoiceIllegalReason(deniedCause),
       };
     }
     freeOperationAnalysis = {

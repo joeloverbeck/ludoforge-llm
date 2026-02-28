@@ -508,6 +508,77 @@ describe('legality surface parity', () => {
     });
   }
 
+  it('prioritizes free-operation denial parity when pipeline is also not applicable', () => {
+    const operationActionId = asActionId('operation');
+    const baseDef = makeCardDrivenFreeOpDef(operationActionId);
+    const def = {
+      ...baseDef,
+      actionPipelines: [
+        {
+          id: 'operation-profile',
+          actionId: operationActionId,
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [],
+          atomicity: 'partial',
+        },
+      ],
+    } as GameDef;
+    const state = makeState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation-alt'],
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+    const move: Move = { actionId: operationActionId, params: {}, freeOperation: true };
+
+    assert.deepEqual(legalChoicesDiscover(def, state, move), {
+      kind: 'illegal',
+      complete: false,
+      reason: 'freeOperationActionIdMismatch',
+    });
+    assert.equal(
+      legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
+      false,
+    );
+    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & {
+        code?: unknown;
+        reason?: unknown;
+        context?: { freeOperationDenial?: { cause?: string } };
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED);
+      assert.equal(details.context?.freeOperationDenial?.cause, 'actionIdMismatch');
+      return true;
+    });
+  });
+
   it('keeps free-operation pipeline applicability parity when grants provide zone filters', () => {
     const operationActionId = asActionId('operation');
     const def = {

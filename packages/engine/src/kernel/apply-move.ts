@@ -31,6 +31,7 @@ import {
   resolveFreeOperationDiscoveryAnalysis,
   resolveTurnFlowActionClassMismatch,
 } from './turn-flow-eligibility.js';
+import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
@@ -575,9 +576,17 @@ const validateMove = (
       submittedActionClass: classMismatch.submitted,
     });
   }
+  const freeOperationAnalysis = resolveMoveFreeOperationAnalysis(def, state, move);
+  const deniedFreeOperationCause = freeOperationAnalysis === null
+    ? null
+    : toFreeOperationDeniedCauseForLegality(freeOperationAnalysis.denial.cause);
+  if (move.freeOperation === true && freeOperationAnalysis !== null && deniedFreeOperationCause !== null) {
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
+      freeOperationDenial: freeOperationAnalysis.denial,
+    });
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const freeOperationAnalysis = resolveMoveFreeOperationAnalysis(def, state, move);
   const preflight = resolveMovePreflightContext(
     def,
     state,
@@ -590,17 +599,6 @@ const validateMove = (
   );
   const action = preflight.action;
   const allowIncomplete = shouldDeferIncompleteDecisionValidationForMove(def, state, move);
-
-  if (
-    move.freeOperation === true &&
-    state.turnOrderState.type === 'cardDriven' &&
-    freeOperationAnalysis !== null &&
-    freeOperationAnalysis.denial.cause !== 'granted'
-  ) {
-    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
-      freeOperationDenial: freeOperationAnalysis.denial,
-    });
-  }
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }

@@ -1,10 +1,8 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
 import { buildCardDrivenTurnFlowSemanticRequirements } from '../kernel/turn-flow-contract.js';
-import {
-  buildActionSelectorContractViolationDiagnostic,
-  evaluateActionSelectorContracts,
-} from '../kernel/action-selector-contract-registry.js';
+import { evaluateActionSelectorContracts } from '../kernel/action-selector-contract-registry.js';
+import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
 import { isRecord, normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
@@ -69,15 +67,14 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         enforceBindingDeclaration: false,
       });
       for (const violation of selectorContractViolations) {
-        const diagnostic = buildActionSelectorContractViolationDiagnostic({
+        diagnostics.push(
+          buildActionSelectorContractViolationDiagnostic({
           violation,
           path: `doc.actions.${actionIndex}.${violation.role}`,
           actionId: String(action.id),
           surface: 'crossValidate',
-        });
-        if (diagnostic !== null) {
-          diagnostics.push(diagnostic);
-        }
+          }),
+        );
       }
     }
   }

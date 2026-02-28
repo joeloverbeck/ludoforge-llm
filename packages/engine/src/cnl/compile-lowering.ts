@@ -22,10 +22,8 @@ import { lowerConditionNode, lowerNumericValueNode, lowerQueryNode } from './com
 import { lowerEffectArray, type EffectLoweringContext } from './compile-effects.js';
 import { normalizeActionExecutorSelector, normalizePlayerSelector } from './compile-selectors.js';
 import type { TypeInferenceContext } from './type-inference.js';
-import {
-  buildActionSelectorContractViolationDiagnostic,
-  evaluateActionSelectorContracts,
-} from '../kernel/action-selector-contract-registry.js';
+import { evaluateActionSelectorContracts } from '../kernel/action-selector-contract-registry.js';
+import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES, buildCompilerMissingCapabilityDiagnostic } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 
@@ -513,8 +511,7 @@ export function lowerActions(
             actionId: String(action.id),
             surface: 'compileLowering',
           }),
-        )
-        .filter((diagnostic): diagnostic is Diagnostic => diagnostic !== null),
+        ),
     );
     const pre = lowerOptionalCondition(
       action.pre,

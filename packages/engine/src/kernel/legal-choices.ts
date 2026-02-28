@@ -92,35 +92,54 @@ const toFreeOperationChoiceIllegalReason = (
   }
 };
 
-const executeDiscoveryEffects = (
+const buildDiscoveryEffectContextBase = (
+  evalCtx: EvalContext,
+  move: Move,
+): Parameters<typeof createDiscoveryStrictEffectContext>[0] => ({
+  def: evalCtx.def,
+  adjacencyGraph: evalCtx.adjacencyGraph,
+  state: evalCtx.state,
+  rng: { state: evalCtx.state.rng },
+  activePlayer: evalCtx.activePlayer,
+  actorPlayer: evalCtx.actorPlayer,
+  bindings: evalCtx.bindings,
+  moveParams: move.params,
+  collector: evalCtx.collector,
+  traceContext: { eventContext: 'actionEffect', actionId: String(move.actionId), effectPathRoot: 'legalChoices.effects' },
+  effectPath: '',
+  ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
+  ...(evalCtx.freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter: evalCtx.freeOperationZoneFilter }),
+  ...(evalCtx.freeOperationZoneFilterDiagnostics === undefined
+    ? {}
+    : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
+  ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
+});
+
+const executeDiscoveryEffectsStrict = (
   effects: readonly EffectAST[],
   evalCtx: EvalContext,
   move: Move,
-  ownershipEnforcement: 'strict' | 'probe',
 ): ChoiceRequest => {
-  const baseContext: Parameters<typeof createDiscoveryStrictEffectContext>[0] = {
-    def: evalCtx.def,
-    adjacencyGraph: evalCtx.adjacencyGraph,
-    state: evalCtx.state,
-    rng: { state: evalCtx.state.rng },
-    activePlayer: evalCtx.activePlayer,
-    actorPlayer: evalCtx.actorPlayer,
-    bindings: evalCtx.bindings,
-    moveParams: move.params,
-    collector: evalCtx.collector,
-    traceContext: { eventContext: 'actionEffect', actionId: String(move.actionId), effectPathRoot: 'legalChoices.effects' },
-    effectPath: '',
-    ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
-    ...(evalCtx.freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter: evalCtx.freeOperationZoneFilter }),
-    ...(evalCtx.freeOperationZoneFilterDiagnostics === undefined
-      ? {}
-      : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
-    ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
-  };
+  const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
   try {
-    const result = ownershipEnforcement === 'probe'
-      ? applyEffects(effects, createDiscoveryProbeEffectContext(baseContext))
-      : applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
+    const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
+    return result.pendingChoice ?? COMPLETE;
+  } catch (error: unknown) {
+    if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
+      return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+    }
+    throw error;
+  }
+};
+
+const executeDiscoveryEffectsProbe = (
+  effects: readonly EffectAST[],
+  evalCtx: EvalContext,
+  move: Move,
+): ChoiceRequest => {
+  const baseContext = buildDiscoveryEffectContextBase(evalCtx, move);
+  try {
+    const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
     return result.pendingChoice ?? COMPLETE;
   } catch (error: unknown) {
     if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
@@ -456,11 +475,49 @@ const resolveActionParamPendingChoice = (
   return null;
 };
 
-const legalChoicesWithPreparedContext = (
+type ExecuteDiscoveryEffects = (
+  effects: readonly EffectAST[],
+  evalCtx: EvalContext,
+  move: Move,
+) => ChoiceRequest;
+
+type ProbeLegalityEvaluator = (move: Move, options?: LegalChoicesRuntimeOptions) => ChoiceRequest;
+
+const classifyProbeMoveSatisfiability = (
+  probeMove: Move,
+  options: LegalChoicesRuntimeOptions | undefined,
+  evaluateProbeLegality: ProbeLegalityEvaluator,
+): DecisionSequenceSatisfiability =>
+  classifyDecisionSequenceSatisfiability(
+    probeMove,
+    (candidateMove, discoverOptions) =>
+      evaluateProbeLegality(candidateMove, {
+        onDeferredPredicatesEvaluated: (count) => {
+          options?.onDeferredPredicatesEvaluated?.(count);
+          discoverOptions?.onDeferredPredicatesEvaluated?.(count);
+        },
+      }),
+  ).classification;
+
+const mapPendingChoiceOptions = (
+  partialMove: Move,
+  request: ChoicePendingRequest,
+  options: LegalChoicesRuntimeOptions | undefined,
+  evaluateProbeLegality: ProbeLegalityEvaluator,
+): readonly ChoiceOption[] =>
+  mapOptionsForPendingChoice(
+    (probeMove) => evaluateProbeLegality(probeMove, options),
+    (probeMove) => classifyProbeMoveSatisfiability(probeMove, options, evaluateProbeLegality),
+    partialMove,
+    request,
+  );
+
+const legalChoicesWithPreparedContextInternal = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
   shouldEvaluateOptionLegality: boolean,
-  ownershipEnforcement: 'strict' | 'probe' = 'strict',
+  executeDiscoveryEffects: ExecuteDiscoveryEffects,
+  evaluateProbeLegality: ProbeLegalityEvaluator,
   options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
@@ -537,22 +594,7 @@ const legalChoicesWithPreparedContext = (
 
     return {
       ...actionParamRequest,
-      options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, 'probe', options),
-        (probeMove) =>
-          classifyDecisionSequenceSatisfiability(
-            probeMove,
-            (candidateMove, discoverOptions) =>
-              legalChoicesWithPreparedContext(context, candidateMove, false, 'probe', {
-                onDeferredPredicatesEvaluated: (count) => {
-                  options?.onDeferredPredicatesEvaluated?.(count);
-                  discoverOptions?.onDeferredPredicatesEvaluated?.(count);
-                },
-              }),
-          ).classification,
-        partialMove,
-        actionParamRequest,
-      ),
+      options: mapPendingChoiceOptions(partialMove, actionParamRequest, options, evaluateProbeLegality),
     };
   }
 
@@ -580,7 +622,6 @@ const legalChoicesWithPreparedContext = (
       [...resolutionEffects, ...eventEffects],
       evalCtx,
       partialMove,
-      ownershipEnforcement,
     );
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       return request;
@@ -588,22 +629,7 @@ const legalChoicesWithPreparedContext = (
 
     return {
       ...request,
-      options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, 'probe', options),
-        (probeMove) =>
-          classifyDecisionSequenceSatisfiability(
-            probeMove,
-            (candidateMove, discoverOptions) =>
-              legalChoicesWithPreparedContext(context, candidateMove, false, 'probe', {
-                onDeferredPredicatesEvaluated: (count) => {
-                  options?.onDeferredPredicatesEvaluated?.(count);
-                  discoverOptions?.onDeferredPredicatesEvaluated?.(count);
-                },
-              }),
-          ).classification,
-        partialMove,
-        request,
-      ),
+      options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
     };
   }
 
@@ -611,7 +637,6 @@ const legalChoicesWithPreparedContext = (
     [...action.effects, ...eventEffects],
     evalCtx,
     partialMove,
-    ownershipEnforcement,
   );
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     return request;
@@ -619,24 +644,39 @@ const legalChoicesWithPreparedContext = (
 
   return {
     ...request,
-    options: mapOptionsForPendingChoice(
-      (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false, 'probe', options),
-      (probeMove) =>
-        classifyDecisionSequenceSatisfiability(
-          probeMove,
-          (candidateMove, discoverOptions) =>
-            legalChoicesWithPreparedContext(context, candidateMove, false, 'probe', {
-              onDeferredPredicatesEvaluated: (count) => {
-                options?.onDeferredPredicatesEvaluated?.(count);
-                discoverOptions?.onDeferredPredicatesEvaluated?.(count);
-              },
-            }),
-        ).classification,
-      partialMove,
-      request,
-    ),
+    options: mapPendingChoiceOptions(partialMove, request, options, evaluateProbeLegality),
   };
 };
+
+const legalChoicesWithPreparedContextProbe = (
+  context: LegalChoicesPreparedContext,
+  partialMove: Move,
+  shouldEvaluateOptionLegality: boolean,
+  options?: LegalChoicesRuntimeOptions,
+): ChoiceRequest =>
+  legalChoicesWithPreparedContextInternal(
+    context,
+    partialMove,
+    shouldEvaluateOptionLegality,
+    executeDiscoveryEffectsProbe,
+    (probeMove, probeOptions) => legalChoicesWithPreparedContextProbe(context, probeMove, false, probeOptions),
+    options,
+  );
+
+const legalChoicesWithPreparedContextStrict = (
+  context: LegalChoicesPreparedContext,
+  partialMove: Move,
+  shouldEvaluateOptionLegality: boolean,
+  options?: LegalChoicesRuntimeOptions,
+): ChoiceRequest =>
+  legalChoicesWithPreparedContextInternal(
+    context,
+    partialMove,
+    shouldEvaluateOptionLegality,
+    executeDiscoveryEffectsStrict,
+    (probeMove, probeOptions) => legalChoicesWithPreparedContextProbe(context, probeMove, false, probeOptions),
+    options,
+  );
 
 export function legalChoicesDiscover(
   def: GameDef,
@@ -663,7 +703,7 @@ export function legalChoicesDiscover(
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContext(context, partialMove, false, 'strict', options);
+  return legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
 }
 
 export function legalChoicesEvaluate(
@@ -691,5 +731,5 @@ export function legalChoicesEvaluate(
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContext(context, partialMove, true, 'strict', options);
+  return legalChoicesWithPreparedContextStrict(context, partialMove, true, options);
 }

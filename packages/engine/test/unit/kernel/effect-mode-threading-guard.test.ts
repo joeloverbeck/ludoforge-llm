@@ -36,6 +36,7 @@ const expectedConstructorsByBoundaryModule: Readonly<Record<
 
 const fallbackPattern = /\bmode\s*\?\?\s*['"]execution['"]/u;
 const fallbackCtxPattern = /\bctx\s*\.\s*mode\s*\?\?/u;
+const legacyScalarOwnershipThreadingPattern = /ownershipEnforcement\s*:\s*['"]strict['"]\s*\|\s*['"]probe['"]/u;
 describe('effect mode threading architecture guard', () => {
   it('keeps kernel applyEffects entry boundary allowlist explicit', () => {
     const kernelModules = listKernelModulesByPrefix('');
@@ -163,5 +164,14 @@ describe('effect mode threading architecture guard', () => {
         `${moduleName} must not use ctx.mode ?? fallback semantics`,
       );
     }
+  });
+
+  it('forbids scalar strict/probe ownership threading in legal-choices recursion', () => {
+    const source = readKernelSource('src/kernel/legal-choices.ts');
+    assert.doesNotMatch(
+      source,
+      legacyScalarOwnershipThreadingPattern,
+      'legal-choices.ts must not reintroduce scalar ownershipEnforcement threading parameters',
+    );
   });
 });

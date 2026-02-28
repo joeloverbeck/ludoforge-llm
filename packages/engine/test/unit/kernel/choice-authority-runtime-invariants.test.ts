@@ -124,6 +124,43 @@ describe('choice authority runtime invariants', () => {
     }
   });
 
+  it('keeps discovery ownership-enforcement parity between applyEffect and applyEffects', () => {
+    for (const primitive of primitives) {
+      const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+      const moveParams = { 'decision:$target': ownershipSelection(primitive, 'a') };
+
+      const probeContext = makeDiscoveryProbeEffectContext({
+        def: makeDef([effect]),
+        state: makeState(),
+        moveParams,
+        collector: createCollector(),
+      });
+      assertEffectRuntimeReason(
+        () => applyEffect(effect, probeContext),
+        EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
+      );
+      assertEffectRuntimeReason(
+        () => applyEffects([effect], probeContext),
+        EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
+      );
+
+      const strictContext = makeDiscoveryEffectContext({
+        def: makeDef([effect]),
+        state: makeState(),
+        moveParams,
+        collector: createCollector(),
+      });
+      assertEffectRuntimeReason(
+        () => applyEffect(effect, strictContext),
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      );
+      assertEffectRuntimeReason(
+        () => applyEffects([effect], strictContext),
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      );
+    }
+  });
+
   it('emits choiceRuntimeValidationFailed in execution+strict ownership enforcement', () => {
     for (const primitive of primitives) {
       const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);

@@ -1,6 +1,6 @@
 # ENGINEARCH-131: Legal-Choices Probe Flow Explicit Context Ownership
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel legal-choices probe threading and context-construction flow
@@ -15,6 +15,7 @@
 1. Discovery context constructors now support explicit strict/probe variants.
 2. `legal-choices.ts` still passes scalar ownership flags through recursive calls and only resolves constructor choice inside `executeDiscoveryEffects`.
 3. Existing pending tickets do not cover removal of scalar probe-threading from legal-choices recursion. Corrected scope: move to explicit strict/probe execution paths and constructor ownership at call boundaries.
+4. Existing tests verify effect-context constructor boundaries and effect-runtime ownership invariants, but they do not explicitly guard against reintroducing scalar strict/probe recursion parameters in legal-choices control flow.
 
 ## Architecture Check
 
@@ -66,7 +67,7 @@ No change to actual legality outcomes; only control-flow/contract clarity improv
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/choice-authority-runtime-invariants.test.ts` — verifies probe-vs-strict behavior parity after flow refactor.
-2. `packages/engine/test/unit/kernel/effect-mode-threading-guard.test.ts` — ensures boundary constructor usage expectations remain explicit after legal-choices refactor.
+2. `packages/engine/test/unit/kernel/effect-mode-threading-guard.test.ts` — ensures boundary constructor usage expectations remain explicit after legal-choices refactor and guards against regression to scalar strict/probe recursion-threading.
 
 ### Commands
 
@@ -75,3 +76,21 @@ No change to actual legality outcomes; only control-flow/contract clarity improv
 3. `node --test packages/engine/dist/test/unit/kernel/effect-mode-threading-guard.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-02-28
+- **What changed**:
+  - Refactored `packages/engine/src/kernel/legal-choices.ts` to remove scalar `'strict' | 'probe'` recursion threading.
+  - Introduced explicit strict/probe execution paths via dedicated effect-execution functions and strict/probe legal-choices wrappers.
+  - Kept strict/probe context constructor ownership explicit at effect execution boundaries.
+  - Strengthened architecture guard coverage in `packages/engine/test/unit/kernel/effect-mode-threading-guard.test.ts` to forbid regression to scalar ownership threading in legal-choices flow.
+  - Added parity coverage in `packages/engine/test/unit/kernel/choice-authority-runtime-invariants.test.ts` to assert discovery ownership behavior matches across `applyEffect` and `applyEffects`.
+- **Deviations from original plan**:
+  - None in scope. Test coverage was expanded to close a discovered regression gap for scalar threading reintroduction.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/choice-authority-runtime-invariants.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/effect-mode-threading-guard.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (321/321).
+  - `pnpm -F @ludoforge/engine lint` passed.

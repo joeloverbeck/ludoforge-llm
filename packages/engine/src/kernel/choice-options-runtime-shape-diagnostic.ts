@@ -7,14 +7,13 @@ import {
 import type { OptionsQuery } from './types.js';
 import { renderChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-diagnostic-rendering.js';
 
-export const CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID =
-  'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID';
-export const EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID =
-  'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID';
+export const CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES = Object.freeze({
+  compiler: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+  validator: 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+} as const);
 
 export type ChoiceOptionsRuntimeShapeDiagnosticCode =
-  | typeof CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID
-  | typeof EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID;
+  (typeof CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES)[keyof typeof CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES];
 
 export interface BuildChoiceOptionsRuntimeShapeDiagnosticArgs {
   readonly code: ChoiceOptionsRuntimeShapeDiagnosticCode;

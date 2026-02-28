@@ -2,7 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
 import {
   buildChoiceOptionsRuntimeShapeDiagnostic,
-  CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+  CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES,
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
@@ -2155,7 +2155,7 @@ function validateChoiceOptionsRuntimeShape(
   effectName: 'chooseOne' | 'chooseN',
 ): readonly Diagnostic[] {
   const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
-    code: CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+    code: CHOICE_OPTIONS_RUNTIME_SHAPE_DIAGNOSTIC_CODES.compiler,
     path,
     effectName,
     query,

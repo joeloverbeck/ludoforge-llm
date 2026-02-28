@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — cross-module diagnostic taxonomy contract hardening in kernel/cnl
-**Deps**: tickets/ENGINEARCH-153-choice-options-diagnostic-code-contract-single-source-derivation.md
+**Deps**: archive/tickets/ENGINEARCH-153-choice-options-diagnostic-code-contract-single-source-derivation.md
 
 ## Problem
 

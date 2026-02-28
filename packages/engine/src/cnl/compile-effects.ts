@@ -1,6 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
-import { buildChoiceOptionsRuntimeShapeDiagnostic } from '../kernel/choice-options-runtime-shape-diagnostic.js';
+import {
+  buildChoiceOptionsRuntimeShapeDiagnostic,
+  CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+} from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   isTurnFlowActionClass,
@@ -2161,7 +2164,7 @@ function validateChoiceOptionsRuntimeShapeContract(
   }
 
   const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
-    code: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+    code: CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
     path,
     effectName,
     query,

@@ -1,5 +1,8 @@
 import type { Diagnostic } from './diagnostics.js';
-import { buildChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-diagnostic.js';
+import {
+  buildChoiceOptionsRuntimeShapeDiagnostic,
+  EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+} from './choice-options-runtime-shape-diagnostic.js';
 import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import type {
   ConditionAST,
@@ -447,7 +450,7 @@ const validateChoiceOptionsRuntimeShape = (
   effectName: 'chooseOne' | 'chooseN',
 ): void => {
   const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
-    code: 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+    code: EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
     path,
     effectName,
     query,

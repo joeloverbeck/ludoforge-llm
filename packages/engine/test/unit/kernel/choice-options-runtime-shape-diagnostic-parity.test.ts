@@ -2,6 +2,10 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerEffectArray, type EffectLoweringContext } from '../../../src/cnl/compile-effects.js';
+import {
+  CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+  EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
+} from '../../../src/kernel/choice-options-runtime-shape-diagnostic.js';
 import { type GameDef, validateGameDef } from '../../../src/kernel/index.js';
 import { createValidGameDef } from '../../helpers/gamedef-fixtures.js';
 
@@ -45,9 +49,10 @@ describe('choice options runtime-shape diagnostic parity', () => {
     it(`keeps compiler and validator diagnostic detail payloads in sync for ${testCase.effectName}`, () => {
       const compileResult = lowerEffectArray([testCase.effectNode], compileContext, 'doc.actions.0.effects');
       const compilerDiagnostic = compileResult.diagnostics.find(
-        (diagnostic) => diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+        (diagnostic) => diagnostic.code === CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
       );
       assert.ok(compilerDiagnostic);
+      assert.equal(compilerDiagnostic.code, CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID);
 
       const base = createValidGameDef();
       const def = {
@@ -70,9 +75,10 @@ describe('choice options runtime-shape diagnostic parity', () => {
       } as unknown as GameDef;
       const validatorDiagnostics = validateGameDef(def);
       const validatorDiagnostic = validatorDiagnostics.find(
-        (diagnostic) => diagnostic.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+        (diagnostic) => diagnostic.code === EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID,
       );
       assert.ok(validatorDiagnostic);
+      assert.equal(validatorDiagnostic.code, EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID);
 
       assert.equal(compilerDiagnostic.message, validatorDiagnostic.message);
       assert.equal(compilerDiagnostic.suggestion, validatorDiagnostic.suggestion);

@@ -7,8 +7,17 @@ import {
 import type { OptionsQuery } from './types.js';
 import { renderChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-diagnostic-rendering.js';
 
+export const CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID =
+  'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID';
+export const EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID =
+  'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID';
+
+export type ChoiceOptionsRuntimeShapeDiagnosticCode =
+  | typeof CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID
+  | typeof EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID;
+
 export interface BuildChoiceOptionsRuntimeShapeDiagnosticArgs {
-  readonly code: string;
+  readonly code: ChoiceOptionsRuntimeShapeDiagnosticCode;
   readonly path: string;
   readonly effectName: ChoiceOptionsEffectName;
   readonly query: OptionsQuery;

@@ -508,6 +508,119 @@ describe('legality surface parity', () => {
     });
   }
 
+  it('keeps free-operation pipeline applicability parity when grants provide zone filters', () => {
+    const operationActionId = asActionId('operation');
+    const def = {
+      metadata: { id: 'free-op-zone-filter-pipeline-parity', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'board' },
+        { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city' },
+      ],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: [String(operationActionId)],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      actions: [
+        {
+          id: operationActionId,
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [{ name: 'zone', domain: { query: 'zones' } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      actionPipelines: [
+        {
+          id: 'operation-profile',
+          actionId: operationActionId,
+          applicability: {
+            op: '==',
+            left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+            right: 2,
+          },
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [],
+          atomicity: 'partial',
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state = makeState({
+      zones: { 'board:none': [], 'city:none': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                right: 'board',
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+    const move: Move = { actionId: operationActionId, params: { zone: 'board:none' }, freeOperation: true };
+
+    assert.deepEqual(legalChoicesDiscover(def, state, move), {
+      kind: 'illegal',
+      complete: false,
+      reason: 'pipelineNotApplicable',
+    });
+    assert.equal(
+      legalMoves(def, state).some((candidate) => candidate.freeOperation === true && candidate.actionId === operationActionId),
+      false,
+    );
+    assert.throws(() => applyMove(def, state, move), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; reason?: unknown };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+      return true;
+    });
+  });
+
   const selectorContractCases: ReadonlyArray<{
     readonly name: string;
     readonly make: () => { readonly def: GameDef; readonly state: GameState; readonly move: Move };

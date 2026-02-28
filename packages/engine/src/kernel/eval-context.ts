@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ConditionAST, ExecutionCollector, GameDef, GameState } from './types.js';
@@ -6,7 +7,7 @@ import type { ConditionAST, ExecutionCollector, GameDef, GameState } from './typ
 export const DEFAULT_MAX_QUERY_RESULTS = 10_000;
 
 export interface FreeOperationZoneFilterDiagnostics {
-  readonly source: 'legalChoices';
+  readonly source: FreeOperationZoneFilterSurface;
   readonly actionId: string;
   readonly moveParams: Readonly<Record<string, unknown>>;
 }

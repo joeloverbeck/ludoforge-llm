@@ -458,7 +458,19 @@ const resolveMovePreflightContext = (
         runtimeTableIndex,
         ...(resolvedFreeOperationAnalysis === null
           ? {}
-          : { executionPlayerOverride: resolvedFreeOperationAnalysis.executionPlayer }),
+          : {
+              executionPlayerOverride: resolvedFreeOperationAnalysis.executionPlayer,
+              ...(resolvedFreeOperationAnalysis.zoneFilter === undefined
+                ? {}
+                : {
+                    freeOperationZoneFilter: resolvedFreeOperationAnalysis.zoneFilter,
+                    freeOperationZoneFilterDiagnostics: {
+                      source: 'turnFlowEligibility',
+                      actionId: String(move.actionId),
+                      moveParams: move.params,
+                    },
+                  }),
+            }),
       });
       if (preflight.kind === 'invalidSpec') {
         throw selectorInvalidSpecError(

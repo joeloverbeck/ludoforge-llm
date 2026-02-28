@@ -1146,6 +1146,106 @@ phase: [asPhaseId('main')],
     assert.doesNotThrow(() =>
       applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }, { advanceToDecisionPoint: false }));
   });
+
+  it('threads free-operation zone-filter context into validation preflight pipeline applicability', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'zone', domain: { query: 'zones' } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile',
+      actionId: action.id,
+      applicability: {
+        op: '==',
+        left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+        right: 2,
+      },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        actionPipelines: [profile],
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'board' },
+          { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                right: 'board',
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyMove(def, state, {
+          actionId: action.id,
+          params: { zone: 'board:none' },
+          freeOperation: true,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; reason?: unknown };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+        return true;
+      },
+    );
+  });
 });
 
 describe('applyMove() executor applicability contract', () => {

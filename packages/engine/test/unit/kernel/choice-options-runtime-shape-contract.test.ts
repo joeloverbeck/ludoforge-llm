@@ -55,7 +55,7 @@ describe('choice options runtime-shape contract', () => {
     assert.equal(details.reason, 'nonMoveParamEncodableRuntimeShapes');
     assert.deepEqual(details.runtimeShapes, ['number', 'object']);
     assert.deepEqual(details.invalidShapes, ['object']);
-    assert.deepEqual(details.alternatives, ['object']);
+    assert.equal('alternatives' in details, false);
   });
 
   it('returns fresh diagnostic detail arrays across calls', () => {
@@ -68,11 +68,10 @@ describe('choice options runtime-shape contract', () => {
     const first = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
     (first.runtimeShapes as string[]).push('mutated-runtime-shape');
     (first.invalidShapes as string[]).push('mutated-invalid-shape');
-    (first.alternatives as string[]).push('mutated-shape');
 
     const second = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
     assert.deepEqual(second.runtimeShapes, ['object']);
     assert.deepEqual(second.invalidShapes, ['object']);
-    assert.deepEqual(second.alternatives, ['object']);
+    assert.equal('alternatives' in second, false);
   });
 });

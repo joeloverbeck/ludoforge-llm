@@ -1,6 +1,6 @@
 # ENGINEARCH-147: Remove Redundant `alternatives` from Choice-Options Diagnostic Semantic Details
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel diagnostic semantic contract normalization + caller derivation updates
@@ -89,3 +89,34 @@ Adjust tests to assert:
 6. `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
 7. `pnpm -F @ludoforge/engine test`
 8. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-02-28
+- **What Changed**:
+  - Removed redundant semantic `alternatives` from `ChoiceOptionsRuntimeShapeDiagnosticDetails`.
+  - Kept semantic payload single-source (`runtimeShapes` + `invalidShapes`), and derived emitted diagnostic `alternatives` from `details.invalidShapes` at compiler/validator boundaries.
+  - Updated contract/rendering tests to assert no semantic `alternatives` field and fresh-array determinism.
+  - Strengthened compile/validate tests to assert emitted `alternatives` remain `['object']` for non-encodable choice-option runtime shapes.
+- **Deviations From Original Plan**:
+  - `packages/engine/src/kernel/choice-options-runtime-shape-diagnostic-rendering.ts` required no code changes (type usage remained compatible after contract simplification).
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-contract.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-diagnostic-rendering.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/compile-effects.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/validate-gamedef.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅
+
+### Post-Archive Refinement (2026-02-28)
+
+- Consolidated remaining compiler/validator choice-options runtime-shape diagnostic construction into a shared kernel helper:
+  - `packages/engine/src/kernel/choice-options-runtime-shape-diagnostic.ts`
+- Removed duplicated assembly logic from:
+  - `packages/engine/src/cnl/compile-effects.ts`
+  - `packages/engine/src/kernel/validate-gamedef-behavior.ts`
+- Added focused shared-helper regression coverage:
+  - `packages/engine/test/unit/kernel/choice-options-runtime-shape-diagnostic.test.ts`
+- Behavior intentionally unchanged: diagnostics remain deterministic with `alternatives` derived from semantic `invalidShapes`.

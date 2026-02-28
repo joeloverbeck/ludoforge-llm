@@ -12,7 +12,6 @@ export interface ChoiceOptionsRuntimeShapeDiagnosticDetails {
   readonly reason: 'nonMoveParamEncodableRuntimeShapes';
   readonly runtimeShapes: readonly QueryRuntimeShape[];
   readonly invalidShapes: readonly QueryRuntimeShape[];
-  readonly alternatives: readonly QueryRuntimeShape[];
 }
 
 export function getChoiceOptionsRuntimeShapeViolation(
@@ -37,6 +36,5 @@ export function buildChoiceOptionsRuntimeShapeDiagnosticDetails(
     reason: 'nonMoveParamEncodableRuntimeShapes',
     runtimeShapes: [...violation.runtimeShapes],
     invalidShapes: [...violation.invalidShapes],
-    alternatives: [...violation.invalidShapes],
   };
 }

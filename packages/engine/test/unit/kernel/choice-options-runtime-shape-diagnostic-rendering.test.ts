@@ -9,7 +9,6 @@ describe('choice options runtime-shape diagnostic rendering', () => {
       reason: 'nonMoveParamEncodableRuntimeShapes' as const,
       runtimeShapes: ['number', 'object'] as const,
       invalidShapes: ['object'] as const,
-      alternatives: ['object'] as const,
     };
 
     const first = renderChoiceOptionsRuntimeShapeDiagnostic('chooseN', details);

@@ -1,10 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
-import {
-  buildChoiceOptionsRuntimeShapeDiagnosticDetails,
-  getChoiceOptionsRuntimeShapeViolation,
-} from '../kernel/choice-options-runtime-shape-contract.js';
-import { renderChoiceOptionsRuntimeShapeDiagnostic } from '../kernel/choice-options-runtime-shape-diagnostic-rendering.js';
+import { buildChoiceOptionsRuntimeShapeDiagnostic } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   isTurnFlowActionClass,
@@ -2164,23 +2160,16 @@ function validateChoiceOptionsRuntimeShapeContract(
     return [];
   }
 
-  const violation = getChoiceOptionsRuntimeShapeViolation(query);
-  if (violation === null) {
+  const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
+    code: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+    path,
+    effectName,
+    query,
+  });
+  if (diagnostic === null) {
     return [];
   }
-  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
-  const rendered = renderChoiceOptionsRuntimeShapeDiagnostic(effectName, details);
-
-  return [
-    {
-      code: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
-      path,
-      severity: 'error',
-      message: rendered.message,
-      suggestion: rendered.suggestion,
-      alternatives: [...details.alternatives],
-    },
-  ];
+  return [diagnostic];
 }
 
 function lowerNestedEffects(

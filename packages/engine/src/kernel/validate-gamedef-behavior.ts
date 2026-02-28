@@ -1,9 +1,5 @@
 import type { Diagnostic } from './diagnostics.js';
-import {
-  buildChoiceOptionsRuntimeShapeDiagnosticDetails,
-  getChoiceOptionsRuntimeShapeViolation,
-} from './choice-options-runtime-shape-contract.js';
-import { renderChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-diagnostic-rendering.js';
+import { buildChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-diagnostic.js';
 import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import type {
   ConditionAST,
@@ -450,20 +446,16 @@ const validateChoiceOptionsRuntimeShape = (
   path: string,
   effectName: 'chooseOne' | 'chooseN',
 ): void => {
-  const violation = getChoiceOptionsRuntimeShapeViolation(query);
-  if (violation === null) {
-    return;
-  }
-  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
-  const rendered = renderChoiceOptionsRuntimeShapeDiagnostic(effectName, details);
-  diagnostics.push({
+  const diagnostic = buildChoiceOptionsRuntimeShapeDiagnostic({
     code: 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
     path,
-    severity: 'error',
-    message: rendered.message,
-    suggestion: rendered.suggestion,
-    alternatives: [...details.alternatives],
+    effectName,
+    query,
   });
+  if (diagnostic === null) {
+    return;
+  }
+  diagnostics.push(diagnostic);
 };
 
 const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;

@@ -2757,24 +2757,22 @@ describe('validateGameDef constraints and warnings', () => {
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
-    assert.equal(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
-          && diag.path === 'actions[0].effects[0].chooseOne.options'
-          && diag.severity === 'error',
-      ),
-      true,
+    const chooseOneDiagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+        && diag.path === 'actions[0].effects[0].chooseOne.options'
+        && diag.severity === 'error',
     );
-    assert.equal(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
-          && diag.path === 'actions[0].effects[1].chooseN.options'
-          && diag.severity === 'error',
-      ),
-      true,
+    const chooseNDiagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+        && diag.path === 'actions[0].effects[1].chooseN.options'
+        && diag.severity === 'error',
     );
+    assert.ok(chooseOneDiagnostic);
+    assert.ok(chooseNDiagnostic);
+    assert.deepEqual(chooseOneDiagnostic.alternatives, ['object']);
+    assert.deepEqual(chooseNDiagnostic.alternatives, ['object']);
   });
 
   it('suppresses secondary choose options shape diagnostics when options queries already fail validation', () => {

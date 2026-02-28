@@ -958,22 +958,20 @@ describe('compile-effects lowering', () => {
     );
 
     assert.equal(result.value, null);
-    assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
-          && diagnostic.path === 'doc.actions.0.effects.0.chooseOne.options',
-      ),
-      true,
+    const chooseOneDiagnostic = result.diagnostics.find(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+        && diagnostic.path === 'doc.actions.0.effects.0.chooseOne.options',
     );
-    assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
-          && diagnostic.path === 'doc.actions.0.effects.1.chooseN.options',
-      ),
-      true,
+    const chooseNDiagnostic = result.diagnostics.find(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+        && diagnostic.path === 'doc.actions.0.effects.1.chooseN.options',
     );
+    assert.ok(chooseOneDiagnostic);
+    assert.ok(chooseNDiagnostic);
+    assert.deepEqual(chooseOneDiagnostic.alternatives, ['object']);
+    assert.deepEqual(chooseNDiagnostic.alternatives, ['object']);
   });
 
   it('lowers distributeTokens into chooseN/forEach/chooseOne/moveToken sequence', () => {

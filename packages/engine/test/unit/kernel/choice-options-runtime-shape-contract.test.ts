@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  createChoiceOptionsRuntimeShapeDiagnostic,
+  buildChoiceOptionsRuntimeShapeDiagnosticDetails,
   getChoiceOptionsRuntimeShapeViolation,
 } from '../../../src/kernel/choice-options-runtime-shape-contract.js';
 
@@ -29,31 +29,51 @@ describe('choice options runtime-shape contract', () => {
     );
   });
 
-  it('builds standardized diagnostics for compiler and validator call sites', () => {
-    const query = { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' } as const;
+  it('exposes semantic violation metadata without layer-specific diagnostic fields', () => {
+    const violation = getChoiceOptionsRuntimeShapeViolation({
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+    });
 
-    const compilerDiagnostic = createChoiceOptionsRuntimeShapeDiagnostic(
-      query,
-      'doc.actions.0.effects.0.chooseOne.options',
-      'chooseOne',
-      'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
-    );
-    assert.ok(compilerDiagnostic);
-    assert.equal(compilerDiagnostic.code, 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID');
-    assert.deepEqual(compilerDiagnostic.alternatives, ['object']);
+    assert.deepEqual(violation, {
+      runtimeShapes: ['object'],
+      invalidShapes: ['object'],
+    });
+  });
 
-    const validatorDiagnostic = createChoiceOptionsRuntimeShapeDiagnostic(
-      query,
-      'actions[0].effects[0].chooseOne.options',
-      'chooseOne',
-      'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
-    );
-    assert.ok(validatorDiagnostic);
-    assert.equal(validatorDiagnostic.code, 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID');
-    assert.deepEqual(validatorDiagnostic.alternatives, ['object']);
+  it('builds shared diagnostic details without owning caller diagnostic taxonomies', () => {
+    const violation = getChoiceOptionsRuntimeShapeViolation({
+      query: 'concat',
+      sources: [
+        { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+        { query: 'players' },
+      ],
+    });
+    assert.ok(violation);
+
+    const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails('chooseN', violation);
     assert.equal(
-      validatorDiagnostic.message,
-      'chooseOne options query must produce move-param-encodable values; runtime shape(s) [object] are not fully encodable.',
+      details.message,
+      'chooseN options query must produce move-param-encodable values; runtime shape(s) [number, object] are not fully encodable.',
     );
+    assert.equal(
+      details.suggestion,
+      'Use queries yielding token/string/number values (or binding queries that resolve to encodable values) and avoid object-valued option domains like assetRows.',
+    );
+    assert.deepEqual(details.alternatives, ['object']);
+  });
+
+  it('returns fresh diagnostic detail arrays across calls', () => {
+    const violation = getChoiceOptionsRuntimeShapeViolation({
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+    });
+    assert.ok(violation);
+
+    const first = buildChoiceOptionsRuntimeShapeDiagnosticDetails('chooseOne', violation);
+    (first.alternatives as string[]).push('mutated-shape');
+
+    const second = buildChoiceOptionsRuntimeShapeDiagnosticDetails('chooseOne', violation);
+    assert.deepEqual(second.alternatives, ['object']);
   });
 });

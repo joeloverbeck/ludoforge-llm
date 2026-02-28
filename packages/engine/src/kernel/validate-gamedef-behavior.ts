@@ -1,5 +1,9 @@
 import type { Diagnostic } from './diagnostics.js';
-import { createChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-contract.js';
+import {
+  buildChoiceOptionsRuntimeShapeDiagnosticDetails,
+  getChoiceOptionsRuntimeShapeViolation,
+} from './choice-options-runtime-shape-contract.js';
+import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import type {
   ConditionAST,
   EffectAST,
@@ -445,16 +449,19 @@ const validateChoiceOptionsRuntimeShape = (
   path: string,
   effectName: 'chooseOne' | 'chooseN',
 ): void => {
-  const diagnostic = createChoiceOptionsRuntimeShapeDiagnostic(
-    query,
-    path,
-    effectName,
-    'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
-  );
-  if (diagnostic === null) {
+  const violation = getChoiceOptionsRuntimeShapeViolation(query);
+  if (violation === null) {
     return;
   }
-  diagnostics.push(diagnostic);
+  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(effectName, violation);
+  diagnostics.push({
+    code: 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+    path,
+    severity: 'error',
+    message: details.message,
+    suggestion: details.suggestion,
+    alternatives: [...details.alternatives],
+  });
 };
 
 const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;
@@ -1365,8 +1372,12 @@ export const validateEffectAst = (
   }
 
   if ('chooseOne' in effect) {
-    validateOptionsQuery(diagnostics, effect.chooseOne.options, `${path}.chooseOne.options`, context);
-    validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseOne.options, `${path}.chooseOne.options`, 'chooseOne');
+    const optionsPath = `${path}.chooseOne.options`;
+    const diagnosticsBeforeQueryValidation = diagnostics.length;
+    validateOptionsQuery(diagnostics, effect.chooseOne.options, optionsPath, context);
+    if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, optionsPath)) {
+      validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseOne.options, optionsPath, 'chooseOne');
+    }
     return;
   }
 
@@ -1653,8 +1664,12 @@ export const validateEffectAst = (
     });
   }
 
-  validateOptionsQuery(diagnostics, effect.chooseN.options, `${path}.chooseN.options`, context);
-  validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseN.options, `${path}.chooseN.options`, 'chooseN');
+  const optionsPath = `${path}.chooseN.options`;
+  const diagnosticsBeforeQueryValidation = diagnostics.length;
+  validateOptionsQuery(diagnostics, effect.chooseN.options, optionsPath, context);
+  if (!hasErrorDiagnosticAtPathSince(diagnostics, diagnosticsBeforeQueryValidation, optionsPath)) {
+    validateChoiceOptionsRuntimeShape(diagnostics, effect.chooseN.options, optionsPath, 'chooseN');
+  }
 };
 
 export const validatePostAdjacencyBehavior = (

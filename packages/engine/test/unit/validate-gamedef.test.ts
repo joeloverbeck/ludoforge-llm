@@ -2777,6 +2777,69 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
+  it('suppresses secondary choose options shape diagnostics when options queries already fail validation', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              chooseOne: {
+                bind: '$row',
+                options: { query: 'assetRows', tableId: 'missing-table' },
+              },
+            },
+            {
+              chooseN: {
+                bind: '$rows',
+                options: { query: 'assetRows', tableId: 'missing-table' },
+                max: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_MISSING'
+          && diag.path === 'actions[0].effects[0].chooseOne.options.tableId'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_MISSING'
+          && diag.path === 'actions[0].effects[1].chooseN.options.tableId'
+          && diag.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'actions[0].effects[0].chooseOne.options',
+      ),
+      false,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID'
+          && diag.path === 'actions[0].effects[1].chooseN.options',
+      ),
+      false,
+    );
+  });
+
   it('accepts chooseOne/chooseN options queries with move-param-encodable runtime shapes', () => {
     const base = createValidGameDef();
     const def = {

@@ -1,0 +1,73 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import { lowerEffectArray, type EffectLoweringContext } from '../../../src/cnl/compile-effects.js';
+import { type GameDef, validateGameDef } from '../../../src/kernel/index.js';
+import { createValidGameDef } from '../../helpers/gamedef-fixtures.js';
+
+const compileContext: EffectLoweringContext = {
+  ownershipByBase: {
+    deck: 'none',
+    hand: 'player',
+    discard: 'none',
+    board: 'none',
+  },
+  bindingScope: ['$actor'],
+};
+
+describe('choice options runtime-shape diagnostic parity', () => {
+  it('keeps compiler and validator diagnostic detail payloads in sync', () => {
+    const compileResult = lowerEffectArray(
+      [
+        {
+          chooseOne: {
+            bind: '$row',
+            options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+          },
+        },
+      ],
+      compileContext,
+      'doc.actions.0.effects',
+    );
+    const compilerDiagnostic = compileResult.diagnostics.find(
+      (diagnostic) => diagnostic.code === 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+    );
+    assert.ok(compilerDiagnostic);
+
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [{ field: 'bigBlind', type: 'int' }],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              chooseOne: {
+                bind: '$row',
+                options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+    const validatorDiagnostics = validateGameDef(def);
+    const validatorDiagnostic = validatorDiagnostics.find(
+      (diagnostic) => diagnostic.code === 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
+    );
+    assert.ok(validatorDiagnostic);
+
+    assert.equal(compilerDiagnostic.message, validatorDiagnostic.message);
+    assert.equal(compilerDiagnostic.suggestion, validatorDiagnostic.suggestion);
+    assert.deepEqual(compilerDiagnostic.alternatives, validatorDiagnostic.alternatives);
+  });
+});

@@ -1,16 +1,26 @@
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
-import type { FreeOperationDiscoveryAnalysisResult } from './turn-flow-eligibility.js';
-import type { EvalContext } from './eval-context.js';
-import type { Move } from './types.js';
+import type { PlayerId } from './branded.js';
+import type { ConditionAST, Move } from './types.js';
+
+interface FreeOperationPreflightOverlayInput {
+  readonly executionPlayer: PlayerId;
+  readonly zoneFilter?: ConditionAST;
+}
+
+interface FreeOperationPreflightOverlayDiagnostics {
+  readonly source: FreeOperationZoneFilterSurface;
+  readonly actionId: string;
+  readonly moveParams: Move['params'];
+}
 
 export interface FreeOperationPreflightOverlay {
-  readonly executionPlayerOverride?: FreeOperationDiscoveryAnalysisResult['executionPlayer'];
-  readonly freeOperationZoneFilter?: EvalContext['freeOperationZoneFilter'];
-  readonly freeOperationZoneFilterDiagnostics?: EvalContext['freeOperationZoneFilterDiagnostics'];
+  readonly executionPlayerOverride?: PlayerId;
+  readonly freeOperationZoneFilter?: ConditionAST;
+  readonly freeOperationZoneFilterDiagnostics?: FreeOperationPreflightOverlayDiagnostics;
 }
 
 export const buildFreeOperationPreflightOverlay = (
-  analysis: Pick<FreeOperationDiscoveryAnalysisResult, 'executionPlayer' | 'zoneFilter'> | null | undefined,
+  analysis: FreeOperationPreflightOverlayInput | null | undefined,
   move: Pick<Move, 'actionId' | 'params'>,
   surface: FreeOperationZoneFilterSurface,
 ): FreeOperationPreflightOverlay => {

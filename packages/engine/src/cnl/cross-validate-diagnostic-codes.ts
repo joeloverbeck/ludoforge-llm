@@ -1,5 +1,3 @@
-const CNL_XREF_DIAGNOSTIC_CODE_PREFIX = 'CNL_XREF_' as const;
-
 export const CNL_XREF_DIAGNOSTIC_CODES = Object.freeze({
   CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED: 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
   CNL_XREF_ACTION_PHASE_MISSING: 'CNL_XREF_ACTION_PHASE_MISSING',
@@ -37,7 +35,8 @@ export const CNL_XREF_DIAGNOSTIC_CODES = Object.freeze({
 } as const);
 
 export type CnlXrefDiagnosticCode = (typeof CNL_XREF_DIAGNOSTIC_CODES)[keyof typeof CNL_XREF_DIAGNOSTIC_CODES];
+const CNL_XREF_DIAGNOSTIC_CODE_SET = new Set<string>(Object.values(CNL_XREF_DIAGNOSTIC_CODES));
 
 export function isCnlXrefDiagnosticCode(code: string): boolean {
-  return code.startsWith(CNL_XREF_DIAGNOSTIC_CODE_PREFIX);
+  return CNL_XREF_DIAGNOSTIC_CODE_SET.has(code);
 }

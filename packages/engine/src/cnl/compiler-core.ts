@@ -3,6 +3,7 @@ import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableCon
 import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId, asZoneId } from '../kernel/branded.js';
 import { ACTION_CAPABILITY_CARD_EVENT, isCardEventAction } from '../kernel/action-capabilities.js';
+import { isKernelReferenceDiagnosticCode } from '../kernel/reference-diagnostic-codes.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
@@ -34,7 +35,6 @@ import { expandEffectSections, expandZoneMacros } from './compile-macro-expansio
 import {
   CNL_XREF_DIAGNOSTIC_CODES,
   isCnlXrefDiagnosticCode,
-  toCnlXrefDiagnosticCode,
 } from './cross-validate-diagnostic-codes.js';
 import { crossValidateSpec } from './cross-validate.js';
 import { lowerEventDecks } from './compile-event-cards.js';
@@ -217,7 +217,7 @@ export function compileGameSpecToGameDef(
     validatedGameDef = validated.gameDef;
   }
   const gatedDiagnostics = suppressUnavailableSectionDiagnostics(diagnostics, compiled.sections);
-  const normalizedDiagnostics = canonicalizeCompilerReferenceDiagnostics(gatedDiagnostics);
+  const normalizedDiagnostics = suppressAliasedCompilerReferenceDiagnostics(gatedDiagnostics);
 
   const finalizedDiagnostics = finalizeDiagnostics(normalizedDiagnostics, options?.sourceMap, limits.maxDiagnosticCount);
 
@@ -593,32 +593,26 @@ function finalizeDiagnostics(
   return capDiagnostics(deduped, maxDiagnosticCount);
 }
 
-function canonicalizeCompilerReferenceDiagnostics(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
+function suppressAliasedCompilerReferenceDiagnostics(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
   const crossRefPaths = new Set(
     diagnostics
       .filter((diagnostic) => isCnlXrefDiagnosticCode(diagnostic.code))
       .map((diagnostic) => normalizeDiagnosticPath(diagnostic.path)),
   );
 
-  const canonicalized: Diagnostic[] = [];
+  const filtered: Diagnostic[] = [];
   for (const diagnostic of diagnostics) {
-    if (!diagnostic.code.startsWith('REF_')) {
-      canonicalized.push(diagnostic);
-      continue;
-    }
-
     const normalizedPath = normalizeDiagnosticPath(diagnostic.path);
-    if (crossRefPaths.has(normalizedPath)) {
+    if (isKernelReferenceDiagnosticCode(diagnostic.code) && crossRefPaths.has(normalizedPath)) {
       continue;
     }
 
-    canonicalized.push({
+    filtered.push({
       ...diagnostic,
-      code: toCnlXrefDiagnosticCode(diagnostic.code),
       path: normalizedPath,
     });
   }
-  return canonicalized;
+  return filtered;
 }
 
 function suppressUnavailableSectionDiagnostics(

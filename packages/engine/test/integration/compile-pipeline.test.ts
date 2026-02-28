@@ -99,7 +99,7 @@ actor: 'active',
     assert.equal(
       first.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'SPATIAL_DANGLING_ZONE_REF' && diagnostic.path === 'zones[0].adjacentTo[0].to',
+          diagnostic.code === 'SPATIAL_DANGLING_ZONE_REF' && diagnostic.path === 'doc.zones.0.adjacentTo.0.to',
       ),
       true,
     );
@@ -1994,7 +1994,7 @@ actor: 'active',
       compiled.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL' &&
-          diagnostic.path === 'doc.actions.0.effects.0.forEach.over.filter[0].value',
+          diagnostic.path === 'doc.actions.0.effects.0.forEach.over.filter.0.value',
       ),
       true,
     );

@@ -462,7 +462,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
-  it('canonicalizes legacy boundary REF diagnostics to CNL_XREF diagnostics in compile output', () => {
+  it('preserves kernel REF diagnostics when no CNL xref counterpart exists', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'canonicalize-ref-to-cnl-xref', players: { min: 2, max: 2 } },
@@ -478,7 +478,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_XREF_GVAR_MISSING' &&
+          diagnostic.code === 'REF_GVAR_MISSING' &&
           diagnostic.path === 'doc.terminal.conditions.0.when.left.var',
       ),
       true,
@@ -486,10 +486,42 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'REF_GVAR_MISSING' &&
-          diagnostic.path === 'terminal.conditions[0].when.left.var',
+          diagnostic.code === 'CNL_XREF_GVAR_MISSING' &&
+          diagnostic.path === 'doc.terminal.conditions.0.when.left.var',
       ),
       false,
+    );
+  });
+
+  it('keeps mixed source-owned diagnostic codes while normalizing paths to compile doc-path format', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'mixed-xref-and-kernel-ref-normalized-paths', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [{ event: { type: 'actionResolved', action: 'missingAction' }, effects: [] }],
+      terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'missingVar' }, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TRIGGER_ACTION_MISSING'
+          && diagnostic.path === 'doc.triggers.0.event.action',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'REF_GVAR_MISSING'
+          && diagnostic.path === 'doc.terminal.conditions.0.when.left.var',
+      ),
+      true,
     );
   });
 
@@ -1468,7 +1500,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_BINDING_UNBOUND'
-          && diagnostic.path === 'doc.actionPipelines.0.stages[1].effects.0.setVar.value.name',
+          && diagnostic.path === 'doc.actionPipelines.0.stages.1.effects.0.setVar.value.name',
       ),
       true,
     );
@@ -1563,7 +1595,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_BINDING_UNBOUND'
-          && diagnostic.path === 'doc.actionPipelines.0.stages[1].effects.0.setVar.value.name',
+          && diagnostic.path === 'doc.actionPipelines.0.stages.1.effects.0.setVar.value.name',
       ),
       true,
     );

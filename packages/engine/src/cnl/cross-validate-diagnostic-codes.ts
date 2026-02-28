@@ -1,5 +1,4 @@
 const CNL_XREF_DIAGNOSTIC_CODE_PREFIX = 'CNL_XREF_' as const;
-const LEGACY_REFERENCE_DIAGNOSTIC_CODE_PREFIX = 'REF_' as const;
 
 export const CNL_XREF_DIAGNOSTIC_CODES = Object.freeze({
   CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED: 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
@@ -41,14 +40,4 @@ export type CnlXrefDiagnosticCode = (typeof CNL_XREF_DIAGNOSTIC_CODES)[keyof typ
 
 export function isCnlXrefDiagnosticCode(code: string): boolean {
   return code.startsWith(CNL_XREF_DIAGNOSTIC_CODE_PREFIX);
-}
-
-export function toCnlXrefDiagnosticCode(code: string): string {
-  if (code.startsWith(CNL_XREF_DIAGNOSTIC_CODE_PREFIX)) {
-    return code;
-  }
-  if (!code.startsWith(LEGACY_REFERENCE_DIAGNOSTIC_CODE_PREFIX)) {
-    return code;
-  }
-  return `${CNL_XREF_DIAGNOSTIC_CODE_PREFIX}${code.slice(LEGACY_REFERENCE_DIAGNOSTIC_CODE_PREFIX.length)}`;
 }

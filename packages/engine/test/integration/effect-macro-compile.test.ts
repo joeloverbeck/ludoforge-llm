@@ -225,7 +225,7 @@ actor: 'active',
     const violationPaths = result.diagnostics
       .filter((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION')
       .map((d) => d.path);
-    assert.deepEqual(violationPaths, ['setup[0].args.faction', 'setup[0].args.tier']);
+    assert.deepEqual(violationPaths, ['doc.setup.0.args.faction', 'doc.setup.0.args.tier']);
   });
 
   it('tokenTraitValue macro params fail compile on non-canonical selected piece-catalog trait literals', () => {
@@ -294,7 +294,7 @@ actor: 'active',
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION' && diagnostic.path === 'setup[0].args.pieceType',
+          diagnostic.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION' && diagnostic.path === 'doc.setup.0.args.pieceType',
       ),
       true,
     );

@@ -11,6 +11,14 @@
       "suggestion": "Use one of the supported forms."
     },
     {
+      "code": "META_PLAYERS_RANGE_INVALID",
+      "path": "doc.metadata.players"
+    },
+    {
+      "code": "META_PLAYERS_MIN_INVALID",
+      "path": "doc.metadata.players.min"
+    },
+    {
       "code": "CNL_COMPILER_MISSING_CAPABILITY",
       "path": "doc.terminal.conditions.0.when",
       "suggestion": "Rewrite this node to a supported kernel-compatible shape."
@@ -19,14 +27,6 @@
       "code": "CNL_COMPILER_ZONE_OWNER_INVALID",
       "path": "doc.zones.0.owner",
       "suggestion": "Use owner \"none\" or \"player\"."
-    },
-    {
-      "code": "META_PLAYERS_RANGE_INVALID",
-      "path": "metadata.players"
-    },
-    {
-      "code": "META_PLAYERS_MIN_INVALID",
-      "path": "metadata.players.min"
     }
   ]
 }

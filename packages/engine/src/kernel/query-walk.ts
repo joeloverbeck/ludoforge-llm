@@ -1,22 +1,39 @@
 import type { LeafOptionsQuery, RecursiveOptionsQuery } from './query-partition-types.js';
+import type { RecursiveOptionsQueryKind } from './query-partition-types.js';
 import type { OptionsQuery } from './types.js';
 
-const isRecursiveOptionsQuery = (query: OptionsQuery): query is RecursiveOptionsQuery =>
-  query.query === 'concat' || query.query === 'nextInOrderByCondition';
+type RecursiveOptionsQueryDispatchMap = {
+  readonly [Kind in RecursiveOptionsQueryKind]: (
+    query: Extract<RecursiveOptionsQuery, { readonly query: Kind }>,
+    visitLeaf: (query: LeafOptionsQuery) => void,
+  ) => void;
+};
 
-const walkRecursiveOptionsQuery = (
-  query: RecursiveOptionsQuery,
-  visitLeaf: (query: LeafOptionsQuery) => void,
-): void => {
+const recursiveOptionsQueryDispatch: RecursiveOptionsQueryDispatchMap = {
+  concat: (query, visitLeaf) => {
+    query.sources.forEach((source) => forEachOptionsQueryLeaf(source, visitLeaf));
+  },
+  nextInOrderByCondition: (query, visitLeaf) => {
+    forEachOptionsQueryLeaf(query.source, visitLeaf);
+  },
+};
+
+export type RecursiveOptionsQueryDispatchCoverage = [
+  Exclude<RecursiveOptionsQueryKind, keyof typeof recursiveOptionsQueryDispatch>,
+  Exclude<keyof typeof recursiveOptionsQueryDispatch, RecursiveOptionsQueryKind>,
+] extends [never, never]
+  ? true
+  : false;
+
+const walkRecursiveOptionsQuery = (query: RecursiveOptionsQuery, visitLeaf: (query: LeafOptionsQuery) => void): void => {
   switch (query.query) {
     case 'concat':
-      query.sources.forEach((source) => forEachOptionsQueryLeaf(source, visitLeaf));
+      recursiveOptionsQueryDispatch.concat(query, visitLeaf);
       return;
     case 'nextInOrderByCondition':
-      forEachOptionsQueryLeaf(query.source, visitLeaf);
+      recursiveOptionsQueryDispatch.nextInOrderByCondition(query, visitLeaf);
       return;
   }
-
   const exhaustive: never = query;
   return exhaustive;
 };
@@ -25,12 +42,16 @@ export const forEachOptionsQueryLeaf = (
   query: OptionsQuery,
   visitLeaf: (query: LeafOptionsQuery) => void,
 ): void => {
-  if (isRecursiveOptionsQuery(query)) {
-    walkRecursiveOptionsQuery(query, visitLeaf);
-    return;
+  switch (query.query) {
+    case 'concat':
+    case 'nextInOrderByCondition':
+      walkRecursiveOptionsQuery(query, visitLeaf);
+      return;
+    default: {
+      const leafQuery: LeafOptionsQuery = query;
+      visitLeaf(leafQuery);
+    }
   }
-
-  visitLeaf(query);
 };
 
 export const reduceOptionsQueryLeaves = <TAcc>(

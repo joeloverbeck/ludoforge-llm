@@ -76,4 +76,15 @@ describe('query walk', () => {
     assert.equal(visited.includes('concat'), false);
     assert.equal(visited.includes('nextInOrderByCondition'), false);
   });
+
+  it('dispatches top-level leaf queries directly to the leaf visitor', () => {
+    const query = { query: 'players' } as const satisfies OptionsQuery;
+    const visited: string[] = [];
+
+    forEachOptionsQueryLeaf(query, (leaf) => {
+      visited.push(leaf.query);
+    });
+
+    assert.deepEqual(visited, ['players']);
+  });
 });

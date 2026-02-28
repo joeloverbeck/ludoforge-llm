@@ -18,6 +18,7 @@ import type {
   RecursiveOptionsQueryKind,
   RecursiveOptionsQueryKindCoverage,
 } from '../../src/kernel/query-partition-types.js';
+import type { RecursiveOptionsQueryDispatchCoverage } from '../../src/kernel/query-walk.js';
 
 type UnionToIntersection<T> = (
   T extends unknown ? (arg: T) => void : never
@@ -173,12 +174,14 @@ describe('exhaustive kernel unions', () => {
     const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
     const leafKinds: UnionSize<LeafOptionsQueryKind> = 14;
     const recursiveCoverage: RecursiveOptionsQueryKindCoverage = true;
+    const recursiveDispatchCoverage: RecursiveOptionsQueryDispatchCoverage = true;
     type Overlap = Extract<LeafOptionsQuery, RecursiveOptionsQuery>;
     const overlapVariants: UnionSize<Overlap> = 0;
 
     assert.equal(recursiveKinds, 2);
     assert.equal(leafKinds, 14);
     assert.equal(recursiveCoverage, true);
+    assert.equal(recursiveDispatchCoverage, true);
     assert.equal(overlapVariants, 0);
   });
 

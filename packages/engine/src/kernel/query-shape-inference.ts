@@ -1,7 +1,8 @@
 import type { GameDef, OptionsQuery, RuntimeTableContract, ValueExpr } from './types.js';
-import { inferQueryRuntimeShapes as inferCanonicalQueryRuntimeShapesSet, type QueryRuntimeShape } from './query-runtime-shapes.js';
+import { inferLeafOptionsQueryContract, type QueryRuntimeShape } from './query-kind-contract.js';
+import { forEachOptionsQueryLeaf } from './query-walk.js';
 
-export type { QueryRuntimeShape } from './query-runtime-shapes.js';
+export type { QueryRuntimeShape } from './query-kind-contract.js';
 export type ValueRuntimeShape = 'number' | 'string' | 'boolean' | 'unknown';
 const MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES: ReadonlySet<QueryRuntimeShape> = new Set([
   'token',
@@ -25,7 +26,11 @@ export function dedupeValueRuntimeShapes(shapes: readonly ValueRuntimeShape[]): 
 }
 
 export function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShape[] {
-  return [...inferCanonicalQueryRuntimeShapesSet(query)];
+  const shapes = new Set<QueryRuntimeShape>();
+  forEachOptionsQueryLeaf(query, (leafQuery) => {
+    shapes.add(inferLeafOptionsQueryContract(leafQuery).runtimeShape);
+  });
+  return [...shapes];
 }
 
 export function isMoveParamEncodableQueryRuntimeShape(shape: QueryRuntimeShape): boolean {

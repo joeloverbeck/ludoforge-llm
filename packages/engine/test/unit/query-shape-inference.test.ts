@@ -8,7 +8,6 @@ import {
   type QueryRuntimeShape,
   inferValueRuntimeShapes,
 } from '../../src/kernel/query-shape-inference.js';
-import { inferQueryRuntimeShapes as inferCanonicalQueryRuntimeShapesSet } from '../../src/kernel/query-runtime-shapes.js';
 
 describe('query shape inference', () => {
   it('classifies every leaf OptionsQuery variant runtime shape', () => {
@@ -62,7 +61,6 @@ describe('query shape inference', () => {
     const shapes = inferQueryRuntimeShapes(query);
 
     assert.deepEqual(shapes, ['token', 'object', 'string', 'unknown', 'number']);
-    assert.deepEqual(shapes, [...inferCanonicalQueryRuntimeShapesSet(query)]);
   });
 
   it('infers recursive nextInOrderByCondition source shapes through nested recursion', () => {
@@ -83,7 +81,6 @@ describe('query shape inference', () => {
     } as const satisfies OptionsQuery;
 
     assert.deepEqual(inferQueryRuntimeShapes(query), ['string', 'token', 'number']);
-    assert.deepEqual(inferQueryRuntimeShapes(query), [...inferCanonicalQueryRuntimeShapesSet(query)]);
   });
 
   it('infers value runtime shapes for refs and conditional expressions', () => {

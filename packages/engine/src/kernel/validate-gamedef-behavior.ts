@@ -14,6 +14,7 @@ import type {
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import { isCanonicalBindingIdentifier } from './binding-identifier-contract.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from './turn-flow-action-class-contract.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -1509,19 +1510,13 @@ export const validateEffectAst = (
 
   if ('grantFreeOperation' in effect) {
     const grant = effect.grantFreeOperation;
-    if (
-      grant.operationClass !== 'pass' &&
-      grant.operationClass !== 'event' &&
-      grant.operationClass !== 'operation' &&
-      grant.operationClass !== 'limitedOperation' &&
-      grant.operationClass !== 'operationPlusSpecialActivity'
-    ) {
+    if (!(TURN_FLOW_ACTION_CLASS_VALUES as readonly string[]).includes(grant.operationClass)) {
       diagnostics.push({
         code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
         path: `${path}.grantFreeOperation.operationClass`,
         severity: 'error',
         message: `grantFreeOperation.operationClass is invalid: \"${grant.operationClass}\".`,
-        suggestion: 'Use one of pass|event|operation|limitedOperation|operationPlusSpecialActivity.',
+        suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join('|')}.`,
       });
     }
     if (grant.uses !== undefined && (!Number.isSafeInteger(grant.uses) || grant.uses <= 0)) {

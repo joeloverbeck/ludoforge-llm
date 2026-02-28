@@ -3,18 +3,10 @@ import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { isTurnFlowActionClass } from './turn-flow-action-class-contract.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
-
-const isTurnFlowActionClass = (
-  value: string,
-): value is 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' =>
-  value === 'pass' ||
-  value === 'event' ||
-  value === 'operation' ||
-  value === 'limitedOperation' ||
-  value === 'operationPlusSpecialActivity';
 
 const resolveGrantSeat = (
   token: string,

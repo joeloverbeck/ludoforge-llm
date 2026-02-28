@@ -8,7 +8,7 @@ import {
 import { resolveEffectiveFreeOperationActionDomain, resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { toMoveIdentityKey } from './move-identity.js';
 import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
-import type { TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
+import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -20,7 +20,7 @@ const cardDrivenRuntime = (state: GameState) =>
 export function resolveConstrainedSecondEligibleActionClasses(
   def: GameDef,
   state: GameState,
-): readonly ('pass' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | 'event')[] | null {
+): readonly TurnFlowActionClass[] | null {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return null;

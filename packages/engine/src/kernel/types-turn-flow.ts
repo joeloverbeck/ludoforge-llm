@@ -1,11 +1,8 @@
+import type { TurnFlowActionClass as CanonicalTurnFlowActionClass } from './turn-flow-action-class-contract.js';
+
 export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
-export type TurnFlowActionClass =
-  | 'pass'
-  | 'event'
-  | 'operation'
-  | 'limitedOperation'
-  | 'operationPlusSpecialActivity';
+export type TurnFlowActionClass = CanonicalTurnFlowActionClass;
 
 export interface TurnFlowCardLifecycleDef {
   readonly played: string;

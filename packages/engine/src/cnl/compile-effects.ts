@@ -1,6 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { resolveEffectiveFreeOperationActionDomain } from '../kernel/free-operation-action-domain.js';
 import { createChoiceOptionsRuntimeShapeDiagnostic } from '../kernel/choice-options-runtime-shape-contract.js';
+import {
+  TURN_FLOW_ACTION_CLASS_VALUES,
+  isTurnFlowActionClass,
+} from '../kernel/turn-flow-action-class-contract.js';
 import type {
   ConditionAST,
   EffectAST,
@@ -1625,19 +1629,9 @@ function lowerGrantFreeOperationEffect(
       '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, uses?, id?, sequence? } }',
     ]);
   }
-  if (
-    source.operationClass !== 'pass' &&
-    source.operationClass !== 'event' &&
-    source.operationClass !== 'operation' &&
-    source.operationClass !== 'limitedOperation' &&
-    source.operationClass !== 'operationPlusSpecialActivity'
-  ) {
+  if (typeof source.operationClass !== 'string' || !isTurnFlowActionClass(source.operationClass)) {
     return missingCapability(`${path}.operationClass`, 'grantFreeOperation operationClass', source.operationClass, [
-      'pass',
-      'event',
-      'operation',
-      'limitedOperation',
-      'operationPlusSpecialActivity',
+      ...TURN_FLOW_ACTION_CLASS_VALUES,
     ]);
   }
 

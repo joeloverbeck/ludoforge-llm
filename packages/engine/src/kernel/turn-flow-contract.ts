@@ -1,4 +1,5 @@
 import { ACTION_CAPABILITY_CARD_EVENT } from './action-capabilities.js';
+import type { TurnFlowActionClass } from './turn-flow-action-class-contract.js';
 
 export const TURN_FLOW_REQUIRED_KEYS = [
   'cardLifecycle',
@@ -11,19 +12,9 @@ export const TURN_FLOW_REQUIRED_KEYS = [
 
 export const TURN_FLOW_OPTIONAL_KEYS = ['freeOperationActionIds', 'monsoon', 'pivotal', 'cardSeatOrderMetadataKey', 'cardSeatOrderMapping'] as const;
 
-export const TURN_FLOW_ACTION_CLASS_VALUES = [
-  'pass',
-  'event',
-  'operation',
-  'limitedOperation',
-  'operationPlusSpecialActivity',
-] as const;
-
 export const TURN_FLOW_DURATION_VALUES = ['turn', 'nextTurn', 'round', 'cycle'] as const;
 
 export const TURN_FLOW_FIRST_ACTION_VALUES = ['event', 'operation', 'operationPlusSpecialActivity'] as const;
-
-export type TurnFlowActionClass = (typeof TURN_FLOW_ACTION_CLASS_VALUES)[number];
 
 export interface TurnFlowSemanticActionDescriptor {
   readonly id: string;

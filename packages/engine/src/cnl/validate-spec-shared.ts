@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from '../kernel/turn-flow-action-class-contract.js';
 import {
-  TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_DURATION_VALUES,
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_OPTIONAL_KEYS,

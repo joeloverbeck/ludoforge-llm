@@ -4,6 +4,7 @@ import type {
   EventDeckDef,
   ValueExpr,
 } from '../kernel/types.js';
+import type { TurnFlowActionClass } from '../kernel/turn-flow-action-class-contract.js';
 
 export interface GameSpecMetadata {
   readonly id: string;
@@ -164,12 +165,7 @@ export interface GameSpecImport {
 
 export type GameSpecTurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
-export type GameSpecTurnFlowActionClass =
-  | 'pass'
-  | 'event'
-  | 'operation'
-  | 'limitedOperation'
-  | 'operationPlusSpecialActivity';
+export type GameSpecTurnFlowActionClass = TurnFlowActionClass;
 
 export interface GameSpecTurnFlowCardLifecycle {
   readonly played: string;

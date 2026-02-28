@@ -14,9 +14,9 @@ import {
   hasTurnFlowInterruptSelectorMatchField,
 } from './turn-flow-interrupt-selector-contract.js';
 import {
-  TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_DURATION_VALUES,
 } from './turn-flow-contract.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from './turn-flow-action-class-contract.js';
 
 export const TurnFlowDurationSchema = z.enum(TURN_FLOW_DURATION_VALUES);
 

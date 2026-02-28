@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CANONICAL_BINDING_IDENTIFIER_MESSAGE, CANONICAL_BINDING_IDENTIFIER_PATTERN } from './binding-identifier-contract.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from './turn-flow-action-class-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
 
@@ -762,13 +763,7 @@ effectAstSchemaInternal = z.union([
           id: StringSchema.optional(),
           seat: StringSchema,
           executeAsSeat: StringSchema.optional(),
-          operationClass: z.union([
-            z.literal('pass'),
-            z.literal('event'),
-            z.literal('operation'),
-            z.literal('limitedOperation'),
-            z.literal('operationPlusSpecialActivity'),
-          ]),
+          operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
           actionIds: z.array(StringSchema).optional(),
           zoneFilter: ConditionASTSchema.optional(),
           uses: NumberSchema.optional(),

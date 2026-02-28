@@ -56,4 +56,21 @@ describe('runtime error contract layering guard', () => {
       ],
     });
   });
+
+  it('keeps turn-flow-contract.ts action-class definitions sourced from canonical contract module', () => {
+    const source = readKernelSource('src/kernel/turn-flow-contract.ts');
+    const sourceFile = parseTypeScriptSource(source, 'turn-flow-contract.ts');
+    const imports = collectImportSpecifiers(sourceFile);
+
+    assert.equal(
+      imports.includes('./turn-flow-action-class-contract.js'),
+      true,
+      'turn-flow-contract.ts must import turn-flow action-class contracts from canonical module',
+    );
+    assert.equal(
+      source.includes('export const TURN_FLOW_ACTION_CLASS_VALUES ='),
+      false,
+      'turn-flow-contract.ts must not redeclare action-class literal values',
+    );
+  });
 });

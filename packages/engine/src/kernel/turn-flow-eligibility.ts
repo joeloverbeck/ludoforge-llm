@@ -14,6 +14,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { isTurnFlowActionClass } from './turn-flow-action-class-contract.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import type {
@@ -55,15 +56,6 @@ const cardDrivenConfig = (def: GameDef) =>
 
 const cardDrivenRuntime = (state: GameState) =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
-
-const isTurnFlowActionClass = (
-  value: string,
-): value is 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' =>
-  value === 'pass' ||
-  value === 'event' ||
-  value === 'operation' ||
-  value === 'limitedOperation' ||
-  value === 'operationPlusSpecialActivity';
 
 export type ResolvedTurnFlowActionClass = TurnFlowActionClass;
 

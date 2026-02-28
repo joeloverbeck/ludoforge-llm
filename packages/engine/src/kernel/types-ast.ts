@@ -1,5 +1,6 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
+import type { TurnFlowActionClass } from './turn-flow-action-class-contract.js';
 
 export type PlayerSel =
   | 'actor'
@@ -469,7 +470,7 @@ export type EffectAST =
         readonly id?: string;
         readonly seat: string;
         readonly executeAsSeat?: string;
-        readonly operationClass: 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity';
+        readonly operationClass: TurnFlowActionClass;
         readonly actionIds?: readonly string[];
         readonly zoneFilter?: ConditionAST;
         readonly uses?: number;

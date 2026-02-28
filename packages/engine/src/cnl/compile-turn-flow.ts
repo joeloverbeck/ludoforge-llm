@@ -1,8 +1,8 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { hasTurnFlowInterruptSelectorMatchField } from '../kernel/turn-flow-interrupt-selector-contract.js';
 import type { TurnFlowDef, TurnOrderStrategy } from '../kernel/types.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from '../kernel/turn-flow-action-class-contract.js';
 import {
-  TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_REQUIRED_KEYS,
 } from '../kernel/turn-flow-contract.js';
 import type { GameSpecDoc } from './game-spec-doc.js';

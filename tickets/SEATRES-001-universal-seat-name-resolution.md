@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — compiler pipeline (`compile-selectors.ts`, `compile-conditions.ts`, `compile-lowering.ts`, `compile-effects.ts`)
-**Deps**: None (builds on already-merged cross-seat choice ownership work)
+**Deps**: None
 
 ## Problem
 

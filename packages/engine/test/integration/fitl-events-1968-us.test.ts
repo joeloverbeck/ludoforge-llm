@@ -127,6 +127,34 @@ const setupPsychedelicCookieState = (
   };
 };
 
+const setupKissingerState = (
+  def: GameDef,
+  overrides: {
+    readonly zoneTokens?: Readonly<Record<string, readonly Token[]>>;
+    readonly aid?: number;
+  },
+): GameState => {
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+  const baseState = clearAllZones(initialState(def, 196802, 4).state);
+  return {
+    ...baseState,
+    activePlayer: asPlayerId(0),
+    turnOrderState: { type: 'roundRobin' },
+    globalVars: {
+      ...baseState.globalVars,
+      aid: overrides.aid ?? (baseState.globalVars.aid as number | undefined) ?? 0,
+    },
+    markers: withNeutralSupportMarkers(baseState),
+    zones: {
+      ...baseState.zones,
+      [eventDeck!.discardZone]: [makeToken('card-2', 'card', 'none')],
+      ...overrides.zoneTokens,
+    },
+  };
+};
+
 const findPeaceTalksMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded') =>
   legalMoves(def, state).find(
     (move) =>
@@ -391,7 +419,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.equal(aboveFloorAfter.globalVars.nvaResources, 19);
   });
 
-  it('encodes card 2 (Kissinger) with rollRandom unshaded and three-part shaded effects', () => {
+  it('encodes card 2 (Kissinger) metadata, text, and shaded aid penalty', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -407,91 +435,80 @@ describe('FITL 1968 US-first event-card production spec', () => {
       card?.shaded?.text,
       'NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6.',
     );
+    assert.deepEqual(card?.shaded?.effects?.at(-1), { addVar: { scope: 'global', var: 'aid', delta: -6 } });
+  });
 
-    // Unshaded: single top-level rollRandom
-    const unshadedEffects = card?.unshaded?.effects ?? [];
-    assert.equal(unshadedEffects.length, 1, 'unshaded must have exactly 1 top-level effect');
-    const rollRandom = (unshadedEffects[0] as { rollRandom?: { bind?: string; min?: number; max?: number; in?: unknown[] } }).rollRandom;
-    assert.notEqual(rollRandom, undefined, 'top-level effect must be rollRandom');
-    assert.equal(rollRandom?.bind, '$dieRoll');
-    assert.equal(rollRandom?.min, 1);
-    assert.equal(rollRandom?.max, 6);
-    assert.equal(rollRandom?.in?.length, 2, 'rollRandom.in must contain chooseN + forEach');
-
-    const chooseNUnshaded = (rollRandom?.in?.[0] as { chooseN?: { bind?: string; options?: { query?: string }; max?: { ref?: string; name?: string } } }).chooseN;
-    assert.notEqual(chooseNUnshaded, undefined, 'first inner effect must be chooseN');
-    assert.equal(chooseNUnshaded?.bind, '$insurgentPieces');
-    assert.equal(chooseNUnshaded?.options?.query, 'concat');
-    const unshadedSources = (chooseNUnshaded?.options as { sources?: Array<{ filter?: Array<{ prop?: string; op?: string; value?: string | string[] }> }> })?.sources;
-    assert.equal(unshadedSources?.length, 2, 'unshaded insurgent concat must have 2 sources');
-
-    const mixedTypeSource = unshadedSources?.find((source) =>
-      source.filter?.some((predicate) => predicate.prop === 'type' && predicate.op === 'in'),
+  it('applies card-2 shaded by placing up to 2 NVA pieces in Cambodia, moving 2 US troops to out-of-play, and reducing aid by 6', () => {
+    const def = compileDef();
+    const setup = setupKissingerState(def, {
+      aid: 20,
+      zoneTokens: {
+        'available-NVA:none': [
+          makeToken('nva-av-troops', 'troops', 'NVA'),
+          makeToken('nva-av-base', 'base', 'NVA'),
+          makeGuerrilla('nva-av-guerrilla', 'NVA', 'active'),
+        ],
+        'northeast-cambodia:none': [makeToken('vc-cam-existing', 'troops', 'VC')],
+        'quang-nam:none': [makeToken('us-map-1', 'troops', 'US')],
+        'available-US:none': [makeToken('us-av-1', 'troops', 'US')],
+        'casualties-US:none': [makeToken('us-cas-1', 'troops', 'US')],
+      },
+    });
+    const move = legalMoves(def, setup).find(
+      (candidate) =>
+        String(candidate.actionId) === 'event' &&
+        candidate.params.eventCardId === 'card-2' &&
+        candidate.params.side === 'shaded',
     );
-    assert.notEqual(mixedTypeSource, undefined, 'unshaded must include mixed type source for troops + guerrilla');
+    assert.notEqual(move, undefined, 'Expected shaded Kissinger event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) =>
+          request.type === 'chooseN' &&
+          request.options.some((option) => String(option.value).startsWith('nva-av-')),
+        value: [asTokenId('nva-av-troops'), asTokenId('nva-av-base')],
+      },
+      {
+        when: (request) =>
+          request.type === 'chooseN' &&
+          request.options.some((option) => String(option.value).startsWith('us-')),
+        value: [asTokenId('us-map-1'), asTokenId('us-av-1')],
+      },
+    ];
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    assert.equal(final.globalVars.aid, 14, 'Aid should be reduced by 6');
     assert.equal(
-      mixedTypeSource?.filter?.some(
-        (predicate) =>
-          predicate.prop === 'type' &&
-          predicate.op === 'in' &&
-          Array.isArray(predicate.value) &&
-          predicate.value.includes('troops') &&
-          predicate.value.includes('guerrilla'),
-      ),
-      true,
-      'mixed type source must include troops and guerrilla',
+      countTokens(final, 'northeast-cambodia:none', (token) => token.props.faction === 'NVA'),
+      2,
+      'Selected NVA pieces should be placed in Cambodia',
     );
-
-    const baseSource = unshadedSources?.find((source) =>
-      source.filter?.some((predicate) => predicate.prop === 'type' && predicate.op === 'eq' && predicate.value === 'base'),
-    );
-    assert.notEqual(baseSource, undefined, 'unshaded must include dedicated base source');
     assert.equal(
-      baseSource?.filter?.some((predicate) => predicate.prop === 'tunnel' && predicate.op === 'eq' && predicate.value === 'untunneled'),
-      true,
-      'base source must preserve untunneled tunnel filter',
+      countTokens(final, 'available-NVA:none', (token) => token.props.faction === 'NVA'),
+      1,
+      'Exactly one unselected NVA piece should remain in available',
     );
-    assert.equal(chooseNUnshaded?.max?.ref, 'binding');
-    assert.equal(chooseNUnshaded?.max?.name, '$dieRoll');
-
-    const forEachUnshaded = (rollRandom?.in?.[1] as { forEach?: { bind?: string } }).forEach;
-    assert.notEqual(forEachUnshaded, undefined, 'second inner effect must be forEach');
-    assert.equal(forEachUnshaded?.bind, '$piece');
-
-    // Shaded: 5 effects total (chooseN, forEach, chooseN, forEach, addVar)
-    const shadedEffects = card?.shaded?.effects ?? [];
-    assert.equal(shadedEffects.length, 5, 'shaded must have exactly 5 top-level effects');
-
-    // Effect 1: chooseN for NVA pieces
-    const nvaChooseN = (shadedEffects[0] as { chooseN?: { bind?: string; options?: { query?: string; zone?: string }; max?: number } }).chooseN;
-    assert.notEqual(nvaChooseN, undefined, 'shaded effect 0 must be chooseN');
-    assert.equal(typeof nvaChooseN?.bind, 'string');
-    assert.equal(nvaChooseN?.options?.query, 'tokensInZone');
-    assert.equal(nvaChooseN?.options?.zone, 'available-NVA:none');
-    assert.equal(nvaChooseN?.max, 2);
-
-    // Effect 2: forEach placing NVA pieces over the chooseN binding
-    const nvaForEach = (shadedEffects[1] as { forEach?: { bind?: string; over?: { query?: string; name?: string } } }).forEach;
-    assert.notEqual(nvaForEach, undefined, 'shaded effect 1 must be forEach');
-    assert.equal(typeof nvaForEach?.bind, 'string');
-    assert.equal(nvaForEach?.over?.query, 'binding');
-    assert.equal(nvaForEach?.over?.name, nvaChooseN?.bind);
-
-    // Effect 3: chooseN for US troops (concat of 3 sources)
-    const usChooseN = (shadedEffects[2] as { chooseN?: { bind?: string; options?: { query?: string; sources?: unknown[] }; max?: number } }).chooseN;
-    assert.notEqual(usChooseN, undefined, 'shaded effect 2 must be chooseN');
-    assert.equal(usChooseN?.bind, '$usTroops');
-    assert.equal(usChooseN?.options?.query, 'concat');
-    assert.equal(usChooseN?.options?.sources?.length, 3, 'US troops concat must have 3 sources');
-    assert.equal(usChooseN?.max, 2);
-
-    // Effect 4: forEach moving US troops
-    const usForEach = (shadedEffects[3] as { forEach?: { bind?: string } }).forEach;
-    assert.notEqual(usForEach, undefined, 'shaded effect 3 must be forEach');
-    assert.equal(usForEach?.bind, '$usTroop');
-
-    // Effect 5: addVar for Aid -6
-    assert.deepEqual(shadedEffects[4], { addVar: { scope: 'global', var: 'aid', delta: -6 } });
+    assert.equal(
+      countTokens(final, 'out-of-play-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      2,
+      'Exactly two selected US troops should move to out-of-play',
+    );
+    assert.equal(
+      countTokens(final, 'quang-nam:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected map US troop should leave its origin space',
+    );
+    assert.equal(
+      countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected available US troop should leave available',
+    );
+    assert.equal(
+      countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      1,
+      'Unselected casualties troop should remain in casualties',
+    );
   });
 
   it('encodes card 9 (Psychedelic Cookie) with explicit unshaded/shaded troop-routing effects', () => {

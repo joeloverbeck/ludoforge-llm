@@ -17,17 +17,22 @@ const expectedApplyEffectsBoundaryModules = [
   'trigger-dispatch.ts',
 ] as const;
 
-const expectedConstructorByBoundaryModule = {
-  'apply-move.ts': 'createExecutionEffectContext',
-  'event-execution.ts': 'createExecutionEffectContext',
-  'initial-state.ts': 'createExecutionEffectContext',
-  'legal-choices.ts': 'createDiscoveryEffectContext',
-  'phase-lifecycle.ts': 'createExecutionEffectContext',
-  'trigger-dispatch.ts': 'createExecutionEffectContext',
-} as const satisfies Readonly<Record<
+type CanonicalEffectContextConstructorId =
+  | 'createExecutionEffectContext'
+  | 'createDiscoveryStrictEffectContext'
+  | 'createDiscoveryProbeEffectContext';
+
+const expectedConstructorsByBoundaryModule: Readonly<Record<
   (typeof expectedApplyEffectsBoundaryModules)[number],
-  'createExecutionEffectContext' | 'createDiscoveryEffectContext'
->>;
+  readonly CanonicalEffectContextConstructorId[]
+>> = {
+  'apply-move.ts': ['createExecutionEffectContext'],
+  'event-execution.ts': ['createExecutionEffectContext'],
+  'initial-state.ts': ['createExecutionEffectContext'],
+  'legal-choices.ts': ['createDiscoveryStrictEffectContext', 'createDiscoveryProbeEffectContext'],
+  'phase-lifecycle.ts': ['createExecutionEffectContext'],
+  'trigger-dispatch.ts': ['createExecutionEffectContext'],
+};
 
 const fallbackPattern = /\bmode\s*\?\?\s*['"]execution['"]/u;
 const fallbackCtxPattern = /\bctx\s*\.\s*mode\s*\?\?/u;
@@ -55,7 +60,7 @@ describe('effect mode threading architecture guard', () => {
       const sourceFile = parseTypeScriptSource(source, moduleName);
       const applyEffectsCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyEffects');
       assert.ok(applyEffectsCalls.length > 0, `${moduleName} must contain applyEffects call(s) for this architecture guard`);
-      const expectedConstructor = expectedConstructorByBoundaryModule[moduleName];
+      const expectedConstructors = expectedConstructorsByBoundaryModule[moduleName];
 
       for (const applyEffectsCall of applyEffectsCalls) {
         const contextArgument = applyEffectsCall.arguments[1];
@@ -69,10 +74,10 @@ describe('effect mode threading architecture guard', () => {
         }
 
         const resolvedConstructor = resolveCallIdentifierFromExpression(contextArgument, sourceFile, applyEffectsCall);
-        assert.equal(
-          resolvedConstructor,
-          expectedConstructor,
-          `${moduleName} applyEffects context must resolve to ${expectedConstructor}; got ${
+        assert.ok(
+          resolvedConstructor !== undefined
+            && expectedConstructors.includes(resolvedConstructor as CanonicalEffectContextConstructorId),
+          `${moduleName} applyEffects context must resolve to one of ${expectedConstructors.join(', ')}; got ${
             resolvedConstructor ?? 'non-constructor expression'
           } from ${expressionToText(sourceFile, contextArgument)}`,
         );
@@ -111,7 +116,7 @@ describe('effect mode threading architecture guard', () => {
 
   it('resolves constructor source by nearest lexical scope when context identifiers are shadowed', () => {
     const source = `
-      const ctx = createDiscoveryEffectContext({ state, rng });
+      const ctx = createDiscoveryStrictEffectContext({ state, rng });
       {
         const ctx = createExecutionEffectContext({ state, rng });
         applyEffects(effects, ctx);
@@ -138,7 +143,7 @@ describe('effect mode threading architecture guard', () => {
 
     assert.deepEqual(
       resolved.sort(),
-      ['createDiscoveryEffectContext', 'createExecutionEffectContext'].sort(),
+      ['createDiscoveryStrictEffectContext', 'createExecutionEffectContext'].sort(),
       'scope-aware resolution must follow the nearest visible binding for each applyEffects usage',
     );
   });

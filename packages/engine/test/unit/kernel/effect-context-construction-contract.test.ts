@@ -3,11 +3,11 @@ import { describe, it } from 'node:test';
 
 import { asPhaseId, asPlayerId, asZoneId, type PlayerId } from '../../../src/kernel/branded.js';
 import {
-  createDiscoveryEffectContext,
   createDiscoveryProbeEffectContext,
   createDiscoveryStrictEffectContext,
   createExecutionEffectContext,
 } from '../../../src/kernel/effect-context.js';
+import * as effectContextModule from '../../../src/kernel/effect-context.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
@@ -128,43 +128,39 @@ describe('effect-context construction contract', () => {
     assert.equal(context.activePlayer, asPlayerId(0));
   });
 
-  it('enforces discovery strict defaults in strict constructor and wrapper default path', () => {
+  it('enforces discovery strict defaults in strict constructor', () => {
     const activePlayer = asPlayerId(1);
     const options = makeRuntimeEffectContextOptions({ activePlayer });
 
     const strictContext = createDiscoveryStrictEffectContext(options);
-    const wrapperDefaultContext = createDiscoveryEffectContext(options);
 
     assert.equal(strictContext.mode, 'discovery');
-    assert.equal(wrapperDefaultContext.mode, 'discovery');
     assertAuthority(strictContext.decisionAuthority, {
-      player: activePlayer,
-      ownershipEnforcement: 'strict',
-    });
-    assertAuthority(wrapperDefaultContext.decisionAuthority, {
       player: activePlayer,
       ownershipEnforcement: 'strict',
     });
   });
 
-  it('enforces discovery probe ownership via direct probe constructor and wrapper probe path', () => {
+  it('enforces discovery probe ownership via direct probe constructor', () => {
     const options = makeRuntimeEffectContextOptions({
       activePlayer: asPlayerId(0),
       decisionAuthorityPlayer: asPlayerId(1),
     });
 
     const probeContext = createDiscoveryProbeEffectContext(options);
-    const wrapperProbeContext = createDiscoveryEffectContext(options, 'probe');
 
     assert.equal(probeContext.mode, 'discovery');
-    assert.equal(wrapperProbeContext.mode, 'discovery');
     assertAuthority(probeContext.decisionAuthority, {
       player: asPlayerId(1),
       ownershipEnforcement: 'probe',
     });
-    assertAuthority(wrapperProbeContext.decisionAuthority, {
-      player: asPlayerId(1),
-      ownershipEnforcement: 'probe',
-    });
+  });
+
+  it('does not export a discovery dispatcher alias constructor', () => {
+    assert.equal(
+      Object.hasOwn(effectContextModule, 'createDiscoveryEffectContext'),
+      false,
+      'effect-context module must expose only explicit discovery constructors',
+    );
   });
 });

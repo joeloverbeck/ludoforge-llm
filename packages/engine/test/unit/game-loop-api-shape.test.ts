@@ -62,6 +62,7 @@ describe('game-loop API shape', () => {
     assert.equal('selectorCardinalityPlayerCountContext' in kernel, false);
     assert.equal('selectorCardinalityPlayerResolvedContext' in kernel, false);
     assert.equal('selectorCardinalityZoneResolvedContext' in kernel, false);
+    assert.equal('createDiscoveryEffectContext' in kernel, false);
     assert.equal('createScopedVarContractSchema' in kernel, false);
     assert.equal('AST_SCOPED_VAR_SCOPES' in kernel, false);
     assert.equal('TRACE_SCOPED_VAR_SCOPES' in kernel, false);

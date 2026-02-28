@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel legal-choices probe threading and context-construction flow
-**Deps**: archive/tickets/ENGINEARCH-113-discriminated-decision-authority-context-contract.md, tickets/ENGINEARCH-129-eliminate-discovery-context-dispatcher-alias.md
+**Deps**: archive/tickets/ENGINEARCH-113-discriminated-decision-authority-context-contract.md, archive/tickets/ENGINEARCH-129-eliminate-discovery-context-dispatcher-alias.md
 
 ## Problem
 

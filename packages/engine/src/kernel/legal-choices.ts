@@ -6,7 +6,7 @@ import {
   isDeclaredActionParamValueInDomain,
   resolveDeclaredActionParamDomainOptions,
 } from './declared-action-param-domain.js';
-import { createDiscoveryEffectContext, type EffectContext } from './effect-context.js';
+import { createDiscoveryProbeEffectContext, createDiscoveryStrictEffectContext } from './effect-context.js';
 import type { EvalContext } from './eval-context.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
@@ -98,7 +98,7 @@ const executeDiscoveryEffects = (
   move: Move,
   ownershipEnforcement: 'strict' | 'probe',
 ): ChoiceRequest => {
-  const baseContext: Parameters<typeof createDiscoveryEffectContext>[0] = {
+  const baseContext: Parameters<typeof createDiscoveryStrictEffectContext>[0] = {
     def: evalCtx.def,
     adjacencyGraph: evalCtx.adjacencyGraph,
     state: evalCtx.state,
@@ -117,9 +117,10 @@ const executeDiscoveryEffects = (
       : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
     ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
   };
-  const effectCtx: EffectContext = createDiscoveryEffectContext(baseContext, ownershipEnforcement);
   try {
-    const result = applyEffects(effects, effectCtx);
+    const result = ownershipEnforcement === 'probe'
+      ? applyEffects(effects, createDiscoveryProbeEffectContext(baseContext))
+      : applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
     return result.pendingChoice ?? COMPLETE;
   } catch (error: unknown) {
     if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {

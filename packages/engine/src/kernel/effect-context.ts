@@ -140,14 +140,6 @@ export const createDiscoveryProbeEffectContext = (
   };
 };
 
-export const createDiscoveryEffectContext = (
-  options: RuntimeEffectContextOptions,
-  ownershipEnforcement: 'strict' | 'probe' = 'strict',
-): DiscoveryEffectContext =>
-  ownershipEnforcement === 'probe'
-    ? createDiscoveryProbeEffectContext(options)
-    : createDiscoveryStrictEffectContext(options);
-
 export function getMaxEffectOps(ctx: Pick<EffectContext, 'maxEffectOps'>): number {
   return ctx.maxEffectOps ?? DEFAULT_MAX_EFFECT_OPS;
 }

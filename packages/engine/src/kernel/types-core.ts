@@ -542,11 +542,22 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
-export interface DecisionAuthorityContext {
+export interface DecisionAuthorityBaseContext {
   readonly source: 'engineRuntime';
   readonly player: PlayerId;
-  readonly ownershipEnforcement: 'strict' | 'probe';
 }
+
+export interface DecisionAuthorityStrictContext extends DecisionAuthorityBaseContext {
+  readonly ownershipEnforcement: 'strict';
+}
+
+export interface DecisionAuthorityProbeContext extends DecisionAuthorityBaseContext {
+  readonly ownershipEnforcement: 'probe';
+}
+
+export type DecisionAuthorityContext =
+  | DecisionAuthorityStrictContext
+  | DecisionAuthorityProbeContext;
 
 export interface ChoiceCompleteRequest {
   readonly kind: 'complete';

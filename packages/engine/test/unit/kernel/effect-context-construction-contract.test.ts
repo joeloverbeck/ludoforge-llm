@@ -20,15 +20,18 @@ describe('effect-context construction contract', () => {
     const source = readKernelSource('src/kernel/effect-context.ts');
 
     assert.match(source, /export const createExecutionEffectContext\s*=\s*\(/u);
+    assert.match(source, /export const createDiscoveryStrictEffectContext\s*=\s*\(/u);
+    assert.match(source, /export const createDiscoveryProbeEffectContext\s*=\s*\(/u);
     assert.match(source, /export const createDiscoveryEffectContext\s*=\s*\(/u);
     assert.match(source, /decisionAuthorityPlayer\s*=\s*activePlayer/u);
-    assert.match(source, /ownershipEnforcement\s*=\s*'strict'/u);
+    assert.match(source, /ownershipEnforcement:\s*'strict'/u);
+    assert.match(source, /ownershipEnforcement:\s*'probe'/u);
 
     const engineRuntimeSourceMatches = source.match(/source:\s*'engineRuntime'/gu) ?? [];
     assert.equal(
       engineRuntimeSourceMatches.length,
-      2,
-      'Execution and discovery constructors must both encode engine-owned authority source',
+      3,
+      'Execution and strict/probe discovery constructors must encode engine-owned authority source',
     );
     assert.match(source, /mode:\s*'execution'/u);
     assert.match(source, /mode:\s*'discovery'/u);

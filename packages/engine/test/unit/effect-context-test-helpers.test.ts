@@ -2,7 +2,11 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { asPhaseId, asPlayerId, asZoneId, createCollector, type GameDef, type GameState } from '../../src/kernel/index.js';
-import { makeDiscoveryEffectContext, makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import {
+  makeDiscoveryEffectContext,
+  makeDiscoveryProbeEffectContext,
+  makeExecutionEffectContext,
+} from '../helpers/effect-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effect-context-test-helpers', players: { min: 1, max: 2 } },
@@ -49,6 +53,13 @@ describe('effect-context test helper', () => {
   it('uses explicit discovery mode when requested', () => {
     const context = makeDiscoveryEffectContext({ def: makeDef(), state: makeState() });
     assert.equal(context.mode, 'discovery');
+    assert.equal(context.decisionAuthority.ownershipEnforcement, 'strict');
+  });
+
+  it('supports explicit discovery probe contexts for legality probing tests', () => {
+    const context = makeDiscoveryProbeEffectContext({ def: makeDef(), state: makeState() });
+    assert.equal(context.mode, 'discovery');
+    assert.equal(context.decisionAuthority.ownershipEnforcement, 'probe');
   });
 
   it('passes through trace-specific fields used by trace contract tests', () => {

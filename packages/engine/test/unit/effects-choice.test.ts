@@ -1,13 +1,19 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
+import {
+  makeDiscoveryEffectContext,
+  makeDiscoveryProbeEffectContext,
+  makeExecutionEffectContext,
+  type EffectContextTestOverrides,
+} from '../helpers/effect-context-test-helpers.js';
 import {
   buildAdjacencyGraph,
   applyEffect,
   asPhaseId,
   asPlayerId,
   asZoneId,
+  EFFECT_RUNTIME_REASONS,
   createRng,
   isEffectErrorCode,
   type EffectAST,
@@ -73,6 +79,19 @@ const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeE
 });
 
 const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeDiscoveryEffectContext({
+  def: makeDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
+  state: makeState(),
+  rng: createRng(19n),
+  activePlayer: asPlayerId(0),
+  actorPlayer: asPlayerId(0),
+  bindings: {},
+  moveParams: {},
+  collector: createCollector(),
+  ...overrides,
+});
+
+const makeDiscoveryProbeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeDiscoveryProbeEffectContext({
   def: makeDef(),
   adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(),
@@ -199,6 +218,42 @@ describe('effects choice assertions', () => {
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain');
     });
+  });
+
+  it('chooseOne owner mismatch emits strict validation reason in strict discovery contexts', () => {
+    const ctx = makeDiscoveryCtx({
+      decisionAuthorityPlayer: asPlayerId(1),
+      moveParams: { 'decision:$choice': 'alpha' },
+    });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) =>
+      isEffectErrorCode(error, 'EFFECT_RUNTIME')
+      && error.context?.reason === EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+  });
+
+  it('chooseOne owner mismatch emits probe reason in probe discovery contexts', () => {
+    const ctx = makeDiscoveryProbeCtx({
+      decisionAuthorityPlayer: asPlayerId(1),
+      moveParams: { 'decision:$choice': 'alpha' },
+    });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) =>
+      isEffectErrorCode(error, 'EFFECT_RUNTIME')
+      && error.context?.reason === EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
   });
 
   it('chooseOne resolves templated bind names against current bindings', () => {

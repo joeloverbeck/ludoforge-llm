@@ -94,14 +94,13 @@ const executeDiscoveryEffects = (
   move: Move,
   ownershipEnforcement: 'strict' | 'probe',
 ): ChoiceRequest => {
-  const effectCtx: EffectContext = createDiscoveryEffectContext({
+  const baseContext: Parameters<typeof createDiscoveryEffectContext>[0] = {
     def: evalCtx.def,
     adjacencyGraph: evalCtx.adjacencyGraph,
     state: evalCtx.state,
     rng: { state: evalCtx.state.rng },
     activePlayer: evalCtx.activePlayer,
     actorPlayer: evalCtx.actorPlayer,
-    ownershipEnforcement,
     bindings: evalCtx.bindings,
     moveParams: move.params,
     collector: evalCtx.collector,
@@ -113,7 +112,8 @@ const executeDiscoveryEffects = (
       ? {}
       : { freeOperationZoneFilterDiagnostics: evalCtx.freeOperationZoneFilterDiagnostics }),
     ...(evalCtx.maxQueryResults === undefined ? {} : { maxQueryResults: evalCtx.maxQueryResults }),
-  });
+  };
+  const effectCtx: EffectContext = createDiscoveryEffectContext(baseContext, ownershipEnforcement);
   try {
     const result = applyEffects(effects, effectCtx);
     return result.pendingChoice ?? COMPLETE;

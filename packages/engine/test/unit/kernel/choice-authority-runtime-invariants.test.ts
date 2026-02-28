@@ -16,7 +16,11 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
-import { makeDiscoveryEffectContext, makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import {
+  makeDiscoveryEffectContext,
+  makeDiscoveryProbeEffectContext,
+  makeExecutionEffectContext,
+} from '../../helpers/effect-context-test-helpers.js';
 import {
   CHOICE_OWNER_PLAYER,
   buildChooserOwnedChoiceEffect,
@@ -88,7 +92,7 @@ describe('choice authority runtime invariants', () => {
   it('emits choiceProbeAuthorityMismatch only in discovery+probe ownership enforcement', () => {
     for (const primitive of primitives) {
       const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-      const context = makeDiscoveryEffectContext({
+      const context = makeDiscoveryProbeEffectContext({
         def: makeDef([effect]),
         state: makeState(),
         moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
@@ -96,11 +100,7 @@ describe('choice authority runtime invariants', () => {
       });
 
       assertEffectRuntimeReason(
-        () =>
-          applyEffect(effect, {
-            ...context,
-            decisionAuthority: { ...context.decisionAuthority, ownershipEnforcement: 'probe' },
-          }),
+        () => applyEffect(effect, context),
         EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
       );
     }

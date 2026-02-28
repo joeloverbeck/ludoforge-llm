@@ -1,10 +1,16 @@
 import { asPlayerId, type PlayerId } from '../../src/kernel/branded.js';
+import {
+  createDiscoveryProbeEffectContext,
+  createDiscoveryStrictEffectContext,
+  createExecutionEffectContext,
+  type EffectContext,
+  type EffectTraceContext,
+  type PhaseTransitionBudget,
+} from '../../src/kernel/effect-context.js';
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import { createRng } from '../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
 import type { FreeOperationZoneFilterDiagnostics } from '../../src/kernel/eval-context.js';
-import type { EffectContext, EffectTraceContext, PhaseTransitionBudget } from '../../src/kernel/effect-context.js';
-import type { InterpreterMode } from '../../src/kernel/interpreter-mode.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';
 import type { AdjacencyGraph } from '../../src/kernel/spatial.js';
 import type {
@@ -15,6 +21,8 @@ import type {
   MoveParamValue,
   Rng,
 } from '../../src/kernel/types.js';
+
+type RuntimeEffectContextOptions = Parameters<typeof createExecutionEffectContext>[0];
 
 interface EffectContextTestOptions {
   readonly def: GameDef;
@@ -34,15 +42,14 @@ interface EffectContextTestOptions {
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
-  readonly mode: InterpreterMode;
   readonly collector?: ExecutionCollector;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly iterationPath?: string;
 }
 
-export type EffectContextTestOverrides = Omit<Partial<EffectContext>, 'mode'>;
+export type EffectContextTestOverrides = Partial<RuntimeEffectContextOptions>;
 
-const makeEffectContext = ({
+const makeRuntimeEffectContextOptions = ({
   def,
   state,
   adjacencyGraph = buildAdjacencyGraph(def.zones),
@@ -52,7 +59,6 @@ const makeEffectContext = ({
   decisionAuthorityPlayer = activePlayer,
   bindings = {},
   moveParams = {},
-  mode,
   collector = createCollector(),
   runtimeTableIndex,
   traceContext,
@@ -64,14 +70,14 @@ const makeEffectContext = ({
   maxQueryResults,
   phaseTransitionBudget,
   iterationPath,
-}: EffectContextTestOptions): EffectContext => ({
+}: EffectContextTestOptions): RuntimeEffectContextOptions => ({
   def,
   adjacencyGraph,
   state,
   rng,
   activePlayer,
   actorPlayer,
-  decisionAuthority: { source: 'engineRuntime', player: decisionAuthorityPlayer, ownershipEnforcement: 'strict' },
+  decisionAuthorityPlayer,
   bindings,
   ...(runtimeTableIndex === undefined ? {} : { runtimeTableIndex }),
   moveParams,
@@ -82,16 +88,16 @@ const makeEffectContext = ({
   ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
   ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
-  mode,
   collector,
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
   ...(iterationPath === undefined ? {} : { iterationPath }),
 });
 
-type EffectContextTestOptionsWithoutMode = Omit<EffectContextTestOptions, 'mode'>;
+export const makeExecutionEffectContext = (options: EffectContextTestOptions): EffectContext =>
+  createExecutionEffectContext(makeRuntimeEffectContextOptions(options));
 
-export const makeExecutionEffectContext = (options: EffectContextTestOptionsWithoutMode): EffectContext =>
-  makeEffectContext({ ...options, mode: 'execution' });
+export const makeDiscoveryEffectContext = (options: EffectContextTestOptions): EffectContext =>
+  createDiscoveryStrictEffectContext(makeRuntimeEffectContextOptions(options));
 
-export const makeDiscoveryEffectContext = (options: EffectContextTestOptionsWithoutMode): EffectContext =>
-  makeEffectContext({ ...options, mode: 'discovery' });
+export const makeDiscoveryProbeEffectContext = (options: EffectContextTestOptions): EffectContext =>
+  createDiscoveryProbeEffectContext(makeRuntimeEffectContextOptions(options));

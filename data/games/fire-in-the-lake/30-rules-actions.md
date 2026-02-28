@@ -1713,10 +1713,10 @@ actionPipelines:
                           token: $cube
                           from: { zoneExpr: { ref: tokenZone, token: $cube } }
                           to: $loc
-                - macro: cap-patrol-m48-shaded-moved-cube-penalty
-                  args:
-                    movedCubes: $movingCubes
-                    loc: $loc
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_m48Patton }, right: shaded }
+                          then:
+                            - setTokenProp: { token: $cube, prop: m48PatrolMoved, value: true }
 
       - stage: activate-guerrillas
         effects:
@@ -1771,6 +1771,12 @@ actionPipelines:
                                       damageExpr: { ref: binding, name: $patrolDmg }
                                       bodyCountEligible: true
                                       forceUntunneledBaseFirst: false
+      - stage: cap-m48-patrol-penalty
+        effects:
+          - macro: cap-patrol-m48-shaded-moved-cube-penalty
+            args:
+              targetLoCs: targetLoCs
+              movedFaction: US
     atomicity: atomic
   # ── patrol-arvn-profile ─────────────────────────────────────────────────────
   # ARVN Patrol operation (Rule 3.2.2)
@@ -1871,10 +1877,10 @@ actionPipelines:
                           token: $cube
                           from: { zoneExpr: { ref: tokenZone, token: $cube } }
                           to: $loc
-                - macro: cap-patrol-m48-shaded-moved-cube-penalty
-                  args:
-                    movedCubes: $movingCubes
-                    loc: $loc
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_m48Patton }, right: shaded }
+                          then:
+                            - setTokenProp: { token: $cube, prop: m48PatrolMoved, value: true }
 
       - stage: activate-guerrillas
         effects:
@@ -1921,6 +1927,12 @@ actionPipelines:
                                 damageExpr: { ref: binding, name: $patrolDmg }
                                 bodyCountEligible: true
                                 forceUntunneledBaseFirst: false
+      - stage: cap-m48-patrol-penalty
+        effects:
+          - macro: cap-patrol-m48-shaded-moved-cube-penalty
+            args:
+              targetLoCs: targetLoCs
+              movedFaction: ARVN
     atomicity: atomic
   # ── sweep-us-profile ──────────────────────────────────────────────────────────
   # US Sweep operation (Rule 3.2.3)
@@ -2438,11 +2450,6 @@ actionPipelines:
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
-      - stage: cap-m48-patton-bonus-removal
-        effects:
-          - macro: cap-assault-m48-unshaded-bonus-removal
-            args:
-              targetSpaces: targetSpaces
     atomicity: atomic
   # ── Insurgent profiles (rally) and remaining stubs (march, attack, terror) ──
   - id: rally-nva-profile

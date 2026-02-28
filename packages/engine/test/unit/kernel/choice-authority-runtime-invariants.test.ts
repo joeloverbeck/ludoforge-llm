@@ -87,95 +87,203 @@ const assertEffectRuntimeReason = (fn: () => unknown, expectedReason: string): v
   });
 };
 
+const buildImplicitChooserEffect = (
+  primitive: ChoiceOwnershipPrimitive,
+  decisionId: string,
+  bind: string,
+  values: readonly string[],
+): EffectAST => {
+  if (primitive === 'chooseOne') {
+    return {
+      chooseOne: {
+        internalDecisionId: decisionId,
+        bind,
+        options: { query: 'enums', values },
+      },
+    };
+  }
+  return {
+    chooseN: {
+      internalDecisionId: decisionId,
+      bind,
+      options: { query: 'enums', values },
+      n: 1,
+    },
+  };
+};
+
 describe('choice authority runtime invariants', () => {
   const primitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-  it('emits choiceProbeAuthorityMismatch only in discovery+probe ownership enforcement', () => {
-    for (const primitive of primitives) {
-      const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-      const context = makeDiscoveryProbeEffectContext({
-        def: makeDef([effect]),
-        state: makeState(),
-        moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
-        collector: createCollector(),
-      });
+  describe('implicit chooser (default active) enforces authority mismatch', () => {
+    it('emits choiceProbeAuthorityMismatch in discovery+probe when authority differs from active player', () => {
+      for (const primitive of primitives) {
+        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const context = makeDiscoveryProbeEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
+          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          collector: createCollector(),
+        });
 
-      assertEffectRuntimeReason(
-        () => applyEffect(effect, context),
-        EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
-      );
-    }
+        assertEffectRuntimeReason(
+          () => applyEffect(effect, context),
+          EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
+        );
+      }
+    });
+
+    it('emits choiceRuntimeValidationFailed in discovery+strict when authority differs from active player', () => {
+      for (const primitive of primitives) {
+        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const context = makeDiscoveryEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
+          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          collector: createCollector(),
+        });
+
+        assertEffectRuntimeReason(
+          () => applyEffect(effect, context),
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        );
+      }
+    });
+
+    it('emits choiceRuntimeValidationFailed in execution+strict when authority differs from active player', () => {
+      for (const primitive of primitives) {
+        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const context = makeExecutionEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
+          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          collector: createCollector(),
+        });
+
+        assertEffectRuntimeReason(
+          () => applyEffect(effect, context),
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        );
+      }
+    });
+
+    it('keeps discovery ownership-enforcement parity between applyEffect and applyEffects', () => {
+      for (const primitive of primitives) {
+        const effect = buildImplicitChooserEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const moveParams = { 'decision:$target': ownershipSelection(primitive, 'a') };
+
+        const probeContext = makeDiscoveryProbeEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
+          moveParams,
+          collector: createCollector(),
+        });
+        assertEffectRuntimeReason(
+          () => applyEffect(effect, probeContext),
+          EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
+        );
+        assertEffectRuntimeReason(
+          () => applyEffects([effect], probeContext),
+          EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
+        );
+
+        const strictContext = makeDiscoveryEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          decisionAuthorityPlayer: CHOICE_OWNER_PLAYER,
+          moveParams,
+          collector: createCollector(),
+        });
+        assertEffectRuntimeReason(
+          () => applyEffect(effect, strictContext),
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        );
+        assertEffectRuntimeReason(
+          () => applyEffects([effect], strictContext),
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        );
+      }
+    });
   });
 
-  it('emits choiceRuntimeValidationFailed in discovery+strict ownership enforcement', () => {
-    for (const primitive of primitives) {
-      const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-      const context = makeDiscoveryEffectContext({
-        def: makeDef([effect]),
-        state: makeState(),
-        moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
-        collector: createCollector(),
-      });
+  describe('explicit chooser bypasses authority check (cross-seat ownership)', () => {
+    it('accepts cross-seat submissions in discovery+probe when chooser is explicit', () => {
+      for (const primitive of primitives) {
+        const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const context = makeDiscoveryProbeEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          collector: createCollector(),
+        });
 
-      assertEffectRuntimeReason(
-        () => applyEffect(effect, context),
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      );
-    }
-  });
+        const result = applyEffect(effect, context);
+        assert.ok(result.bindings?.$target !== undefined);
+      }
+    });
 
-  it('keeps discovery ownership-enforcement parity between applyEffect and applyEffects', () => {
-    for (const primitive of primitives) {
-      const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-      const moveParams = { 'decision:$target': ownershipSelection(primitive, 'a') };
+    it('accepts cross-seat submissions in discovery+strict when chooser is explicit', () => {
+      for (const primitive of primitives) {
+        const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const context = makeDiscoveryEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          collector: createCollector(),
+        });
 
-      const probeContext = makeDiscoveryProbeEffectContext({
-        def: makeDef([effect]),
-        state: makeState(),
-        moveParams,
-        collector: createCollector(),
-      });
-      assertEffectRuntimeReason(
-        () => applyEffect(effect, probeContext),
-        EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
-      );
-      assertEffectRuntimeReason(
-        () => applyEffects([effect], probeContext),
-        EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
-      );
+        const result = applyEffect(effect, context);
+        assert.ok(result.bindings?.$target !== undefined);
+      }
+    });
 
-      const strictContext = makeDiscoveryEffectContext({
-        def: makeDef([effect]),
-        state: makeState(),
-        moveParams,
-        collector: createCollector(),
-      });
-      assertEffectRuntimeReason(
-        () => applyEffect(effect, strictContext),
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      );
-      assertEffectRuntimeReason(
-        () => applyEffects([effect], strictContext),
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      );
-    }
-  });
+    it('accepts cross-seat submissions in execution+strict when chooser is explicit', () => {
+      for (const primitive of primitives) {
+        const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const context = makeExecutionEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
+          collector: createCollector(),
+        });
 
-  it('emits choiceRuntimeValidationFailed in execution+strict ownership enforcement', () => {
-    for (const primitive of primitives) {
-      const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
-      const context = makeExecutionEffectContext({
-        def: makeDef([effect]),
-        state: makeState(),
-        moveParams: { 'decision:$target': ownershipSelection(primitive, 'a') },
-        collector: createCollector(),
-      });
+        const result = applyEffect(effect, context);
+        assert.ok(result.bindings?.$target !== undefined);
+      }
+    });
 
-      assertEffectRuntimeReason(
-        () => applyEffect(effect, context),
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      );
-    }
+    it('keeps cross-seat parity between applyEffect and applyEffects', () => {
+      for (const primitive of primitives) {
+        const effect = buildChooserOwnedChoiceEffect(primitive, 'decision:$target', '$target', ['a', 'b']);
+        const moveParams = { 'decision:$target': ownershipSelection(primitive, 'a') };
+
+        const probeContext = makeDiscoveryProbeEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          moveParams,
+          collector: createCollector(),
+        });
+        const probeResult1 = applyEffect(effect, probeContext);
+        assert.ok(probeResult1.bindings?.$target !== undefined);
+        const probeResult2 = applyEffects([effect], probeContext);
+        assert.ok(probeResult2.bindings?.$target !== undefined);
+
+        const strictContext = makeDiscoveryEffectContext({
+          def: makeDef([effect]),
+          state: makeState(),
+          moveParams,
+          collector: createCollector(),
+        });
+        const strictResult1 = applyEffect(effect, strictContext);
+        assert.ok(strictResult1.bindings?.$target !== undefined);
+        const strictResult2 = applyEffects([effect], strictContext);
+        assert.ok(strictResult2.bindings?.$target !== undefined);
+      }
+    });
   });
 
   it('accepts chooser-owned submissions in strict execution contexts', () => {

@@ -1650,11 +1650,11 @@ describe('FITL COIN operations integration', () => {
       assert.ok(assaultChooseN.length >= 1, 'Expected chooseN max:1 for free assault LoC selection');
     });
 
-    it('has four stages stages: select-locs, move-cubes, activate-guerrillas, free-assault', () => {
+    it('has five stages: select-locs, move-cubes, activate-guerrillas, free-assault, cap-m48-patrol-penalty', () => {
       const profile = getPatrolProfile();
       assert.deepEqual(
         profile.stages.map((s: any) => s.stage),
-        ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault'],
+        ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault', 'cap-m48-patrol-penalty'],
       );
     });
 
@@ -1779,11 +1779,11 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
     });
 
-    it('has four stages stages: select-locs, move-cubes, activate-guerrillas, free-assault', () => {
+    it('has five stages: select-locs, move-cubes, activate-guerrillas, free-assault, cap-m48-patrol-penalty', () => {
       const profile = getPatrolProfile();
       assert.deepEqual(
         profile.stages.map((s: any) => s.stage),
-        ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault'],
+        ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault', 'cap-m48-patrol-penalty'],
       );
     });
   });

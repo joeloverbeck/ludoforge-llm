@@ -1865,7 +1865,7 @@ effectMacros:
             - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
 
   # ── cap-assault-m48-unshaded-bonus-removal ───────────────────────────────
-  # M48 Patton unshaded: up to 2 selected Assault spaces each remove 2 enemy.
+  # M48 Patton unshaded: up to 2 selected non-Lowland US Assault spaces each remove +2 enemy.
   - id: cap-assault-m48-unshaded-bonus-removal
     params:
       - { name: targetSpaces, type: bindingName }
@@ -1876,7 +1876,16 @@ effectMacros:
           then:
             - chooseN:
                 bind: $m48Spaces
-                options: { query: binding, name: { param: targetSpaces } }
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: in
+                        item: { ref: zoneProp, zone: $zone, prop: id }
+                        set: { ref: binding, name: { param: targetSpaces } }
+                      - op: not
+                        arg: { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
                 min: 0
                 max: 2
             - forEach:
@@ -1908,37 +1917,63 @@ effectMacros:
                 maxPieces: 1
 
   # ── cap-patrol-m48-shaded-moved-cube-penalty ─────────────────────────────
-  # M48 Patton shaded: on roll 1-3, remove one moved cube to Available.
+  # M48 Patton shaded: after US/ARVN Patrol, remove up to 2 moved cubes
+  # (US -> Casualties, ARVN -> Available).
   - id: cap-patrol-m48-shaded-moved-cube-penalty
     params:
-      - { name: movedCubes, type: bindingName }
-      - { name: loc, type: zoneSelector }
+      - { name: targetLoCs, type: bindingName }
+      - { name: movedFaction, type: { kind: enum, values: [US, ARVN] } }
     exports: []
     effects:
       - if:
           when: { op: '==', left: { ref: globalMarkerState, marker: cap_m48Patton }, right: shaded }
           then:
-            - rollRandom:
-                bind: $m48PatrolDie
-                min: 1
-                max: 6
-                in:
+            - chooseN:
+                bind: $m48PenaltyCubes
+                chooser: NVA
+                options:
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: in
+                    item: { ref: zoneProp, zone: $zone, prop: id }
+                    set: { ref: binding, name: { param: targetLoCs } }
+                  filter:
+                    - { prop: faction, eq: { param: movedFaction } }
+                    - { prop: type, op: in, value: ['troops', 'police'] }
+                    - { prop: m48PatrolMoved, eq: true }
+                min: 0
+                max: 2
+            - forEach:
+                bind: $m48Cube
+                over: { query: binding, name: $m48PenaltyCubes }
+                effects:
                   - if:
-                      when: { op: '<=', left: { ref: binding, name: $m48PatrolDie }, right: 3 }
+                      when: { op: '==', left: { param: movedFaction }, right: US }
                       then:
-                        - chooseN:
-                            bind: $m48PenaltyCube
-                            options: { query: binding, name: { param: movedCubes } }
-                            min: 0
-                            max: 1
-                        - forEach:
-                            bind: $m48Cube
-                            over: { query: binding, name: $m48PenaltyCube }
-                            effects:
-                            - moveToken:
-                                token: $m48Cube
-                                from: { param: loc }
-                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
+                        - moveToken:
+                            token: $m48Cube
+                            from: { zoneExpr: { ref: tokenZone, token: $m48Cube } }
+                            to: casualties-US:none
+                      else:
+                        - moveToken:
+                            token: $m48Cube
+                            from: { zoneExpr: { ref: tokenZone, token: $m48Cube } }
+                            to: available-ARVN:none
+            - forEach:
+                bind: $m48Loc
+                over: { query: binding, name: { param: targetLoCs } }
+                effects:
+                  - forEach:
+                      bind: $m48MovedCube
+                      over:
+                        query: tokensInZone
+                        zone: $m48Loc
+                        filter:
+                          - { prop: faction, eq: { param: movedFaction } }
+                          - { prop: type, op: in, value: ['troops', 'police'] }
+                          - { prop: m48PatrolMoved, eq: true }
+                      effects:
+                        - setTokenProp: { token: $m48MovedCube, prop: m48PatrolMoved, value: false }
 
   # ── coup-process-commitment ───────────────────────────────────────────────
   # Rule 6.5: process US casualties and resolve up to 10 troop / 2 base moves.

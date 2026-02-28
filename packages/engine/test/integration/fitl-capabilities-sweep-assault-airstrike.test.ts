@@ -68,7 +68,6 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       { profileId: 'assault-us-profile', marker: 'cap_m48Patton', side: 'unshaded' },
       { profileId: 'assault-us-profile', marker: 'cap_searchAndDestroy', side: 'unshaded' },
       { profileId: 'assault-us-profile', marker: 'cap_searchAndDestroy', side: 'shaded' },
-      { profileId: 'assault-arvn-profile', marker: 'cap_m48Patton', side: 'unshaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_searchAndDestroy', side: 'unshaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_searchAndDestroy', side: 'shaded' },
       { profileId: 'air-strike-profile', marker: 'cap_topGun', side: 'unshaded' },
@@ -358,6 +357,113 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
   });
 
+  it('US M48 unshaded applies +2 removal only in selected non-Lowland US Assault spaces', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const lowland = 'quang-tin-quang-ngai:none';
+    const highland = 'binh-dinh:none';
+    const start = clearAllZones(initialState(def, 22016, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_m48Patton: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [lowland]: [
+          makeToken('m48-us-lowland', 'troops', 'US', { type: 'troops' }),
+          makeToken('m48-vc-lowland-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('m48-vc-lowland-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('m48-vc-lowland-3', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [highland]: [
+          makeToken('m48-us-highland-a', 'troops', 'US', { type: 'troops' }),
+          makeToken('m48-us-highland-b', 'troops', 'US', { type: 'troops' }),
+          makeToken('m48-vc-highland-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('m48-vc-highland-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('m48-vc-highland-3', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(
+      def,
+      configured,
+      {
+        actionId: asActionId('assault'),
+        params: {
+          targetSpaces: [lowland, highland],
+          $arvnFollowupSpaces: [],
+        },
+      },
+      {
+        overrides: [
+          {
+            when: (request) => request.name.includes('m48Spaces'),
+            value: [highland],
+          },
+        ],
+      },
+    ).state;
+
+    assert.equal(
+      countTokens(final, lowland, (token) => token.props.faction === 'VC'),
+      2,
+      'Lowland should take only normal US Assault removal (no M48 bonus)',
+    );
+    assert.equal(
+      countTokens(final, highland, (token) => token.props.faction === 'VC'),
+      0,
+      'Selected non-Lowland should apply M48 +2 removal on top of normal US Assault damage',
+    );
+  });
+
+  it('ARVN Assault ignores M48 unshaded bonus entirely', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'binh-dinh:none';
+    const start = clearAllZones(initialState(def, 22017, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 3,
+        mom_bodyCount: false,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_m48Patton: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('m48-arvn-t1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('m48-arvn-t2', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('m48-arvn-t3', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('m48-vc-a', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('m48-vc-b', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('m48-vc-c', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('assault'),
+      params: { targetSpaces: [space] },
+    }).state;
+
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'VC'),
+      2,
+      'ARVN Assault should apply only normal ARVN damage with no M48 extra removals',
+    );
+  });
+
   it('US Abrams shaded caps Assault space selection to max 2', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
@@ -391,7 +497,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     );
   });
 
-  it('routes M48 unshaded Assault bonus through one shared macro in both US and ARVN profiles', () => {
+  it('routes M48 unshaded Assault bonus only through the US Assault profile', () => {
     const { parsed } = compileProductionSpec();
     assertNoErrors(parsed);
 
@@ -405,16 +511,15 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       'Expected M48 macro targetSpaces to be binding-aware for macro hygiene rewrites',
     );
 
-    const assertProfileUsesM48Macro = (profileId: string): void => {
-      const profile = getParsedProfile(profileId);
-      const stage = profile.stages.find((candidate: any) => candidate.stage === 'cap-m48-patton-bonus-removal');
-      assert.ok(stage, `Expected ${profileId} M48 stage`);
-      const refs = findDeep(stage.effects, (node: any) => node?.macro === 'cap-assault-m48-unshaded-bonus-removal');
-      assert.equal(refs.length, 1, `Expected ${profileId} to call shared M48 macro exactly once`);
-    };
+    const usProfile = getParsedProfile('assault-us-profile');
+    const usStage = usProfile.stages.find((candidate: any) => candidate.stage === 'cap-m48-patton-bonus-removal');
+    assert.ok(usStage, 'Expected assault-us-profile M48 stage');
+    const usRefs = findDeep(usStage.effects, (node: any) => node?.macro === 'cap-assault-m48-unshaded-bonus-removal');
+    assert.equal(usRefs.length, 1, 'Expected assault-us-profile to call shared M48 macro exactly once');
 
-    assertProfileUsesM48Macro('assault-us-profile');
-    assertProfileUsesM48Macro('assault-arvn-profile');
+    const arvnProfile = getParsedProfile('assault-arvn-profile');
+    const arvnStage = arvnProfile.stages.find((candidate: any) => candidate.stage === 'cap-m48-patton-bonus-removal');
+    assert.equal(arvnStage, undefined, 'Expected assault-arvn-profile to omit M48 bonus stage');
   });
 
   it('models Arc Light with dedicated no-COIN Province slot and per-space >1 removal shaded shift trigger', () => {

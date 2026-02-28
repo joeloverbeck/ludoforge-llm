@@ -135,7 +135,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   }
 
   const selected = ctx.moveParams[decisionId];
-  if (providedDecisionPlayer !== choiceDecisionPlayer) {
+  if (effect.chooseOne.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
     const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
       ? 'choiceProbeAuthorityMismatch'
       : 'choiceRuntimeValidationFailed';
@@ -285,7 +285,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   }
 
   const selectedValue = ctx.moveParams[decisionId];
-  if (providedDecisionPlayer !== choiceDecisionPlayer) {
+  if (chooseN.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
     const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
       ? 'choiceProbeAuthorityMismatch'
       : 'choiceRuntimeValidationFailed';

@@ -17,7 +17,6 @@ import {
   type Move,
 } from '../../../src/kernel/index.js';
 import {
-  assertDecisionOwnerMismatch,
   buildChooserOwnedChoiceEffect,
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
@@ -998,7 +997,7 @@ phase: [asPhaseId('main')],
 
   const ownershipPrimitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-  it('rejects cross-seat chooser-owned decision params across non-pipeline choice primitives', () => {
+  it('accepts cross-seat chooser-owned decision params across non-pipeline choice primitives', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `cross-seat-${primitive}-op`;
       const action: ActionDef = {
@@ -1018,16 +1017,15 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action] });
       const state = makeBaseState();
 
-      assertDecisionOwnerMismatch(() =>
-        resolveMoveDecisionSequence(def, state, {
-          actionId: asActionId(actionId),
-          params: { 'decision:$target': ownershipSelection(primitive, 'a') },
-        }),
-      );
+      const resolved = resolveMoveDecisionSequence(def, state, {
+        actionId: asActionId(actionId),
+        params: { 'decision:$target': ownershipSelection(primitive, 'a') },
+      });
+      assert.equal(resolved.complete, true, `Expected cross-seat ${primitive} resolution to complete`);
     }
   });
 
-  it('rejects cross-seat chooser-owned decision params across pipeline choice primitives', () => {
+  it('accepts cross-seat chooser-owned decision params across pipeline choice primitives', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `cross-seat-pipeline-${primitive}-op`;
       const action: ActionDef = {
@@ -1061,12 +1059,11 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const state = makeBaseState();
 
-      assertDecisionOwnerMismatch(() =>
-        resolveMoveDecisionSequence(def, state, {
-          actionId: asActionId(actionId),
-          params: { 'decision:$target': ownershipSelection(primitive, 'a') },
-        }),
-      );
+      const resolved = resolveMoveDecisionSequence(def, state, {
+        actionId: asActionId(actionId),
+        params: { 'decision:$target': ownershipSelection(primitive, 'a') },
+      });
+      assert.equal(resolved.complete, true, `Expected cross-seat pipeline ${primitive} resolution to complete`);
     }
   });
 

@@ -21,7 +21,6 @@ import {
 } from '../../../src/kernel/index.js';
 import {
   CHOICE_OWNER_PLAYER,
-  assertChoiceRuntimeValidationFailed,
   buildChooserOwnedChoiceEffect,
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
@@ -2902,7 +2901,7 @@ phase: [asPhaseId('main')],
   describe('purity invariant', () => {
     const primitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-    it('annotates chooser-owned pending decisions and rejects cross-seat resolution across choice primitives', () => {
+    it('annotates chooser-owned pending decisions and accepts cross-seat resolution across choice primitives', () => {
       for (const primitive of primitives) {
         const actionId = `crossSeatChoice-${primitive}`;
         const action: ActionDef = {
@@ -2935,18 +2934,17 @@ phase: [asPhaseId('main')],
         }
         assert.deepEqual(
           evaluatedPending.options.map((option) => option.legality),
-          ['unknown', 'unknown', 'unknown'],
+          ['legal', 'legal', 'legal'],
         );
 
-        assertChoiceRuntimeValidationFailed(() =>
-          legalChoicesEvaluate(def, state, makeMove(actionId, {
-            [request.decisionId]: ownershipSelection(primitive, 'a'),
-          })),
-        );
+        const crossSeatResult = legalChoicesEvaluate(def, state, makeMove(actionId, {
+          [request.decisionId]: ownershipSelection(primitive, 'a'),
+        }));
+        assert.deepStrictEqual(crossSeatResult, { kind: 'complete', complete: true });
       }
     });
 
-    it('preserves chooser ownership semantics across choice primitives in pipeline stages', () => {
+    it('accepts cross-seat chooser-owned submissions across choice primitives in pipeline stages', () => {
       for (const primitive of primitives) {
         const actionId = `crossSeatPipelineChoice-${primitive}`;
         const action: ActionDef = {
@@ -2995,14 +2993,13 @@ phase: [asPhaseId('main')],
         }
         assert.deepEqual(
           evaluatedPending.options.map((option) => option.legality),
-          ['unknown', 'unknown', 'unknown'],
+          ['legal', 'legal', 'legal'],
         );
 
-        assertChoiceRuntimeValidationFailed(() =>
-          legalChoicesEvaluate(def, state, makeMove(actionId, {
-            [pending.decisionId]: ownershipSelection(primitive, 'a'),
-          })),
-        );
+        const crossSeatResult = legalChoicesEvaluate(def, state, makeMove(actionId, {
+          [pending.decisionId]: ownershipSelection(primitive, 'a'),
+        }));
+        assert.deepStrictEqual(crossSeatResult, { kind: 'complete', complete: true });
 
         const ownerResult = legalChoicesEvaluate(
           def,

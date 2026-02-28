@@ -361,6 +361,7 @@ function compileExpandedDoc(
   }
   const freeOperationActionIds =
     sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.freeOperationActionIds : undefined;
+  const seatIds = derivedFromAssets.seats?.map((s) => s.id);
   const loweringContext: EffectLoweringSharedContext = {
     ownershipByBase,
     ...(derivedFromAssets.tokenTraitVocabulary == null
@@ -369,6 +370,7 @@ function compileExpandedDoc(
     ...(namedSets === undefined ? {} : { namedSets }),
     ...(typeInference === undefined ? {} : { typeInference }),
     ...(freeOperationActionIds === undefined ? {} : { freeOperationActionIds }),
+    ...(seatIds !== undefined && seatIds.length > 0 ? { seatIds } : {}),
   };
 
   const setup = compileSection(diagnostics, () =>

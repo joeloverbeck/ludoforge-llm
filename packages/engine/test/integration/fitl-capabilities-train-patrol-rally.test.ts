@@ -1,13 +1,34 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import {
+  applyMove,
+  asActionId,
+  asPlayerId,
+  asTokenId,
+  initialState,
+  pickDeterministicChoiceValue,
+  resolveMoveDecisionSequence,
+  type GameState,
+  type Token,
+} from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 type CapabilitySide = 'unshaded' | 'shaded';
+
+const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
+  id: asTokenId(id),
+  type,
+  props: { faction, ...extra },
+});
+
+const countTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
+  (state.zones[zone] ?? []).filter(predicate).length;
 
 function getParsedProfile(profileId: string): any {
   const { parsed } = compileProductionSpec();
@@ -116,7 +137,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     }
   });
 
-  it('applies Patrol M48 shaded penalty through a shared roll-gated macro', () => {
+  it('applies Patrol M48 shaded penalty through a shared post-patrol up-to-2 moved-cube macro', () => {
     const { parsed } = compileProductionSpec();
     const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));
 
@@ -128,20 +149,189 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
       node?.if?.when?.left?.marker === 'cap_m48Patton' &&
       node?.if?.when?.right === 'shaded',
     );
-    const hasRoll = findDeep(penaltyMacro.effects ?? [], (node: any) => node?.rollRandom?.bind === '$m48PatrolDie');
-    const hasPenaltyRemoval = findDeep(penaltyMacro.effects ?? [], (node: any) =>
-      node?.moveToken?.to?.zoneExpr?.concat !== undefined,
+    const hasRoll = findDeep(penaltyMacro.effects ?? [], (node: any) => node?.rollRandom !== undefined);
+    const hasChooseUpToTwo = findDeep(penaltyMacro.effects ?? [], (node: any) =>
+      node?.chooseN?.bind === '$m48PenaltyCubes' && node?.chooseN?.max === 2,
+    );
+    const hasUsToCasualties = findDeep(penaltyMacro.effects ?? [], (node: any) =>
+      node?.moveToken?.to === 'casualties-US:none',
+    );
+    const hasArvnToAvailable = findDeep(penaltyMacro.effects ?? [], (node: any) =>
+      node?.moveToken?.to === 'available-ARVN:none',
+    );
+    const hasCleanup = findDeep(penaltyMacro.effects ?? [], (node: any) =>
+      node?.setTokenProp?.prop === 'm48PatrolMoved' && node?.setTokenProp?.value === false,
     );
 
     assert.ok(hasShadedGuard.length >= 1, 'Expected cap_m48Patton shaded guard in patrol penalty macro');
-    assert.ok(hasRoll.length >= 1, 'Expected patrol penalty macro to include rollRandom');
-    assert.ok(hasPenaltyRemoval.length >= 1, 'Expected patrol penalty macro to move one moved cube to Available');
+    assert.equal(hasRoll.length, 0, 'Expected patrol penalty macro to avoid die-roll gating');
+    assert.ok(hasChooseUpToTwo.length >= 1, 'Expected patrol penalty macro to choose up to 2 moved cubes');
+    assert.ok(hasUsToCasualties.length >= 1, 'Expected patrol penalty macro to send US cubes to Casualties');
+    assert.ok(hasArvnToAvailable.length >= 1, 'Expected patrol penalty macro to send ARVN cubes to Available');
+    assert.ok(hasCleanup.length >= 1, 'Expected patrol penalty macro to clear temporary moved-cube flags');
+
+    const hasNvaChooser = findDeep(penaltyMacro.effects ?? [], (node: any) =>
+      node?.chooseN?.bind === '$m48PenaltyCubes' && node?.chooseN?.chooser === 'NVA',
+    );
+    assert.ok(hasNvaChooser.length >= 1, 'Expected M48 patrol penalty chooseN to have NVA as chooser');
 
     for (const profileId of ['patrol-us-profile', 'patrol-arvn-profile']) {
       const profile = getParsedProfile(profileId);
-      const macroRefs = findDeep(profile.stages, (node: any) => node?.macro === 'cap-patrol-m48-shaded-moved-cube-penalty');
-      assert.ok(macroRefs.length >= 1, `Expected ${profileId} to use cap-patrol-m48-shaded-moved-cube-penalty`);
+      const penaltyStage = profile.stages.find((stage: any) => stage?.stage === 'cap-m48-patrol-penalty');
+      assert.ok(penaltyStage, `Expected ${profileId} to include cap-m48-patrol-penalty stage`);
+      const macroRefs = findDeep(penaltyStage.effects, (node: any) => node?.macro === 'cap-patrol-m48-shaded-moved-cube-penalty');
+      assert.ok(macroRefs.length >= 1, `Expected ${profileId} penalty stage to call cap-patrol-m48-shaded-moved-cube-penalty`);
     }
+  });
+
+  it('M48 shaded patrol penalty compiles chooser NVA to player id 2 in GameDef', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const m48PenaltyChooseN = findDeep([def], (node: any) =>
+      node?.chooseN?.bind?.includes('m48PenaltyCubes') && node?.chooseN?.chooser !== undefined,
+    );
+    assert.ok(m48PenaltyChooseN.length >= 1, 'Expected compiled GameDef to contain M48 penalty chooseN with chooser');
+
+    const chooser = m48PenaltyChooseN[0]?.chooseN?.chooser;
+    assert.deepEqual(chooser, { id: 2 }, 'Expected chooser NVA to compile to { id: 2 }');
+  });
+
+  it('M48 shaded after US Patrol removes up to 2 moved US cubes to Casualties', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const locA = 'loc-saigon-can-tho:none';
+    const locB = 'loc-da-nang-qui-nhon:none';
+    const start = clearAllZones(initialState(def, 22018, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_m48Patton: 'shaded',
+      },
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 3,
+      },
+      zones: {
+        ...start.zones,
+        [locA]: [makeToken('m48-us-a', 'troops', 'US', { type: 'troops' }), makeToken('m48-us-b', 'troops', 'US', { type: 'troops' })],
+        [locB]: [makeToken('m48-us-c', 'troops', 'US', { type: 'troops' })],
+      },
+    };
+
+    const baseMove = {
+      actionId: asActionId('patrol'),
+      params: {
+        targetLoCs: [locA, locB],
+        $assaultLoCs: [],
+      },
+    };
+    const resolved = resolveMoveDecisionSequence(def, configured, baseMove, {
+      choose: (request) => {
+        if (request.name === 'targetLoCs') {
+          return [locA, locB];
+        }
+        if (request.name.includes('assaultLoCs')) {
+          return [];
+        }
+        if (request.name.includes('$movingCubes')) {
+          return request.options.map((option) => option.value as string | number | boolean);
+        }
+        if (request.name.includes('m48PenaltyCubes')) {
+          assert.equal(
+            request.decisionPlayer,
+            2,
+            'M48 penalty chooseN should route decision to NVA (player 2) via cross-seat chooser',
+          );
+          return request.options.slice(0, 2).map((option) => option.value as string | number | boolean);
+        }
+        return pickDeterministicChoiceValue(request);
+      },
+    });
+    assert.equal(resolved.complete, true, 'Expected US Patrol decision sequence to resolve completely');
+    const final = applyMove(def, configured, resolved.move).state;
+
+    assert.equal(
+      countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      2,
+      'M48 shaded should send up to two moved US cubes to Casualties after US Patrol',
+    );
+    assert.equal(
+      countTokens(final, locA, (token) => token.props.faction === 'US' && token.type === 'troops')
+        + countTokens(final, locB, (token) => token.props.faction === 'US' && token.type === 'troops'),
+      1,
+      'M48 shaded should remove only two of three moved US cubes total across all selected LoCs',
+    );
+  });
+
+  it('M48 shaded after ARVN Patrol sends moved ARVN cubes to ARVN Available, not Casualties', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const loc = 'loc-saigon-can-tho:none';
+    const start = clearAllZones(initialState(def, 22019, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 3,
+        mom_bodyCount: false,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_m48Patton: 'shaded',
+      },
+      zones: {
+        ...start.zones,
+        'saigon:none': [
+          makeToken('m48-arvn-a', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('m48-arvn-b', 'police', 'ARVN', { type: 'police' }),
+        ],
+      },
+    };
+
+    const baseMove = {
+      actionId: asActionId('patrol'),
+      params: {
+        targetLoCs: [loc],
+        $assaultLoCs: [],
+      },
+    };
+    const resolved = resolveMoveDecisionSequence(def, configured, baseMove, {
+      choose: (request) => {
+        if (request.name === 'targetLoCs') {
+          return [loc];
+        }
+        if (request.name.includes('assaultLoCs')) {
+          return [];
+        }
+        if (request.name.includes('$movingCubes')) {
+          return request.options.map((option) => option.value as string | number | boolean);
+        }
+        if (request.name.includes('m48PenaltyCubes')) {
+          return request.options.map((option) => option.value as string | number | boolean);
+        }
+        return pickDeterministicChoiceValue(request);
+      },
+    });
+    assert.equal(resolved.complete, true, 'Expected ARVN Patrol decision sequence to resolve completely');
+    const final = applyMove(def, configured, resolved.move).state;
+
+    assert.equal(
+      countTokens(final, 'available-ARVN:none', (token) => token.props.faction === 'ARVN' && (token.type === 'troops' || token.type === 'police')),
+      2,
+      'M48 shaded should route moved ARVN cubes to ARVN Available',
+    );
+    assert.equal(
+      countTokens(final, 'casualties-US:none', (token) => token.props.faction === 'US'),
+      0,
+      'M48 shaded ARVN Patrol should not add US casualties',
+    );
   });
 
   it('encodes Rally trail and cadres branches with side-specific constraints', () => {

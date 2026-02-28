@@ -49,6 +49,7 @@ export interface EffectLoweringContext {
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
+  readonly seatIds?: readonly string[];
 }
 
 export interface EffectLoweringResult<TValue> {
@@ -1802,7 +1803,7 @@ function lowerChooseOneEffect(
   const options = lowerQueryNode(source.options, makeConditionContext(context, scope), `${path}.options`);
   const chooser = source.chooser === undefined
     ? { value: undefined, diagnostics: [] }
-    : normalizePlayerSelector(source.chooser, `${path}.chooser`);
+    : normalizePlayerSelector(source.chooser, `${path}.chooser`, context.seatIds);
   const diagnostics = [...options.diagnostics, ...chooser.diagnostics];
   if (options.value !== null) {
     diagnostics.push(
@@ -1855,7 +1856,7 @@ function lowerChooseNEffect(
   const condCtx = makeConditionContext(context, scope);
   const chooser = source.chooser === undefined
     ? { value: undefined, diagnostics: [] }
-    : normalizePlayerSelector(source.chooser, `${path}.chooser`);
+    : normalizePlayerSelector(source.chooser, `${path}.chooser`, context.seatIds);
   const diagnostics = [...options.diagnostics, ...chooser.diagnostics];
   if (options.value !== null) {
     diagnostics.push(

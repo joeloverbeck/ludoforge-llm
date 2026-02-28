@@ -14,9 +14,13 @@ export interface SelectorCompileResult<TValue> {
 
 type ZoneOwnerQualifier = 'none' | 'all' | 'actor' | 'active' | 'allOther' | 'left' | 'right' | `${number}` | `$${string}`;
 
-export function normalizePlayerSelector(value: unknown, path: string): SelectorCompileResult<PlayerSel> {
+export function normalizePlayerSelector(
+  value: unknown,
+  path: string,
+  seatIds?: readonly string[],
+): SelectorCompileResult<PlayerSel> {
   if (typeof value === 'string') {
-    return normalizePlayerSelectorFromString(value, path);
+    return normalizePlayerSelectorFromString(value, path, seatIds);
   }
 
   if (!isRecord(value)) {
@@ -144,7 +148,11 @@ export function normalizeZoneOwnerQualifier(value: string, path: string): Select
   };
 }
 
-function normalizePlayerSelectorFromString(value: string, path: string): SelectorCompileResult<PlayerSel> {
+function normalizePlayerSelectorFromString(
+  value: string,
+  path: string,
+  seatIds?: readonly string[],
+): SelectorCompileResult<PlayerSel> {
   if (value === 'active') {
     return { value: 'active', diagnostics: [] };
   }
@@ -162,6 +170,14 @@ function normalizePlayerSelectorFromString(value: string, path: string): Selecto
   }
   if (isBindingToken(value)) {
     return { value: { chosen: value }, diagnostics: [] };
+  }
+
+  if (seatIds !== undefined) {
+    const lowerValue = value.toLowerCase();
+    const seatIndex = seatIds.findIndex((s) => s.toLowerCase() === lowerValue);
+    if (seatIndex >= 0) {
+      return { value: { id: asPlayerId(seatIndex) }, diagnostics: [] };
+    }
   }
 
   return invalidPlayerSelector(path, value);

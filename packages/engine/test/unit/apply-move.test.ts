@@ -23,7 +23,6 @@ import {
 } from '../../src/kernel/index.js';
 import {
   CHOICE_OWNER_PLAYER,
-  assertIllegalMoveParamsInvalid,
   buildChooserOwnedChoiceEffect,
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
@@ -422,7 +421,7 @@ phase: [asPhaseId('main')],
 
   const ownershipPrimitives: readonly ChoiceOwnershipPrimitive[] = ['chooseOne', 'chooseN'];
 
-  it('enforces chooser ownership across choice primitives without caller override options', () => {
+  it('accepts cross-seat chooser-owned submissions across choice primitives without caller override options', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `decide-${primitive}`;
       const decisionId = 'decision:$pick';
@@ -468,22 +467,21 @@ phase: [asPhaseId('main')],
       assert.equal(pending.type, primitive);
       assert.equal(pending.decisionPlayer, CHOICE_OWNER_PLAYER);
 
-      assertIllegalMoveParamsInvalid(() =>
-        applyMove(def, state, {
-          actionId: asActionId(actionId),
-          params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
-        }),
-      );
-
-      const applied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
+      const crossSeatApplied = applyMove(def, state, {
         actionId: asActionId(actionId),
         params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
       });
-      assert.equal(applied.state.globalVars.score, 2);
+      assert.equal(crossSeatApplied.state.globalVars.score, 2);
+
+      const ownerApplied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
+        actionId: asActionId(actionId),
+        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+      });
+      assert.equal(ownerApplied.state.globalVars.score, 2);
     }
   });
 
-  it('enforces chooser ownership for pipeline-generated decisions across choice primitives', () => {
+  it('accepts cross-seat chooser-owned submissions for pipeline-generated decisions across choice primitives', () => {
     for (const primitive of ownershipPrimitives) {
       const actionId = `pipeline-decide-${primitive}`;
       const decisionId = 'decision:$pick';
@@ -545,18 +543,17 @@ phase: [asPhaseId('main')],
       assert.equal(pending.type, primitive);
       assert.equal(pending.decisionPlayer, CHOICE_OWNER_PLAYER);
 
-      assertIllegalMoveParamsInvalid(() =>
-        applyMove(def, state, {
-          actionId: asActionId(actionId),
-          params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
-        }),
-      );
-
-      const applied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
+      const crossSeatApplied = applyMove(def, state, {
         actionId: asActionId(actionId),
         params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
       });
-      assert.equal(applied.state.globalVars.score, 2);
+      assert.equal(crossSeatApplied.state.globalVars.score, 2);
+
+      const ownerApplied = applyMove(def, { ...state, activePlayer: CHOICE_OWNER_PLAYER }, {
+        actionId: asActionId(actionId),
+        params: { [pending.decisionId]: ownershipSelection(primitive, 'b') },
+      });
+      assert.equal(ownerApplied.state.globalVars.score, 2);
     }
   });
 

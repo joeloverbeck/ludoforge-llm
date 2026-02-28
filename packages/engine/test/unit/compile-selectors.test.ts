@@ -51,6 +51,58 @@ describe('normalizePlayerSelector', () => {
       },
     ]);
   });
+
+  describe('with seatIds', () => {
+    const fitlSeats = ['US', 'ARVN', 'NVA', 'VC'] as const;
+    const path = 'doc.effects.0.chooseN.chooser';
+
+    it('resolves seat names to player id indices', () => {
+      assert.deepEqual(normalizePlayerSelector('US', path, fitlSeats).value, { id: 0 });
+      assert.deepEqual(normalizePlayerSelector('ARVN', path, fitlSeats).value, { id: 1 });
+      assert.deepEqual(normalizePlayerSelector('NVA', path, fitlSeats).value, { id: 2 });
+      assert.deepEqual(normalizePlayerSelector('VC', path, fitlSeats).value, { id: 3 });
+    });
+
+    it('rejects unknown seat names', () => {
+      const result = normalizePlayerSelector('unknown', path, fitlSeats);
+      assert.equal(result.value, null);
+      assert.equal(result.diagnostics.length, 1);
+      assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
+    });
+
+    it('rejects seat names when seatIds is not provided (backwards compat)', () => {
+      const result = normalizePlayerSelector('NVA', path);
+      assert.equal(result.value, null);
+      assert.equal(result.diagnostics.length, 1);
+      assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
+    });
+
+    it('keyword selectors take priority over seat names', () => {
+      const seatsWithKeyword = ['active', 'actor', 'all'] as const;
+      assert.equal(normalizePlayerSelector('active', path, seatsWithKeyword).value, 'active');
+      assert.equal(normalizePlayerSelector('actor', path, seatsWithKeyword).value, 'actor');
+      assert.equal(normalizePlayerSelector('all', path, seatsWithKeyword).value, 'all');
+    });
+
+    it('numeric strings take priority over seat names', () => {
+      const seatsWithNumeric = ['0', '1', 'NVA'] as const;
+      assert.deepEqual(normalizePlayerSelector('0', path, seatsWithNumeric).value, { id: 0 });
+      assert.deepEqual(normalizePlayerSelector('1', path, seatsWithNumeric).value, { id: 1 });
+    });
+
+    it('binding tokens take priority over seat names', () => {
+      const seatsWithBinding = ['$var', 'NVA'] as const;
+      assert.deepEqual(normalizePlayerSelector('$var', path, seatsWithBinding).value, { chosen: '$var' });
+    });
+
+    it('resolves seat names case-insensitively', () => {
+      const lowerSeats = ['us', 'arvn', 'nva', 'vc'] as const;
+      assert.deepEqual(normalizePlayerSelector('NVA', path, lowerSeats).value, { id: 2 });
+      assert.deepEqual(normalizePlayerSelector('nva', path, lowerSeats).value, { id: 2 });
+      assert.deepEqual(normalizePlayerSelector('US', path, lowerSeats).value, { id: 0 });
+      assert.deepEqual(normalizePlayerSelector('Arvn', path, lowerSeats).value, { id: 1 });
+    });
+  });
 });
 
 describe('normalizeZoneOwnerQualifier', () => {

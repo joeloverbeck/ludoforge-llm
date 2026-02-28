@@ -1051,6 +1051,7 @@ export function buildEffectLoweringContext(
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
+    ...(context.seatIds === undefined ? {} : { seatIds: context.seatIds }),
   };
 }
 

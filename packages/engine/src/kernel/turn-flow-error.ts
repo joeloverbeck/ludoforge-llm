@@ -1,4 +1,5 @@
 import type { ConditionAST } from './types.js';
+import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 
 export type TurnFlowErrorCode = 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED';
 
@@ -29,7 +30,7 @@ export class TurnFlowRuntimeError extends Error {
 }
 
 export interface FreeOperationZoneFilterErrorInput {
-  readonly surface: 'turnFlowEligibility' | 'legalChoices';
+  readonly surface: FreeOperationZoneFilterSurface;
   readonly actionId: string;
   readonly moveParams: Readonly<Record<string, unknown>>;
   readonly zoneFilter: ConditionAST;

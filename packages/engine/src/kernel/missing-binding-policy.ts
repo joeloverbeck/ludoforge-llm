@@ -1,14 +1,13 @@
 import { hasEvalErrorDeferClass } from './eval-error-classification.js';
 import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
 import { isEvalErrorCode } from './eval-error.js';
+import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 
 export type MissingBindingPolicyContext =
   | 'legalMoves.executorDuringParamEnumeration'
   | 'legalMoves.eventDecisionSequence'
   | 'legalChoices.freeOperationZoneFilterProbe'
   | 'pipeline.discoveryPredicate';
-
-export type FreeOperationZoneFilterSurface = 'turnFlowEligibility' | 'legalChoices';
 
 const isDeferrableUnresolvedSelectorCardinality = (error: unknown): boolean => {
   return hasEvalErrorDeferClass(

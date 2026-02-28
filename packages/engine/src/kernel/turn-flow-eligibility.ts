@@ -19,6 +19,7 @@ import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycl
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { isTurnFlowActionClass } from './turn-flow-action-class-contract.js';
+import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import type {
@@ -370,7 +371,7 @@ const evaluateZoneFilterForMove = (
   state: GameState,
   move: Move,
   zoneFilter: ConditionAST,
-  surface: 'turnFlowEligibility' | 'legalChoices',
+  surface: FreeOperationZoneFilterSurface,
 ): boolean => {
   const shouldDeferZoneFilterFailure = (cause: unknown): boolean =>
     shouldDeferFreeOperationZoneFilterFailure(surface, cause);
@@ -680,7 +681,7 @@ const analyzeFreeOperationGrantMatch = (
   move: Move,
   options?: {
     readonly evaluateZoneFilters?: boolean;
-    readonly zoneFilterErrorSurface?: 'turnFlowEligibility' | 'legalChoices';
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
 ): FreeOperationGrantAnalysis | null => {
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
@@ -743,7 +744,7 @@ export const explainFreeOperationBlockForMove = (
   move: Move,
   options?: {
     readonly evaluateZoneFilters?: boolean;
-    readonly zoneFilterErrorSurface?: 'turnFlowEligibility' | 'legalChoices';
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
 ): FreeOperationBlockExplanation => {
   if (move.freeOperation !== true) {
@@ -846,7 +847,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
   state: GameState,
   move: Move,
   options?: {
-    readonly zoneFilterErrorSurface?: 'turnFlowEligibility' | 'legalChoices';
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
 ): FreeOperationDiscoveryAnalysisResult => {
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {

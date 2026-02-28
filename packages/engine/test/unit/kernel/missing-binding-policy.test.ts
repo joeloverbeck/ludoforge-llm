@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { EVAL_ERROR_DEFER_CLASS } from '../../../src/kernel/eval-error-defer-class.js';
 import { createEvalError } from '../../../src/kernel/eval-error.js';
+import { FREE_OPERATION_ZONE_FILTER_SURFACES } from '../../../src/kernel/free-operation-zone-filter-contract.js';
 import {
   shouldDeferFreeOperationZoneFilterFailure,
   shouldDeferMissingBinding,
@@ -64,7 +65,8 @@ describe('shouldDeferFreeOperationZoneFilterFailure()', () => {
 
   it('does not defer non-missing-binding errors on either surface', () => {
     const missingVar = createEvalError('MISSING_VAR', 'missing var');
-    assert.equal(shouldDeferFreeOperationZoneFilterFailure('legalChoices', missingVar), false);
-    assert.equal(shouldDeferFreeOperationZoneFilterFailure('turnFlowEligibility', missingVar), false);
+    for (const surface of FREE_OPERATION_ZONE_FILTER_SURFACES) {
+      assert.equal(shouldDeferFreeOperationZoneFilterFailure(surface, missingVar), false);
+    }
   });
 });

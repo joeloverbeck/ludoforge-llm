@@ -23,9 +23,10 @@ import { lowerEffectArray, type EffectLoweringContext } from './compile-effects.
 import { normalizeActionExecutorSelector, normalizePlayerSelector } from './compile-selectors.js';
 import type { TypeInferenceContext } from './type-inference.js';
 import {
+  buildActionSelectorContractViolationDiagnostic,
   evaluateActionSelectorContracts,
-  getActionSelectorContract,
 } from '../kernel/action-selector-contract-registry.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES, buildCompilerMissingCapabilityDiagnostic } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 
 export type EffectLoweringSharedContext = Omit<EffectLoweringContext, 'bindingScope'>;
@@ -144,7 +145,7 @@ export function lowerIntVarDefs(
       continue;
     }
     diagnostics.push({
-      code: 'CNL_COMPILER_ZONE_VAR_TYPE_INVALID',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_VAR_TYPE_INVALID,
       path: `${pathPrefix}.${sourceIndex}.type`,
       severity: 'error',
       message: `Cannot lower zoneVars.${sourceIndex}: only int zoneVars are supported.`,
@@ -237,7 +238,7 @@ export function lowerTurnStructure(
 ): TurnStructure {
   if ('activePlayerOrder' in turnStructure) {
     diagnostics.push({
-      code: 'CNL_COMPILER_TURN_STRUCTURE_LEGACY_FIELD_UNSUPPORTED',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TURN_STRUCTURE_LEGACY_FIELD_UNSUPPORTED,
       path: 'doc.turnStructure.activePlayerOrder',
       severity: 'error',
       message: 'turnStructure.activePlayerOrder is no longer supported.',
@@ -504,22 +505,16 @@ export function lowerActions(
       enforcePipelineBindingCompatibility: false,
     });
     diagnostics.push(
-      ...selectorContractViolations.map((violation) => ({
-        code:
-          violation.kind === 'bindingMalformed'
-            ? getActionSelectorContract(violation.role).malformedBindingDiagnosticCode
-            : getActionSelectorContract(violation.role).missingBindingDiagnosticCode,
-        path: `${path}.${violation.role}`,
-        severity: 'error' as const,
-        message:
-          violation.kind === 'bindingMalformed'
-            ? `Action ${violation.role} binding "${violation.binding}" must be a canonical "$name" token.`
-            : `Action ${violation.role} binding "${violation.binding}" is not declared in action params.`,
-        suggestion:
-          violation.kind === 'bindingMalformed'
-            ? `Use a canonical selector binding token like "$owner".`
-            : `Declare a matching action param (for example name: "$owner") or use a non-binding ${violation.role} selector.`,
-      })),
+      ...selectorContractViolations
+        .map((violation) =>
+          buildActionSelectorContractViolationDiagnostic({
+            violation,
+            path: `${path}.${violation.role}`,
+            actionId: String(action.id),
+            surface: 'compileLowering',
+          }),
+        )
+        .filter((diagnostic): diagnostic is Diagnostic => diagnostic !== null),
     );
     const pre = lowerOptionalCondition(
       action.pre,
@@ -592,7 +587,7 @@ function lowerActionPhases(
     const phaseId = asPhaseId(phase);
     if (seen.has(phaseId)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_PHASE_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_PHASE_DUPLICATE,
         path: `${path}.${phaseIndex}`,
         severity: 'error',
         message: `Duplicate action phase "${phaseId}" after normalization.`,
@@ -633,7 +628,7 @@ function lowerActionCapabilities(
     const normalizedCapability = capability.normalize('NFC');
     if (normalized.has(normalizedCapability)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_ACTION_CAPABILITY_DUPLICATE',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ACTION_CAPABILITY_DUPLICATE,
         path: `${path}.${index}`,
         severity: 'error',
         message: `Duplicate action capability "${normalizedCapability}" after NFC normalization.`,
@@ -1068,25 +1063,7 @@ export function missingCapabilityDiagnostic(
   actual: unknown,
   alternatives: readonly string[] = [],
 ): Diagnostic {
-  return {
-    code: 'CNL_COMPILER_MISSING_CAPABILITY',
-    path,
-    severity: 'error',
-    message: `Cannot lower ${label}: ${formatValue(actual)}.`,
-    suggestion: alternatives.length > 0 ? `Use one of the supported forms.` : 'Use a supported compiler shape.',
-    ...(alternatives.length === 0 ? {} : { alternatives: [...alternatives] }),
-  };
-}
-
-function formatValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return `"${value}"`;
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
+  return buildCompilerMissingCapabilityDiagnostic({ path, label, actual, alternatives });
 }
 
 function isFiniteNumber(value: unknown): value is number {

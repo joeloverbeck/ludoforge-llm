@@ -2,10 +2,11 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
 import { buildCardDrivenTurnFlowSemanticRequirements } from '../kernel/turn-flow-contract.js';
 import {
+  buildActionSelectorContractViolationDiagnostic,
   evaluateActionSelectorContracts,
-  getActionSelectorContract,
 } from '../kernel/action-selector-contract-registry.js';
 import type { CompileSectionResults } from './compiler-core.js';
+import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
 import { isRecord, normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 
 export function crossValidateSpec(sections: CompileSectionResults): readonly Diagnostic[] {
@@ -29,7 +30,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       for (const [phaseIndex, phase] of action.phase.entries()) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_ACTION_PHASE_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ACTION_PHASE_MISSING,
           `doc.actions.${actionIndex}.phase.${phaseIndex}`,
           phase,
           phaseTargets,
@@ -45,7 +46,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_PROFILE_ACTION_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_PROFILE_ACTION_MISSING,
         `doc.actionPipelines.${profileIndex}.actionId`,
         String(profile.actionId),
         actionTargets,
@@ -68,28 +69,14 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         enforceBindingDeclaration: false,
       });
       for (const violation of selectorContractViolations) {
-        if (violation.kind === 'bindingMalformed') {
-          diagnostics.push({
-            code: getActionSelectorContract(violation.role).malformedBindingDiagnosticCode,
-            path: `doc.actions.${actionIndex}.${violation.role}`,
-            severity: 'error',
-            message: `Action "${String(action.id)}" uses malformed ${violation.role} binding "${violation.binding}".`,
-            suggestion: 'Use a canonical selector binding token like "$owner".',
-          });
-          continue;
-        }
-        if (violation.kind === 'bindingWithPipelineUnsupported') {
-          const code = getActionSelectorContract(violation.role).bindingWithPipelineUnsupportedDiagnosticCode;
-          if (code === undefined) {
-            continue;
-          }
-          diagnostics.push({
-            code,
-            path: `doc.actions.${actionIndex}.${violation.role}`,
-            severity: 'error',
-            message: `Action "${String(action.id)}" uses binding-derived ${violation.role} "${violation.binding}" with action pipelines.`,
-            suggestion: `Use actor/active/id/relative ${violation.role} selectors for pipelined actions.`,
-          });
+        const diagnostic = buildActionSelectorContractViolationDiagnostic({
+          violation,
+          path: `doc.actions.${actionIndex}.${violation.role}`,
+          actionId: String(action.id),
+          surface: 'crossValidate',
+        });
+        if (diagnostic !== null) {
+          diagnostics.push(diagnostic);
         }
       }
     }
@@ -100,7 +87,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       for (const [windowIndex, windowId] of (profile.linkedWindows ?? []).entries()) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_PROFILE_WINDOW_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_PROFILE_WINDOW_MISSING,
           `doc.actionPipelines.${profileIndex}.linkedWindows.${windowIndex}`,
           windowId,
           windowTargets,
@@ -125,7 +112,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [actionId, mappedClass] of Object.entries(cardDrivenTurnFlow.actionClassByActionId)) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_TURN_FLOW_ACTION_CLASS_ACTION_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_ACTION_CLASS_ACTION_MISSING,
         `doc.turnOrder.config.turnFlow.actionClassByActionId.${actionId}`,
         actionId,
         actionTargets,
@@ -137,7 +124,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [actionIndex, actionId] of (cardDrivenTurnFlow.freeOperationActionIds ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_TURN_FLOW_FREE_OPERATION_ACTION_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_FREE_OPERATION_ACTION_MISSING,
         `doc.turnOrder.config.turnFlow.freeOperationActionIds.${actionIndex}`,
         actionId,
         actionTargets,
@@ -153,7 +140,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [restrictionIndex, restriction] of (cardDrivenTurnFlow.monsoon?.restrictedActions ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_TURN_FLOW_MONSOON_RESTRICTION_ACTION_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_MONSOON_RESTRICTION_ACTION_MISSING,
         `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.actionId`,
         restriction.actionId,
         actionTargets,
@@ -174,7 +161,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       if (restriction.maxParam !== undefined) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAM_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAM_MISSING,
           `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.maxParam.name`,
           restriction.maxParam.name,
           actionParamTargets,
@@ -188,7 +175,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         for (const [nameIndex, name] of restriction.maxParamsTotal.names.entries()) {
           pushMissingIdentifierDiagnostic(
             diagnostics,
-            'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_MISSING',
+            CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_MISSING,
             `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.maxParamsTotal.names.${nameIndex}`,
             name,
             actionParamTargets,
@@ -201,7 +188,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
             continue;
           }
           diagnostics.push({
-            code: 'CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_DUPLICATE',
+            code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_MONSOON_MAX_PARAMS_TOTAL_PARAM_DUPLICATE,
             path: `doc.turnOrder.config.turnFlow.monsoon.restrictedActions.${restrictionIndex}.maxParamsTotal.names.${nameIndex}`,
             severity: 'error',
             message: `Monsoon restriction for action "${restriction.actionId}" repeats maxParamsTotal parameter "${name}".`,
@@ -216,7 +203,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       if (rule.winner.actionId !== undefined) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING,
           `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${ruleIndex}.winner.actionId`,
           rule.winner.actionId,
           actionTargets,
@@ -227,7 +214,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       if (rule.canceled.actionId !== undefined) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING,
           `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${ruleIndex}.canceled.actionId`,
           rule.canceled.actionId,
           actionTargets,
@@ -259,7 +246,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         const mappedClass = cardDrivenTurnFlow.actionClassByActionId[requirement.actionId];
         if (mappedClass === undefined) {
           diagnostics.push({
-            code: 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISSING',
+            code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISSING,
             path,
             severity: 'error',
             message: `turnFlow.actionClassByActionId must include required action "${requirement.actionId}".`,
@@ -269,7 +256,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         }
         if (mappedClass !== requirement.requiredClass) {
           diagnostics.push({
-            code: 'CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH',
+            code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_ACTION_CLASS_REQUIRED_MISMATCH,
             path,
             severity: 'error',
             message: `turnFlow.actionClassByActionId maps "${requirement.actionId}" to "${mappedClass}" but must be "${requirement.requiredClass}".`,
@@ -287,7 +274,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       }
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_TRIGGER_PHASE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TRIGGER_PHASE_MISSING,
         `doc.triggers.${triggerIndex}.event.phase`,
         trigger.event.phase,
         phaseTargets,
@@ -304,7 +291,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       }
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_TRIGGER_ACTION_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TRIGGER_ACTION_MISSING,
         `doc.triggers.${triggerIndex}.event.action`,
         String(trigger.event.action),
         actionTargets,
@@ -328,7 +315,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
             : mergeIdentifierTargets(globalVarTargets, perPlayerVarTargets);
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_TRIGGER_VAR_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TRIGGER_VAR_MISSING,
         `doc.triggers.${triggerIndex}.event.var`,
         trigger.event.var,
         targets,
@@ -342,7 +329,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [checkpointIndex, checkpoint] of sections.terminal.checkpoints.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_VICTORY_SEAT_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_VICTORY_SEAT_MISSING,
         `doc.terminal.checkpoints.${checkpointIndex}.seat`,
         checkpoint.seat,
         seatTargets,
@@ -354,7 +341,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [marginIndex, margin] of (sections.terminal.margins ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_MARGIN_SEAT_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_MARGIN_SEAT_MISSING,
         `doc.terminal.margins.${marginIndex}.seat`,
         margin.seat,
         seatTargets,
@@ -371,7 +358,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       }
       pushMissingZoneRefDiagnostic(
         diagnostics,
-        'CNL_XREF_SETUP_ZONE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_SETUP_ZONE_MISSING,
         `${path}.createToken.zone`,
         effect.createToken.zone,
         zoneTargets,
@@ -387,7 +374,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       }
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_SETUP_TOKEN_TYPE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_SETUP_TOKEN_TYPE_MISSING,
         `${path}.createToken.type`,
         effect.createToken.type,
         tokenTypeTargets,
@@ -405,7 +392,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           effect,
           path,
           zoneTargets,
-          'CNL_XREF_EFFECT_ZONE_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EFFECT_ZONE_MISSING,
           `Action "${action.id}" references unknown zone`,
         );
       });
@@ -417,7 +404,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       const deckPath = `doc.eventDecks.${deckIndex}`;
       pushMissingZoneRefDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_ZONE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_ZONE_MISSING,
         `${deckPath}.drawZone`,
         deck.drawZone,
         zoneTargets,
@@ -425,7 +412,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       );
       pushMissingZoneRefDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_ZONE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_ZONE_MISSING,
         `${deckPath}.discardZone`,
         deck.discardZone,
         zoneTargets,
@@ -462,7 +449,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           card.playCondition === undefined
         ) {
           diagnostics.push({
-            code: 'CNL_XREF_PIVOTAL_PLAY_CONDITION_MISSING',
+            code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_PIVOTAL_PLAY_CONDITION_MISSING,
             severity: 'warning',
             path: `${deckPath}.cards.${cardIndex}.playCondition`,
             message: `Pivotal event card "${card.id}" has tag "pivotal" but no playCondition defined.`,
@@ -476,7 +463,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   if (cardDrivenTurnFlow !== null && sections.zones !== null) {
     pushMissingIdentifierDiagnostic(
       diagnostics,
-      'CNL_XREF_LIFECYCLE_ZONE_MISSING',
+      CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_LIFECYCLE_ZONE_MISSING,
       'doc.turnOrder.config.turnFlow.cardLifecycle.played',
       cardDrivenTurnFlow.cardLifecycle.played,
       zoneTargets,
@@ -485,7 +472,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     );
     pushMissingIdentifierDiagnostic(
       diagnostics,
-      'CNL_XREF_LIFECYCLE_ZONE_MISSING',
+      CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_LIFECYCLE_ZONE_MISSING,
       'doc.turnOrder.config.turnFlow.cardLifecycle.lookahead',
       cardDrivenTurnFlow.cardLifecycle.lookahead,
       zoneTargets,
@@ -494,7 +481,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     );
     pushMissingIdentifierDiagnostic(
       diagnostics,
-      'CNL_XREF_LIFECYCLE_ZONE_MISSING',
+      CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_LIFECYCLE_ZONE_MISSING,
       'doc.turnOrder.config.turnFlow.cardLifecycle.leader',
       cardDrivenTurnFlow.cardLifecycle.leader,
       zoneTargets,
@@ -507,7 +494,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     for (const [rewardIndex, reward] of cardDrivenTurnFlow.passRewards.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_REWARD_VAR_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_REWARD_VAR_MISSING,
         `doc.turnOrder.config.turnFlow.passRewards.${rewardIndex}.resource`,
         reward.resource,
         globalVarTargets,
@@ -589,7 +576,7 @@ function mergeIdentifierTargets(
 
 function pushMissingIdentifierDiagnostic(
   diagnostics: Diagnostic[],
-  code: string,
+  code: CnlXrefDiagnosticCode,
   path: string,
   sourceValue: string,
   targets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
@@ -605,7 +592,7 @@ function pushMissingIdentifierDiagnostic(
 
 function pushMissingZoneRefDiagnostic(
   diagnostics: Diagnostic[],
-  code: string,
+  code: CnlXrefDiagnosticCode,
   path: string,
   zone: ZoneRef,
   targets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
@@ -749,7 +736,7 @@ function validateEventCardSide(
         effect,
         path,
         zoneTargets,
-        'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING,
         `Event card "${cardId}" references unknown zone`,
       );
     });
@@ -792,7 +779,7 @@ function validateEventCardSide(
         effect,
         path,
         zoneTargets,
-        'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING,
         `Event card "${cardId}" references unknown zone`,
       );
     });
@@ -805,7 +792,7 @@ function validateEventCardSide(
         effect,
         path,
         zoneTargets,
-        'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING,
         `Event card "${cardId}" references unknown zone`,
       );
     });
@@ -819,7 +806,7 @@ function validateEventCardSide(
             effect,
             path,
             zoneTargets,
-            'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+            CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING,
             `Event card "${cardId}" references unknown zone`,
           );
         },
@@ -847,7 +834,7 @@ function pushEventTargetExecutabilityDiagnostic(
   }
 
   diagnostics.push({
-    code: 'CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING',
+    code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING,
     path: `${pathPrefix}.targets`,
     severity: 'error',
     message: `Event card "${cardId}" declares targets without executable gameplay payload at this scope.`,
@@ -872,7 +859,7 @@ function validateEventFreeOperationGrants(
     if (validateSeats) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING,
         `${pathPrefix}.${grantIndex}.seat`,
         grant.seat,
         seatTargets,
@@ -882,7 +869,7 @@ function validateEventFreeOperationGrants(
       if (grant.executeAsSeat !== undefined && grant.executeAsSeat !== 'self') {
         pushMissingIdentifierDiagnostic(
           diagnostics,
-          'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING',
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING,
           `${pathPrefix}.${grantIndex}.executeAsSeat`,
           grant.executeAsSeat,
           seatTargets,
@@ -895,7 +882,7 @@ function validateEventFreeOperationGrants(
     for (const [actionIndex, actionId] of (grant.actionIds ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_GRANT_ACTION_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_GRANT_ACTION_MISSING,
         `${pathPrefix}.${grantIndex}.actionIds.${actionIndex}`,
         actionId,
         actionTargets,
@@ -923,7 +910,7 @@ function validateEventEligibilityOverrides(
     if (validateSeats && override.target.kind === 'seat') {
       pushMissingIdentifierDiagnostic(
         diagnostics,
-        'CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING',
+        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING,
         `${pathPrefix}.${overrideIndex}.target.seat`,
         override.target.seat,
         seatTargets,
@@ -934,7 +921,7 @@ function validateEventEligibilityOverrides(
 
     pushMissingIdentifierDiagnostic(
       diagnostics,
-      'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING',
+      CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING,
       `${pathPrefix}.${overrideIndex}.windowId`,
       override.windowId,
       windowTargets,
@@ -949,7 +936,7 @@ function pushEffectZoneDiagnostics(
   effect: EffectAST,
   path: string,
   zoneTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
-  code: string,
+  code: CnlXrefDiagnosticCode,
   messagePrefix: string,
 ): void {
   if ('moveToken' in effect) {

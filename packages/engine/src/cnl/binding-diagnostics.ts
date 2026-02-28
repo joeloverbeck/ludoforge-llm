@@ -1,14 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { hasBindingIdentifier } from '../kernel/binding-identifier-contract.js';
+import { buildCompilerBindingShadowWarningDiagnostic } from './compiler-diagnostic-codes.js';
 
 export function createBindingShadowWarning(name: string, path: string): Diagnostic {
-  return {
-    code: 'CNL_COMPILER_BINDING_SHADOWED',
-    path,
-    severity: 'warning',
-    message: `Binding "${name}" shadows an outer binding.`,
-    suggestion: 'Rename the inner binding to avoid accidental capture.',
-  };
+  return buildCompilerBindingShadowWarningDiagnostic(name, path);
 }
 
 export function bindingShadowWarningsForScope(name: string, path: string, scope?: readonly string[]): readonly Diagnostic[] {

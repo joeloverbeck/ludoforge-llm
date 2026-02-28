@@ -1,6 +1,6 @@
 # ENGINEARCH-139: Choice-Options Diagnostic Parity Coverage for `chooseN`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel/CNL diagnostic parity test coverage
@@ -14,7 +14,10 @@
 
 1. `packages/engine/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.ts` currently asserts cross-layer parity only for `chooseOne`.
 2. `packages/engine/src/cnl/compile-effects.ts` and `packages/engine/src/kernel/validate-gamedef-behavior.ts` both build `chooseN` shape diagnostics via shared details + layer-local code/path/severity.
-3. Mismatch: test coverage does not fully match supported effect surface (`chooseOne` + `chooseN`). Corrected scope: extend parity tests to include `chooseN`.
+3. `chooseN` runtime-shape diagnostics are already tested per layer in:
+   - `packages/engine/test/unit/compile-effects.test.ts`
+   - `packages/engine/test/unit/validate-gamedef.test.ts`
+4. Mismatch: coverage exists for each layer independently, but cross-layer parity is only locked for `chooseOne`. Corrected scope: extend parity tests to include `chooseN`.
 
 ## Architecture Check
 
@@ -30,7 +33,7 @@ Add a `chooseN` case to the kernel parity test to assert compiler/validator deta
 
 ### 2. Keep scope limited to contract parity
 
-Do not change runtime semantics or diagnostic policy; only harden parity coverage.
+Do not change runtime semantics or diagnostic policy; only harden cross-layer parity coverage.
 
 ## Files to Touch
 
@@ -67,3 +70,17 @@ Do not change runtime semantics or diagnostic policy; only harden parity coverag
 2. `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-02-28
+- What actually changed:
+  - Updated assumption scope to reflect existing per-layer `chooseN` coverage and clarify the remaining gap is cross-layer parity only.
+  - Extended `choice-options-runtime-shape-diagnostic-parity` to assert compiler/validator parity for both `chooseOne` and `chooseN` via a table-driven case set.
+- Deviations from original plan:
+  - No architectural/runtime behavior changes were needed; work remained strictly in parity test coverage and ticket assumptions.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-diagnostic-parity.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (323/323).
+  - `pnpm -F @ludoforge/engine lint` passed.

@@ -90,7 +90,7 @@ Adjust kernel contract tests for structured payload (including fresh-array deter
 - **Completion Date**: 2026-02-28
 - **What Changed**:
   - Replaced string-first choice-options diagnostic details with structured semantic details in `choice-options-runtime-shape-contract.ts` (`reason`, `runtimeShapes`, `invalidShapes`, `alternatives`).
-  - Moved final `message`/`suggestion` rendering to caller layers (`compile-effects.ts` and `validate-gamedef-behavior.ts`) while preserving layer-local diagnostic code ownership.
+  - Centralized final `message`/`suggestion` rendering in shared kernel helper `choice-options-runtime-shape-diagnostic-rendering.ts`, consumed by caller layers (`compile-effects.ts` and `validate-gamedef-behavior.ts`) while preserving layer-local diagnostic code ownership.
   - Updated kernel contract tests to assert structured payload shape and fresh-array determinism for all returned arrays.
   - Preserved compiler/validator parity coverage and executed focused + full engine test/lint suites.
 - **Deviations From Original Plan**:
@@ -99,5 +99,5 @@ Adjust kernel contract tests for structured payload (including fresh-array deter
 - **Verification Results**:
   - `pnpm -F @ludoforge/engine build` passed.
   - Focused node tests for contract/parity/compiler/validator passed.
-  - `pnpm -F @ludoforge/engine test` passed (`323` passed, `0` failed).
+  - `pnpm -F @ludoforge/engine test` passed (`326` passed, `0` failed).
   - `pnpm -F @ludoforge/engine lint` passed.

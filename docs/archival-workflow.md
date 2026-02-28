@@ -14,17 +14,18 @@ Use this as the canonical, single-source archival policy for tickets, specs, bra
    - what actually changed
    - deviations from original plan
    - verification results
-3. Ensure destination archive directory exists:
+3. If implementation is refined after archival and the archived `Outcome` becomes stale, amend the archived document before merge/finalization so ownership, behavior, and verification facts remain accurate.
+4. Ensure destination archive directory exists:
    - `archive/tickets/`
    - `archive/specs/`
    - `archive/brainstorming/`
    - `archive/reports/`
-4. Move with the collision-safe command (never raw `mv`):
+5. Move with the collision-safe command (never raw `mv`):
    - `node scripts/archive-ticket.mjs <source> <archive-destination>`
    - The script also rewrites matching `**Deps**` references in active `tickets/*.md` from old path to new path.
-5. If there is a filename collision, pass an explicit non-colliding destination filename.
-6. Confirm the original path no longer exists in its source folder (`tickets/`, `specs/`, `brainstorming/`, or `reports/`).
-7. Run `pnpm run check:ticket-deps` to verify active ticket dependency integrity remains valid.
+6. If there is a filename collision, pass an explicit non-colliding destination filename.
+7. Confirm the original path no longer exists in its source folder (`tickets/`, `specs/`, `brainstorming/`, or `reports/`).
+8. Run `pnpm run check:ticket-deps` to verify active ticket dependency integrity remains valid.
 
 ## Examples
 

@@ -5,6 +5,7 @@ import { isEvalErrorCode } from './eval-error.js';
 export type MissingBindingPolicyContext =
   | 'legalMoves.executorDuringParamEnumeration'
   | 'legalMoves.eventDecisionSequence'
+  | 'legalChoices.freeOperationZoneFilterProbe'
   | 'pipeline.discoveryPredicate';
 
 const isDeferrableUnresolvedSelectorCardinality = (error: unknown): boolean => {
@@ -30,6 +31,7 @@ export const shouldDeferMissingBinding = (
   }
   switch (context) {
     case 'legalMoves.executorDuringParamEnumeration':
+    case 'legalChoices.freeOperationZoneFilterProbe':
     case 'pipeline.discoveryPredicate':
       return isMissingBinding;
     case 'legalMoves.eventDecisionSequence':

@@ -10,12 +10,14 @@ describe('shouldDeferMissingBinding()', () => {
     const missing = createEvalError('MISSING_BINDING', 'missing');
     assert.equal(shouldDeferMissingBinding(missing, 'pipeline.discoveryPredicate'), true);
     assert.equal(shouldDeferMissingBinding(missing, 'legalMoves.executorDuringParamEnumeration'), true);
+    assert.equal(shouldDeferMissingBinding(missing, 'legalChoices.freeOperationZoneFilterProbe'), true);
   });
 
   it('does not defer non-missing-binding eval errors', () => {
     const missingVar = createEvalError('MISSING_VAR', 'missing var');
     assert.equal(shouldDeferMissingBinding(missingVar, 'pipeline.discoveryPredicate'), false);
     assert.equal(shouldDeferMissingBinding(missingVar, 'legalMoves.executorDuringParamEnumeration'), false);
+    assert.equal(shouldDeferMissingBinding(missingVar, 'legalChoices.freeOperationZoneFilterProbe'), false);
   });
 
   it('does not defer arbitrary non-eval errors', () => {

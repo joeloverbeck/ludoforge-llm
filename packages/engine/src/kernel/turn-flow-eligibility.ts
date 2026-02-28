@@ -6,7 +6,7 @@ import {
   resolveEventFreeOperationGrants,
 } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
-import { isEvalErrorCode } from './eval-error.js';
+import { shouldDeferMissingBinding } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { normalizeSeatOrder, parseNumericSeatPlayer } from './seat-resolution.js';
@@ -383,7 +383,7 @@ const evaluateZoneFilterForMove = (
         collector: createCollector(),
       });
     } catch (cause) {
-      if (surface === 'legalChoices' && isEvalErrorCode(cause, 'MISSING_BINDING') && cause.context?.binding === '$zone') {
+      if (surface === 'legalChoices' && shouldDeferMissingBinding(cause, 'legalChoices.freeOperationZoneFilterProbe')) {
         // During discovery template probing, zone decisions may be unresolved.
         // Defer grant denial until concrete zone bindings exist.
         return true;

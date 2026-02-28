@@ -1,6 +1,6 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
 import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
-import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
+import { isEvalErrorCode, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
@@ -276,6 +276,43 @@ function extractOwnerQualifier(zoneId: ZoneId): string | null {
 
 type ZoneQueryFilter = Extract<OptionsQuery, { readonly query: 'zones' }>['filter'];
 
+const evaluateFreeOperationZoneFilterForZone = (
+  freeOperationZoneFilter: NonNullable<EvalContext['freeOperationZoneFilter']>,
+  zoneId: ZoneId,
+  ctx: EvalContext,
+): boolean => {
+  const baseBindings = {
+    ...ctx.bindings,
+    $zone: zoneId,
+  };
+  try {
+    return evalCondition(freeOperationZoneFilter, {
+      ...ctx,
+      bindings: baseBindings,
+    });
+  } catch (error) {
+    if (!isEvalErrorCode(error, 'MISSING_BINDING')) {
+      throw error;
+    }
+    const missingBinding = error.context?.binding;
+    if (
+      typeof missingBinding !== 'string' ||
+      missingBinding.length === 0 ||
+      missingBinding === '$zone' ||
+      Object.prototype.hasOwnProperty.call(baseBindings, missingBinding)
+    ) {
+      throw error;
+    }
+    return evalCondition(freeOperationZoneFilter, {
+      ...ctx,
+      bindings: {
+        ...baseBindings,
+        [missingBinding]: zoneId,
+      },
+    });
+  }
+};
+
 function applyZonesFilter(
   zones: readonly { readonly id: ZoneId; readonly owner: 'none' | 'player' }[],
   queryFilter: ZoneQueryFilter,
@@ -317,13 +354,7 @@ function applyZonesFilter(
   if (freeOperationZoneFilter !== undefined) {
     filteredZones = filteredZones.filter((zone) => {
       try {
-        return evalCondition(freeOperationZoneFilter, {
-          ...ctx,
-          bindings: {
-            ...ctx.bindings,
-            $zone: zone.id,
-          },
-        });
+        return evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, zone.id, ctx);
       } catch (cause) {
         const diagnostics = ctx.freeOperationZoneFilterDiagnostics;
         if (diagnostics !== undefined) {

@@ -1,6 +1,6 @@
 # ENGINEARCH-109: Shared `OptionsQuery` Recursion Walker for Contract Inference
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel query traversal utility + inference adoption
@@ -12,9 +12,10 @@ Leaf query contracts are now centralized, but recursion handling (`concat`, `nex
 
 ## Assumption Reassessment (2026-02-27)
 
-1. `packages/engine/src/kernel/query-domain-kinds.ts` and `packages/engine/src/kernel/query-shape-inference.ts` both contain recursive traversal logic for `OptionsQuery`.
-2. Leaf classification has been centralized in `packages/engine/src/kernel/query-kind-contract.ts`, but recursive traversal is not yet centralized.
-3. Mismatch: architecture is partially unified; corrected scope is to centralize recursive query traversal in one reusable kernel utility.
+1. `packages/engine/src/kernel/query-domain-kinds.ts` and `packages/engine/src/kernel/query-runtime-shapes.ts` both contain duplicated recursive traversal logic for `OptionsQuery`.
+2. `packages/engine/src/kernel/query-shape-inference.ts` is already a thin adapter that delegates query-shape inference to `query-runtime-shapes.ts`; it does not duplicate recursion.
+3. Leaf classification is centralized in `packages/engine/src/kernel/query-kind-contract.ts`, but recursive traversal is not yet centralized.
+4. Corrected scope: introduce one shared recursion walker and adopt it in both inferencers that currently recurse directly.
 
 ## Architecture Check
 
@@ -39,7 +40,7 @@ Add/extend tests that lock recursive traversal behavior and parity across both i
 ## Files to Touch
 
 - `packages/engine/src/kernel/query-domain-kinds.ts` (modify)
-- `packages/engine/src/kernel/query-shape-inference.ts` (modify)
+- `packages/engine/src/kernel/query-runtime-shapes.ts` (modify)
 - `packages/engine/src/kernel/query-kind-contract.ts` (modify if needed for type exports)
 - `packages/engine/src/kernel/query-walk.ts` (new)
 - `packages/engine/test/unit/kernel/query-domain-kinds.test.ts` (modify)
@@ -76,3 +77,20 @@ Add/extend tests that lock recursive traversal behavior and parity across both i
 
 1. `pnpm -F @ludoforge/engine test:unit`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-02-28
+- **What changed**:
+  - Added `packages/engine/src/kernel/query-walk.ts` with shared recursive leaf traversal utilities (`forEachOptionsQueryLeaf`, `reduceOptionsQueryLeaves`).
+  - Refactored `query-domain-kinds.ts` and `query-runtime-shapes.ts` to consume the shared walker instead of duplicating recursive switch logic.
+  - Kept leaf contract authority centralized in `query-kind-contract.ts`; updated it to consume the shared `LeafOptionsQuery` type.
+  - Added new traversal contract tests in `packages/engine/test/unit/kernel/query-walk.test.ts`.
+  - Strengthened recursive inference coverage in `query-domain-kinds.test.ts` and `query-shape-inference.test.ts`.
+- **Deviations from original plan**:
+  - Corrected scope before implementation: recursion duplication was in `query-runtime-shapes.ts` (not `query-shape-inference.ts`), so runtime-shape inferencer adoption occurred there.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine lint` passed.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed (includes `dist/test/unit/kernel/query-walk.test.js`).
+  - `pnpm -F @ludoforge/engine test` passed.

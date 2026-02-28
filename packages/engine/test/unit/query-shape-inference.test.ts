@@ -65,6 +65,27 @@ describe('query shape inference', () => {
     assert.deepEqual(shapes, [...inferCanonicalQueryRuntimeShapesSet(query)]);
   });
 
+  it('infers recursive nextInOrderByCondition source shapes through nested recursion', () => {
+    const query = {
+      query: 'nextInOrderByCondition',
+      source: {
+        query: 'concat',
+        sources: [
+          { query: 'zones' },
+          { query: 'tokensInZone', zone: 'deck:none' },
+          { query: 'zones' },
+          { query: 'players' },
+        ],
+      },
+      from: 1,
+      bind: '$item',
+      where: { op: '==', left: 1, right: 1 },
+    } as const satisfies OptionsQuery;
+
+    assert.deepEqual(inferQueryRuntimeShapes(query), ['string', 'token', 'number']);
+    assert.deepEqual(inferQueryRuntimeShapes(query), [...inferCanonicalQueryRuntimeShapesSet(query)]);
+  });
+
   it('infers value runtime shapes for refs and conditional expressions', () => {
     const shapes = inferValueRuntimeShapes(
       {

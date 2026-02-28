@@ -1,12 +1,7 @@
-import type { OptionsQuery } from './types.js';
+import type { LeafOptionsQuery } from './query-walk.js';
 
 export type QueryDomainKind = 'token' | 'zone' | 'other';
 export type QueryRuntimeShape = 'token' | 'object' | 'number' | 'string' | 'unknown';
-
-type LeafOptionsQuery = Exclude<
-  OptionsQuery,
-  { readonly query: 'concat' } | { readonly query: 'nextInOrderByCondition' }
->;
 
 export interface LeafOptionsQueryContract {
   readonly domain: QueryDomainKind;

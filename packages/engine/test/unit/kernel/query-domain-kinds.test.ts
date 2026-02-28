@@ -49,6 +49,28 @@ describe('query domain kinds', () => {
     assert.deepEqual(sortedDomains(concat), ['other', 'token', 'zone']);
   });
 
+  it('keeps recursive domain inference deterministic across deeply nested recursion', () => {
+    const query = {
+      query: 'concat',
+      sources: [
+        {
+          query: 'nextInOrderByCondition',
+          source: {
+            query: 'concat',
+            sources: [{ query: 'zones' }, { query: 'tokensInZone', zone: 'deck:none' }],
+          },
+          from: 1,
+          bind: '$item',
+          where: { op: '==', left: 1, right: 1 },
+        },
+        { query: 'assetRows', tableId: 'scores' },
+        { query: 'tokensInMapSpaces' },
+      ],
+    } as const satisfies OptionsQuery;
+
+    assert.deepEqual(sortedDomains(query), ['other', 'token', 'zone']);
+  });
+
   it('derives choice target kinds from domain inference and ignores other-domain queries', () => {
     assert.deepEqual(deriveChoiceTargetKinds({ query: 'mapSpaces' }), ['zone']);
     assert.deepEqual(deriveChoiceTargetKinds({ query: 'players' }), []);

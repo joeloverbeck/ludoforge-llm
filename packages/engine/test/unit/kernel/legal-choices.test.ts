@@ -2118,6 +2118,163 @@ phase: [asPhaseId('main')],
       assert.deepEqual(request.options.map((option) => option.value), ['board:cambodia']);
     });
 
+    it('defers unresolved bindings on no-zone free-operation zone-filter path during discovery', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({ actions: [action] }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                seat: '0',
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                zoneFilter: {
+                  op: '==',
+                  left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                  right: 'cambodia',
+                },
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      const request = legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true });
+      assert.deepEqual(request, { kind: 'complete', complete: true });
+    });
+
+    it('defers unresolved bindings on per-zone free-operation zone-filter path during discovery', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [{ name: 'zone', domain: { query: 'zones' } }],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({
+          actions: [action],
+          zones: [
+            {
+              id: asZoneId('board:cambodia'),
+              owner: 'none',
+              visibility: 'public',
+              ordering: 'set',
+              category: 'province',
+              attributes: {
+                population: 1,
+                econ: 0,
+                terrainTags: [],
+                country: 'cambodia',
+                coastal: false,
+              },
+            },
+          ],
+        }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        zones: { 'board:cambodia': [] },
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                seat: '0',
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                zoneFilter: {
+                  op: '==',
+                  left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                  right: 'cambodia',
+                },
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      const request = legalChoicesDiscover(def, state, {
+        actionId: asActionId('operation'),
+        params: { zone: 'board:cambodia' },
+        freeOperation: true,
+      });
+      assert.deepEqual(request, { kind: 'complete', complete: true });
+    });
+
     it('resolves multi-unresolved zone aliases deterministically during free-operation zone-filter probing', () => {
       const action: ActionDef = {
         id: asActionId('operation'),

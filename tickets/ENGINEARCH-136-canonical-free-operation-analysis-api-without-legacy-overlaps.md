@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — turn-flow free-operation API ownership + callsite consolidation + export cleanup
-**Deps**: archive/tickets/ENGINEARCH-124-unify-free-operation-denial-analysis-single-pass.md, archive/tickets/ENGINEARCH-129-eliminate-discovery-context-dispatcher-alias.md, tickets/ENGINEARCH-133-canonical-free-operation-zone-filter-surface-contract.md
+**Deps**: archive/tickets/ENGINEARCH-124-unify-free-operation-denial-analysis-single-pass.md, archive/tickets/ENGINEARCH-129-eliminate-discovery-context-dispatcher-alias.md, archive/tickets/ENGINEARCH-133-canonical-free-operation-zone-filter-surface-contract.md
 
 ## Problem
 

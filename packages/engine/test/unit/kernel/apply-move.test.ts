@@ -964,6 +964,102 @@ phase: [asPhaseId('main')],
       },
     );
   });
+
+  it('throws typed error with candidateZone diagnostics for per-zone free-operation zone-filter failures', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'zone',
+          domain: { query: 'zones' },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        globalVars: [],
+        zones: [
+          { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: { 'board:cambodia': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'gvar', var: 'missingVar' },
+                right: 1,
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      globalVars: {},
+    });
+
+    assert.throws(
+      () =>
+        applyMove(def, state, {
+          actionId: asActionId('operation'),
+          params: { zone: 'board:cambodia' },
+          freeOperation: true,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED');
+        assert.equal(details.context?.surface, 'turnFlowEligibility');
+        assert.equal(details.context?.actionId, 'operation');
+        assert.equal(details.context?.candidateZone, 'board:cambodia');
+        assert.deepEqual(details.context?.candidateZones, ['board:cambodia']);
+        return true;
+      },
+    );
+  });
 });
 
 describe('applyMove() free-operation execution seat threading', () => {

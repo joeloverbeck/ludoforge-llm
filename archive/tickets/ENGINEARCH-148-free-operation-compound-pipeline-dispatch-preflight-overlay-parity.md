@@ -1,6 +1,6 @@
 # ENGINEARCH-148: Free-Operation Compound Pipeline Dispatch Must Share Canonical Preflight Overlay Contract
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel `applyMove` compound/special-activity pipeline dispatch parity hardening
@@ -14,7 +14,9 @@
 
 1. Confirmed: validation preflight in `resolveMovePreflightContext` threads free-operation preflight overlay via `buildFreeOperationPreflightOverlay(...)`.
 2. Confirmed: `resolveMatchedPipelineForMove(...)` currently computes `executionPlayer` and pipeline dispatch directly, without canonical overlay threading (`freeOperationZoneFilter` + diagnostics).
-3. Mismatch: canonical contract ownership is incomplete for free-operation pipeline applicability in `applyMove` auxiliary pipeline lookup. Corrected scope: unify this path with canonical overlay ownership.
+3. Confirmed: existing unit coverage already validates overlay threading for primary `applyMove` validation preflight (`threads free-operation zone-filter context into validation preflight pipeline applicability`), but does not cover compound special-activity pipeline lookup.
+4. Mismatch: test-plan assumptions were too broad. `legal-choices` regression execution is not required for this ticket because no `legalChoices` codepath is touched.
+5. Corrected scope: unify compound special-activity pipeline lookup with canonical free-operation overlay ownership and add targeted regression tests for that path.
 
 ## Architecture Check
 
@@ -34,7 +36,7 @@ Remove parallel manual wiring in compound/special-activity pipeline lookup when 
 
 ### 3. Add regression tests for overlap path
 
-Add focused unit coverage where free-operation zone filters affect pipeline applicability during compound validation/special-activity constraints.
+Add focused unit coverage where free-operation zone filters affect special-activity pipeline applicability during compound validation. Include a case that would falsely match without overlay threading.
 
 ## Files to Touch
 
@@ -65,14 +67,27 @@ Add focused unit coverage where free-operation zone filters affect pipeline appl
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/apply-move.test.ts` — add case where free-operation `zoneFilter` constrains pipeline applicability in compound/special-activity validation path.
-2. `packages/engine/test/unit/kernel/legal-choices.test.ts` (existing assertions only) — ensure discovery behavior remains consistent after consolidation.
+1. `packages/engine/test/unit/kernel/apply-move.test.ts` — add case where free-operation `zoneFilter` constrains pipeline applicability in compound special-activity validation path.
+2. `packages/engine/test/unit/kernel/apply-move.test.ts` — add case proving accompanying-op constraint does not falsely trigger when free-operation zone-filtered pipeline dispatch should be non-matching.
 
 ### Commands
 
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/kernel/apply-move.test.js`
-3. `node --test packages/engine/dist/test/unit/kernel/legal-choices.test.js`
-4. `pnpm -F @ludoforge/engine test`
-5. `pnpm turbo lint`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo lint`
 
+## Outcome
+
+- **Completion Date**: 2026-02-28
+- **What Changed**:
+  - `resolveMatchedPipelineForMove(...)` now threads canonical free-operation overlay fields (`freeOperationZoneFilter` and diagnostics) via `buildFreeOperationPreflightOverlay(...)` into pipeline dispatch eval context.
+  - Added compound special-activity regression coverage proving restrictive special-activity pipelines are not incorrectly selected when free-operation zone filters narrow applicability.
+- **Deviations From Original Plan**:
+  - Removed unnecessary `legal-choices` regression execution from this ticket scope after reassessment; no `legalChoices` codepath was modified.
+  - Implemented two focused `apply-move` regressions (accompanying-ops and compound-param-constraint paths) using restrictive + fallback pipeline fixtures to isolate dispatch selection behavior.
+- **Verification Results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/apply-move.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅ (327/327 passing)
+  - `pnpm turbo lint` ✅

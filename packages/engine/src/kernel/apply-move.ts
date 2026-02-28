@@ -137,6 +137,11 @@ const resolveMatchedPipelineForMove = (
   if (executionPlayer === null) {
     return undefined;
   }
+  const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
+    freeOperationAnalysis,
+    move,
+    'turnFlowEligibility',
+  );
   const dispatch = resolveActionPipelineDispatch(def, action, {
     def,
     adjacencyGraph,
@@ -146,6 +151,12 @@ const resolveMatchedPipelineForMove = (
     actorPlayer: executionPlayer,
     bindings: runtimeBindingsForMove(move, undefined),
     collector: createCollector(),
+    ...(freeOperationPreflightOverlay.freeOperationZoneFilter === undefined
+      ? {}
+      : { freeOperationZoneFilter: freeOperationPreflightOverlay.freeOperationZoneFilter }),
+    ...(freeOperationPreflightOverlay.freeOperationZoneFilterDiagnostics === undefined
+      ? {}
+      : { freeOperationZoneFilterDiagnostics: freeOperationPreflightOverlay.freeOperationZoneFilterDiagnostics }),
   });
   if (dispatch.kind !== 'matched') {
     return undefined;

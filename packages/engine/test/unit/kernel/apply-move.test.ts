@@ -1333,6 +1333,211 @@ phase: [asPhaseId('main')],
   });
 });
 
+describe('applyMove() compound special-activity free-operation pipeline overlay parity', () => {
+  const makeTurnFlowDef = (actions: readonly ActionDef[], actionPipelines: readonly ActionPipelineDef[]): GameDef =>
+    ({
+      ...makeBaseDef({
+        actions,
+        actionPipelines,
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'board' },
+          { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['special'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef);
+
+  const makeTurnFlowState = (): GameState =>
+    makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['special'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                right: 'board',
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+  it('does not enforce accompanyingOps from a zone-filtered-out special-activity pipeline', () => {
+    const operation: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const special: ActionDef = {
+      id: asActionId('special'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'zone', domain: { query: 'zones' } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const restrictiveProfile: ActionPipelineDef = {
+      id: 'special-profile-restrictive',
+      actionId: special.id,
+      applicability: {
+        op: '==',
+        left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+        right: 2,
+      },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      accompanyingOps: ['different-operation'],
+      atomicity: 'partial',
+    };
+    const fallbackProfile: ActionPipelineDef = {
+      id: 'special-profile-fallback',
+      actionId: special.id,
+      applicability: { op: '==', left: 1, right: 1 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+
+    const def = makeTurnFlowDef([operation, special], [restrictiveProfile, fallbackProfile]);
+    const state = makeTurnFlowState();
+
+    assert.doesNotThrow(() =>
+      applyMove(def, state, {
+        actionId: operation.id,
+        params: {},
+        compound: {
+          timing: 'before',
+          specialActivity: {
+            actionId: special.id,
+            params: { zone: 'board:none' },
+            freeOperation: true,
+          },
+        },
+      }, { advanceToDecisionPoint: false }));
+  });
+
+  it('does not enforce compoundParamConstraints from a zone-filtered-out special-activity pipeline', () => {
+    const operation: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'source', domain: { query: 'zones' } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const special: ActionDef = {
+      id: asActionId('special'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'zone', domain: { query: 'zones' } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const restrictiveProfile: ActionPipelineDef = {
+      id: 'special-profile-restrictive',
+      actionId: special.id,
+      applicability: {
+        op: '==',
+        left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+        right: 2,
+      },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      compoundParamConstraints: [
+        {
+          operationParam: 'source',
+          specialActivityParam: 'zone',
+          relation: 'subset',
+        },
+      ],
+      atomicity: 'partial',
+    };
+    const fallbackProfile: ActionPipelineDef = {
+      id: 'special-profile-fallback',
+      actionId: special.id,
+      applicability: { op: '==', left: 1, right: 1 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+
+    const def = makeTurnFlowDef([operation, special], [restrictiveProfile, fallbackProfile]);
+    const state = makeTurnFlowState();
+
+    assert.doesNotThrow(() =>
+      applyMove(def, state, {
+        actionId: operation.id,
+        params: { source: 'city:none' },
+        compound: {
+          timing: 'before',
+          specialActivity: {
+            actionId: special.id,
+            params: { zone: 'board:none' },
+            freeOperation: true,
+          },
+        },
+      }, { advanceToDecisionPoint: false }));
+  });
+});
+
 describe('applyMove() executor applicability contract', () => {
   it('returns illegal move when actor does not include active player', () => {
     const action: ActionDef = {

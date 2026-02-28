@@ -149,6 +149,22 @@ describe('runtime error context contracts', () => {
     assert.equal(unknownActionError.reason, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   });
 
+  it('illegalMoveError type contract rejects payload objects for no-context reasons', () => {
+    const move: Move = {
+      actionId: action.id,
+      params: {},
+    };
+    const assertNoContextContracts = (): void => {
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE);
+      // @ts-expect-error UNKNOWN_ACTION_ID is a no-context reason and must not accept payload objects
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID, { unexpected: 1 });
+      // @ts-expect-error ACTION_ACTOR_NOT_APPLICABLE is a no-context reason and must not accept payload objects
+      illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE, { detail: 'x' });
+    };
+    void assertNoContextContracts;
+  });
+
   it('illegalMoveError context fields are assignable from canonical kernel contract types', () => {
     const move: Move = {
       actionId: action.id,

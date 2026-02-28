@@ -127,10 +127,18 @@ type IllegalMoveContextInput<R extends IllegalMoveReason> = Omit<IllegalMoveCont
 type RequiredKeys<T> = {
   [K in keyof T]-?: Pick<T, K> extends Required<Pick<T, K>> ? K : never;
 }[keyof T];
+type IllegalMoveReasonsWithNoContext = {
+  [R in IllegalMoveReason]: [keyof IllegalMoveContextInput<R>] extends [never] ? R : never;
+}[IllegalMoveReason];
 type IllegalMoveReasonsRequiringContext = {
   [R in IllegalMoveReason]: [RequiredKeys<IllegalMoveContextInput<R>>] extends [never] ? never : R;
 }[IllegalMoveReason];
-type IllegalMoveReasonsWithOptionalContext = Exclude<IllegalMoveReason, IllegalMoveReasonsRequiringContext>;
+type IllegalMoveContextArgs<R extends IllegalMoveReason> =
+  R extends IllegalMoveReasonsRequiringContext
+    ? [context: IllegalMoveContextInput<R>]
+    : R extends IllegalMoveReasonsWithNoContext
+      ? []
+      : [context?: IllegalMoveContextInput<R>];
 
 export interface KernelRuntimeErrorContextByCode {
   readonly ILLEGAL_MOVE: IllegalMoveContext;
@@ -257,21 +265,17 @@ export class IllegalMoveError extends KernelRuntimeError<'ILLEGAL_MOVE'> {
   }
 }
 
-export function illegalMoveError<R extends IllegalMoveReasonsRequiringContext>(
+export function illegalMoveError<R extends IllegalMoveReason>(
   move: Move,
   reason: R,
-  context: IllegalMoveContextInput<R>,
-): IllegalMoveError;
-export function illegalMoveError<R extends IllegalMoveReasonsWithOptionalContext>(
-  move: Move,
-  reason: R,
-  context?: IllegalMoveContextInput<R>,
+  ...args: IllegalMoveContextArgs<R>
 ): IllegalMoveError;
 export function illegalMoveError(
   move: Move,
   reason: IllegalMoveReason,
-  context?: IllegalMoveContextInput<IllegalMoveReason>,
+  ...args: [context?: IllegalMoveContextInput<IllegalMoveReason>]
 ): IllegalMoveError {
+  const context = args[0];
   if (reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED && (context as { freeOperationDenial?: unknown } | undefined)?.freeOperationDenial === undefined) {
     throw new TypeError('FREE_OPERATION_NOT_GRANTED requires freeOperationDenial in ILLEGAL_MOVE context.');
   }

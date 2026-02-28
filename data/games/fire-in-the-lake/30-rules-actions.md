@@ -1770,6 +1770,7 @@ actionPipelines:
                                       space: $assaultLoC
                                       damageExpr: { ref: binding, name: $patrolDmg }
                                       bodyCountEligible: true
+                                      forceUntunneledBaseFirst: false
     atomicity: atomic
   # ── patrol-arvn-profile ─────────────────────────────────────────────────────
   # ARVN Patrol operation (Rule 3.2.2)
@@ -1919,6 +1920,7 @@ actionPipelines:
                                 space: $assaultLoC
                                 damageExpr: { ref: binding, name: $patrolDmg }
                                 bodyCountEligible: true
+                                forceUntunneledBaseFirst: false
     atomicity: atomic
   # ── sweep-us-profile ──────────────────────────────────────────────────────────
   # US Sweep operation (Rule 3.2.3)
@@ -2225,6 +2227,17 @@ actionPipelines:
                                   right: 0
                           min: 1
                           max: 99
+      - stage: abrams-select-space
+        effects:
+          - chooseN:
+              bind: $abramsSpace
+              options: { query: binding, name: targetSpaces }
+              min: 0
+              max:
+                if:
+                  when: { op: '==', left: { ref: globalMarkerState, marker: cap_abrams }, right: unshaded }
+                  then: 1
+                  else: 0
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -2259,14 +2272,17 @@ actionPipelines:
                                       space: $space
                                       damageExpr: { ref: binding, name: $damage }
                                       bodyCountEligible: true
+                                      forceUntunneledBaseFirst:
+                                        if:
+                                          when:
+                                            op: in
+                                            item: { ref: binding, name: $space }
+                                            set: { ref: binding, name: $abramsSpace }
+                                          then: true
+                                          else: false
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
-      - stage: cap-abrams-base-first
-        effects:
-          - macro: cap-assault-abrams-unshaded-base-first
-            args:
-              targetSpaces: targetSpaces
       - stage: cap-m48-patton-bonus-removal
         effects:
           - macro: cap-assault-m48-unshaded-bonus-removal
@@ -2314,6 +2330,7 @@ actionPipelines:
                                       space: $arvnSpace
                                       damageExpr: { ref: binding, name: $arvnDamage }
                                       bodyCountEligible: true
+                                      forceUntunneledBaseFirst: false
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault
@@ -2352,57 +2369,28 @@ actionPipelines:
                     min: 1
                     max: 1
               else:
-                - if:
-                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_abrams }, right: shaded }
-                    then:
-                      - chooseN:
-                          bind: targetSpaces
-                          options:
-                            query: mapSpaces
-                            filter:
-                              op: and
-                              args:
-                                - op: '>'
-                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
-                                  right: 0
-                                - op: '>'
-                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
-                                  right: 0
-                          min: 1
-                          max:
-                            if:
-                              when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
-                              then: 99
-                              else:
-                                op: min
-                                left: 2
-                                right:
-                                  op: floorDiv
-                                  left: { ref: gvar, var: arvnResources }
-                                  right: 3
-                    else:
-                      - chooseN:
-                          bind: targetSpaces
-                          options:
-                            query: mapSpaces
-                            filter:
-                              op: and
-                              args:
-                                - op: '>'
-                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
-                                  right: 0
-                                - op: '>'
-                                  left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
-                                  right: 0
-                          min: 1
-                          max:
-                            if:
-                              when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
-                              then: 99
-                              else:
-                                op: floorDiv
-                                left: { ref: gvar, var: arvnResources }
-                                right: 3
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                            right: 0
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+                            right: 0
+                    min: 1
+                    max:
+                      if:
+                        when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                        then: 99
+                        else:
+                          op: floorDiv
+                          left: { ref: gvar, var: arvnResources }
+                          right: 3
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -2449,14 +2437,10 @@ actionPipelines:
                                       space: $space
                                       damageExpr: { ref: binding, name: $damage }
                                       bodyCountEligible: true
+                                      forceUntunneledBaseFirst: false
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
-      - stage: cap-abrams-base-first
-        effects:
-          - macro: cap-assault-abrams-unshaded-base-first
-            args:
-              targetSpaces: targetSpaces
       - stage: cap-m48-patton-bonus-removal
         effects:
           - macro: cap-assault-m48-unshaded-bonus-removal
@@ -3165,6 +3149,7 @@ actionPipelines:
                                             space: $space
                                             damageExpr: { ref: binding, name: $damage }
                                             bodyCountEligible: false
+                                            forceUntunneledBaseFirst: false
                 - if:
                     when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: activate-remove }
                     then:

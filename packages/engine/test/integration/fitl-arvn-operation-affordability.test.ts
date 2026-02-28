@@ -20,7 +20,7 @@ const withArvnSweepState = (state: GameState, arvnResources: number): GameState 
 
 const withArvnAssaultState = (
   state: GameState,
-  options: { arvnResources: number; bodyCount?: boolean; abrams?: 'unshaded' | 'shaded' },
+  options: { arvnResources: number; bodyCount?: boolean },
 ): GameState => ({
   ...state,
   activePlayer: asPlayerId(1),
@@ -31,7 +31,6 @@ const withArvnAssaultState = (
   },
   globalMarkers: {
     ...state.globalMarkers,
-    ...(options.abrams === undefined ? {} : { cap_abrams: options.abrams }),
   },
   zones: {
     ...state.zones,
@@ -113,7 +112,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     assert.equal(result.globalVars.arvnResources, before, 'Body Count ARVN Assault should not spend ARVN resources');
   });
 
-  it('composes capability caps with affordability for ARVN Sweep/Assault', () => {
+  it('composes capability caps with affordability for ARVN Sweep and keeps Abrams independent from ARVN Assault', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -136,34 +135,24 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       'With cap_caps shaded and 3 resources, Sweep should cap at 1 space',
     );
 
-    const assaultCapTwo = withArvnAssaultState(makeIsolatedInitialState(def, 2302, 4), {
+    const arvnAssaultBase = withArvnAssaultState(makeIsolatedInitialState(def, 2302, 4), {
       arvnResources: 9,
       bodyCount: false,
-      abrams: 'shaded',
     });
-    assert.throws(
+    const assaultWithAbramsShaded: GameState = {
+      ...arvnAssaultBase,
+      globalMarkers: {
+        ...arvnAssaultBase.globalMarkers,
+        cap_abrams: 'shaded',
+      },
+    };
+    assert.doesNotThrow(
       () =>
-        applyMoveWithResolvedDecisionIds(def, assaultCapTwo, {
+        applyMoveWithResolvedDecisionIds(def, assaultWithAbramsShaded, {
           actionId: asActionId('assault'),
           params: { targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
         }),
-      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
-      'With cap_abrams shaded and sufficient resources, Assault should still cap at 2 spaces',
-    );
-
-    const assaultCapOne = withArvnAssaultState(makeIsolatedInitialState(def, 2303, 4), {
-      arvnResources: 3,
-      bodyCount: false,
-      abrams: 'shaded',
-    });
-    assert.throws(
-      () =>
-        applyMoveWithResolvedDecisionIds(def, assaultCapOne, {
-          actionId: asActionId('assault'),
-          params: { targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1]] },
-        }),
-      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
-      'With cap_abrams shaded and 3 resources, Assault should cap at 1 space via min(2, affordability)',
+      'ARVN Assault should not inherit cap_abrams shaded max-2 space limit',
     );
   });
 });

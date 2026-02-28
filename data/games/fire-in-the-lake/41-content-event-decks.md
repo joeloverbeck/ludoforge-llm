@@ -1185,12 +1185,12 @@ eventDecks:
           seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Command shift prioritizes selective base targeting."
         unshaded:
-          text: "US capability: one Assault space removes untunneled base first."
+          text: "1 US Assault space may remove 1 enemy non-Tunnel Base first not last."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_abrams, markerState: unshaded }
         shaded:
-          text: "US capability (shaded): US/ARVN Assault is limited to max 2 spaces."
+          text: "US may select max 2 spaces per Assault."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_abrams, markerState: shaded }

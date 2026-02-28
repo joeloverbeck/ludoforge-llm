@@ -222,17 +222,66 @@ effectMacros:
       - { name: space, type: zoneSelector }
       - { name: damageExpr, type: value }
       - { name: bodyCountEligible, type: value }
+      - { name: forceUntunneledBaseFirst, type: value }
     exports: []
     effects:
       - let:
           bind: $basesBefore
           value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
           in:
-            - macro: piece-removal-ordering
-              args:
-                space: { param: space }
-                damageExpr: { param: damageExpr }
-                bodyCountEligible: { param: bodyCountEligible }
+            - let:
+                bind: $forcedBaseRemoved
+                value:
+                  if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { param: forceUntunneledBaseFirst }, right: true }
+                        - { op: '>', left: { param: damageExpr }, right: 0 }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: { param: space }
+                                filter:
+                                  - { prop: type, eq: base }
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                  - { prop: tunnel, eq: untunneled }
+                          right: 0
+                    then: 1
+                    else: 0
+                in:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '==', left: { ref: binding, name: $forcedBaseRemoved }, right: 1 }
+                      then:
+                        - forEach:
+                            bind: $forcedBase
+                            over:
+                              query: tokensInZone
+                              zone: { param: space }
+                              filter:
+                                - { prop: type, eq: base }
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                - { prop: tunnel, eq: untunneled }
+                            limit: 1
+                            effects:
+                              - moveToken:
+                                  token: $forcedBase
+                                  from: { param: space }
+                                  to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $forcedBase, prop: faction }, ':none'] } }
+                  - macro: piece-removal-ordering
+                    args:
+                      space: { param: space }
+                      damageExpr:
+                        op: '-'
+                        left: { param: damageExpr }
+                        right: { ref: binding, name: $forcedBaseRemoved }
+                      bodyCountEligible: { param: bodyCountEligible }
             - let:
                 bind: $basesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
@@ -1815,38 +1864,6 @@ effectMacros:
           then:
             - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
 
-  # ── cap-assault-abrams-unshaded-base-first ────────────────────────────────
-  # Abrams unshaded: one selected Assault space removes untunneled base first.
-  - id: cap-assault-abrams-unshaded-base-first
-    params:
-      - { name: targetSpaces, type: value }
-    exports: []
-    effects:
-      - if:
-          when: { op: '==', left: { ref: globalMarkerState, marker: cap_abrams }, right: unshaded }
-          then:
-            - chooseN:
-                bind: $abramsSpace
-                options: { query: binding, name: { param: targetSpaces } }
-                min: 0
-                max: 1
-            - forEach:
-                bind: $abramsTargetSpace
-                over: { query: binding, name: $abramsSpace }
-                effects:
-                  - forEach:
-                      bind: $abramsBase
-                      over:
-                        query: tokensInZone
-                        zone: $abramsTargetSpace
-                        filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: tunnel, eq: untunneled }]
-                      limit: 1
-                      effects:
-                        - moveToken:
-                            token: $abramsBase
-                            from: $abramsTargetSpace
-                            to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $abramsBase, prop: faction }, ':none'] } }
-
   # ── cap-assault-m48-unshaded-bonus-removal ───────────────────────────────
   # M48 Patton unshaded: up to 2 selected Assault spaces each remove 2 enemy.
   - id: cap-assault-m48-unshaded-bonus-removal
@@ -1871,6 +1888,7 @@ effectMacros:
                       space: $m48Space
                       damageExpr: 2
                       bodyCountEligible: false
+                      forceUntunneledBaseFirst: false
 
   # ── cap-train-caps-unshaded-bonus-police ─────────────────────────────────
   # CAPs unshaded: each Train space places +1 ARVN Police.

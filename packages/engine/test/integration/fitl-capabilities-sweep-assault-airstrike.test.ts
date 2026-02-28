@@ -68,8 +68,6 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       { profileId: 'assault-us-profile', marker: 'cap_m48Patton', side: 'unshaded' },
       { profileId: 'assault-us-profile', marker: 'cap_searchAndDestroy', side: 'unshaded' },
       { profileId: 'assault-us-profile', marker: 'cap_searchAndDestroy', side: 'shaded' },
-      { profileId: 'assault-arvn-profile', marker: 'cap_abrams', side: 'unshaded' },
-      { profileId: 'assault-arvn-profile', marker: 'cap_abrams', side: 'shaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_cobras', side: 'shaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_m48Patton', side: 'unshaded' },
       { profileId: 'assault-arvn-profile', marker: 'cap_searchAndDestroy', side: 'unshaded' },
@@ -153,7 +151,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.ok(arvnHasAffordabilityElse.length >= 1, 'Expected ARVN cap_caps else branch to use floorDiv(arvnResources, 3)');
   });
 
-  it('caps Assault space selection for cap_abrams shaded branch (US fixed cap, ARVN body-count-aware affordability)', () => {
+  it('caps Assault space selection for cap_abrams shaded branch in US profile only', () => {
     const us = getParsedProfile('assault-us-profile');
     const arvn = getParsedProfile('assault-arvn-profile');
 
@@ -168,36 +166,230 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.ok(usHasMaxTwo.length >= 1, 'Expected US cap_abrams shaded branch to set max 2');
     assert.ok(usHasMaxNinetyNine.length >= 1, 'Expected US cap_abrams else branch to preserve max 99');
 
-    const arvnShadedChecks = findDeep(arvn.stages, (node: any) =>
+    const arvnAbramsChecks = findDeep(arvn.stages, (node: any) =>
       node?.if?.when?.left?.ref === 'globalMarkerState' &&
-      node?.if?.when?.left?.marker === 'cap_abrams' &&
-      node?.if?.when?.right === 'shaded',
+      node?.if?.when?.left?.marker === 'cap_abrams',
     );
-    assert.ok(arvnShadedChecks.length >= 1);
-    const arvnBodyCountBypass = findDeep(arvnShadedChecks[0], (node: any) =>
-      node?.chooseN?.max?.if?.when?.op === '==' &&
-      node?.chooseN?.max?.if?.when?.left?.ref === 'gvar' &&
-      node?.chooseN?.max?.if?.when?.left?.var === 'mom_bodyCount' &&
-      node?.chooseN?.max?.if?.when?.right === true &&
-      node?.chooseN?.max?.if?.then === 99,
+    assert.equal(arvnAbramsChecks.length, 0, 'Expected ARVN Assault profile to ignore cap_abrams');
+  });
+
+  it('US Abrams unshaded removes one untunneled Base first within normal Assault removal budget', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'quang-tin-quang-ngai:none';
+    const start = clearAllZones(initialState(def, 22011, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_abrams: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('abrams-us-t', 'troops', 'US', { type: 'troops' }),
+          makeToken('abrams-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('abrams-vc-base', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+        ],
+      },
+    };
+
+    const beforeAid = Number(configured.globalVars.aid ?? 0);
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('assault'),
+      params: {
+        targetSpaces: [space],
+        $abramsSpace: [space],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'VC'),
+      1,
+      'Abrams unshaded should not add extra removals beyond normal Assault damage',
     );
-    const arvnMinAffordability = findDeep(arvnShadedChecks[0], (node: any) =>
-      node?.chooseN?.max?.if?.else?.op === 'min' &&
-      node?.chooseN?.max?.if?.else?.left === 2 &&
-      node?.chooseN?.max?.if?.else?.right?.op === 'floorDiv' &&
-      node?.chooseN?.max?.if?.else?.right?.left?.ref === 'gvar' &&
-      node?.chooseN?.max?.if?.else?.right?.left?.var === 'arvnResources' &&
-      node?.chooseN?.max?.if?.else?.right?.right === 3,
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'base' && token.props.faction === 'VC'),
+      0,
+      'Abrams unshaded should remove an untunneled Base first in the selected US Assault space',
     );
-    const arvnElseAffordability = findDeep(arvnShadedChecks[0], (node: any) =>
-      node?.chooseN?.max?.if?.else?.op === 'floorDiv' &&
-      node?.chooseN?.max?.if?.else?.left?.ref === 'gvar' &&
-      node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
-      node?.chooseN?.max?.if?.else?.right === 3,
+    assert.equal(final.globalVars.aid, beforeAid + 6, 'Removing one insurgent Base via Abrams should still grant +6 Aid');
+  });
+
+  it('US Abrams unshaded does not remove tunneled Bases first', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'saigon:none';
+    const start = clearAllZones(initialState(def, 22012, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_abrams: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('abrams-us-t2', 'troops', 'US', { type: 'troops' }),
+          makeToken('abrams-nva-g2', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'active' }),
+          makeToken('abrams-nva-base2', 'base', 'NVA', { type: 'base', tunnel: 'tunneled' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('assault'),
+      params: {
+        targetSpaces: [space],
+        $abramsSpace: [space],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'base' && token.props.faction === 'NVA'),
+      1,
+      'Abrams unshaded must not force removal of tunneled Bases',
     );
-    assert.ok(arvnBodyCountBypass.length >= 2, 'Expected ARVN Body Count max bypass in both cap_abrams branches');
-    assert.ok(arvnMinAffordability.length >= 1, 'Expected ARVN cap_abrams shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
-    assert.ok(arvnElseAffordability.length >= 1, 'Expected ARVN cap_abrams else branch to use floorDiv(arvnResources, 3)');
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'guerrilla' && token.props.faction === 'NVA'),
+      0,
+      'Normal Assault order should remove non-Base enemy first when Base is tunneled',
+    );
+  });
+
+  it('US Abrams unshaded applies to exactly one selected US Assault space', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const abramsSpace = 'saigon:none';
+    const normalSpace = 'hue:none';
+    const start = clearAllZones(initialState(def, 22013, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_abrams: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [abramsSpace]: [
+          makeToken('abrams-us-a', 'troops', 'US', { type: 'troops' }),
+          makeToken('abrams-vc-g-a', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('abrams-vc-b-a', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+        ],
+        [normalSpace]: [
+          makeToken('abrams-us-b', 'troops', 'US', { type: 'troops' }),
+          makeToken('abrams-vc-g-b', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('abrams-vc-b-b', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('assault'),
+      params: {
+        targetSpaces: [abramsSpace, normalSpace],
+        $abramsSpace: [abramsSpace],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+
+    assert.equal(
+      countTokens(final, abramsSpace, (token) => token.type === 'base' && token.props.faction === 'VC'),
+      0,
+      'Selected Abrams space should remove Base first',
+    );
+    assert.equal(
+      countTokens(final, normalSpace, (token) => token.type === 'base' && token.props.faction === 'VC'),
+      1,
+      'Non-selected space should retain Base when only 1 damage is available',
+    );
+  });
+
+  it('ARVN Assault remains unaffected by Abrams unshaded', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'hue:none';
+    const start = clearAllZones(initialState(def, 22014, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(1),
+      globalVars: {
+        ...start.globalVars,
+        arvnResources: 3,
+        mom_bodyCount: false,
+      },
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_abrams: 'unshaded',
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('abrams-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('abrams-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('abrams-arvn-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('abrams-arvn-vc-b', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, configured, {
+      actionId: asActionId('assault'),
+      params: { targetSpaces: [space] },
+    }).state;
+
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'base' && token.props.faction === 'VC'),
+      1,
+      'ARVN Assault should still remove non-Base enemy before Base regardless of Abrams unshaded',
+    );
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'guerrilla' && token.props.faction === 'VC'),
+      0,
+      'ARVN Assault should remove the guerrilla first with 1 damage',
+    );
+  });
+
+  it('US Abrams shaded caps Assault space selection to max 2', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const a = 'saigon:none';
+    const b = 'hue:none';
+    const c = 'quang-tin-quang-ngai:none';
+    const start = clearAllZones(initialState(def, 22015, 4).state);
+    const configured: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_abrams: 'shaded',
+      },
+      zones: {
+        ...start.zones,
+        [a]: [makeToken('abrams-shaded-us-a', 'troops', 'US', { type: 'troops' }), makeToken('abrams-shaded-vc-a', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+        [b]: [makeToken('abrams-shaded-us-b', 'troops', 'US', { type: 'troops' }), makeToken('abrams-shaded-vc-b', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+        [c]: [makeToken('abrams-shaded-us-c', 'troops', 'US', { type: 'troops' }), makeToken('abrams-shaded-vc-c', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+      },
+    };
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, configured, {
+          actionId: asActionId('assault'),
+          params: { targetSpaces: [a, b, c], $arvnFollowupSpaces: [] },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+    );
   });
 
   it('routes M48 unshaded Assault bonus through one shared macro in both US and ARVN profiles', () => {

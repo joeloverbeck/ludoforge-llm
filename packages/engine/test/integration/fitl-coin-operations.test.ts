@@ -912,8 +912,8 @@ describe('FITL COIN operations integration', () => {
 
     it('AC4/AC5/AC6: US damage formula applies base/highland/normal branches', () => {
       const parsed = parseAssaultUsProfile();
-      const resolvePerSpace = parsed.stages[1];
-      assert.equal(resolvePerSpace.stage, 'resolve-per-space');
+      const resolvePerSpace = parsed.stages.find((stage: { stage: string }) => stage.stage === 'resolve-per-space');
+      assert.ok(resolvePerSpace, 'Expected resolve-per-space stage');
 
       const baseDoubleBranch = findDeep(resolvePerSpace.effects, (node: any) =>
         node?.if?.when?.op === '>' &&
@@ -1268,17 +1268,8 @@ describe('FITL COIN operations integration', () => {
         node?.chooseN?.max?.if?.else?.left?.var === 'arvnResources' &&
         node?.chooseN?.max?.if?.else?.right === 3,
       );
-      const capabilityMinCap = findDeep(limOpIf[0].if.else, (node: any) =>
-        node?.chooseN?.max?.if?.else?.op === 'min' &&
-        node?.chooseN?.max?.if?.else?.left === 2 &&
-        node?.chooseN?.max?.if?.else?.right?.op === 'floorDiv' &&
-        node?.chooseN?.max?.if?.else?.right?.left?.ref === 'gvar' &&
-        node?.chooseN?.max?.if?.else?.right?.left?.var === 'arvnResources' &&
-        node?.chooseN?.max?.if?.else?.right?.right === 3,
-      );
-      assert.ok(bodyCountBypass.length >= 2, 'Expected Body Count max bypass in both capability and non-capability branches');
+      assert.ok(bodyCountBypass.length >= 1, 'Expected Body Count max bypass in ARVN Assault select-spaces');
       assert.ok(affordabilityCap.length >= 1, 'Expected non-Body-Count affordability max floorDiv(arvnResources, 3)');
-      assert.ok(capabilityMinCap.length >= 1, 'Expected cap_abrams shaded branch max equivalent to min(2, floorDiv(arvnResources, 3))');
 
       const arvnCubeFilter = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '>' &&

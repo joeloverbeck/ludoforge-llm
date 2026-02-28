@@ -3,10 +3,9 @@ import { describe, it } from 'node:test';
 
 import {
   inferLeafOptionsQueryContract,
-  type LeafOptionsQuery,
   type LeafOptionsQueryContract,
-  type RecursiveOptionsQuery,
 } from '../../../src/kernel/query-kind-contract.js';
+import type { LeafOptionsQuery, RecursiveOptionsQuery } from '../../../src/kernel/query-partition-types.js';
 
 describe('query kind contract', () => {
   it('classifies every leaf OptionsQuery variant with explicit domain and runtime shape', () => {

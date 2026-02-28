@@ -17,7 +17,7 @@ import type {
   RecursiveOptionsQuery,
   RecursiveOptionsQueryKind,
   RecursiveOptionsQueryKindCoverage,
-} from '../../src/kernel/query-kind-contract.js';
+} from '../../src/kernel/query-partition-types.js';
 
 type UnionToIntersection<T> = (
   T extends unknown ? (arg: T) => void : never

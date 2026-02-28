@@ -21,8 +21,10 @@ Use this as the canonical, single-source archival policy for tickets, specs, bra
    - `archive/reports/`
 4. Move with the collision-safe command (never raw `mv`):
    - `node scripts/archive-ticket.mjs <source> <archive-destination>`
+   - The script also rewrites matching `**Deps**` references in active `tickets/*.md` from old path to new path.
 5. If there is a filename collision, pass an explicit non-colliding destination filename.
 6. Confirm the original path no longer exists in its source folder (`tickets/`, `specs/`, `brainstorming/`, or `reports/`).
+7. Run `pnpm run check:ticket-deps` to verify active ticket dependency integrity remains valid.
 
 ## Examples
 

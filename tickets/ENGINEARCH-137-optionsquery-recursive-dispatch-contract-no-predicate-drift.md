@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel query traversal dispatch contract
-**Deps**: archive/tickets/ENGINEARCH-126-optionsquery-recursive-kind-exhaustiveness-guard.md, tickets/ENGINEARCH-127-shared-query-type-ownership-boundary.md
+**Deps**: archive/tickets/ENGINEARCH-126-optionsquery-recursive-kind-exhaustiveness-guard.md, archive/tickets/ENGINEARCH-127-shared-query-type-ownership-boundary.md
 
 ## Problem
 
@@ -13,7 +13,7 @@
 ## Assumption Reassessment (2026-02-28)
 
 1. `packages/engine/src/kernel/query-walk.ts` currently uses `isRecursiveOptionsQuery` and non-recursive fallback leaf dispatch.
-2. `packages/engine/src/kernel/query-kind-contract.ts` now defines recursive/leaf partition types, but walker runtime dispatch still duplicates recursive-kind knowledge.
+2. `packages/engine/src/kernel/query-partition-types.ts` now defines recursive/leaf partition types, but walker runtime dispatch still duplicates recursive-kind knowledge.
 3. Corrected scope: harden walker dispatch so recursive-kind handling is single-source and compile-time enforced, not predicate-trust based.
 
 ## Architecture Check
@@ -39,7 +39,7 @@ Add tests that fail if recursive kind registration and traversal dispatch diverg
 ## Files to Touch
 
 - `packages/engine/src/kernel/query-walk.ts` (modify)
-- `packages/engine/src/kernel/query-kind-contract.ts` (modify if shared dispatch contract types are needed)
+- `packages/engine/src/kernel/query-partition-types.ts` (modify if shared dispatch contract types are needed)
 - `packages/engine/test/unit/kernel/query-walk.test.ts` (modify)
 - `packages/engine/test/unit/types-exhaustive.test.ts` (modify if additional compile-time drift guards are added)
 

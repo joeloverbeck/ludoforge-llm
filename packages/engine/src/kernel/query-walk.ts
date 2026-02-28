@@ -1,4 +1,4 @@
-import type { LeafOptionsQuery, RecursiveOptionsQuery } from './query-kind-contract.js';
+import type { LeafOptionsQuery, RecursiveOptionsQuery } from './query-partition-types.js';
 import type { OptionsQuery } from './types.js';
 
 const isRecursiveOptionsQuery = (query: OptionsQuery): query is RecursiveOptionsQuery =>

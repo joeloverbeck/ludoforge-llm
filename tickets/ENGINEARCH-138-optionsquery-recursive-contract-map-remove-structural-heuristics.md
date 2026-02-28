@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel query typing contract hardening
-**Deps**: archive/tickets/ENGINEARCH-126-optionsquery-recursive-kind-exhaustiveness-guard.md, tickets/ENGINEARCH-127-shared-query-type-ownership-boundary.md
+**Deps**: archive/tickets/ENGINEARCH-126-optionsquery-recursive-kind-exhaustiveness-guard.md, archive/tickets/ENGINEARCH-127-shared-query-type-ownership-boundary.md
 
 ## Problem
 
@@ -12,7 +12,7 @@
 
 ## Assumption Reassessment (2026-02-28)
 
-1. `packages/engine/src/kernel/query-kind-contract.ts` currently derives coverage via `StructuredRecursiveOptionsQuery` field-shape extraction.
+1. `packages/engine/src/kernel/query-partition-types.ts` currently derives coverage via `StructuredRecursiveOptionsQuery` field-shape extraction.
 2. Structural heuristics are less robust than explicit canonical maps keyed by query kind because they encode implicit assumptions about field names.
 3. Corrected scope: replace structural recursion inference with explicit kind-based contract mapping that cannot be perturbed by unrelated leaf field changes.
 
@@ -38,8 +38,7 @@ Add compile-time tests that guarantee: no overlap between partitions, no missing
 
 ## Files to Touch
 
-- `packages/engine/src/kernel/query-kind-contract.ts` (modify)
-- `packages/engine/src/kernel/query-types.ts` (modify if ENGINEARCH-127 lands first)
+- `packages/engine/src/kernel/query-partition-types.ts` (modify)
 - `packages/engine/test/unit/types-exhaustive.test.ts` (modify)
 - `packages/engine/test/unit/kernel/query-kind-contract.test.ts` (modify if assertions move)
 

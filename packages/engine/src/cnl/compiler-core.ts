@@ -31,6 +31,11 @@ import { lowerActionPipelines } from './compile-operations.js';
 import { lowerVictory } from './compile-victory.js';
 import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
+import {
+  CNL_XREF_DIAGNOSTIC_CODES,
+  isCnlXrefDiagnosticCode,
+  toCnlXrefDiagnosticCode,
+} from './cross-validate-diagnostic-codes.js';
 import { crossValidateSpec } from './cross-validate.js';
 import { lowerEventDecks } from './compile-event-cards.js';
 import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
@@ -591,7 +596,7 @@ function finalizeDiagnostics(
 function canonicalizeCompilerReferenceDiagnostics(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
   const crossRefPaths = new Set(
     diagnostics
-      .filter((diagnostic) => diagnostic.code.startsWith('CNL_XREF_'))
+      .filter((diagnostic) => isCnlXrefDiagnosticCode(diagnostic.code))
       .map((diagnostic) => normalizeDiagnosticPath(diagnostic.path)),
   );
 
@@ -609,7 +614,7 @@ function canonicalizeCompilerReferenceDiagnostics(diagnostics: readonly Diagnost
 
     canonicalized.push({
       ...diagnostic,
-      code: `CNL_XREF_${diagnostic.code.slice('REF_'.length)}`,
+      code: toCnlXrefDiagnosticCode(diagnostic.code),
       path: normalizedPath,
     });
   }
@@ -625,7 +630,9 @@ function suppressUnavailableSectionDiagnostics(
   }
 
   return diagnostics.filter(
-    (diagnostic) => diagnostic.code !== 'REF_ZONEVAR_MISSING' && diagnostic.code !== 'CNL_XREF_ZONEVAR_MISSING',
+    (diagnostic) =>
+      diagnostic.code !== 'REF_ZONEVAR_MISSING'
+      && diagnostic.code !== CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ZONEVAR_MISSING,
   );
 }
 

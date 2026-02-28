@@ -7,8 +7,18 @@ import { describe, it } from 'node:test';
 const CNL_SOURCE_DIR = existsSync(join(process.cwd(), 'src/cnl'))
   ? join(process.cwd(), 'src/cnl')
   : fileURLToPath(new URL('../../../src/cnl/', import.meta.url));
-const ALLOWED_LITERAL_FILES = new Set<string>(['compiler-diagnostic-codes.ts']);
-const INLINE_COMPILER_DIAGNOSTIC_LITERAL = /(['"`])(?:\\.|(?!\1)[^\\\r\n])*CNL_COMPILER_[A-Z0-9_]*(?:\\.|(?!\1)[^\\\r\n])*\1/g;
+const DIAGNOSTIC_LITERAL_POLICIES = [
+  {
+    namespace: 'CNL_COMPILER_*',
+    allowedLiteralFiles: new Set<string>(['compiler-diagnostic-codes.ts']),
+    literalPattern: /(['"`])(?:\\.|(?!\1)[^\\\r\n])*CNL_COMPILER_[A-Z0-9_]*(?:\\.|(?!\1)[^\\\r\n])*\1/g,
+  },
+  {
+    namespace: 'CNL_XREF_*',
+    allowedLiteralFiles: new Set<string>(['cross-validate-diagnostic-codes.ts', 'action-selector-diagnostic-codes.ts']),
+    literalPattern: /(['"`])(?:\\.|(?!\1)[^\\\r\n])*CNL_XREF_[A-Z0-9_]*(?:\\.|(?!\1)[^\\\r\n])*\1/g,
+  },
+] as const;
 
 const collectTsFiles = (directory: string): string[] => {
   const entries = readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
@@ -30,26 +40,29 @@ const collectTsFiles = (directory: string): string[] => {
 };
 
 describe('compiler diagnostic registry audit', () => {
-  it('forbids inline CNL_COMPILER_* string literals outside canonical registry files', () => {
+  it('forbids inline diagnostic literals outside canonical registry files', () => {
     const root = process.cwd();
     const violations: string[] = [];
+    const sourceFiles = collectTsFiles(CNL_SOURCE_DIR);
 
-    for (const file of collectTsFiles(CNL_SOURCE_DIR)) {
-      if (ALLOWED_LITERAL_FILES.has(basename(file))) {
-        continue;
-      }
+    for (const policy of DIAGNOSTIC_LITERAL_POLICIES) {
+      for (const file of sourceFiles) {
+        if (policy.allowedLiteralFiles.has(basename(file))) {
+          continue;
+        }
 
-      const source = readFileSync(file, 'utf8');
-      const matches = source.match(INLINE_COMPILER_DIAGNOSTIC_LITERAL);
-      if (matches !== null && matches.length > 0) {
-        violations.push(`${relative(root, file)} contains ${matches.join(', ')}`);
+        const source = readFileSync(file, 'utf8');
+        const matches = source.match(policy.literalPattern);
+        if (matches !== null && matches.length > 0) {
+          violations.push(`${policy.namespace}: ${relative(root, file)} contains ${matches.join(', ')}`);
+        }
       }
     }
 
     assert.deepEqual(
       violations,
       [],
-      `Found inline CNL_COMPILER_* literals outside canonical registry:\n${violations.map((v) => `- ${v}`).join('\n')}`,
+      `Found inline diagnostic literals outside canonical registries:\n${violations.map((v) => `- ${v}`).join('\n')}`,
     );
   });
 });

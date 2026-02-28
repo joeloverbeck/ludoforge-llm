@@ -33,6 +33,7 @@ import {
 } from './turn-flow-eligibility.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
+import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import type {
   ActionDef,
   ChoiceOption,
@@ -61,12 +62,6 @@ interface LegalChoicesPreparedContext {
   readonly action: ActionDef;
   readonly adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
   readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
-}
-
-interface DiscoveryFreeOperationAnalysis {
-  readonly executionPlayerOverride?: GameState['activePlayer'];
-  readonly zoneFilter?: EvalContext['freeOperationZoneFilter'];
-  readonly zoneFilterDiagnostics?: EvalContext['freeOperationZoneFilterDiagnostics'];
 }
 
 const buildDiscoveryEffectContextBase = (
@@ -498,7 +493,7 @@ const legalChoicesWithPreparedContextInternal = (
   options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
-  let freeOperationAnalysis: DiscoveryFreeOperationAnalysis | undefined;
+  let freeOperationAnalysis: ReturnType<typeof resolveFreeOperationDiscoveryAnalysis> | undefined;
   if (partialMove.freeOperation === true) {
     const analysis = resolveFreeOperationDiscoveryAnalysis(def, state, partialMove, {
       zoneFilterErrorSurface: 'legalChoices',
@@ -511,19 +506,7 @@ const legalChoicesWithPreparedContextInternal = (
         reason: toFreeOperationChoiceIllegalReason(deniedCause),
       };
     }
-    freeOperationAnalysis = {
-      executionPlayerOverride: analysis.executionPlayer,
-      ...(analysis.zoneFilter === undefined ? {} : { zoneFilter: analysis.zoneFilter }),
-      ...(analysis.zoneFilter === undefined
-        ? {}
-        : {
-            zoneFilterDiagnostics: {
-              source: 'legalChoices',
-              actionId: String(partialMove.actionId),
-              moveParams: partialMove.params,
-            },
-          }),
-    };
+    freeOperationAnalysis = analysis;
   }
 
   const baseBindings: Record<string, unknown> = {
@@ -537,17 +520,7 @@ const legalChoicesWithPreparedContextInternal = (
     decisionPlayer: state.activePlayer,
     bindings: baseBindings,
     runtimeTableIndex,
-    ...(freeOperationAnalysis?.executionPlayerOverride === undefined
-      ? {}
-      : { executionPlayerOverride: freeOperationAnalysis.executionPlayerOverride }),
-    ...(freeOperationAnalysis?.zoneFilter === undefined
-      ? {}
-      : {
-          freeOperationZoneFilter: freeOperationAnalysis.zoneFilter,
-          ...(freeOperationAnalysis.zoneFilterDiagnostics === undefined
-            ? {}
-            : { freeOperationZoneFilterDiagnostics: freeOperationAnalysis.zoneFilterDiagnostics }),
-        }),
+    ...buildFreeOperationPreflightOverlay(freeOperationAnalysis, partialMove, 'legalChoices'),
   });
   if (preflight.kind === 'notApplicable') {
     return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(preflight.reason) };

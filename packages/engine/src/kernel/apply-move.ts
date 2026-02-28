@@ -41,6 +41,7 @@ import { toMoveExecutionPolicy } from './execution-policy.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
+import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -449,6 +450,11 @@ const resolveMovePreflightContext = (
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const preflightEvalCtx = mode === 'validation'
     ? (() => {
+      const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
+        resolvedFreeOperationAnalysis,
+        move,
+        'turnFlowEligibility',
+      );
       const preflight = resolveActionApplicabilityPreflight({
         def,
         state,
@@ -457,21 +463,7 @@ const resolveMovePreflightContext = (
         decisionPlayer: state.activePlayer,
         bindings: baseBindings,
         runtimeTableIndex,
-        ...(resolvedFreeOperationAnalysis === null
-          ? {}
-          : {
-              executionPlayerOverride: resolvedFreeOperationAnalysis.executionPlayer,
-              ...(resolvedFreeOperationAnalysis.zoneFilter === undefined
-                ? {}
-                : {
-                    freeOperationZoneFilter: resolvedFreeOperationAnalysis.zoneFilter,
-                    freeOperationZoneFilterDiagnostics: {
-                      source: 'turnFlowEligibility',
-                      actionId: String(move.actionId),
-                      moveParams: move.params,
-                    },
-                  }),
-            }),
+        ...freeOperationPreflightOverlay,
       });
       if (preflight.kind === 'invalidSpec') {
         throw selectorInvalidSpecError(

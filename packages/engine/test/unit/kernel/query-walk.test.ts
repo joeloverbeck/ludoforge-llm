@@ -87,4 +87,28 @@ describe('query walk', () => {
 
     assert.deepEqual(visited, ['players']);
   });
+
+  it('visits leaves through single-branch recursive nesting without exposing recursive kinds', () => {
+    const query = {
+      query: 'concat',
+      sources: [
+        {
+          query: 'nextInOrderByCondition',
+          source: { query: 'players' },
+          from: 0,
+          bind: '$item',
+          where: true,
+        },
+      ],
+    } as const satisfies OptionsQuery;
+    const visited: string[] = [];
+
+    forEachOptionsQueryLeaf(query, (leaf) => {
+      visited.push(leaf.query);
+    });
+
+    assert.deepEqual(visited, ['players']);
+    assert.equal(visited.includes('concat'), false);
+    assert.equal(visited.includes('nextInOrderByCondition'), false);
+  });
 });

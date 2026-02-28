@@ -2,9 +2,13 @@ import type { LeafOptionsQuery, RecursiveOptionsQuery } from './query-partition-
 import type { RecursiveOptionsQueryKind } from './query-partition-types.js';
 import type { OptionsQuery } from './types.js';
 
+type RecursiveOptionsQueryByKind = {
+  readonly [Kind in RecursiveOptionsQueryKind]: Extract<RecursiveOptionsQuery, { readonly query: Kind }>;
+};
+
 type RecursiveOptionsQueryDispatchMap = {
   readonly [Kind in RecursiveOptionsQueryKind]: (
-    query: Extract<RecursiveOptionsQuery, { readonly query: Kind }>,
+    query: RecursiveOptionsQueryByKind[Kind],
     visitLeaf: (query: LeafOptionsQuery) => void,
   ) => void;
 };
@@ -25,33 +29,27 @@ export type RecursiveOptionsQueryDispatchCoverage = [
   ? true
   : false;
 
-const walkRecursiveOptionsQuery = (query: RecursiveOptionsQuery, visitLeaf: (query: LeafOptionsQuery) => void): void => {
-  switch (query.query) {
-    case 'concat':
-      recursiveOptionsQueryDispatch.concat(query, visitLeaf);
-      return;
-    case 'nextInOrderByCondition':
-      recursiveOptionsQueryDispatch.nextInOrderByCondition(query, visitLeaf);
-      return;
-  }
-  const exhaustive: never = query;
-  return exhaustive;
+const isRecursiveOptionsQuery = (query: OptionsQuery): query is RecursiveOptionsQuery =>
+  Object.prototype.hasOwnProperty.call(recursiveOptionsQueryDispatch, query.query);
+
+const walkRecursiveOptionsQuery = <Kind extends RecursiveOptionsQueryKind>(
+  query: RecursiveOptionsQueryByKind[Kind],
+  visitLeaf: (query: LeafOptionsQuery) => void,
+): void => {
+  recursiveOptionsQueryDispatch[query.query](query, visitLeaf);
 };
 
 export const forEachOptionsQueryLeaf = (
   query: OptionsQuery,
   visitLeaf: (query: LeafOptionsQuery) => void,
 ): void => {
-  switch (query.query) {
-    case 'concat':
-    case 'nextInOrderByCondition':
-      walkRecursiveOptionsQuery(query, visitLeaf);
-      return;
-    default: {
-      const leafQuery: LeafOptionsQuery = query;
-      visitLeaf(leafQuery);
-    }
+  if (isRecursiveOptionsQuery(query)) {
+    walkRecursiveOptionsQuery(query, visitLeaf);
+    return;
   }
+
+  const leafQuery: LeafOptionsQuery = query;
+  visitLeaf(leafQuery);
 };
 
 export const reduceOptionsQueryLeaves = <TAcc>(

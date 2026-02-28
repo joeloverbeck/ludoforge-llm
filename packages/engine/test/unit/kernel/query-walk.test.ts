@@ -54,4 +54,26 @@ describe('query walk', () => {
 
     assert.deepEqual(counts, { players: 2, enums: 1 });
   });
+
+  it('never dispatches recursive query kinds to leaf visitors', () => {
+    const query = {
+      query: 'nextInOrderByCondition',
+      source: {
+        query: 'concat',
+        sources: [{ query: 'players' }, { query: 'zones' }],
+      },
+      from: 0,
+      bind: '$item',
+      where: true,
+    } as const satisfies OptionsQuery;
+
+    const visited: string[] = [];
+    forEachOptionsQueryLeaf(query, (leaf) => {
+      visited.push(leaf.query);
+    });
+
+    assert.deepEqual(visited, ['players', 'zones']);
+    assert.equal(visited.includes('concat'), false);
+    assert.equal(visited.includes('nextInOrderByCondition'), false);
+  });
 });

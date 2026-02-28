@@ -11,6 +11,13 @@ import type {
   ScenarioPayload,
   ScenarioPiecePlacement,
 } from '../../src/kernel/index.js';
+import type {
+  LeafOptionsQuery,
+  LeafOptionsQueryKind,
+  RecursiveOptionsQuery,
+  RecursiveOptionsQueryKind,
+  RecursiveOptionsQueryKindCoverage,
+} from '../../src/kernel/query-kind-contract.js';
 
 type UnionToIntersection<T> = (
   T extends unknown ? (arg: T) => void : never
@@ -151,11 +158,28 @@ describe('exhaustive kernel unions', () => {
     const conditionVariants: UnionSize<ConditionAST> = 10;
     const effectVariants: UnionSize<EffectAST> = 34;
     const queryVariants: UnionSize<OptionsQuery> = 16;
+    const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 2;
+    const leafQueryVariants: UnionSize<LeafOptionsQuery> = 14;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
     assert.equal(effectVariants, 34);
     assert.equal(queryVariants, 16);
+    assert.equal(recursiveQueryVariants, 2);
+    assert.equal(leafQueryVariants, 14);
+  });
+
+  it('keeps recursive and leaf OptionsQuery kind partitions aligned', () => {
+    const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
+    const leafKinds: UnionSize<LeafOptionsQueryKind> = 14;
+    const recursiveCoverage: RecursiveOptionsQueryKindCoverage = true;
+    type Overlap = Extract<LeafOptionsQuery, RecursiveOptionsQuery>;
+    const overlapVariants: UnionSize<Overlap> = 0;
+
+    assert.equal(recursiveKinds, 2);
+    assert.equal(leafKinds, 14);
+    assert.equal(recursiveCoverage, true);
+    assert.equal(overlapVariants, 0);
   });
 
   it('ensures MoveLog includes legalMoveCount', () => {

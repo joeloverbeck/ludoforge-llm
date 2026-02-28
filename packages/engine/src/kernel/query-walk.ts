@@ -1,12 +1,11 @@
+import type { LeafOptionsQuery, RecursiveOptionsQuery } from './query-kind-contract.js';
 import type { OptionsQuery } from './types.js';
 
-export type LeafOptionsQuery = Exclude<
-  OptionsQuery,
-  { readonly query: 'concat' } | { readonly query: 'nextInOrderByCondition' }
->;
+const isRecursiveOptionsQuery = (query: OptionsQuery): query is RecursiveOptionsQuery =>
+  query.query === 'concat' || query.query === 'nextInOrderByCondition';
 
-export const forEachOptionsQueryLeaf = (
-  query: OptionsQuery,
+const walkRecursiveOptionsQuery = (
+  query: RecursiveOptionsQuery,
   visitLeaf: (query: LeafOptionsQuery) => void,
 ): void => {
   switch (query.query) {
@@ -16,12 +15,22 @@ export const forEachOptionsQueryLeaf = (
     case 'nextInOrderByCondition':
       forEachOptionsQueryLeaf(query.source, visitLeaf);
       return;
-    default: {
-      const leafQuery: LeafOptionsQuery = query;
-      visitLeaf(leafQuery);
-      return;
-    }
   }
+
+  const exhaustive: never = query;
+  return exhaustive;
+};
+
+export const forEachOptionsQueryLeaf = (
+  query: OptionsQuery,
+  visitLeaf: (query: LeafOptionsQuery) => void,
+): void => {
+  if (isRecursiveOptionsQuery(query)) {
+    walkRecursiveOptionsQuery(query, visitLeaf);
+    return;
+  }
+
+  visitLeaf(query);
 };
 
 export const reduceOptionsQueryLeaves = <TAcc>(

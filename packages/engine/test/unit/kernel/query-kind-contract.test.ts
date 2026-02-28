@@ -1,12 +1,16 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { OptionsQuery } from '../../../src/kernel/types.js';
-import { inferLeafOptionsQueryContract, type LeafOptionsQueryContract } from '../../../src/kernel/query-kind-contract.js';
+import {
+  inferLeafOptionsQueryContract,
+  type LeafOptionsQuery,
+  type LeafOptionsQueryContract,
+  type RecursiveOptionsQuery,
+} from '../../../src/kernel/query-kind-contract.js';
 
 describe('query kind contract', () => {
   it('classifies every leaf OptionsQuery variant with explicit domain and runtime shape', () => {
-    const cases: readonly [OptionsQuery, LeafOptionsQueryContract][] = [
+    const cases: readonly [LeafOptionsQuery, LeafOptionsQueryContract][] = [
       [{ query: 'tokensInZone', zone: 'deck:none' }, { domain: 'token', runtimeShape: 'token' }],
       [{ query: 'tokensInMapSpaces' }, { domain: 'token', runtimeShape: 'token' }],
       [{ query: 'tokensInAdjacentZones', zone: 'deck:none' }, { domain: 'token', runtimeShape: 'token' }],
@@ -24,10 +28,26 @@ describe('query kind contract', () => {
     ];
 
     for (const [query, expected] of cases) {
-      if (query.query === 'concat' || query.query === 'nextInOrderByCondition') {
-        assert.fail('Leaf test case must not include recursive query kinds.');
-      }
       assert.deepEqual(inferLeafOptionsQueryContract(query), expected);
+    }
+  });
+
+  it('rejects recursive query variants at compile time', () => {
+    const expectLeafOnly = (_query: LeafOptionsQuery): void => undefined;
+    const recursiveCases: readonly RecursiveOptionsQuery[] = [
+      { query: 'concat', sources: [{ query: 'players' }, { query: 'zones' }] },
+      {
+        query: 'nextInOrderByCondition',
+        source: { query: 'players' },
+        from: 0,
+        bind: '$player',
+        where: true,
+      },
+    ];
+
+    for (const recursiveQuery of recursiveCases) {
+      // @ts-expect-error Recursive query variants are not leaf variants.
+      expectLeafOnly(recursiveQuery);
     }
   });
 });

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel query typing module boundary cleanup
-**Deps**: archive/tickets/ENGINEARCH-109-shared-options-query-recursion-walker.md, tickets/ENGINEARCH-126-optionsquery-recursive-kind-exhaustiveness-guard.md
+**Deps**: archive/tickets/ENGINEARCH-109-shared-options-query-recursion-walker.md, archive/tickets/ENGINEARCH-126-optionsquery-recursive-kind-exhaustiveness-guard.md
 
 ## Problem
 

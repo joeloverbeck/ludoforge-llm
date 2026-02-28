@@ -30,7 +30,7 @@ import type { GameSpecDoc } from './game-spec-doc.js';
 export type EffectLoweringSharedContext = Omit<EffectLoweringContext, 'bindingScope'>;
 export type ConditionLoweringSharedContext = Pick<
   EffectLoweringSharedContext,
-  'ownershipByBase' | 'tokenTraitVocabulary' | 'namedSets' | 'typeInference'
+  'ownershipByBase' | 'tokenTraitVocabulary' | 'tokenFilterProps' | 'namedSets' | 'typeInference'
 >;
 
 export function lowerConstants(
@@ -489,6 +489,7 @@ export function lowerActions(
       diagnostics,
       `${path}.params`,
       context.tokenTraitVocabulary,
+      context.tokenFilterProps,
       context.namedSets,
       context.typeInference,
     );
@@ -645,6 +646,7 @@ function lowerActionParams(
   diagnostics: Diagnostic[],
   path: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  tokenFilterProps?: readonly string[],
   namedSets?: Readonly<Record<string, readonly string[]>>,
   typeInference?: TypeInferenceContext,
 ): {
@@ -670,6 +672,7 @@ function lowerActionParams(
       {
         ownershipByBase,
         ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+        ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
         ...(namedSets === undefined ? {} : { namedSets }),
         ...(typeInference === undefined ? {} : { typeInference }),
       },
@@ -876,6 +879,7 @@ export function lowerEndConditions(
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  tokenFilterProps?: readonly string[],
   namedSets?: Readonly<Record<string, readonly string[]>>,
   typeInference?: TypeInferenceContext,
 ): readonly EndCondition[] {
@@ -892,6 +896,7 @@ export function lowerEndConditions(
       {
         ownershipByBase,
         ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+        ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
         ...(namedSets === undefined ? {} : { namedSets }),
         ...(typeInference === undefined ? {} : { typeInference }),
       },
@@ -1007,6 +1012,7 @@ export function buildConditionLoweringContext(
   readonly ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>;
   readonly bindingScope: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
+  readonly tokenFilterProps?: readonly string[];
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
 } {
@@ -1014,6 +1020,7 @@ export function buildConditionLoweringContext(
     ownershipByBase: context.ownershipByBase,
     bindingScope,
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
+    ...(context.tokenFilterProps === undefined ? {} : { tokenFilterProps: context.tokenFilterProps }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
   };
@@ -1049,6 +1056,7 @@ export function buildEffectLoweringContext(
     bindingScope,
     ...(context.freeOperationActionIds === undefined ? {} : { freeOperationActionIds: context.freeOperationActionIds }),
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
+    ...(context.tokenFilterProps === undefined ? {} : { tokenFilterProps: context.tokenFilterProps }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
     ...(context.seatIds === undefined ? {} : { seatIds: context.seatIds }),

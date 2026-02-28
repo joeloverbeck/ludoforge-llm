@@ -118,6 +118,23 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     }
   });
 
+  it('declares m48PatrolMoved as a boolean runtime prop on Patrol-moved cube types', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const expectedPieceTypes = ['us-troops', 'arvn-troops', 'arvn-police'];
+    for (const pieceTypeId of expectedPieceTypes) {
+      const tokenType = def.tokenTypes.find((candidate) => candidate.id === pieceTypeId);
+      assert.notEqual(tokenType, undefined, `Expected token type ${pieceTypeId} in compiled GameDef`);
+      assert.equal(
+        tokenType!.props.m48PatrolMoved,
+        'boolean',
+        `Expected ${pieceTypeId} to declare m48PatrolMoved as boolean`,
+      );
+    }
+  });
+
   it('uses CORDS unshaded to allow 2 Train sub-action spaces and preserves default max 1', () => {
     const trainUs = getParsedProfile('train-us-profile');
     const trainArvn = getParsedProfile('train-arvn-profile');

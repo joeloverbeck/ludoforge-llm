@@ -2083,6 +2083,96 @@ actor: 'active',
     assert.notEqual(compiled.gameDef, null);
   });
 
+  it('rejects token filter props not declared by selected piece-catalog token types', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-unknown-token-filter-prop',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          category: province',
+      '          attributes:',
+      '            population: 1',
+      '            econ: 1',
+      '            terrainTags: [lowland]',
+      '            country: south-vietnam',
+      '            coastal: false',
+      '          adjacentTo: []',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      seats:',
+      '        - id: us',
+      '      pieceTypes:',
+      '        - id: us-troops',
+      '          seat: us',
+      '          statusDimensions: []',
+      '          transitions: []',
+      '          runtimeProps: { faction: us, type: troops }',
+      '      inventory:',
+      '        - pieceTypeId: us-troops',
+      '          seat: us',
+      '          total: 2',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      scenarioName: Foundation',
+      '      yearRange: 1964-1965',
+      '      seatPools:',
+      '        - seat: us',
+      '          availableZoneId: alpha:none',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $token',
+      '          over:',
+      '            query: tokensInZone',
+      '            zone: alpha:none',
+      '            filter:',
+      '              - { prop: typeTypo, op: eq, value: troops }',
+      '          effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN' &&
+          diagnostic.path === 'doc.actions.0.effects.0.forEach.over.filter.0.prop',
+      ),
+      true,
+    );
+  });
+
   it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
     const markdown = readCompilerFixture('compile-malformed.md');
 

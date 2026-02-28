@@ -906,6 +906,7 @@ dataAssets:
           runtimeProps:
             faction: US
             type: troops
+            m48PatrolMoved: false
         - id: us-bases
           seat: us
           statusDimensions: []
@@ -935,6 +936,7 @@ dataAssets:
           runtimeProps:
             faction: ARVN
             type: troops
+            m48PatrolMoved: false
         - id: arvn-police
           seat: arvn
           statusDimensions: []
@@ -942,6 +944,7 @@ dataAssets:
           runtimeProps:
             faction: ARVN
             type: police
+            m48PatrolMoved: false
         - id: arvn-rangers
           seat: arvn
           statusDimensions:

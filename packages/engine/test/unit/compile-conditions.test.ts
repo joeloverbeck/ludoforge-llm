@@ -775,6 +775,59 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('emits diagnostic for undeclared token filter prop when token prop vocabulary is available', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'typoType', eq: 'troops' },
+        ],
+      },
+      {
+        ...context,
+        tokenFilterProps: ['faction', 'type'],
+      },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN',
+        path: 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter[0].prop',
+        severity: 'error',
+        message: 'Token filter references undeclared prop "typoType".',
+        suggestion: 'Use a token prop declared by selected token types/piece runtime props.',
+        alternatives: ['faction', 'id', 'type'],
+      },
+    ]);
+  });
+
+  it('accepts intrinsic token filter prop id when token prop vocabulary is available', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'id', eq: 'token-1' },
+        ],
+      },
+      {
+        ...context,
+        tokenFilterProps: ['faction', 'type'],
+      },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+    });
+  });
+
   it('lowers tokensInZone query with dynamic zoneExpr', () => {
     const result = lowerQueryNode(
       {

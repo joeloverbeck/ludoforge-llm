@@ -29,6 +29,7 @@ export interface ConditionLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
+  readonly tokenFilterProps?: readonly string[];
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
 }
@@ -316,6 +317,7 @@ export function lowerValueNode(
 
 const SUPPORTED_TOKEN_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
 const SUPPORTED_ASSET_ROW_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
+const TOKEN_FILTER_INTRINSIC_PROPS = ['id'] as const;
 
 function lowerTokenFilterEntry(
   source: unknown,
@@ -326,6 +328,10 @@ function lowerTokenFilterEntry(
     return missingCapability(path, 'token filter entry', source, ['{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
   }
   const prop = source.prop;
+  const propDiagnostics = validateDeclaredTokenFilterProp(context, prop, `${path}.prop`);
+  if (propDiagnostics.length > 0) {
+    return { value: null, diagnostics: propDiagnostics };
+  }
 
   // Normalize shorthand: { prop, eq: <value> } → { prop, op: 'eq', value }
   const resolvedOp =
@@ -407,6 +413,31 @@ function lowerTokenFilterEntry(
     value: { prop, op, value: loweredValue.value },
     diagnostics: [...loweredValue.diagnostics, ...canonicalDiagnostics],
   };
+}
+
+function validateDeclaredTokenFilterProp(
+  context: ConditionLoweringContext,
+  prop: string,
+  path: string,
+): readonly Diagnostic[] {
+  if (context.tokenFilterProps === undefined || context.tokenFilterProps.length === 0) {
+    return [];
+  }
+  if (TOKEN_FILTER_INTRINSIC_PROPS.includes(prop as typeof TOKEN_FILTER_INTRINSIC_PROPS[number]) || context.tokenFilterProps.includes(prop)) {
+    return [];
+  }
+  const alternatives = [...new Set([...TOKEN_FILTER_INTRINSIC_PROPS, ...context.tokenFilterProps])]
+    .sort((left, right) => left.localeCompare(right));
+  return [
+    {
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Token filter references undeclared prop "${prop}".`,
+      suggestion: 'Use a token prop declared by selected token types/piece runtime props.',
+      alternatives,
+    },
+  ];
 }
 
 function lowerNamedSetReference(source: unknown): { readonly name: string } | null {

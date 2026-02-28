@@ -348,12 +348,24 @@ function compileExpandedDoc(
     sections.tokenTypes = tokenTypes.failed ? null : tokenTypes.value;
   }
 
+  const scenarioDeckTokenType = compileSection(diagnostics, () =>
+    ensureScenarioDeckCardTokenType(tokenTypes.value, derivedFromAssets.selectedScenarioDeckComposition),
+  );
+  tokenTypes = {
+    value: scenarioDeckTokenType.value.tokenTypes,
+    failed: tokenTypes.failed || scenarioDeckTokenType.failed,
+  };
+  if (sections.tokenTypes !== null) {
+    sections.tokenTypes = tokenTypes.value;
+  }
+
   const typeInference = buildTypeInferenceContext(
     globalVars.value,
     perPlayerVars.value,
     tokenTypes.value,
     derivedFromAssets.tableContracts,
   );
+  const tokenFilterProps = collectDeclaredTokenFilterProps(tokenTypes.value);
 
   if (resolvedTableRefDoc.turnOrder !== null) {
     const turnOrder = compileSection(diagnostics, () => lowerTurnOrder(resolvedTableRefDoc.turnOrder, diagnostics));
@@ -367,6 +379,7 @@ function compileExpandedDoc(
     ...(derivedFromAssets.tokenTraitVocabulary == null
       ? {}
       : { tokenTraitVocabulary: derivedFromAssets.tokenTraitVocabulary }),
+    ...(tokenFilterProps.length === 0 ? {} : { tokenFilterProps }),
     ...(namedSets === undefined ? {} : { namedSets }),
     ...(typeInference === undefined ? {} : { typeInference }),
     ...(freeOperationActionIds === undefined ? {} : { freeOperationActionIds }),
@@ -455,6 +468,7 @@ function compileExpandedDoc(
         ownershipByBase,
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
+        tokenFilterProps,
         namedSets,
         typeInference,
       ),
@@ -481,17 +495,6 @@ function compileExpandedDoc(
       ),
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
-  }
-
-  const scenarioDeckTokenType = compileSection(diagnostics, () =>
-    ensureScenarioDeckCardTokenType(tokenTypes.value, derivedFromAssets.selectedScenarioDeckComposition),
-  );
-  tokenTypes = {
-    value: scenarioDeckTokenType.value.tokenTypes,
-    failed: tokenTypes.failed || scenarioDeckTokenType.failed,
-  };
-  if (sections.tokenTypes !== null) {
-    sections.tokenTypes = tokenTypes.value;
   }
 
   const scenarioDeckSetup = compileSection(diagnostics, () =>
@@ -1705,4 +1708,14 @@ function buildTypeInferenceContext(
     tableFieldTypes[tc.id] = fields;
   }
   return { globalVarTypes, perPlayerVarTypes, tokenPropTypes, tableFieldTypes };
+}
+
+function collectDeclaredTokenFilterProps(tokenTypeDefs: readonly TokenTypeDef[]): readonly string[] {
+  const props = new Set<string>();
+  for (const tokenTypeDef of tokenTypeDefs) {
+    for (const prop of Object.keys(tokenTypeDef.props)) {
+      props.add(prop);
+    }
+  }
+  return [...props].sort((left, right) => left.localeCompare(right));
 }

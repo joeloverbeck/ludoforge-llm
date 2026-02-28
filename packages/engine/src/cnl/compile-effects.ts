@@ -47,6 +47,7 @@ export interface EffectLoweringContext {
   readonly bindingScope?: readonly string[];
   readonly freeOperationActionIds?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
+  readonly tokenFilterProps?: readonly string[];
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
   readonly seatIds?: readonly string[];
@@ -2305,6 +2306,7 @@ function makeConditionContext(context: EffectLoweringContext, scope: BindingScop
     ownershipByBase: context.ownershipByBase,
     bindingScope: scope.visibleBindings(),
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
+    ...(context.tokenFilterProps === undefined ? {} : { tokenFilterProps: context.tokenFilterProps }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
   };

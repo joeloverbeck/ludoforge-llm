@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel type contract ownership for free-operation zone-filter surfaces
-**Deps**: archive/tickets/ENGINEARCH-123-free-operation-zone-filter-deferral-path-completeness.md, tickets/ENGINEARCH-132-free-operation-zone-filter-binding-resolution-contract.md
+**Deps**: archive/tickets/ENGINEARCH-123-free-operation-zone-filter-deferral-path-completeness.md, archive/tickets/ENGINEARCH-132-free-operation-zone-filter-binding-resolution-contract.md
 
 ## Problem
 

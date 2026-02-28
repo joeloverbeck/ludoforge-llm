@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel test contract coverage for zone-filter probe/strict branch parity
-**Deps**: archive/tickets/ENGINEARCH-123-free-operation-zone-filter-deferral-path-completeness.md, tickets/ENGINEARCH-132-free-operation-zone-filter-binding-resolution-contract.md
+**Deps**: archive/tickets/ENGINEARCH-123-free-operation-zone-filter-deferral-path-completeness.md, archive/tickets/ENGINEARCH-132-free-operation-zone-filter-binding-resolution-contract.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — applyMove preflight/evalCtx free-operation context wiring + legality surface parity tests
-**Deps**: archive/tickets/ENGINEARCH-124-unify-free-operation-denial-analysis-single-pass.md, tickets/ENGINEARCH-132-free-operation-zone-filter-binding-resolution-contract.md, tickets/ENGINEARCH-133-canonical-free-operation-zone-filter-surface-contract.md, tickets/ENGINEARCH-134-free-operation-zone-filter-surface-path-regression-matrix.md
+**Deps**: archive/tickets/ENGINEARCH-124-unify-free-operation-denial-analysis-single-pass.md, archive/tickets/ENGINEARCH-132-free-operation-zone-filter-binding-resolution-contract.md, tickets/ENGINEARCH-133-canonical-free-operation-zone-filter-surface-contract.md, tickets/ENGINEARCH-134-free-operation-zone-filter-surface-path-regression-matrix.md
 
 ## Problem
 

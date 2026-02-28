@@ -1,4 +1,4 @@
-import { asPlayerId } from './branded.js';
+import { asPlayerId, asZoneId } from './branded.js';
 import { createCollector } from './execution-collector.js';
 import {
   resolveBoundaryDurationsAtTurnEnd,
@@ -7,6 +7,10 @@ import {
 } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
+import {
+  collectFreeOperationZoneFilterProbeRebindableAliases,
+  evaluateFreeOperationZoneFilterProbe,
+} from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { normalizeSeatOrder, parseNumericSeatPlayer } from './seat-resolution.js';
@@ -372,6 +376,7 @@ const evaluateZoneFilterForMove = (
     shouldDeferFreeOperationZoneFilterFailure(surface, cause);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const baseBindings: Readonly<Record<string, unknown>> = buildMoveRuntimeBindings(move);
+  const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(zoneFilter);
   const zones = moveZoneCandidates(def, move);
   if (zones.length === 0) {
     try {
@@ -402,17 +407,19 @@ const evaluateZoneFilterForMove = (
   }
   for (const zone of zones) {
     try {
-      if (evalCondition(zoneFilter, {
-        def,
-        adjacencyGraph,
-        state,
-        activePlayer: state.activePlayer,
-        actorPlayer: state.activePlayer,
-        bindings: {
-          ...baseBindings,
-          $zone: zone,
-        },
-        collector: createCollector(),
+      if (evaluateFreeOperationZoneFilterProbe({
+        zoneId: asZoneId(zone),
+        baseBindings,
+        rebindableAliases,
+        evaluateWithBindings: (bindings) => evalCondition(zoneFilter, {
+          def,
+          adjacencyGraph,
+          state,
+          activePlayer: state.activePlayer,
+          actorPlayer: state.activePlayer,
+          bindings,
+          collector: createCollector(),
+        }),
       })) {
         return true;
       }

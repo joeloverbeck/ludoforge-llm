@@ -2118,6 +2118,114 @@ phase: [asPhaseId('main')],
       assert.deepEqual(request.options.map((option) => option.value), ['board:cambodia']);
     });
 
+    it('resolves multi-unresolved zone aliases deterministically during free-operation zone-filter probing', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'operation-profile',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$targetProvince',
+                  bind: '$targetProvince',
+                  options: { query: 'zones' },
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+        zones: [
+          { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+          { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
+        ],
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { seats: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        zones: { 'board:cambodia': [], 'board:vietnam': [] },
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            seatOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                seat: '0',
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                zoneFilter: {
+                  op: 'and',
+                  args: [
+                    {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                      right: 'cambodia',
+                    },
+                    {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: '$supportProvince', prop: 'country' },
+                      right: 'cambodia',
+                    },
+                  ],
+                },
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      const request = legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true });
+      assert.equal(request.kind, 'pending');
+      assert.equal(request.complete, false);
+      assert.equal(request.decisionId, 'decision:$targetProvince');
+      assert.deepEqual(request.options.map((option) => option.value), ['board:cambodia']);
+    });
+
     it('applies free-operation executeAsSeat to discovery preflight pipeline applicability', () => {
       const action: ActionDef = {
         id: asActionId('operation'),

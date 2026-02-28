@@ -10,6 +10,7 @@ import {
   enumerateLegalMoves,
   isKernelErrorCode,
   legalMoves,
+  resolveMoveDecisionSequence,
   type ActionDef,
   type GameDef,
   type GameState,
@@ -1219,6 +1220,117 @@ phase: [asPhaseId('main')],
       moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
       true,
     );
+  });
+
+  it('16c. keeps free-operation template probing deterministic with multi-unresolved zone aliases', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operationProfile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$targetProvince',
+                bind: '$targetProvince',
+                options: { query: 'zones' },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        actionPipelines: [profile],
+        zones: [
+          { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+          { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: { 'board:cambodia': [], 'board:vietnam': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: 'and',
+                args: [
+                  {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                  {
+                    op: '==',
+                    left: { ref: 'zoneProp', zone: '$supportProvince', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                ],
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const template = legalMoves(def, state).find((move) => String(move.actionId) === 'operation' && move.freeOperation === true);
+    assert.ok(template);
+    const sequence = resolveMoveDecisionSequence(def, state, template, { choose: () => undefined });
+    assert.equal(sequence.complete, false);
+    assert.deepEqual(sequence.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
   it('17. skips actions when actor selector resolves outside playerCount', () => {

@@ -1,6 +1,6 @@
 # ENGINEARCH-132: Free-Operation Zone-Filter Binding Resolution Contract
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-02-28)
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — query evaluation + turn-flow free-operation zone-filter policy wiring
@@ -14,7 +14,11 @@ Free-operation zone-filter probing currently uses heuristic rebinding in query e
 
 1. `packages/engine/src/kernel/eval-query.ts` currently retries free-operation zone-filter evaluation by rebinding exactly one unresolved binding name to `zoneId`.
 2. This retry logic is local to query evaluation and is not represented as a shared contract used across all free-operation zone-filter probing paths.
-3. Existing pending tickets (`ENGINEARCH-123`, `ENGINEARCH-124`) do not define or test a canonical binding-resolution contract for multi-unresolved cases; corrected scope is to introduce one explicit contract and route probing through it.
+3. Existing tests already cover unresolved non-`$zone` probing behavior in:
+   - `packages/engine/test/unit/kernel/legal-choices.test.ts`
+   - `packages/engine/test/unit/kernel/move-decision-sequence.test.ts`
+   - `packages/engine/test/unit/kernel/legal-moves.test.ts`
+4. The remaining gap is not baseline deferral coverage; it is absence of one explicit multi-unresolved binding-resolution contract shared across probing surfaces.
 
 ## Architecture Check
 
@@ -28,7 +32,7 @@ Free-operation zone-filter probing currently uses heuristic rebinding in query e
 
 Add a shared helper that resolves candidate-zone probe bindings for free-operation zone filters with explicit behavior:
 - canonical `$zone` binding
-- deterministic handling for unresolved aliases
+- deterministic handling for unresolved aliases, including multi-unresolved chains
 - explicit failure/defer classification when bindings cannot be resolved safely
 
 ### 2. Replace heuristic retry in query evaluation
@@ -71,8 +75,8 @@ Ensure `turn-flow-eligibility` and `eval-query` use compatible policy decisions 
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/legal-choices.test.ts` — add multi-unresolved binding probe cases and explicit expected outcomes.
-2. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — assert decision-sequence probing follows same contract as legalChoices.
-3. `packages/engine/test/unit/kernel/legal-moves.test.ts` — guard template generation parity when unresolved zone-filter bindings appear.
+2. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — strengthen parity assertions for multi-unresolved probe contract vs legalChoices.
+3. `packages/engine/test/unit/kernel/legal-moves.test.ts` — guard template generation parity for multi-unresolved unresolved-alias zone-filter probes.
 
 ### Commands
 
@@ -82,3 +86,22 @@ Ensure `turn-flow-eligibility` and `eval-query` use compatible policy decisions 
 4. `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
 5. `pnpm -F @ludoforge/engine test`
 6. `pnpm turbo lint`
+
+## Outcome
+
+Implemented vs planned:
+- Added a new canonical probe helper at `packages/engine/src/kernel/free-operation-zone-filter-probe.ts`.
+- Replaced `eval-query` single-missing-binding retry with canonical probe helper wiring.
+- Wired `turn-flow-eligibility` per-zone probing through the same helper for surface/path contract parity.
+- Tightened resolver safety: only unresolved aliases referenced in zone-selector positions are eligible for candidate-zone rebinding; non-zone missing bindings continue through existing defer/typed-failure policy.
+- Added multi-unresolved regression coverage in:
+  - `packages/engine/test/unit/kernel/legal-choices.test.ts`
+  - `packages/engine/test/unit/kernel/move-decision-sequence.test.ts`
+  - `packages/engine/test/unit/kernel/legal-moves.test.ts`
+- Validation completed:
+  - `pnpm turbo build`
+  - `node --test packages/engine/dist/test/unit/kernel/legal-choices.test.js`
+  - `node --test packages/engine/dist/test/unit/kernel/move-decision-sequence.test.js`
+  - `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo lint`

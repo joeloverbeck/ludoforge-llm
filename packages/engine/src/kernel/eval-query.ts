@@ -1,10 +1,14 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
 import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
-import { isEvalErrorCode, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
+import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
+import {
+  collectFreeOperationZoneFilterProbeRebindableAliases,
+  evaluateFreeOperationZoneFilterProbe,
+} from './free-operation-zone-filter-probe.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
@@ -279,39 +283,19 @@ type ZoneQueryFilter = Extract<OptionsQuery, { readonly query: 'zones' }>['filte
 
 const evaluateFreeOperationZoneFilterForZone = (
   freeOperationZoneFilter: NonNullable<EvalContext['freeOperationZoneFilter']>,
+  rebindableAliases: ReadonlySet<string>,
   zoneId: ZoneId,
   ctx: EvalContext,
 ): boolean => {
-  const baseBindings = {
-    ...ctx.bindings,
-    $zone: zoneId,
-  };
-  try {
-    return evalCondition(freeOperationZoneFilter, {
+  return evaluateFreeOperationZoneFilterProbe({
+    zoneId,
+    baseBindings: ctx.bindings,
+    rebindableAliases,
+    evaluateWithBindings: (bindings) => evalCondition(freeOperationZoneFilter, {
       ...ctx,
-      bindings: baseBindings,
-    });
-  } catch (error) {
-    if (!isEvalErrorCode(error, 'MISSING_BINDING')) {
-      throw error;
-    }
-    const missingBinding = error.context?.binding;
-    if (
-      typeof missingBinding !== 'string' ||
-      missingBinding.length === 0 ||
-      missingBinding === '$zone' ||
-      Object.prototype.hasOwnProperty.call(baseBindings, missingBinding)
-    ) {
-      throw error;
-    }
-    return evalCondition(freeOperationZoneFilter, {
-      ...ctx,
-      bindings: {
-        ...baseBindings,
-        [missingBinding]: zoneId,
-      },
-    });
-  }
+      bindings,
+    }),
+  });
 };
 
 function applyZonesFilter(
@@ -353,9 +337,10 @@ function applyZonesFilter(
   }
 
   if (freeOperationZoneFilter !== undefined) {
+    const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(freeOperationZoneFilter);
     filteredZones = filteredZones.filter((zone) => {
       try {
-        return evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, zone.id, ctx);
+        return evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, rebindableAliases, zone.id, ctx);
       } catch (cause) {
         const diagnostics = ctx.freeOperationZoneFilterDiagnostics;
         if (diagnostics !== undefined) {

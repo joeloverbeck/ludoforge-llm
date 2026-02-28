@@ -3,7 +3,10 @@ import { describe, it } from 'node:test';
 
 import { EVAL_ERROR_DEFER_CLASS } from '../../../src/kernel/eval-error-defer-class.js';
 import { createEvalError } from '../../../src/kernel/eval-error.js';
-import { shouldDeferMissingBinding } from '../../../src/kernel/missing-binding-policy.js';
+import {
+  shouldDeferFreeOperationZoneFilterFailure,
+  shouldDeferMissingBinding,
+} from '../../../src/kernel/missing-binding-policy.js';
 
 describe('shouldDeferMissingBinding()', () => {
   it('defers missing-binding errors for supported discovery contexts', () => {
@@ -49,5 +52,19 @@ describe('shouldDeferMissingBinding()', () => {
       resolvedZones: [],
     });
     assert.equal(shouldDeferMissingBinding(selectorCardinality, 'legalMoves.eventDecisionSequence'), false);
+  });
+});
+
+describe('shouldDeferFreeOperationZoneFilterFailure()', () => {
+  it('defers missing-binding only on legalChoices surface', () => {
+    const missing = createEvalError('MISSING_BINDING', 'missing');
+    assert.equal(shouldDeferFreeOperationZoneFilterFailure('legalChoices', missing), true);
+    assert.equal(shouldDeferFreeOperationZoneFilterFailure('turnFlowEligibility', missing), false);
+  });
+
+  it('does not defer non-missing-binding errors on either surface', () => {
+    const missingVar = createEvalError('MISSING_VAR', 'missing var');
+    assert.equal(shouldDeferFreeOperationZoneFilterFailure('legalChoices', missingVar), false);
+    assert.equal(shouldDeferFreeOperationZoneFilterFailure('turnFlowEligibility', missingVar), false);
   });
 });

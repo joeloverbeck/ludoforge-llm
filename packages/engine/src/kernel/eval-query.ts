@@ -4,6 +4,7 @@ import { isEvalErrorCode, missingVarError, queryBoundsExceededError, typeMismatc
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
+import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
@@ -358,6 +359,9 @@ function applyZonesFilter(
       } catch (cause) {
         const diagnostics = ctx.freeOperationZoneFilterDiagnostics;
         if (diagnostics !== undefined) {
+          if (shouldDeferFreeOperationZoneFilterFailure(diagnostics.source, cause)) {
+            return true;
+          }
           throw freeOperationZoneFilterEvaluationError({
             surface: diagnostics.source,
             actionId: diagnostics.actionId,

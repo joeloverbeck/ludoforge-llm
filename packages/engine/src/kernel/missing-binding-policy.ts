@@ -8,6 +8,8 @@ export type MissingBindingPolicyContext =
   | 'legalChoices.freeOperationZoneFilterProbe'
   | 'pipeline.discoveryPredicate';
 
+export type FreeOperationZoneFilterSurface = 'turnFlowEligibility' | 'legalChoices';
+
 const isDeferrableUnresolvedSelectorCardinality = (error: unknown): boolean => {
   return hasEvalErrorDeferClass(
     error,
@@ -42,3 +44,9 @@ export const shouldDeferMissingBinding = (
     }
   }
 };
+
+export const shouldDeferFreeOperationZoneFilterFailure = (
+  surface: FreeOperationZoneFilterSurface,
+  error: unknown,
+): boolean =>
+  surface === 'legalChoices' && shouldDeferMissingBinding(error, 'legalChoices.freeOperationZoneFilterProbe');

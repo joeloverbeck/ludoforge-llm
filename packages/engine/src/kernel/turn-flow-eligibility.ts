@@ -6,7 +6,7 @@ import {
   resolveEventFreeOperationGrants,
 } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
-import { shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { normalizeSeatOrder, parseNumericSeatPlayer } from './seat-resolution.js';
@@ -368,6 +368,8 @@ const evaluateZoneFilterForMove = (
   zoneFilter: ConditionAST,
   surface: 'turnFlowEligibility' | 'legalChoices',
 ): boolean => {
+  const shouldDeferZoneFilterFailure = (cause: unknown): boolean =>
+    shouldDeferFreeOperationZoneFilterFailure(surface, cause);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const baseBindings: Readonly<Record<string, unknown>> = buildMoveRuntimeBindings(move);
   const zones = moveZoneCandidates(def, move);
@@ -383,7 +385,7 @@ const evaluateZoneFilterForMove = (
         collector: createCollector(),
       });
     } catch (cause) {
-      if (surface === 'legalChoices' && shouldDeferMissingBinding(cause, 'legalChoices.freeOperationZoneFilterProbe')) {
+      if (shouldDeferZoneFilterFailure(cause)) {
         // During discovery template probing, zone decisions may be unresolved.
         // Defer grant denial until concrete zone bindings exist.
         return true;
@@ -415,6 +417,9 @@ const evaluateZoneFilterForMove = (
         return true;
       }
     } catch (cause) {
+      if (shouldDeferZoneFilterFailure(cause)) {
+        return true;
+      }
       throw freeOperationZoneFilterEvaluationError({
         surface,
         actionId: String(move.actionId),

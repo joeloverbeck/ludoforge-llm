@@ -1,6 +1,6 @@
 # ENGINEARCH-123: Free-Operation Zone-Filter Deferral Path Completeness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — turn-flow eligibility zone-filter evaluation control flow
@@ -14,7 +14,9 @@ Deferral logic for unresolved zone-filter bindings is currently applied only in 
 
 1. `evaluateZoneFilterForMove` has two catch paths: no-candidate-zone and per-candidate-zone loop.
 2. Only the no-candidate path currently applies unresolved-binding deferral policy.
-3. Mismatch: deferral policy is not path-complete; corrected scope is to apply one canonical deferral policy in both branches.
+3. `legalChoices` zone-option filtering in `eval-query.ts` has its own per-zone free-operation catch path that currently throws without deferral.
+4. Existing test coverage validates no-candidate deferral behavior (`move-decision-sequence.test.ts`), but did not lock the per-candidate unresolved-binding path in either `turn-flow-eligibility.ts` or `eval-query.ts`.
+5. Mismatch: deferral policy is not path-complete; corrected scope is to apply one canonical deferral policy in all relevant per-zone branches and add explicit branch-complete tests.
 
 ## Architecture Check
 
@@ -27,16 +29,19 @@ Deferral logic for unresolved zone-filter bindings is currently applied only in 
 ### 1. Centralize catch-path decisioning
 
 Apply one shared deferral decision helper for both evaluation branches inside `evaluateZoneFilterForMove`.
+Also apply the same policy in `eval-query.ts` zone-option filtering (`applyZonesFilter`) when `freeOperationZoneFilterDiagnostics.source === 'legalChoices'`.
 
 ### 2. Add branch-completeness contract tests
 
 Add tests that exercise unresolved-binding behavior in both:
 - no-zone-candidates path
 - per-zone-candidate path
+- legal-moves template generation path (surface: `legalChoices`) for per-zone candidate probing
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/turn-flow-eligibility.ts` (modify)
+- `packages/engine/src/kernel/eval-query.ts` (modify)
 - `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` (modify)
 - `packages/engine/test/unit/kernel/legal-moves.test.ts` (modify/add if needed to assert template probing invariants)
 
@@ -62,8 +67,8 @@ Add tests that exercise unresolved-binding behavior in both:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — add explicit cases for both evaluation branches to lock behavior.
-2. `packages/engine/test/unit/kernel/legal-moves.test.ts` — verify template variant generation remains stable under branch-complete deferral.
+1. `packages/engine/test/unit/kernel/move-decision-sequence.test.ts` — retain existing no-zone-path assertion and add explicit per-zone unresolved-binding deferral case.
+2. `packages/engine/test/unit/kernel/legal-moves.test.ts` — add per-zone unresolved-binding deferral case to verify template variant generation remains stable under branch-complete deferral.
 
 ### Commands
 
@@ -72,3 +77,16 @@ Add tests that exercise unresolved-binding behavior in both:
 3. `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo lint`
+
+## Outcome
+
+Implemented:
+1. Shared unresolved-binding deferral policy in both branches of `evaluateZoneFilterForMove` (`turn-flow-eligibility.ts`).
+2. Equivalent deferral handling in `eval-query.ts` (`applyZonesFilter`) when probing free-operation zone filters on the `legalChoices` surface.
+3. New branch-completeness tests for per-zone unresolved-binding deferral in:
+   - `move-decision-sequence.test.ts`
+   - `legal-moves.test.ts`
+
+Originally planned vs actual:
+1. Planned scope referenced only `turn-flow-eligibility.ts`; actual code path required extending scope to `eval-query.ts` after assumption reassessment against current runtime behavior.
+2. All listed verification commands pass.

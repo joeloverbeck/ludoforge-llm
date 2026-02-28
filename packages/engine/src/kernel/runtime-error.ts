@@ -265,6 +265,39 @@ export class IllegalMoveError extends KernelRuntimeError<'ILLEGAL_MOVE'> {
   }
 }
 
+type IllegalMoveRequiredContextReason = IllegalMoveReasonsRequiringContext;
+type IllegalMoveRequiredContextField<R extends IllegalMoveReason> = RequiredKeys<IllegalMoveContextInput<R>> & string;
+
+const ILLEGAL_MOVE_REQUIRED_CONTEXT_FIELDS: Readonly<{
+  [R in IllegalMoveRequiredContextReason]: readonly IllegalMoveRequiredContextField<R>[];
+}> = {
+  [ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED]: ['operationActionId', 'specialActivityActionId', 'profileId'],
+  [ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED]:
+    ['operationActionId', 'specialActivityActionId', 'profileId', 'relation', 'operationParam', 'specialActivityParam'],
+  [ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH]: ['mappedActionClass', 'submittedActionClass'],
+  [ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED]: ['freeOperationDenial'],
+};
+
+const validateRequiredIllegalMoveContextFields = (
+  reason: IllegalMoveReason,
+  context: unknown,
+): void => {
+  const requiredFields = (
+    ILLEGAL_MOVE_REQUIRED_CONTEXT_FIELDS as Readonly<Partial<Record<IllegalMoveReason, readonly string[]>>>
+  )[reason];
+  if (requiredFields === undefined || requiredFields.length === 0) {
+    return;
+  }
+  const contextRecord = typeof context === 'object' && context !== null
+    ? (context as Record<string, unknown>)
+    : undefined;
+  for (const field of requiredFields) {
+    if (contextRecord?.[field] === undefined) {
+      throw new TypeError(`${reason} requires ${field} in ILLEGAL_MOVE context.`);
+    }
+  }
+};
+
 export function illegalMoveError<R extends IllegalMoveReason>(
   move: Move,
   reason: R,
@@ -276,9 +309,7 @@ export function illegalMoveError(
   ...args: [context?: IllegalMoveContextInput<IllegalMoveReason>]
 ): IllegalMoveError {
   const context = args[0];
-  if (reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED && (context as { freeOperationDenial?: unknown } | undefined)?.freeOperationDenial === undefined) {
-    throw new TypeError('FREE_OPERATION_NOT_GRANTED requires freeOperationDenial in ILLEGAL_MOVE context.');
-  }
+  validateRequiredIllegalMoveContextFields(reason, context);
   const resolvedContext = {
     actionId: move.actionId,
     params: move.params,

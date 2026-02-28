@@ -81,6 +81,49 @@ describe('runtime error context contracts', () => {
     }
   });
 
+  it('illegalMoveError rejects missing required context for FREE_OPERATION_NOT_GRANTED on untyped invocation paths', () => {
+    const move: Move = {
+      actionId: action.id,
+      params: {},
+      freeOperation: true,
+    };
+    const invokeUntypedIllegalMoveError = illegalMoveError as unknown as (
+      moveArg: Move,
+      reasonArg: string,
+      contextArg?: unknown,
+    ) => Error;
+
+    assert.throws(
+      () => invokeUntypedIllegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {}),
+      (error: unknown) =>
+        error instanceof TypeError
+        && error.message === 'freeOperationNotGranted requires freeOperationDenial in ILLEGAL_MOVE context.',
+    );
+  });
+
+  it('illegalMoveError rejects missing required context for other required-context reasons on untyped invocation paths', () => {
+    const move: Move = {
+      actionId: action.id,
+      params: {},
+    };
+    const invokeUntypedIllegalMoveError = illegalMoveError as unknown as (
+      moveArg: Move,
+      reasonArg: string,
+      contextArg?: unknown,
+    ) => Error;
+
+    assert.throws(
+      () =>
+        invokeUntypedIllegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
+          operationActionId: 'operate',
+          specialActivityActionId: 'assist',
+        }),
+      (error: unknown) =>
+        error instanceof TypeError
+        && error.message === 'specialActivityAccompanyingOpDisallowed requires profileId in ILLEGAL_MOVE context.',
+    );
+  });
+
   it('pipeline applicability helper emits deterministic context contract', () => {
     const error = pipelineApplicabilityEvaluationError(action, 'profile-op', new Error('boom'));
 

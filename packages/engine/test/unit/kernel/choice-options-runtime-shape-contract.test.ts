@@ -51,15 +51,10 @@ describe('choice options runtime-shape contract', () => {
     });
     assert.ok(violation);
 
-    const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails('chooseN', violation);
-    assert.equal(
-      details.message,
-      'chooseN options query must produce move-param-encodable values; runtime shape(s) [number, object] are not fully encodable.',
-    );
-    assert.equal(
-      details.suggestion,
-      'Use queries yielding token/string/number values (or binding queries that resolve to encodable values) and avoid object-valued option domains like assetRows.',
-    );
+    const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
+    assert.equal(details.reason, 'nonMoveParamEncodableRuntimeShapes');
+    assert.deepEqual(details.runtimeShapes, ['number', 'object']);
+    assert.deepEqual(details.invalidShapes, ['object']);
     assert.deepEqual(details.alternatives, ['object']);
   });
 
@@ -70,10 +65,14 @@ describe('choice options runtime-shape contract', () => {
     });
     assert.ok(violation);
 
-    const first = buildChoiceOptionsRuntimeShapeDiagnosticDetails('chooseOne', violation);
+    const first = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
+    (first.runtimeShapes as string[]).push('mutated-runtime-shape');
+    (first.invalidShapes as string[]).push('mutated-invalid-shape');
     (first.alternatives as string[]).push('mutated-shape');
 
-    const second = buildChoiceOptionsRuntimeShapeDiagnosticDetails('chooseOne', violation);
+    const second = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
+    assert.deepEqual(second.runtimeShapes, ['object']);
+    assert.deepEqual(second.invalidShapes, ['object']);
     assert.deepEqual(second.alternatives, ['object']);
   });
 });

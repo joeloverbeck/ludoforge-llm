@@ -9,8 +9,9 @@ export interface ChoiceOptionsRuntimeShapeViolation {
 }
 
 export interface ChoiceOptionsRuntimeShapeDiagnosticDetails {
-  readonly message: string;
-  readonly suggestion: string;
+  readonly reason: 'nonMoveParamEncodableRuntimeShapes';
+  readonly runtimeShapes: readonly QueryRuntimeShape[];
+  readonly invalidShapes: readonly QueryRuntimeShape[];
   readonly alternatives: readonly QueryRuntimeShape[];
 }
 
@@ -30,13 +31,12 @@ export function getChoiceOptionsRuntimeShapeViolation(
 }
 
 export function buildChoiceOptionsRuntimeShapeDiagnosticDetails(
-  effectName: ChoiceOptionsEffectName,
   violation: ChoiceOptionsRuntimeShapeViolation,
 ): ChoiceOptionsRuntimeShapeDiagnosticDetails {
   return {
-    message: `${effectName} options query must produce move-param-encodable values; runtime shape(s) [${violation.runtimeShapes.join(', ')}] are not fully encodable.`,
-    suggestion:
-      'Use queries yielding token/string/number values (or binding queries that resolve to encodable values) and avoid object-valued option domains like assetRows.',
+    reason: 'nonMoveParamEncodableRuntimeShapes',
+    runtimeShapes: [...violation.runtimeShapes],
+    invalidShapes: [...violation.invalidShapes],
     alternatives: [...violation.invalidShapes],
   };
 }

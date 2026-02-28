@@ -4,6 +4,7 @@ import {
   buildChoiceOptionsRuntimeShapeDiagnosticDetails,
   getChoiceOptionsRuntimeShapeViolation,
 } from '../kernel/choice-options-runtime-shape-contract.js';
+import { renderChoiceOptionsRuntimeShapeDiagnostic } from '../kernel/choice-options-runtime-shape-diagnostic-rendering.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   isTurnFlowActionClass,
@@ -2167,15 +2168,16 @@ function validateChoiceOptionsRuntimeShapeContract(
   if (violation === null) {
     return [];
   }
-  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(effectName, violation);
+  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
+  const rendered = renderChoiceOptionsRuntimeShapeDiagnostic(effectName, details);
 
   return [
     {
       code: 'CNL_COMPILER_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
       path,
       severity: 'error',
-      message: details.message,
-      suggestion: details.suggestion,
+      message: rendered.message,
+      suggestion: rendered.suggestion,
       alternatives: [...details.alternatives],
     },
   ];

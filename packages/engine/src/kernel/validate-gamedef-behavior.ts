@@ -3,6 +3,7 @@ import {
   buildChoiceOptionsRuntimeShapeDiagnosticDetails,
   getChoiceOptionsRuntimeShapeViolation,
 } from './choice-options-runtime-shape-contract.js';
+import { renderChoiceOptionsRuntimeShapeDiagnostic } from './choice-options-runtime-shape-diagnostic-rendering.js';
 import { hasErrorDiagnosticAtPathSince } from './diagnostic-path-policy.js';
 import type {
   ConditionAST,
@@ -453,13 +454,14 @@ const validateChoiceOptionsRuntimeShape = (
   if (violation === null) {
     return;
   }
-  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(effectName, violation);
+  const details = buildChoiceOptionsRuntimeShapeDiagnosticDetails(violation);
+  const rendered = renderChoiceOptionsRuntimeShapeDiagnostic(effectName, details);
   diagnostics.push({
     code: 'EFFECT_CHOICE_OPTIONS_RUNTIME_SHAPE_INVALID',
     path,
     severity: 'error',
-    message: details.message,
-    suggestion: details.suggestion,
+    message: rendered.message,
+    suggestion: rendered.suggestion,
     alternatives: [...details.alternatives],
   });
 };

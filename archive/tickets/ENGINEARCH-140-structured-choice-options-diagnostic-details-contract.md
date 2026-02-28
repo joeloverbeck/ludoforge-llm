@@ -1,6 +1,6 @@
 # ENGINEARCH-140: Structured Choice-Options Diagnostic Details Contract
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel diagnostic detail contract shape + caller formatting boundaries
@@ -12,9 +12,10 @@ Choice-options diagnostic details currently rely on pre-rendered free-form text.
 
 ## Assumption Reassessment (2026-02-28)
 
-1. `packages/engine/src/kernel/choice-options-runtime-shape-contract.ts` currently returns `message` and `suggestion` strings plus `alternatives` for shape violations.
-2. Compiler and validator currently consume those strings directly, adding only layer-local code/path/severity.
-3. Mismatch: current detail payload is not structured for future rendering policy evolution. Corrected scope: introduce structured, game-agnostic detail payload and have callers render final strings locally.
+1. `packages/engine/src/kernel/choice-options-runtime-shape-contract.ts` currently returns pre-rendered `message`/`suggestion` strings plus `alternatives` copied from invalid runtime shapes.
+2. Compiler and validator currently forward those kernel-rendered strings directly, adding layer-local diagnostic code/path/severity and cloning `alternatives`.
+3. Mismatch: semantics and presentation are coupled in the shared kernel contract, which increases drift risk for future caller-local taxonomy and rendering policy changes.
+4. Corrected scope: shared kernel contract should expose structured semantic fields only (reason + params + alternatives). Compiler/validator must each own final user-facing message/suggestion rendering from that structure.
 
 ## Architecture Check
 
@@ -30,11 +31,11 @@ Replace string-first detail object with structured fields (for example reason id
 
 ### 2. Move final string rendering to caller layers
 
-In `compile-effects.ts` and `validate-gamedef-behavior.ts`, build user-facing `message`/`suggestion` from structured payload while keeping layer-local diagnostic code ownership.
+In `compile-effects.ts` and `validate-gamedef-behavior.ts`, build user-facing `message`/`suggestion` from structured payload while keeping layer-local diagnostic code ownership. Keep wording parity intentionally locked across caller layers via tests.
 
 ### 3. Update tests to assert structure + rendering parity
 
-Adjust kernel contract tests for structured payload and preserve parity assertions across compiler/validator rendered diagnostics.
+Adjust kernel contract tests for structured payload (including fresh-array determinism), preserve parity assertions across compiler/validator rendered diagnostics, and keep direct caller-suite coverage where choice-options diagnostics are emitted.
 
 ## Files to Touch
 
@@ -56,9 +57,10 @@ Adjust kernel contract tests for structured payload and preserve parity assertio
 
 ### Tests That Must Pass
 
-1. Kernel shared module emits structured, deterministic choice-options diagnostic details with no caller taxonomy.
-2. Compiler/validator render equivalent user-facing detail text from shared structure.
+1. Kernel shared module emits structured, deterministic, game-agnostic choice-options diagnostic details with no pre-rendered user-facing strings.
+2. Compiler/validator render equivalent user-facing detail text from shared structure while preserving layer-local diagnostic codes.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
+4. Existing suite: `pnpm -F @ludoforge/engine lint`
 
 ### Invariants
 
@@ -82,3 +84,20 @@ Adjust kernel contract tests for structured payload and preserve parity assertio
 5. `node --test packages/engine/dist/test/unit/validate-gamedef.test.js`
 6. `pnpm -F @ludoforge/engine test`
 7. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-02-28
+- **What Changed**:
+  - Replaced string-first choice-options diagnostic details with structured semantic details in `choice-options-runtime-shape-contract.ts` (`reason`, `runtimeShapes`, `invalidShapes`, `alternatives`).
+  - Moved final `message`/`suggestion` rendering to caller layers (`compile-effects.ts` and `validate-gamedef-behavior.ts`) while preserving layer-local diagnostic code ownership.
+  - Updated kernel contract tests to assert structured payload shape and fresh-array determinism for all returned arrays.
+  - Preserved compiler/validator parity coverage and executed focused + full engine test/lint suites.
+- **Deviations From Original Plan**:
+  - No additional deviations in implementation scope; plan remained accurate after assumption corrections.
+  - `compile-effects.test.ts` and `validate-gamedef.test.ts` did not require assertion text changes because emitted wording remained intentionally stable.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - Focused node tests for contract/parity/compiler/validator passed.
+  - `pnpm -F @ludoforge/engine test` passed (`323` passed, `0` failed).
+  - `pnpm -F @ludoforge/engine lint` passed.

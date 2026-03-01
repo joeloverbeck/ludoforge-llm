@@ -4,9 +4,13 @@ import { buildCardDrivenTurnFlowSemanticRequirements, evaluateActionSelectorCont
 import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
+import type { SeatIdentityContract } from './seat-identity-contract.js';
 import { isRecord, normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 
-export function crossValidateSpec(sections: CompileSectionResults): readonly Diagnostic[] {
+export function crossValidateSpec(
+  sections: CompileSectionResults,
+  seatIdentityContract: SeatIdentityContract,
+): readonly Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   const phaseTargets = collectIdentifierTargets([
@@ -17,7 +21,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
   const cardDrivenTurnFlow = sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow : null;
-  const seatTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.seats);
+  const seatTargets = collectIdentifierTargets(seatIdentityContract.referenceSeatIds);
   const windowTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.overrideWindows.map((window) => window.id));
   const globalVarTargets = collectIdentifierTargets(sections.globalVars?.map((globalVar) => globalVar.name));
   const perPlayerVarTargets = collectIdentifierTargets(sections.perPlayerVars?.map((playerVar) => playerVar.name));
@@ -330,7 +334,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         checkpoint.seat,
         seatTargets,
         `Victory checkpoint "${checkpoint.id}" references unknown seat "${checkpoint.seat}".`,
-        'Use one of the declared turnFlow.eligibility.seats ids.',
+        'Use one of the declared seat ids.',
       );
     }
 
@@ -342,7 +346,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         margin.seat,
         seatTargets,
         `Victory margin references unknown seat "${margin.seat}".`,
-        'Use one of the declared turnFlow.eligibility.seats ids.',
+        'Use one of the declared seat ids.',
       );
     }
   }
@@ -860,7 +864,7 @@ function validateEventFreeOperationGrants(
         grant.seat,
         seatTargets,
         `Event card "${cardId}" freeOperationGrant references unknown seat "${grant.seat}".`,
-        'Use one of the declared turnFlow.eligibility.seats ids.',
+        'Use one of the declared seat ids.',
       );
       if (grant.executeAsSeat !== undefined && grant.executeAsSeat !== 'self') {
         pushMissingIdentifierDiagnostic(
@@ -870,7 +874,7 @@ function validateEventFreeOperationGrants(
           grant.executeAsSeat,
           seatTargets,
           `Event card "${cardId}" freeOperationGrant executeAsSeat references unknown seat "${grant.executeAsSeat}".`,
-          'Use "self" or one of the declared turnFlow.eligibility.seats ids.',
+          'Use "self" or one of the declared seat ids.',
         );
       }
     }
@@ -911,7 +915,7 @@ function validateEventEligibilityOverrides(
         override.target.seat,
         seatTargets,
         `Event card "${cardId}" eligibilityOverride references unknown seat "${override.target.seat}".`,
-        'Use one of the declared turnFlow.eligibility.seats ids.',
+        'Use one of the declared seat ids.',
       );
     }
 

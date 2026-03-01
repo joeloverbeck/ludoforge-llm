@@ -1,6 +1,6 @@
 # SEATRES-004: Unified seat identity contract module for compiler surfaces
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler architecture boundary (`compiler-core.ts`, `cross-validate.ts`, new shared contract module, diagnostics, tests)
@@ -20,13 +20,18 @@ This keeps seat behavior functional but not architecturally unified.
 
 1. `compiler-core.ts` now derives canonical selector seat ids, but cross-validation independently builds seat targets from turn-flow seats.
 2. `cross-validate.ts` currently has no shared seat-contract input from compiler core.
-3. Existing active tickets do not currently cover creation of a shared seat-identity contract module consumed by both lowering and cross-validation.
+3. Existing tests already cover selector-seat canonicalization inside `compiler-core.ts` (`compiler-structured-results.test.ts`), but they do **not** enforce that cross-validation consumes the same canonical seat identity source.
+4. Existing active tickets do not currently cover creation of a shared seat-identity contract module consumed by both lowering and cross-validation.
 
 ## Architecture Check
 
 1. A single shared seat-identity contract module is cleaner than duplicating seat logic in multiple compiler subsystems.
 2. This remains game-agnostic: the module interprets schema-level seat surfaces, not game rules.
 3. No compatibility shims: invalid seat-contract shapes should emit explicit compiler diagnostics.
+4. Current mismatch symptoms are broader than one error code; they can surface as `CNL_COMPILER_PLAYER_SELECTOR_INVALID` (compile-time) and/or downstream bounds/identity failures. The fix target is unified contract semantics, not a single diagnostic substitution.
+5. Seat identity has two explicit compiler domains that should be modeled, not conflated:
+   - selector-lowering domain (`selectorSeatIds`) may canonicalize index seats to named piece-catalog seats
+   - seat-reference/xref domain (`referenceSeatIds`) follows turn-flow seat ids used by event/victory seat references
 
 ## What to Change
 
@@ -34,8 +39,8 @@ This keeps seat behavior functional but not architecturally unified.
 
 Create a neutral compiler-shared module (for example `packages/engine/src/cnl/seat-identity-contract.ts`) that derives and returns:
 
-1. canonical selector seat ids
-2. canonical seat reference ids for cross-surface validations
+1. canonical selector seat ids (`selectorSeatIds`)
+2. canonical seat reference ids for cross-surface validations (`referenceSeatIds`)
 3. resolved seat contract mode metadata (for deterministic diagnostics/tests)
 
 ### 2. Make compiler-core and cross-validate consume the same contract output
@@ -45,7 +50,7 @@ Create a neutral compiler-shared module (for example `packages/engine/src/cnl/se
 
 ### 3. Add explicit compiler diagnostics for seat-contract incoherence
 
-Emit a dedicated compiler diagnostic when seat surfaces are structurally incoherent (for example index-mode count mismatch that would otherwise fail as generic player-id bounds).
+Emit a dedicated compiler diagnostic when seat surfaces are structurally incoherent (for example index-mode count mismatch between `turnFlow.eligibility.seats` and piece-catalog seats), instead of relying on incidental selector/bounds failures later in the pipeline.
 
 ## Files to Touch
 
@@ -80,7 +85,7 @@ Emit a dedicated compiler diagnostic when seat surfaces are structurally incoher
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/compiler-structured-results.test.ts` — assert deterministic seat-contract diagnostics for incoherent seat surfaces.
-2. `packages/engine/test/unit/cross-validate.test.ts` — assert seat reference validation uses shared contract output (not independent ad hoc targets).
+2. `packages/engine/test/unit/cross-validate.test.ts` — assert seat reference validation uses shared contract output (not independent ad hoc targets), including index-seat turn-flow + named piece-catalog seat references.
 
 ### Commands
 
@@ -88,3 +93,30 @@ Emit a dedicated compiler diagnostic when seat surfaces are structurally incoher
 2. `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js`
 3. `node --test packages/engine/dist/test/unit/cross-validate.test.js`
 4. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-01
+- **What Changed**:
+  - Added shared seat contract module at `packages/engine/src/cnl/seat-identity-contract.ts`.
+  - Replaced local seat derivation in `compiler-core.ts` with the shared contract output.
+  - Threaded shared seat contract into `cross-validate.ts` so cross-validation seat targets come from contract output instead of ad hoc derivation.
+  - Added explicit diagnostic code `CNL_COMPILER_SEAT_IDENTITY_CONTRACT_INCOHERENT` and emit logic for index-seat/piece-catalog count mismatch.
+  - Strengthened tests in:
+    - `packages/engine/test/unit/compiler-structured-results.test.ts`
+    - `packages/engine/test/unit/cross-validate.test.ts`
+    - `packages/engine/test/integration/compile-pipeline.test.ts` (fixture coherence fix)
+- **Deviations From Original Plan**:
+  - Seat identity was split into two explicit contract domains:
+    - `selectorSeatIds` for selector lowering
+    - `referenceSeatIds` for seat-reference cross-validation
+  - This avoids conflating selector canonicalization with turn-flow-authored seat reference semantics while still centralizing policy in one module.
+- **Verification Results**:
+  - `pnpm turbo build` passed
+  - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js` passed
+  - `node --test packages/engine/dist/test/unit/cross-validate.test.js` passed
+  - `node --test packages/engine/dist/test/integration/compile-pipeline.test.js` passed
+  - `pnpm -F @ludoforge/runner test test/config/visual-config-files.test.ts` passed
+  - `pnpm turbo test` passed
+  - `pnpm turbo typecheck` passed
+  - `pnpm turbo lint` passed

@@ -40,6 +40,7 @@ import {
 import { crossValidateSpec } from './cross-validate.js';
 import { lowerEventDecks } from './compile-event-cards.js';
 import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
+import { buildSeatIdentityContract } from './seat-identity-contract.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -376,10 +377,12 @@ function compileExpandedDoc(
     sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.freeOperationActionIds : undefined;
   const turnFlowSeatIds =
     sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.eligibility.seats : undefined;
-  const seatIds = deriveCanonicalSeatIds(
+  const seatIdentityContract = buildSeatIdentityContract({
     turnFlowSeatIds,
-    derivedFromAssets.seats?.map((s) => s.id),
-  );
+    pieceCatalogSeatIds: derivedFromAssets.seats?.map((seat) => seat.id),
+  });
+  diagnostics.push(...seatIdentityContract.diagnostics);
+  const seatIds = seatIdentityContract.contract.selectorSeatIds;
   const loweringContext: EffectLoweringSharedContext = {
     ownershipByBase,
     ...(derivedFromAssets.tokenTraitVocabulary == null
@@ -539,7 +542,7 @@ function compileExpandedDoc(
   // Policy contract: partial-compile is dependency-aware best-effort.
   // Cross-validation always executes, but each rule gates on prerequisite
   // section availability (null sections suppress dependent xref diagnostics).
-  diagnostics.push(...crossValidateSpec(sections));
+  diagnostics.push(...crossValidateSpec(sections, seatIdentityContract.contract));
 
   if (runtimeMetadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
     return { gameDef: null, sections };
@@ -590,31 +593,6 @@ function compileSection<T>(
     value,
     failed: countErrorDiagnostics(diagnostics) > beforeErrorCount,
   };
-}
-
-function deriveCanonicalSeatIds(
-  turnFlowSeatIds: readonly string[] | undefined,
-  pieceCatalogSeatIds: readonly string[] | undefined,
-): readonly string[] | undefined {
-  if (turnFlowSeatIds !== undefined) {
-    if (!isIndexSeatIdentity(turnFlowSeatIds)) {
-      return turnFlowSeatIds;
-    }
-    if (pieceCatalogSeatIds !== undefined && pieceCatalogSeatIds.length === turnFlowSeatIds.length) {
-      return pieceCatalogSeatIds;
-    }
-    return turnFlowSeatIds;
-  }
-  return pieceCatalogSeatIds;
-}
-
-function isIndexSeatIdentity(seatIds: readonly string[]): boolean {
-  for (let index = 0; index < seatIds.length; index += 1) {
-    if (seatIds[index] !== String(index)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function finalizeDiagnostics(

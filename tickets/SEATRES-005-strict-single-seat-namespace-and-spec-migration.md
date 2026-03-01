@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — compiler contract + schema constraints + fixtures/spec migration
-**Deps**: tickets/SEATRES-004-unified-seat-identity-contract-module.md
+**Deps**: archive/tickets/SEATRES-004-unified-seat-identity-contract-module.md
 
 ## Problem
 

@@ -5,6 +5,7 @@ import { asActionId, asPhaseId } from '../../src/kernel/branded.js';
 import type { CompileSectionResults } from '../../src/cnl/compiler-core.js';
 import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
 import {
+  buildSeatIdentityContract,
   compileGameSpecToGameDef,
   createEmptyGameSpecDoc,
   crossValidateSpec,
@@ -117,6 +118,16 @@ function compileRichSections(): CompileSectionResults {
   return result.sections;
 }
 
+function crossValidate(sections: CompileSectionResults) {
+  const turnFlowSeatIds =
+    sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.eligibility.seats : undefined;
+  const seatIdentityContract = buildSeatIdentityContract({
+    turnFlowSeatIds,
+    pieceCatalogSeatIds: undefined,
+  });
+  return crossValidateSpec(sections, seatIdentityContract.contract);
+}
+
 describe('crossValidateSpec', () => {
   it('valid spec produces zero cross-ref diagnostics', () => {
     const parsed = parseGameSpec(readCompilerFixture('compile-valid.md'));
@@ -131,7 +142,7 @@ describe('crossValidateSpec', () => {
   it('action referencing nonexistent phase emits CNL_XREF_ACTION_PHASE_MISSING with suggestion', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [
         {
@@ -150,7 +161,7 @@ describe('crossValidateSpec', () => {
   it('profile referencing nonexistent action emits CNL_XREF_PROFILE_ACTION_MISSING', () => {
     const sections = compileRichSections();
     const profile = requireValue(sections.actionPipelines?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actionPipelines: [
         {
@@ -169,7 +180,7 @@ describe('crossValidateSpec', () => {
   it('pipelined action with malformed actor binding emits canonical binding-invalid diagnostic', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [
         {
@@ -188,7 +199,7 @@ describe('crossValidateSpec', () => {
   it('victory checkpoint referencing nonexistent faction emits CNL_XREF_VICTORY_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const checkpoint = requireValue(sections.terminal?.checkpoints?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       terminal: {
         ...sections.terminal!,
@@ -202,11 +213,48 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
+  it('uses turn-flow seat reference ids from the shared seat contract when turn-flow seats are index-based', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const checkpoint = requireValue(sections.terminal?.checkpoints?.[0]);
+    const withIndexSeats: CompileSectionResults = {
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            eligibility: {
+              ...turnOrder.config.turnFlow.eligibility,
+              seats: ['0', '1'],
+            },
+          },
+        },
+      },
+      terminal: {
+        ...sections.terminal!,
+        checkpoints: [{ ...checkpoint, seat: 'arvn' }],
+      },
+    };
+
+    const seatIdentityContract = buildSeatIdentityContract({
+      turnFlowSeatIds: ['0', '1'],
+      pieceCatalogSeatIds: ['us', 'arvn'],
+    });
+    const diagnostics = crossValidateSpec(withIndexSeats, seatIdentityContract.contract);
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_VICTORY_SEAT_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.terminal.checkpoints.0.seat');
+  });
+
   it('turnOrder.config.turnFlow.cardLifecycle.played referencing nonexistent zone emits CNL_XREF_LIFECYCLE_ZONE_MISSING', () => {
     const sections = compileRichSections();
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       turnOrder: {
         ...turnOrder,
@@ -229,7 +277,7 @@ describe('crossValidateSpec', () => {
   it('cross-ref skips validation when target section is null', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       turnStructure: null,
       actions: [
@@ -253,14 +301,14 @@ describe('crossValidateSpec', () => {
       actionPipelines: [{ ...profile, actionId: asActionId('acx') }],
     };
 
-    const first = crossValidateSpec(withMultipleErrors);
-    const second = crossValidateSpec(withMultipleErrors);
+    const first = crossValidate(withMultipleErrors);
+    const second = crossValidate(withMultipleErrors);
     assert.deepEqual(first, second);
   });
 
   it('setup createToken referencing nonexistent zone emits CNL_XREF_SETUP_ZONE_MISSING', () => {
     const sections = compileRichSections();
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       setup: [{ createToken: { type: 'cube', zone: 'discrad:none' } }],
     });
@@ -275,7 +323,7 @@ describe('crossValidateSpec', () => {
     const reward = requireValue(
       turnOrder.config.turnFlow.passRewards[0],
     );
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       turnOrder: {
         ...turnOrder,
@@ -296,7 +344,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       turnOrder: {
         ...turnOrder,
@@ -344,7 +392,7 @@ describe('crossValidateSpec', () => {
     const action = requireValue(sections.actions?.[0]);
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [
         action,
@@ -380,7 +428,7 @@ describe('crossValidateSpec', () => {
     const action = requireValue(sections.actions?.[0]);
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [
         action,
@@ -417,7 +465,7 @@ describe('crossValidateSpec', () => {
     const action = requireValue(sections.actions?.[0]);
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       turnOrder: {
         ...turnOrder,
@@ -449,7 +497,7 @@ describe('crossValidateSpec', () => {
     const action = requireValue(sections.actions?.[0]);
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [
         {
@@ -519,7 +567,7 @@ describe('crossValidateSpec', () => {
 
   it('setup createToken referencing nonexistent tokenType emits CNL_XREF_SETUP_TOKEN_TYPE_MISSING', () => {
     const sections = compileRichSections();
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       setup: [{ createToken: { type: 'cubee', zone: 'discard:none' } }],
     });
@@ -532,7 +580,7 @@ describe('crossValidateSpec', () => {
   it('trigger event referencing nonexistent action emits CNL_XREF_TRIGGER_ACTION_MISSING', () => {
     const sections = compileRichSections();
     const trigger = requireValue(sections.triggers?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       triggers: [
         {
@@ -551,7 +599,7 @@ describe('crossValidateSpec', () => {
   it('trigger varChanged event referencing nonexistent var emits CNL_XREF_TRIGGER_VAR_MISSING', () => {
     const sections = compileRichSections();
     const trigger = requireValue(sections.triggers?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       triggers: [
         {
@@ -571,7 +619,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -597,7 +645,7 @@ describe('crossValidateSpec', () => {
   it('eventDecks drawZone referencing nonexistent zone emits CNL_XREF_EVENT_DECK_ZONE_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [{ ...deck, drawZone: 'decj:none' }],
     });
@@ -611,7 +659,7 @@ describe('crossValidateSpec', () => {
   it('eventDecks discardZone referencing nonexistent zone emits CNL_XREF_EVENT_DECK_ZONE_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [{ ...deck, discardZone: 'discrad:none' }],
     });
@@ -628,7 +676,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -656,7 +704,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -699,7 +747,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -734,7 +782,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -769,7 +817,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -797,7 +845,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -830,7 +878,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -863,7 +911,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {
@@ -902,7 +950,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);
     const card = requireValue(deck.cards[0]);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       eventDecks: [
         {

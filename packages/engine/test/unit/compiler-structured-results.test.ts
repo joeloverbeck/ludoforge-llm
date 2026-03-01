@@ -335,6 +335,58 @@ describe('compiler structured section results', () => {
     assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 2 });
   });
 
+  it('emits explicit seat-identity incoherence diagnostic for index turn-flow/piece-catalog count mismatch', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      metadata: { id: 'asset-cascade-seat-index-incoherent', players: { min: 2, max: 2 } },
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
+            pieceTypes: [
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
+              { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
+              { id: 'nva-troops', seat: 'NVA', statusDimensions: [], transitions: [] },
+            ],
+            inventory: [
+              { pieceTypeId: 'us-troops', seat: 'US', total: 1 },
+              { pieceTypeId: 'arvn-troops', seat: 'ARVN', total: 1 },
+              { pieceTypeId: 'nva-troops', seat: 'NVA', total: 1 },
+            ],
+          },
+        },
+      ],
+      tokenTypes: null,
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'ARVN', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_IDENTITY_CONTRACT_INCOHERENT',
+      ),
+      true,
+    );
+  });
+
   it('fails compile when selected piece catalog omits required factions catalog', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

@@ -332,6 +332,169 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects unknown token-filter props in tokensInAdjacentZones domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInAdjacentZones',
+                zone: 'market:none',
+                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
+          diag.path === 'actions[0].params[0].domain.filter[0].prop',
+      ),
+    );
+  });
+
+  it('accepts intrinsic token-filter prop id in tokensInAdjacentZones domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInAdjacentZones',
+                zone: 'market:none',
+                filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
+  });
+
+  it('rejects unknown token-filter props in reveal.filter effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
+          diag.path === 'actions[0].effects[0].reveal.filter[0].prop',
+      ),
+    );
+  });
+
+  it('accepts declared token-filter props in reveal.filter effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
+  });
+
+  it('rejects unknown token-filter props in conceal.filter effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              conceal: {
+                zone: 'market:none',
+                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
+          diag.path === 'actions[0].effects[0].conceal.filter[0].prop',
+      ),
+    );
+  });
+
+  it('accepts intrinsic token-filter prop id in conceal.filter effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              conceal: {
+                zone: 'market:none',
+                filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
+  });
+
   it('reports unknown map-space properties used by zoneProp references', () => {
     const base = createValidGameDef();
     const def = {

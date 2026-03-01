@@ -32,22 +32,6 @@ export function validatePieceCatalogPayload(
   const diagnostics: Diagnostic[] = [];
   const catalog = parseResult.data as PieceCatalogPayload;
   const pieceTypeById = new Map<string, PieceCatalogPayload['pieceTypes'][number]>();
-  const declaredSeats = new Set<string>();
-  for (const [index, seatDef] of (catalog.seats ?? []).entries()) {
-    if (!declaredSeats.has(seatDef.id)) {
-      declaredSeats.add(seatDef.id);
-      continue;
-    }
-    diagnostics.push(withContext(
-      {
-        code: 'PIECE_CATALOG_DUPLICATE_SEAT',
-        path: `asset.payload.seats[${index}].id`,
-        severity: 'error',
-        message: `Duplicate seat id "${seatDef.id}" in piece catalog payload.`,
-      },
-      context,
-    ));
-  }
 
   catalog.pieceTypes.forEach((pieceType, index) => {
     if (pieceTypeById.has(pieceType.id)) {
@@ -64,19 +48,6 @@ export function validatePieceCatalogPayload(
     }
 
     pieceTypeById.set(pieceType.id, pieceType);
-
-    if (declaredSeats.size > 0 && !declaredSeats.has(pieceType.seat)) {
-      diagnostics.push(withContext(
-        {
-          code: 'PIECE_CATALOG_PIECE_TYPE_SEAT_UNDECLARED',
-          path: `asset.payload.pieceTypes[${index}].seat`,
-          severity: 'error',
-          message: `Piece type "${pieceType.id}" references undeclared seat "${pieceType.seat}".`,
-          suggestion: 'Add the seat to payload.seats or update pieceTypes[*].seat.',
-        },
-        context,
-      ));
-    }
 
     const declaredDimensions = new Set(pieceType.statusDimensions);
 
@@ -145,19 +116,6 @@ export function validatePieceCatalogPayload(
           path: `asset.payload.inventory[${index}].seat`,
           severity: 'error',
           message: `Inventory seat "${entry.seat}" does not match piece type "${entry.pieceTypeId}" seat "${pieceType.seat}".`,
-        },
-        context,
-      ));
-    }
-
-    if (declaredSeats.size > 0 && !declaredSeats.has(entry.seat)) {
-      diagnostics.push(withContext(
-        {
-          code: 'PIECE_CATALOG_INVENTORY_SEAT_UNDECLARED',
-          path: `asset.payload.inventory[${index}].seat`,
-          severity: 'error',
-          message: `Inventory entry for piece type "${entry.pieceTypeId}" references undeclared seat "${entry.seat}".`,
-          suggestion: 'Add the seat to payload.seats or update inventory[*].seat.',
         },
         context,
       ));

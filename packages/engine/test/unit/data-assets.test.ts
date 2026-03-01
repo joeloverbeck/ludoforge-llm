@@ -96,7 +96,7 @@ describe('data asset loader scaffold', () => {
       );
 
       const result = loadDataAssetEnvelopeFromFile(assetPath, {
-        expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+        expectedKinds: ['map', 'scenario', 'pieceCatalog', 'seatCatalog'],
       });
 
       assert.equal(result.asset?.kind, 'map');
@@ -107,7 +107,7 @@ describe('data asset loader scaffold', () => {
   });
 
   it('validates embedded envelopes without requiring filesystem paths', () => {
-    const result = validateDataAssetEnvelope(
+      const result = validateDataAssetEnvelope(
       {
         id: 'fitl-map-foundation',
         kind: 'map',
@@ -131,7 +131,7 @@ describe('data asset loader scaffold', () => {
         payload: { cards: [] },
       },
       {
-        expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+        expectedKinds: ['map', 'scenario', 'pieceCatalog', 'seatCatalog'],
         pathPrefix: 'doc.dataAssets.0',
       },
     );
@@ -190,7 +190,6 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-foundation',
           kind: 'pieceCatalog',
           payload: {
-            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
@@ -206,7 +205,7 @@ describe('data asset loader scaffold', () => {
       );
 
       const result = loadDataAssetEnvelopeFromFile(assetPath, {
-        expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+        expectedKinds: ['map', 'scenario', 'pieceCatalog', 'seatCatalog'],
       });
 
       assert.equal(result.diagnostics.length, 0);
@@ -217,7 +216,7 @@ describe('data asset loader scaffold', () => {
     }
   });
 
-  it('rejects piece-catalog payloads that omit required factions', () => {
+  it('accepts piece-catalog payloads without seat declarations', () => {
     const result = validateDataAssetEnvelope(
       {
         id: 'fitl-piece-catalog-missing-factions',
@@ -230,15 +229,24 @@ describe('data asset loader scaffold', () => {
       { pathPrefix: 'doc.dataAssets.0' },
     );
 
-    assert.equal(result.asset, null);
-    assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID'
-          && diagnostic.path === 'doc.dataAssets.0.payload.seats',
-      ),
-      true,
+    assert.notEqual(result.asset, null);
+    assert.equal(result.diagnostics.length, 0);
+  });
+
+  it('validates seat-catalog payloads separately', () => {
+    const result = validateDataAssetEnvelope(
+      {
+        id: 'fitl-seat-catalog-foundation',
+        kind: 'seatCatalog',
+        payload: {
+          seats: [{ id: 'vc' }],
+        },
+      },
+      { pathPrefix: 'doc.dataAssets.0' },
     );
+
+    assert.notEqual(result.asset, null);
+    assert.equal(result.diagnostics.length, 0);
   });
 
   it('rejects map tracks with out-of-bounds defaults', () => {
@@ -397,7 +405,6 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-invalid-transition',
           kind: 'pieceCatalog',
           payload: {
-            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-base',
@@ -433,7 +440,6 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-missing-inventory',
           kind: 'pieceCatalog',
           payload: {
-            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
@@ -469,7 +475,6 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-negative-total',
           kind: 'pieceCatalog',
           payload: {
-            seats: [{ id: 'vc' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
@@ -494,7 +499,7 @@ describe('data asset loader scaffold', () => {
     }
   });
 
-  it('rejects piece-catalog pieceTypes that reference undeclared factions', () => {
+  it('allows piece-catalog pieceTypes with seats not declared in piece-catalog payload', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
     try {
       const assetPath = join(dir, 'foundation-pieces-faction-undeclared.v1.json');
@@ -504,7 +509,6 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-faction-undeclared',
           kind: 'pieceCatalog',
           payload: {
-            seats: [{ id: 'us' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
@@ -520,13 +524,8 @@ describe('data asset loader scaffold', () => {
       );
 
       const result = loadDataAssetEnvelopeFromFile(assetPath);
-      assert.equal(result.asset, null);
-      const pieceTypeDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_PIECE_TYPE_SEAT_UNDECLARED');
-      const inventoryDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_INVENTORY_SEAT_UNDECLARED');
-      assert.notEqual(pieceTypeDiag, undefined);
-      assert.notEqual(inventoryDiag, undefined);
-      assert.equal(pieceTypeDiag?.path, 'asset.payload.pieceTypes[0].seat');
-      assert.equal(inventoryDiag?.path, 'asset.payload.inventory[0].seat');
+      assert.notEqual(result.asset, null);
+      assert.equal(result.diagnostics.length, 0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

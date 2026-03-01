@@ -93,7 +93,7 @@ describe('FITL 1968 VC-first event-card production spec', () => {
     assert.equal(
       (conditional?.else?.[0] as { grantFreeOperation?: { seat?: string; operationClass?: string; actionIds?: string[] } })?.grantFreeOperation
         ?.seat,
-      'VC',
+      'vc',
     );
     assert.equal(
       (conditional?.else?.[0] as { grantFreeOperation?: { operationClass?: string } })?.grantFreeOperation?.operationClass,
@@ -122,7 +122,7 @@ describe('FITL 1968 VC-first event-card production spec', () => {
       'Remove a die roll of ARVN pieces from 1 or 2 adjacent spaces. ARVN Ineligible through next card.',
     );
     assert.deepEqual(card?.shaded?.eligibilityOverrides, [
-      { target: { kind: 'seat', seat: 'ARVN' }, eligible: false, windowId: 'make-ineligible' },
+      { target: { kind: 'seat', seat: 'arvn' }, eligible: false, windowId: 'make-ineligible' },
     ]);
 
     const unshadedEffects = card?.unshaded?.effects ?? [];

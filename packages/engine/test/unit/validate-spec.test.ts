@@ -674,18 +674,8 @@ describe('validateGameSpec structural rules', () => {
       diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
-          diagnostic.path.startsWith('doc.dataAssets.0.payload.seats') &&
-          diagnostic.message.includes('color') &&
-          diagnostic.severity === 'error',
-      ),
-      true,
-    );
-    assert.equal(
-      diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
-          diagnostic.path.startsWith('doc.dataAssets.0.payload.seats') &&
-          diagnostic.message.includes('displayName') &&
+          diagnostic.path === 'doc.dataAssets.0.payload' &&
+          diagnostic.message.includes('Unrecognized key: "seats"') &&
           diagnostic.severity === 'error',
       ),
       true,

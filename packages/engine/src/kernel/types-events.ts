@@ -155,6 +155,7 @@ export interface ScenarioDeckComposition {
 export interface ScenarioPayload {
   readonly mapAssetId?: string;
   readonly pieceCatalogAssetId?: string;
+  readonly seatCatalogAssetId?: string;
   readonly eventDeckAssetId?: string;
   readonly scenarioName?: string;
   readonly yearRange?: string;

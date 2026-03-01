@@ -183,12 +183,12 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       assert.deepEqual(result!.victory, {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
-        winnerSeat: 'US',
+        winnerSeat: 'us',
         ranking: [
-          { seat: 'US', margin: 1, rank: 1, tieBreakKey: 'US' },
-          { seat: 'NVA', margin: -18, rank: 2, tieBreakKey: 'NVA' },
-          { seat: 'VC', margin: -35, rank: 3, tieBreakKey: 'VC' },
-          { seat: 'ARVN', margin: -50, rank: 4, tieBreakKey: 'ARVN' },
+          { seat: 'us', margin: 1, rank: 1, tieBreakKey: 'us' },
+          { seat: 'nva', margin: -18, rank: 2, tieBreakKey: 'nva' },
+          { seat: 'vc', margin: -35, rank: 3, tieBreakKey: 'vc' },
+          { seat: 'arvn', margin: -50, rank: 4, tieBreakKey: 'arvn' },
         ],
       });
     });
@@ -231,12 +231,12 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       assert.deepEqual(result!.victory, {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
-        winnerSeat: 'US',
+        winnerSeat: 'us',
         ranking: [
-          { seat: 'US', margin: 1, rank: 1, tieBreakKey: 'US' },
-          { seat: 'NVA', margin: -18, rank: 2, tieBreakKey: 'NVA' },
-          { seat: 'VC', margin: -35, rank: 3, tieBreakKey: 'VC' },
-          { seat: 'ARVN', margin: -50, rank: 4, tieBreakKey: 'ARVN' },
+          { seat: 'us', margin: 1, rank: 1, tieBreakKey: 'us' },
+          { seat: 'nva', margin: -18, rank: 2, tieBreakKey: 'nva' },
+          { seat: 'vc', margin: -35, rank: 3, tieBreakKey: 'vc' },
+          { seat: 'arvn', margin: -50, rank: 4, tieBreakKey: 'arvn' },
         ],
       });
     });
@@ -321,12 +321,12 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       assert.deepEqual(result!.victory, {
         timing: 'duringCoup',
         checkpointId: 'vc-victory',
-        winnerSeat: 'VC',
+        winnerSeat: 'vc',
         ranking: [
-          { seat: 'VC', margin: 1, rank: 1, tieBreakKey: 'VC' },
-          { seat: 'NVA', margin: -18, rank: 2, tieBreakKey: 'NVA' },
-          { seat: 'ARVN', margin: -50, rank: 3, tieBreakKey: 'ARVN' },
-          { seat: 'US', margin: -50, rank: 4, tieBreakKey: 'US' },
+          { seat: 'vc', margin: 1, rank: 1, tieBreakKey: 'vc' },
+          { seat: 'nva', margin: -18, rank: 2, tieBreakKey: 'nva' },
+          { seat: 'arvn', margin: -50, rank: 3, tieBreakKey: 'arvn' },
+          { seat: 'us', margin: -50, rank: 4, tieBreakKey: 'us' },
         ],
       });
     });
@@ -390,8 +390,8 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       const passiveRanking = assertFinalCoupWin(terminalResult(def, passiveState));
 
       // Extract US margins from rankings.
-      const activeUsMargin = marginForSeat(activeRanking, 'US');
-      const passiveUsMargin = marginForSeat(passiveRanking, 'US');
+      const activeUsMargin = marginForSeat(activeRanking, 'us');
+      const passiveUsMargin = marginForSeat(passiveRanking, 'us');
 
       assert.ok(
         activeUsMargin > passiveUsMargin,
@@ -427,8 +427,8 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       );
       const passiveRanking = assertFinalCoupWin(terminalResult(def, passiveState));
 
-      const activeVcMargin = marginForSeat(activeRanking, 'VC');
-      const passiveVcMargin = marginForSeat(passiveRanking, 'VC');
+      const activeVcMargin = marginForSeat(activeRanking, 'vc');
+      const passiveVcMargin = marginForSeat(passiveRanking, 'vc');
 
       assert.ok(
         activeVcMargin > passiveVcMargin,
@@ -469,8 +469,8 @@ describe('FITL active support/opposition doubling in victory calculations', () =
 
       const ranking = assertFinalCoupWin(terminalResult(def, state));
 
-      const usMargin = marginForSeat(ranking, 'US');
-      const vcMargin = marginForSeat(ranking, 'VC');
+      const usMargin = marginForSeat(ranking, 'us');
+      const vcMargin = marginForSeat(ranking, 'vc');
 
       assert.equal(usMargin, -37,
         'US margin = Active Support Saigon(6x2=12) + Passive Support Da Nang(1x1=1) + 0 pieces - 50 = -37');
@@ -496,7 +496,7 @@ describe('FITL active support/opposition doubling in victory calculations', () =
       );
 
       const ranking = assertFinalCoupWin(terminalResult(def, state));
-      const usMargin = marginForSeat(ranking, 'US');
+      const usMargin = marginForSeat(ranking, 'us');
 
       // US margin = Active Support Da Nang(1x2=2) + 0 pieces - 50 = -48
       // Saigon neutral contributes 0 despite pop 6.

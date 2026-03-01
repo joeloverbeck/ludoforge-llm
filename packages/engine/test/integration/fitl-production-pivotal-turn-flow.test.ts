@@ -14,17 +14,17 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const OWNED_PIVOTAL_CARD_BY_SEAT: Readonly<Record<string, string>> = {
-  US: 'card-121',
-  ARVN: 'card-123',
-  NVA: 'card-122',
-  VC: 'card-124',
+  us: 'card-121',
+  arvn: 'card-123',
+  nva: 'card-122',
+  vc: 'card-124',
 };
 
 const PLAYER_BY_SEAT: Readonly<Record<string, number>> = {
-  US: 0,
-  ARVN: 1,
-  NVA: 2,
-  VC: 3,
+  us: 0,
+  arvn: 1,
+  nva: 2,
+  vc: 3,
 };
 
 const withLookaheadCoup = (def: GameDef, state: GameState, isCoup: boolean): GameState => {
@@ -73,10 +73,10 @@ const withEligibilityPair = (
       runtime: {
         ...runtime,
         eligibility: {
-          US: options.activeSeat === 'US' || options.firstEligible === 'US' || options.secondEligible === 'US',
-          ARVN: options.activeSeat === 'ARVN' || options.firstEligible === 'ARVN' || options.secondEligible === 'ARVN',
-          NVA: options.activeSeat === 'NVA' || options.firstEligible === 'NVA' || options.secondEligible === 'NVA',
-          VC: options.activeSeat === 'VC' || options.firstEligible === 'VC' || options.secondEligible === 'VC',
+          us: options.activeSeat === 'us' || options.firstEligible === 'us' || options.secondEligible === 'us',
+          arvn: options.activeSeat === 'arvn' || options.firstEligible === 'arvn' || options.secondEligible === 'arvn',
+          nva: options.activeSeat === 'nva' || options.firstEligible === 'nva' || options.secondEligible === 'nva',
+          vc: options.activeSeat === 'vc' || options.firstEligible === 'vc' || options.secondEligible === 'vc',
         },
         currentCard: {
           ...runtime.currentCard,
@@ -98,11 +98,11 @@ describe('FITL production pivotal turn-flow integration', () => {
 
     const start = withLookaheadCoup(def, initialState(def, 11, 4).state, false);
     const preActionWinnerState = withEligibilityPair(start, {
-      activeSeat: 'VC',
-      firstEligible: 'US',
-      secondEligible: 'VC',
+      activeSeat: 'vc',
+      firstEligible: 'us',
+      secondEligible: 'vc',
     });
-    const activeSeat = 'VC';
+    const activeSeat = 'vc';
     const expectedCardId = OWNED_PIVOTAL_CARD_BY_SEAT[activeSeat];
     assert.notEqual(expectedCardId, undefined, `Missing pivotal ownership mapping for seat ${activeSeat}`);
 
@@ -142,9 +142,9 @@ describe('FITL production pivotal turn-flow integration', () => {
       readonly lowerSeat: string;
       readonly higherSeat: string;
     }> = [
-      { lowerSeat: 'US', higherSeat: 'NVA' },
-      { lowerSeat: 'NVA', higherSeat: 'ARVN' },
-      { lowerSeat: 'ARVN', higherSeat: 'VC' },
+      { lowerSeat: 'us', higherSeat: 'nva' },
+      { lowerSeat: 'nva', higherSeat: 'arvn' },
+      { lowerSeat: 'arvn', higherSeat: 'vc' },
     ];
 
     for (const check of checks) {

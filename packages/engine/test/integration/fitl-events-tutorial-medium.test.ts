@@ -94,7 +94,7 @@ describe('FITL tutorial medium event-card production spec', () => {
 
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        seat: 'ARVN',
+        seat: 'arvn',
         sequence: { chain: 'sihanouk-unshaded-arvn', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
@@ -106,8 +106,8 @@ describe('FITL tutorial medium event-card production spec', () => {
       },
     ]);
     assert.deepEqual(card?.shaded?.freeOperationGrants, [
-      { seat: 'VC', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
-      { seat: 'NVA', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
+      { seat: 'vc', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
+      { seat: 'nva', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
     ]);
   });
 

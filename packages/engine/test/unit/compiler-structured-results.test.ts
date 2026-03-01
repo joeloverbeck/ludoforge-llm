@@ -213,16 +213,22 @@ describe('compiler structured section results', () => {
     );
   });
 
-  it('projects factions into gameDef when selected piece catalog declares them', () => {
+  it('projects seats into gameDef from selected seat catalog', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
       dataAssets: [
         {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'us' }],
+          },
+        },
+        {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            seats: [{ id: 'us' }],
             pieceTypes: [
               {
                 id: 'us-troops',
@@ -244,21 +250,27 @@ describe('compiler structured section results', () => {
     assert.deepEqual(result.gameDef?.seats, [{ id: 'us' }]);
   });
 
-  it('prefers named turn-flow seats over piece-catalog seats for selector lowering when both are present', () => {
+  it('uses seat-catalog seats for selector lowering', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
       dataAssets: [
         {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'us' }, { id: 'nva' }],
+          },
+        },
+        {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            seats: [{ id: 'VC' }],
             pieceTypes: [
-              { id: 'vc-guerrilla', seat: 'VC', statusDimensions: [], transitions: [] },
+              { id: 'nva-guerrilla', seat: 'nva', statusDimensions: [], transitions: [] },
             ],
             inventory: [
-              { pieceTypeId: 'vc-guerrilla', seat: 'VC', total: 1 },
+              { pieceTypeId: 'nva-guerrilla', seat: 'nva', total: 1 },
             ],
           },
         },
@@ -286,17 +298,23 @@ describe('compiler structured section results', () => {
     assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 1 });
   });
 
-  it('rejects numeric turn-flow seat ids even when piece-catalog seats are present in matching count', () => {
+  it('rejects turn-flow seat ids that are missing from seat catalog', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
       metadata: { id: 'asset-cascade-seat-index-canonicalization', players: { min: 4, max: 4 } },
       dataAssets: [
         {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+          },
+        },
+        {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
             pieceTypes: [
               { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
               { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
@@ -334,13 +352,13 @@ describe('compiler structured section results', () => {
     assert.equal(result.gameDef, null);
     assert.equal(
       result.diagnostics.some(
-        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_IDENTITY_INDEX_FORBIDDEN',
+        (diagnostic) => diagnostic.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING',
       ),
       true,
     );
   });
 
-  it('emits explicit index-seat-forbidden diagnostic for index turn-flow/piece-catalog count mismatch', () => {
+  it('requires seat catalog for card-driven turn flow', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
@@ -350,7 +368,6 @@ describe('compiler structured section results', () => {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
             pieceTypes: [
               { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
               { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
@@ -386,13 +403,13 @@ describe('compiler structured section results', () => {
     assert.equal(result.gameDef, null);
     assert.equal(
       result.diagnostics.some(
-        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_IDENTITY_INDEX_FORBIDDEN',
+        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED',
       ),
       true,
     );
   });
 
-  it('fails compile when selected piece catalog omits required factions catalog', () => {
+  it('accepts piece catalogs without embedded seat declarations', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
@@ -418,14 +435,14 @@ describe('compiler structured section results', () => {
 
     const result = compileGameSpecToGameDef(doc);
 
-    assert.equal(result.gameDef, null);
+    assert.notEqual(result.gameDef, null);
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID'
           && diagnostic.path.endsWith('.payload.seats'),
       ),
-      true,
+      false,
     );
   });
 

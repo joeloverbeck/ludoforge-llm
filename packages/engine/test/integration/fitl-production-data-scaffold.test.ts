@@ -16,10 +16,10 @@ describe('fitl production data scaffold', () => {
 
     const dataAssets = parsed.doc.dataAssets;
     assert.ok(dataAssets !== null);
-    assert.equal(dataAssets.length, 5);
+    assert.equal(dataAssets.length, 6);
     assert.deepEqual(
       dataAssets.map((asset) => asset.kind),
-      ['map', 'pieceCatalog', 'scenario', 'scenario', 'scenario'],
+      ['map', 'pieceCatalog', 'seatCatalog', 'scenario', 'scenario', 'scenario'],
     );
 
     const eventDecks = parsed.doc.eventDecks;

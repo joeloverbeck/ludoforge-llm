@@ -44,10 +44,12 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
 
   const mapAssetIds = new Set<string>();
   const pieceCatalogAssetIds = new Set<string>();
+  const seatCatalogAssetIds = new Set<string>();
   const scenarioRefs: Array<{
     readonly path: string;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
+    readonly seatCatalogAssetId?: string;
     readonly payload: Record<string, unknown>;
   }> = [];
   const resolvedMapPayloads = new Map<string, Record<string, unknown>>();
@@ -102,6 +104,9 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       if (isRecord(asset.payload)) {
         resolvedPieceCatalogPayloads.set(normalizedPcId, asset.payload);
       }
+    } else if (asset.kind === 'seatCatalog') {
+      const normalizedSeatCatalogId = normalizeIdentifier(asset.id);
+      seatCatalogAssetIds.add(normalizedSeatCatalogId);
     } else if (asset.kind === 'scenario') {
       const payload = asset.payload;
       const basePath = `${path}.payload`;
@@ -124,12 +129,17 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
         typeof payload.pieceCatalogAssetId === 'string' && payload.pieceCatalogAssetId.trim() !== ''
           ? normalizeIdentifier(payload.pieceCatalogAssetId)
           : undefined;
+      const seatCatalogAssetId =
+        typeof payload.seatCatalogAssetId === 'string' && payload.seatCatalogAssetId.trim() !== ''
+          ? normalizeIdentifier(payload.seatCatalogAssetId)
+          : undefined;
 
       scenarioRefs.push({
         path: basePath,
         payload,
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
+        ...(seatCatalogAssetId === undefined ? {} : { seatCatalogAssetId }),
       });
     }
   }
@@ -157,6 +167,17 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
         reference.pieceCatalogAssetId,
         [...pieceCatalogAssetIds],
         'Use one of the declared pieceCatalog data asset ids.',
+      );
+    }
+    if (reference.seatCatalogAssetId !== undefined && !seatCatalogAssetIds.has(reference.seatCatalogAssetId)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'CNL_VALIDATOR_REFERENCE_MISSING',
+        `${reference.path}.seatCatalogAssetId`,
+        `Unknown seatCatalog data asset "${reference.seatCatalogAssetId}".`,
+        reference.seatCatalogAssetId,
+        [...seatCatalogAssetIds],
+        'Use one of the declared seatCatalog data asset ids.',
       );
     }
   }

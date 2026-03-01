@@ -11,6 +11,7 @@ import type {
   PieceStatusDimension,
   RuntimeDataAsset,
   RuntimeTableContract,
+  SeatCatalogPayload,
   ScenarioPayload,
   SpaceMarkerLatticeDef,
   SpaceMarkerValueDef,
@@ -107,12 +108,14 @@ export function deriveSectionsFromDataAssets(
 
   const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
   const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
+  const seatCatalogAssets: Array<{ readonly id: string; readonly payload: SeatCatalogPayload }> = [];
   const runtimeDataAssets: RuntimeDataAsset[] = [];
   const tableContracts: RuntimeTableContract[] = [];
   const scenarioRefs: Array<{
     readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
+    readonly seatCatalogAssetId?: string;
     readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
     readonly path: string;
     readonly entityId: string;
@@ -178,6 +181,14 @@ export function deriveSectionsFromDataAssets(
       continue;
     }
 
+    if (validated.asset.kind === 'seatCatalog') {
+      seatCatalogAssets.push({
+        id: validated.asset.id,
+        payload: validated.asset.payload as SeatCatalogPayload,
+      });
+      continue;
+    }
+
     if (validated.asset.kind === 'scenario') {
       const payload = validated.asset.payload as ScenarioPayload;
       const mapAssetId =
@@ -186,10 +197,15 @@ export function deriveSectionsFromDataAssets(
         typeof payload.pieceCatalogAssetId === 'string' && payload.pieceCatalogAssetId.trim() !== ''
           ? payload.pieceCatalogAssetId.trim()
           : undefined;
+      const seatCatalogAssetId =
+        typeof payload.seatCatalogAssetId === 'string' && payload.seatCatalogAssetId.trim() !== ''
+          ? payload.seatCatalogAssetId.trim()
+          : undefined;
       scenarioRefs.push({
         payload,
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
+        ...(seatCatalogAssetId === undefined ? {} : { seatCatalogAssetId }),
         ...(payload.initializations === undefined
           ? {}
           : { initialTrackValues: collectScenarioTrackInitializations(payload.initializations, `${pathPrefix}.payload`) }),
@@ -233,6 +249,19 @@ export function deriveSectionsFromDataAssets(
     : { selected: undefined, failed: false };
   pieceCatalogDerivationFailed = pieceCatalogDerivationFailed || selectedPieceCatalogResult.failed;
   const selectedPieceCatalog = selectedPieceCatalogResult.selected;
+  const shouldResolveSeatCatalog =
+    !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length === 1);
+  const selectedSeatCatalogResult = shouldResolveSeatCatalog
+    ? selectAssetById(
+        seatCatalogAssets,
+        selectedScenario?.seatCatalogAssetId,
+        diagnostics,
+        'seatCatalog',
+        selectedScenario?.path ?? 'doc.dataAssets',
+        selectedScenario?.entityId,
+      )
+    : { selected: undefined, failed: false };
+  const selectedSeatCatalog = selectedSeatCatalogResult.selected;
 
   const zones =
     selectedMap === undefined
@@ -288,7 +317,7 @@ export function deriveSectionsFromDataAssets(
   return {
     zones,
     tokenTypes,
-    seats: selectedPieceCatalog?.payload.seats ?? null,
+    seats: selectedSeatCatalog?.payload.seats ?? null,
     tracks: selectedMap?.payload.tracks ?? null,
     scenarioInitialTrackValues: selectedScenario?.initialTrackValues ?? null,
     markerLattices: selectedMap?.payload.markerLattices ?? null,
@@ -329,6 +358,7 @@ function selectScenarioRef(
     readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
+    readonly seatCatalogAssetId?: string;
     readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
     readonly path: string;
     readonly entityId: string;
@@ -341,6 +371,7 @@ function selectScenarioRef(
         readonly payload: ScenarioPayload;
         readonly mapAssetId?: string;
         readonly pieceCatalogAssetId?: string;
+        readonly seatCatalogAssetId?: string;
         readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
         readonly path: string;
         readonly entityId: string;
@@ -945,7 +976,7 @@ function selectAssetById<TPayload>(
   assets: ReadonlyArray<{ readonly id: string; readonly payload: TPayload }>,
   selectedId: string | undefined,
   diagnostics: Diagnostic[],
-  kind: 'map' | 'pieceCatalog',
+  kind: 'map' | 'pieceCatalog' | 'seatCatalog',
   selectedPath: string,
   entityId?: string,
 ): {

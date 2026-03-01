@@ -61,7 +61,7 @@ describe('FITL card-10 Rolling Thunder', () => {
     const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-10');
     assert.notEqual(card, undefined, 'Expected card-10 in production deck');
     assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
-      { target: { kind: 'seat', seat: 'NVA' }, eligible: false, windowId: 'make-ineligible' },
+      { target: { kind: 'seat', seat: 'nva' }, eligible: false, windowId: 'make-ineligible' },
     ]);
     assert.deepEqual(card?.unshaded?.effects, [
       { addVar: { scope: 'global', var: 'trail', delta: -2 } },
@@ -83,8 +83,8 @@ describe('FITL card-10 Rolling Thunder', () => {
           ...requireCardDrivenRuntime(base),
           currentCard: {
             ...requireCardDrivenRuntime(base).currentCard,
-            firstEligible: 'US',
-            secondEligible: 'ARVN',
+            firstEligible: 'us',
+            secondEligible: 'arvn',
             actedSeats: [],
             passedSeats: [],
             nonPassCount: 0,
@@ -115,14 +115,14 @@ describe('FITL card-10 Rolling Thunder', () => {
     );
     assert.deepEqual(
       (overrideCreate as { overrides?: readonly unknown[] } | undefined)?.overrides,
-      [{ seat: 'NVA', eligible: false, windowId: 'make-ineligible', duration: 'nextTurn' }],
+      [{ seat: 'nva', eligible: false, windowId: 'make-ineligible', duration: 'nextTurn' }],
       'Unshaded should queue a nextTurn make-ineligible override for NVA',
     );
 
     const pendingOverrides = requireCardDrivenRuntime(first.state).pendingEligibilityOverrides ?? [];
     assert.deepEqual(
       pendingOverrides,
-      [{ seat: 'NVA', eligible: false, windowId: 'make-ineligible', duration: 'nextTurn' }],
+      [{ seat: 'nva', eligible: false, windowId: 'make-ineligible', duration: 'nextTurn' }],
       'NVA ineligibility should be queued with nextTurn duration (through next card)',
     );
   });

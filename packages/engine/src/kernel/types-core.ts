@@ -253,7 +253,7 @@ export interface GameDef {
   readonly tableContracts?: readonly RuntimeTableContract[];
 }
 
-export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog'] as const;
+export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog'] as const;
 export type KnownDataAssetKind = (typeof KNOWN_DATA_ASSET_KINDS)[number];
 export type DataAssetKind = string;
 
@@ -284,6 +284,9 @@ export interface PieceInventoryEntry {
 export interface PieceCatalogPayload {
   readonly pieceTypes: readonly PieceTypeCatalogEntry[];
   readonly inventory: readonly PieceInventoryEntry[];
+}
+
+export interface SeatCatalogPayload {
   readonly seats: readonly SeatDef[];
 }
 

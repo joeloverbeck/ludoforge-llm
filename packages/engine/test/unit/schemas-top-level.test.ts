@@ -245,9 +245,20 @@ describe('top-level runtime schemas', () => {
       id: 'fitl-piece-catalog',
       kind: 'pieceCatalog',
       payload: {
-        seats: [{ id: 'vc' }],
         pieceTypes: [],
         inventory: [],
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts seat-catalog data-asset envelope kind', () => {
+    const result = DataAssetEnvelopeSchema.safeParse({
+      id: 'fitl-seat-catalog',
+      kind: 'seatCatalog',
+      payload: {
+        seats: [{ id: 'vc' }],
       },
     });
 
@@ -347,7 +358,6 @@ describe('top-level runtime schemas', () => {
 
   it('parses valid piece-catalog payload contracts', () => {
     const result = PieceCatalogPayloadSchema.safeParse({
-      seats: [{ id: 'vc' }],
       pieceTypes: [
         {
           id: 'vc-guerrilla',
@@ -362,14 +372,13 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
-  it('rejects piece-catalog payloads missing factions catalog', () => {
+  it('accepts piece-catalog payloads without embedded seats', () => {
     const result = PieceCatalogPayloadSchema.safeParse({
       pieceTypes: [],
       inventory: [],
     });
 
-    assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'seats'));
+    assert.equal(result.success, true);
   });
 
   it('parses a minimal valid GameDef with zero issues', () => {

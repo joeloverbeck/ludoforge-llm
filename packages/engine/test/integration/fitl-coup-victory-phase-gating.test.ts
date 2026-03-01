@@ -69,12 +69,12 @@ describe('FITL coup victory phase gating', () => {
       victory: {
         timing: 'duringCoup',
         checkpointId: 'us-victory',
-        winnerSeat: 'US',
+        winnerSeat: 'us',
         ranking: [
-          { seat: 'US', margin: 1, rank: 1, tieBreakKey: 'US' },
-          { seat: 'NVA', margin: -18, rank: 2, tieBreakKey: 'NVA' },
-          { seat: 'VC', margin: -35, rank: 3, tieBreakKey: 'VC' },
-          { seat: 'ARVN', margin: -50, rank: 4, tieBreakKey: 'ARVN' },
+          { seat: 'us', margin: 1, rank: 1, tieBreakKey: 'us' },
+          { seat: 'nva', margin: -18, rank: 2, tieBreakKey: 'nva' },
+          { seat: 'vc', margin: -35, rank: 3, tieBreakKey: 'vc' },
+          { seat: 'arvn', margin: -50, rank: 4, tieBreakKey: 'arvn' },
         ],
       },
     });
@@ -146,12 +146,12 @@ describe('FITL coup victory phase gating', () => {
       victory: {
         timing: 'finalCoup',
         checkpointId: 'final-coup-ranking',
-        winnerSeat: 'NVA',
+        winnerSeat: 'nva',
         ranking: [
-          { seat: 'NVA', margin: -18, rank: 1, tieBreakKey: 'NVA' },
-          { seat: 'VC', margin: -35, rank: 2, tieBreakKey: 'VC' },
-          { seat: 'ARVN', margin: -50, rank: 3, tieBreakKey: 'ARVN' },
-          { seat: 'US', margin: -50, rank: 4, tieBreakKey: 'US' },
+          { seat: 'nva', margin: -18, rank: 1, tieBreakKey: 'nva' },
+          { seat: 'vc', margin: -35, rank: 2, tieBreakKey: 'vc' },
+          { seat: 'arvn', margin: -50, rank: 3, tieBreakKey: 'arvn' },
+          { seat: 'us', margin: -50, rank: 4, tieBreakKey: 'us' },
         ],
       },
     });

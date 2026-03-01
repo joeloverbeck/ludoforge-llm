@@ -74,10 +74,10 @@ describe('FITL production data integration compilation', () => {
         leader: 'leader:none',
       });
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.passRewards, [
-        { seat: 'US', resource: 'arvnResources', amount: 3 },
-        { seat: 'ARVN', resource: 'arvnResources', amount: 3 },
-        { seat: 'NVA', resource: 'nvaResources', amount: 1 },
-        { seat: 'VC', resource: 'vcResources', amount: 1 },
+        { seat: 'us', resource: 'arvnResources', amount: 3 },
+        { seat: 'arvn', resource: 'arvnResources', amount: 3 },
+        { seat: 'nva', resource: 'nvaResources', amount: 1 },
+        { seat: 'vc', resource: 'vcResources', amount: 1 },
       ]);
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.durationWindows, ['turn', 'nextTurn', 'round', 'cycle']);
       assert.equal(
@@ -105,7 +105,7 @@ describe('FITL production data integration compilation', () => {
         requirePreActionWindow: true,
         disallowWhenLookaheadIsCoup: true,
         interrupt: {
-          precedence: ['VC', 'ARVN', 'NVA', 'US'],
+          precedence: ['vc', 'arvn', 'nva', 'us'],
         },
       });
       assert.equal(
@@ -324,11 +324,18 @@ describe('FITL production data integration compilation', () => {
     const pieceCatalogPayload = pieceCatalogAsset.payload as {
       readonly pieceTypes?: readonly PieceTypeLike[];
       readonly inventory?: readonly InventoryEntryLike[];
-      readonly seats?: readonly FactionLike[];
     };
     assert.ok(Array.isArray(pieceCatalogPayload.pieceTypes), 'Expected pieceTypes array');
     assert.ok(Array.isArray(pieceCatalogPayload.inventory), 'Expected inventory array');
-    assert.ok(Array.isArray(pieceCatalogPayload.seats), 'Expected factions array');
+
+    const seatCatalogAsset = (parsed.doc.dataAssets ?? []).find(
+      (asset) => asset.id === 'fitl-seat-catalog-production' && asset.kind === 'seatCatalog',
+    );
+    assert.ok(seatCatalogAsset, 'Expected fitl-seat-catalog-production seat catalog asset');
+    const seatCatalogPayload = seatCatalogAsset.payload as {
+      readonly seats?: readonly FactionLike[];
+    };
+    assert.ok(Array.isArray(seatCatalogPayload.seats), 'Expected seat catalog seats array');
 
     assert.equal(pieceCatalogPayload.pieceTypes.length, 12);
     const inventoryTotal = pieceCatalogPayload.inventory.reduce((sum, entry) => sum + entry.total, 0);

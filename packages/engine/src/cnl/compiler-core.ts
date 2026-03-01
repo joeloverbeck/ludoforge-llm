@@ -375,13 +375,19 @@ function compileExpandedDoc(
   }
   const freeOperationActionIds =
     sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.freeOperationActionIds : undefined;
-  const turnFlowSeatIds =
-    sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.eligibility.seats : undefined;
   const seatIdentityContract = buildSeatIdentityContract({
-    turnFlowSeatIds,
-    pieceCatalogSeatIds: derivedFromAssets.seats?.map((seat) => seat.id),
+    seatCatalogSeatIds: derivedFromAssets.seats?.map((seat) => seat.id),
   });
   diagnostics.push(...seatIdentityContract.diagnostics);
+  if (sections.turnOrder?.type === 'cardDriven' && seatIdentityContract.contract.referenceSeatIds === undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SEAT_CATALOG_REQUIRED,
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: 'Card-driven turn flow requires a seatCatalog data asset for canonical seat identity.',
+      suggestion: 'Add one seatCatalog data asset and reference it from the selected scenario via seatCatalogAssetId.',
+    });
+  }
   const seatIds = seatIdentityContract.contract.selectorSeatIds;
   const loweringContext: EffectLoweringSharedContext = {
     ownershipByBase,

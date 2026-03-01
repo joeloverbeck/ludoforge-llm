@@ -20,7 +20,7 @@ function createEventDeckSequenceParityDoc(freeOperationActionIds: readonly strin
   const riskySequenceEffects = [
     {
       grantFreeOperation: {
-        seat: '1',
+        seat: 'us',
         operationClass: 'operation' as const,
         actionIds: ['limitedOp'],
         sequence: { chain: 'event-deck-chain', step: 0 },
@@ -28,7 +28,7 @@ function createEventDeckSequenceParityDoc(freeOperationActionIds: readonly strin
     },
     {
       grantFreeOperation: {
-        seat: '1',
+        seat: 'us',
         operationClass: 'operation' as const,
         sequence: { chain: 'event-deck-chain', step: 1 },
       },
@@ -38,6 +38,15 @@ function createEventDeckSequenceParityDoc(freeOperationActionIds: readonly strin
   return {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'event-deck-free-op-sequence-parity', players: { min: 2, max: 4 } },
+    dataAssets: [
+      {
+        id: 'seat-catalog',
+        kind: 'seatCatalog',
+        payload: {
+          seats: [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }, { id: 'vc' }],
+        },
+      },
+    ],
     zones: [
       { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       { id: 'discard:none', owner: 'none', visibility: 'public', ordering: 'stack' },
@@ -529,6 +538,15 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'turn-flow-pass-through', players: { min: 2, max: 4 } },
+      dataAssets: [
+        {
+          id: 'seat-catalog',
+          kind: 'seatCatalog',
+          payload: {
+            seats: [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }, { id: 'vc' }],
+          },
+        },
+      ],
       globalVars: [
         { name: 'arvnResources', type: 'int', init: 0, min: 0, max: 99 },
         { name: 'factionResource', type: 'int', init: 0, min: 0, max: 99 },
@@ -552,8 +570,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
             actionClassByActionId: { pass: 'pass' as const },
             optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
             passRewards: [
-              { seat: 'coin', resource: 'arvnResources', amount: 3 },
-              { seat: 'insurgent', resource: 'factionResource', amount: 1 },
+              { seat: 'arvn', resource: 'arvnResources', amount: 3 },
+              { seat: 'nva', resource: 'factionResource', amount: 1 },
             ],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
           },
@@ -790,7 +808,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           effects: [
             {
               grantFreeOperation: {
-                seat: '1',
+                seat: 'us',
                 operationClass: 'operation' as const,
                 actionIds: ['limitedOp'],
                 sequence: { chain: 'event-deck-chain-shaded', step: 0 },
@@ -798,7 +816,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
             },
             {
               grantFreeOperation: {
-                seat: '1',
+                seat: 'us',
                 operationClass: 'operation' as const,
                 sequence: { chain: 'event-deck-chain-shaded', step: 1 },
               },
@@ -833,7 +851,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               effects: [
                 {
                   grantFreeOperation: {
-                    seat: '1',
+                    seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { chain: 'event-deck-chain-branch', step: 0 },
@@ -841,7 +859,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
                 },
                 {
                   grantFreeOperation: {
-                    seat: '1',
+                    seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { chain: 'event-deck-chain-branch', step: 1 },
                   },
@@ -879,7 +897,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               setupEffects: [
                 {
                   grantFreeOperation: {
-                    seat: '1',
+                    seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { chain: 'event-deck-chain-lasting-setup', step: 0 },
@@ -887,7 +905,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
                 },
                 {
                   grantFreeOperation: {
-                    seat: '1',
+                    seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { chain: 'event-deck-chain-lasting-setup', step: 1 },
                   },
@@ -927,7 +945,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               teardownEffects: [
                 {
                   grantFreeOperation: {
-                    seat: '1',
+                    seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { chain: 'event-deck-chain-lasting-teardown', step: 0 },
@@ -935,7 +953,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
                 },
                 {
                   grantFreeOperation: {
-                    seat: '1',
+                    seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { chain: 'event-deck-chain-lasting-teardown', step: 1 },
                   },
@@ -1854,6 +1872,15 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'coup-victory-pass-through', players: { min: 2, max: 4 } },
+      dataAssets: [
+        {
+          id: 'seat-catalog',
+          kind: 'seatCatalog',
+          payload: {
+            seats: [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }, { id: 'vc' }],
+          },
+        },
+      ],
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }, { id: 'victory' }, { id: 'resources' }] },
       turnOrder: {

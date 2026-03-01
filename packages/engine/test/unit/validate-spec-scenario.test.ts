@@ -56,10 +56,6 @@ function createMapPayload() {
 
 function createPieceCatalogPayload() {
   return {
-    seats: [
-      { id: 'us' },
-      { id: 'nva' },
-    ],
     pieceTypes: [
       {
         id: 'us-troops',
@@ -84,17 +80,25 @@ function createPieceCatalogPayload() {
   };
 }
 
+function createSeatCatalogPayload() {
+  return {
+    seats: [{ id: 'us' }, { id: 'nva' }],
+  };
+}
+
 function createDocWithScenario(scenarioPayload: Record<string, unknown>) {
   return {
     ...createBaseDoc(),
     dataAssets: [
       { id: 'test-map', kind: 'map', payload: createMapPayload() },
+      { id: 'test-seats', kind: 'seatCatalog', payload: createSeatCatalogPayload() },
       { id: 'test-pieces', kind: 'pieceCatalog', payload: createPieceCatalogPayload() },
       {
         id: 'test-scenario',
         kind: 'scenario',
         payload: {
           mapAssetId: 'test-map',
+          seatCatalogAssetId: 'test-seats',
           pieceCatalogAssetId: 'test-pieces',
           scenarioName: 'Test',
           yearRange: '1964-1972',

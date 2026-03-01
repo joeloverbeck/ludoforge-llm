@@ -176,10 +176,16 @@ describe('compile actions', () => {
       metadata: { id: 'action-seat-name-resolution', players: { min: 4, max: 4 } },
       dataAssets: [
         {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+          },
+        },
+        {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
             pieceTypes: [
               { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
               { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
@@ -214,6 +220,15 @@ describe('compile actions', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'action-seat-name-resolution-turn-flow', players: { min: 4, max: 4 } },
+      dataAssets: [
+        {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+          },
+        },
+      ],
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       turnOrder: {

@@ -46,6 +46,11 @@ export const PieceCatalogPayloadSchema = z
   .object({
     pieceTypes: z.array(PieceTypeCatalogEntrySchema),
     inventory: z.array(PieceInventoryEntrySchema),
+  })
+  .strict();
+
+export const SeatCatalogPayloadSchema = z
+  .object({
     seats: z.array(SeatDefSchema).min(1),
   })
   .strict();
@@ -219,6 +224,7 @@ export const ScenarioPayloadSchema = z
   .object({
     mapAssetId: StringSchema.min(1).optional(),
     pieceCatalogAssetId: StringSchema.min(1).optional(),
+    seatCatalogAssetId: StringSchema.min(1).optional(),
     eventDeckAssetId: StringSchema.min(1).optional(),
     scenarioName: StringSchema.min(1).optional(),
     yearRange: StringSchema.min(1).optional(),
@@ -286,6 +292,7 @@ export const KnownDataAssetKindSchema = z.union([
   z.literal('map'),
   z.literal('scenario'),
   z.literal('pieceCatalog'),
+  z.literal('seatCatalog'),
 ]);
 
 export const DataAssetKindSchema = StringSchema.min(1);

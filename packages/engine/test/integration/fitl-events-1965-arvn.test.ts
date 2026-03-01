@@ -72,15 +72,15 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
 
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        seat: 'ARVN',
-        executeAsSeat: 'US',
+        seat: 'arvn',
+        executeAsSeat: 'us',
         sequence: { chain: 'roks-arvn-as-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
-        seat: 'ARVN',
-        executeAsSeat: 'US',
+        seat: 'arvn',
+        executeAsSeat: 'us',
         sequence: { chain: 'roks-arvn-as-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],

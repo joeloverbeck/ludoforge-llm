@@ -893,11 +893,6 @@ dataAssets:
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:
-      seats:
-        - id: us
-        - id: arvn
-        - id: nva
-        - id: vc
       pieceTypes:
         - id: us-troops
           seat: us
@@ -1071,6 +1066,14 @@ dataAssets:
         - pieceTypeId: vc-bases
           seat: vc
           total: 9
+  - id: fitl-seat-catalog-production
+    kind: seatCatalog
+    payload:
+      seats:
+        - id: us
+        - id: arvn
+        - id: nva
+        - id: vc
   - id: fitl-scenario-full
     kind: scenario
     payload:

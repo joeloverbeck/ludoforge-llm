@@ -29,7 +29,7 @@ describe('texas hold\'em spec structure', () => {
 
     const dataAssets = parsed.doc.dataAssets;
     assert.ok(dataAssets !== null);
-    assert.equal(dataAssets.length, 2);
+    assert.equal(dataAssets.length, 3);
 
     const macros = parsed.doc.effectMacros;
     assert.ok(macros !== null);
@@ -79,7 +79,7 @@ describe('texas hold\'em spec structure', () => {
           payload: asset.payload,
         },
         {
-        expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+        expectedKinds: ['map', 'scenario', 'pieceCatalog', 'seatCatalog'],
         pathPrefix: `doc.dataAssets.${index}`,
         },
       );

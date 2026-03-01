@@ -32,8 +32,6 @@ dataAssets:
   - id: fitl-piece-catalog-foundation
     kind: pieceCatalog
     payload:
-      seats:
-        - id: vc
       pieceTypes:
         - id: vc-guerrilla
           seat: vc
@@ -46,6 +44,14 @@ dataAssets:
         - pieceTypeId: vc-guerrilla
           seat: vc
           total: 30
+  - id: fitl-seat-catalog-foundation
+    kind: seatCatalog
+    payload:
+      seats:
+        - id: us
+        - id: arvn
+        - id: nva
+        - id: vc
   - id: fitl-scenario-foundation
     kind: scenario
     payload:

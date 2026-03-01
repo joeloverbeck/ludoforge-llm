@@ -23,8 +23,6 @@ dataAssets:
   - id: fitl-pieces-foundation
     kind: pieceCatalog
     payload:
-      seats:
-        - id: us
       pieceTypes: []
       inventory: []
   - id: fitl-scenario-invalid

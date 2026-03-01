@@ -92,7 +92,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
 
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        seat: 'US',
+        seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['airLift'],
@@ -108,7 +108,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         },
       },
       {
-        seat: 'US',
+        seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['sweep'],
@@ -124,7 +124,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         },
       },
       {
-        seat: 'US',
+        seat: 'us',
         sequence: { chain: 'ia-drang-us', step: 2 },
         operationClass: 'operation',
         actionIds: ['assault'],

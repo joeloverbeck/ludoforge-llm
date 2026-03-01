@@ -23,7 +23,7 @@ turnOrder:
         lookahead: lookahead:none
         leader: leader:none
       eligibility:
-        seats: ['US', 'ARVN', 'NVA', 'VC']
+        seats: ['us', 'arvn', 'nva', 'vc']
         overrideWindows:
           - id: remain-eligible
             duration: nextTurn
@@ -65,17 +65,17 @@ turnOrder:
         - first: event
           second: [operation, operationPlusSpecialActivity]
       passRewards:
-        - { seat: 'US', resource: arvnResources, amount: 3 }
-        - { seat: 'ARVN', resource: arvnResources, amount: 3 }
-        - { seat: 'NVA', resource: nvaResources, amount: 1 }
-        - { seat: 'VC', resource: vcResources, amount: 1 }
+        - { seat: 'us', resource: arvnResources, amount: 3 }
+        - { seat: 'arvn', resource: arvnResources, amount: 3 }
+        - { seat: 'nva', resource: nvaResources, amount: 1 }
+        - { seat: 'vc', resource: vcResources, amount: 1 }
       freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
       cardSeatOrderMetadataKey: seatOrder
       cardSeatOrderMapping:
-        US: 'US'
-        ARVN: 'ARVN'
-        NVA: 'NVA'
-        VC: 'VC'
+        US: 'us'
+        ARVN: 'arvn'
+        NVA: 'nva'
+        VC: 'vc'
       durationWindows: [turn, nextTurn, round, cycle]
       monsoon:
         restrictedActions:
@@ -91,7 +91,7 @@ turnOrder:
         requirePreActionWindow: true
         disallowWhenLookaheadIsCoup: true
         interrupt:
-          precedence: ['VC', 'ARVN', 'NVA', 'US']
+          precedence: ['vc', 'arvn', 'nva', 'us']
     coupPlan:
       phases:
         - id: coupVictory
@@ -108,7 +108,7 @@ turnOrder:
           steps: [resolve-reset]
       finalRoundOmitPhases: [coupCommitment, coupReset]
       maxConsecutiveRounds: 1
-      seatOrder: ['US', 'ARVN', 'NVA', 'VC']
+      seatOrder: ['us', 'arvn', 'nva', 'vc']
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)

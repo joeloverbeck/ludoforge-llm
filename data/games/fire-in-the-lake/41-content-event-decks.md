@@ -96,11 +96,11 @@ eventDecks:
         unshaded:
           text: "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault."
           freeOperationGrants:
-            - seat: "ARVN"
+            - seat: "arvn"
               sequence: { chain: amphib-landing-arvn, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - seat: "ARVN"
+            - seat: "arvn"
               sequence: { chain: amphib-landing-arvn, step: 1 }
               operationClass: operation
               actionIds: [assault]
@@ -118,7 +118,7 @@ eventDecks:
         unshaded:
           text: "ARVN executes free Special Activities."
           freeOperationGrants:
-            - seat: "ARVN"
+            - seat: "arvn"
               sequence: { chain: macv-arvn-special-activity, step: 0 }
               operationClass: limitedOperation
       - id: card-70
@@ -133,13 +133,13 @@ eventDecks:
         unshaded:
           text: "ARVN Sweep/Assault in selected spaces as if US."
           freeOperationGrants:
-            - seat: "ARVN"
-              executeAsSeat: "US"
+            - seat: "arvn"
+              executeAsSeat: "us"
               sequence: { chain: roks-arvn-as-us, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - seat: "ARVN"
-              executeAsSeat: "US"
+            - seat: "arvn"
+              executeAsSeat: "us"
               sequence: { chain: roks-arvn-as-us, step: 1 }
               operationClass: operation
               actionIds: [assault]
@@ -710,8 +710,8 @@ eventDecks:
           text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
           effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "NVA"
-              executeAsSeat: "US"
+            - seat: "nva"
+              executeAsSeat: "us"
               sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
@@ -985,7 +985,7 @@ eventDecks:
           text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
           effectTiming: afterGrants
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: aces-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
@@ -1158,7 +1158,7 @@ eventDecks:
         unshaded:
           text: "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card."
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'NVA' }, eligible: false, windowId: make-ineligible }
+            - { target: { kind: seat, seat: 'nva' }, eligible: false, windowId: make-ineligible }
           effects:
             - addVar: { scope: global, var: trail, delta: -2 }
             - addVar: { scope: global, var: nvaResources, delta: -9 }
@@ -1571,15 +1571,15 @@ eventDecks:
         unshaded:
           text: "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel."
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 1 }
               operationClass: operation
               actionIds: [sweep]
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 2 }
               operationClass: operation
               actionIds: [assault]
@@ -1646,11 +1646,11 @@ eventDecks:
         unshaded:
           text: "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong."
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: tf116-us, step: 0 }
               operationClass: operation
               actionIds: [sweep, assault]
-            - seat: "ARVN"
+            - seat: "arvn"
               sequence: { chain: tf116-arvn, step: 0 }
               operationClass: operation
               actionIds: [sweep, assault]
@@ -1825,7 +1825,7 @@ eventDecks:
         unshaded:
           text: "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there."
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: ia-drang-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
@@ -1840,7 +1840,7 @@ eventDecks:
                       filter:
                         - { prop: faction, eq: NVA }
                 right: 0
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: ia-drang-us, step: 1 }
               operationClass: operation
               actionIds: [sweep]
@@ -1855,7 +1855,7 @@ eventDecks:
                       filter:
                         - { prop: faction, eq: NVA }
                 right: 0
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: ia-drang-us, step: 2 }
               operationClass: operation
               actionIds: [assault]
@@ -1951,7 +1951,7 @@ eventDecks:
         shaded:
           text: "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each. ARVN Ineligible through next card."
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'ARVN' }, eligible: false, windowId: make-ineligible }
+            - { target: { kind: seat, seat: 'arvn' }, eligible: false, windowId: make-ineligible }
           effects:
             - chooseN:
                 bind: $arvnPiecesToRemove
@@ -2247,15 +2247,15 @@ eventDecks:
         unshaded:
           text: "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes."
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: westmoreland-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: westmoreland-us, step: 1 }
               operationClass: operation
               actionIds: [sweep, assault]
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: westmoreland-us, step: 2 }
               operationClass: operation
               actionIds: [airStrike]
@@ -2388,21 +2388,21 @@ eventDecks:
         unshaded:
           text: "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US."
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: masher-white-wing-us, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: masher-white-wing-us, step: 1 }
               operationClass: operation
               actionIds: [assault]
-            - seat: "ARVN"
-              executeAsSeat: "US"
+            - seat: "arvn"
+              executeAsSeat: "us"
               sequence: { chain: masher-white-wing-arvn-as-us, step: 0 }
               operationClass: operation
               actionIds: [sweep]
-            - seat: "ARVN"
-              executeAsSeat: "US"
+            - seat: "arvn"
+              executeAsSeat: "us"
               sequence: { chain: masher-white-wing-arvn-as-us, step: 1 }
               operationClass: operation
               actionIds: [assault]
@@ -2909,7 +2909,7 @@ eventDecks:
         unshaded:
           text: "ARVN free Sweep or Assault in Cambodia."
           freeOperationGrants:
-            - seat: "ARVN"
+            - seat: "arvn"
               sequence: { chain: sihanouk-unshaded-arvn, step: 0 }
               operationClass: operation
               actionIds: [sweep, assault]
@@ -2920,10 +2920,10 @@ eventDecks:
         shaded:
           text: "VC then NVA each get a free operation."
           freeOperationGrants:
-            - seat: "VC"
+            - seat: "vc"
               sequence: { chain: sihanouk-shaded-vc-nva, step: 0 }
               operationClass: operation
-            - seat: "NVA"
+            - seat: "nva"
               sequence: { chain: sihanouk-shaded-vc-nva, step: 1 }
               operationClass: operation
       - id: card-51
@@ -3148,7 +3148,7 @@ eventDecks:
                     to:
                       zoneExpr: $targetSpace
           freeOperationGrants:
-            - seat: "US"
+            - seat: "us"
               sequence: { chain: lrrp-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
@@ -3751,7 +3751,7 @@ eventDecks:
                             to: { zoneExpr: leader:none }
                 else:
                   - grantFreeOperation:
-                      seat: "VC"
+                      seat: "vc"
                       operationClass: operation
                       actionIds: [operation]
       - id: card-103
@@ -3975,7 +3975,7 @@ eventDecks:
             - setActivePlayer:
                 player: actor
             - grantFreeOperation:
-                seat: "ARVN"
+                seat: "arvn"
                 operationClass: operation
                 actionIds: [sweep]
                 zoneFilter:
@@ -3989,7 +3989,7 @@ eventDecks:
                   name: $adjacentSpace
                 effects:
                   - grantFreeOperation:
-                      seat: "ARVN"
+                      seat: "arvn"
                       operationClass: operation
                       actionIds: [sweep]
                       zoneFilter:
@@ -3999,7 +3999,7 @@ eventDecks:
         shaded:
           text: "Remove a die roll of ARVN pieces from 1 or 2 adjacent spaces. ARVN Ineligible through next card."
           eligibilityOverrides:
-            - { target: { kind: seat, seat: 'ARVN' }, eligible: false, windowId: make-ineligible }
+            - { target: { kind: seat, seat: 'arvn' }, eligible: false, windowId: make-ineligible }
           effects:
             - chooseOne:
                 bind: $anchorSpace
@@ -4304,11 +4304,11 @@ eventDecks:
         unshaded:
           text: "NVA execute free March then free Attack."
           freeOperationGrants:
-            - seat: "NVA"
+            - seat: "nva"
               sequence: { chain: vo-nguyen-giap-nva, step: 0 }
               operationClass: operation
               actionIds: [march]
-            - seat: "NVA"
+            - seat: "nva"
               sequence: { chain: vo-nguyen-giap-nva, step: 1 }
               operationClass: operation
               actionIds: [attack]
@@ -4326,14 +4326,14 @@ eventDecks:
         unshaded:
           text: "Remove enemy pieces in one selected Highland and execute free March."
           freeOperationGrants:
-            - seat: "NVA"
+            - seat: "nva"
               sequence: { chain: plei-mei-nva, step: 0 }
               operationClass: operation
               actionIds: [march]
         shaded:
           text: "Remove COIN pieces in one selected Highland and execute free Attack."
           freeOperationGrants:
-            - seat: "NVA"
+            - seat: "nva"
               sequence: { chain: plei-mei-nva, step: 0 }
               operationClass: operation
               actionIds: [attack]
@@ -4414,22 +4414,22 @@ eventDecks:
             - id: arvn-two-free-limited-ops
               order: 1
               freeOperationGrants:
-                - seat: "ARVN"
+                - seat: "arvn"
                   sequence: { chain: uncle-ho-unshaded-arvn-two, step: 0 }
                   operationClass: limitedOperation
-                - seat: "ARVN"
+                - seat: "arvn"
                   sequence: { chain: uncle-ho-unshaded-arvn-two, step: 1 }
                   operationClass: limitedOperation
             - id: vc-then-nva-three-free-limited-ops
               order: 2
               freeOperationGrants:
-                - seat: "VC"
+                - seat: "vc"
                   sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 0 }
                   operationClass: limitedOperation
-                - seat: "VC"
+                - seat: "vc"
                   sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 1 }
                   operationClass: limitedOperation
-                - seat: "NVA"
+                - seat: "nva"
                   sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 2 }
                   operationClass: limitedOperation
         shaded:
@@ -4438,22 +4438,22 @@ eventDecks:
             - id: us-then-arvn-three-free-limited-ops
               order: 1
               freeOperationGrants:
-                - seat: "US"
+                - seat: "us"
                   sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 0 }
                   operationClass: limitedOperation
-                - seat: "ARVN"
+                - seat: "arvn"
                   sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 1 }
                   operationClass: limitedOperation
-                - seat: "ARVN"
+                - seat: "arvn"
                   sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 2 }
                   operationClass: limitedOperation
             - id: us-two-free-limited-ops
               order: 2
               freeOperationGrants:
-                - seat: "US"
+                - seat: "us"
                   sequence: { chain: uncle-ho-shaded-us-two, step: 0 }
                   operationClass: limitedOperation
-                - seat: "US"
+                - seat: "us"
                   sequence: { chain: uncle-ho-shaded-us-two, step: 1 }
                   operationClass: limitedOperation
       - id: card-63

@@ -104,7 +104,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
     const gameDef = compiled.gameDef!;
     // Set ARVN resources to 14 — would normally be blocked (14 - 5 = 9 < 10)
     const baseForFree = { ...withArvnResources(initialState(gameDef, 42, 4).state, 14), activePlayer: asPlayerId(0) };
-    const state = withPendingFreeOperationGrant(baseForFree, { seat: 'US', actionIds: ['usOp'] });
+    const state = withPendingFreeOperationGrant(baseForFree, { seat: 'us', actionIds: ['usOp'] });
 
     const move: Move = { actionId: asActionId('usOp'), params: {}, freeOperation: true };
     const result = applyMove(gameDef, state, move);

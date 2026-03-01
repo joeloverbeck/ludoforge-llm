@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 import type { Diagnostic } from './diagnostics.js';
 import { validateMapPayload } from './map-model.js';
 import { validatePieceCatalogPayload } from './piece-catalog.js';
+import { validateSeatCatalogPayload } from './seat-catalog.js';
 import { DataAssetEnvelopeSchema } from './schemas.js';
 import type { DataAssetEnvelope } from './types.js';
 
@@ -89,6 +90,16 @@ export function validateDataAssetEnvelope(
   if (envelope.kind === 'map') {
     diagnostics.push(
       ...validateMapPayload(envelope.payload, {
+        pathPrefix: `${pathPrefix}.payload`,
+        ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
+        entityId: envelope.id,
+      }),
+    );
+  }
+
+  if (envelope.kind === 'seatCatalog') {
+    diagnostics.push(
+      ...validateSeatCatalogPayload(envelope.payload, {
         pathPrefix: `${pathPrefix}.payload`,
         ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
         entityId: envelope.id,

@@ -24,6 +24,15 @@ function createRichCompilableDoc(): GameSpecDoc {
   return {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'cross-validate-rich', players: { min: 2, max: 2 } },
+    dataAssets: [
+      {
+        id: 'seats',
+        kind: 'seatCatalog',
+        payload: {
+          seats: [{ id: 'us' }, { id: 'arvn' }],
+        },
+      },
+    ],
     globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 50 }],
     zones: [
       { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' },
@@ -43,7 +52,7 @@ function createRichCompilableDoc(): GameSpecDoc {
           eligibility: { seats: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
           actionClassByActionId: { act: 'operation', pass: 'pass', event: 'event' },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
-          passRewards: [{ seat: 'coin', resource: 'resources', amount: 2 }],
+          passRewards: [{ seat: 'us', resource: 'resources', amount: 2 }],
           durationWindows: ['turn' as const],
         },
         coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },
@@ -119,11 +128,8 @@ function compileRichSections(): CompileSectionResults {
 }
 
 function crossValidate(sections: CompileSectionResults) {
-  const turnFlowSeatIds =
-    sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.eligibility.seats : undefined;
   const seatIdentityContract = buildSeatIdentityContract({
-    turnFlowSeatIds,
-    pieceCatalogSeatIds: undefined,
+    seatCatalogSeatIds: ['us', 'arvn'],
   });
   return crossValidateSpec(sections, seatIdentityContract.contract);
 }
@@ -213,7 +219,7 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
-  it('uses canonical piece-catalog seat ids for cross-ref targets when turn-flow seats are index-based', () => {
+  it('flags turn-flow eligibility seats that are not present in seat catalog', () => {
     const sections = compileRichSections();
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
@@ -240,19 +246,15 @@ describe('crossValidateSpec', () => {
     };
 
     const seatIdentityContract = buildSeatIdentityContract({
-      turnFlowSeatIds: ['0', '1'],
-      pieceCatalogSeatIds: ['us', 'arvn'],
+      seatCatalogSeatIds: ['us', 'arvn'],
     });
-    assert.equal(seatIdentityContract.contract.mode, 'turn-flow-index-forbidden');
-    assert.equal(
-      seatIdentityContract.diagnostics.some((entry) => entry.code === 'CNL_COMPILER_SEAT_IDENTITY_INDEX_FORBIDDEN'),
-      true,
-    );
+    assert.equal(seatIdentityContract.contract.mode, 'seat-catalog');
+    assert.deepEqual(seatIdentityContract.diagnostics, []);
 
     const diagnostics = crossValidateSpec(withIndexSeats, seatIdentityContract.contract);
     assert.equal(
-      diagnostics.some((entry) => entry.code === 'CNL_XREF_VICTORY_SEAT_MISSING'),
-      false,
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'),
+      true,
     );
   });
 

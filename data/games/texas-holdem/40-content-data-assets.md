@@ -5,8 +5,6 @@ dataAssets:
   - id: standard-52-deck
     kind: pieceCatalog
     payload:
-      seats:
-        - id: neutral
       pieceTypes:
         - id: card-2S
           seat: neutral
@@ -633,6 +631,11 @@ dataAssets:
         - pieceTypeId: card-AC
           seat: neutral
           total: 1
+  - id: standard-seat-catalog
+    kind: seatCatalog
+    payload:
+      seats:
+        - id: neutral
   - id: tournament-standard
     kind: scenario
     tableContracts:

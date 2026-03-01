@@ -258,6 +258,149 @@ actor: 'active',
     );
   });
 
+  it('emits direct map ambiguity diagnostics when selector is omitted across multiple maps', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-map-ambiguity',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-a',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          category: province',
+      '          attributes:',
+      '            population: 1',
+      '            econ: 1',
+      '            terrainTags: [lowland]',
+      '            country: south-vietnam',
+      '            coastal: false',
+      '          adjacentTo: []',
+      '  - id: map-b',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: bravo:none',
+      '          category: province',
+      '          attributes:',
+      '            population: 1',
+      '            econ: 1',
+      '            terrainTags: [lowland]',
+      '            country: south-vietnam',
+      '            coastal: false',
+      '          adjacentTo: []',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple map assets found'),
+      ),
+      true,
+    );
+  });
+
+  it('emits direct pieceCatalog ambiguity diagnostics when selector is omitted across multiple catalogs', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-piece-catalog-ambiguity',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: pieces-a',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes:',
+      '        - id: us-troops',
+      '          seat: us',
+      '          statusDimensions: []',
+      '          transitions: []',
+      '      inventory:',
+      '        - pieceTypeId: us-troops',
+      '          seat: us',
+      '          total: 1',
+      '  - id: pieces-b',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes:',
+      '        - id: nva-regular',
+      '          seat: nva',
+      '          statusDimensions: []',
+      '          transitions: []',
+      '      inventory:',
+      '        - pieceTypeId: nva-regular',
+      '          seat: nva',
+      '          total: 1',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple pieceCatalog assets found'),
+      ),
+      true,
+    );
+  });
+
   it('executes runtime assetRows + assetField logic from embedded dataAssets', () => {
     const markdown = [
       '```yaml',
@@ -771,6 +914,138 @@ actor: 'active',
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(compiled.gameDef?.seats, [{ id: 'nva' }]);
     assert.deepEqual(compiled.gameDef?.tokenTypes.map((tokenType) => tokenType.id), ['nva-regular']);
+  });
+
+  it('emits direct seat-catalog ambiguity diagnostics when selector is omitted across multiple catalogs', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-seat-catalog-ambiguity',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: seats-a',
+      '    kind: seatCatalog',
+      '    payload:',
+      '      seats:',
+      '        - id: US',
+      '  - id: seats-b',
+      '    kind: seatCatalog',
+      '    payload:',
+      '      seats:',
+      '        - id: ARVN',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'turnOrder:',
+      '  type: cardDriven',
+      '  config:',
+      '    turnFlow:',
+      '      cardLifecycle:',
+      '        played: deck:none',
+      '        lookahead: deck:none',
+      '        leader: deck:none',
+      '      eligibility:',
+      '        seats: ["US", "ARVN"]',
+      '        overrideWindows: []',
+      '      actionClassByActionId:',
+      '        pass: pass',
+      '      optionMatrix: []',
+      '      passRewards: []',
+      '      durationWindows: [turn, nextTurn, round, cycle]',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple seatCatalog assets found'),
+      ),
+      true,
+    );
+    assert.equal(
+      compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      false,
+    );
+  });
+
+  it('emits deterministic missing seat-catalog selector diagnostics with alternatives', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-seat-catalog-missing-ref',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: seats-foundation',
+      '    kind: seatCatalog',
+      '    payload:',
+      '      seats:',
+      '        - id: US',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      seatCatalogAssetId: seats-missing',
+      '      scenarioName: Foundation',
+      '      yearRange: 1964-1965',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const missingDiagnostic = compiled.diagnostics.find(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING'
+        && diagnostic.path === 'doc.dataAssets.1.payload.seatCatalogAssetId',
+    );
+
+    assertNoErrors(parsed);
+    assert.notEqual(missingDiagnostic, undefined);
+    assert.deepEqual(missingDiagnostic?.alternatives, ['seats-foundation']);
   });
 
   it('accepts selected piece catalog without embedded seat declarations', () => {

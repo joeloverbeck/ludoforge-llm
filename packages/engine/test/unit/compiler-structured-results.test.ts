@@ -134,6 +134,56 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('emits map ambiguity diagnostics when multiple maps exist without selector', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: null,
+      dataAssets: [
+        {
+          id: 'map-a',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'map-b',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'bravo:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple map assets found'),
+      ),
+      true,
+    );
+  });
+
   it('merges map-derived zones with explicit YAML zones when both are declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
@@ -208,6 +258,44 @@ describe('compiler structured section results', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING' && diagnostic.severity === 'warning',
+      ),
+      true,
+    );
+  });
+
+  it('emits pieceCatalog ambiguity diagnostics when multiple piece catalogs exist without selector', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      tokenTypes: null,
+      dataAssets: [
+        {
+          id: 'pieces-a',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        {
+          id: 'pieces-b',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'nva-regular', seat: 'nva', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'nva-regular', seat: 'nva', total: 1 }],
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple pieceCatalog assets found'),
       ),
       true,
     );
@@ -504,6 +592,94 @@ describe('compiler structured section results', () => {
       ),
       false,
     );
+  });
+
+  it('emits seat-catalog ambiguity and suppresses seat-catalog-required cascade for card-driven docs', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'seats-a',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }],
+          },
+        },
+        {
+          id: 'seats-b',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'ARVN' }],
+          },
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.message.includes('Multiple seatCatalog assets found')
+          && diagnostic.path === 'doc.dataAssets',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      false,
+    );
+  });
+
+  it('emits missing seat-catalog selector diagnostics with alternatives', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'seats-foundation',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }],
+          },
+        },
+        {
+          id: 'scenario-foundation',
+          kind: 'scenario' as const,
+          payload: {
+            seatCatalogAssetId: 'seats-missing',
+            scenarioName: 'Foundation',
+            yearRange: '1964-1965',
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const missingSeatCatalogDiagnostic = result.diagnostics.find(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING'
+        && diagnostic.path === 'doc.dataAssets.1.payload.seatCatalogAssetId',
+    );
+
+    assert.notEqual(missingSeatCatalogDiagnostic, undefined);
+    assert.deepEqual(missingSeatCatalogDiagnostic?.alternatives, ['seats-foundation']);
   });
 
   it('accepts piece catalogs without embedded seat declarations', () => {

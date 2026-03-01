@@ -379,7 +379,11 @@ function compileExpandedDoc(
     seatCatalogSeatIds: derivedFromAssets.seats?.map((seat) => seat.id),
   });
   diagnostics.push(...seatIdentityContract.diagnostics);
-  if (sections.turnOrder?.type === 'cardDriven' && seatIdentityContract.contract.referenceSeatIds === undefined) {
+  if (
+    sections.turnOrder?.type === 'cardDriven'
+    && seatIdentityContract.contract.referenceSeatIds === undefined
+    && !derivedFromAssets.derivationFailures.seatCatalog
+  ) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SEAT_CATALOG_REQUIRED,
       path: 'doc.dataAssets',

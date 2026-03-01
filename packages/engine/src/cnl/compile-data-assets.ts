@@ -84,6 +84,7 @@ export function deriveSectionsFromDataAssets(
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
+    readonly seatCatalog: boolean;
   };
   readonly tokenTraitVocabulary: Readonly<Record<string, readonly string[]>> | null;
 } {
@@ -103,6 +104,7 @@ export function deriveSectionsFromDataAssets(
       derivationFailures: {
         map: false,
         pieceCatalog: false,
+        seatCatalog: false,
       },
       tokenTraitVocabulary: null,
     };
@@ -124,6 +126,7 @@ export function deriveSectionsFromDataAssets(
   }> = [];
   let mapDerivationFailed = false;
   let pieceCatalogDerivationFailed = false;
+  let seatCatalogDerivationFailed = false;
 
   for (const [index, rawAsset] of doc.dataAssets.entries()) {
     if (!isRecord(rawAsset)) {
@@ -148,6 +151,9 @@ export function deriveSectionsFromDataAssets(
       }
       if (rawAsset.kind === 'pieceCatalog') {
         pieceCatalogDerivationFailed = true;
+      }
+      if (rawAsset.kind === 'seatCatalog') {
+        seatCatalogDerivationFailed = true;
       }
       continue;
     }
@@ -227,7 +233,7 @@ export function deriveSectionsFromDataAssets(
   const skipAssetInference = scenarioSelection.failed;
 
   const shouldResolveMap =
-    !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length === 1);
+    !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length > 0);
   const selectedMapResult = shouldResolveMap
     ? selectAssetById(
         mapAssets,
@@ -241,7 +247,7 @@ export function deriveSectionsFromDataAssets(
   mapDerivationFailed = mapDerivationFailed || selectedMapResult.failed;
   const selectedMap = selectedMapResult.selected;
   const shouldResolvePieceCatalog =
-    !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length === 1);
+    !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length > 0);
   const selectedPieceCatalogResult = shouldResolvePieceCatalog
     ? selectAssetById(
         pieceCatalogAssets,
@@ -255,7 +261,7 @@ export function deriveSectionsFromDataAssets(
   pieceCatalogDerivationFailed = pieceCatalogDerivationFailed || selectedPieceCatalogResult.failed;
   const selectedPieceCatalog = selectedPieceCatalogResult.selected;
   const shouldResolveSeatCatalog =
-    !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length === 1);
+    !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length > 0);
   const selectedSeatCatalogResult = shouldResolveSeatCatalog
     ? selectAssetById(
         seatCatalogAssets,
@@ -266,6 +272,7 @@ export function deriveSectionsFromDataAssets(
         selectedScenario?.entityId,
       )
     : { selected: undefined, failed: false };
+  seatCatalogDerivationFailed = seatCatalogDerivationFailed || selectedSeatCatalogResult.failed;
   const selectedSeatCatalog = selectedSeatCatalogResult.selected;
 
   if (selectedSeatCatalog !== undefined) {
@@ -384,6 +391,7 @@ export function deriveSectionsFromDataAssets(
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,
+      seatCatalog: seatCatalogDerivationFailed,
     },
     tokenTraitVocabulary:
       selectedPieceCatalog === undefined

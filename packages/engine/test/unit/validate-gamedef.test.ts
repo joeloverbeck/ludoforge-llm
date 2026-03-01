@@ -207,6 +207,131 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects unknown token-filter props in tokensInZone domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: [{ prop: 'factoin', op: 'eq', value: 'US' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const diagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
+        diag.path === 'actions[0].params[0].domain.filter[0].prop',
+    );
+    assert.ok(diagnostic);
+    assert.deepEqual(diagnostic.alternatives, ['faction']);
+  });
+
+  it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: [{ prop: 'id', op: 'eq', value: 'card-1' }],
+              },
+            },
+          ],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: [{ prop: 'id', op: 'eq', value: 'card-1' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
+  });
+
+  it('accepts declared token-filter props across mixed token-type schemas', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [
+        { id: 'card', props: { faction: 'string' } },
+        { id: 'leader', props: { rank: 'string' } },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: [{ prop: 'rank', op: 'eq', value: 'elite' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
+  });
+
+  it('rejects unknown token-filter props in tokensInMapSpaces domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInMapSpaces',
+                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
+          diag.path === 'actions[0].params[0].domain.filter[0].prop',
+      ),
+    );
+  });
+
   it('reports unknown map-space properties used by zoneProp references', () => {
     const base = createValidGameDef();
     const def = {

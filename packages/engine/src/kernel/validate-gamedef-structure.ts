@@ -38,6 +38,7 @@ export type ValidationContext = {
   tableContractCandidates: readonly string[];
   tokenTypeNames: Set<string>;
   tokenTypeCandidates: readonly string[];
+  tokenFilterPropCandidates: readonly string[];
   turnPhaseNames: Set<string>;
   turnPhaseCandidates: readonly string[];
   phaseNames: Set<string>;
@@ -1041,6 +1042,9 @@ export const buildValidationContext = (
   const tokenTypeCandidates = [...new Set(def.tokenTypes.map((tokenType) => tokenType.id))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const tokenFilterPropCandidates = [
+    ...new Set(def.tokenTypes.flatMap((tokenType) => Object.keys(tokenType.props))),
+  ].sort((left, right) => left.localeCompare(right));
   const markerLatticeCandidates = [...new Set((def.markerLattices ?? []).map((lattice) => lattice.id))].sort((left, right) =>
     left.localeCompare(right),
   );
@@ -1114,6 +1118,7 @@ export const buildValidationContext = (
     globalMarkerLatticeStatesById: new Map((def.globalMarkerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),
     tokenTypeNames: new Set(tokenTypeCandidates),
     tokenTypeCandidates,
+    tokenFilterPropCandidates,
     turnPhaseNames: new Set(turnPhaseCandidates),
     turnPhaseCandidates,
     phaseNames: new Set(phaseCandidates),

@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
+import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from '../kernel/token-filter-prop-contract.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type {
   AssetRowsCardinality,
@@ -318,8 +319,6 @@ export function lowerValueNode(
 
 const SUPPORTED_TOKEN_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
 const SUPPORTED_ASSET_ROW_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
-const TOKEN_FILTER_INTRINSIC_PROPS = ['id'] as const;
-
 function lowerTokenFilterEntry(
   source: unknown,
   context: ConditionLoweringContext,
@@ -424,11 +423,10 @@ function validateDeclaredTokenFilterProp(
   if (context.tokenFilterProps === undefined || context.tokenFilterProps.length === 0) {
     return [];
   }
-  if (TOKEN_FILTER_INTRINSIC_PROPS.includes(prop as typeof TOKEN_FILTER_INTRINSIC_PROPS[number]) || context.tokenFilterProps.includes(prop)) {
+  if (isAllowedTokenFilterProp(prop, context.tokenFilterProps)) {
     return [];
   }
-  const alternatives = [...new Set([...TOKEN_FILTER_INTRINSIC_PROPS, ...context.tokenFilterProps])]
-    .sort((left, right) => left.localeCompare(right));
+  const alternatives = tokenFilterPropAlternatives(context.tokenFilterProps);
   return [
     {
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN,

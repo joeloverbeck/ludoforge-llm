@@ -32,6 +32,7 @@ import {
   inferQueryRuntimeShapes,
   inferValueRuntimeShapes,
 } from './query-shape-inference.js';
+import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from './token-filter-prop-contract.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -436,7 +437,19 @@ const validateTokenFilterPredicates = (
   context: ValidationContext,
 ): void => {
   for (let i = 0; i < filters.length; i += 1) {
-    const filterValue = filters[i]!.value;
+    const predicate = filters[i]!;
+    if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_TOKEN_FILTER_PROP_MISSING',
+        `${path}[${i}].prop`,
+        `Unknown token filter prop "${predicate.prop}".`,
+        predicate.prop,
+        tokenFilterPropAlternatives(context.tokenFilterPropCandidates),
+      );
+    }
+
+    const filterValue = predicate.value;
     if (!Array.isArray(filterValue)) {
       validateValueExpr(diagnostics, filterValue as ValueExpr, `${path}[${i}].value`, context);
     }
@@ -605,6 +618,18 @@ export const validateOptionsQuery = (
     }
     case 'tokensInAdjacentZones': {
       validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
+      if (query.filter) {
+        validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
+      }
+      return;
+    }
+    case 'tokensInMapSpaces': {
+      if (query.spaceFilter?.owner) {
+        validatePlayerSelector(diagnostics, query.spaceFilter.owner, `${path}.spaceFilter.owner`, context);
+      }
+      if (query.spaceFilter?.condition) {
+        validateConditionAst(diagnostics, query.spaceFilter.condition, `${path}.spaceFilter.condition`, context);
+      }
       if (query.filter) {
         validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
       }

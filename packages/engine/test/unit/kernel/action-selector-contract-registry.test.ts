@@ -1,9 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { evaluateActionSelectorContracts, getActionSelectorContract } from '../../../src/kernel/action-selector-contract-registry.js';
-import { asPlayerId } from '../../../src/kernel/branded.js';
-import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from '../../../src/kernel/player-selector-vocabulary.js';
+import { evaluateActionSelectorContracts, getActionSelectorContract } from '../../../src/contracts/action-selector-contract-registry.js';
+import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from '../../../src/contracts/player-selector-vocabulary.js';
 
 describe('action selector contract registry', () => {
   it('covers deterministic selector contract matrix across role bindings and pipeline presence', () => {
@@ -96,7 +95,7 @@ describe('action selector contract registry', () => {
     const violations = evaluateActionSelectorContracts({
       selectors: {
         actor: { chosen: '$actorOwner' },
-        executor: { id: asPlayerId(1) },
+        executor: { id: 1 },
       },
       declaredBindings: [],
       hasPipeline: true,

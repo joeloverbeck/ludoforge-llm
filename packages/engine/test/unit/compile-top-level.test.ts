@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
 import type { EventCardDef } from '../../src/kernel/types.js';
-import { TURN_FLOW_REQUIRED_KEYS } from '../../src/kernel/turn-flow-contract.js';
+import { TURN_FLOW_REQUIRED_KEYS } from '../../src/contracts/turn-flow-contract.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const minimalCardDrivenTurnFlow = {

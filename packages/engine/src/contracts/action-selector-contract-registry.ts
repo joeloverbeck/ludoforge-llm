@@ -1,4 +1,3 @@
-import type { PlayerSel } from './types.js';
 import { isCanonicalBindingIdentifier } from './binding-identifier-contract.js';
 import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from './player-selector-vocabulary.js';
 
@@ -37,14 +36,16 @@ const ACTION_SELECTOR_CONTRACTS: Readonly<Record<ActionSelectorRole, ActionSelec
 };
 
 interface EvaluateActionSelectorContractsInput {
-  readonly selectors: Readonly<Partial<Record<ActionSelectorRole, PlayerSel | null>>>;
+  readonly selectors: Readonly<Partial<Record<ActionSelectorRole, ActionSelectorContractSelector | null>>>;
   readonly declaredBindings: readonly string[];
   readonly hasPipeline: boolean;
   readonly enforceBindingDeclaration?: boolean;
   readonly enforcePipelineBindingCompatibility?: boolean;
 }
 
-const resolveSelectorBindingToken = (selector: PlayerSel | null | undefined): string | null => {
+type ActionSelectorContractSelector = string | Readonly<Record<string, unknown>>;
+
+const resolveSelectorBindingToken = (selector: ActionSelectorContractSelector | null | undefined): string | null => {
   if (selector === null || selector === undefined || typeof selector === 'string' || typeof selector !== 'object') {
     return null;
   }

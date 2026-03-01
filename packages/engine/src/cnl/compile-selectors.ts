@@ -1,7 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { asPlayerId } from '../kernel/branded.js';
-import { getActionSelectorContract } from '../kernel/action-selector-contract-registry.js';
-import { PLAYER_SELECTOR_SUGGESTION, ZONE_OWNER_QUALIFIER_SUGGESTION } from '../kernel/player-selector-vocabulary.js';
+import { getActionSelectorContract } from '../contracts/action-selector-contract-registry.js';
+import { PLAYER_SELECTOR_SUGGESTION, ZONE_OWNER_QUALIFIER_SUGGESTION } from '../contracts/player-selector-vocabulary.js';
 import type { ActionExecutorSel, PlayerSel } from '../kernel/types.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 

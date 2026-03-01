@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import {
   CANONICAL_BINDING_IDENTIFIER_PATTERN,
   isCanonicalBindingIdentifier,
-} from '../../../src/kernel/binding-identifier-contract.js';
+} from '../../../src/contracts/binding-identifier-contract.js';
 
 describe('binding-identifier-contract', () => {
   it('accepts canonical "$name" identifiers and rejects non-canonical values', () => {

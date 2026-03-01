@@ -8,7 +8,7 @@ import {
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   isTurnFlowActionClass,
-} from '../kernel/turn-flow-action-class-contract.js';
+} from '../contracts/turn-flow-action-class-contract.js';
 import type {
   ConditionAST,
   EffectAST,
@@ -22,7 +22,7 @@ import type {
   ZoneRef,
 } from '../kernel/types.js';
 import { inferQueryDomainKinds, type QueryDomainKind } from '../kernel/query-domain-kinds.js';
-import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
+import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../contracts/binding-identifier-contract.js';
 import { collectDeclaredBinderCandidates, collectSequentialBindings } from './binder-surface-registry.js';
 import {
   lowerConditionNode,

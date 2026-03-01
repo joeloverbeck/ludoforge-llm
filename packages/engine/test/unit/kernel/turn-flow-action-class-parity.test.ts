@@ -5,7 +5,7 @@ import { TurnFlowActionClassSchema } from '../../../src/kernel/schemas-extension
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   isTurnFlowActionClass,
-} from '../../../src/kernel/turn-flow-action-class-contract.js';
+} from '../../../src/contracts/turn-flow-action-class-contract.js';
 
 describe('turn-flow action-class schema/runtime parity', () => {
   it('accepts every canonical action-class value in both runtime guard and schema', () => {

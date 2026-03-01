@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 const thisDir = dirname(fileURLToPath(import.meta.url));
-const kernelRegistryPath = resolve(thisDir, '../../../../src/kernel/action-selector-contract-registry.ts');
+const contractRegistryPath = resolve(thisDir, '../../../../src/contracts/action-selector-contract-registry.ts');
 
 describe('action selector contract boundary policy', () => {
-  it('keeps kernel selector contract free of CNL rendering concerns', () => {
-    const source = readFileSync(kernelRegistryPath, 'utf8');
+  it('keeps shared selector contract free of CNL rendering concerns', () => {
+    const source = readFileSync(contractRegistryPath, 'utf8');
 
     for (const pattern of [
       /CNL_COMPILER_/,
@@ -19,7 +19,7 @@ describe('action selector contract boundary policy', () => {
       /Diagnostic/,
       /buildActionSelectorContractViolationDiagnostic/,
     ]) {
-      assert.equal(pattern.test(source), false, `kernel selector contract must not contain ${pattern}`);
+      assert.equal(pattern.test(source), false, `shared selector contract must not contain ${pattern}`);
     }
   });
 });

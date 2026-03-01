@@ -4,7 +4,7 @@ import { resolveActionPipelineDispatch, type ActionPipelineDispatch } from './ap
 import {
   evaluateActionSelectorContracts,
   type ActionSelectorContractViolation,
-} from './action-selector-contract-registry.js';
+} from '../contracts/action-selector-contract-registry.js';
 import { createCollector } from './execution-collector.js';
 import type { EvalContext } from './eval-context.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';

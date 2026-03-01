@@ -12,11 +12,11 @@ import {
 import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   hasTurnFlowInterruptSelectorMatchField,
-} from './turn-flow-interrupt-selector-contract.js';
+} from '../contracts/turn-flow-interrupt-selector-contract.js';
 import {
   TURN_FLOW_DURATION_VALUES,
-} from './turn-flow-contract.js';
-import { TURN_FLOW_ACTION_CLASS_VALUES } from './turn-flow-action-class-contract.js';
+} from '../contracts/turn-flow-contract.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from '../contracts/turn-flow-action-class-contract.js';
 
 export const TurnFlowDurationSchema = z.enum(TURN_FLOW_DURATION_VALUES);
 

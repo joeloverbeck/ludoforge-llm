@@ -1,4 +1,4 @@
-import { ACTION_CAPABILITY_CARD_EVENT } from './action-capabilities.js';
+import { ACTION_CAPABILITY_CARD_EVENT } from './action-capability-contract.js';
 import type { TurnFlowActionClass } from './turn-flow-action-class-contract.js';
 
 export const TURN_FLOW_REQUIRED_KEYS = [

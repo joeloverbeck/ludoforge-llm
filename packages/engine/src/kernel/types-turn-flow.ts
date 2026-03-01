@@ -1,4 +1,4 @@
-import type { TurnFlowActionClass as CanonicalTurnFlowActionClass } from './turn-flow-action-class-contract.js';
+import type { TurnFlowActionClass as CanonicalTurnFlowActionClass } from '../contracts/turn-flow-action-class-contract.js';
 
 export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 

@@ -7,7 +7,7 @@ import { EffectASTSchema } from '../../src/kernel/schemas-ast.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   type TurnFlowActionClass,
-} from '../../src/kernel/turn-flow-action-class-contract.js';
+} from '../../src/contracts/turn-flow-action-class-contract.js';
 
 type GameSpecCoversCanonical = TurnFlowActionClass extends GameSpecTurnFlowActionClass ? true : false;
 type CanonicalCoversGameSpec = GameSpecTurnFlowActionClass extends TurnFlowActionClass ? true : false;

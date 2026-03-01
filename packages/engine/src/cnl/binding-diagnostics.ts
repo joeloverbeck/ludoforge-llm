@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { hasBindingIdentifier } from '../kernel/binding-identifier-contract.js';
+import { hasBindingIdentifier } from '../contracts/binding-identifier-contract.js';
 import { buildCompilerBindingShadowWarningDiagnostic } from './compiler-diagnostic-codes.js';
 
 export function createBindingShadowWarning(name: string, path: string): Diagnostic {

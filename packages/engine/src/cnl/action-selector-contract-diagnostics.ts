@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { ActionSelectorContractViolation } from '../kernel/action-selector-contract-registry.js';
+import type { ActionSelectorContractViolation } from '../contracts/action-selector-contract-registry.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { CNL_XREF_DIAGNOSTIC_CODES } from './cross-validate-diagnostic-codes.js';
 

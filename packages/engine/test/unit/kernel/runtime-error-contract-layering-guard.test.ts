@@ -20,12 +20,12 @@ describe('runtime error contract layering guard', () => {
     const source = readKernelSource('src/kernel/runtime-error.ts');
     const sourceFile = parseTypeScriptSource(source, 'runtime-error.ts');
     const imports = collectImportSpecifiers(sourceFile);
-    const relativeImports = [...new Set(imports.filter((specifier) => specifier.startsWith('./')))].sort();
+    const relativeImports = [...new Set(imports.filter((specifier) => specifier.startsWith('.')))].sort();
 
     assert.deepEqual(
       relativeImports,
       [
-        './action-selector-contract-registry.js',
+        '../contracts/action-selector-contract-registry.js',
         './free-operation-denial-contract.js',
         './runtime-reasons.js',
         './types.js',
@@ -58,7 +58,7 @@ describe('runtime error contract layering guard', () => {
   });
 
   it('keeps turn-flow-contract.ts action-class definitions sourced from canonical contract module', () => {
-    const source = readKernelSource('src/kernel/turn-flow-contract.ts');
+    const source = readKernelSource('src/contracts/turn-flow-contract.ts');
     const sourceFile = parseTypeScriptSource(source, 'turn-flow-contract.ts');
     const imports = collectImportSpecifiers(sourceFile);
 

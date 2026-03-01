@@ -5,7 +5,7 @@ import { TurnFlowInterruptCancellationSchema } from '../../../src/kernel/schemas
 import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   hasTurnFlowInterruptSelectorMatchField,
-} from '../../../src/kernel/turn-flow-interrupt-selector-contract.js';
+} from '../../../src/contracts/turn-flow-interrupt-selector-contract.js';
 
 describe('turn-flow interrupt selector contract', () => {
   it('requires at least one matching field', () => {

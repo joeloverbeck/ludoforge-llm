@@ -20,7 +20,7 @@ const ACTION_CLASS_UNION_LITERAL_PATTERN =
 
 describe('turn-flow action-class canonical contract guard', () => {
   it('keeps canonical action-class values in the dedicated contract module', () => {
-    const source = readKernelSource('src/kernel/turn-flow-action-class-contract.ts');
+    const source = readKernelSource('src/contracts/turn-flow-action-class-contract.ts');
 
     assert.match(
       source,
@@ -58,22 +58,22 @@ describe('turn-flow action-class canonical contract guard', () => {
     );
 
     assert.equal(
-      collectImportSpecifiers(schemaSource).includes('./turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(schemaSource).includes('../contracts/turn-flow-action-class-contract.js'),
       true,
       'schemas-extensions.ts must consume canonical action-class values',
     );
     assert.equal(
-      collectImportSpecifiers(eligibilitySource).includes('./turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(eligibilitySource).includes('../contracts/turn-flow-action-class-contract.js'),
       true,
       'turn-flow-eligibility.ts must consume canonical runtime action-class guard',
     );
     assert.equal(
-      collectImportSpecifiers(effectsSource).includes('./turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(effectsSource).includes('../contracts/turn-flow-action-class-contract.js'),
       true,
       'effects-turn-flow.ts must consume canonical runtime action-class guard',
     );
     assert.equal(
-      collectImportSpecifiers(behaviorValidationSource).includes('./turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(behaviorValidationSource).includes('../contracts/turn-flow-action-class-contract.js'),
       true,
       'validate-gamedef-behavior.ts must consume canonical action-class values',
     );

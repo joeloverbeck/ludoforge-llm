@@ -17,8 +17,8 @@ import type {
 } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
-import { isCanonicalBindingIdentifier } from './binding-identifier-contract.js';
-import { TURN_FLOW_ACTION_CLASS_VALUES } from './turn-flow-action-class-contract.js';
+import { isCanonicalBindingIdentifier } from '../contracts/binding-identifier-contract.js';
+import { TURN_FLOW_ACTION_CLASS_VALUES } from '../contracts/turn-flow-action-class-contract.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,

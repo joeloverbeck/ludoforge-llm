@@ -18,7 +18,7 @@ import {
   hasBindingIdentifier,
   isCanonicalBindingIdentifier,
   rankBindingIdentifierAlternatives,
-} from '../kernel/binding-identifier-contract.js';
+} from '../contracts/binding-identifier-contract.js';
 import { bindingShadowWarningsForScope } from './binding-diagnostics.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-001: Combinatorial piece generation compiler pass (A1)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler pipeline (new expansion pass), GameSpecDoc types
@@ -138,3 +138,15 @@ Test file covering:
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-piece-generation.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+All deliverables implemented:
+
+- **`game-spec-doc.ts`**: Added `GameSpecPieceGenerateDimension`, `GameSpecPieceGenerateDerivedProp`, `GameSpecPieceGenerateBlock` interfaces.
+- **`compiler-diagnostic-codes.ts`**: Added `COMPILER_DIAGNOSTIC_CODES_PIECE_GENERATION` group with 8 error codes, merged into `CNL_COMPILER_DIAGNOSTIC_CODES`.
+- **`expand-piece-generation.ts`** (new, ~270 lines): Pure expansion pass with cartesian product, derived prop evaluation, pattern substitution, and 8-check validation.
+- **`cnl/index.ts`**: Added barrel export.
+- **`expand-piece-generation.test.ts`** (new, 13 tests): Covers 52-card deck, single dimension, derived props, duplicate ID, missing placeholder, invalid derivedProps.from, mixed generate+individual, no pieceCatalog, inventoryPerCombination > 1, unresolved placeholder, empty dimensions, empty values, multiple pieceCatalog assets.
+
+Verification: build passes, 3181 tests pass (0 failures), typecheck clean, lint clean.

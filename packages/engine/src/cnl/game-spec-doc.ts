@@ -396,6 +396,29 @@ export interface GameSpecDoc {
   readonly conditionMacros: readonly ConditionMacroDef[] | null;
 }
 
+export interface GameSpecPieceGenerateDimension {
+  readonly name: string;
+  readonly values: readonly (string | number)[];
+}
+
+export interface GameSpecPieceGenerateDerivedProp {
+  readonly from: string;
+  readonly map: Readonly<Record<string, string | number>>;
+  readonly default?: string;
+}
+
+export interface GameSpecPieceGenerateBlock {
+  readonly generate: {
+    readonly idPattern: string;
+    readonly seat: string;
+    readonly statusDimensions: readonly string[];
+    readonly transitions: readonly unknown[];
+    readonly dimensions: readonly GameSpecPieceGenerateDimension[];
+    readonly derivedProps?: Readonly<Record<string, GameSpecPieceGenerateDerivedProp>>;
+    readonly inventoryPerCombination: number;
+  };
+}
+
 export function createEmptyGameSpecDoc(): GameSpecDoc {
   return {
     imports: null,

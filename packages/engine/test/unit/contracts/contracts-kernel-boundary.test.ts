@@ -5,11 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 const thisDir = dirname(fileURLToPath(import.meta.url));
-const contractsDir = resolve(thisDir, '../../../src/contracts');
+const contractsDir = resolve(thisDir, '../../../../src/contracts');
 
 describe('contracts -> kernel boundary', () => {
   it('keeps shared contracts free of kernel imports', () => {
     const contractFiles = readdirSync(contractsDir).filter((name) => name.endsWith('.ts')).sort();
+    assert.ok(contractFiles.length > 0, 'contracts boundary guard must inspect source .ts modules');
     for (const filename of contractFiles) {
       const source = readFileSync(resolve(contractsDir, filename), 'utf8');
       assert.equal(

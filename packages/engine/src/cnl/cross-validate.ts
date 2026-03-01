@@ -1,7 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
-import { buildCardDrivenTurnFlowSemanticRequirements } from '../contracts/turn-flow-contract.js';
-import { evaluateActionSelectorContracts } from '../contracts/action-selector-contract-registry.js';
+import { buildCardDrivenTurnFlowSemanticRequirements, evaluateActionSelectorContracts } from '../contracts/index.js';
 import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';

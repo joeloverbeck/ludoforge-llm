@@ -1,5 +1,5 @@
 import type { ActionDef, GameDef, Move } from './types.js';
-import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/action-capability-contract.js';
+import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/index.js';
 
 const normalizeCapability = (capability: string): string => capability.normalize('NFC');
 

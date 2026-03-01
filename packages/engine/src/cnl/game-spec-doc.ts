@@ -4,7 +4,7 @@ import type {
   EventDeckDef,
   ValueExpr,
 } from '../kernel/types.js';
-import type { TurnFlowActionClass } from '../contracts/turn-flow-action-class-contract.js';
+import type { TurnFlowActionClass } from '../contracts/index.js';
 
 export interface GameSpecMetadata {
   readonly id: string;

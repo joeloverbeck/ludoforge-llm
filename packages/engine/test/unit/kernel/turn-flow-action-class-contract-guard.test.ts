@@ -58,22 +58,22 @@ describe('turn-flow action-class canonical contract guard', () => {
     );
 
     assert.equal(
-      collectImportSpecifiers(schemaSource).includes('../contracts/turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(schemaSource).includes('../contracts/index.js'),
       true,
       'schemas-extensions.ts must consume canonical action-class values',
     );
     assert.equal(
-      collectImportSpecifiers(eligibilitySource).includes('../contracts/turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(eligibilitySource).includes('../contracts/index.js'),
       true,
       'turn-flow-eligibility.ts must consume canonical runtime action-class guard',
     );
     assert.equal(
-      collectImportSpecifiers(effectsSource).includes('../contracts/turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(effectsSource).includes('../contracts/index.js'),
       true,
       'effects-turn-flow.ts must consume canonical runtime action-class guard',
     );
     assert.equal(
-      collectImportSpecifiers(behaviorValidationSource).includes('../contracts/turn-flow-action-class-contract.js'),
+      collectImportSpecifiers(behaviorValidationSource).includes('../contracts/index.js'),
       true,
       'validate-gamedef-behavior.ts must consume canonical action-class values',
     );

@@ -17,8 +17,12 @@ import type {
 } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
-import { isCanonicalBindingIdentifier } from '../contracts/binding-identifier-contract.js';
-import { TURN_FLOW_ACTION_CLASS_VALUES } from '../contracts/turn-flow-action-class-contract.js';
+import {
+  isAllowedTokenFilterProp,
+  isCanonicalBindingIdentifier,
+  tokenFilterPropAlternatives,
+  TURN_FLOW_ACTION_CLASS_VALUES,
+} from '../contracts/index.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -32,7 +36,6 @@ import {
   inferQueryRuntimeShapes,
   inferValueRuntimeShapes,
 } from './query-shape-inference.js';
-import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from '../contracts/token-filter-prop-contract.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],

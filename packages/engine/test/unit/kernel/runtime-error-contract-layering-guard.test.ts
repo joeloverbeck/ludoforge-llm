@@ -25,7 +25,7 @@ describe('runtime error contract layering guard', () => {
     assert.deepEqual(
       relativeImports,
       [
-        '../contracts/action-selector-contract-registry.js',
+        '../contracts/index.js',
         './free-operation-denial-contract.js',
         './runtime-reasons.js',
         './types.js',

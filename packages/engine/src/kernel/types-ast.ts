@@ -1,6 +1,6 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
-import type { TurnFlowActionClass } from '../contracts/turn-flow-action-class-contract.js';
+import type { TurnFlowActionClass } from '../contracts/index.js';
 
 export type PlayerSel =
   | 'actor'

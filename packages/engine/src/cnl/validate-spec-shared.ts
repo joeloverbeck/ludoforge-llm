@@ -1,11 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { TURN_FLOW_ACTION_CLASS_VALUES } from '../contracts/turn-flow-action-class-contract.js';
 import {
+  TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_DURATION_VALUES,
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_OPTIONAL_KEYS,
   TURN_FLOW_REQUIRED_KEYS,
-} from '../contracts/turn-flow-contract.js';
+} from '../contracts/index.js';
 import { compareSourceSpans, resolveSpanForDiagnosticPath } from './diagnostic-source-map.js';
 import type { GameSpecSourceMap } from './source-map.js';
 

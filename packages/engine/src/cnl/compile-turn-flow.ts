@@ -1,11 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { hasTurnFlowInterruptSelectorMatchField } from '../contracts/turn-flow-interrupt-selector-contract.js';
-import type { TurnFlowDef, TurnOrderStrategy } from '../kernel/types.js';
-import { TURN_FLOW_ACTION_CLASS_VALUES } from '../contracts/turn-flow-action-class-contract.js';
-import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
+  hasTurnFlowInterruptSelectorMatchField,
+  TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_REQUIRED_KEYS,
-} from '../contracts/turn-flow-contract.js';
+} from '../contracts/index.js';
+import type { TurnFlowDef, TurnOrderStrategy } from '../kernel/types.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { lowerCoupPlan } from './compile-victory.js';
 import { isRecord } from './compile-lowering.js';

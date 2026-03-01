@@ -1,7 +1,10 @@
 import { z } from 'zod';
-import { CANONICAL_BINDING_IDENTIFIER_MESSAGE, CANONICAL_BINDING_IDENTIFIER_PATTERN } from '../contracts/binding-identifier-contract.js';
+import {
+  CANONICAL_BINDING_IDENTIFIER_MESSAGE,
+  CANONICAL_BINDING_IDENTIFIER_PATTERN,
+  TURN_FLOW_ACTION_CLASS_VALUES,
+} from '../contracts/index.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
-import { TURN_FLOW_ACTION_CLASS_VALUES } from '../contracts/turn-flow-action-class-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
 

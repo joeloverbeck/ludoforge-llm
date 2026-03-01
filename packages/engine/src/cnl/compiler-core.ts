@@ -3,7 +3,7 @@ import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableCon
 import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId, asZoneId } from '../kernel/branded.js';
 import { isCardEventAction } from '../kernel/action-capabilities.js';
-import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/action-capability-contract.js';
+import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/index.js';
 import { isKernelReferenceDiagnosticCode } from '../kernel/reference-diagnostic-codes.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';

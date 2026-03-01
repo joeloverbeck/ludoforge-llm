@@ -3,7 +3,7 @@ import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
-import { isTurnFlowActionClass } from '../contracts/turn-flow-action-class-contract.js';
+import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';

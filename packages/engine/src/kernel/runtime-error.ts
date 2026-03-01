@@ -1,4 +1,4 @@
-import type { ActionSelectorContractViolation } from '../contracts/action-selector-contract-registry.js';
+import type { ActionSelectorContractViolation } from '../contracts/index.js';
 import { ILLEGAL_MOVE_REASON_MESSAGES, PIPELINE_RUNTIME_REASONS } from './runtime-reasons.js';
 import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';

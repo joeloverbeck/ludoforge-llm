@@ -18,7 +18,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
-import { isTurnFlowActionClass } from '../contracts/turn-flow-action-class-contract.js';
+import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';

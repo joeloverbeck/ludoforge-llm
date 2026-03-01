@@ -984,4 +984,79 @@ describe('crossValidateSpec', () => {
       entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING');
     assert.deepEqual(overrideDiagnostics, []);
   });
+
+  function buildSaFixture(sections: CompileSectionResults) {
+    const action = requireValue(sections.actions?.[0]);
+    const saAction = { ...action, id: asActionId('advise') };
+    const profile = requireValue(sections.actionPipelines?.[0]);
+    const saProfile = {
+      ...profile,
+      id: 'advise-profile',
+      actionId: asActionId('advise'),
+      accompanyingOps: 'any' as const,
+      linkedWindows: [] as readonly string[],
+    };
+    return { saAction, saProfile };
+  }
+
+  it('SA pipeline with unmapped actionId emits CNL_XREF_SA_PIPELINE_ACTION_CLASS_UNMAPPED', () => {
+    const sections = compileRichSections();
+    const { saAction, saProfile } = buildSaFixture(sections);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidate({
+      ...sections,
+      actions: [...(sections.actions ?? []), saAction],
+      actionPipelines: [...(sections.actionPipelines ?? []), saProfile],
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            actionClassByActionId: {
+              ...turnOrder.config.turnFlow.actionClassByActionId,
+            },
+          },
+        },
+      },
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_SA_PIPELINE_ACTION_CLASS_UNMAPPED');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.actionPipelines.1.actionId');
+    assert.equal(diagnostic?.severity, 'warning');
+    assert.ok(diagnostic?.message.includes('advise'));
+    assert.ok(diagnostic?.suggestion?.includes('specialActivity'));
+  });
+
+  it('SA pipeline with mapped actionId produces no CNL_XREF_SA_PIPELINE_ACTION_CLASS_UNMAPPED', () => {
+    const sections = compileRichSections();
+    const { saAction, saProfile } = buildSaFixture(sections);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidate({
+      ...sections,
+      actions: [...(sections.actions ?? []), saAction],
+      actionPipelines: [...(sections.actionPipelines ?? []), saProfile],
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            actionClassByActionId: {
+              ...turnOrder.config.turnFlow.actionClassByActionId,
+              advise: 'specialActivity',
+            },
+          },
+        },
+      },
+    });
+
+    assert.deepEqual(
+      diagnostics.filter((entry) => entry.code === 'CNL_XREF_SA_PIPELINE_ACTION_CLASS_UNMAPPED'),
+      [],
+    );
+  });
 });

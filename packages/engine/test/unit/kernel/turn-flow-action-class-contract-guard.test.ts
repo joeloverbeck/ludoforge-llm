@@ -16,7 +16,7 @@ const collectImportSpecifiers = (sourceFile: ts.SourceFile): readonly string[] =
 };
 
 const ACTION_CLASS_UNION_LITERAL_PATTERN =
-  /'pass'\s*\|\s*'event'\s*\|\s*'operation'\s*\|\s*'limitedOperation'\s*\|\s*'operationPlusSpecialActivity'/;
+  /'pass'\s*\|\s*'event'\s*\|\s*'operation'\s*\|\s*'limitedOperation'\s*\|\s*'operationPlusSpecialActivity'\s*\|\s*'specialActivity'/;
 
 describe('turn-flow action-class canonical contract guard', () => {
   it('keeps canonical action-class values in the dedicated contract module', () => {
@@ -24,7 +24,7 @@ describe('turn-flow action-class canonical contract guard', () => {
 
     assert.match(
       source,
-      /export const TURN_FLOW_ACTION_CLASS_VALUES = \[[\s\S]*'pass',[\s\S]*'event',[\s\S]*'operation',[\s\S]*'limitedOperation',[\s\S]*'operationPlusSpecialActivity',[\s\S]*\] as const;/,
+      /export const TURN_FLOW_ACTION_CLASS_VALUES = \[[\s\S]*'pass',[\s\S]*'event',[\s\S]*'operation',[\s\S]*'limitedOperation',[\s\S]*'operationPlusSpecialActivity',[\s\S]*'specialActivity',[\s\S]*\] as const;/,
       'turn-flow-action-class-contract.ts must define canonical action-class literal values',
     );
     assert.match(

@@ -4,6 +4,7 @@ export const TURN_FLOW_ACTION_CLASS_VALUES = [
   'operation',
   'limitedOperation',
   'operationPlusSpecialActivity',
+  'specialActivity',
 ] as const;
 
 export type TurnFlowActionClass = (typeof TURN_FLOW_ACTION_CLASS_VALUES)[number];

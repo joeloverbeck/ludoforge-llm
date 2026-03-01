@@ -271,9 +271,10 @@ phase: [asPhaseId('main')],
       },
     });
 
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, state).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -357,12 +358,23 @@ phase: [asPhaseId('main')],
       },
     });
 
-    const submittedMove = {
+    // Compatible override: operation → limitedOperation is allowed since operation
+    // base class is compatible with limitedOperation constraint
+    const compatibleMove = {
       actionId: asActionId('operation'),
       params: {},
       actionClass: 'limitedOperation',
     };
-    assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, submittedMove), false);
+    assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, compatibleMove), true);
+
+    // Incompatible case: an unmapped action with event class is rejected since
+    // event is not in the constrained set [limitedOperation]
+    const incompatibleMove = {
+      actionId: asActionId('unmappedAction'),
+      params: {},
+      actionClass: 'event',
+    };
+    assert.equal(isMoveAllowedByTurnFlowOptionMatrix(def, state, incompatibleMove), false);
   });
 
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {

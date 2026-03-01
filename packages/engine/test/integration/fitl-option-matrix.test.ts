@@ -195,9 +195,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'event');
+    // operation-class action gets variants for both compatible constrained classes
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
+      [asActionId('pass'), asActionId('operation'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
     );
   });
 
@@ -209,9 +210,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operation');
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -223,9 +225,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operation');
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -237,9 +240,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operationPlusSpecialActivity');
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('event'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('event'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -314,16 +318,136 @@ describe('FITL option matrix integration', () => {
     );
   });
 
-  it('rejects submitted actionClass when it conflicts with mapped class during apply', () => {
+  it('production 2nd-after-event: operations get operation+operationPlusSpecialActivity; SAs get operationPlusSpecialActivity only', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 113, 4).state;
+    const secondEligible = asSecondEligibleMatrixWindow(start, 'event');
+
+    const moves = legalMoves(def, secondEligible);
+
+    // At least one operation should appear with both operation and operationPlusSpecialActivity variants
+    const operationMoves = moves.filter((move) => move.actionClass === 'operation');
+    const opPlusSaMoves = moves.filter((move) => move.actionClass === 'operationPlusSpecialActivity');
+    assert.ok(operationMoves.length > 0, 'should have operation-classified moves');
+    assert.ok(opPlusSaMoves.length > 0, 'should have operationPlusSpecialActivity-classified moves');
+
+    // Operation action IDs should appear in both groups (the same action as two class variants)
+    const operationIds = new Set(operationMoves.map((move) => String(move.actionId)));
+    const opPlusSaIds = new Set(opPlusSaMoves.map((move) => String(move.actionId)));
+    // All operation-classified IDs should also have an operationPlusSpecialActivity variant
+    for (const id of operationIds) {
+      assert.ok(opPlusSaIds.has(id), `operation '${id}' should also have operationPlusSpecialActivity variant`);
+    }
+
+    // SA moves (if any for this faction) should appear only with operationPlusSpecialActivity
+    const saOnlyMoves = opPlusSaMoves.filter((move) => !operationIds.has(String(move.actionId)));
+    for (const move of saOnlyMoves) {
+      const matchingOpMoves = moves.filter((m) => String(m.actionId) === String(move.actionId) && m.actionClass === 'operation');
+      assert.equal(matchingOpMoves.length, 0, `SA '${move.actionId}' should not appear with operation class`);
+    }
+  });
+
+  it('production 2nd-after-operation: operations get limitedOperation; SAs excluded', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 117, 4).state;
+    const secondEligible = asSecondEligibleMatrixWindow(start, 'operation');
+
+    const moves = legalMoves(def, secondEligible);
+
+    // Operations should appear only with limitedOperation variant
+    const trainMoves = moves.filter((move) => String(move.actionId) === 'train');
+    assert.deepEqual(trainMoves.map((move) => move.actionClass), ['limitedOperation']);
+
+    // Special activities should be excluded entirely
+    const adviseMoves = moves.filter((move) => String(move.actionId) === 'advise');
+    assert.deepEqual(adviseMoves, []);
+
+    const airStrikeMoves = moves.filter((move) => String(move.actionId) === 'airStrike');
+    assert.deepEqual(airStrikeMoves, []);
+  });
+
+  it('production 2nd-after-Op+SA: operations get limitedOperation; SAs excluded; events available', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 119, 4).state;
+    const secondEligible = asSecondEligibleMatrixWindow(start, 'operationPlusSpecialActivity');
+
+    const moves = legalMoves(def, secondEligible);
+
+    // Operations should appear with limitedOperation variant
+    const sweepMoves = moves.filter((move) => String(move.actionId) === 'sweep');
+    assert.deepEqual(sweepMoves.map((move) => move.actionClass), ['limitedOperation']);
+
+    // Special activities should be excluded
+    const airLiftMoves = moves.filter((move) => String(move.actionId) === 'airLift');
+    assert.deepEqual(airLiftMoves, []);
+
+    // Events should be available
+    const classes = actionClasses(moves);
+    assert.ok(classes.includes('event'), 'events should be available after Op+SA');
+  });
+
+  it('production 1st eligible (unconstrained): all operations and SAs available', () => {
+    const def = compileProductionDef();
+    const start = initialState(def, 127, 4).state;
+
+    // First eligible, no constraint (nonPassCount=0)
+    const runtime = requireCardDrivenRuntime(start);
+    const firstEligible: GameState = {
+      ...start,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'us',
+            secondEligible: 'arvn',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+    };
+
+    const moves = legalMoves(def, firstEligible);
+    const actionIds = moves.map((move) => String(move.actionId));
+
+    // Operations should be present
+    assert.ok(actionIds.includes('train'), 'train should be available');
+    assert.ok(actionIds.includes('patrol'), 'patrol should be available');
+
+    // Special activities should be present
+    assert.ok(actionIds.includes('advise'), 'advise should be available');
+    assert.ok(actionIds.includes('airStrike'), 'airStrike should be available');
+  });
+
+  it('allows compatible actionClass override (operation → limitedOperation) during apply', () => {
     const def = createDef();
     const start = initialState(def, 131, 3).state;
     const firstMove: Move = { actionId: asActionId('operation'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
 
+    // operation → limitedOperation is a compatible downgrade, not a mismatch
+    const result = applyMove(def, afterFirst, {
+      actionId: asActionId('operation'),
+      params: {},
+      actionClass: 'limitedOperation',
+    });
+    assert.notEqual(result.state, null);
+  });
+
+  it('rejects incompatible actionClass override (event → limitedOperation) during apply', () => {
+    const def = createDef();
+    const start = initialState(def, 131, 3).state;
+
     assert.throws(
       () =>
-        applyMove(def, afterFirst, {
-          actionId: asActionId('operation'),
+        applyMove(def, start, {
+          actionId: asActionId('event'),
           params: {},
           actionClass: 'limitedOperation',
         }),
@@ -332,10 +456,10 @@ describe('FITL option matrix integration', () => {
         const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH);
         assert.deepEqual(details.context, {
-          actionId: asActionId('operation'),
+          actionId: asActionId('event'),
           params: {},
           reason: ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH,
-          mappedActionClass: 'operation',
+          mappedActionClass: 'event',
           submittedActionClass: 'limitedOperation',
         });
         return true;

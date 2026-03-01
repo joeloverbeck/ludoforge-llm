@@ -43,6 +43,29 @@ turnOrder:
         pivotalEvent: event
         usOp: operation
         arvnOp: operation
+        # COIN Operations
+        train: operation
+        patrol: operation
+        sweep: operation
+        assault: operation
+        rally: operation
+        march: operation
+        attack: operation
+        terror: operation
+        # Special Activities
+        advise: specialActivity
+        airLift: specialActivity
+        airStrike: specialActivity
+        govern: specialActivity
+        transport: specialActivity
+        raid: specialActivity
+        infiltrate: specialActivity
+        bombard: specialActivity
+        ambushNva: specialActivity
+        tax: specialActivity
+        subvert: specialActivity
+        ambushVc: specialActivity
+        # Coup phase actions
         coupVictoryCheck: pass
         coupResourcesResolve: pass
         coupPacifyUS: operation
@@ -4943,7 +4966,7 @@ actionPipelines:
               delta: 1
     atomicity: atomic
     linkedWindows: [vc-special-window]
-  # ── Joint operation stub profiles ──
+  # ── Phantom joint operation stubs (to be removed — see Spec 54) ──
   - id: us-op-profile
     actionId: usOp
     applicability: { op: '==', left: { ref: activePlayer }, right: 0 }

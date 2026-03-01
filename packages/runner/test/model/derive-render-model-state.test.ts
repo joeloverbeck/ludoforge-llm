@@ -1160,4 +1160,40 @@ describe('deriveRenderModel state metadata', () => {
       message: 'Game over - final rankings.',
     });
   });
+
+  it('groups specialActivity moves into the operationPlusSpecialActivity group', () => {
+    const def = compileFixture();
+    const state = initialState(def, 400, 2).state;
+
+    const moves: Move[] = [
+      { actionId: asActionId('train'), params: {}, actionClass: 'operation' },
+      { actionId: asActionId('train'), params: {}, actionClass: 'operationPlusSpecialActivity' },
+      { actionId: asActionId('advise'), params: {}, actionClass: 'specialActivity' },
+      { actionId: asActionId('pass'), params: {} },
+    ];
+
+    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), { legalMoveResult }),
+    );
+
+    const groupNames = model.actionGroups.map((group) => group.groupName);
+    // specialActivity should be merged into operationPlusSpecialActivity, not its own group
+    expect(groupNames).not.toContain('Special Activity');
+    expect(groupNames).toContain('Operation Plus Special Activity');
+
+    // The Op+SA group should contain both train and advise
+    const opSaGroup = model.actionGroups.find((group) => group.groupName === 'Operation Plus Special Activity');
+    const opSaActionIds = opSaGroup?.actions.map((action) => action.actionId) ?? [];
+    expect(opSaActionIds).toContain('train');
+    expect(opSaActionIds).toContain('advise');
+
+    // The operation group should contain train
+    const opGroup = model.actionGroups.find((group) => group.groupName === 'Operation');
+    const opActionIds = opGroup?.actions.map((action) => action.actionId) ?? [];
+    expect(opActionIds).toContain('train');
+    expect(opActionIds).not.toContain('advise');
+  });
 });

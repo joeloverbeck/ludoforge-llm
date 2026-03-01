@@ -1029,7 +1029,9 @@ function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups']
   const groupsByClass = new Map<string, Map<string, string>>();
   for (const move of moves) {
     const actionClass = typeof move.actionClass === 'string' && move.actionClass.length > 0 ? move.actionClass : null;
-    const groupKey = actionClass ?? 'Actions';
+    // Merge specialActivity into the operationPlusSpecialActivity group so SAs
+    // appear alongside operations in the UI rather than as a separate group.
+    const groupKey = actionClass === 'specialActivity' ? 'operationPlusSpecialActivity' : (actionClass ?? 'Actions');
     const group = groupsByClass.get(groupKey) ?? new Map<string, string>();
     if (!groupsByClass.has(groupKey)) {
       groupsByClass.set(groupKey, group);

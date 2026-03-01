@@ -11,6 +11,7 @@ import {
   resolveConstrainedSecondEligibleActionClasses,
 } from './legal-moves-turn-order.js';
 import { resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
@@ -70,6 +71,19 @@ const tryPushTemplateMove = (state: MoveEnumerationState, move: Move, actionId: 
   return true;
 };
 
+const isBaseClassCompatibleWithConstrained = (
+  baseClass: TurnFlowActionClass,
+  constrainedClass: TurnFlowActionClass,
+): boolean => {
+  if (baseClass === 'operation') {
+    return constrainedClass === 'operation' || constrainedClass === 'limitedOperation' || constrainedClass === 'operationPlusSpecialActivity';
+  }
+  if (baseClass === 'specialActivity') {
+    return constrainedClass === 'operationPlusSpecialActivity';
+  }
+  return baseClass === constrainedClass;
+};
+
 const tryPushOptionMatrixFilteredMove = (
   enumeration: MoveEnumerationState,
   def: GameDef,
@@ -80,15 +94,26 @@ const tryPushOptionMatrixFilteredMove = (
   const constrainedClasses = resolveConstrainedSecondEligibleActionClasses(def, state);
   const variants: Move[] = [];
   const baseClass = resolveTurnFlowActionClass(def, move);
-  if (constrainedClasses !== null && String(action.id) !== 'pass' && !isCardEventAction(action) && baseClass === null) {
-    for (const actionClass of constrainedClasses) {
-      if (actionClass === 'event' || actionClass === 'pass') {
-        continue;
+  if (constrainedClasses !== null && String(action.id) !== 'pass' && !isCardEventAction(action)) {
+    if (baseClass === null) {
+      for (const actionClass of constrainedClasses) {
+        if (actionClass === 'event' || actionClass === 'pass') {
+          continue;
+        }
+        variants.push({
+          ...move,
+          actionClass,
+        });
       }
-      variants.push({
-        ...move,
-        actionClass,
-      });
+    } else {
+      for (const actionClass of constrainedClasses) {
+        if (isBaseClassCompatibleWithConstrained(baseClass, actionClass)) {
+          variants.push({
+            ...move,
+            actionClass,
+          });
+        }
+      }
     }
   } else {
     variants.push(

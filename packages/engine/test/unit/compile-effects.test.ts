@@ -25,6 +25,11 @@ const context: EffectLoweringContext = {
   bindingScope: ['$actor'],
 };
 
+const tokenFilterContext: EffectLoweringContext = {
+  ...context,
+  tokenFilterProps: ['faction', 'type'],
+};
+
 describe('compile-effects lowering', () => {
   it('builds canonical condition-lowering context and preserves lowering parity', () => {
     const diagnostics: Diagnostic[] = [];
@@ -100,8 +105,8 @@ describe('compile-effects lowering', () => {
       },
     ];
 
-    const first = lowerEffectArray(source, context, 'doc.actions.0.effects');
-    const second = lowerEffectArray(source, context, 'doc.actions.0.effects');
+    const first = lowerEffectArray(source, tokenFilterContext, 'doc.actions.0.effects');
+    const second = lowerEffectArray(source, tokenFilterContext, 'doc.actions.0.effects');
 
     assert.deepEqual(first, second);
     assertNoDiagnostics(first);
@@ -166,7 +171,7 @@ describe('compile-effects lowering', () => {
           },
         },
       ],
-      context,
+      tokenFilterContext,
       'doc.actions.0.effects',
     );
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel validator tests (and compiler tests if parity assertions are added)
-**Deps**: archive/tickets/TOKFILT-001-kernel-token-filter-prop-validation-parity.md, tickets/TOKFILT-002-compiler-token-filter-prop-contract-strictness.md
+**Deps**: archive/tickets/TOKFILT-001-kernel-token-filter-prop-validation-parity.md, archive/tickets/TOKFILT-002-compiler-token-filter-prop-contract-strictness.md
 
 ## Problem
 

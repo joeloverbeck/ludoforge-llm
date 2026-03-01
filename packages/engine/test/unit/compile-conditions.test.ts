@@ -17,6 +17,11 @@ const fitlSeatContext: ConditionLoweringContext = {
   seatIds: ['US', 'ARVN', 'NVA', 'VC'],
 };
 
+const tokenFilterContext: ConditionLoweringContext = {
+  ...context,
+  tokenFilterProps: ['faction', 'type'],
+};
+
 describe('compile-conditions lowering', () => {
   it('lowers comparator condition with aggregate query and canonicalized zone selectors', () => {
     const result = lowerConditionNode(
@@ -729,7 +734,7 @@ describe('compile-conditions lowering', () => {
         },
         filter: [{ prop: 'type', eq: 'guerrilla' }],
       },
-      context,
+      tokenFilterContext,
       'doc.actions.0.effects.0.forEach.over',
     );
 
@@ -803,7 +808,7 @@ describe('compile-conditions lowering', () => {
           { prop: 'faction', eq: 'ARVN' },
         ],
       },
-      context,
+      tokenFilterContext,
       'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
     );
 
@@ -847,6 +852,61 @@ describe('compile-conditions lowering', () => {
     ]);
   });
 
+  it('emits diagnostic for non-id token filter prop when token prop vocabulary is absent', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'typoType', eq: 'troops' },
+        ],
+      },
+      context,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN',
+        path: 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter[0].prop',
+        severity: 'error',
+        message: 'Token filter references undeclared prop "typoType".',
+        suggestion: 'Use a token prop declared by selected token types/piece runtime props.',
+        alternatives: ['id'],
+      },
+    ]);
+  });
+
+  it('emits diagnostic for non-id token filter prop when token prop vocabulary is explicitly empty', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'typoType', eq: 'troops' },
+        ],
+      },
+      {
+        ...context,
+        tokenFilterProps: [],
+      },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN',
+        path: 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter[0].prop',
+        severity: 'error',
+        message: 'Token filter references undeclared prop "typoType".',
+        suggestion: 'Use a token prop declared by selected token types/piece runtime props.',
+        alternatives: ['id'],
+      },
+    ]);
+  });
+
   it('accepts intrinsic token filter prop id when token prop vocabulary is available', () => {
     const result = lowerQueryNode(
       {
@@ -871,13 +931,58 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('accepts intrinsic token filter prop id when token prop vocabulary is absent', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'id', eq: 'token-1' },
+        ],
+      },
+      context,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+    });
+  });
+
+  it('accepts intrinsic token filter prop id when token prop vocabulary is explicitly empty', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'id', eq: 'token-1' },
+        ],
+      },
+      {
+        ...context,
+        tokenFilterProps: [],
+      },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+    });
+  });
+
   it('lowers tokensInZone query with dynamic zoneExpr', () => {
     const result = lowerQueryNode(
       {
         query: 'tokensInZone',
         zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
       },
-      context,
+      tokenFilterContext,
       'doc.actions.0.effects.0.forEach.over',
     );
 
@@ -897,7 +1002,7 @@ describe('compile-conditions lowering', () => {
           { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
         ],
       },
-      context,
+      tokenFilterContext,
       'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
     );
 
@@ -920,7 +1025,7 @@ describe('compile-conditions lowering', () => {
           { prop: 'faction', op: 'in', value: ['NVA', 'VC'] },
         ],
       },
-      context,
+      tokenFilterContext,
       'doc.actions.0.effects.0.forEach.over',
     );
 
@@ -944,7 +1049,7 @@ describe('compile-conditions lowering', () => {
         ],
       },
       {
-        ...context,
+        ...tokenFilterContext,
         namedSets: {
           COIN: ['US', 'ARVN'],
           Insurgent: ['NVA', 'VC'],
@@ -973,7 +1078,7 @@ describe('compile-conditions lowering', () => {
         ],
       },
       {
-        ...context,
+        ...tokenFilterContext,
         namedSets: {
           COIN: ['US', 'ARVN'],
         },
@@ -1000,7 +1105,7 @@ describe('compile-conditions lowering', () => {
         zone: 'board',
         filter: [{ prop: 'type', eq: 'guerrilla' }],
       },
-      context,
+      tokenFilterContext,
       'doc.effects.0.forEach.over',
     );
 

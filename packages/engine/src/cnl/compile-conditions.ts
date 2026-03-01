@@ -420,9 +420,6 @@ function validateDeclaredTokenFilterProp(
   prop: string,
   path: string,
 ): readonly Diagnostic[] {
-  if (context.tokenFilterProps === undefined || context.tokenFilterProps.length === 0) {
-    return [];
-  }
   if (isAllowedTokenFilterProp(prop, context.tokenFilterProps)) {
     return [];
   }

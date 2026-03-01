@@ -134,6 +134,12 @@ describe('normalizeZoneOwnerQualifier', () => {
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.draw.to');
   });
+
+  it('resolves seat names to numeric owner qualifiers when seatIds are provided', () => {
+    const fitlSeats = ['US', 'ARVN', 'NVA', 'VC'] as const;
+    assert.equal(normalizeZoneOwnerQualifier('NVA', 'doc.actions.0.effects.0.draw.to', fitlSeats).value, '2');
+    assert.equal(normalizeZoneOwnerQualifier('vc', 'doc.actions.0.effects.0.draw.to', fitlSeats).value, '3');
+  });
 });
 
 describe('normalizeActionExecutorSelector', () => {
@@ -149,5 +155,11 @@ describe('normalizeActionExecutorSelector', () => {
     const allResult = normalizeActionExecutorSelector('all', 'doc.actions.0.executor');
     assert.equal(allResult.value, null);
     assert.equal(allResult.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
+  });
+
+  it('resolves seat names when seatIds are provided', () => {
+    const fitlSeats = ['US', 'ARVN', 'NVA', 'VC'] as const;
+    assert.deepEqual(normalizeActionExecutorSelector('US', 'doc.actions.0.executor', fitlSeats).value, { id: 0 });
+    assert.deepEqual(normalizeActionExecutorSelector('nva', 'doc.actions.0.executor', fitlSeats).value, { id: 2 });
   });
 });

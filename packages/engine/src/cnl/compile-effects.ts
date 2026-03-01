@@ -142,7 +142,7 @@ function lowerEffectNode(
     return wrapSingleEffectLowering(lowerSetVarEffect(source.setVar, context, scope, `${path}.setVar`));
   }
   if (isRecord(source.setActivePlayer)) {
-    return wrapSingleEffectLowering(lowerSetActivePlayerEffect(source.setActivePlayer, scope, `${path}.setActivePlayer`));
+    return wrapSingleEffectLowering(lowerSetActivePlayerEffect(source.setActivePlayer, context, scope, `${path}.setActivePlayer`));
   }
   if (isRecord(source.addVar)) {
     return wrapSingleEffectLowering(lowerAddVarEffect(source.addVar, context, scope, `${path}.addVar`));
@@ -297,7 +297,7 @@ function lowerSetVarEffect(
     };
   }
 
-  const player = lowerPlayerSelector(source.player, scope, `${path}.player`);
+  const player = lowerPlayerSelector(source.player, scope, `${path}.player`, context.seatIds);
   diagnostics.push(...player.diagnostics);
   if (player.value === null) {
     return { value: null, diagnostics };
@@ -366,7 +366,7 @@ function lowerAddVarEffect(
     };
   }
 
-  const player = lowerPlayerSelector(source.player, scope, `${path}.player`);
+  const player = lowerPlayerSelector(source.player, scope, `${path}.player`, context.seatIds);
   diagnostics.push(...player.diagnostics);
   if (player.value === null) {
     return { value: null, diagnostics };
@@ -387,10 +387,11 @@ function lowerAddVarEffect(
 
 function lowerSetActivePlayerEffect(
   source: Record<string, unknown>,
+  context: EffectLoweringContext,
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
-  const player = lowerPlayerSelector(source.player, scope, `${path}.player`);
+  const player = lowerPlayerSelector(source.player, scope, `${path}.player`, context.seatIds);
   if (player.value === null) {
     return { value: null, diagnostics: player.diagnostics };
   }
@@ -435,7 +436,7 @@ function lowerTransferVarEffect(
   let fromPlayer: PlayerSel | undefined;
   let fromZone: ZoneRef | undefined;
   if (source.from.scope === 'pvar') {
-    const loweredFromPlayer = lowerPlayerSelector(source.from.player, scope, `${path}.from.player`);
+    const loweredFromPlayer = lowerPlayerSelector(source.from.player, scope, `${path}.from.player`, context.seatIds);
     diagnostics.push(...loweredFromPlayer.diagnostics);
     if (loweredFromPlayer.value === null) {
       return { value: null, diagnostics };
@@ -461,7 +462,7 @@ function lowerTransferVarEffect(
   let toPlayer: PlayerSel | undefined;
   let toZone: ZoneRef | undefined;
   if (source.to.scope === 'pvar') {
-    const loweredToPlayer = lowerPlayerSelector(source.to.player, scope, `${path}.to.player`);
+    const loweredToPlayer = lowerPlayerSelector(source.to.player, scope, `${path}.to.player`, context.seatIds);
     diagnostics.push(...loweredToPlayer.diagnostics);
     if (loweredToPlayer.value === null) {
       return { value: null, diagnostics };
@@ -694,7 +695,7 @@ function lowerRevealEffect(
   if (source.to === 'all') {
     to = 'all';
   } else {
-    const loweredTo = lowerPlayerSelector(source.to, scope, `${path}.to`);
+    const loweredTo = lowerPlayerSelector(source.to, scope, `${path}.to`, context.seatIds);
     diagnostics.push(...loweredTo.diagnostics);
     if (loweredTo.value === null) {
       return { value: null, diagnostics };
@@ -744,7 +745,7 @@ function lowerConcealEffect(
   if (source.from === 'all') {
     from = 'all';
   } else if (source.from !== undefined) {
-    const loweredFrom = lowerPlayerSelector(source.from, scope, `${path}.from`);
+    const loweredFrom = lowerPlayerSelector(source.from, scope, `${path}.from`, context.seatIds);
     diagnostics.push(...loweredFrom.diagnostics);
     if (loweredFrom.value === null) {
       return { value: null, diagnostics };
@@ -2202,7 +2203,7 @@ function lowerZoneSelector(
   path: string,
 ): EffectLoweringResult<ZoneRef> {
   if (typeof source === 'string') {
-    const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path);
+    const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path, context.seatIds);
     if (zone.value === null) {
       return { value: null, diagnostics: zone.diagnostics };
     }
@@ -2251,8 +2252,13 @@ function lowerZoneSelector(
   return { value: { zoneExpr: valueResult.value }, diagnostics: valueResult.diagnostics };
 }
 
-function lowerPlayerSelector(source: unknown, scope: BindingScope, path: string): EffectLoweringResult<PlayerSel> {
-  const selector = normalizePlayerSelector(source, path);
+function lowerPlayerSelector(
+  source: unknown,
+  scope: BindingScope,
+  path: string,
+  seatIds?: readonly string[],
+): EffectLoweringResult<PlayerSel> {
+  const selector = normalizePlayerSelector(source, path, seatIds);
   if (selector.value === null) {
     return selector;
   }
@@ -2309,6 +2315,7 @@ function makeConditionContext(context: EffectLoweringContext, scope: BindingScop
     ...(context.tokenFilterProps === undefined ? {} : { tokenFilterProps: context.tokenFilterProps }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
+    ...(context.seatIds === undefined ? {} : { seatIds: context.seatIds }),
   };
 }
 

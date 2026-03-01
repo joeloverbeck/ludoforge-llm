@@ -32,6 +32,7 @@ export interface ConditionLoweringContext {
   readonly tokenFilterProps?: readonly string[];
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
+  readonly seatIds?: readonly string[];
 }
 
 export interface ConditionLoweringResult<TValue> {
@@ -708,7 +709,7 @@ export function lowerQueryNode(
           }
           spaceFilter = { condition: loweredCondition.value };
         } else if (source.spaceFilter.owner !== undefined) {
-          const owner = normalizePlayerSelector(source.spaceFilter.owner, `${path}.spaceFilter.owner`);
+          const owner = normalizePlayerSelector(source.spaceFilter.owner, `${path}.spaceFilter.owner`, context.seatIds);
           diagnostics.push(...owner.diagnostics);
           if (owner.value === null) {
             return { value: null, diagnostics };
@@ -981,7 +982,7 @@ export function lowerQueryNode(
 
       // Owner-based filter: { owner: <PlayerSel> }
       if (source.filter.owner !== undefined) {
-        const owner = normalizePlayerSelector(source.filter.owner, `${path}.filter.owner`);
+        const owner = normalizePlayerSelector(source.filter.owner, `${path}.filter.owner`, context.seatIds);
         if (owner.value === null) {
           return { value: null, diagnostics: owner.diagnostics };
         }
@@ -1279,7 +1280,7 @@ function lowerReference(
       if (typeof source.var !== 'string') {
         return missingCapability(path, 'pvar reference', source, ['{ ref: "pvar", player: <PlayerSel>, var: string }']);
       }
-      const player = normalizePlayerSelector(source.player, `${path}.player`);
+      const player = normalizePlayerSelector(source.player, `${path}.player`, context.seatIds);
       if (player.value === null) {
         return { value: null, diagnostics: player.diagnostics };
       }
@@ -1419,7 +1420,7 @@ function lowerZoneSelector(
   context: ConditionLoweringContext,
   path: string,
 ): ConditionLoweringResult<string> {
-  const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path);
+  const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path, context.seatIds);
   if (zone.value === null) {
     return { value: null, diagnostics: zone.diagnostics };
   }

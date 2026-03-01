@@ -170,6 +170,46 @@ describe('compile actions', () => {
     );
   });
 
+  it('resolves seat names for action actor/executor and terminal win player when seats are derived from data assets', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-seat-name-resolution', players: { min: 4, max: 4 } },
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+            pieceTypes: [
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
+              { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
+              { id: 'nva-troops', seat: 'NVA', statusDimensions: [], transitions: [] },
+              { id: 'vc-troops', seat: 'VC', statusDimensions: [], transitions: [] },
+            ],
+            inventory: [
+              { pieceTypeId: 'us-troops', seat: 'US', total: 1 },
+              { pieceTypeId: 'arvn-troops', seat: 'ARVN', total: 1 },
+              { pieceTypeId: 'nva-troops', seat: 'NVA', total: 1 },
+              { pieceTypeId: 'vc-troops', seat: 'VC', total: 1 },
+            ],
+          },
+        },
+      ],
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      tokenTypes: null,
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'play', actor: 'NVA', executor: 'us', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'win', player: 'nva' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 2 });
+    assert.deepEqual(result.gameDef?.actions[0]?.executor, { id: 0 });
+    assert.deepEqual(result.gameDef?.terminal.conditions[0]?.result, { type: 'win', player: { id: 2 } });
+  });
+
   it('accepts binding-derived executor when binding is declared action param', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

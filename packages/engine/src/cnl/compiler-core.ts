@@ -471,6 +471,7 @@ function compileExpandedDoc(
         tokenFilterProps,
         namedSets,
         typeInference,
+        seatIds,
       ),
     );
     const victorySection = compileSection(diagnostics, () => lowerVictory(rawTerminal, diagnostics));

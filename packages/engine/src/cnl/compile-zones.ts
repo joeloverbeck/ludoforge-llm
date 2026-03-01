@@ -138,6 +138,7 @@ export function canonicalizeZoneSelector(
   selector: unknown,
   ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   path: string,
+  seatIds?: readonly string[],
 ): ZoneCompileResult<string | null> {
   // Static concat resolution: { concat: ['available:', 'US'] } → "available:US"
   const resolved = tryStaticConcatResolution(selector, path);
@@ -220,7 +221,7 @@ export function canonicalizeZoneSelector(
     };
   }
 
-  const normalizedQualifier = normalizeZoneOwnerQualifier(qualifierRaw, path);
+  const normalizedQualifier = normalizeZoneOwnerQualifier(qualifierRaw, path, seatIds);
   if (normalizedQualifier.value === null) {
     return {
       value: null,

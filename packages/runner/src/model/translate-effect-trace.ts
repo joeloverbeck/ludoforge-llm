@@ -162,7 +162,7 @@ function translateEffectEntry(
       return {
         ...base,
         kind: 'iteration',
-        message: `Reduce ${summarizeLifecycleBinding(entry.resultBind, entry.macroOrigin)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
+        message: `Reduce ${summarizeLifecycleBinding(entry.resultBind, entry.resultMacroOrigin)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
       };
   }
 }

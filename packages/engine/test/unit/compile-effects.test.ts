@@ -193,6 +193,26 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('resolves seat-name selectors in effect-local player and zone selectors when seatIds are provided', () => {
+    const result = lowerEffectArray(
+      [
+        { setVar: { scope: 'pvar', player: 'NVA', var: 'resources', value: 1 } },
+        { moveAll: { from: 'deck:none', to: 'hand:vc' } },
+      ],
+      {
+        ...context,
+        seatIds: ['US', 'ARVN', 'NVA', 'VC'],
+      },
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      { setVar: { scope: 'pvar', player: { id: 2 }, var: 'resources', value: 1 } },
+      { moveAll: { from: 'deck:none', to: 'hand:3' } },
+    ]);
+  });
+
   it('rejects reduce effects with conflicting binder identifiers', () => {
     const result = lowerEffectArray(
       [

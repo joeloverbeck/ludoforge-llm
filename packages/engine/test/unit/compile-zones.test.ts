@@ -125,6 +125,18 @@ describe('canonicalizeZoneSelector', () => {
     assertNoDiagnostics(numeric);
   });
 
+  it('canonicalizes seat-name qualifiers to player ids when seatIds are provided', () => {
+    const fitlSeats = ['US', 'ARVN', 'NVA', 'VC'] as const;
+    const withSeatQualifier = canonicalizeZoneSelector(
+      'hand:NVA',
+      ownershipByBase,
+      'doc.actions.0.effects.0.draw.to',
+      fitlSeats,
+    );
+    assert.equal(withSeatQualifier.value, 'hand:2');
+    assertNoDiagnostics(withSeatQualifier);
+  });
+
   it('rejects non-canonical owner qualifier aliases with deterministic diagnostics', () => {
     const result = canonicalizeZoneSelector('hand:activePlayer', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
     assert.equal(result.value, null);

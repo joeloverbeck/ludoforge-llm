@@ -12,6 +12,11 @@ const context: ConditionLoweringContext = {
   },
 };
 
+const fitlSeatContext: ConditionLoweringContext = {
+  ...context,
+  seatIds: ['US', 'ARVN', 'NVA', 'VC'],
+};
+
 describe('compile-conditions lowering', () => {
   it('lowers comparator condition with aggregate query and canonicalized zone selectors', () => {
     const result = lowerConditionNode(
@@ -168,6 +173,34 @@ describe('compile-conditions lowering', () => {
     ]);
   });
 
+  it('resolves seat-name owner selectors for zones/mapSpaces queries when seatIds are provided', () => {
+    const zonesResult = lowerQueryNode(
+      { query: 'zones', filter: { owner: 'NVA' } },
+      fitlSeatContext,
+      'doc.actions.0.params.0.domain',
+    );
+    assertNoDiagnostics(zonesResult);
+    assert.deepEqual(zonesResult.value, { query: 'zones', filter: { owner: { id: 2 } } });
+
+    const mapSpacesResult = lowerQueryNode(
+      { query: 'mapSpaces', filter: { owner: 'vc' } },
+      fitlSeatContext,
+      'doc.actions.0.params.0.domain',
+    );
+    assertNoDiagnostics(mapSpacesResult);
+    assert.deepEqual(mapSpacesResult.value, { query: 'mapSpaces', filter: { owner: { id: 3 } } });
+  });
+
+  it('resolves seat-name owner selectors for tokensInMapSpaces.spaceFilter when seatIds are provided', () => {
+    const result = lowerQueryNode(
+      { query: 'tokensInMapSpaces', spaceFilter: { owner: 'ARVN' } },
+      fitlSeatContext,
+      'doc.actions.0.params.0.domain',
+    );
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, { query: 'tokensInMapSpaces', spaceFilter: { owner: { id: 1 } } });
+  });
+
   it('lowers intsInRange query with dynamic ValueExpr bounds', () => {
     const result = lowerQueryNode(
       {
@@ -294,6 +327,16 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_NEXT_IN_ORDER_BIND_INVALID');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.bind');
+  });
+
+  it('resolves seat-name pvar reference selectors when seatIds are provided', () => {
+    const result = lowerValueNode(
+      { ref: 'pvar', player: 'NVA', var: 'resources' },
+      fitlSeatContext,
+      'doc.actions.0.pre.left',
+    );
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, { ref: 'pvar', player: { id: 2 }, var: 'resources' });
   });
 
   it('rejects nextInOrderByCondition queries without source order', () => {

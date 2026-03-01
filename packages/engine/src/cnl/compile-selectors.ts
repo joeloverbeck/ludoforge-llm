@@ -57,8 +57,9 @@ export function normalizePlayerSelector(
 export function normalizeActionExecutorSelector(
   value: unknown,
   path: string,
+  seatIds?: readonly string[],
 ): SelectorCompileResult<ActionExecutorSel> {
-  const normalized = normalizePlayerSelector(value, path);
+  const normalized = normalizePlayerSelector(value, path, seatIds);
   if (normalized.value === null) {
     return {
       value: null,
@@ -90,12 +91,16 @@ export function normalizeActionExecutorSelector(
   return { value: normalized.value as ActionExecutorSel, diagnostics: [] };
 }
 
-export function normalizeZoneOwnerQualifier(value: string, path: string): SelectorCompileResult<ZoneOwnerQualifier> {
+export function normalizeZoneOwnerQualifier(
+  value: string,
+  path: string,
+  seatIds?: readonly string[],
+): SelectorCompileResult<ZoneOwnerQualifier> {
   if (value === 'none' || value === 'all') {
     return { value, diagnostics: [] };
   }
 
-  const normalizedPlayer = normalizePlayerSelector(value, path);
+  const normalizedPlayer = normalizePlayerSelector(value, path, seatIds);
   if (normalizedPlayer.value === null) {
     return {
       value: null,

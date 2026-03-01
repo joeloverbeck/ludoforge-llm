@@ -30,7 +30,7 @@ import type { GameSpecDoc } from './game-spec-doc.js';
 export type EffectLoweringSharedContext = Omit<EffectLoweringContext, 'bindingScope'>;
 export type ConditionLoweringSharedContext = Pick<
   EffectLoweringSharedContext,
-  'ownershipByBase' | 'tokenTraitVocabulary' | 'tokenFilterProps' | 'namedSets' | 'typeInference'
+  'ownershipByBase' | 'tokenTraitVocabulary' | 'tokenFilterProps' | 'namedSets' | 'typeInference' | 'seatIds'
 >;
 
 export function lowerConstants(
@@ -477,9 +477,9 @@ export function lowerActions(
       continue;
     }
 
-    const actor = normalizePlayerSelector(action.actor, `${path}.actor`);
+    const actor = normalizePlayerSelector(action.actor, `${path}.actor`, context.seatIds);
     diagnostics.push(...actor.diagnostics);
-    const executor = normalizeActionExecutorSelector(action.executor, `${path}.executor`);
+    const executor = normalizeActionExecutorSelector(action.executor, `${path}.executor`, context.seatIds);
     diagnostics.push(...executor.diagnostics);
     const capabilities = lowerActionCapabilities(action.capabilities, diagnostics, `${path}.capabilities`);
 
@@ -882,6 +882,7 @@ export function lowerEndConditions(
   tokenFilterProps?: readonly string[],
   namedSets?: Readonly<Record<string, readonly string[]>>,
   typeInference?: TypeInferenceContext,
+  seatIds?: readonly string[],
 ): readonly EndCondition[] {
   const lowered: EndCondition[] = [];
   for (const [index, endCondition] of endConditions.entries()) {
@@ -899,11 +900,24 @@ export function lowerEndConditions(
         ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
         ...(namedSets === undefined ? {} : { namedSets }),
         ...(typeInference === undefined ? {} : { typeInference }),
+        ...(seatIds === undefined ? {} : { seatIds }),
       },
       `${path}.when`,
     );
     diagnostics.push(...when.diagnostics);
-    const result = lowerTerminalResult(endCondition.result, diagnostics, `${path}.result`);
+    const result = lowerTerminalResult(
+      endCondition.result,
+      diagnostics,
+      `${path}.result`,
+      {
+        ownershipByBase,
+        ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+        ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
+        ...(namedSets === undefined ? {} : { namedSets }),
+        ...(typeInference === undefined ? {} : { typeInference }),
+        ...(seatIds === undefined ? {} : { seatIds }),
+      },
+    );
 
     if (when.value === null || result === null) {
       continue;
@@ -953,6 +967,7 @@ function lowerTerminalResult(
   result: unknown,
   diagnostics: Diagnostic[],
   path: string,
+  context: ConditionLoweringSharedContext,
 ): EndCondition['result'] | null {
   if (!isRecord(result) || typeof result.type !== 'string') {
     diagnostics.push(missingCapabilityDiagnostic(path, 'end condition result', result));
@@ -967,7 +982,7 @@ function lowerTerminalResult(
     case 'score':
       return { type: 'score' };
     case 'win': {
-      const player = normalizePlayerSelector(result.player, `${path}.player`);
+      const player = normalizePlayerSelector(result.player, `${path}.player`, context.seatIds);
       diagnostics.push(...player.diagnostics);
       if (player.value === null) {
         return null;
@@ -1015,6 +1030,7 @@ export function buildConditionLoweringContext(
   readonly tokenFilterProps?: readonly string[];
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly typeInference?: TypeInferenceContext;
+  readonly seatIds?: readonly string[];
 } {
   return {
     ownershipByBase: context.ownershipByBase,
@@ -1023,6 +1039,7 @@ export function buildConditionLoweringContext(
     ...(context.tokenFilterProps === undefined ? {} : { tokenFilterProps: context.tokenFilterProps }),
     ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
     ...(context.typeInference === undefined ? {} : { typeInference: context.typeInference }),
+    ...(context.seatIds === undefined ? {} : { seatIds: context.seatIds }),
   };
 }
 

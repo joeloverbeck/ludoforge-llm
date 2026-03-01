@@ -216,7 +216,7 @@ describe('translateEffectTrace', () => {
         itemBind: 'item',
         accBind: 'acc',
         resultBind: '$__macro_hand_rank_score_turnStructure_phases_5__onEnter_1__forEach_effects_0__if_then_1__evaluateSubset_compute_0__straightHigh',
-        macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+        resultMacroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
         matchCount: 21,
         iteratedCount: 21,
         provenance: provenance(),

@@ -33,11 +33,11 @@ const createDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+          eligibility: { seats: ['US', 'ARVN', 'NVA', 'VC'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [
-            { seat: '0', resource: 'res0', amount: 1 },
-            { seat: '1', resource: 'res1', amount: 3 },
+            { seat: 'US', resource: 'res0', amount: 1 },
+            { seat: 'ARVN', resource: 'res1', amount: 3 },
           ],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
@@ -100,7 +100,7 @@ const createCardLifecycleDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+          eligibility: { seats: ['US', 'ARVN', 'NVA', 'VC'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -131,30 +131,30 @@ describe('FITL eligibility/pass-chain integration', () => {
     const start = initialState(def, 19, 4).state;
 
     assert.equal(start.activePlayer, asPlayerId(0));
-    assert.equal(requireCardDrivenRuntime(start).currentCard.firstEligible, '0');
-    assert.equal(requireCardDrivenRuntime(start).currentCard.secondEligible, '1');
+    assert.equal(requireCardDrivenRuntime(start).currentCard.firstEligible, 'US');
+    assert.equal(requireCardDrivenRuntime(start).currentCard.secondEligible, 'ARVN');
 
     const first = applyMove(def, start, passMove).state;
     assert.equal(first.activePlayer, asPlayerId(1));
     assert.equal(first.globalVars.res0, 1);
-    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, '1');
-    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, '2');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, 'ARVN');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, 'NVA');
 
     const second = applyMove(def, first, passMove).state;
     assert.equal(second.activePlayer, asPlayerId(2));
     assert.equal(second.globalVars.res1, 3);
-    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, '2');
-    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, '3');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, 'NVA');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, 'VC');
 
     const third = applyMove(def, second, passMove).state;
     assert.equal(third.activePlayer, asPlayerId(3));
-    assert.equal(requireCardDrivenRuntime(third).currentCard.firstEligible, '3');
+    assert.equal(requireCardDrivenRuntime(third).currentCard.firstEligible, 'VC');
     assert.equal(requireCardDrivenRuntime(third).currentCard.secondEligible, null);
 
     const fourth = applyMove(def, third, passMove).state;
     assert.equal(fourth.activePlayer, asPlayerId(0));
-    assert.equal(requireCardDrivenRuntime(fourth).currentCard.firstEligible, '0');
-    assert.equal(requireCardDrivenRuntime(fourth).currentCard.secondEligible, '1');
+    assert.equal(requireCardDrivenRuntime(fourth).currentCard.firstEligible, 'US');
+    assert.equal(requireCardDrivenRuntime(fourth).currentCard.secondEligible, 'ARVN');
     assert.equal(requireCardDrivenRuntime(fourth).currentCard.nonPassCount, 0);
     assert.deepEqual(requireCardDrivenRuntime(fourth).currentCard.passedSeats, []);
   });
@@ -168,16 +168,16 @@ describe('FITL eligibility/pass-chain integration', () => {
     assert.equal(first.globalVars.ops, 1);
     assert.equal(first.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(first).currentCard.nonPassCount, 1);
-    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, '1');
-    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, '2');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.firstEligible, 'ARVN');
+    assert.equal(requireCardDrivenRuntime(first).currentCard.secondEligible, 'NVA');
 
     const second = applyMove(def, first, operateMove).state;
     assert.equal(second.globalVars.ops, 2);
     assert.equal(second.activePlayer, asPlayerId(2));
     assert.equal(requireCardDrivenRuntime(second).currentCard.nonPassCount, 0);
-    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, '2');
-    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, '3');
-    assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { '0': false, '1': false, '2': true, '3': true });
+    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, 'NVA');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, 'VC');
+    assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { US: false, ARVN: false, NVA: true, VC: true });
     assert.deepEqual(requireCardDrivenRuntime(second).currentCard.actedSeats, []);
   });
 

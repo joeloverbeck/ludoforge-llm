@@ -56,23 +56,23 @@
         {
           "kind": "turnFlowEligibility",
           "step": "passChain",
-          "seat": "0",
+          "seat": "US",
           "before": {
-            "firstEligible": "0",
-            "secondEligible": "1",
+            "firstEligible": "US",
+            "secondEligible": "ARVN",
             "actedSeats": [],
             "passedSeats": [],
             "nonPassCount": 0,
             "firstActionClass": null
           },
           "after": {
-            "firstEligible": "1",
-            "secondEligible": "2",
+            "firstEligible": "ARVN",
+            "secondEligible": "NVA",
             "actedSeats": [
-              "0"
+              "US"
             ],
             "passedSeats": [
-              "0"
+              "US"
             ],
             "nonPassCount": 0,
             "firstActionClass": null
@@ -161,26 +161,26 @@
           "type": "cardDriven",
           "runtime": {
             "seatOrder": [
-              "0",
-              "1",
-              "2",
-              "3"
+              "US",
+              "ARVN",
+              "NVA",
+              "VC"
             ],
             "eligibility": {
-              "0": true,
-              "1": true,
-              "2": true,
-              "3": true
+              "US": true,
+              "ARVN": true,
+              "NVA": true,
+              "VC": true
             },
             "pendingEligibilityOverrides": [],
             "currentCard": {
-              "firstEligible": "1",
-              "secondEligible": "2",
+              "firstEligible": "ARVN",
+              "secondEligible": "NVA",
               "actedSeats": [
-                "0"
+                "US"
               ],
               "passedSeats": [
-                "0"
+                "US"
               ],
               "nonPassCount": 0,
               "firstActionClass": null
@@ -297,26 +297,26 @@
           "type": "cardDriven",
           "runtime": {
             "seatOrder": [
-              "0",
-              "1",
-              "2",
-              "3"
+              "US",
+              "ARVN",
+              "NVA",
+              "VC"
             ],
             "eligibility": {
-              "0": true,
-              "1": true,
-              "2": true,
-              "3": true
+              "US": true,
+              "ARVN": true,
+              "NVA": true,
+              "VC": true
             },
             "pendingEligibilityOverrides": [],
             "currentCard": {
-              "firstEligible": "1",
-              "secondEligible": "2",
+              "firstEligible": "ARVN",
+              "secondEligible": "NVA",
               "actedSeats": [
-                "0"
+                "US"
               ],
               "passedSeats": [
-                "0"
+                "US"
               ],
               "nonPassCount": 0,
               "firstActionClass": null
@@ -337,28 +337,28 @@
         {
           "kind": "turnFlowEligibility",
           "step": "candidateScan",
-          "seat": "1",
+          "seat": "ARVN",
           "before": {
-            "firstEligible": "1",
-            "secondEligible": "2",
+            "firstEligible": "ARVN",
+            "secondEligible": "NVA",
             "actedSeats": [
-              "0"
+              "US"
             ],
             "passedSeats": [
-              "0"
+              "US"
             ],
             "nonPassCount": 0,
             "firstActionClass": null
           },
           "after": {
-            "firstEligible": "2",
-            "secondEligible": "3",
+            "firstEligible": "NVA",
+            "secondEligible": "VC",
             "actedSeats": [
-              "0",
-              "1"
+              "US",
+              "ARVN"
             ],
             "passedSeats": [
-              "0"
+              "US"
             ],
             "nonPassCount": 1,
             "firstActionClass": "event"
@@ -367,36 +367,36 @@
         {
           "kind": "turnFlowEligibility",
           "step": "overrideCreate",
-          "seat": "1",
+          "seat": "ARVN",
           "before": {
-            "firstEligible": "2",
-            "secondEligible": "3",
+            "firstEligible": "NVA",
+            "secondEligible": "VC",
             "actedSeats": [
-              "0",
-              "1"
+              "US",
+              "ARVN"
             ],
             "passedSeats": [
-              "0"
+              "US"
             ],
             "nonPassCount": 1,
             "firstActionClass": "event"
           },
           "after": {
-            "firstEligible": "2",
-            "secondEligible": "3",
+            "firstEligible": "NVA",
+            "secondEligible": "VC",
             "actedSeats": [
-              "0",
-              "1"
+              "US",
+              "ARVN"
             ],
             "passedSeats": [
-              "0"
+              "US"
             ],
             "nonPassCount": 1,
             "firstActionClass": "event"
           },
           "overrides": [
             {
-              "seat": "1",
+              "seat": "ARVN",
               "eligible": true,
               "windowId": "remain-eligible",
               "duration": "nextTurn"
@@ -478,34 +478,34 @@
           "type": "cardDriven",
           "runtime": {
             "seatOrder": [
-              "0",
-              "1",
-              "2",
-              "3"
+              "US",
+              "ARVN",
+              "NVA",
+              "VC"
             ],
             "eligibility": {
-              "0": true,
-              "1": true,
-              "2": true,
-              "3": true
+              "US": true,
+              "ARVN": true,
+              "NVA": true,
+              "VC": true
             },
             "pendingEligibilityOverrides": [
               {
-                "seat": "1",
+                "seat": "ARVN",
                 "eligible": true,
                 "windowId": "remain-eligible",
                 "duration": "nextTurn"
               }
             ],
             "currentCard": {
-              "firstEligible": "2",
-              "secondEligible": "3",
+              "firstEligible": "NVA",
+              "secondEligible": "VC",
               "actedSeats": [
-                "0",
-                "1"
+                "US",
+                "ARVN"
               ],
               "passedSeats": [
-                "0"
+                "US"
               ],
               "nonPassCount": 1,
               "firstActionClass": "event"
@@ -665,34 +665,34 @@
           "type": "cardDriven",
           "runtime": {
             "seatOrder": [
-              "0",
-              "1",
-              "2",
-              "3"
+              "US",
+              "ARVN",
+              "NVA",
+              "VC"
             ],
             "eligibility": {
-              "0": true,
-              "1": true,
-              "2": true,
-              "3": true
+              "US": true,
+              "ARVN": true,
+              "NVA": true,
+              "VC": true
             },
             "pendingEligibilityOverrides": [
               {
-                "seat": "1",
+                "seat": "ARVN",
                 "eligible": true,
                 "windowId": "remain-eligible",
                 "duration": "nextTurn"
               }
             ],
             "currentCard": {
-              "firstEligible": "2",
-              "secondEligible": "3",
+              "firstEligible": "NVA",
+              "secondEligible": "VC",
               "actedSeats": [
-                "0",
-                "1"
+                "US",
+                "ARVN"
               ],
               "passedSeats": [
-                "0"
+                "US"
               ],
               "nonPassCount": 1,
               "firstActionClass": "event"

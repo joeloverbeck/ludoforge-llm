@@ -36,7 +36,7 @@ const createDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1'], overrideWindows: [] },
+          eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

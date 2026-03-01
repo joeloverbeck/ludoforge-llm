@@ -43,20 +43,20 @@
     {
       "kind": "turnFlowEligibility",
       "step": "candidateScan",
-      "seat": "0",
+      "seat": "US",
       "before": {
-        "firstEligible": "0",
-        "secondEligible": "1",
+        "firstEligible": "US",
+        "secondEligible": "ARVN",
         "actedSeats": [],
         "passedSeats": [],
         "nonPassCount": 0,
         "firstActionClass": null
       },
       "after": {
-        "firstEligible": "1",
-        "secondEligible": "2",
+        "firstEligible": "ARVN",
+        "secondEligible": "NVA",
         "actedSeats": [
-          "0"
+          "US"
         ],
         "passedSeats": [],
         "nonPassCount": 1,
@@ -66,22 +66,22 @@
     {
       "kind": "turnFlowEligibility",
       "step": "overrideCreate",
-      "seat": "0",
+      "seat": "US",
       "before": {
-        "firstEligible": "1",
-        "secondEligible": "2",
+        "firstEligible": "ARVN",
+        "secondEligible": "NVA",
         "actedSeats": [
-          "0"
+          "US"
         ],
         "passedSeats": [],
         "nonPassCount": 1,
         "firstActionClass": "event"
       },
       "after": {
-        "firstEligible": "1",
-        "secondEligible": "2",
+        "firstEligible": "ARVN",
+        "secondEligible": "NVA",
         "actedSeats": [
-          "0"
+          "US"
         ],
         "passedSeats": [],
         "nonPassCount": 1,
@@ -89,7 +89,7 @@
       },
       "overrides": [
         {
-          "seat": "0",
+          "seat": "US",
           "eligible": true,
           "windowId": "remain-eligible",
           "duration": "nextTurn"
@@ -104,30 +104,30 @@
     },
     "turnFlow": {
       "seatOrder": [
-        "0",
-        "1",
-        "2",
-        "3"
+        "US",
+        "ARVN",
+        "NVA",
+        "VC"
       ],
       "eligibility": {
-        "0": true,
-        "1": true,
-        "2": true,
-        "3": true
+        "US": true,
+        "ARVN": true,
+        "NVA": true,
+        "VC": true
       },
       "pendingEligibilityOverrides": [
         {
-          "seat": "0",
+          "seat": "US",
           "eligible": true,
           "windowId": "remain-eligible",
           "duration": "nextTurn"
         }
       ],
       "currentCard": {
-        "firstEligible": "1",
-        "secondEligible": "2",
+        "firstEligible": "ARVN",
+        "secondEligible": "NVA",
         "actedSeats": [
-          "0"
+          "US"
         ],
         "passedSeats": [],
         "nonPassCount": 1,

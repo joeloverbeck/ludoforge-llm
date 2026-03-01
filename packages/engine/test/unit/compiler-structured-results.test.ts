@@ -286,7 +286,7 @@ describe('compiler structured section results', () => {
     assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 1 });
   });
 
-  it('accepts numeric turn-flow seat ids when piece-catalog seats are present in matching count', () => {
+  it('rejects numeric turn-flow seat ids even when piece-catalog seats are present in matching count', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
@@ -331,11 +331,16 @@ describe('compiler structured section results', () => {
 
     const result = compileGameSpecToGameDef(doc);
 
-    assert.notEqual(result.gameDef, null);
-    assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 2 });
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_IDENTITY_INDEX_FORBIDDEN',
+      ),
+      true,
+    );
   });
 
-  it('emits explicit seat-identity incoherence diagnostic for index turn-flow/piece-catalog count mismatch', () => {
+  it('emits explicit index-seat-forbidden diagnostic for index turn-flow/piece-catalog count mismatch', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
@@ -381,7 +386,7 @@ describe('compiler structured section results', () => {
     assert.equal(result.gameDef, null);
     assert.equal(
       result.diagnostics.some(
-        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_IDENTITY_CONTRACT_INCOHERENT',
+        (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_IDENTITY_INDEX_FORBIDDEN',
       ),
       true,
     );

@@ -150,7 +150,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1'], overrideWindows: [] },
+          eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -222,7 +222,7 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     assert.equal(nextTurn.turnCount, 1);
     assert.equal(requireCardDrivenRuntime(nextTurn).currentCard.nonPassCount, 0);
     assert.equal(requireCardDrivenRuntime(nextTurn).currentCard.firstActionClass, null);
-    assert.deepEqual(requireCardDrivenRuntime(nextTurn).eligibility, { '0': true, '1': true });
+    assert.deepEqual(requireCardDrivenRuntime(nextTurn).eligibility, { US: true, ARVN: true });
 
     const lifecycleSteps = lifecycleLog
       .filter((entry) => entry.kind === 'turnFlowLifecycle')

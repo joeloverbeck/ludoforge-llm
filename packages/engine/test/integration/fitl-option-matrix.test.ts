@@ -33,7 +33,7 @@ const createDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['0', '1', '2'], overrideWindows: [] },
+          eligibility: { seats: ['US', 'ARVN', 'NVA'], overrideWindows: [] },
           actionClassByActionId: {
             pass: 'pass',
             event: 'event',
@@ -138,9 +138,9 @@ const asSecondEligibleMatrixWindow = (
         ...runtime,
         currentCard: {
           ...runtime.currentCard,
-          firstEligible: '1',
-          secondEligible: '2',
-          actedSeats: ['0'],
+          firstEligible: 'ARVN',
+          secondEligible: 'NVA',
+          actedSeats: ['US'],
           passedSeats: [],
           nonPassCount: 1,
           firstActionClass,
@@ -291,9 +291,9 @@ describe('FITL option matrix integration', () => {
           ...requireCardDrivenRuntime(start),
           currentCard: {
             ...requireCardDrivenRuntime(start).currentCard,
-            firstEligible: '1',
-            secondEligible: '2',
-            actedSeats: ['0'],
+            firstEligible: 'ARVN',
+            secondEligible: 'NVA',
+            actedSeats: ['US'],
             passedSeats: [],
             nonPassCount: 1,
             firstActionClass: 'operation',

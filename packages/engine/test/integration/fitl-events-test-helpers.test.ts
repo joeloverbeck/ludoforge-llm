@@ -27,7 +27,7 @@ describe('FITL events test helpers', () => {
         windowId: 'force-ineligible',
       }),
       {
-        target: { kind: 'seat', seat: '2' },
+        target: { kind: 'seat', seat: 'NVA' },
         eligible: false,
         windowId: 'force-ineligible',
       },

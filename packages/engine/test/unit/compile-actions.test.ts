@@ -113,7 +113,7 @@ describe('compile actions', () => {
           effects: [
             {
               grantFreeOperation: {
-                seat: '1',
+                seat: 'arvn',
                 operationClass: 'operation',
                 actionIds: ['limitedOp'],
                 sequence: { chain: 'action-sequence', step: 0 },
@@ -121,7 +121,7 @@ describe('compile actions', () => {
             },
             {
               grantFreeOperation: {
-                seat: '1',
+                seat: 'arvn',
                 operationClass: 'operation',
                 sequence: { chain: 'action-sequence', step: 1 },
               },

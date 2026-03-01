@@ -26,9 +26,10 @@ export function withPendingFreeOperationGrant(
 ): GameState {
   const runtime = requireCardDrivenRuntime(state);
   const nextIndex = (runtime.pendingFreeOperationGrants ?? []).length;
+  const activeSeat = runtime.seatOrder[Number(state.activePlayer)] ?? String(state.activePlayer);
   const nextGrant: TurnFlowPendingFreeOperationGrant = {
     grantId: grant?.grantId ?? `test-grant-${nextIndex}`,
-    seat: grant?.seat ?? String(state.activePlayer),
+    seat: grant?.seat ?? activeSeat,
     operationClass: grant?.operationClass ?? 'operation',
     ...(grant?.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant?.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),

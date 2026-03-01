@@ -75,19 +75,19 @@ describe('FITL VC-first event-card production spec batch', () => {
     assert.notEqual(westmoreland, undefined);
     assert.deepEqual(westmoreland?.unshaded?.freeOperationGrants, [
       {
-        seat: '0',
+        seat: 'US',
         sequence: { chain: 'westmoreland-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['airLift'],
       },
       {
-        seat: '0',
+        seat: 'US',
         sequence: { chain: 'westmoreland-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
       },
       {
-        seat: '0',
+        seat: 'US',
         sequence: { chain: 'westmoreland-us', step: 2 },
         operationClass: 'operation',
         actionIds: ['airStrike'],
@@ -98,27 +98,27 @@ describe('FITL VC-first event-card production spec batch', () => {
     assert.notEqual(masher, undefined);
     assert.deepEqual(masher?.unshaded?.freeOperationGrants, [
       {
-        seat: '0',
+        seat: 'US',
         sequence: { chain: 'masher-white-wing-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
-        seat: '0',
+        seat: 'US',
         sequence: { chain: 'masher-white-wing-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],
       },
       {
-        seat: '1',
-        executeAsSeat: '0',
+        seat: 'ARVN',
+        executeAsSeat: 'US',
         sequence: { chain: 'masher-white-wing-arvn-as-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep'],
       },
       {
-        seat: '1',
-        executeAsSeat: '0',
+        seat: 'ARVN',
+        executeAsSeat: 'US',
         sequence: { chain: 'masher-white-wing-arvn-as-us', step: 1 },
         operationClass: 'operation',
         actionIds: ['assault'],

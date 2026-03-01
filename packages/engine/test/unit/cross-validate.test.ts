@@ -213,7 +213,7 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
-  it('uses turn-flow seat reference ids from the shared seat contract when turn-flow seats are index-based', () => {
+  it('uses canonical piece-catalog seat ids for cross-ref targets when turn-flow seats are index-based', () => {
     const sections = compileRichSections();
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
@@ -243,11 +243,17 @@ describe('crossValidateSpec', () => {
       turnFlowSeatIds: ['0', '1'],
       pieceCatalogSeatIds: ['us', 'arvn'],
     });
-    const diagnostics = crossValidateSpec(withIndexSeats, seatIdentityContract.contract);
+    assert.equal(seatIdentityContract.contract.mode, 'turn-flow-index-forbidden');
+    assert.equal(
+      seatIdentityContract.diagnostics.some((entry) => entry.code === 'CNL_COMPILER_SEAT_IDENTITY_INDEX_FORBIDDEN'),
+      true,
+    );
 
-    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_VICTORY_SEAT_MISSING');
-    assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.terminal.checkpoints.0.seat');
+    const diagnostics = crossValidateSpec(withIndexSeats, seatIdentityContract.contract);
+    assert.equal(
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_VICTORY_SEAT_MISSING'),
+      false,
+    );
   });
 
   it('turnOrder.config.turnFlow.cardLifecycle.played referencing nonexistent zone emits CNL_XREF_LIFECYCLE_ZONE_MISSING', () => {

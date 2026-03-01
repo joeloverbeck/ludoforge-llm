@@ -23,7 +23,7 @@ turnOrder:
         lookahead: lookahead:none
         leader: leader:none
       eligibility:
-        seats: ['0', '1', '2', '3']
+        seats: ['US', 'ARVN', 'NVA', 'VC']
         overrideWindows:
           - id: remain-eligible
             duration: nextTurn
@@ -65,17 +65,17 @@ turnOrder:
         - first: event
           second: [operation, operationPlusSpecialActivity]
       passRewards:
-        - { seat: '0', resource: arvnResources, amount: 3 }
-        - { seat: '1', resource: arvnResources, amount: 3 }
-        - { seat: '2', resource: nvaResources, amount: 1 }
-        - { seat: '3', resource: vcResources, amount: 1 }
+        - { seat: 'US', resource: arvnResources, amount: 3 }
+        - { seat: 'ARVN', resource: arvnResources, amount: 3 }
+        - { seat: 'NVA', resource: nvaResources, amount: 1 }
+        - { seat: 'VC', resource: vcResources, amount: 1 }
       freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
       cardSeatOrderMetadataKey: seatOrder
       cardSeatOrderMapping:
-        US: '0'
-        ARVN: '1'
-        NVA: '2'
-        VC: '3'
+        US: 'US'
+        ARVN: 'ARVN'
+        NVA: 'NVA'
+        VC: 'VC'
       durationWindows: [turn, nextTurn, round, cycle]
       monsoon:
         restrictedActions:
@@ -91,7 +91,7 @@ turnOrder:
         requirePreActionWindow: true
         disallowWhenLookaheadIsCoup: true
         interrupt:
-          precedence: ['3', '1', '2', '0']
+          precedence: ['VC', 'ARVN', 'NVA', 'US']
     coupPlan:
       phases:
         - id: coupVictory
@@ -108,7 +108,7 @@ turnOrder:
           steps: [resolve-reset]
       finalRoundOmitPhases: [coupCommitment, coupReset]
       maxConsecutiveRounds: 1
-      seatOrder: ['0', '1', '2', '3']
+      seatOrder: ['US', 'ARVN', 'NVA', 'VC']
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)
@@ -1099,7 +1099,7 @@ actions:
   - { id: arvnOp, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: resolveCommitment
     actor: active
-    executor: '0'
+    executor: 'US'
     phase: [commitment]
     params: []
     pre: null

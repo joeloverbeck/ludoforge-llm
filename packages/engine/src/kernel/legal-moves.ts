@@ -349,7 +349,7 @@ export const enumerateLegalMoves = (
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
 
-  if (!isActiveSeatEligibleForTurnFlow(state)) {
+  if (!isActiveSeatEligibleForTurnFlow(def, state)) {
     return { moves: [], warnings };
   }
 

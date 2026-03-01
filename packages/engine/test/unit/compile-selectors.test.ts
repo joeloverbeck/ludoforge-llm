@@ -84,10 +84,14 @@ describe('normalizePlayerSelector', () => {
       assert.equal(normalizePlayerSelector('all', path, seatsWithKeyword).value, 'all');
     });
 
-    it('numeric strings take priority over seat names', () => {
+    it('rejects numeric string selectors when canonical seat ids are declared', () => {
       const seatsWithNumeric = ['0', '1', 'NVA'] as const;
-      assert.deepEqual(normalizePlayerSelector('0', path, seatsWithNumeric).value, { id: 0 });
-      assert.deepEqual(normalizePlayerSelector('1', path, seatsWithNumeric).value, { id: 1 });
+      const numericZero = normalizePlayerSelector('0', path, seatsWithNumeric);
+      const numericOne = normalizePlayerSelector('1', path, seatsWithNumeric);
+      assert.equal(numericZero.value, null);
+      assert.equal(numericOne.value, null);
+      assert.equal(numericZero.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
+      assert.equal(numericOne.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
     });
 
     it('binding tokens take priority over seat names', () => {

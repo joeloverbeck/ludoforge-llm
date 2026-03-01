@@ -91,8 +91,8 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.equal(typeof card?.shaded?.text, 'string');
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
-        seat: '2',
-        executeAsSeat: '0',
+        seat: 'NVA',
+        executeAsSeat: 'US',
         sequence: { chain: 'gulf-of-tonkin-us-airstrike', step: 0 },
         operationClass: 'operation',
         actionIds: ['airStrike'],
@@ -152,8 +152,8 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
           ...baseState.turnOrderState.runtime,
           currentCard: {
             ...baseState.turnOrderState.runtime.currentCard,
-            firstEligible: '0',
-            secondEligible: '2',
+            firstEligible: 'US',
+            secondEligible: 'NVA',
             actedSeats: [],
             passedSeats: [],
             nonPassCount: 0,
@@ -179,8 +179,8 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     }
     const pending = afterEvent.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
     assert.equal(pending.length, 1);
-    assert.equal(pending[0]?.seat, '2');
-    assert.equal(pending[0]?.executeAsSeat, '0');
+    assert.equal(pending[0]?.seat, 'NVA');
+    assert.equal(pending[0]?.executeAsSeat, 'US');
 
     const grantReadyState: GameState = {
       ...afterEvent,
@@ -191,7 +191,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
           ...afterEvent.turnOrderState.runtime,
           currentCard: {
             ...afterEvent.turnOrderState.runtime.currentCard,
-            firstEligible: '2',
+            firstEligible: 'NVA',
             secondEligible: null,
             actedSeats: [],
             passedSeats: [],

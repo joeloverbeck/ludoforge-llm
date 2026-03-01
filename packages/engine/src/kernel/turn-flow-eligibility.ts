@@ -13,7 +13,7 @@ import {
 } from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { normalizeSeatOrder, parseNumericSeatPlayer } from './seat-resolution.js';
+import { normalizeSeatOrder, resolvePlayerIndexForTurnFlowSeat, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
@@ -125,13 +125,12 @@ const readNumericResource = (vars: Readonly<Record<string, number | boolean>>, n
   return value;
 };
 
-const resolveActiveSeat = (state: GameState): string | null => {
+const resolveActiveSeat = (def: GameDef, state: GameState): string | null => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return null;
   }
-  const seat = String(state.activePlayer);
-  return runtime.seatOrder.includes(seat) ? seat : null;
+  return resolveTurnFlowSeatForPlayerIndex(def, state.playerCount, runtime.seatOrder, Number(state.activePlayer));
 };
 
 const computeCandidates = (
@@ -555,12 +554,12 @@ const computePostCardEligibility = (
   return eligibility;
 };
 
-const withActiveFromFirstEligible = (state: GameState, firstEligible: string | null): GameState => {
+const withActiveFromFirstEligible = (def: GameDef, state: GameState, firstEligible: string | null): GameState => {
   if (firstEligible === null) {
     return state;
   }
 
-  const playerId = parseNumericSeatPlayer(firstEligible, state.playerCount);
+  const playerId = resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, firstEligible);
   if (playerId === null) {
     return state;
   }
@@ -598,7 +597,7 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
         const resolved = mapping === undefined
           ? rawOrder
           : rawOrder.map((value) => mapping[value] ?? value);
-        const filtered = resolved.filter((seatId) => parseNumericSeatPlayer(seatId, state.playerCount) !== null);
+        const filtered = resolved.filter((seatId) => resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, seatId) !== null);
         return filtered.length > 0 ? filtered : null;
       }
     }
@@ -639,10 +638,10 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
     },
   };
 
-  return withActiveFromFirstEligible(nextState, candidates.first);
+  return withActiveFromFirstEligible(def, nextState, candidates.first);
 };
 
-export const isActiveSeatEligibleForTurnFlow = (state: GameState): boolean => {
+export const isActiveSeatEligibleForTurnFlow = (def: GameDef, state: GameState): boolean => {
   if (state.turnOrderState.type === 'simultaneous') {
     return state.turnOrderState.submitted[state.activePlayer] !== true;
   }
@@ -652,7 +651,7 @@ export const isActiveSeatEligibleForTurnFlow = (state: GameState): boolean => {
     return true;
   }
 
-  const activeSeat = resolveActiveSeat(state);
+  const activeSeat = resolveActiveSeat(def, state);
   if (activeSeat === null) {
     return true;
   }
@@ -687,7 +686,7 @@ const analyzeFreeOperationGrantMatch = (
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
     return null;
   }
-  const activeSeat = String(state.activePlayer);
+  const activeSeat = resolveActiveSeat(def, state) ?? String(state.activePlayer);
   const actionClass = moveOperationClass(def, move);
   const actionId = String(move.actionId);
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
@@ -848,7 +847,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
   const executionPlayer = executionSeat === undefined
     ? state.activePlayer
-    : parsePlayerId(executionSeat, state.playerCount) ?? state.activePlayer;
+    : parsePlayerId(def, executionSeat, state.playerCount) ?? state.activePlayer;
 
   const zoneFilters: ConditionAST[] = applicable
     .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
@@ -866,10 +865,11 @@ export const resolveFreeOperationDiscoveryAnalysis = (
 };
 
 const parsePlayerId = (
+  def: GameDef,
   seat: string,
   playerCount: number,
 ): ReturnType<typeof asPlayerId> | null => {
-  const parsed = parseNumericSeatPlayer(seat, playerCount);
+  const parsed = resolvePlayerIndexForTurnFlowSeat(def, playerCount, seat);
   return parsed === null ? null : asPlayerId(parsed);
 };
 
@@ -910,7 +910,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     return { state, traceEntries: [] };
   }
 
-  const activeSeat = resolveActiveSeat(state);
+  const activeSeat = resolveActiveSeat(def, state);
   if (activeSeat === null) {
     return { state, traceEntries: [] };
   }
@@ -1133,7 +1133,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   };
 
   return {
-    state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible),
+    state: withActiveFromFirstEligible(def, stateWithTurnFlow, nextTurn.firstEligible),
     traceEntries,
     ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
@@ -1149,7 +1149,7 @@ export const consumeTurnFlowFreeOperationGrant = (
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
-  const activeSeat = String(state.activePlayer);
+  const activeSeat = resolveActiveSeat(def, state) ?? String(state.activePlayer);
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = pending.findIndex(
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),

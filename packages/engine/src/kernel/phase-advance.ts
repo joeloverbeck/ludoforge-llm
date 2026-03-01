@@ -7,6 +7,7 @@ import { legalMoves } from './legal-moves.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { resolvePlayerIndexForTurnFlowSeat, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import { terminalResult } from './terminal.js';
 import type { ExecutionCollector, GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -41,6 +42,15 @@ const resolveCoupPhaseIds = (def: GameDef): ReadonlySet<string> => {
 const isInCoupPhase = (def: GameDef, state: GameState): boolean =>
   resolveCoupPhaseIds(def).has(String(state.currentPhase));
 
+const resolveCurrentCoupSeat = (
+  def: GameDef,
+  state: GameState,
+  seatOrder: readonly string[],
+): string => {
+  const activePlayerIndex = Number(state.activePlayer);
+  return resolveTurnFlowSeatForPlayerIndex(def, state.playerCount, seatOrder, activePlayerIndex) ?? String(state.activePlayer);
+};
+
 /**
  * When entering a coup phase, reset the turn flow state so all factions are
  * eligible, the first seat in seatOrder is active, and the current card
@@ -64,9 +74,12 @@ const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameS
   ) as Readonly<Record<string, boolean>>;
   const firstSeat = coupSeatOrder[0] ?? null;
   const secondSeat = coupSeatOrder[1] ?? null;
+  const resolvedFirstSeatPlayerIndex =
+    firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, firstSeat);
   return {
     ...state,
-    activePlayer: firstSeat !== null ? asPlayerId(Number(firstSeat)) : state.activePlayer,
+    activePlayer:
+      resolvedFirstSeatPlayerIndex === null ? state.activePlayer : asPlayerId(resolvedFirstSeatPlayerIndex),
     turnOrderState: {
       type: 'cardDriven',
       runtime: {
@@ -299,7 +312,7 @@ const coupPhaseImplicitPass = (
   }
 
   const runtime = state.turnOrderState.runtime;
-  const currentSeat = String(state.activePlayer);
+  const currentSeat = resolveCurrentCoupSeat(def, state, runtime.seatOrder);
   const acted = new Set([...runtime.currentCard.actedSeats, currentSeat]);
   const passed = new Set([...runtime.currentCard.passedSeats, currentSeat]);
 
@@ -311,9 +324,13 @@ const coupPhaseImplicitPass = (
   }
 
   const nextSeat = remaining[0]!;
+  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, nextSeat);
+  if (nextSeatPlayerIndex === null) {
+    return null;
+  }
   return {
     ...state,
-    activePlayer: asPlayerId(Number(nextSeat)),
+    activePlayer: asPlayerId(nextSeatPlayerIndex),
     turnOrderState: {
       type: 'cardDriven',
       runtime: {

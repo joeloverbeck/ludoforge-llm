@@ -42,6 +42,7 @@ const withPendingFreeGrant = (
   if (state.turnOrderState.type !== 'cardDriven') {
     return state;
   }
+  const activeSeat = state.turnOrderState.runtime.seatOrder[Number(state.activePlayer)] ?? String(state.activePlayer);
   return {
     ...state,
     turnOrderState: {
@@ -52,7 +53,7 @@ const withPendingFreeGrant = (
           ...(state.turnOrderState.runtime.pendingFreeOperationGrants ?? []),
           {
             grantId: `test-free-grant-${actionId}`,
-            seat: String(state.activePlayer),
+            seat: activeSeat,
             operationClass,
             actionIds: [actionId],
             remainingUses: 1,

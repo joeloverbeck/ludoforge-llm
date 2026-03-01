@@ -56,7 +56,7 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            seats: ['0', '1', '2', '3'],
+            seats: ['US', 'ARVN', 'NVA', 'VC'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
           actionClassByActionId: {
@@ -70,8 +70,8 @@ const createDef = (): GameDef =>
           },
           optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
           passRewards: [
-            { seat: '0', resource: 'res0', amount: 1 },
-            { seat: '1', resource: 'res1', amount: 3 },
+            { seat: 'US', resource: 'res0', amount: 1 },
+            { seat: 'ARVN', resource: 'res1', amount: 3 },
           ],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           monsoon: {

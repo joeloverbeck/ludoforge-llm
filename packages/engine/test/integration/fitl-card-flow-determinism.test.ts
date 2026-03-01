@@ -46,7 +46,7 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            seats: ['0', '1', '2', '3'],
+            seats: ['US', 'ARVN', 'NVA', 'VC'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
           actionClassByActionId: {
@@ -242,7 +242,7 @@ const createEventTraceDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            seats: ['0', '1', '2', '3'],
+            seats: ['US', 'ARVN', 'NVA', 'VC'],
             overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
           },
           actionClassByActionId: {

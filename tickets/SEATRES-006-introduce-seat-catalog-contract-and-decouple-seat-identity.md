@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — schema + compiler + migration tooling + fixture/spec migration
-**Deps**: tickets/SEATRES-005-strict-single-seat-namespace-and-spec-migration.md
+**Deps**: archive/tickets/SEATRES-005-strict-single-seat-namespace-and-spec-migration.md
 
 ## Problem
 

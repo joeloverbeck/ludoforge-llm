@@ -68,8 +68,8 @@ describe('FITL card-6 Aces', () => {
           ...requireCardDrivenRuntime(base),
           currentCard: {
             ...requireCardDrivenRuntime(base).currentCard,
-            firstEligible: '0',
-            secondEligible: '2',
+            firstEligible: 'US',
+            secondEligible: 'NVA',
             actedSeats: [],
             passedSeats: [],
             nonPassCount: 0,
@@ -112,7 +112,7 @@ describe('FITL card-6 Aces', () => {
     const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
     const pendingAfterEvent = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
     assert.equal(pendingAfterEvent.length, 1, 'Aces should queue exactly one free operation grant');
-    assert.equal(pendingAfterEvent[0]?.seat, '0', 'Aces grant must belong to US seat');
+    assert.equal(pendingAfterEvent[0]?.seat, 'US', 'Aces grant must belong to US seat');
     assert.deepEqual(pendingAfterEvent[0]?.actionIds, ['airStrike']);
     assert.equal(afterEvent.globalVars.trail, 3, 'Aces Trail degrade is deferred until free grant resolution');
     assert.equal(afterEvent.globalVars.fitl_acesAirStrikeWindow, true, 'Aces targeting window should be enabled');
@@ -126,7 +126,7 @@ describe('FITL card-6 Aces', () => {
           ...requireCardDrivenRuntime(afterEvent),
           currentCard: {
             ...requireCardDrivenRuntime(afterEvent).currentCard,
-            firstEligible: '0',
+            firstEligible: 'US',
             secondEligible: null,
             actedSeats: [],
             passedSeats: [],

@@ -59,8 +59,8 @@ const setupState = (def: GameDef, seed: number, zones: Readonly<Record<string, r
         ...runtime,
         currentCard: {
           ...runtime.currentCard,
-          firstEligible: '0',
-          secondEligible: '1',
+          firstEligible: 'US',
+          secondEligible: 'ARVN',
           actedSeats: [],
           passedSeats: [],
           nonPassCount: 0,
@@ -111,9 +111,9 @@ describe('FITL card-117 Corps Commanders', () => {
     assert.equal(countArvnTroops(result, 'out-of-play-ARVN:none'), 0);
 
     const pending = requireCardDrivenRuntime(result).pendingFreeOperationGrants ?? [];
-    const card117Grants = pending.filter((grant) => grant.seat === '1' && grant.actionIds?.[0] === 'sweep');
+    const card117Grants = pending.filter((grant) => grant.seat === 'ARVN' && grant.actionIds?.[0] === 'sweep');
     assert.equal(card117Grants.length, 2, 'Expected one free Sweep grant per selected space');
-    assert.equal(card117Grants.every((grant) => grant.seat === '1'), true);
+    assert.equal(card117Grants.every((grant) => grant.seat === 'ARVN'), true);
     assert.equal(card117Grants.every((grant) => grant.operationClass === 'operation'), true);
     assert.equal(card117Grants.every((grant) => grant.actionIds?.[0] === 'sweep'), true);
 
@@ -155,7 +155,7 @@ describe('FITL card-117 Corps Commanders', () => {
     assert.equal(countArvnTroops(result, 'available-ARVN:none'), 0);
     assert.equal(
       (requireCardDrivenRuntime(result).pendingFreeOperationGrants ?? []).filter(
-        (grant) => grant.seat === '1' && grant.actionIds?.[0] === 'sweep',
+        (grant) => grant.seat === 'ARVN' && grant.actionIds?.[0] === 'sweep',
       ).length,
       1,
       'Selecting one destination space should yield one free Sweep grant',
@@ -214,7 +214,7 @@ describe('FITL card-117 Corps Commanders', () => {
     );
     assert.deepEqual(
       requireCardDrivenRuntime(final).pendingEligibilityOverrides,
-      [{ seat: '1', eligible: false, windowId: 'make-ineligible', duration: 'nextTurn' }],
+      [{ seat: 'ARVN', eligible: false, windowId: 'make-ineligible', duration: 'nextTurn' }],
       'Shaded should queue ARVN ineligible through next card',
     );
   });

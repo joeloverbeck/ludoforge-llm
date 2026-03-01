@@ -71,7 +71,7 @@ turnFlow:
     lookahead: quang-tri:none
     leader: hue:none
   eligibility:
-    seats: ["0", "1", "2", "3"]
+    seats: ["US", "ARVN", "NVA", "VC"]
     overrideWindows:
       - id: remain-eligible
         duration: nextTurn
@@ -85,10 +85,10 @@ turnFlow:
     - first: operationPlusSpecialActivity
       second: [limitedOperation, event]
   passRewards:
-    - seat: "0"
+    - seat: "US"
       resource: insurgentPassReward
       amount: 1
-    - seat: "1"
+    - seat: "ARVN"
       resource: coinPassReward
       amount: 3
   durationWindows: [turn, nextTurn, round, cycle]
@@ -110,7 +110,7 @@ turnFlow:
     actionIds: [pivotalEvent]
     requirePreActionWindow: true
     interrupt:
-      precedence: ["0", "1", "2", "3"]
+      precedence: ["US", "ARVN", "NVA", "VC"]
       cancellation:
         - winner: { actionId: pivotalEvent }
           canceled: { actionId: pivotalEvent, paramEquals: { side: shaded } }

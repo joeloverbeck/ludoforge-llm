@@ -98,7 +98,7 @@ describe('FITL tutorial simple event-card production spec', () => {
 
     // Shaded: ARVN ineligible through next card
     assert.deepEqual(card?.shaded?.eligibilityOverrides, [
-      { target: { kind: 'seat', seat: '1' }, eligible: false, windowId: 'make-ineligible' },
+      { target: { kind: 'seat', seat: 'ARVN' }, eligible: false, windowId: 'make-ineligible' },
     ]);
 
     // Shaded: chooseN for ARVN pieces from any map space

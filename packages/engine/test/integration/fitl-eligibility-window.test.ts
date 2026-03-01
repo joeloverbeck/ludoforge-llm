@@ -29,7 +29,7 @@ const createDef = (): GameDef =>
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: {
-            seats: ['0', '1', '2', '3'],
+            seats: ['US', 'ARVN', 'NVA', 'VC'],
             overrideWindows: [
               { id: 'remain-eligible', duration: 'nextTurn' },
               { id: 'force-ineligible', duration: 'nextTurn' },
@@ -86,7 +86,7 @@ phase: [asPhaseId('main')],
               text: 'No free operation grant.',
               eligibilityOverrides: [
                 { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
-                { target: { kind: 'seat', seat: '2' }, eligible: false, windowId: 'force-ineligible' },
+                { target: { kind: 'seat', seat: 'NVA' }, eligible: false, windowId: 'force-ineligible' },
               ],
             },
           },
@@ -98,7 +98,7 @@ phase: [asPhaseId('main')],
               text: 'Grant a free operation.',
               freeOperationGrants: [
                 {
-                  seat: '2',
+                  seat: 'NVA',
                   sequence: { chain: 'grant-nva-op', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -122,9 +122,9 @@ describe('FITL eligibility window integration', () => {
     }).state;
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} });
 
-    assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { '0': true, '1': false, '2': false, '3': true });
-    assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, '0');
-    assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, '3');
+    assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { US: true, ARVN: false, NVA: false, VC: true });
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, 'US');
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, 'VC');
   });
 
   it('emits and consumes one-shot free-operation move variants from freeOpGranted directives', () => {
@@ -143,7 +143,7 @@ describe('FITL eligibility window integration', () => {
 
     const pendingFreeOperationGrants = requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [];
     assert.equal(pendingFreeOperationGrants.length, 1);
-    assert.equal(pendingFreeOperationGrants[0]?.seat, '2');
+    assert.equal(pendingFreeOperationGrants[0]?.seat, 'NVA');
     assert.equal(pendingFreeOperationGrants[0]?.operationClass, 'operation');
     assert.deepEqual(pendingFreeOperationGrants[0]?.actionIds, ['operation']);
     assert.equal(pendingFreeOperationGrants[0]?.remainingUses, 1);
@@ -178,9 +178,9 @@ describe('FITL eligibility window integration', () => {
     assert.equal(cardEndEntry?.kind, 'turnFlowEligibility');
     assert.equal(cardEndEntry?.overrides, undefined);
 
-    assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { '0': false, '1': false, '2': true, '3': true });
+    assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { US: false, ARVN: false, NVA: true, VC: true });
     assert.equal(second.activePlayer, asPlayerId(2));
-    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, '2');
-    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, '3');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, 'NVA');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, 'VC');
   });
 });

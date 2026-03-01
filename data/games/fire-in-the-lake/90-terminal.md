@@ -4,7 +4,7 @@
 terminal:
   checkpoints:
     - id: us-victory
-      seat: '0'
+      seat: 'US'
       timing: duringCoup
       when:
         op: and
@@ -49,7 +49,7 @@ terminal:
                       - { prop: type, op: in, value: [troops, base] }
             right: 50
     - id: arvn-victory
-      seat: '1'
+      seat: 'ARVN'
       timing: duringCoup
       when:
         op: and
@@ -118,7 +118,7 @@ terminal:
                 var: patronage
             right: 50
     - id: nva-victory
-      seat: '2'
+      seat: 'NVA'
       timing: duringCoup
       when:
         op: and
@@ -192,7 +192,7 @@ terminal:
                       - { prop: type, op: eq, value: base }
             right: 18
     - id: vc-victory
-      seat: '3'
+      seat: 'VC'
       timing: duringCoup
       when:
         op: and
@@ -237,7 +237,7 @@ terminal:
                       - { prop: type, op: eq, value: base }
             right: 35
     - id: final-coup-ranking
-      seat: '2'
+      seat: 'NVA'
       timing: finalCoup
       when:
         op: and
@@ -255,7 +255,7 @@ terminal:
           - { op: '==', left: { ref: zoneCount, zone: deck:none }, right: 0 }
           - { op: '==', left: { ref: zoneCount, zone: lookahead:none }, right: 0 }
   margins:
-    - seat: '0'
+    - seat: 'US'
       value:
         op: '-'
         left:
@@ -286,7 +286,7 @@ terminal:
                 filter:
                   - { prop: type, op: in, value: [troops, base] }
         right: 50
-    - seat: '1'
+    - seat: 'ARVN'
       value:
         op: '-'
         left:
@@ -341,7 +341,7 @@ terminal:
             ref: gvar
             var: patronage
         right: 50
-    - seat: '2'
+    - seat: 'NVA'
       value:
         op: '-'
         left:
@@ -401,7 +401,7 @@ terminal:
                   - { prop: faction, op: eq, value: NVA }
                   - { prop: type, op: eq, value: base }
         right: 18
-    - seat: '3'
+    - seat: 'VC'
       value:
         op: '-'
         left:
@@ -434,7 +434,7 @@ terminal:
         right: 35
   ranking:
     order: desc
-    tieBreakOrder: ['3', '1', '2', '0']
+    tieBreakOrder: ['VC', 'ARVN', 'NVA', 'US']
   conditions: []
 
 ```

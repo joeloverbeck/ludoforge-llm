@@ -170,6 +170,9 @@ function normalizePlayerSelectorFromString(
     return { value: { relative: value }, diagnostics: [] };
   }
   if (isUnsignedIntegerString(value)) {
+    if (seatIds !== undefined && seatIds.length > 0) {
+      return invalidNumericPlayerSelectorWithSeatIds(path, value, seatIds);
+    }
     return { value: { id: asPlayerId(Number(value)) }, diagnostics: [] };
   }
   if (isBindingToken(value)) {
@@ -212,6 +215,25 @@ function invalidPlayerSelector(path: string, actual: unknown): SelectorCompileRe
         severity: 'error',
         message: `Invalid player selector: ${formatValue(actual)}.`,
         suggestion: PLAYER_SELECTOR_SUGGESTION,
+      },
+    ],
+  };
+}
+
+function invalidNumericPlayerSelectorWithSeatIds(
+  path: string,
+  actual: string,
+  seatIds: readonly string[],
+): SelectorCompileResult<PlayerSel> {
+  return {
+    value: null,
+    diagnostics: [
+      {
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PLAYER_SELECTOR_INVALID,
+        path,
+        severity: 'error',
+        message: `Numeric player selector "${actual}" is not allowed when canonical seat ids are declared.`,
+        suggestion: `Use one of the canonical seat ids: ${seatIds.join(', ')}.`,
       },
     ],
   };

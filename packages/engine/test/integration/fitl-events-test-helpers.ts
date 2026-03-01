@@ -2,6 +2,13 @@ import type { EventEligibilityOverrideDef } from '../../src/kernel/index.js';
 
 export type FactionRef = number | string;
 
+const SEAT_BY_INDEX: Readonly<Record<number, string>> = {
+  0: 'US',
+  1: 'ARVN',
+  2: 'NVA',
+  3: 'VC',
+};
+
 export const createEligibilityOverride = ({
   target,
   eligible,
@@ -18,7 +25,7 @@ export const createEligibilityOverride = ({
         windowId,
       }
     : {
-        target: { kind: 'seat', seat: String(target) },
+        target: { kind: 'seat', seat: typeof target === 'number' ? (SEAT_BY_INDEX[target] ?? String(target)) : String(target) },
         eligible,
         windowId,
       }

@@ -74,10 +74,10 @@ describe('FITL production data integration compilation', () => {
         leader: 'leader:none',
       });
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.passRewards, [
-        { seat: '0', resource: 'arvnResources', amount: 3 },
-        { seat: '1', resource: 'arvnResources', amount: 3 },
-        { seat: '2', resource: 'nvaResources', amount: 1 },
-        { seat: '3', resource: 'vcResources', amount: 1 },
+        { seat: 'US', resource: 'arvnResources', amount: 3 },
+        { seat: 'ARVN', resource: 'arvnResources', amount: 3 },
+        { seat: 'NVA', resource: 'nvaResources', amount: 1 },
+        { seat: 'VC', resource: 'vcResources', amount: 1 },
       ]);
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.durationWindows, ['turn', 'nextTurn', 'round', 'cycle']);
       assert.equal(
@@ -105,7 +105,7 @@ describe('FITL production data integration compilation', () => {
         requirePreActionWindow: true,
         disallowWhenLookaheadIsCoup: true,
         interrupt: {
-          precedence: ['3', '1', '2', '0'],
+          precedence: ['VC', 'ARVN', 'NVA', 'US'],
         },
       });
       assert.equal(

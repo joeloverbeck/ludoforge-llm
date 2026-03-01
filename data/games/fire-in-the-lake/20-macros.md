@@ -2464,7 +2464,7 @@ effectMacros:
                                   bind: $priorActivePlayer
                                   value: { ref: activePlayer }
                                   in:
-                                    - setActivePlayer: { player: '3' }
+                                    - setActivePlayer: { player: 'VC' }
                                     - chooseN:
                                         bind: $chosenLocs
                                         options:

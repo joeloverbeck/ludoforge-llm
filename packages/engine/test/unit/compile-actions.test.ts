@@ -210,6 +210,36 @@ describe('compile actions', () => {
     assert.deepEqual(result.gameDef?.terminal.conditions[0]?.result, { type: 'win', player: { id: 2 } });
   });
 
+  it('resolves seat names for action actor/executor and terminal win player from turn-flow seats without piece-catalog seats', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-seat-name-resolution-turn-flow', players: { min: 4, max: 4 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            eligibility: {
+              seats: ['US', 'ARVN', 'NVA', 'VC'],
+              overrideWindows: [],
+            },
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'NVA', executor: 'us', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'win', player: 'vc' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 2 });
+    assert.deepEqual(result.gameDef?.actions[0]?.executor, { id: 0 });
+    assert.deepEqual(result.gameDef?.terminal.conditions[0]?.result, { type: 'win', player: { id: 3 } });
+  });
+
   it('accepts binding-derived executor when binding is declared action param', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

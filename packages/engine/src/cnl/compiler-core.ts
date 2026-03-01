@@ -373,7 +373,12 @@ function compileExpandedDoc(
   }
   const freeOperationActionIds =
     sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.freeOperationActionIds : undefined;
-  const seatIds = derivedFromAssets.seats?.map((s) => s.id);
+  const turnFlowSeatIds =
+    sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow.eligibility.seats : undefined;
+  const seatIds = deriveCanonicalSeatIds(
+    turnFlowSeatIds,
+    derivedFromAssets.seats?.map((s) => s.id),
+  );
   const loweringContext: EffectLoweringSharedContext = {
     ownershipByBase,
     ...(derivedFromAssets.tokenTraitVocabulary == null
@@ -584,6 +589,31 @@ function compileSection<T>(
     value,
     failed: countErrorDiagnostics(diagnostics) > beforeErrorCount,
   };
+}
+
+function deriveCanonicalSeatIds(
+  turnFlowSeatIds: readonly string[] | undefined,
+  pieceCatalogSeatIds: readonly string[] | undefined,
+): readonly string[] | undefined {
+  if (turnFlowSeatIds !== undefined) {
+    if (!isIndexSeatIdentity(turnFlowSeatIds)) {
+      return turnFlowSeatIds;
+    }
+    if (pieceCatalogSeatIds !== undefined && pieceCatalogSeatIds.length === turnFlowSeatIds.length) {
+      return pieceCatalogSeatIds;
+    }
+    return turnFlowSeatIds;
+  }
+  return pieceCatalogSeatIds;
+}
+
+function isIndexSeatIdentity(seatIds: readonly string[]): boolean {
+  for (let index = 0; index < seatIds.length; index += 1) {
+    if (seatIds[index] !== String(index)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function finalizeDiagnostics(

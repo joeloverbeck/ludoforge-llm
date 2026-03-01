@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — compiler lowering + tests (`compile-lowering.ts`, `compile-conditions.ts`, unit tests)
-**Deps**: archive/tickets/SEATRES-001-universal-seat-name-resolution.md, tickets/SEATRES-002-canonical-seat-identity-source.md
+**Deps**: archive/tickets/SEATRES-001-universal-seat-name-resolution.md, archive/tickets/SEATRES-002-canonical-seat-identity-source.md
 
 ## Problem
 

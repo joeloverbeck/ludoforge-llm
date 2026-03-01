@@ -244,6 +244,97 @@ describe('compiler structured section results', () => {
     assert.deepEqual(result.gameDef?.seats, [{ id: 'us' }]);
   });
 
+  it('prefers named turn-flow seats over piece-catalog seats for selector lowering when both are present', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            seats: [{ id: 'VC' }],
+            pieceTypes: [
+              { id: 'vc-guerrilla', seat: 'VC', statusDimensions: [], transitions: [] },
+            ],
+            inventory: [
+              { pieceTypeId: 'vc-guerrilla', seat: 'VC', total: 1 },
+            ],
+          },
+        },
+      ],
+      tokenTypes: null,
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['us', 'nva'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'nva', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 1 });
+  });
+
+  it('accepts numeric turn-flow seat ids when piece-catalog seats are present in matching count', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      metadata: { id: 'asset-cascade-seat-index-canonicalization', players: { min: 4, max: 4 } },
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+            pieceTypes: [
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
+              { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
+              { id: 'nva-troops', seat: 'NVA', statusDimensions: [], transitions: [] },
+              { id: 'vc-troops', seat: 'VC', statusDimensions: [], transitions: [] },
+            ],
+            inventory: [
+              { pieceTypeId: 'us-troops', seat: 'US', total: 1 },
+              { pieceTypeId: 'arvn-troops', seat: 'ARVN', total: 1 },
+              { pieceTypeId: 'nva-troops', seat: 'NVA', total: 1 },
+              { pieceTypeId: 'vc-troops', seat: 'VC', total: 1 },
+            ],
+          },
+        },
+      ],
+      tokenTypes: null,
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['0', '1', '2', '3'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'nva', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assert.deepEqual(result.gameDef?.actions[0]?.actor, { id: 2 });
+  });
+
   it('fails compile when selected piece catalog omits required factions catalog', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

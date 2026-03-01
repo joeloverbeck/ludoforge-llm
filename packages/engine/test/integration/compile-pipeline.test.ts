@@ -2173,6 +2173,92 @@ actor: 'active',
     );
   });
 
+  it('accepts scenario-deck synthetic token props in token filters before lowering', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: scenario-deck-token-filter-ordering',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      '  defaultScenarioAssetId: scenario-foundation',
+      'zones:',
+      '  - id: deck:none',
+      '    owner: none',
+      '    visibility: hidden',
+      '    ordering: stack',
+      '  - id: played:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'tokenTypes: []',
+      'setup: []',
+      'dataAssets:',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      eventDeckAssetId: deck-a',
+      '      deckComposition:',
+      '        materializationStrategy: pile-coup-mix-v1',
+      '        pileCount: 1',
+      '        eventsPerPile: 1',
+      '        coupsPerPile: 1',
+      'eventDecks:',
+      '  - id: deck-a',
+      '    drawZone: deck:none',
+      '    discardZone: played:none',
+      '    cards:',
+      '      - id: card-event-1',
+      '        title: Event 1',
+      '        sideMode: single',
+      '        tags: []',
+      '        unshaded: { text: event }',
+      '      - id: card-coup-1',
+      '        title: Coup 1',
+      '        sideMode: single',
+      '        tags: [coup]',
+      '        unshaded: { text: coup }',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $card',
+      '          over:',
+      '            query: tokensInZone',
+      '            zone: deck:none',
+      '            filter:',
+      '              - { prop: cardId, op: eq, value: card-event-1 }',
+      '              - { prop: isCoup, op: eq, value: false }',
+      '          effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN'),
+      false,
+    );
+  });
+
   it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
     const markdown = readCompilerFixture('compile-malformed.md');
 

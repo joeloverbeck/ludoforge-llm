@@ -325,8 +325,15 @@ function compileExpandedDoc(
     }
   } else {
     const zoneCompilation = compileSection(diagnostics, () => {
-      // SAFETY: Zone template expansion (CROGAMPRIELE-008) runs before this
-      // point, guaranteeing effectiveZones contains only GameSpecZoneDef entries.
+      // Guard: all template entries must be expanded before compilation.
+      for (const z of effectiveZones) {
+        if ('template' in z) {
+          throw new Error(
+            'Zone template entry reached compilation unexpectedly. ' +
+            'Ensure expandZoneTemplates runs before compileGameSpecToGameDef.',
+          );
+        }
+      }
       const materialized = materializeZoneDefs(
         effectiveZones as readonly GameSpecZoneDef[],
         metadata?.players.max ?? 0,

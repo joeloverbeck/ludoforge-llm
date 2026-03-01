@@ -3,6 +3,7 @@ export * from './expand-condition-macros.js';
 export * from './expand-macros.js';
 export * from './expand-batch-markers.js';
 export * from './expand-piece-generation.js';
+export * from './expand-zone-templates.js';
 export * from './compiler.js';
 export * from './compiler-diagnostics.js';
 export * from './compile-selectors.js';

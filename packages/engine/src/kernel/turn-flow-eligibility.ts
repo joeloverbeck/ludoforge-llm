@@ -81,6 +81,18 @@ export const resolveTurnFlowActionClassMismatch = (
   if (mapped === null || move.actionClass === undefined || move.actionClass === mapped) {
     return null;
   }
+  // Allow compatible class overrides for operation-family and specialActivity actions.
+  // An operation can be submitted as limitedOperation or operationPlusSpecialActivity
+  // depending on the option matrix constrained slot the player is filling.
+  if (
+    mapped === 'operation' &&
+    (move.actionClass === 'limitedOperation' || move.actionClass === 'operationPlusSpecialActivity')
+  ) {
+    return null;
+  }
+  if (mapped === 'specialActivity' && move.actionClass === 'operationPlusSpecialActivity') {
+    return null;
+  }
   return {
     mapped,
     submitted: move.actionClass,
@@ -103,6 +115,9 @@ const normalizeFirstActionClass = (
 ): 'event' | 'operation' | 'operationPlusSpecialActivity' | null => {
   if (actionClass === 'limitedOperation') {
     return 'operation';
+  }
+  if (actionClass === 'specialActivity') {
+    return 'operationPlusSpecialActivity';
   }
   if (actionClass === 'event' || actionClass === 'operation' || actionClass === 'operationPlusSpecialActivity') {
     return actionClass;
@@ -302,6 +317,23 @@ const moveOperationClass = (
 ): TurnFlowPendingFreeOperationGrant['operationClass'] => {
   const resolved = resolveTurnFlowActionClass(def, move);
   if (resolved !== null) {
+    // When move.actionClass is a compatible override of the mapped class,
+    // use it for grant matching (e.g., operation-mapped action submitted as limitedOperation).
+    if (
+      move.actionClass !== undefined &&
+      move.actionClass !== resolved &&
+      isTurnFlowActionClass(move.actionClass)
+    ) {
+      if (
+        resolved === 'operation' &&
+        (move.actionClass === 'limitedOperation' || move.actionClass === 'operationPlusSpecialActivity')
+      ) {
+        return move.actionClass;
+      }
+      if (resolved === 'specialActivity' && move.actionClass === 'operationPlusSpecialActivity') {
+        return move.actionClass;
+      }
+    }
     return resolved;
   }
   return 'operation';
@@ -324,12 +356,27 @@ const isPendingFreeOperationGrantSequenceReady = (
   );
 };
 
+const isGrantOperationClassCompatible = (
+  grantClass: TurnFlowPendingFreeOperationGrant['operationClass'],
+  moveClass: TurnFlowPendingFreeOperationGrant['operationClass'],
+): boolean => {
+  if (grantClass === moveClass) {
+    return true;
+  }
+  // An 'operation'-class grant can cover specialActivity actions (e.g., free Air Strike
+  // grants in COIN games use operationClass: 'operation' but target SA action IDs).
+  if (grantClass === 'operation' && moveClass === 'specialActivity') {
+    return true;
+  }
+  return false;
+};
+
 const doesGrantApplyToMove = (
   def: GameDef,
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
-  grant.operationClass === moveOperationClass(def, move) &&
+  isGrantOperationClassCompatible(grant.operationClass, moveOperationClass(def, move)) &&
   grantActionIds(def, grant).includes(String(move.actionId));
 
 const doesGrantAuthorizeMove = (
@@ -692,7 +739,7 @@ const analyzeFreeOperationGrantMatch = (
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
   const activeGrants = pending.filter((grant) => grant.seat === activeSeat);
   const sequenceReadyGrants = activeGrants.filter((grant) => isPendingFreeOperationGrantSequenceReady(pending, grant));
-  const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => grant.operationClass === actionClass);
+  const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => isGrantOperationClassCompatible(grant.operationClass, actionClass));
   const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
   const zoneMatchedGrants = options?.evaluateZoneFilters === true
     ? actionMatchedGrants.filter(

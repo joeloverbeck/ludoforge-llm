@@ -66,6 +66,16 @@ export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameSta
   if (moveClass === null) {
     return false;
   }
+  if (moveClass === 'specialActivity') {
+    return constrained.includes('operationPlusSpecialActivity');
+  }
+  if (moveClass === 'operation') {
+    return (
+      constrained.includes('operation') ||
+      constrained.includes('limitedOperation') ||
+      constrained.includes('operationPlusSpecialActivity')
+    );
+  }
   return constrained.includes(moveClass);
 }
 

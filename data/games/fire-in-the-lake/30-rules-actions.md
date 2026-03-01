@@ -43,6 +43,29 @@ turnOrder:
         pivotalEvent: event
         usOp: operation
         arvnOp: operation
+        # COIN Operations
+        train: operation
+        patrol: operation
+        sweep: operation
+        assault: operation
+        rally: operation
+        march: operation
+        attack: operation
+        terror: operation
+        # Special Activities
+        advise: specialActivity
+        airLift: specialActivity
+        airStrike: specialActivity
+        govern: specialActivity
+        transport: specialActivity
+        raid: specialActivity
+        infiltrate: specialActivity
+        bombard: specialActivity
+        ambushNva: specialActivity
+        tax: specialActivity
+        subvert: specialActivity
+        ambushVc: specialActivity
+        # Coup phase actions
         coupVictoryCheck: pass
         coupResourcesResolve: pass
         coupPacifyUS: operation

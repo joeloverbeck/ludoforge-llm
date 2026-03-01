@@ -195,9 +195,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'event');
+    // operation-class action gets variants for both compatible constrained classes
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
+      [asActionId('pass'), asActionId('operation'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
     );
   });
 
@@ -209,9 +210,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operation');
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -223,9 +225,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operation');
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -237,9 +240,10 @@ describe('FITL option matrix integration', () => {
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
     assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operationPlusSpecialActivity');
+    // operation-class action also gets a limitedOperation variant
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('event'), asActionId('limitedOperation')],
+      [asActionId('pass'), asActionId('event'), asActionId('operation'), asActionId('limitedOperation')],
     );
   });
 
@@ -314,16 +318,29 @@ describe('FITL option matrix integration', () => {
     );
   });
 
-  it('rejects submitted actionClass when it conflicts with mapped class during apply', () => {
+  it('allows compatible actionClass override (operation → limitedOperation) during apply', () => {
     const def = createDef();
     const start = initialState(def, 131, 3).state;
     const firstMove: Move = { actionId: asActionId('operation'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
 
+    // operation → limitedOperation is a compatible downgrade, not a mismatch
+    const result = applyMove(def, afterFirst, {
+      actionId: asActionId('operation'),
+      params: {},
+      actionClass: 'limitedOperation',
+    });
+    assert.notEqual(result.state, null);
+  });
+
+  it('rejects incompatible actionClass override (event → limitedOperation) during apply', () => {
+    const def = createDef();
+    const start = initialState(def, 131, 3).state;
+
     assert.throws(
       () =>
-        applyMove(def, afterFirst, {
-          actionId: asActionId('operation'),
+        applyMove(def, start, {
+          actionId: asActionId('event'),
           params: {},
           actionClass: 'limitedOperation',
         }),
@@ -332,10 +349,10 @@ describe('FITL option matrix integration', () => {
         const details = error as Error & { reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.reason, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH);
         assert.deepEqual(details.context, {
-          actionId: asActionId('operation'),
+          actionId: asActionId('event'),
           params: {},
           reason: ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH,
-          mappedActionClass: 'operation',
+          mappedActionClass: 'event',
           submittedActionClass: 'limitedOperation',
         });
         return true;

@@ -451,9 +451,10 @@ phase: [asPhaseId('main')],
       },
     };
 
+    // operation-class action gets variants for both compatible constrained classes
     assert.deepEqual(
       legalMoves(def, state).map((move) => move.actionId),
-      [asActionId('pass'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
+      [asActionId('pass'), asActionId('operation'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
     );
   });
 
@@ -551,7 +552,8 @@ phase: [asPhaseId('main')],
       },
     };
 
-    assert.deepEqual(legalMoves(def, state).map((move) => move.actionId), [asActionId('pass'), asActionId('limitedOperation')]);
+    // operation-class action also gets a limitedOperation variant
+    assert.deepEqual(legalMoves(def, state).map((move) => move.actionId), [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')]);
   });
 
   it('resolves card-driven action class from turnFlow.actionClassByActionId even when move.actionClass conflicts', () => {

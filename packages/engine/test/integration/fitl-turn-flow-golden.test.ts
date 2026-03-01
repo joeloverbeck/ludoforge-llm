@@ -156,6 +156,49 @@ phase: [asPhaseId('main')],
   }) as unknown as GameDef;
 
 describe('FITL turn-flow golden trace', () => {
+  it('rejects unresolved card metadata seat order at GameDef validation time', () => {
+    const base = createDef();
+    const baseTurnOrder = base.turnOrder as Extract<GameDef['turnOrder'], { type: 'cardDriven' }>;
+    const baseDeck = base.eventDecks?.[0];
+    assert.notEqual(baseDeck, undefined);
+    const baseCard = baseDeck!.cards[0];
+    assert.notEqual(baseCard, undefined);
+    const def = {
+      ...base,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrder.config,
+          turnFlow: {
+            ...baseTurnOrder.config.turnFlow,
+            cardSeatOrderMetadataKey: 'seatOrder',
+            cardSeatOrderMapping: { US: 'US', ARVN: 'ARVN', NVA: 'NVA', VC: 'VC' },
+          },
+        },
+      },
+      eventDecks: [
+        {
+          ...baseDeck!,
+          cards: [
+            {
+              ...baseCard!,
+              metadata: { seatOrder: ['US', 'BROKEN', 'NVA', 'VC'] },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    assert.throws(() => initialState(def, 71, 4), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { message?: string };
+      assert.match(String(details.message), /Invalid GameDef: validation failed/i);
+      assert.match(String(details.message), /TURN_FLOW_CARD_SEAT_ORDER_ENTRY_UNKNOWN_SEAT/i);
+      assert.match(String(details.message), /eventDecks\[0\]\.cards\[0\]\.metadata\.seatOrder\[1\]/i);
+      return true;
+    });
+  });
+
   it('matches golden artifact for pass chain, override window, monsoon gating, and coup handoff boundary logs', () => {
     // Fixture policy: this file is a contract artifact. Update it only when turn-flow semantics intentionally change.
     const fixture = readFixtureJson<FitlTurnFlowGolden>('trace/fitl-turn-flow.golden.json');

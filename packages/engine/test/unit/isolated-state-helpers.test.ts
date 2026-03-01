@@ -16,6 +16,7 @@ import { clearAllZones, makeIsolatedInitialState } from '../helpers/isolated-sta
 const createCardDrivenDef = (): GameDef =>
   ({
     metadata: { id: 'isolated-state-helper-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],

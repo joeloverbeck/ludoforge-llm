@@ -159,10 +159,10 @@ export const validateCardSeatOrderMapping = (diagnostics: Diagnostic[], def: Gam
           continue;
         }
         diagnostics.push({
-          code: 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DROPPED',
+          code: 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_UNKNOWN_SEAT',
           path: `eventDecks[${deckIndex}].cards[${cardIndex}].metadata.${metadataKey}[${seatIndex}]`,
-          severity: 'warning',
-          message: `Card seat-order value "${sourceSeat}" resolves to "${mappedSeat}", which is not in turnFlow.eligibility.seats and will be dropped at runtime.`,
+          severity: 'error',
+          message: `Card seat-order value "${sourceSeat}" resolves to "${mappedSeat}", which is not in turnFlow.eligibility.seats.`,
           suggestion: 'Add or correct cardSeatOrderMapping, or align card metadata seat-order values with turnFlow.eligibility.seats.',
         });
       }

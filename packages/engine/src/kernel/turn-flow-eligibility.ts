@@ -602,7 +602,10 @@ const withActiveFromFirstEligible = (def: GameDef, state: GameState, firstEligib
   const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
   const playerId = resolvePlayerIndexForTurnFlowSeat(firstEligible, seatResolutionIndex);
   if (playerId === null) {
-    return state;
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `Turn-flow runtime invariant failed: initializeTurnFlowEligibilityState could not resolve firstEligible=${firstEligible} from card/default seat order.`,
+    );
   }
 
   return {
@@ -639,8 +642,16 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
         const resolved = mapping === undefined
           ? rawOrder
           : rawOrder.map((value) => mapping[value] ?? value);
-        const filtered = resolved.filter((seatId) => resolvePlayerIndexForTurnFlowSeat(seatId, seatResolutionIndex) !== null);
-        return filtered.length > 0 ? filtered : null;
+        for (const seatToken of resolved) {
+          if (resolvePlayerIndexForTurnFlowSeat(seatToken, seatResolutionIndex) !== null) {
+            continue;
+          }
+          throw kernelRuntimeError(
+            'RUNTIME_CONTRACT_INVALID',
+            `Turn-flow runtime invariant failed: card metadata seat order token could not resolve (cardId=${cardId}, metadataKey=${metadataKey}, token=${seatToken}).`,
+          );
+        }
+        return resolved;
       }
     }
   }

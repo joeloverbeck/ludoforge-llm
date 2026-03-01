@@ -8,6 +8,7 @@ import {
   applyMove,
   asActionId,
   asPhaseId,
+  asTokenId,
   initialState,
   legalMoves,
   serializeGameState,
@@ -15,6 +16,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { initializeTurnFlowEligibilityState } from '../../src/kernel/turn-flow-eligibility.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
 
@@ -341,6 +343,64 @@ phase: [asPhaseId('main')],
   }) as unknown as GameDef;
 
 describe('FITL card-flow determinism integration', () => {
+  it('keeps deterministic initialization when card metadata seat order is valid and mapped', () => {
+    const base = createDef();
+    const baseTurnOrder = base.turnOrder as Extract<GameDef['turnOrder'], { type: 'cardDriven' }>;
+    const baseDeck = base.eventDecks?.[0];
+    assert.notEqual(baseDeck, undefined);
+    const baseCard = baseDeck!.cards[0];
+    assert.notEqual(baseCard, undefined);
+    const def = {
+      ...base,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrder.config,
+          turnFlow: {
+            ...baseTurnOrder.config.turnFlow,
+            cardSeatOrderMetadataKey: 'seatOrder',
+            cardSeatOrderMapping: { us: 'US', nva: 'NVA', vc: 'VC', arvn: 'ARVN' },
+          },
+        },
+      },
+      eventDecks: [
+        {
+          ...baseDeck!,
+          cards: [
+            {
+              ...baseCard!,
+              metadata: { seatOrder: ['us', 'nva', 'vc', 'arvn'] },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const run = () => {
+      const start = initialState(def, 97, 4).state;
+      const withPlayedCard = {
+        ...start,
+        zones: {
+          ...start.zones,
+          'played:none': [{ id: asTokenId('played-card'), type: 'card', props: { cardId: 'card-overrides' } }],
+        },
+      };
+      const initialized = initializeTurnFlowEligibilityState(def, withPlayedCard);
+      return {
+        activePlayer: initialized.activePlayer,
+        turnOrderState: initialized.turnOrderState,
+      };
+    };
+
+    const baseline = run();
+    assert.equal(baseline.turnOrderState.type, 'cardDriven');
+    assert.deepEqual(baseline.turnOrderState.runtime.seatOrder, ['US', 'NVA', 'VC', 'ARVN']);
+    assert.equal(baseline.activePlayer, 0);
+    for (let runIndex = 0; runIndex < REPEATED_RUN_COUNT; runIndex += 1) {
+      assert.deepEqual(run(), baseline);
+    }
+  });
+
   it('produces byte-identical state and trace logs for same seed and move sequence across repeated runs', () => {
     const def = createDef();
     const run = () => {

@@ -78,6 +78,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
 
   return {
     metadata: { id: 'fitl-coup-redeploy-commit-reset-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
     globalVars: [
       { name: 'isFinalCoup', type: 'int', init: options.isFinalCoup ? 1 : 0, min: 0, max: 1 },

@@ -419,6 +419,10 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
 
     const def: GameDef = {
       ...baseDef,
+      seats: [
+        { id: 'us' },
+        { id: 'nva' },
+      ],
       turnOrder: {
         type: 'cardDriven',
         config: {

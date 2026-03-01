@@ -98,7 +98,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('warns when card metadata seat-order entries are unresolved and dropped', () => {
+  it('errors when card metadata seat-order entries resolve to unknown seats', () => {
     const base = createValidGameDef();
     const def = withCardDrivenTurnFlow(base, { US: '0' }, ['US', 'NVA']);
 
@@ -106,9 +106,9 @@ describe('validateGameDef reference checks', () => {
     assert.ok(
       diagnostics.some(
         (diag) =>
-          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DROPPED'
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_UNKNOWN_SEAT'
           && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder[1]'
-          && diag.severity === 'warning',
+          && diag.severity === 'error',
       ),
     );
   });

@@ -17,6 +17,7 @@ import {
   type ActionPipelineDef,
   type EventCardDef,
 } from '../../../src/kernel/index.js';
+import { initializeTurnFlowEligibilityState } from '../../../src/kernel/turn-flow-eligibility.js';
 import { isMoveAllowedByTurnFlowOptionMatrix } from '../../../src/kernel/legal-moves-turn-order.js';
 
 const makeBaseDef = (overrides?: {
@@ -333,6 +334,35 @@ phase: [asPhaseId('main')],
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
       assert.match(String(details.message), /could not resolve active seat/i);
+      return true;
+    });
+  });
+
+  it('throws when initialization firstEligible cannot resolve from configured seat order', () => {
+    const def = {
+      ...makeBaseDef(),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['bogus-seat', 'us'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState();
+
+    assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /initializeTurnFlowEligibilityState could not resolve firstEligible/i);
       return true;
     });
   });

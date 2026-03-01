@@ -38,6 +38,16 @@ export interface GameSpecBatchGlobalMarkerLattice {
   };
 }
 
+export interface GameSpecBatchVarDef {
+  readonly batch: {
+    readonly names: readonly string[];
+    readonly type: 'int' | 'boolean';
+    readonly init: unknown;
+    readonly min?: unknown;
+    readonly max?: unknown;
+  };
+}
+
 export interface GameSpecZoneDef {
   readonly id: string;
   readonly zoneKind?: 'board' | 'aux';
@@ -386,8 +396,8 @@ export interface GameSpecDoc {
   readonly constants: Readonly<Record<string, number>> | null;
   readonly dataAssets: readonly GameSpecDataAsset[] | null;
   readonly globalMarkerLattices: readonly (GameSpecGlobalMarkerLatticeDef | GameSpecBatchGlobalMarkerLattice)[] | null;
-  readonly globalVars: readonly GameSpecVarDef[] | null;
-  readonly perPlayerVars: readonly GameSpecVarDef[] | null;
+  readonly globalVars: readonly (GameSpecVarDef | GameSpecBatchVarDef)[] | null;
+  readonly perPlayerVars: readonly (GameSpecVarDef | GameSpecBatchVarDef)[] | null;
   readonly zoneVars: readonly GameSpecVarDef[] | null;
   readonly zones: readonly GameSpecZoneDef[] | null;
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-003: Batch variable declarations compiler pass (A3)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compiler pipeline (new expansion pass), GameSpecDoc types
@@ -123,3 +123,23 @@ Test file covering:
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-batch-vars.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+### Files Modified
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` — added `COMPILER_DIAGNOSTIC_CODES_BATCH_VARS` block with 4 codes
+- `packages/engine/src/cnl/game-spec-doc.ts` — added `GameSpecBatchVarDef` interface, widened `globalVars` and `perPlayerVars` to `(GameSpecVarDef | GameSpecBatchVarDef)[]`
+
+### Files Created
+- `packages/engine/src/cnl/expand-batch-vars.ts` — `expandBatchVars()` expansion pass following `expand-batch-markers.ts` pattern
+- `packages/engine/test/unit/expand-batch-vars.test.ts` — 12 test cases covering all acceptance criteria
+
+### Design Decision
+- Duplicate detection is per-field (within `globalVars` and `perPlayerVars` independently), not cross-scope, matching the existing `expand-batch-markers.ts` pattern and respecting semantic scope boundaries.
+
+### Verification
+- `pnpm turbo build` — clean
+- 12/12 new tests pass
+- 3202/3202 full suite tests pass (0 failures)
+- `pnpm turbo typecheck` — clean
+- `pnpm turbo lint` — clean

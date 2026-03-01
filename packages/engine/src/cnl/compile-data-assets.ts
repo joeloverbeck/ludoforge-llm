@@ -53,6 +53,17 @@ const COMPILER_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvaria
   },
 };
 
+export type DataAssetDerivationFailureReason =
+  | 'invalid-payload'
+  | 'missing-reference'
+  | 'ambiguous-selection';
+
+export interface DataAssetDerivationFailures {
+  readonly map: readonly DataAssetDerivationFailureReason[];
+  readonly pieceCatalog: readonly DataAssetDerivationFailureReason[];
+  readonly seatCatalog: readonly DataAssetDerivationFailureReason[];
+}
+
 export function deriveSectionsFromDataAssets(
   doc: GameSpecDoc,
   diagnostics: Diagnostic[],
@@ -81,11 +92,7 @@ export function deriveSectionsFromDataAssets(
   readonly runtimeDataAssets: readonly RuntimeDataAsset[];
   readonly tableContracts: readonly RuntimeTableContract[];
   readonly selectedScenarioAssetId?: string;
-  readonly derivationFailures: {
-    readonly map: boolean;
-    readonly pieceCatalog: boolean;
-    readonly seatCatalog: boolean;
-  };
+  readonly derivationFailures: DataAssetDerivationFailures;
   readonly tokenTraitVocabulary: Readonly<Record<string, readonly string[]>> | null;
 } {
   if (doc.dataAssets === null) {
@@ -102,9 +109,9 @@ export function deriveSectionsFromDataAssets(
       runtimeDataAssets: [],
       tableContracts: [],
       derivationFailures: {
-        map: false,
-        pieceCatalog: false,
-        seatCatalog: false,
+        map: [],
+        pieceCatalog: [],
+        seatCatalog: [],
       },
       tokenTraitVocabulary: null,
     };
@@ -124,9 +131,11 @@ export function deriveSectionsFromDataAssets(
     readonly path: string;
     readonly entityId: string;
   }> = [];
-  let mapDerivationFailed = false;
-  let pieceCatalogDerivationFailed = false;
-  let seatCatalogDerivationFailed = false;
+  const derivationFailures = {
+    map: new Set<DataAssetDerivationFailureReason>(),
+    pieceCatalog: new Set<DataAssetDerivationFailureReason>(),
+    seatCatalog: new Set<DataAssetDerivationFailureReason>(),
+  };
 
   for (const [index, rawAsset] of doc.dataAssets.entries()) {
     if (!isRecord(rawAsset)) {
@@ -147,13 +156,13 @@ export function deriveSectionsFromDataAssets(
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {
       if (rawAsset.kind === 'map') {
-        mapDerivationFailed = true;
+        derivationFailures.map.add('invalid-payload');
       }
       if (rawAsset.kind === 'pieceCatalog') {
-        pieceCatalogDerivationFailed = true;
+        derivationFailures.pieceCatalog.add('invalid-payload');
       }
       if (rawAsset.kind === 'seatCatalog') {
-        seatCatalogDerivationFailed = true;
+        derivationFailures.seatCatalog.add('invalid-payload');
       }
       continue;
     }
@@ -243,8 +252,10 @@ export function deriveSectionsFromDataAssets(
         selectedScenario?.path ?? 'doc.dataAssets',
         selectedScenario?.entityId,
       )
-    : { selected: undefined, failed: false };
-  mapDerivationFailed = mapDerivationFailed || selectedMapResult.failed;
+    : { selected: undefined, failureReason: undefined };
+  if (selectedMapResult.failureReason !== undefined) {
+    derivationFailures.map.add(selectedMapResult.failureReason);
+  }
   const selectedMap = selectedMapResult.selected;
   const shouldResolvePieceCatalog =
     !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length > 0);
@@ -257,8 +268,10 @@ export function deriveSectionsFromDataAssets(
         selectedScenario?.path ?? 'doc.dataAssets',
         selectedScenario?.entityId,
       )
-    : { selected: undefined, failed: false };
-  pieceCatalogDerivationFailed = pieceCatalogDerivationFailed || selectedPieceCatalogResult.failed;
+    : { selected: undefined, failureReason: undefined };
+  if (selectedPieceCatalogResult.failureReason !== undefined) {
+    derivationFailures.pieceCatalog.add(selectedPieceCatalogResult.failureReason);
+  }
   const selectedPieceCatalog = selectedPieceCatalogResult.selected;
   const shouldResolveSeatCatalog =
     !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length > 0);
@@ -271,8 +284,10 @@ export function deriveSectionsFromDataAssets(
         selectedScenario?.path ?? 'doc.dataAssets',
         selectedScenario?.entityId,
       )
-    : { selected: undefined, failed: false };
-  seatCatalogDerivationFailed = seatCatalogDerivationFailed || selectedSeatCatalogResult.failed;
+    : { selected: undefined, failureReason: undefined };
+  if (selectedSeatCatalogResult.failureReason !== undefined) {
+    derivationFailures.seatCatalog.add(selectedSeatCatalogResult.failureReason);
+  }
   const selectedSeatCatalog = selectedSeatCatalogResult.selected;
 
   if (selectedSeatCatalog !== undefined) {
@@ -389,9 +404,9 @@ export function deriveSectionsFromDataAssets(
     tableContracts,
     ...(selectedScenario?.entityId === undefined ? {} : { selectedScenarioAssetId: selectedScenario.entityId }),
     derivationFailures: {
-      map: mapDerivationFailed,
-      pieceCatalog: pieceCatalogDerivationFailed,
-      seatCatalog: seatCatalogDerivationFailed,
+      map: [...derivationFailures.map],
+      pieceCatalog: [...derivationFailures.pieceCatalog],
+      seatCatalog: [...derivationFailures.seatCatalog],
     },
     tokenTraitVocabulary:
       selectedPieceCatalog === undefined
@@ -1028,7 +1043,7 @@ function selectAssetById<TPayload, TAsset extends { readonly id: string; readonl
   entityId?: string,
 ): {
   readonly selected: TAsset | undefined;
-  readonly failed: boolean;
+  readonly failureReason: DataAssetDerivationFailureReason | undefined;
 } {
   if (selectedId !== undefined) {
     const normalizedSelectedId = normalizeIdentifier(selectedId);
@@ -1036,7 +1051,7 @@ function selectAssetById<TPayload, TAsset extends { readonly id: string; readonl
     if (matched !== undefined) {
       return {
         selected: matched,
-        failed: false,
+        failureReason: undefined,
       };
     }
 
@@ -1051,14 +1066,14 @@ function selectAssetById<TPayload, TAsset extends { readonly id: string; readonl
     });
     return {
       selected: undefined,
-      failed: true,
+      failureReason: 'missing-reference',
     };
   }
 
   if (assets.length === 1) {
     return {
       selected: assets[0],
-      failed: false,
+      failureReason: undefined,
     };
   }
 
@@ -1075,6 +1090,6 @@ function selectAssetById<TPayload, TAsset extends { readonly id: string; readonl
 
   return {
     selected: undefined,
-    failed: assets.length > 1,
+    failureReason: assets.length > 1 ? 'ambiguous-selection' : undefined,
   };
 }

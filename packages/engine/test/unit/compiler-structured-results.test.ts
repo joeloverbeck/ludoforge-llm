@@ -118,6 +118,30 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('does not emit map cascade warning when zones are missing without map derivation failures', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: null,
+      dataAssets: null,
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING'
+          && diagnostic.path === 'doc.zones',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING'),
+      false,
+    );
+  });
+
   it('map data asset failure does not null zones when explicit YAML zones exist', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
@@ -594,6 +618,66 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('keeps non-seat xref diagnostics active when seat catalog is required', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      metadata: { id: 'asset-cascade-seat-required-non-seat-xref', players: { min: 2, max: 2 } },
+      globalVars: [{ name: 'resources', type: 'int' as const, init: 0, min: 0, max: 10 }],
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [
+              { id: 'us-troops', seat: 'US', statusDimensions: [], transitions: [] },
+              { id: 'arvn-troops', seat: 'ARVN', statusDimensions: [], transitions: [] },
+            ],
+            inventory: [
+              { pieceTypeId: 'us-troops', seat: 'US', total: 1 },
+              { pieceTypeId: 'arvn-troops', seat: 'ARVN', total: 1 },
+            ],
+          },
+        },
+      ],
+      tokenTypes: null,
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [{ seat: 'US', resource: 'resorces', amount: 1 }],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_XREF_TURN_FLOW_PASS_REWARD_SEAT_MISSING'),
+      false,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_REWARD_VAR_MISSING'
+          && diagnostic.path === 'doc.turnOrder.config.turnFlow.passRewards.0.resource',
+      ),
+      true,
+    );
+  });
+
   it('emits seat-catalog ambiguity and suppresses seat-catalog-required cascade for card-driven docs', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
@@ -680,6 +764,99 @@ describe('compiler structured section results', () => {
 
     assert.notEqual(missingSeatCatalogDiagnostic, undefined);
     assert.deepEqual(missingSeatCatalogDiagnostic?.alternatives, ['seats-foundation']);
+  });
+
+  it('suppresses seat-catalog-required when scenario seatCatalogAssetId is missing', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'seats-foundation',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }],
+          },
+        },
+        {
+          id: 'scenario-foundation',
+          kind: 'scenario' as const,
+          payload: {
+            seatCatalogAssetId: 'seats-missing',
+            scenarioName: 'Foundation',
+            yearRange: '1964-1965',
+          },
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING'
+          && diagnostic.path === 'doc.dataAssets.1.payload.seatCatalogAssetId',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      false,
+    );
+  });
+
+  it('suppresses seat-catalog-required when seat catalog payload is invalid', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'seats-invalid',
+          kind: 'seatCatalog' as const,
+          payload: {},
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'SEAT_CATALOG_SCHEMA_INVALID'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      false,
+    );
   });
 
   it('accepts piece catalogs without embedded seat declarations', () => {

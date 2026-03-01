@@ -31,7 +31,10 @@ import {
 import { lowerTurnOrder } from './compile-turn-flow.js';
 import { lowerActionPipelines } from './compile-operations.js';
 import { lowerVictory } from './compile-victory.js';
-import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
+import {
+  deriveSectionsFromDataAssets,
+  type DataAssetDerivationFailureReason,
+} from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
 import {
   CNL_XREF_DIAGNOSTIC_CODES,
@@ -85,6 +88,11 @@ type MutableCompileSectionResults = {
 
 const SCENARIO_DECK_SYNTHETIC_CARD_TOKEN_TYPE_ID = '__eventCard';
 const SCENARIO_DECK_PILE_COUP_MIX_STRATEGY_ID = 'pile-coup-mix-v1';
+const DATA_ASSET_DERIVATION_SUPPRESSION_POLICY = {
+  mapZonesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection'],
+  pieceCatalogTokenTypesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection'],
+  seatCatalogRequired: ['invalid-payload', 'missing-reference', 'ambiguous-selection'],
+} as const;
 
 type ScenarioDeckSelection = {
   readonly path: string;
@@ -318,7 +326,13 @@ function compileExpandedDoc(
   let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
   let zones: GameDef['zones'] | null = null;
   if (effectiveZones === null) {
-    if (resolvedTableRefDoc.zones === null && derivedFromAssets.derivationFailures.map) {
+    if (
+      resolvedTableRefDoc.zones === null
+      && shouldSuppressForDerivationFailure(
+        derivedFromAssets.derivationFailures.map,
+        DATA_ASSET_DERIVATION_SUPPRESSION_POLICY.mapZonesMissing,
+      )
+    ) {
       diagnostics.push(dataAssetCascadeZonesDiagnostic());
     } else {
       diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
@@ -338,7 +352,14 @@ function compileExpandedDoc(
     readonly value: GameDef['tokenTypes'];
     readonly failed: boolean;
   };
-  if (effectiveTokenTypes === null && resolvedTableRefDoc.tokenTypes === null && derivedFromAssets.derivationFailures.pieceCatalog) {
+  if (
+    effectiveTokenTypes === null
+    && resolvedTableRefDoc.tokenTypes === null
+    && shouldSuppressForDerivationFailure(
+      derivedFromAssets.derivationFailures.pieceCatalog,
+      DATA_ASSET_DERIVATION_SUPPRESSION_POLICY.pieceCatalogTokenTypesMissing,
+    )
+  ) {
     diagnostics.push(dataAssetCascadeTokenTypesDiagnostic());
     tokenTypes = {
       value: [],
@@ -382,7 +403,10 @@ function compileExpandedDoc(
   if (
     sections.turnOrder?.type === 'cardDriven'
     && seatIdentityContract.contract.referenceSeatIds === undefined
-    && !derivedFromAssets.derivationFailures.seatCatalog
+    && !shouldSuppressForDerivationFailure(
+      derivedFromAssets.derivationFailures.seatCatalog,
+      DATA_ASSET_DERIVATION_SUPPRESSION_POLICY.seatCatalogRequired,
+    )
   ) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SEAT_CATALOG_REQUIRED,
@@ -688,6 +712,13 @@ function dataAssetCascadeTokenTypesDiagnostic(): Diagnostic {
     message: 'Piece catalog data asset derivation failed and no explicit tokenTypes were provided; tokenTypes section is unavailable.',
     suggestion: 'Fix the pieceCatalog data asset diagnostics or provide doc.tokenTypes explicitly in YAML.',
   };
+}
+
+function shouldSuppressForDerivationFailure(
+  actualReasons: readonly DataAssetDerivationFailureReason[],
+  suppressOn: readonly DataAssetDerivationFailureReason[],
+): boolean {
+  return suppressOn.some((reason) => actualReasons.includes(reason));
 }
 
 function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {

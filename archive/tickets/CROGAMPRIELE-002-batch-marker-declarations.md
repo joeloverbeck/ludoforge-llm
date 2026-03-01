@@ -1,6 +1,6 @@
 # CROGAMPRIELE-002: Batch marker declarations compiler pass (A2)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compiler pipeline (new expansion pass), GameSpecDoc types
@@ -111,3 +111,16 @@ Test file covering:
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-batch-markers.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-01
+- **What changed**:
+  - `compiler-diagnostic-codes.ts` — added `COMPILER_DIAGNOSTIC_CODES_BATCH_MARKERS` with 3 codes (`IDS_EMPTY`, `DEFAULT_STATE_INVALID`, `DUPLICATE_ID`)
+  - `game-spec-doc.ts` — added `GameSpecBatchGlobalMarkerLattice` interface; widened `globalMarkerLattices` to `readonly (GameSpecGlobalMarkerLatticeDef | GameSpecBatchGlobalMarkerLattice)[] | null`
+  - `expand-batch-markers.ts` (new) — `isBatchEntry` type guard + `expandBatchMarkers` pure function
+  - `cnl/index.ts` — added export for `expand-batch-markers`
+  - `test/unit/expand-batch-markers.test.ts` (new) — 9 test cases covering all acceptance criteria
+  - `test/unit/parser.test.ts` — added type assertion at line 257 to accommodate widened union type
+- **Deviations from plan**: One additional file touched (`parser.test.ts`) — the widened union type required a type assertion where the parser test accessed `.id` directly on `globalMarkerLattices[0]`
+- **Verification**: build clean, 9/9 new tests pass, 3190/3190 full suite pass, typecheck clean, lint clean

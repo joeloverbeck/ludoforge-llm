@@ -94,6 +94,25 @@ describe('normalizePlayerSelector', () => {
       assert.equal(numericOne.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
     });
 
+    it('rejects object-form numeric selectors when canonical seat ids are declared', () => {
+      const fitlSeats = ['US', 'ARVN', 'NVA', 'VC'] as const;
+      const result = normalizePlayerSelector({ id: 0 }, path, fitlSeats);
+      assert.equal(result.value, null);
+      assert.deepEqual(result.diagnostics, [
+        {
+          code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+          path,
+          severity: 'error',
+          message: 'Numeric player selector "{ id: 0 }" is not allowed when canonical seat ids are declared.',
+          suggestion: 'Use one of the canonical seat ids: US, ARVN, NVA, VC.',
+        },
+      ]);
+    });
+
+    it('accepts object-form numeric selectors when canonical seat ids are not declared', () => {
+      assert.deepEqual(normalizePlayerSelector({ id: 0 }, path).value, { id: 0 });
+    });
+
     it('binding tokens take priority over seat names', () => {
       const seatsWithBinding = ['$var', 'NVA'] as const;
       assert.deepEqual(normalizePlayerSelector('$var', path, seatsWithBinding).value, { chosen: '$var' });

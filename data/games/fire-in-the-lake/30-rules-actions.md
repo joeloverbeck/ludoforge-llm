@@ -4976,15 +4976,13 @@ actionPipelines:
         args:
           resourceExpr:
             ref: pvar
-            player:
-              id: 1
+            player: arvn
             var: resources
           costExpr: 5
     costEffects:
         - addVar:
             scope: pvar
-            player:
-              id: 1
+            player: arvn
             var: resources
             delta: -5
     targeting:

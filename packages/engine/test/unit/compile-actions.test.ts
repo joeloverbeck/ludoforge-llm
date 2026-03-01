@@ -255,6 +255,40 @@ describe('compile actions', () => {
     assert.deepEqual(result.gameDef?.terminal.conditions[0]?.result, { type: 'win', player: { id: 3 } });
   });
 
+  it('fails deterministically when object-form numeric selectors are used with canonical seat ids', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-object-numeric-selector-reject-canonical-seats', players: { min: 4, max: 4 } },
+      dataAssets: [
+        {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
+          },
+        },
+      ],
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'play', actor: { id: 0 }, executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.deepEqual(
+      result.diagnostics.find((diagnostic) => diagnostic.path === 'doc.actions.0.actor'),
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.actions.0.actor',
+        severity: 'error',
+        message: 'Numeric player selector "{ id: 0 }" is not allowed when canonical seat ids are declared.',
+        suggestion: 'Use one of the canonical seat ids: US, ARVN, NVA, VC.',
+      },
+    );
+  });
+
   it('fails deterministically when seat-name selectors are used without canonical seat ids', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

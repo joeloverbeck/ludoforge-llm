@@ -29,6 +29,9 @@ export function normalizePlayerSelector(
   if ('id' in value) {
     const idValue = value.id;
     if (typeof idValue === 'number' && Number.isInteger(idValue) && idValue >= 0) {
+      if (seatIds !== undefined && seatIds.length > 0) {
+        return invalidNumericObjectPlayerSelectorWithSeatIds(path, idValue, seatIds);
+      }
       return { value: { id: asPlayerId(idValue) }, diagnostics: [] };
     }
     return invalidPlayerSelector(path, value);
@@ -233,6 +236,25 @@ function invalidNumericPlayerSelectorWithSeatIds(
         path,
         severity: 'error',
         message: `Numeric player selector "${actual}" is not allowed when canonical seat ids are declared.`,
+        suggestion: `Use one of the canonical seat ids: ${seatIds.join(', ')}.`,
+      },
+    ],
+  };
+}
+
+function invalidNumericObjectPlayerSelectorWithSeatIds(
+  path: string,
+  actual: number,
+  seatIds: readonly string[],
+): SelectorCompileResult<PlayerSel> {
+  return {
+    value: null,
+    diagnostics: [
+      {
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PLAYER_SELECTOR_INVALID,
+        path,
+        severity: 'error',
+        message: `Numeric player selector "{ id: ${actual} }" is not allowed when canonical seat ids are declared.`,
         suggestion: `Use one of the canonical seat ids: ${seatIds.join(', ')}.`,
       },
     ],

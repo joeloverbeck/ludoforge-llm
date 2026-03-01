@@ -1,17 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
-import { type Diagnostic, type GameDef, validateGameDef } from '../../src/kernel/index.js';
-
-const readGameDefFixture = (name: string): GameDef => {
-  const distRelativeFixturePath = fileURLToPath(new URL(`../../../test/fixtures/gamedef/${name}`, import.meta.url));
-  const sourceRelativeFixturePath = fileURLToPath(new URL(`../fixtures/gamedef/${name}`, import.meta.url));
-  const fixturePath = existsSync(distRelativeFixturePath) ? distRelativeFixturePath : sourceRelativeFixturePath;
-  const raw = readFileSync(fixturePath, 'utf8');
-  return JSON.parse(raw) as GameDef;
-};
+import { type Diagnostic, validateGameDef } from '../../src/kernel/index.js';
+import { readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 describe('validateGameDef golden diagnostics', () => {
   it('minimal valid fixture yields zero diagnostics', () => {

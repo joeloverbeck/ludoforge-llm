@@ -1,8 +1,7 @@
 import * as assert from 'node:assert/strict';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
+import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import {
   ILLEGAL_MOVE_REASONS,
   applyMove,
@@ -18,11 +17,10 @@ import {
   type Move,
 } from '../../src/kernel/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-
-const CONFORMANCE_FIXTURE_DIR = join(process.cwd(), 'test', 'fixtures', 'cnl', 'conformance');
+import { readFixtureText } from '../helpers/fixture-reader.js';
 
 function compileConformanceFixture(name: string): GameDef {
-  const markdown = loadGameSpecSource(join(CONFORMANCE_FIXTURE_DIR, name)).markdown;
+  const markdown = readFixtureText(`cnl/conformance/${name}`);
   const parsed = parseGameSpec(markdown);
   const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
   const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });

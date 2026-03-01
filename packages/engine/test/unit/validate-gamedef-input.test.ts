@@ -1,25 +1,16 @@
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import {
   assertValidatedGameDefInput,
   isGameDefInputValidationError,
-  type GameDef,
   type GameDefInputValidationError,
 } from '../../src/kernel/index.js';
-
-const loadFixtureGameDef = (fixtureName: string): GameDef => {
-  const distRelativeFixturePath = fileURLToPath(new URL(`../../../test/fixtures/gamedef/${fixtureName}`, import.meta.url));
-  const sourceRelativeFixturePath = fileURLToPath(new URL(`../fixtures/gamedef/${fixtureName}`, import.meta.url));
-  const fixturePath = existsSync(distRelativeFixturePath) ? distRelativeFixturePath : sourceRelativeFixturePath;
-  return JSON.parse(readFileSync(fixturePath, 'utf8')) as GameDef;
-};
+import { readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 describe('assertValidatedGameDefInput', () => {
   it('returns a validated GameDef for valid object input', () => {
-    const gameDef = loadFixtureGameDef('minimal-valid.json');
+    const gameDef = readGameDefFixture('minimal-valid.json');
 
     const validated = assertValidatedGameDefInput(gameDef, 'unit fixture');
 

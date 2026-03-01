@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
@@ -11,16 +9,11 @@ import {
   type SerializedGameTrace,
   validateGameDef,
 } from '../../src/kernel/index.js';
-import { createValidGameDef } from '../helpers/gamedef-fixtures.js';
-
-const readGameDefFixture = (name: string): GameDef => {
-  const raw = readFileSync(join(process.cwd(), 'test', 'fixtures', 'gamedef', name), 'utf8');
-  return JSON.parse(raw) as GameDef;
-};
+import { readFixtureJson } from '../helpers/fixture-reader.js';
+import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 const readSerializedTraceFixture = (name: string): SerializedGameTrace => {
-  const raw = readFileSync(join(process.cwd(), 'test', 'fixtures', 'trace', name), 'utf8');
-  return JSON.parse(raw) as SerializedGameTrace;
+  return readFixtureJson<SerializedGameTrace>(`trace/${name}`);
 };
 
 describe('core-types validation integration', () => {

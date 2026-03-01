@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import {
@@ -14,14 +12,7 @@ import {
   validateGameDefBoundary,
   validateInitialPlacementsAgainstStackingConstraints,
 } from '../../src/kernel/index.js';
-import { createValidGameDef } from '../helpers/gamedef-fixtures.js';
-
-const loadFixtureGameDef = (fixtureName: string): GameDef => {
-  const distRelativeFixturePath = fileURLToPath(new URL(`../../../test/fixtures/gamedef/${fixtureName}`, import.meta.url));
-  const sourceRelativeFixturePath = fileURLToPath(new URL(`../fixtures/gamedef/${fixtureName}`, import.meta.url));
-  const fixturePath = existsSync(distRelativeFixturePath) ? distRelativeFixturePath : sourceRelativeFixturePath;
-  return JSON.parse(readFileSync(fixturePath, 'utf8')) as GameDef;
-};
+import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 const withCardDrivenTurnFlow = (
   base: GameDef,
@@ -3183,7 +3174,7 @@ describe('validateGameDef constraints and warnings', () => {
   });
 
   it('returns no diagnostics for FITL foundation map fixture', () => {
-    const diagnostics = validateGameDef(loadFixtureGameDef('fitl-map-foundation-valid.json'));
+    const diagnostics = validateGameDef(readGameDefFixture('fitl-map-foundation-valid.json'));
     assert.deepEqual(diagnostics, []);
   });
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — shared contracts module ergonomics + import policy
-**Deps**: tickets/ENGINEARCH-161-complete-cross-layer-contract-extraction-from-kernel-namespace.md, tickets/ENGINEARCH-162-enforce-cnl-contract-import-boundary-via-lint.md
+**Deps**: archive/tickets/ENGINEARCH-161-complete-cross-layer-contract-extraction-from-kernel-namespace.md, archive/tickets/ENGINEARCH-162-enforce-cnl-contract-import-boundary-via-lint.md
 
 ## Problem
 

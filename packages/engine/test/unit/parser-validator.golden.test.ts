@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
+import { readFixtureJson, readFixtureText } from '../helpers/fixture-reader.js';
 
 interface ValidGolden {
   readonly expectedDoc: unknown;
@@ -19,9 +18,9 @@ interface InvalidGolden {
   >[];
 }
 
-const readFixture = (name: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', name), 'utf8');
+const readFixture = (name: string): string => readFixtureText(`cnl/${name}`);
 
-const readJsonFixture = <T>(name: string): T => JSON.parse(readFixture(name)) as T;
+const readJsonFixture = <T>(name: string): T => readFixtureJson<T>(`cnl/${name}`);
 
 const normalizeDiagnostic = (diagnostic: Diagnostic) => ({
   code: diagnostic.code,

@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readFixtureJson, readFixtureText } from '../helpers/fixture-reader.js';
 import {
   asActionId,
   asPhaseId,
@@ -16,8 +15,6 @@ import {
   serializeTrace,
 } from '../../src/kernel/index.js';
 import type { GameState, GameTrace, SerializedGameState, SerializedGameTrace } from '../../src/kernel/index.js';
-
-const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const gameStateFixture: GameState = {
   globalVars: { round: 1 },
@@ -108,10 +105,7 @@ describe('kernel bigint serialization codecs', () => {
   });
 
   it('round-trips FITL-shaped initial state compiled from embedded dataAssets', () => {
-    const markdown = readFileSync(
-      join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', 'fitl-foundation-inline-assets.md'),
-      'utf8',
-    );
+    const markdown = readFixtureText('cnl/compiler/fitl-foundation-inline-assets.md');
     const parsed = parseGameSpec(markdown);
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
@@ -206,7 +200,7 @@ describe('kernel bigint serialization codecs', () => {
   });
 
   it('simulator golden fixture round-trips through deserializeTrace/serializeTrace exactly', () => {
-    const fixture = readJsonFixture<SerializedGameTrace>('test/fixtures/trace/simulator-golden-trace.json');
+    const fixture = readFixtureJson<SerializedGameTrace>('trace/simulator-golden-trace.json');
 
     const roundTripped = serializeTrace(deserializeTrace(fixture));
     assert.deepEqual(roundTripped, fixture);

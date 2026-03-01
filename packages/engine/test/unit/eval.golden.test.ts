@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
@@ -16,15 +14,11 @@ import {
   type SerializedGameState,
   type ValueExpr,
 } from '../../src/kernel/index.js';
-
-const readJsonFixture = <T>(filePath: string): T => {
-  const raw = readFileSync(join(process.cwd(), filePath), 'utf8');
-  return JSON.parse(raw) as T;
-};
+import { readFixtureJson } from '../helpers/fixture-reader.js';
 
 const makeCtx = (): EvalContext => {
-  const def = readJsonFixture<GameDef>('test/fixtures/gamedef/eval-complex-valid.json');
-  const serializedState = readJsonFixture<SerializedGameState>('test/fixtures/trace/eval-state-snapshot.json');
+  const def = readFixtureJson<GameDef>('gamedef/eval-complex-valid.json');
+  const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
 
   return {
     def,

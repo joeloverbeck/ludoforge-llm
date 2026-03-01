@@ -1,4 +1,7 @@
 import type { EffectAST, GameDef } from '../../src/kernel/index.js';
+import { readFixtureJson } from './fixture-reader.js';
+
+export const readGameDefFixture = (fixtureName: string): GameDef => readFixtureJson<GameDef>(`gamedef/${fixtureName}`);
 
 export const createValidGameDef = (): GameDef =>
   ({

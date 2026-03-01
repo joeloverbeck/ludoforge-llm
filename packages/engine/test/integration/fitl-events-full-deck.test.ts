@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readFixtureJson } from '../helpers/fixture-reader.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_FACTIONS = new Set(['US', 'NVA', 'ARVN', 'VC']);
@@ -28,8 +27,7 @@ interface TutorialGoldenFragment {
 }
 
 function readTutorialGolden(): TutorialGoldenFragment {
-  const raw = readFileSync(join(process.cwd(), 'test', 'fixtures', 'fitl-events-tutorial-golden.json'), 'utf8');
-  return JSON.parse(raw) as TutorialGoldenFragment;
+  return readFixtureJson<TutorialGoldenFragment>('fitl-events-tutorial-golden.json');
 }
 
 describe('FITL full deck compilation and golden invariants', () => {

@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../../helpers/diagnostic-helpers.js';
+import { readFixtureText } from '../../helpers/fixture-reader.js';
 import {
   assertValidatedGameDef,
   asActionId,
@@ -67,7 +66,7 @@ phase: [asPhaseId('main')],
 
 describe('runGames integration', () => {
   it('keeps a non-FITL fixture compile + simulation path green', () => {
-    const markdown = readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', 'compile-valid.md'), 'utf8');
+    const markdown = readFixtureText('cnl/compiler/compile-valid.md');
     const parsed = parseGameSpec(markdown);
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });

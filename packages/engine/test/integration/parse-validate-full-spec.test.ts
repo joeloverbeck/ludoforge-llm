@@ -1,13 +1,12 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readFixtureText } from '../helpers/fixture-reader.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
-const readFixture = (name: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', name), 'utf8');
+const readFixture = (name: string): string => readFixtureText(`cnl/${name}`);
 
 describe('parse + validate full-spec integration', () => {
   it('accepts a realistic valid full markdown spec end-to-end', () => {

@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readFixtureJson } from '../helpers/fixture-reader.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 import {
   asActionId,
@@ -19,8 +18,6 @@ import {
   type SerializedGameState,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
-
-const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const createDef = (): GameDef =>
   ({
@@ -234,7 +231,7 @@ describe('initialState', () => {
     assert.notEqual(compiled.gameDef, null);
 
     const serialized = serializeGameState(initialState(compiled.gameDef!, 17, 2).state);
-    const fixture = readJsonFixture<SerializedGameState>('test/fixtures/trace/fitl-foundation-initial-state.golden.json');
+    const fixture = readFixtureJson<SerializedGameState>('trace/fitl-foundation-initial-state.golden.json');
 
     assert.deepEqual(serialized, fixture);
     assert.equal(JSON.stringify(serialized), JSON.stringify(fixture));

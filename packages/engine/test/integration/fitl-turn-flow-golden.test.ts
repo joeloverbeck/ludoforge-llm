@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
@@ -15,6 +13,7 @@ import {
   type Move,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
+import { readFixtureJson } from '../helpers/fixture-reader.js';
 
 interface FitlTurnFlowGolden {
   readonly seed: number;
@@ -27,8 +26,6 @@ interface FitlTurnFlowGolden {
     readonly afterBoundary: ReturnType<typeof serializeGameState>;
   }[];
 }
-
-const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const createDef = (): GameDef =>
   ({
@@ -160,7 +157,7 @@ phase: [asPhaseId('main')],
 describe('FITL turn-flow golden trace', () => {
   it('matches golden artifact for pass chain, override window, monsoon gating, and coup handoff boundary logs', () => {
     // Fixture policy: this file is a contract artifact. Update it only when turn-flow semantics intentionally change.
-    const fixture = readJsonFixture<FitlTurnFlowGolden>('test/fixtures/trace/fitl-turn-flow.golden.json');
+    const fixture = readFixtureJson<FitlTurnFlowGolden>('trace/fitl-turn-flow.golden.json');
     const def = createDef();
     const seed = 71;
 

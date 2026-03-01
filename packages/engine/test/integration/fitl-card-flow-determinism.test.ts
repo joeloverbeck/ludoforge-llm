@@ -1,9 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readFixtureJson } from '../helpers/fixture-reader.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   applyMove,
@@ -130,8 +129,6 @@ const scriptedMoves: readonly Move[] = [
   { actionId: asActionId('pass'), params: {} },
   { actionId: asActionId('operation'), params: {} },
 ];
-
-const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const completeProfileMoveDeterministically = (
   baseMove: Move,
@@ -392,7 +389,7 @@ describe('FITL card-flow determinism integration', () => {
 
   it('captures deterministic event side/branch/target metadata and partial-stages trace entries during eligible-faction sequencing', () => {
     // Fixture policy: this golden trace is intentionally reviewed state/trace contract data, not an auto-regenerated snapshot.
-    const fixture = readJsonFixture<FitlEventInitialPackGolden>('test/fixtures/trace/fitl-events-initial-pack.golden.json');
+    const fixture = readFixtureJson<FitlEventInitialPackGolden>('trace/fitl-events-initial-pack.golden.json');
     const def = createEventTraceDef();
     const seed = 113;
 

@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
@@ -13,6 +11,7 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
+import { readFixtureJson } from '../../helpers/fixture-reader.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
@@ -23,8 +22,6 @@ const firstLegalAgent: Agent = {
     return { move, rng: input.rng };
   },
 };
-
-const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const createGoldenDef = (): ValidatedGameDef =>
   assertValidatedGameDef({
@@ -66,7 +63,7 @@ phase: [asPhaseId('p2')],
 
 describe('simulator golden trace stability', () => {
   it('fixed setup yields expected hash sequence and exact serialized golden trace', () => {
-    const fixture = readJsonFixture<SerializedGameTrace>('test/fixtures/trace/simulator-golden-trace.json');
+    const fixture = readFixtureJson<SerializedGameTrace>('trace/simulator-golden-trace.json');
     const def = createGoldenDef();
 
     const trace = runGame(def, 13, [firstLegalAgent, firstLegalAgent], 10);

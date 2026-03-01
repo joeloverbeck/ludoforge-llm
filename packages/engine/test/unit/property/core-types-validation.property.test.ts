@@ -1,14 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { type GameDef, GameDefSchema, validateGameDef } from '../../../src/kernel/index.js';
-
-const readGameDefFixture = (name: string): GameDef => {
-  const raw = readFileSync(join(process.cwd(), 'test', 'fixtures', 'gamedef', name), 'utf8');
-  return JSON.parse(raw) as GameDef;
-};
+import { readGameDefFixture } from '../../helpers/gamedef-fixtures.js';
 
 const parseRoundTrip = (def: GameDef): unknown => JSON.parse(JSON.stringify(def));
 

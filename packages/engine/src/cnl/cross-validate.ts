@@ -95,6 +95,19 @@ export function crossValidateSpec(
           'Use one of the declared turnFlow.eligibility.overrideWindows ids.',
         );
       }
+
+      if (
+        profile.accompanyingOps !== undefined &&
+        cardDrivenTurnFlow.actionClassByActionId[String(profile.actionId)] === undefined
+      ) {
+        diagnostics.push({
+          code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_SA_PIPELINE_ACTION_CLASS_UNMAPPED,
+          path: `doc.actionPipelines.${profileIndex}.actionId`,
+          severity: 'warning',
+          message: `Action pipeline "${profile.id}" has accompanyingOps (special activity) but its action "${String(profile.actionId)}" is not mapped in actionClassByActionId.`,
+          suggestion: `Add "${String(profile.actionId)}: specialActivity" to actionClassByActionId.`,
+        });
+      }
     }
   }
 

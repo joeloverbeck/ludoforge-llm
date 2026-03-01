@@ -1,5 +1,5 @@
 import { kernelRuntimeError } from './runtime-error.js';
-import { resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { buildSeatResolutionIndex, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import type { GameDef, GameState } from './types.js';
 
 export const requireCardDrivenActiveSeat = (
@@ -14,11 +14,11 @@ export const requireCardDrivenActiveSeat = (
     );
   }
 
+  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
   const seat = resolveTurnFlowSeatForPlayerIndex(
-    def,
-    state.playerCount,
     state.turnOrderState.runtime.seatOrder,
     Number(state.activePlayer),
+    seatResolutionIndex,
   );
   if (seat !== null) {
     return seat;

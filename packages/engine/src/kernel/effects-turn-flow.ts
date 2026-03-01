@@ -7,7 +7,7 @@ import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
-import { resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { buildSeatResolutionIndex, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 
 const resolveGrantSeat = (
   token: string,
@@ -92,11 +92,11 @@ export const applyGrantFreeOperation = (
   }
 
   const runtime = ctx.state.turnOrderState.runtime;
+  const seatResolutionIndex = buildSeatResolutionIndex(ctx.def, ctx.state.playerCount);
   const activeSeat = resolveTurnFlowSeatForPlayerIndex(
-    ctx.def,
-    ctx.state.playerCount,
     runtime.seatOrder,
     Number(ctx.activePlayer),
+    seatResolutionIndex,
   );
   if (activeSeat === null) {
     throw effectRuntimeError(

@@ -8,7 +8,7 @@ import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
+import { buildSeatResolutionIndex, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
 import { terminalResult } from './terminal.js';
 import type { ExecutionCollector, GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -73,8 +73,9 @@ const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameS
   ) as Readonly<Record<string, boolean>>;
   const firstSeat = coupSeatOrder[0] ?? null;
   const secondSeat = coupSeatOrder[1] ?? null;
+  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
   const resolvedFirstSeatPlayerIndex =
-    firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, firstSeat);
+    firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(firstSeat, seatResolutionIndex);
   if (firstSeat !== null && resolvedFirstSeatPlayerIndex === null) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
@@ -329,7 +330,8 @@ const coupPhaseImplicitPass = (
   }
 
   const nextSeat = remaining[0]!;
-  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, nextSeat);
+  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
+  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(nextSeat, seatResolutionIndex);
   if (nextSeatPlayerIndex === null) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',

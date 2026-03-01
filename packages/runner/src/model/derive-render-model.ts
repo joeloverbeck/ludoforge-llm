@@ -1005,7 +1005,7 @@ function deriveTurnOrder(
   if (state.turnOrderState.type === 'cardDriven') {
     const bySeatOrder = state.turnOrderState.runtime.seatOrder
       .map((seat) => {
-        const playerIndex = resolvePlayerIndexForSeatValue(seat, state.playerCount, seatResolution);
+        const playerIndex = resolvePlayerIndexForSeatValue(seat, seatResolution);
         return playerIndex === null ? null : asPlayerId(playerIndex);
       })
       .filter((playerId): playerId is PlayerId => playerId !== null);

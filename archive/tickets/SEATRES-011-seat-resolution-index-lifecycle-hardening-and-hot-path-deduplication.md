@@ -1,9 +1,9 @@
 # SEATRES-011: Seat-resolution index lifecycle hardening and hot-path deduplication
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
-**Engine Changes**: Yes — kernel seat-resolution API and callers in turn-flow/coup/legal-move paths
+**Engine Changes**: Yes — kernel seat-resolution API and callers in turn-flow/coup paths (plus runner call-site adaptation to new API)
 **Deps**: archive/tickets/SEATRES-010-remove-runtime-numeric-seat-fallback-and-fail-fast-on-unresolvable-active-seat.md
 
 ## Problem
@@ -14,9 +14,10 @@ Current runtime seat resolution rebuilds `SeatResolutionIndex` repeatedly in hot
 
 1. `resolvePlayerIndexForTurnFlowSeat()` currently constructs a fresh index each call.
 2. `resolveTurnFlowSeatForPlayerIndex()` loops seats and repeatedly invokes seat resolution, compounding rebuild cost.
-3. Callers (`turn-flow-eligibility`, `phase-advance`, `legal-moves-turn-order`, `effects-turn-flow`) invoke these helpers in high-frequency paths.
-4. Existing tests verify correctness but do not lock a single-build-per-context lifecycle for seat resolution.
-5. Active tickets `SEATRES-006`, `SEATRES-007`, and `SEATRES-008` do not cover performance/lifecycle deduplication of seat-resolution indexes.
+3. High-frequency callers are in `turn-flow-eligibility`, `phase-advance`, `turn-flow-runtime-invariants`, and `effects-turn-flow`.
+4. `legal-moves-turn-order` currently does not call seat-resolution helpers directly, so it is not part of this ticket scope.
+5. Existing tests verify correctness but do not lock a single-build-per-context lifecycle for seat resolution.
+6. Archived tickets `SEATRES-006`, `SEATRES-007`, `SEATRES-008`, and `SEATRES-010` establish seat-identity/runtime correctness but do not address index lifecycle deduplication.
 
 ## Architecture Check
 
@@ -37,6 +38,7 @@ Current runtime seat resolution rebuilds `SeatResolutionIndex` repeatedly in hot
 1. Build index once per relevant runtime operation (for example per turn-flow legality/apply step).
 2. Thread index through repeated seat lookups instead of invoking per-call builders.
 3. Preserve existing semantics and diagnostics.
+4. Remove hidden builder usage from looped helper paths so index construction is always explicit at the call site.
 
 ### 3. Add regression coverage for lifecycle discipline
 
@@ -48,16 +50,17 @@ Current runtime seat resolution rebuilds `SeatResolutionIndex` repeatedly in hot
 - `packages/engine/src/kernel/seat-resolution.ts` (modify)
 - `packages/engine/src/kernel/turn-flow-eligibility.ts` (modify)
 - `packages/engine/src/kernel/phase-advance.ts` (modify)
-- `packages/engine/src/kernel/legal-moves-turn-order.ts` (modify, if lookup reuse applies)
-- `packages/engine/src/kernel/effects-turn-flow.ts` (modify, if lookup reuse applies)
+- `packages/engine/src/kernel/turn-flow-runtime-invariants.ts` (modify)
+- `packages/engine/src/kernel/effects-turn-flow.ts` (modify)
 - `packages/engine/test/unit/kernel/seat-resolution.test.ts` (modify/add)
 - `packages/engine/test/unit/phase-advance.test.ts` (modify/add if helper-threading changes)
+- `packages/engine/test/unit/effects-turn-flow.test.ts` (modify/add if helper-threading changes)
 
 ## Out of Scope
 
 - Changing seat identity semantics
 - Adding game-specific optimization paths
-- Runner/UI concerns
+- Runner/UI feature work
 
 ## Acceptance Criteria
 
@@ -80,11 +83,34 @@ Current runtime seat resolution rebuilds `SeatResolutionIndex` repeatedly in hot
 Rationale: ensures refactor preserves functional outcomes.
 2. `packages/engine/test/unit/phase-advance.test.ts` — verifies updated callers still resolve coup seat progression correctly.
 Rationale: protects key control-flow path while deduplicating lookup work.
+3. `packages/engine/test/unit/effects-turn-flow.test.ts` — verifies grant seat resolution behavior remains strict and correct with explicit index reuse.
+Rationale: protects effect-time seat resolution path that now uses shared index context.
 
 ### Commands
 
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/kernel/seat-resolution.test.js`
 3. `node --test packages/engine/dist/test/unit/phase-advance.test.js`
-4. `pnpm -F @ludoforge/engine test`
-5. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+4. `node --test packages/engine/dist/test/unit/effects-turn-flow.test.js`
+5. `pnpm -F @ludoforge/engine test`
+6. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-03-01
+- What changed:
+  - Refactored `seat-resolution` APIs to require explicit prebuilt `SeatResolutionIndex` for runtime seat lookups.
+  - Removed hidden index construction from resolver helpers and updated hot-path callers (`turn-flow-eligibility`, `phase-advance`, `turn-flow-runtime-invariants`, `effects-turn-flow`) to build once per operation scope.
+  - Updated runner render-model derivation call site to use the new resolver contract.
+  - Strengthened `packages/engine/test/unit/kernel/seat-resolution.test.ts` to validate explicit-index resolver behavior and deterministic repeated lookups.
+- Deviations from original plan:
+  - `legal-moves-turn-order` was not modified because it does not use seat-resolution helpers.
+  - `phase-advance` and `effects-turn-flow` tests did not require code changes; existing tests continued to validate behavior after refactor.
+  - One runner call site required adaptation due intentional API hardening.
+- Verification results:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/seat-resolution.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/phase-advance.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/effects-turn-flow.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` passed.

@@ -13,7 +13,7 @@ import {
 } from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { normalizeSeatOrder, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
+import { buildSeatResolutionIndex, normalizeSeatOrder, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
@@ -599,7 +599,8 @@ const withActiveFromFirstEligible = (def: GameDef, state: GameState, firstEligib
     return state;
   }
 
-  const playerId = resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, firstEligible);
+  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
+  const playerId = resolvePlayerIndexForTurnFlowSeat(firstEligible, seatResolutionIndex);
   if (playerId === null) {
     return state;
   }
@@ -629,6 +630,7 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
     return null;
   }
   const mapping = config.turnFlow.cardSeatOrderMapping;
+  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
   for (const deck of def.eventDecks ?? []) {
     const card = deck.cards.find((c) => c.id === cardId);
     if (card !== undefined) {
@@ -637,7 +639,7 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
         const resolved = mapping === undefined
           ? rawOrder
           : rawOrder.map((value) => mapping[value] ?? value);
-        const filtered = resolved.filter((seatId) => resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, seatId) !== null);
+        const filtered = resolved.filter((seatId) => resolvePlayerIndexForTurnFlowSeat(seatId, seatResolutionIndex) !== null);
         return filtered.length > 0 ? filtered : null;
       }
     }
@@ -906,7 +908,8 @@ const parsePlayerId = (
   seat: string,
   playerCount: number,
 ): ReturnType<typeof asPlayerId> | null => {
-  const parsed = resolvePlayerIndexForTurnFlowSeat(def, playerCount, seat);
+  const seatResolutionIndex = buildSeatResolutionIndex(def, playerCount);
+  const parsed = resolvePlayerIndexForTurnFlowSeat(seat, seatResolutionIndex);
   return parsed === null ? null : asPlayerId(parsed);
 };
 

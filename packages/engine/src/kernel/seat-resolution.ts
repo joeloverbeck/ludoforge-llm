@@ -81,7 +81,6 @@ export const buildSeatResolutionIndex = (
 
 export const resolvePlayerIndexForSeatValue = (
   seatValue: string,
-  _playerCount: number,
   index: SeatResolutionIndex,
 ): number | null => {
   const fromCardSeat = index.playerIndexByCardSeatKey.get(seatValue);
@@ -113,29 +112,21 @@ export const resolvePlayerIndexForSeatValue = (
 };
 
 export const resolvePlayerIndexForTurnFlowSeat = (
-  def: Pick<GameDef, 'seats' | 'turnOrder'>,
-  playerCount: number,
   seat: string,
+  index: SeatResolutionIndex,
 ): number | null => {
-  const seatResolutionIndex = buildSeatResolutionIndex(def, playerCount);
-  return resolvePlayerIndexForSeatValue(seat, playerCount, seatResolutionIndex);
+  return resolvePlayerIndexForSeatValue(seat, index);
 };
 
 export const resolveTurnFlowSeatForPlayerIndex = (
-  def: Pick<GameDef, 'seats' | 'turnOrder'>,
-  playerCount: number,
   seatOrder: readonly string[],
   playerIndex: number,
+  index: SeatResolutionIndex,
 ): string | null => {
   for (const seat of seatOrder) {
-    if (resolvePlayerIndexForTurnFlowSeat(def, playerCount, seat) === playerIndex) {
+    if (resolvePlayerIndexForTurnFlowSeat(seat, index) === playerIndex) {
       return seat;
     }
-  }
-
-  const seatId = def.seats?.[playerIndex]?.id;
-  if (typeof seatId === 'string' && seatOrder.includes(seatId)) {
-    return seatId;
   }
   return null;
 };

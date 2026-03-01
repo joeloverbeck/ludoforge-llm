@@ -47,7 +47,7 @@ Primitives are elevated into the appropriate layer based on their nature:
 | Layer | What lives here | Who understands it | Change type |
 |-------|----------------|-------------------|-------------|
 | **Kernel** | EffectAST, ConditionAST, GameState evaluation, action resolution | The runtime engine | New optional fields on existing types; modified action resolution loop and draw effect handler |
-| **Compiler** | Expansion passes, validation, lowering to GameDef | The build pipeline | New expansion passes that run before existing `expandMacros` pass |
+| **Compiler** | Expansion passes, validation, lowering to GameDef | The build pipeline | New `expandTemplates()` orchestrator with 5 expansion passes, inserted before `expandConditionMacros` in `compileGameSpecToGameDef` |
 | **GameSpecDoc** | Per-game macros, data assets, rules | Individual game authors | New YAML patterns that trigger compiler expansion |
 
 **Principle**: A pattern belongs at kernel level only when the desired runtime behavior cannot be cleanly composed from existing primitives, or when composition is so error-prone that semantic awareness prevents bugs. All other patterns belong at compiler level and compile away completely — the GameDef has no trace of them.
@@ -159,7 +159,7 @@ globalMarkerLattices:
 - All IDs in `batch.ids` must be unique (and unique across all marker declarations in the spec)
 - `batch.defaultState` must be present in `batch.states`
 
-**Also applies to**: `spaceMarkerLattices` (per-space markers) — same `batch` syntax.
+**Scope**: `globalMarkerLattices` only. Space markers (`markerLattices`) live inside `MapPayload` data assets and are not a top-level `GameSpecDoc` field — batch expansion does not apply to them.
 
 ---
 
@@ -244,7 +244,7 @@ zones:
 
 **Expansion behavior**:
 
-1. Resolve all seat IDs from the spec's `seats` section (e.g., `['US', 'ARVN', 'NVA', 'VC']` for FITL, `['0', '1', ..., '9']` for Texas Hold'em).
+1. Pre-scan `doc.dataAssets` for assets with `kind === 'seatCatalog'` and read `payload.seats[].id` to resolve seat IDs (e.g., `['US', 'ARVN', 'NVA', 'VC']` for FITL, `['0', '1', ..., '9']` for Texas Hold'em). This follows the same resolution pattern as `SeatIdentityContract` (`cnl/seat-identity-contract.ts`). If no `seatCatalog` data asset exists, emit a diagnostic error.
 2. For each seat, substitute `{seat}` in `idPattern` to produce a concrete zone ID.
 3. Emit an individual zone declaration with the template's properties.
 4. If `owner: player`, set the zone's owner to the corresponding seat.
@@ -336,22 +336,25 @@ turnStructure:
 
 ### Compiler Pass Ordering
 
-All five passes run **before** the existing `expandMacros` pass, since macros may reference entities produced by template expansion.
+All five passes run **before `expandConditionMacros`** in `compileGameSpecToGameDef` (`compiler-core.ts`), since condition/effect macros and zone macros may reference entities produced by template expansion.
+
+A new `expandTemplates(doc)` orchestrator function (in a new file `packages/engine/src/cnl/expand-templates.ts`) calls A1-A5 sequentially and returns the expanded `GameSpecDoc`. This is inserted as the first step in `compileGameSpecToGameDef`:
 
 ```
-parseGameSpec
-  → expandPieceGeneration     (A1)
-  → expandBatchMarkers        (A2)
-  → expandBatchVars           (A3)
-  → expandZoneTemplates       (A4) — requires seats to be resolved
-  → expandPhaseTemplates      (A5)
-  → expandMacros              (existing)
-  → expandZoneMacros          (existing)
-  → expandEffectSections      (existing)
-  → compileGameSpecToGameDef  (existing)
+compileGameSpecToGameDef(doc)
+  → expandTemplates(doc)           ← NEW orchestrator
+      → expandPieceGeneration      (A1)
+      → expandBatchMarkers         (A2)
+      → expandBatchVars            (A3)
+      → expandZoneTemplates        (A4) — pre-scans seatCatalog data assets for seat IDs
+      → expandPhaseTemplates       (A5)
+  → expandConditionMacros          (existing)
+  → expandEffectMacros             (existing)
+  → expandMacros                   (existing: expandZoneMacros + expandEffectSections)
+  → compileExpandedDoc             (existing)
 ```
 
-Passes A1-A3 have no dependencies on each other and could run in any order. A4 depends on `seats` being available. A5 has no dependencies but logically runs last among the new passes (phase templates may reference zones or variables produced by earlier passes).
+Passes A1-A3 have no dependencies on each other and could run in any order. A4 depends on seat IDs being available (pre-scanned from `seatCatalog` data assets). A5 has no dependencies but logically runs last among the new passes (phase templates may reference zones or variables produced by earlier passes). The `expandTemplates` orchestrator collects diagnostics from all five passes and propagates them alongside the existing diagnostic pipeline.
 
 ---
 
@@ -366,12 +369,13 @@ Two new kernel concepts. Both are additive — games that don't use them see zer
 **GameDef type change**:
 
 ```typescript
-// In PhaseDef (types-core.ts)
+// In PhaseDef (types-core.ts) — showing complete current type with addition
 interface PhaseDef {
-  id: string;
-  onEnter?: readonly EffectAST[];
+  readonly id: PhaseId;
+  readonly onEnter?: readonly EffectAST[];
+  readonly onExit?: readonly EffectAST[];
   // NEW:
-  actionDefaults?: {
+  readonly actionDefaults?: {
     readonly pre?: ConditionAST;          // ANDed with each action's own pre
     readonly afterEffects?: readonly EffectAST[];  // Run after each action's effects
   };
@@ -439,23 +443,29 @@ Phase templates can declare `actionDefaults`. When a template is instantiated, t
 **GameDef type change**:
 
 ```typescript
-// In ZoneDef (types-core.ts)
+// In ZoneDef (types-core.ts) — showing complete current type with addition
 interface ZoneDef {
-  id: string;
-  owner?: string;
-  visibility?: 'public' | 'hidden' | 'owner';
-  ordering?: 'set' | 'stack' | 'queue';
-  attributes?: Record<string, unknown>;
-  adjacentTo?: readonly { to: string }[];
+  readonly id: ZoneId;
+  readonly zoneKind?: 'board' | 'aux';
+  readonly isInternal?: boolean;
+  readonly ownerPlayerIndex?: number;
+  readonly owner: 'none' | 'player';
+  readonly visibility: 'public' | 'owner' | 'hidden';
+  readonly ordering: 'stack' | 'queue' | 'set';
+  readonly adjacentTo?: readonly ZoneAdjacency[];
+  readonly category?: string;
+  readonly attributes?: Readonly<Record<string, AttributeValue>>;
   // NEW:
-  behavior?: DeckBehavior;
-  // Future: behavior?: DeckBehavior | MarketBehavior | ...
+  readonly behavior?: ZoneBehavior;
+  // Future: ZoneBehavior = DeckBehavior | MarketBehavior | ...
 }
+
+type ZoneBehavior = DeckBehavior;
 
 interface DeckBehavior {
   readonly type: 'deck';
   readonly drawFrom: 'top' | 'bottom' | 'random';
-  readonly reshuffleFrom?: string;  // Zone ID to recycle from when deck is empty
+  readonly reshuffleFrom?: ZoneId;  // Zone ID to recycle from when deck is empty
 }
 ```
 
@@ -557,12 +567,14 @@ Auto-reshuffle uses the GameState's RNG, so determinism is preserved: same seed 
 
 ### D1. Compiler Passes
 
+**Orchestrator**: A new `expandTemplates(doc)` function in `packages/engine/src/cnl/expand-templates.ts` calls all five passes sequentially and returns the expanded `GameSpecDoc` with collected diagnostics. It is inserted into `compileGameSpecToGameDef` (`compiler-core.ts`) as the first step, **before `expandConditionMacros`**.
+
 | Pass | New File | Input Pattern | Output | Depends On |
 |------|----------|--------------|--------|-----------|
 | `expandPieceGeneration` | `packages/engine/src/cnl/expand-piece-generation.ts` | `generate:` in pieceCatalog payload | Individual `pieceType` + `inventory` entries | None |
-| `expandBatchMarkers` | `packages/engine/src/cnl/expand-batch-markers.ts` | `batch:` in marker lattices | Individual marker declarations | None |
+| `expandBatchMarkers` | `packages/engine/src/cnl/expand-batch-markers.ts` | `batch:` in `globalMarkerLattices` | Individual marker declarations | None |
 | `expandBatchVars` | `packages/engine/src/cnl/expand-batch-vars.ts` | `batch:` in globalVars/perPlayerVars | Individual var declarations | None |
-| `expandZoneTemplates` | `packages/engine/src/cnl/expand-zone-templates.ts` | `template:` in zones with `perSeat` | Individual zone declarations | Seats must be resolved |
+| `expandZoneTemplates` | `packages/engine/src/cnl/expand-zone-templates.ts` | `template:` in zones with `perSeat` | Individual zone declarations | Seat IDs pre-scanned from `seatCatalog` data assets |
 | `expandPhaseTemplates` | `packages/engine/src/cnl/expand-phase-templates.ts` | `phaseTemplates:` + `fromTemplate:` | Concrete phase definitions | None |
 
 Each pass: ~100-200 lines of implementation + ~100-200 lines of tests.

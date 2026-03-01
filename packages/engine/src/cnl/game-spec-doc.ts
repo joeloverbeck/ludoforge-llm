@@ -30,6 +30,24 @@ export interface GameSpecGlobalMarkerLatticeDef {
   readonly defaultState: string;
 }
 
+export interface GameSpecBatchGlobalMarkerLattice {
+  readonly batch: {
+    readonly ids: readonly string[];
+    readonly states: readonly string[];
+    readonly defaultState: string;
+  };
+}
+
+export interface GameSpecBatchVarDef {
+  readonly batch: {
+    readonly names: readonly string[];
+    readonly type: 'int' | 'boolean';
+    readonly init: unknown;
+    readonly min?: unknown;
+    readonly max?: unknown;
+  };
+}
+
 export interface GameSpecZoneDef {
   readonly id: string;
   readonly zoneKind?: 'board' | 'aux';
@@ -45,6 +63,20 @@ export interface GameSpecZoneDef {
   }>;
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
+}
+
+export interface GameSpecZoneTemplateDef {
+  readonly template: {
+    readonly idPattern: string;
+    readonly perSeat: true;
+    readonly owner: string;
+    readonly visibility: string;
+    readonly ordering: string;
+    readonly zoneKind?: 'board' | 'aux';
+    readonly isInternal?: boolean;
+    readonly category?: string;
+    readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  };
 }
 
 export interface GameSpecTokenTypeDef {
@@ -377,11 +409,11 @@ export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
   readonly dataAssets: readonly GameSpecDataAsset[] | null;
-  readonly globalMarkerLattices: readonly GameSpecGlobalMarkerLatticeDef[] | null;
-  readonly globalVars: readonly GameSpecVarDef[] | null;
-  readonly perPlayerVars: readonly GameSpecVarDef[] | null;
+  readonly globalMarkerLattices: readonly (GameSpecGlobalMarkerLatticeDef | GameSpecBatchGlobalMarkerLattice)[] | null;
+  readonly globalVars: readonly (GameSpecVarDef | GameSpecBatchVarDef)[] | null;
+  readonly perPlayerVars: readonly (GameSpecVarDef | GameSpecBatchVarDef)[] | null;
   readonly zoneVars: readonly GameSpecVarDef[] | null;
-  readonly zones: readonly GameSpecZoneDef[] | null;
+  readonly zones: readonly (GameSpecZoneDef | GameSpecZoneTemplateDef)[] | null;
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
@@ -394,6 +426,29 @@ export interface GameSpecDoc {
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
   readonly conditionMacros: readonly ConditionMacroDef[] | null;
+}
+
+export interface GameSpecPieceGenerateDimension {
+  readonly name: string;
+  readonly values: readonly (string | number)[];
+}
+
+export interface GameSpecPieceGenerateDerivedProp {
+  readonly from: string;
+  readonly map: Readonly<Record<string, string | number>>;
+  readonly default?: string;
+}
+
+export interface GameSpecPieceGenerateBlock {
+  readonly generate: {
+    readonly idPattern: string;
+    readonly seat: string;
+    readonly statusDimensions: readonly string[];
+    readonly transitions: readonly unknown[];
+    readonly dimensions: readonly GameSpecPieceGenerateDimension[];
+    readonly derivedProps?: Readonly<Record<string, GameSpecPieceGenerateDerivedProp>>;
+    readonly inventoryPerCombination: number;
+  };
 }
 
 export function createEmptyGameSpecDoc(): GameSpecDoc {

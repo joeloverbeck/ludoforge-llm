@@ -254,7 +254,10 @@ describe('parseGameSpec API shape', () => {
     ].join('\n'));
 
     assert.equal(result.doc.globalMarkerLattices?.length, 1);
-    assert.equal(result.doc.globalMarkerLattices?.[0]?.id, 'cap_topGun');
+    const firstLattice = result.doc.globalMarkerLattices?.[0] as
+      | { readonly id: string }
+      | undefined;
+    assert.equal(firstLattice?.id, 'cap_topGun');
     assert.ok(result.sourceMap.byPath['globalMarkerLattices[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['globalMarkerLattices[0].defaultState'] !== undefined);
   });

@@ -137,6 +137,13 @@ describe('canonicalizeZoneSelector', () => {
     assertNoDiagnostics(withSeatQualifier);
   });
 
+  it('rejects seat-name qualifiers when seatIds are unavailable', () => {
+    const result = canonicalizeZoneSelector('hand:NVA', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.draw.to');
+  });
+
   it('rejects non-canonical owner qualifier aliases with deterministic diagnostics', () => {
     const result = canonicalizeZoneSelector('hand:activePlayer', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
     assert.equal(result.value, null);

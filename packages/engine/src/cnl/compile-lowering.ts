@@ -885,6 +885,15 @@ export function lowerEndConditions(
   seatIds?: readonly string[],
 ): readonly EndCondition[] {
   const lowered: EndCondition[] = [];
+  const sharedConditionContext: ConditionLoweringSharedContext = {
+    ownershipByBase,
+    ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+    ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
+    ...(namedSets === undefined ? {} : { namedSets }),
+    ...(typeInference === undefined ? {} : { typeInference }),
+    ...(seatIds === undefined ? {} : { seatIds }),
+  };
+  const conditionContext = buildConditionLoweringContext(sharedConditionContext);
   for (const [index, endCondition] of endConditions.entries()) {
     const path = `doc.terminal.conditions.${index}`;
     if (!isRecord(endCondition)) {
@@ -894,14 +903,7 @@ export function lowerEndConditions(
 
     const when = lowerConditionNode(
       endCondition.when,
-      {
-        ownershipByBase,
-        ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
-        ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
-        ...(namedSets === undefined ? {} : { namedSets }),
-        ...(typeInference === undefined ? {} : { typeInference }),
-        ...(seatIds === undefined ? {} : { seatIds }),
-      },
+      conditionContext,
       `${path}.when`,
     );
     diagnostics.push(...when.diagnostics);
@@ -909,14 +911,7 @@ export function lowerEndConditions(
       endCondition.result,
       diagnostics,
       `${path}.result`,
-      {
-        ownershipByBase,
-        ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
-        ...(tokenFilterProps === undefined ? {} : { tokenFilterProps }),
-        ...(namedSets === undefined ? {} : { namedSets }),
-        ...(typeInference === undefined ? {} : { typeInference }),
-        ...(seatIds === undefined ? {} : { seatIds }),
-      },
+      sharedConditionContext,
     );
 
     if (when.value === null || result === null) {

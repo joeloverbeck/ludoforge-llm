@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler architecture boundary (`compiler-core.ts`, `cross-validate.ts`, new shared contract module, diagnostics, tests)
-**Deps**: archive/tickets/SEATRES-002-canonical-seat-identity-source.md, tickets/SEATRES-003-seat-regression-guards-and-context-dryness.md
+**Deps**: archive/tickets/SEATRES-002-canonical-seat-identity-source.md, archive/tickets/SEATRES-003-seat-regression-guards-and-context-dryness.md
 
 ## Problem
 

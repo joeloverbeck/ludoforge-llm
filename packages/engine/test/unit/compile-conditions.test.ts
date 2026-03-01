@@ -196,6 +196,21 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(mapSpacesResult.value, { query: 'mapSpaces', filter: { owner: { id: 3 } } });
   });
 
+  it('rejects seat-name owner selectors when seatIds are unavailable', () => {
+    const result = lowerQueryNode(
+      { query: 'zones', filter: { owner: 'NVA' } },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics.map((diagnostic) => ({ code: diagnostic.code, path: diagnostic.path })), [
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.actions.0.params.0.domain.filter.owner',
+      },
+    ]);
+  });
+
   it('resolves seat-name owner selectors for tokensInMapSpaces.spaceFilter when seatIds are provided', () => {
     const result = lowerQueryNode(
       { query: 'tokensInMapSpaces', spaceFilter: { owner: 'ARVN' } },
@@ -342,6 +357,21 @@ describe('compile-conditions lowering', () => {
     );
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, { ref: 'pvar', player: { id: 2 }, var: 'resources' });
+  });
+
+  it('rejects seat-name pvar reference selectors when seatIds are unavailable', () => {
+    const result = lowerValueNode(
+      { ref: 'pvar', player: 'NVA', var: 'resources' },
+      context,
+      'doc.actions.0.pre.left',
+    );
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics.map((diagnostic) => ({ code: diagnostic.code, path: diagnostic.path })), [
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.actions.0.pre.left.player',
+      },
+    ]);
   });
 
   it('rejects nextInOrderByCondition queries without source order', () => {

@@ -240,6 +240,28 @@ describe('compile actions', () => {
     assert.deepEqual(result.gameDef?.terminal.conditions[0]?.result, { type: 'win', player: { id: 3 } });
   });
 
+  it('fails deterministically when seat-name selectors are used without canonical seat ids', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-seat-name-resolution-missing-seats', players: { min: 4, max: 4 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'play', actor: 'NVA', executor: 'us', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'win', player: 'vc' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.deepEqual(
+      result.diagnostics
+        .filter((diagnostic) => diagnostic.code === 'CNL_COMPILER_PLAYER_SELECTOR_INVALID')
+        .map((diagnostic) => diagnostic.path)
+        .sort(),
+      ['doc.actions.0.actor', 'doc.actions.0.executor', 'doc.terminal.conditions.0.result.player'],
+    );
+  });
+
   it('accepts binding-derived executor when binding is declared action param', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

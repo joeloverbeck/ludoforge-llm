@@ -407,6 +407,19 @@ describe('compiler structured section results', () => {
       ),
       true,
     );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'
+          || diagnostic.code === 'CNL_XREF_VICTORY_SEAT_MISSING'
+          || diagnostic.code === 'CNL_XREF_MARGIN_SEAT_MISSING'
+          || diagnostic.code === 'CNL_XREF_TURN_FLOW_PASS_REWARD_SEAT_MISSING'
+          || diagnostic.code === 'CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING'
+          || diagnostic.code === 'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING'
+          || diagnostic.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING',
+      ),
+      false,
+    );
   });
 
   it('accepts piece catalogs without embedded seat declarations', () => {

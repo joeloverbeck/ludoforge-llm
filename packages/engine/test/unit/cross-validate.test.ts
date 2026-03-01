@@ -274,23 +274,37 @@ describe('crossValidateSpec', () => {
     );
   });
 
-  it('turn-flow eligibility seats fail xref when contract mode is none', () => {
+  it('turn-flow eligibility seats are gated when contract mode is none', () => {
     const sections = compileRichSections();
     const diagnostics = crossValidateWithoutSeatCatalog(sections);
 
+    assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'), false);
+  });
+
+  it('keeps non-seat xref checks active when contract mode is none', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidateWithoutSeatCatalog({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            passRewards: [{ seat: 'uss', resource: 'resorces', amount: 1 }],
+          },
+        },
+      },
+    });
+
+    assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_TURN_FLOW_PASS_REWARD_SEAT_MISSING'), false);
     assert.equal(
       diagnostics.some(
         (entry) =>
-          entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'
-          && entry.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.0',
-      ),
-      true,
-    );
-    assert.equal(
-      diagnostics.some(
-        (entry) =>
-          entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'
-          && entry.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.1',
+          entry.code === 'CNL_XREF_REWARD_VAR_MISSING'
+          && entry.path === 'doc.turnOrder.config.turnFlow.passRewards.0.resource',
       ),
       true,
     );
@@ -885,6 +899,32 @@ describe('crossValidateSpec', () => {
     assert.notEqual(diagnostic, undefined);
     assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.eligibilityOverrides.0.target.seat');
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
+  });
+
+  it('gates eventDeck seat override diagnostics in none mode while still validating window references', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateWithoutSeatCatalog({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                eligibilityOverrides: [{ target: { kind: 'seat', seat: 'uss' }, eligible: true, windowId: 'window-b' }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING'), false);
+    assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING'), true);
   });
 
   it('eventDeck branch eligibilityOverrides with unknown window emits CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING', () => {

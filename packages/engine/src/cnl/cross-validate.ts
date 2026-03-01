@@ -12,6 +12,7 @@ export function crossValidateSpec(
   seatIdentityContract: SeatIdentityContract,
 ): readonly Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
+  const validateSeatReferences = seatIdentityContract.mode === 'seat-catalog';
 
   const phaseTargets = collectIdentifierTargets([
     ...(sections.turnStructure?.phases.map((phase) => phase.id) ?? []),
@@ -112,16 +113,18 @@ export function crossValidateSpec(
   }
 
   if (cardDrivenTurnFlow !== null) {
-    for (const [seatIndex, seat] of cardDrivenTurnFlow.eligibility.seats.entries()) {
-      pushMissingIdentifierDiagnostic(
-        diagnostics,
-        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING,
-        `doc.turnOrder.config.turnFlow.eligibility.seats.${seatIndex}`,
-        seat,
-        seatTargets,
-        `turnFlow.eligibility.seats[${seatIndex}] references unknown seat "${seat}".`,
-        'Use one of the declared seat catalog ids.',
-      );
+    if (validateSeatReferences) {
+      for (const [seatIndex, seat] of cardDrivenTurnFlow.eligibility.seats.entries()) {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING,
+          `doc.turnOrder.config.turnFlow.eligibility.seats.${seatIndex}`,
+          seat,
+          seatTargets,
+          `turnFlow.eligibility.seats[${seatIndex}] references unknown seat "${seat}".`,
+          'Use one of the declared seat catalog ids.',
+        );
+      }
     }
 
     const pipelineDecisionParamsByActionId = new Map<string, Set<string>>();
@@ -350,7 +353,7 @@ export function crossValidateSpec(
     }
   }
 
-  if (sections.terminal?.checkpoints !== undefined && cardDrivenTurnFlow !== null) {
+  if (sections.terminal?.checkpoints !== undefined && cardDrivenTurnFlow !== null && validateSeatReferences) {
     for (const [checkpointIndex, checkpoint] of sections.terminal.checkpoints.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
@@ -454,7 +457,7 @@ export function crossValidateSpec(
           seatTargets,
           windowTargets,
           actionTargets,
-          cardDrivenTurnFlow !== null,
+          cardDrivenTurnFlow !== null && validateSeatReferences,
         );
         validateEventCardSide(
           diagnostics,
@@ -465,7 +468,7 @@ export function crossValidateSpec(
           seatTargets,
           windowTargets,
           actionTargets,
-          cardDrivenTurnFlow !== null,
+          cardDrivenTurnFlow !== null && validateSeatReferences,
         );
 
         if (
@@ -517,15 +520,17 @@ export function crossValidateSpec(
 
   if (cardDrivenTurnFlow !== null && sections.globalVars !== null) {
     for (const [rewardIndex, reward] of cardDrivenTurnFlow.passRewards.entries()) {
-      pushMissingIdentifierDiagnostic(
-        diagnostics,
-        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_PASS_REWARD_SEAT_MISSING,
-        `doc.turnOrder.config.turnFlow.passRewards.${rewardIndex}.seat`,
-        reward.seat,
-        seatTargets,
-        `turnOrder.config.turnFlow.passRewards[${rewardIndex}] references unknown seat "${reward.seat}".`,
-        'Use one of the declared seat catalog ids.',
-      );
+      if (validateSeatReferences) {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_TURN_FLOW_PASS_REWARD_SEAT_MISSING,
+          `doc.turnOrder.config.turnFlow.passRewards.${rewardIndex}.seat`,
+          reward.seat,
+          seatTargets,
+          `turnOrder.config.turnFlow.passRewards[${rewardIndex}] references unknown seat "${reward.seat}".`,
+          'Use one of the declared seat catalog ids.',
+        );
+      }
       pushMissingIdentifierDiagnostic(
         diagnostics,
         CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_REWARD_VAR_MISSING,

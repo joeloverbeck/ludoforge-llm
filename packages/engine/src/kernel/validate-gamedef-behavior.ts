@@ -32,7 +32,7 @@ import {
   inferQueryRuntimeShapes,
   inferValueRuntimeShapes,
 } from './query-shape-inference.js';
-import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from './token-filter-prop-contract.js';
+import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from '../contracts/token-filter-prop-contract.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],

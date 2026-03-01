@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
-import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from '../kernel/token-filter-prop-contract.js';
+import { isAllowedTokenFilterProp, tokenFilterPropAlternatives } from '../contracts/token-filter-prop-contract.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type {
   AssetRowsCardinality,

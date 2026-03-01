@@ -1004,7 +1004,7 @@ describe('crossValidateSpec', () => {
     const { saAction, saProfile } = buildSaFixture(sections);
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [...(sections.actions ?? []), saAction],
       actionPipelines: [...(sections.actionPipelines ?? []), saProfile],
@@ -1035,7 +1035,7 @@ describe('crossValidateSpec', () => {
     const { saAction, saProfile } = buildSaFixture(sections);
     assert.equal(sections.turnOrder?.type, 'cardDriven');
     const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
-    const diagnostics = crossValidateSpec({
+    const diagnostics = crossValidate({
       ...sections,
       actions: [...(sections.actions ?? []), saAction],
       actionPipelines: [...(sections.actionPipelines ?? []), saProfile],

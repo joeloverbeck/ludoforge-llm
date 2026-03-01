@@ -402,8 +402,8 @@ describe('FITL option matrix integration', () => {
           ...runtime,
           currentCard: {
             ...runtime.currentCard,
-            firstEligible: '0',
-            secondEligible: '1',
+            firstEligible: 'us',
+            secondEligible: 'arvn',
             actedSeats: [],
             passedSeats: [],
             nonPassCount: 0,

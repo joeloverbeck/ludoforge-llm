@@ -4966,10 +4966,7 @@ actionPipelines:
               delta: 1
     atomicity: atomic
     linkedWindows: [vc-special-window]
-  # ── Joint operation stub profiles (COIN Section 3.1) ──
-  # US/ARVN share eligibility slots. usOp lets US command ARVN forces
-  # (costs 5 ARVN Resources); arvnOp lets ARVN operate (costs 5 own
-  # Resources). usOpCount/arvnOpCount are bookkeeping counters.
+  # ── Phantom joint operation stubs (to be removed — see Spec 54) ──
   - id: us-op-profile
     actionId: usOp
     applicability: { op: '==', left: { ref: activePlayer }, right: 0 }

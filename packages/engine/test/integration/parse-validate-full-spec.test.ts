@@ -18,7 +18,8 @@ describe('parse + validate full-spec integration', () => {
     assert.deepEqual(diagnostics, []);
 
     assert.equal(parsed.doc.metadata?.id, 'fixture-valid');
-    assert.equal(parsed.doc.zones?.[0]?.id, 'deck');
+    const firstZone = parsed.doc.zones?.[0];
+    assert.equal(firstZone !== undefined && 'id' in firstZone ? firstZone.id : undefined, 'deck');
     assert.equal(parsed.doc.actions?.[0]?.id, 'draw');
     assert.equal(parsed.doc.turnStructure?.phases[0]?.id, 'main');
   });

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-004: Per-player zone templates compiler pass (A4)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler pipeline (new expansion pass), GameSpecDoc types
@@ -10,13 +10,14 @@
 
 FITL hand-types 8 per-faction zones following a `{prefix}-{seatId}` naming pattern (~40 lines). Texas Hold'em uses runtime `zoneExpr: { concat: ['hand:', ...] }` to reference per-player hand zones, introducing runtime string concatenation where compile-time expansion suffices. A `template:` syntax with `perSeat: true` on the `zones` array should expand into individual zone declarations at compile time.
 
-## Assumption Reassessment (2026-03-01)
+## Assumption Reassessment (2026-03-01, verified)
 
-1. `GameSpecZoneDef` exists in `game-spec-doc.ts:33-48` with `id`, `zoneKind?`, `isInternal?`, `owner`, `visibility`, `ordering`, `adjacentTo?`, `category?`, `attributes?`.
-2. `GameSpecDoc.zones` is `readonly GameSpecZoneDef[] | null` (`game-spec-doc.ts:384`).
+1. `GameSpecZoneDef` exists in `game-spec-doc.ts:51-66` with `id`, `zoneKind?`, `isInternal?`, `owner`, `visibility`, `ordering`, `adjacentTo?`, `category?`, `attributes?`.
+2. `GameSpecDoc.zones` is `readonly GameSpecZoneDef[] | null` (`game-spec-doc.ts:402`).
 3. Seats come from `seatCatalog` data assets, resolved via `SeatIdentityContract` (`cnl/seat-identity-contract.ts`). There is no top-level `seats` field on `GameSpecDoc`.
 4. `buildSeatIdentityContract` in `seat-identity-contract.ts:21-44` expects `seatCatalogSeatIds: readonly string[] | undefined`.
 5. `SeatCatalogPayload` in `types-core.ts:289-291` has `seats: readonly SeatDef[]` where `SeatDef` has `id: string`.
+6. Existing expand-* passes (expand-batch-markers, expand-batch-vars) use **in-place** expansion — batch entries are replaced where they appear, preserving interleaving order with individual entries. Owner valid values are `'none'` or `'player'` only (`compile-zones.ts:44`).
 
 ## Architecture Check
 
@@ -119,7 +120,7 @@ Test file covering:
 2. Output doc's `zones` contains only individual `GameSpecZoneDef` entries — no `template` entries remain.
 3. No mutation of the input `GameSpecDoc`.
 4. Seat ID resolution is read-only from `doc.dataAssets` — does not modify data assets.
-5. Order: individual zones first (in original order), then template expansions (in template order x seat order).
+5. Order: in-place expansion — template entries are replaced where they appear, preserving interleaving order with individual entries. Within a template, seats expand in seat-catalog order.
 
 ## Test Plan
 
@@ -132,3 +133,28 @@ Test file covering:
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-zone-templates.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+### What changed vs originally planned
+
+**Implemented as planned:**
+- `GameSpecZoneTemplateDef` type added to `game-spec-doc.ts`
+- `zones` field widened to `readonly (GameSpecZoneDef | GameSpecZoneTemplateDef)[] | null`
+- `expand-zone-templates.ts` created with `expandZoneTemplates` function
+- 3 diagnostic codes added: `ZONE_TEMPLATE_DUPLICATE_ID`, `ZONE_TEMPLATE_ID_PATTERN_MISSING_SEAT`, `ZONE_TEMPLATE_SEAT_CATALOG_MISSING`
+- 22 unit tests covering all acceptance criteria
+
+**Deviated from plan:**
+- **Ordering invariant**: Changed from "individuals first, then templates" to in-place expansion (consistent with `expand-batch-markers.ts` pattern).
+- **Type widening ripple fixes**: Added type assertion in `compiler-core.ts:331` (with SAFETY comment referencing CROGAMPRIELE-008) and narrowed zone type access in 2 integration tests (`parse-validate-full-spec.test.ts`, `texas-holdem-spec-structure.test.ts`).
+- **Assumption line numbers**: Corrected stale line numbers from pre-CROGAMPRIELE-001/002/003 state.
+
+### Files touched
+- `packages/engine/src/cnl/game-spec-doc.ts` — added `GameSpecZoneTemplateDef`, widened `zones` type
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` — added 3 zone template diagnostic codes
+- `packages/engine/src/cnl/expand-zone-templates.ts` — new expansion pass
+- `packages/engine/src/cnl/compiler-core.ts` — added `GameSpecZoneDef` import + type assertion
+- `packages/engine/test/unit/expand-zone-templates.test.ts` — 22 new tests
+- `packages/engine/test/integration/parse-validate-full-spec.test.ts` — narrowed zone type
+- `packages/engine/test/integration/texas-holdem-spec-structure.test.ts` — narrowed zone type

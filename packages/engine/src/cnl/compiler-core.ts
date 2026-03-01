@@ -7,7 +7,7 @@ import { ACTION_CAPABILITY_CARD_EVENT } from '../contracts/index.js';
 import { isKernelReferenceDiagnosticCode } from '../kernel/reference-diagnostic-codes.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
-import type { GameSpecDoc } from './game-spec-doc.js';
+import type { GameSpecDoc, GameSpecZoneDef } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
 import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
@@ -325,7 +325,12 @@ function compileExpandedDoc(
     }
   } else {
     const zoneCompilation = compileSection(diagnostics, () => {
-      const materialized = materializeZoneDefs(effectiveZones, metadata?.players.max ?? 0);
+      // SAFETY: Zone template expansion (CROGAMPRIELE-008) runs before this
+      // point, guaranteeing effectiveZones contains only GameSpecZoneDef entries.
+      const materialized = materializeZoneDefs(
+        effectiveZones as readonly GameSpecZoneDef[],
+        metadata?.players.max ?? 0,
+      );
       diagnostics.push(...materialized.diagnostics);
       ownershipByBase = materialized.value.ownershipByBase;
       return materialized.value.zones;

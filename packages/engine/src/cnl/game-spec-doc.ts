@@ -65,6 +65,20 @@ export interface GameSpecZoneDef {
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
 }
 
+export interface GameSpecZoneTemplateDef {
+  readonly template: {
+    readonly idPattern: string;
+    readonly perSeat: true;
+    readonly owner: string;
+    readonly visibility: string;
+    readonly ordering: string;
+    readonly zoneKind?: 'board' | 'aux';
+    readonly isInternal?: boolean;
+    readonly category?: string;
+    readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  };
+}
+
 export interface GameSpecTokenTypeDef {
   readonly id: string;
   readonly props: Readonly<Record<string, string>>;
@@ -399,7 +413,7 @@ export interface GameSpecDoc {
   readonly globalVars: readonly (GameSpecVarDef | GameSpecBatchVarDef)[] | null;
   readonly perPlayerVars: readonly (GameSpecVarDef | GameSpecBatchVarDef)[] | null;
   readonly zoneVars: readonly GameSpecVarDef[] | null;
-  readonly zones: readonly GameSpecZoneDef[] | null;
+  readonly zones: readonly (GameSpecZoneDef | GameSpecZoneTemplateDef)[] | null;
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;

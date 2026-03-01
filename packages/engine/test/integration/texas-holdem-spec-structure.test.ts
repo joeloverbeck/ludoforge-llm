@@ -23,7 +23,7 @@ describe('texas hold\'em spec structure', () => {
 
     const zones = parsed.doc.zones ?? [];
     assert.deepEqual(
-      zones.map((zone) => zone.id),
+      zones.map((zone) => ('id' in zone ? zone.id : undefined)),
       ['deck', 'burn', 'community', 'hand', 'muck'],
     );
 

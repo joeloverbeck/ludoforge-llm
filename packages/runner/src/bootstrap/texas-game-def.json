@@ -298,11 +298,6 @@
       "id": "standard-52-deck",
       "kind": "pieceCatalog",
       "payload": {
-        "seats": [
-          {
-            "id": "neutral"
-          }
-        ],
         "pieceTypes": [
           {
             "id": "card-2S",
@@ -1194,6 +1189,17 @@
       }
     },
     {
+      "id": "standard-seat-catalog",
+      "kind": "seatCatalog",
+      "payload": {
+        "seats": [
+          {
+            "id": "neutral"
+          }
+        ]
+      }
+    },
+    {
       "id": "tournament-standard",
       "kind": "scenario",
       "payload": {
@@ -1311,8 +1317,8 @@
       ]
     },
     {
-      "id": "standard-52-deck::seats",
-      "assetId": "standard-52-deck",
+      "id": "standard-seat-catalog::seats",
+      "assetId": "standard-seat-catalog",
       "tablePath": "seats",
       "fields": [
         {

@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -53,6 +54,17 @@ describe('bootstrap-fixtures script', () => {
     expect(ids).toContain('default');
     expect(ids).toContain('fitl');
     expect(ids).toContain('texas');
+  });
+
+  it('builds engine before running bootstrap fixture scripts', () => {
+    const testDir = dirname(fileURLToPath(import.meta.url));
+    const runnerPackageJsonPath = resolve(testDir, '..', '..', 'package.json');
+    const packageJson = JSON.parse(readFileSync(runnerPackageJsonPath, 'utf8')) as {
+      readonly scripts?: Readonly<Record<string, string>>;
+    };
+
+    expect(packageJson.scripts?.['bootstrap:fixtures']).toMatch(/^pnpm -F @ludoforge\/engine build && node scripts\/bootstrap-fixtures\.mjs generate$/);
+    expect(packageJson.scripts?.['bootstrap:fixtures:check']).toMatch(/^pnpm -F @ludoforge\/engine build && node scripts\/bootstrap-fixtures\.mjs check$/);
   });
 
   it('check fails when committed fixture content is stale', () => {

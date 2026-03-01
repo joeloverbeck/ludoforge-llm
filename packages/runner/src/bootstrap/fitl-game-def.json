@@ -4673,20 +4673,6 @@
       "id": "fitl-piece-catalog-production",
       "kind": "pieceCatalog",
       "payload": {
-        "seats": [
-          {
-            "id": "us"
-          },
-          {
-            "id": "arvn"
-          },
-          {
-            "id": "nva"
-          },
-          {
-            "id": "vc"
-          }
-        ],
         "pieceTypes": [
           {
             "id": "us-troops",
@@ -4956,6 +4942,26 @@
             "pieceTypeId": "vc-bases",
             "seat": "vc",
             "total": 9
+          }
+        ]
+      }
+    },
+    {
+      "id": "fitl-seat-catalog-production",
+      "kind": "seatCatalog",
+      "payload": {
+        "seats": [
+          {
+            "id": "us"
+          },
+          {
+            "id": "arvn"
+          },
+          {
+            "id": "nva"
+          },
+          {
+            "id": "vc"
           }
         ]
       }
@@ -7012,8 +7018,8 @@
       ]
     },
     {
-      "id": "fitl-piece-catalog-production::seats",
-      "assetId": "fitl-piece-catalog-production",
+      "id": "fitl-seat-catalog-production::seats",
+      "assetId": "fitl-seat-catalog-production",
       "tablePath": "seats",
       "fields": [
         {
@@ -11647,10 +11653,10 @@
         },
         "eligibility": {
           "seats": [
-            "0",
-            "1",
-            "2",
-            "3"
+            "us",
+            "arvn",
+            "nva",
+            "vc"
           ],
           "overrideWindows": [
             {
@@ -11685,6 +11691,26 @@
           "pivotalEvent": "event",
           "usOp": "operation",
           "arvnOp": "operation",
+          "train": "operation",
+          "patrol": "operation",
+          "sweep": "operation",
+          "assault": "operation",
+          "rally": "operation",
+          "march": "operation",
+          "attack": "operation",
+          "terror": "operation",
+          "advise": "specialActivity",
+          "airLift": "specialActivity",
+          "airStrike": "specialActivity",
+          "govern": "specialActivity",
+          "transport": "specialActivity",
+          "raid": "specialActivity",
+          "infiltrate": "specialActivity",
+          "bombard": "specialActivity",
+          "ambushNva": "specialActivity",
+          "tax": "specialActivity",
+          "subvert": "specialActivity",
+          "ambushVc": "specialActivity",
           "coupVictoryCheck": "pass",
           "coupResourcesResolve": "pass",
           "coupPacifyUS": "operation",
@@ -11724,22 +11750,22 @@
         ],
         "passRewards": [
           {
-            "seat": "0",
+            "seat": "us",
             "resource": "arvnResources",
             "amount": 3
           },
           {
-            "seat": "1",
+            "seat": "arvn",
             "resource": "arvnResources",
             "amount": 3
           },
           {
-            "seat": "2",
+            "seat": "nva",
             "resource": "nvaResources",
             "amount": 1
           },
           {
-            "seat": "3",
+            "seat": "vc",
             "resource": "vcResources",
             "amount": 1
           }
@@ -11756,10 +11782,10 @@
         ],
         "cardSeatOrderMetadataKey": "seatOrder",
         "cardSeatOrderMapping": {
-          "US": "0",
-          "ARVN": "1",
-          "NVA": "2",
-          "VC": "3"
+          "US": "us",
+          "ARVN": "arvn",
+          "NVA": "nva",
+          "VC": "vc"
         },
         "durationWindows": [
           "turn",
@@ -11807,10 +11833,10 @@
           "disallowWhenLookaheadIsCoup": true,
           "interrupt": {
             "precedence": [
-              "3",
-              "1",
-              "2",
-              "0"
+              "vc",
+              "arvn",
+              "nva",
+              "us"
             ]
           }
         }
@@ -11860,10 +11886,10 @@
         ],
         "maxConsecutiveRounds": 1,
         "seatOrder": [
-          "0",
-          "1",
-          "2",
-          "3"
+          "us",
+          "arvn",
+          "nva",
+          "vc"
         ]
       }
     }
@@ -50588,7 +50614,7 @@
     "checkpoints": [
       {
         "id": "us-victory",
-        "seat": "0",
+        "seat": "us",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -50705,7 +50731,7 @@
       },
       {
         "id": "arvn-victory",
-        "seat": "1",
+        "seat": "arvn",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -50835,7 +50861,7 @@
       },
       {
         "id": "nva-victory",
-        "seat": "2",
+        "seat": "nva",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -50981,7 +51007,7 @@
       },
       {
         "id": "vc-victory",
-        "seat": "3",
+        "seat": "vc",
         "timing": "duringCoup",
         "when": {
           "op": "and",
@@ -51099,7 +51125,7 @@
       },
       {
         "id": "final-coup-ranking",
-        "seat": "2",
+        "seat": "nva",
         "timing": "finalCoup",
         "when": {
           "op": "and",
@@ -51146,7 +51172,7 @@
     ],
     "margins": [
       {
-        "seat": "0",
+        "seat": "us",
         "value": {
           "op": "-",
           "left": {
@@ -51236,7 +51262,7 @@
         }
       },
       {
-        "seat": "1",
+        "seat": "arvn",
         "value": {
           "op": "-",
           "left": {
@@ -51339,7 +51365,7 @@
         }
       },
       {
-        "seat": "2",
+        "seat": "nva",
         "value": {
           "op": "-",
           "left": {
@@ -51458,7 +51484,7 @@
         }
       },
       {
-        "seat": "3",
+        "seat": "vc",
         "value": {
           "op": "-",
           "left": {
@@ -51552,10 +51578,10 @@
     "ranking": {
       "order": "desc",
       "tieBreakOrder": [
-        "3",
-        "1",
-        "2",
-        "0"
+        "vc",
+        "arvn",
+        "nva",
+        "us"
       ]
     }
   },
@@ -51587,8 +51613,8 @@
             "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
-                "seat": "2",
-                "executeAsSeat": "0",
+                "seat": "nva",
+                "executeAsSeat": "us",
                 "sequence": {
                   "chain": "gulf-of-tonkin-us-airstrike",
                   "step": 0
@@ -52435,7 +52461,7 @@
             "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "aces-us-airstrike",
                   "step": 0
@@ -52921,7 +52947,7 @@
               {
                 "target": {
                   "kind": "seat",
-                  "seat": "2"
+                  "seat": "nva"
                 },
                 "eligible": false,
                 "windowId": "make-ineligible"
@@ -54260,7 +54286,7 @@
             "text": "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel.",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "operation-attleboro-us",
                   "step": 0
@@ -54271,7 +54297,7 @@
                 ]
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "operation-attleboro-us",
                   "step": 1
@@ -54282,7 +54308,7 @@
                 ]
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "operation-attleboro-us",
                   "step": 2
@@ -54435,7 +54461,7 @@
             "text": "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong.",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "tf116-us",
                   "step": 0
@@ -54447,7 +54473,7 @@
                 ]
               },
               {
-                "seat": "1",
+                "seat": "arvn",
                 "sequence": {
                   "chain": "tf116-arvn",
                   "step": 0
@@ -54640,7 +54666,7 @@
             ],
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "lrrp-us-airstrike",
                   "step": 0
@@ -55653,7 +55679,7 @@
             "text": "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there.",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 0
@@ -55684,7 +55710,7 @@
                 }
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 1
@@ -55715,7 +55741,7 @@
                 }
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "ia-drang-us",
                   "step": 2
@@ -56395,7 +56421,7 @@
                 "order": 1,
                 "freeOperationGrants": [
                   {
-                    "seat": "1",
+                    "seat": "arvn",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-arvn-two",
                       "step": 0
@@ -56403,7 +56429,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "1",
+                    "seat": "arvn",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-arvn-two",
                       "step": 1
@@ -56417,7 +56443,7 @@
                 "order": 2,
                 "freeOperationGrants": [
                   {
-                    "seat": "3",
+                    "seat": "vc",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-vc-nva-three",
                       "step": 0
@@ -56425,7 +56451,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "3",
+                    "seat": "vc",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-vc-nva-three",
                       "step": 1
@@ -56433,7 +56459,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "2",
+                    "seat": "nva",
                     "sequence": {
                       "chain": "uncle-ho-unshaded-vc-nva-three",
                       "step": 2
@@ -56452,7 +56478,7 @@
                 "order": 1,
                 "freeOperationGrants": [
                   {
-                    "seat": "0",
+                    "seat": "us",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-arvn-three",
                       "step": 0
@@ -56460,7 +56486,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "1",
+                    "seat": "arvn",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-arvn-three",
                       "step": 1
@@ -56468,7 +56494,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "1",
+                    "seat": "arvn",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-arvn-three",
                       "step": 2
@@ -56482,7 +56508,7 @@
                 "order": 2,
                 "freeOperationGrants": [
                   {
-                    "seat": "0",
+                    "seat": "us",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-two",
                       "step": 0
@@ -56490,7 +56516,7 @@
                     "operationClass": "limitedOperation"
                   },
                   {
-                    "seat": "0",
+                    "seat": "us",
                     "sequence": {
                       "chain": "uncle-ho-shaded-us-two",
                       "step": 1
@@ -57214,7 +57240,7 @@
             "text": "NVA execute free March then free Attack.",
             "freeOperationGrants": [
               {
-                "seat": "2",
+                "seat": "nva",
                 "sequence": {
                   "chain": "vo-nguyen-giap-nva",
                   "step": 0
@@ -57225,7 +57251,7 @@
                 ]
               },
               {
-                "seat": "2",
+                "seat": "nva",
                 "sequence": {
                   "chain": "vo-nguyen-giap-nva",
                   "step": 1
@@ -57307,7 +57333,7 @@
             "text": "Remove enemy pieces in one selected Highland and execute free March.",
             "freeOperationGrants": [
               {
-                "seat": "2",
+                "seat": "nva",
                 "sequence": {
                   "chain": "plei-mei-nva",
                   "step": 0
@@ -57323,7 +57349,7 @@
             "text": "Remove COIN pieces in one selected Highland and execute free Attack.",
             "freeOperationGrants": [
               {
-                "seat": "2",
+                "seat": "nva",
                 "sequence": {
                   "chain": "plei-mei-nva",
                   "step": 0
@@ -57728,7 +57754,7 @@
             "text": "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault.",
             "freeOperationGrants": [
               {
-                "seat": "1",
+                "seat": "arvn",
                 "sequence": {
                   "chain": "amphib-landing-arvn",
                   "step": 0
@@ -57739,7 +57765,7 @@
                 ]
               },
               {
-                "seat": "1",
+                "seat": "arvn",
                 "sequence": {
                   "chain": "amphib-landing-arvn",
                   "step": 1
@@ -58154,7 +58180,7 @@
             "text": "ARVN executes free Special Activities.",
             "freeOperationGrants": [
               {
-                "seat": "1",
+                "seat": "arvn",
                 "sequence": {
                   "chain": "macv-arvn-special-activity",
                   "step": 0
@@ -58184,8 +58210,8 @@
             "text": "ARVN Sweep/Assault in selected spaces as if US.",
             "freeOperationGrants": [
               {
-                "seat": "1",
-                "executeAsSeat": "0",
+                "seat": "arvn",
+                "executeAsSeat": "us",
                 "sequence": {
                   "chain": "roks-arvn-as-us",
                   "step": 0
@@ -58196,8 +58222,8 @@
                 ]
               },
               {
-                "seat": "1",
-                "executeAsSeat": "0",
+                "seat": "arvn",
+                "executeAsSeat": "us",
                 "sequence": {
                   "chain": "roks-arvn-as-us",
                   "step": 1
@@ -58385,7 +58411,7 @@
             "text": "ARVN free Sweep or Assault in Cambodia.",
             "freeOperationGrants": [
               {
-                "seat": "1",
+                "seat": "arvn",
                 "sequence": {
                   "chain": "sihanouk-unshaded-arvn",
                   "step": 0
@@ -58411,7 +58437,7 @@
             "text": "VC then NVA each get a free operation.",
             "freeOperationGrants": [
               {
-                "seat": "3",
+                "seat": "vc",
                 "sequence": {
                   "chain": "sihanouk-shaded-vc-nva",
                   "step": 0
@@ -58419,7 +58445,7 @@
                 "operationClass": "operation"
               },
               {
-                "seat": "2",
+                "seat": "nva",
                 "sequence": {
                   "chain": "sihanouk-shaded-vc-nva",
                   "step": 1
@@ -58685,7 +58711,7 @@
               {
                 "target": {
                   "kind": "seat",
-                  "seat": "1"
+                  "seat": "arvn"
                 },
                 "eligible": false,
                 "windowId": "make-ineligible"
@@ -59972,7 +59998,7 @@
             "text": "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes.",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "westmoreland-us",
                   "step": 0
@@ -59983,7 +60009,7 @@
                 ]
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "westmoreland-us",
                   "step": 1
@@ -59995,7 +60021,7 @@
                 ]
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "westmoreland-us",
                   "step": 2
@@ -60088,7 +60114,7 @@
                   "else": [
                     {
                       "grantFreeOperation": {
-                        "seat": "3",
+                        "seat": "vc",
                         "operationClass": "operation",
                         "actionIds": [
                           "operation"
@@ -60605,7 +60631,7 @@
             "text": "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US.",
             "freeOperationGrants": [
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "masher-white-wing-us",
                   "step": 0
@@ -60616,7 +60642,7 @@
                 ]
               },
               {
-                "seat": "0",
+                "seat": "us",
                 "sequence": {
                   "chain": "masher-white-wing-us",
                   "step": 1
@@ -60627,8 +60653,8 @@
                 ]
               },
               {
-                "seat": "1",
-                "executeAsSeat": "0",
+                "seat": "arvn",
+                "executeAsSeat": "us",
                 "sequence": {
                   "chain": "masher-white-wing-arvn-as-us",
                   "step": 0
@@ -60639,8 +60665,8 @@
                 ]
               },
               {
-                "seat": "1",
-                "executeAsSeat": "0",
+                "seat": "arvn",
+                "executeAsSeat": "us",
                 "sequence": {
                   "chain": "masher-white-wing-arvn-as-us",
                   "step": 1
@@ -62710,7 +62736,7 @@
               },
               {
                 "grantFreeOperation": {
-                  "seat": "1",
+                  "seat": "arvn",
                   "operationClass": "operation",
                   "actionIds": [
                     "sweep"
@@ -62732,7 +62758,7 @@
                   "effects": [
                     {
                       "grantFreeOperation": {
-                        "seat": "1",
+                        "seat": "arvn",
                         "operationClass": "operation",
                         "actionIds": [
                           "sweep"
@@ -62755,7 +62781,7 @@
               {
                 "target": {
                   "kind": "seat",
-                  "seat": "1"
+                  "seat": "arvn"
                 },
                 "eligible": false,
                 "windowId": "make-ineligible"

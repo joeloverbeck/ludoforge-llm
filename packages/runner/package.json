@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "bootstrap:fixtures": "node scripts/bootstrap-fixtures.mjs generate",
-    "bootstrap:fixtures:check": "node scripts/bootstrap-fixtures.mjs check",
+    "bootstrap:fixtures": "pnpm -F @ludoforge/engine build && node scripts/bootstrap-fixtures.mjs generate",
+    "bootstrap:fixtures:check": "pnpm -F @ludoforge/engine build && node scripts/bootstrap-fixtures.mjs check",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run",

@@ -43,6 +43,36 @@ const resolveCoupPhaseIds = (def: GameDef): ReadonlySet<string> => {
 const isInCoupPhase = (def: GameDef, state: GameState): boolean =>
   resolveCoupPhaseIds(def).has(String(state.currentPhase));
 
+const validateCoupSeatOrderAtPhaseEntry = (
+  coupSeatOrder: readonly string[],
+  seatResolutionIndex: ReturnType<typeof buildSeatResolutionIndex>,
+  playerCount: number,
+): void => {
+  const unresolvedSeats: string[] = [];
+  const duplicateSeats: string[] = [];
+  const seenSeats = new Set<string>();
+
+  for (const seat of coupSeatOrder) {
+    if (resolvePlayerIndexForTurnFlowSeat(seat, seatResolutionIndex) === null) {
+      unresolvedSeats.push(seat);
+    }
+    if (seenSeats.has(seat) && !duplicateSeats.includes(seat)) {
+      duplicateSeats.push(seat);
+    } else {
+      seenSeats.add(seat);
+    }
+  }
+
+  if (unresolvedSeats.length === 0 && duplicateSeats.length === 0) {
+    return;
+  }
+
+  throw kernelRuntimeError(
+    'RUNTIME_CONTRACT_INVALID',
+    `Turn-flow runtime invariant failed: applyCoupPhaseEntryReset invalid coup seat order for playerCount=${playerCount} (unresolved=[${unresolvedSeats.join(', ')}], duplicates=[${duplicateSeats.join(', ')}])`,
+  );
+};
+
 const resolveCurrentCoupSeat = (
   def: GameDef,
   state: GameState,
@@ -74,14 +104,9 @@ const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameS
   const firstSeat = coupSeatOrder[0] ?? null;
   const secondSeat = coupSeatOrder[1] ?? null;
   const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
+  validateCoupSeatOrderAtPhaseEntry(coupSeatOrder, seatResolutionIndex, state.playerCount);
   const resolvedFirstSeatPlayerIndex =
     firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(firstSeat, seatResolutionIndex);
-  if (firstSeat !== null && resolvedFirstSeatPlayerIndex === null) {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      `Turn-flow runtime invariant failed: applyCoupPhaseEntryReset could not resolve first coup seat "${firstSeat}" for playerCount=${state.playerCount}`,
-    );
-  }
   return {
     ...state,
     activePlayer:

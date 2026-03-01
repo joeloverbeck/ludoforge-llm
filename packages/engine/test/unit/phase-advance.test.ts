@@ -503,10 +503,10 @@ phase: [asPhaseId('p2')],
     assert.equal(requireCardDrivenRuntime(afterSecond).consecutiveCoupRounds, 1);
   });
 
-  it('throws when coup phase entry seatOrder cannot resolve to canonical seats', () => {
-    const def: GameDef = {
+  const createCoupSeatValidationDef = (coupSeatOrder: readonly string[]): GameDef =>
+    ({
       ...createBaseDef(),
-      seats: [{ id: 'us' }, { id: 'nva' }],
+      seats: [{ id: 'US' }, { id: 'ARVN' }],
       zones: [
         { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
         { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
@@ -520,20 +520,21 @@ phase: [asPhaseId('p2')],
         config: {
           turnFlow: {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
           coupPlan: {
             phases: [{ id: 'victory', steps: ['check-thresholds'] }],
-            seatOrder: ['0', '1'],
+            seatOrder: [...coupSeatOrder],
           },
         },
       },
-    } as unknown as GameDef;
+    }) as unknown as GameDef;
 
-    const state = createState({
+  const createCoupSeatValidationState = (): GameState =>
+    createState({
       currentPhase: asPhaseId('main'),
       zones: {
         'deck:none': [],
@@ -544,11 +545,11 @@ phase: [asPhaseId('p2')],
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          seatOrder: ['0', '1'],
-          eligibility: { '0': true, '1': true },
+          seatOrder: ['US', 'ARVN'],
+          eligibility: { US: true, ARVN: true },
           currentCard: {
-            firstEligible: '0',
-            secondEligible: '1',
+            firstEligible: 'US',
+            secondEligible: 'ARVN',
             actedSeats: [],
             passedSeats: [],
             nonPassCount: 0,
@@ -559,11 +560,44 @@ phase: [asPhaseId('p2')],
       },
     });
 
+  it('throws at coup phase entry when first coup seat cannot resolve canonically', () => {
+    const def = createCoupSeatValidationDef(['BROKEN', 'ARVN']);
+    const state = createCoupSeatValidationState();
+
     assert.throws(() => advancePhase(def, state), (error: unknown) => {
       assert.ok(error instanceof Error);
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
-      assert.match(String(details.message), /could not resolve first coup seat/i);
+      assert.match(String(details.message), /applyCoupPhaseEntryReset invalid coup seat order/i);
+      assert.match(String(details.message), /unresolved=\[BROKEN\]/i);
+      return true;
+    });
+  });
+
+  it('throws at coup phase entry when a non-first coup seat cannot resolve canonically', () => {
+    const def = createCoupSeatValidationDef(['US', 'BROKEN']);
+    const state = createCoupSeatValidationState();
+
+    assert.throws(() => advancePhase(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /applyCoupPhaseEntryReset invalid coup seat order/i);
+      assert.match(String(details.message), /unresolved=\[BROKEN\]/i);
+      return true;
+    });
+  });
+
+  it('throws at coup phase entry when coup seatOrder includes duplicates', () => {
+    const def = createCoupSeatValidationDef(['US', 'US']);
+    const state = createCoupSeatValidationState();
+
+    assert.throws(() => advancePhase(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /applyCoupPhaseEntryReset invalid coup seat order/i);
+      assert.match(String(details.message), /duplicates=\[US\]/i);
       return true;
     });
   });

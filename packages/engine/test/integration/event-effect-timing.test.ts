@@ -15,6 +15,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'event-effect-timing-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [
       { name: 'afterCounter', type: 'int', init: 0, min: 0, max: 99 },

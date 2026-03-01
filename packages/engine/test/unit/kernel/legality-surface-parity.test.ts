@@ -58,6 +58,7 @@ const makeDef = (overrides?: {
 }): GameDef =>
   ({
     metadata: { id: 'legality-surface-parity', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 100 }],
     perPlayerVars: [],
@@ -74,6 +75,7 @@ const makeDef = (overrides?: {
 const makeCardDrivenFreeOpDef = (operationActionId: ReturnType<typeof asActionId>): GameDef =>
   ({
     metadata: { id: 'free-op-legality-surface-parity', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],
@@ -583,6 +585,7 @@ describe('legality surface parity', () => {
     const operationActionId = asActionId('operation');
     const def = {
       metadata: { id: 'free-op-zone-filter-pipeline-parity', players: { min: 2, max: 2 } },
+      seats: [{ id: '0' }, { id: '1' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],

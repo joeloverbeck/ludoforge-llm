@@ -15,6 +15,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-monsoon-pivotal-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],

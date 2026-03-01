@@ -6,6 +6,7 @@ import { applyMove, asActionId, asPhaseId, initialState, legalMoves, type GameDe
 const createLifecycleDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-card-lifecycle-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],
@@ -28,7 +29,7 @@ const createLifecycleDef = (): GameDef =>
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: [], overrideWindows: [] },
+          eligibility: { seats: ['0', '1'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -76,10 +77,11 @@ describe('FITL card lifecycle integration', () => {
       'coupHandoff',
       'promoteLookaheadToPlayed',
       'revealLookahead',
+      'promoteLookaheadToPlayed',
     ]);
     assert.equal(second.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
-    assert.equal(second.state.zones['played:none']?.[0]?.id, 'tok_card_1');
-    assert.equal(second.state.zones['lookahead:none']?.[0]?.id, 'tok_card_0');
+    assert.equal(second.state.zones['played:none']?.[0]?.id, 'tok_card_0');
+    assert.equal(second.state.zones['lookahead:none']?.[0], undefined);
   });
 
   it('enforces coupPlan.maxConsecutiveRounds by suppressing repeated coup handoffs', () => {

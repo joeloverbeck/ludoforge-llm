@@ -97,7 +97,18 @@ export const applyGrantFreeOperation = (
     ctx.state.playerCount,
     runtime.seatOrder,
     Number(ctx.activePlayer),
-  ) ?? String(ctx.activePlayer);
+  );
+  if (activeSeat === null) {
+    throw effectRuntimeError(
+      'turnFlowRuntimeValidationFailed',
+      `grantFreeOperation could not resolve active seat for activePlayer=${String(ctx.activePlayer)}`,
+      {
+        effectType: 'grantFreeOperation',
+        activePlayer: Number(ctx.activePlayer),
+        seatOrder: runtime.seatOrder,
+      },
+    );
+  }
   const seat = resolveGrantSeat(grant.seat, activeSeat, runtime.seatOrder);
   if (seat === null) {
     throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.seat is unknown: ${grant.seat}`, {

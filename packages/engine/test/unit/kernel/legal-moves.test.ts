@@ -27,6 +27,7 @@ const makeBaseDef = (overrides?: {
 }): GameDef =>
   ({
     metadata: { id: 'legal-moves-test', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: overrides?.globalVars ?? [],
     perPlayerVars: [],
@@ -276,6 +277,64 @@ phase: [asPhaseId('main')],
       legalMoves(def, state).map((move) => move.actionId),
       [asActionId('pass'), asActionId('operation'), asActionId('limitedOperation')],
     );
+  });
+
+  it('throws when card-driven active seat cannot be resolved from canonical seat ids', () => {
+    const action: ActionDef = {
+      id: asActionId('noop'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    });
+
+    assert.throws(() => legalMoves(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /could not resolve active seat/i);
+      return true;
+    });
   });
 
   it('rejects move.actionClass overrides that conflict with mapped class during option-matrix checks', () => {

@@ -27,6 +27,7 @@ import {
 const makeDef = (overrides?: Partial<GameDef>): GameDef =>
   ({
     metadata: { id: 'turn-flow-test', players: { min: 2, max: 4 } },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],
@@ -180,6 +181,21 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const effect = {
       grantFreeOperation: { seat: 'unknownSeat', operationClass: 'operation' },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) =>
+      isEffectErrorCode(err, 'EFFECT_RUNTIME'),
+    );
+  });
+
+  it('throws when self seat cannot resolve from canonical seat ids', () => {
+    const ctx = makeCtx({
+      def: makeDef({
+        seats: [{ id: 'us' }, { id: 'nva' }, { id: 'arvn' }, { id: 'vc' }],
+      }),
+    });
+    const effect = {
+      grantFreeOperation: { seat: 'self', operationClass: 'operation' },
     } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
 
     assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) =>

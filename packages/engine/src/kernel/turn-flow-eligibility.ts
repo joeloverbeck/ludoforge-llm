@@ -13,11 +13,12 @@ import {
 } from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { normalizeSeatOrder, resolvePlayerIndexForTurnFlowSeat, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { normalizeSeatOrder, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
@@ -138,14 +139,6 @@ const readNumericResource = (vars: Readonly<Record<string, number | boolean>>, n
     );
   }
   return value;
-};
-
-const resolveActiveSeat = (def: GameDef, state: GameState): string | null => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return null;
-  }
-  return resolveTurnFlowSeatForPlayerIndex(def, state.playerCount, runtime.seatOrder, Number(state.activePlayer));
 };
 
 const computeCandidates = (
@@ -698,10 +691,7 @@ export const isActiveSeatEligibleForTurnFlow = (def: GameDef, state: GameState):
     return true;
   }
 
-  const activeSeat = resolveActiveSeat(def, state);
-  if (activeSeat === null) {
-    return true;
-  }
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow');
 
   return (
     activeSeat === runtime.currentCard.firstEligible ||
@@ -733,7 +723,7 @@ const analyzeFreeOperationGrantMatch = (
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
     return null;
   }
-  const activeSeat = resolveActiveSeat(def, state) ?? String(state.activePlayer);
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'analyzeFreeOperationGrantMatch');
   const actionClass = moveOperationClass(def, move);
   const actionId = String(move.actionId);
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
@@ -957,10 +947,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     return { state, traceEntries: [] };
   }
 
-  const activeSeat = resolveActiveSeat(def, state);
-  if (activeSeat === null) {
-    return { state, traceEntries: [] };
-  }
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'applyTurnFlowEligibilityAfterMove');
 
   const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
     ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => p.id))
@@ -1196,7 +1183,7 @@ export const consumeTurnFlowFreeOperationGrant = (
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
-  const activeSeat = resolveActiveSeat(def, state) ?? String(state.activePlayer);
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'consumeTurnFlowFreeOperationGrant');
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = pending.findIndex(
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),

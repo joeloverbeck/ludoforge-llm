@@ -21,6 +21,7 @@ import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-eligibili
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'legal-moves-test', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],

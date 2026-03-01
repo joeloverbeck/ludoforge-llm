@@ -10,21 +10,13 @@ import { toMoveIdentityKey } from './move-identity.js';
 import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
-import { resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 
 const cardDrivenConfig = (def: GameDef) =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
 
 const cardDrivenRuntime = (state: GameState) =>
   state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
-
-const resolveActiveSeat = (def: GameDef, state: GameState): string | null => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return null;
-  }
-  return resolveTurnFlowSeatForPlayerIndex(def, state.playerCount, runtime.seatOrder, Number(state.activePlayer));
-};
 
 export function resolveConstrainedSecondEligibleActionClasses(
   def: GameDef,
@@ -237,7 +229,9 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
   const monsoonActive = turnFlow.monsoon !== undefined && isLookaheadCardCoup(def, state);
   const pivotalActionIds = new Set(turnFlow.pivotal?.actionIds ?? []);
   const inPreActionWindow = (cardDrivenRuntime(state)?.currentCard.nonPassCount ?? 0) === 0;
-  const activeSeat = resolveActiveSeat(def, state) ?? String(state.activePlayer);
+  const activeSeat = state.turnOrderState.type === 'cardDriven'
+    ? requireCardDrivenActiveSeat(def, state, 'applyTurnFlowWindowFilters')
+    : String(state.activePlayer);
   const precedence = turnFlow.pivotal?.interrupt?.precedence ?? [];
   const interruptWinnerSeat =
     precedence.length > 0 && inPreActionWindow ? resolveInterruptWinnerSeat(state, precedence) : null;
@@ -338,7 +332,7 @@ export function applyPendingFreeOperationVariants(
   }
 
   const pendingGrants = runtime.pendingFreeOperationGrants ?? [];
-  const activeSeat = resolveActiveSeat(def, state) ?? String(state.activePlayer);
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'applyPendingFreeOperationVariants');
   if (!pendingGrants.some((grant) => grant.seat === activeSeat)) {
     return moves;
   }

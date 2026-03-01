@@ -6,8 +6,9 @@ import type { GameDefRuntime } from './gamedef-runtime.js';
 import { legalMoves } from './legal-moves.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { resolvePlayerIndexForTurnFlowSeat, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
 import { terminalResult } from './terminal.js';
 import type { ExecutionCollector, GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -45,10 +46,8 @@ const isInCoupPhase = (def: GameDef, state: GameState): boolean =>
 const resolveCurrentCoupSeat = (
   def: GameDef,
   state: GameState,
-  seatOrder: readonly string[],
 ): string => {
-  const activePlayerIndex = Number(state.activePlayer);
-  return resolveTurnFlowSeatForPlayerIndex(def, state.playerCount, seatOrder, activePlayerIndex) ?? String(state.activePlayer);
+  return requireCardDrivenActiveSeat(def, state, 'resolveCurrentCoupSeat');
 };
 
 /**
@@ -76,6 +75,12 @@ const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameS
   const secondSeat = coupSeatOrder[1] ?? null;
   const resolvedFirstSeatPlayerIndex =
     firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, firstSeat);
+  if (firstSeat !== null && resolvedFirstSeatPlayerIndex === null) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `Turn-flow runtime invariant failed: applyCoupPhaseEntryReset could not resolve first coup seat "${firstSeat}" for playerCount=${state.playerCount}`,
+    );
+  }
   return {
     ...state,
     activePlayer:
@@ -312,7 +317,7 @@ const coupPhaseImplicitPass = (
   }
 
   const runtime = state.turnOrderState.runtime;
-  const currentSeat = resolveCurrentCoupSeat(def, state, runtime.seatOrder);
+  const currentSeat = resolveCurrentCoupSeat(def, state);
   const acted = new Set([...runtime.currentCard.actedSeats, currentSeat]);
   const passed = new Set([...runtime.currentCard.passedSeats, currentSeat]);
 
@@ -326,7 +331,10 @@ const coupPhaseImplicitPass = (
   const nextSeat = remaining[0]!;
   const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(def, state.playerCount, nextSeat);
   if (nextSeatPlayerIndex === null) {
-    return null;
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `Turn-flow runtime invariant failed: coupPhaseImplicitPass could not resolve next seat "${nextSeat}" for playerCount=${state.playerCount}`,
+    );
   }
   return {
     ...state,

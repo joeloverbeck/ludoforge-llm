@@ -16,17 +16,6 @@ export const normalizeSeatOrder = (seats: readonly string[]): readonly string[] 
   return ordered;
 };
 
-export const parseNumericSeatPlayer = (seat: string, playerCount: number): number | null => {
-  if (!/^\d+$/.test(seat)) {
-    return null;
-  }
-  const parsed = Number(seat);
-  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed >= playerCount) {
-    return null;
-  }
-  return parsed;
-};
-
 export interface SeatResolutionIndex {
   readonly seatIdByPlayerIndex: readonly (string | null)[];
   readonly playerIndexBySeatId: ReadonlyMap<string, number>;
@@ -92,7 +81,7 @@ export const buildSeatResolutionIndex = (
 
 export const resolvePlayerIndexForSeatValue = (
   seatValue: string,
-  playerCount: number,
+  _playerCount: number,
   index: SeatResolutionIndex,
 ): number | null => {
   const fromCardSeat = index.playerIndexByCardSeatKey.get(seatValue);
@@ -120,7 +109,7 @@ export const resolvePlayerIndexForSeatValue = (
     }
   }
 
-  return parseNumericSeatPlayer(seatValue, playerCount);
+  return null;
 };
 
 export const resolvePlayerIndexForTurnFlowSeat = (
@@ -129,27 +118,7 @@ export const resolvePlayerIndexForTurnFlowSeat = (
   seat: string,
 ): number | null => {
   const seatResolutionIndex = buildSeatResolutionIndex(def, playerCount);
-  const resolved = resolvePlayerIndexForSeatValue(seat, playerCount, seatResolutionIndex);
-  if (resolved !== null) {
-    return resolved;
-  }
-
-  if (def.turnOrder?.type !== 'cardDriven') {
-    return null;
-  }
-
-  const eligibilitySeats = def.turnOrder.config.turnFlow.eligibility.seats;
-  const directIndex = eligibilitySeats.findIndex((entry) => entry === seat);
-  if (directIndex >= 0 && directIndex < playerCount) {
-    return directIndex;
-  }
-
-  const normalizedSeat = normalizeSeatKey(seat);
-  if (normalizedSeat.length === 0) {
-    return null;
-  }
-  const normalizedIndex = eligibilitySeats.findIndex((entry) => normalizeSeatKey(entry) === normalizedSeat);
-  return normalizedIndex >= 0 && normalizedIndex < playerCount ? normalizedIndex : null;
+  return resolvePlayerIndexForSeatValue(seat, playerCount, seatResolutionIndex);
 };
 
 export const resolveTurnFlowSeatForPlayerIndex = (
@@ -168,7 +137,5 @@ export const resolveTurnFlowSeatForPlayerIndex = (
   if (typeof seatId === 'string' && seatOrder.includes(seatId)) {
     return seatId;
   }
-
-  const numericSeat = String(playerIndex);
-  return seatOrder.includes(numericSeat) ? numericSeat : null;
+  return null;
 };

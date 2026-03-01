@@ -21,6 +21,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-option-matrix-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],

@@ -36,6 +36,7 @@ const makeBaseDef = (overrides?: {
 }): GameDef =>
   ({
     metadata: { id: 'legal-choices-test', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: overrides?.globalVars ?? [],
     perPlayerVars: overrides?.perPlayerVars ?? [],

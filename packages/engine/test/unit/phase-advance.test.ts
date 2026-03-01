@@ -20,6 +20,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createBaseDef = (): GameDef =>
   ({
     metadata: { id: 'phase-advance-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [
       { name: 'step', type: 'int', init: 0, min: 0, max: 100 },
@@ -414,6 +415,7 @@ phase: [asPhaseId('p2')],
   it('suppresses a second consecutive coup handoff when coupPlan.maxConsecutiveRounds is 1', () => {
     const def: GameDef = {
       metadata: { id: 'phase-lifecycle-consecutive', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -499,6 +501,71 @@ phase: [asPhaseId('p2')],
     assert.equal(afterSecond.zones['leader:none']?.length, 1);
     assert.equal(afterSecond.zones['leader:none']?.[0]?.id, 'tok_card_0');
     assert.equal(requireCardDrivenRuntime(afterSecond).consecutiveCoupRounds, 1);
+  });
+
+  it('throws when coup phase entry seatOrder cannot resolve to canonical seats', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('victory') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+          coupPlan: {
+            phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+            seatOrder: ['0', '1'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = createState({
+      currentPhase: asPhaseId('main'),
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('coup-card-0'), type: 'card', props: { isCoup: true } }],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    });
+
+    assert.throws(() => advancePhase(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /could not resolve first coup seat/i);
+      return true;
+    });
   });
 
   it('expires card-duration lasting effects at card boundary and applies teardown effects', () => {

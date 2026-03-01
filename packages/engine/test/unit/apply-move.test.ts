@@ -32,6 +32,7 @@ import { requireCardDrivenRuntime, withPendingFreeOperationGrant } from '../help
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'apply-move-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [
       { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
@@ -111,6 +112,7 @@ const lifecycleTraceCategories = (
 const createEventDynamicDecisionDef = (withDeclaredParam = false): GameDef =>
   ({
     metadata: { id: withDeclaredParam ? 'event-dynamic-decision-with-declared' : 'event-dynamic-decision', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
     perPlayerVars: [],
@@ -184,6 +186,7 @@ const createDeferredDecisionEventDef = (
 ): GameDef =>
   ({
     metadata: { id: withFreeGrant ? 'deferred-decision-with-grant' : 'deferred-decision-no-grant', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [
       { name: 'resolved', type: 'int', init: 0, min: 0, max: 99 },
@@ -1133,6 +1136,7 @@ phase: [asPhaseId('main')],
   it('applies pass rewards and resets candidates when rightmost eligible faction passes', () => {
     const def: GameDef = {
       metadata: { id: 'turn-flow-pass-chain', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
       globalVars: [
         { name: 'res0', type: 'int', init: 0, min: 0, max: 99 },
@@ -1202,6 +1206,7 @@ phase: [asPhaseId('main')],
   it('marks non-pass executors ineligible for the next card at card end', () => {
     const def: GameDef = {
       metadata: { id: 'turn-flow-default-eligibility', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -1270,6 +1275,7 @@ phase: [asPhaseId('main')],
   it('applies typed nextTurn eligibility overrides and traces override creation', () => {
     const def: GameDef = {
       metadata: { id: 'turn-flow-override-typed', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -1724,6 +1730,7 @@ phase: [asPhaseId('main')],
   it('preserves eligibility state when freeOperation is true with operation profile', () => {
     const def: GameDef = {
       metadata: { id: 'free-op-eligibility', players: { min: 4, max: 4 } },
+      seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -1791,6 +1798,7 @@ phase: [asPhaseId('main')],
   it('consumes exactly one matching grant instance per free operation use', () => {
     const def: GameDef = {
       metadata: { id: 'free-op-consume-single-grant', players: { min: 4, max: 4 } },
+      seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -1867,6 +1875,7 @@ phase: [asPhaseId('main')],
   it('throws runtime contract error when released deferred actorPlayer is out of range', () => {
     const def: GameDef = {
       metadata: { id: 'deferred-actor-player-range', players: { min: 4, max: 4 } },
+      seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
       perPlayerVars: [],
@@ -2557,6 +2566,7 @@ phase: [asPhaseId('main')],
   it('activates selected lasting effects and applies setup effects for event moves', () => {
     const def: GameDef = {
       metadata: { id: 'event-lasting-effect-activation', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
       constants: {},
       globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
       perPlayerVars: [],

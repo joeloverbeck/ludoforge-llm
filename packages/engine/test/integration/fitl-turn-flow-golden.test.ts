@@ -30,6 +30,7 @@ interface FitlTurnFlowGolden {
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-turn-flow-golden-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
     globalVars: [
       { name: 'res0', type: 'int', init: 0, min: 0, max: 99 },

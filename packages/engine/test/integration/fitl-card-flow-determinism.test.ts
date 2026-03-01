@@ -23,6 +23,7 @@ const REPEATED_RUN_COUNT = 20;
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-card-flow-determinism-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
     globalVars: [{ name: 'ops', type: 'int', init: 0, min: 0, max: 99 }],
     perPlayerVars: [],
@@ -216,6 +217,7 @@ interface FitlEventInitialPackGolden {
 const createEventTraceDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-events-initial-pack-golden-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
     globalVars: [
       { name: 'spent', type: 'int', init: 0, min: 0, max: 99 },

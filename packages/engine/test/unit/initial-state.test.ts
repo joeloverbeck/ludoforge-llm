@@ -22,6 +22,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'initial-state-test', players: { min: 2, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
     globalVars: [{ name: 'coins', type: 'int', init: 0, min: 0, max: 99 }],
     perPlayerVars: [{ name: 'score', type: 'int', init: 1, min: 0, max: 99 }],
@@ -240,6 +241,7 @@ describe('initialState', () => {
   it('reveals played and lookahead slots from the inferred draw pile when turnFlow lifecycle is declared', () => {
     const def: GameDef = {
       metadata: { id: 'lifecycle-start', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -296,6 +298,7 @@ phase: [asPhaseId('main')],
   it('initializes turnFlow eligibility runtime state from declared faction order', () => {
     const def: GameDef = {
       metadata: { id: 'turn-flow-eligibility-start', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
       constants: {},
       globalVars: [{ name: 'res0', type: 'int', init: 0, min: 0, max: 99 }],
       perPlayerVars: [],

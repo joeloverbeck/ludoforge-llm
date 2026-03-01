@@ -17,6 +17,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-eligibility-pass-chain-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
     globalVars: [
       { name: 'res0', type: 'int', init: 0, min: 0, max: 99 },
@@ -74,6 +75,7 @@ phase: [asPhaseId('main')],
 const createCardLifecycleDef = (): GameDef =>
   ({
     metadata: { id: 'fitl-eligibility-pass-chain-lifecycle-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
     globalVars: [
       { name: 'aid', type: 'int', init: 0, min: -99, max: 99 },

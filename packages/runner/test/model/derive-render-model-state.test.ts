@@ -188,6 +188,7 @@ function expectedRenderChoiceStep(
 function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly def: GameDef; readonly state: GameState } {
   const def: GameDef = {
     ...baseDef,
+    seats: [{ id: 'us' }, { id: 'nva' }],
     markerLattices: [
       { id: 'terror', states: ['none', 'low', 'high'], defaultState: 'none' },
     ],
@@ -598,11 +599,11 @@ describe('deriveRenderModel state metadata', () => {
             ...baseTurnOrder.config.turnFlow,
             eligibility: {
               ...baseTurnOrder.config.turnFlow.eligibility,
-              seats: ['0', '1'],
+              seats: ['us', 'nva'],
             },
             cardSeatOrderMapping: {
-              US: '0',
-              NVA: '1',
+              US: 'us',
+              NVA: 'nva',
             },
           },
         },
@@ -614,14 +615,14 @@ describe('deriveRenderModel state metadata', () => {
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          seatOrder: ['1', '0'],
+          seatOrder: ['nva', 'us'],
           eligibility: {
-            '0': true,
-            '1': true,
+            us: true,
+            nva: true,
           },
           currentCard: {
-            firstEligible: '1',
-            secondEligible: '0',
+            firstEligible: 'nva',
+            secondEligible: 'us',
             actedSeats: [],
             passedSeats: [],
             nonPassCount: 0,

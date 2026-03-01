@@ -18,6 +18,7 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 const createDef = (): GameDef =>
   ({
     metadata: { id: 'event-turn-flow-directives-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],
@@ -344,6 +345,7 @@ const assertFreeOperationDenial = (error: unknown, expectedCause: string): boole
 const createZoneFilteredDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-zone-filter-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
     constants: {},
     globalVars: [],
     perPlayerVars: [],
@@ -474,6 +476,7 @@ phase: [asPhaseId('main')],
 const createExecuteAsSeatDef = (): GameDef =>
   ({
     metadata: { id: 'event-free-op-execute-as-faction-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
     globalVars: [{ name: 'executeAsMarker', type: 'int', init: 0, min: 0, max: 999 }],
     perPlayerVars: [],

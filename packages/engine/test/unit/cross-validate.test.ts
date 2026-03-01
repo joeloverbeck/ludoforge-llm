@@ -14,6 +14,10 @@ import {
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
+const RICH_SEAT_CATALOG_IDS = ['us', 'arvn'] as const;
+const PRIMARY_SEAT_ID = RICH_SEAT_CATALOG_IDS[0];
+const SECONDARY_SEAT_ID = RICH_SEAT_CATALOG_IDS[1];
+
 function requireValue<T>(value: T): NonNullable<T> {
   assert.notEqual(value, undefined);
   assert.notEqual(value, null);
@@ -29,7 +33,7 @@ function createRichCompilableDoc(): GameSpecDoc {
         id: 'seats',
         kind: 'seatCatalog',
         payload: {
-          seats: [{ id: 'us' }, { id: 'arvn' }],
+          seats: RICH_SEAT_CATALOG_IDS.map((id) => ({ id })),
         },
       },
     ],
@@ -49,10 +53,13 @@ function createRichCompilableDoc(): GameSpecDoc {
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { seats: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
+          eligibility: {
+            seats: [...RICH_SEAT_CATALOG_IDS],
+            overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }],
+          },
           actionClassByActionId: { act: 'operation', pass: 'pass', event: 'event' },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
-          passRewards: [{ seat: 'us', resource: 'resources', amount: 2 }],
+          passRewards: [{ seat: PRIMARY_SEAT_ID, resource: 'resources', amount: 2 }],
           durationWindows: ['turn' as const],
         },
         coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },
@@ -114,8 +121,10 @@ phase: ['main'],
     ],
     terminal: {
       conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
-      checkpoints: [{ id: 'cp-1', seat: 'us', timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } }],
-      margins: [{ seat: 'arvn', value: 1 }],
+      checkpoints: [
+        { id: 'cp-1', seat: PRIMARY_SEAT_ID, timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } },
+      ],
+      margins: [{ seat: SECONDARY_SEAT_ID, value: 1 }],
       ranking: { order: 'desc' as const },
     },
   };
@@ -129,7 +138,14 @@ function compileRichSections(): CompileSectionResults {
 
 function crossValidate(sections: CompileSectionResults) {
   const seatIdentityContract = buildSeatIdentityContract({
-    seatCatalogSeatIds: ['us', 'arvn'],
+    seatCatalogSeatIds: [...RICH_SEAT_CATALOG_IDS],
+  });
+  return crossValidateSpec(sections, seatIdentityContract.contract);
+}
+
+function crossValidateWithoutSeatCatalog(sections: CompileSectionResults) {
+  const seatIdentityContract = buildSeatIdentityContract({
+    seatCatalogSeatIds: undefined,
   });
   return crossValidateSpec(sections, seatIdentityContract.contract);
 }
@@ -246,7 +262,7 @@ describe('crossValidateSpec', () => {
     };
 
     const seatIdentityContract = buildSeatIdentityContract({
-      seatCatalogSeatIds: ['us', 'arvn'],
+      seatCatalogSeatIds: [...RICH_SEAT_CATALOG_IDS],
     });
     assert.equal(seatIdentityContract.contract.mode, 'seat-catalog');
     assert.deepEqual(seatIdentityContract.diagnostics, []);
@@ -254,6 +270,28 @@ describe('crossValidateSpec', () => {
     const diagnostics = crossValidateSpec(withIndexSeats, seatIdentityContract.contract);
     assert.equal(
       diagnostics.some((entry) => entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'),
+      true,
+    );
+  });
+
+  it('turn-flow eligibility seats fail xref when contract mode is none', () => {
+    const sections = compileRichSections();
+    const diagnostics = crossValidateWithoutSeatCatalog(sections);
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'
+          && entry.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.0',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'
+          && entry.path === 'doc.turnOrder.config.turnFlow.eligibility.seats.1',
+      ),
       true,
     );
   });

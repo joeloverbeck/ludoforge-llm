@@ -358,6 +358,90 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('rejects piece/scenario seat references that are missing from selected seat catalog', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      tokenTypes: null,
+      dataAssets: [
+        {
+          id: 'map',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'saigon:none',
+                category: 'city',
+                attributes: { population: 6, econ: 0, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'seats',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'us' }, { id: 'nva' }],
+          },
+        },
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [
+              { id: 'us-troops', seat: 'arvn', statusDimensions: [], transitions: [] },
+            ],
+            inventory: [
+              { pieceTypeId: 'us-troops', seat: 'arvn', total: 2 },
+            ],
+          },
+        },
+        {
+          id: 'scenario',
+          kind: 'scenario' as const,
+          payload: {
+            mapAssetId: 'map',
+            pieceCatalogAssetId: 'pieces',
+            seatCatalogAssetId: 'seats',
+            scenarioName: 'Seat Contract',
+            yearRange: '1964-1972',
+            initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
+            outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
+            seatPools: [{ seat: 'arvn', availableZoneId: 'available-arvn:none', outOfPlayZoneId: 'out-of-play-arvn:none' }],
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const missingRefDiagnostics = result.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING',
+    );
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat'),
+      true,
+    );
+    assert.equal(
+      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat'),
+      true,
+    );
+    assert.equal(
+      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.initialPlacements.0.seat'),
+      true,
+    );
+    assert.equal(
+      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.outOfPlay.0.seat'),
+      true,
+    );
+    assert.equal(
+      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.seatPools.0.seat'),
+      true,
+    );
+  });
+
   it('requires seat catalog for card-driven turn flow', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import type { MapPayload, PieceCatalogPayload, ScenarioPayload } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
   collectScenarioProjectionEntries,
@@ -153,12 +154,12 @@ export function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): read
 }
 
 export function validateScenarioCrossReferences(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
-  mapPayload: Record<string, unknown> | undefined,
-  pieceCatalogPayload: Record<string, unknown> | undefined,
-  globalVars: readonly unknown[] | null,
-  globalMarkerLattices: readonly unknown[] | null,
+  mapPayload: MapPayload | undefined,
+  pieceCatalogPayload: PieceCatalogPayload | undefined,
+  globalVars: GameSpecDoc['globalVars'],
+  globalMarkerLattices: GameSpecDoc['globalMarkerLattices'],
   diagnostics: Diagnostic[],
 ): void {
   const spaceIds = extractMapSpaceIds(mapPayload);
@@ -181,44 +182,39 @@ export function validateScenarioCrossReferences(
   emitScenarioProjectionInvariantDiagnostics(payload, basePath, pieceTypeIndex, inventoryIndex, diagnostics);
 }
 
-function extractMapSpaceIds(mapPayload: Record<string, unknown> | undefined): ReadonlySet<string> {
+function extractMapSpaceIds(mapPayload: MapPayload | undefined): ReadonlySet<string> {
   const result = new Set<string>();
-  if (mapPayload === undefined || !Array.isArray(mapPayload.spaces)) {
+  if (mapPayload === undefined) {
     return result;
   }
   for (const space of mapPayload.spaces) {
-    if (isRecord(space) && typeof space.id === 'string' && space.id.trim() !== '') {
+    if (typeof space.id === 'string' && space.id.trim() !== '') {
       result.add(space.id);
     }
   }
   return result;
 }
 
-function extractMapTrackDefs(mapPayload: Record<string, unknown> | undefined): ReadonlyMap<string, TrackDef> {
+function extractMapTrackDefs(mapPayload: MapPayload | undefined): ReadonlyMap<string, TrackDef> {
   const result = new Map<string, TrackDef>();
-  if (mapPayload === undefined || !Array.isArray(mapPayload.tracks)) {
+  if (mapPayload === undefined) {
     return result;
   }
-  for (const track of mapPayload.tracks) {
-    if (isRecord(track) && typeof track.id === 'string' && isFiniteNumber(track.min) && isFiniteNumber(track.max)) {
+  for (const track of mapPayload.tracks ?? []) {
+    if (typeof track.id === 'string' && isFiniteNumber(track.min) && isFiniteNumber(track.max)) {
       result.set(track.id, { id: track.id, min: track.min, max: track.max });
     }
   }
   return result;
 }
 
-function extractMapMarkerLattices(
-  mapPayload: Record<string, unknown> | undefined,
-): ReadonlyMap<string, MarkerLatticeDef> {
+function extractMapMarkerLattices(mapPayload: MapPayload | undefined): ReadonlyMap<string, MarkerLatticeDef> {
   const result = new Map<string, MarkerLatticeDef>();
-  if (mapPayload === undefined || !Array.isArray(mapPayload.markerLattices)) {
+  if (mapPayload === undefined) {
     return result;
   }
-  for (const lattice of mapPayload.markerLattices) {
-    if (isRecord(lattice) && typeof lattice.id === 'string' && Array.isArray(lattice.states)) {
-      const states = lattice.states.filter((s: unknown): s is string => typeof s === 'string');
-      result.set(lattice.id, { id: lattice.id, states });
-    }
+  for (const lattice of mapPayload.markerLattices ?? []) {
+    result.set(lattice.id, { id: lattice.id, states: [...lattice.states] });
   }
   return result;
 }
@@ -278,16 +274,12 @@ function extractGlobalMarkerLattices(
 }
 
 function extractTrackInitializations(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
 ): readonly TrackInitializationEntry[] {
-  if (!Array.isArray(payload.initializations)) {
-    return [];
-  }
-
   const result: TrackInitializationEntry[] = [];
-  for (const [index, entry] of payload.initializations.entries()) {
-    if (!isRecord(entry) || typeof entry.trackId !== 'string' || !isFiniteNumber(entry.value)) {
+  for (const [index, entry] of (payload.initializations ?? []).entries()) {
+    if (!('trackId' in entry) || !isFiniteNumber(entry.value)) {
       continue;
     }
     result.push({
@@ -300,16 +292,12 @@ function extractTrackInitializations(
 }
 
 function extractGlobalVarInitializations(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
 ): readonly GlobalVarInitializationEntry[] {
-  if (!Array.isArray(payload.initializations)) {
-    return [];
-  }
-
   const result: GlobalVarInitializationEntry[] = [];
-  for (const [index, entry] of payload.initializations.entries()) {
-    if (!isRecord(entry) || typeof entry.var !== 'string') {
+  for (const [index, entry] of (payload.initializations ?? []).entries()) {
+    if (!('var' in entry) || typeof entry.var !== 'string') {
       continue;
     }
     if (!isFiniteNumber(entry.value) && typeof entry.value !== 'boolean') {
@@ -325,16 +313,12 @@ function extractGlobalVarInitializations(
 }
 
 function extractGlobalMarkerInitializations(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
 ): readonly GlobalMarkerInitializationEntry[] {
-  if (!Array.isArray(payload.initializations)) {
-    return [];
-  }
-
   const result: GlobalMarkerInitializationEntry[] = [];
-  for (const [index, entry] of payload.initializations.entries()) {
-    if (!isRecord(entry) || typeof entry.markerId !== 'string' || typeof entry.state !== 'string' || 'spaceId' in entry) {
+  for (const [index, entry] of (payload.initializations ?? []).entries()) {
+    if (!('markerId' in entry) || typeof entry.markerId !== 'string' || typeof entry.state !== 'string' || 'spaceId' in entry) {
       continue;
     }
     result.push({
@@ -347,21 +331,12 @@ function extractGlobalMarkerInitializations(
 }
 
 function extractMarkerInitializations(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
 ): readonly MarkerInitializationEntry[] {
-  if (!Array.isArray(payload.initializations)) {
-    return [];
-  }
-
   const result: MarkerInitializationEntry[] = [];
-  for (const [index, entry] of payload.initializations.entries()) {
-    if (
-      !isRecord(entry) ||
-      typeof entry.spaceId !== 'string' ||
-      typeof entry.markerId !== 'string' ||
-      typeof entry.state !== 'string'
-    ) {
+  for (const [index, entry] of (payload.initializations ?? []).entries()) {
+    if (!('spaceId' in entry) || typeof entry.spaceId !== 'string' || typeof entry.markerId !== 'string' || typeof entry.state !== 'string') {
       continue;
     }
     result.push({
@@ -375,32 +350,27 @@ function extractMarkerInitializations(
 }
 
 function extractPieceTypeIndex(
-  pieceCatalogPayload: Record<string, unknown> | undefined,
+  pieceCatalogPayload: PieceCatalogPayload | undefined,
 ): ReadonlyMap<string, PieceTypeInfo> {
   const result = new Map<string, PieceTypeInfo>();
-  if (pieceCatalogPayload === undefined || !Array.isArray(pieceCatalogPayload.pieceTypes)) {
+  if (pieceCatalogPayload === undefined) {
     return result;
   }
   for (const pt of pieceCatalogPayload.pieceTypes) {
-    if (isRecord(pt) && typeof pt.id === 'string' && typeof pt.seat === 'string') {
-      const statusDimensions = Array.isArray(pt.statusDimensions)
-        ? pt.statusDimensions.filter((s: unknown): s is string => typeof s === 'string')
-        : [];
-      result.set(pt.id, { id: pt.id, seat: pt.seat, statusDimensions });
-    }
+    result.set(pt.id, { id: pt.id, seat: pt.seat, statusDimensions: [...pt.statusDimensions] });
   }
   return result;
 }
 
 function extractInventoryIndex(
-  pieceCatalogPayload: Record<string, unknown> | undefined,
+  pieceCatalogPayload: PieceCatalogPayload | undefined,
 ): ReadonlyMap<string, number> {
   const result = new Map<string, number>();
-  if (pieceCatalogPayload === undefined || !Array.isArray(pieceCatalogPayload.inventory)) {
+  if (pieceCatalogPayload === undefined) {
     return result;
   }
   for (const entry of pieceCatalogPayload.inventory) {
-    if (isRecord(entry) && typeof entry.pieceTypeId === 'string' && isFiniteNumber(entry.total)) {
+    if (isFiniteNumber(entry.total)) {
       result.set(entry.pieceTypeId, (result.get(entry.pieceTypeId) ?? 0) + entry.total);
     }
   }
@@ -408,19 +378,12 @@ function extractInventoryIndex(
 }
 
 function validateInitialPlacements(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
   spaceIds: ReadonlySet<string>,
   diagnostics: Diagnostic[],
 ): void {
-  if (!Array.isArray(payload.initialPlacements)) {
-    return;
-  }
-
-  for (const [index, placement] of payload.initialPlacements.entries()) {
-    if (!isRecord(placement)) {
-      continue;
-    }
+  for (const [index, placement] of (payload.initialPlacements ?? []).entries()) {
     const placementPath = `${basePath}.initialPlacements.${index}`;
 
     if (typeof placement.spaceId === 'string' && spaceIds.size > 0 && !spaceIds.has(placement.spaceId)) {
@@ -607,7 +570,7 @@ function validateInitialMarkers(
 }
 
 function emitScenarioProjectionInvariantDiagnostics(
-  payload: Record<string, unknown>,
+  payload: ScenarioPayload,
   basePath: string,
   pieceTypeIndex: ReadonlyMap<string, PieceTypeInfo>,
   inventoryIndex: ReadonlyMap<string, number>,

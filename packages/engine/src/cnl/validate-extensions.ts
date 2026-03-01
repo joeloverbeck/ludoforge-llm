@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
+import type { MapPayload, PieceCatalogPayload, ScenarioPayload, SeatCatalogPayload } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
   ACTION_PIPELINE_ATOMICITY_VALUES,
@@ -25,6 +26,7 @@ import {
   validateIdentifierField,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { validateScenarioCrossReferences } from './validate-zones.js';
 
 interface DataAssetValidationContext {
@@ -50,10 +52,11 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
     readonly seatCatalogAssetId?: string;
-    readonly payload: Record<string, unknown>;
+    readonly payload: ScenarioPayload;
   }> = [];
-  const resolvedMapPayloads = new Map<string, Record<string, unknown>>();
-  const resolvedPieceCatalogPayloads = new Map<string, Record<string, unknown>>();
+  const resolvedMapPayloads = new Map<string, MapPayload>();
+  const resolvedPieceCatalogPayloads = new Map<string, { readonly path: string; readonly payload: PieceCatalogPayload }>();
+  const resolvedSeatCatalogPayloads = new Map<string, { readonly path: string; readonly payload: SeatCatalogPayload }>();
   const normalizedIds: string[] = [];
   let hasMapAsset = false;
 
@@ -95,18 +98,21 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       hasMapAsset = true;
       const normalizedMapId = normalizeIdentifier(asset.id);
       mapAssetIds.add(normalizedMapId);
-      if (isRecord(asset.payload)) {
-        resolvedMapPayloads.set(normalizedMapId, asset.payload);
-      }
+      resolvedMapPayloads.set(normalizedMapId, asset.payload as MapPayload);
     } else if (asset.kind === 'pieceCatalog') {
       const normalizedPcId = normalizeIdentifier(asset.id);
       pieceCatalogAssetIds.add(normalizedPcId);
-      if (isRecord(asset.payload)) {
-        resolvedPieceCatalogPayloads.set(normalizedPcId, asset.payload);
-      }
+      resolvedPieceCatalogPayloads.set(normalizedPcId, {
+        path: `${path}.payload`,
+        payload: asset.payload as PieceCatalogPayload,
+      });
     } else if (asset.kind === 'seatCatalog') {
       const normalizedSeatCatalogId = normalizeIdentifier(asset.id);
       seatCatalogAssetIds.add(normalizedSeatCatalogId);
+      resolvedSeatCatalogPayloads.set(normalizedSeatCatalogId, {
+        path: `${path}.payload`,
+        payload: asset.payload as SeatCatalogPayload,
+      });
     } else if (asset.kind === 'scenario') {
       const payload = asset.payload;
       const basePath = `${path}.payload`;
@@ -136,7 +142,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
 
       scenarioRefs.push({
         path: basePath,
-        payload,
+        payload: payload as ScenarioPayload,
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
         ...(seatCatalogAssetId === undefined ? {} : { seatCatalogAssetId }),
@@ -187,11 +193,49 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       reference.payload,
       reference.path,
       reference.mapAssetId !== undefined ? resolvedMapPayloads.get(reference.mapAssetId) : undefined,
-      reference.pieceCatalogAssetId !== undefined ? resolvedPieceCatalogPayloads.get(reference.pieceCatalogAssetId) : undefined,
+      reference.pieceCatalogAssetId !== undefined ? resolvedPieceCatalogPayloads.get(reference.pieceCatalogAssetId)?.payload : undefined,
       doc.globalVars,
       doc.globalMarkerLattices,
       diagnostics,
     );
+
+    if (reference.seatCatalogAssetId === undefined) {
+      continue;
+    }
+    const resolvedSeatCatalog = resolvedSeatCatalogPayloads.get(reference.seatCatalogAssetId);
+    if (resolvedSeatCatalog === undefined) {
+      continue;
+    }
+
+    const resolvedPieceCatalog =
+      reference.pieceCatalogAssetId === undefined ? undefined : resolvedPieceCatalogPayloads.get(reference.pieceCatalogAssetId);
+    const seatIssues = collectInvalidSeatReferences({
+      canonicalSeatIds: resolvedSeatCatalog.payload.seats.map((seat) => seat.id),
+      ...(resolvedPieceCatalog === undefined
+        ? {}
+        : {
+            pieceCatalog: {
+              payload: resolvedPieceCatalog.payload,
+              path: resolvedPieceCatalog.path,
+            },
+          }),
+      scenario: {
+        payload: reference.payload,
+        path: reference.path,
+      },
+    });
+
+    for (const issue of seatIssues) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'CNL_VALIDATOR_REFERENCE_MISSING',
+        issue.path,
+        `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
+        issue.seat,
+        resolvedSeatCatalog.payload.seats.map((seat) => seat.id),
+        'Use one of the declared seat catalog ids.',
+      );
+    }
   }
 
   return { hasMapAsset };

@@ -19,6 +19,8 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
+import { collectInvalidSeatReferences } from './seat-reference-validation.js';
+import { pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {
   collectScenarioProjectionEntries,
@@ -106,9 +108,9 @@ export function deriveSectionsFromDataAssets(
     };
   }
 
-  const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
-  const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
-  const seatCatalogAssets: Array<{ readonly id: string; readonly payload: SeatCatalogPayload }> = [];
+  const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload; readonly path: string }> = [];
+  const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload; readonly path: string }> = [];
+  const seatCatalogAssets: Array<{ readonly id: string; readonly payload: SeatCatalogPayload; readonly path: string }> = [];
   const runtimeDataAssets: RuntimeDataAsset[] = [];
   const tableContracts: RuntimeTableContract[] = [];
   const scenarioRefs: Array<{
@@ -169,6 +171,7 @@ export function deriveSectionsFromDataAssets(
       mapAssets.push({
         id: validated.asset.id,
         payload: validated.asset.payload as MapPayload,
+        path: `${pathPrefix}.payload`,
       });
       continue;
     }
@@ -177,6 +180,7 @@ export function deriveSectionsFromDataAssets(
       pieceCatalogAssets.push({
         id: validated.asset.id,
         payload: validated.asset.payload as PieceCatalogPayload,
+        path: `${pathPrefix}.payload`,
       });
       continue;
     }
@@ -185,6 +189,7 @@ export function deriveSectionsFromDataAssets(
       seatCatalogAssets.push({
         id: validated.asset.id,
         payload: validated.asset.payload as SeatCatalogPayload,
+        path: `${pathPrefix}.payload`,
       });
       continue;
     }
@@ -262,6 +267,40 @@ export function deriveSectionsFromDataAssets(
       )
     : { selected: undefined, failed: false };
   const selectedSeatCatalog = selectedSeatCatalogResult.selected;
+
+  if (selectedSeatCatalog !== undefined) {
+    const seatIssues = collectInvalidSeatReferences({
+      canonicalSeatIds: selectedSeatCatalog.payload.seats.map((seat) => seat.id),
+      ...(selectedPieceCatalog === undefined
+        ? {}
+        : {
+            pieceCatalog: {
+              payload: selectedPieceCatalog.payload,
+              path: selectedPieceCatalog.path,
+            },
+          }),
+      ...(selectedScenario === undefined
+        ? {}
+        : {
+            scenario: {
+              payload: selectedScenario.payload,
+              path: selectedScenario.path,
+            },
+          }),
+    });
+
+    for (const issue of seatIssues) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_REF_MISSING,
+        issue.path,
+        `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
+        issue.seat,
+        selectedSeatCatalog.payload.seats.map((seat) => seat.id),
+        'Use one of the declared seat catalog ids.',
+      );
+    }
+  }
 
   const zones =
     selectedMap === undefined
@@ -972,15 +1011,15 @@ const resolveScenarioTokenProps = (
   return props;
 };
 
-function selectAssetById<TPayload>(
-  assets: ReadonlyArray<{ readonly id: string; readonly payload: TPayload }>,
+function selectAssetById<TPayload, TAsset extends { readonly id: string; readonly payload: TPayload }>(
+  assets: ReadonlyArray<TAsset>,
   selectedId: string | undefined,
   diagnostics: Diagnostic[],
   kind: 'map' | 'pieceCatalog' | 'seatCatalog',
   selectedPath: string,
   entityId?: string,
 ): {
-  readonly selected: { readonly id: string; readonly payload: TPayload } | undefined;
+  readonly selected: TAsset | undefined;
   readonly failed: boolean;
 } {
   if (selectedId !== undefined) {

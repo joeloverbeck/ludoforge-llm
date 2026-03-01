@@ -138,6 +138,20 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.ok(matches[0]!.message.includes('hanoi'));
   });
 
+  it('scenario reports one placement-space diagnostic per invalid placement entry', () => {
+    const diagnostics = validateGameSpec(
+      createDocWithScenario({
+        initialPlacements: [
+          { spaceId: 'hanoi', pieceTypeId: 'us-troops', seat: 'us', count: 1 },
+          { spaceId: 'danang', pieceTypeId: 'us-troops', seat: 'us', count: 1 },
+        ],
+      }),
+    );
+
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_SPACE_INVALID');
+    assert.equal(matches.length, 2);
+  });
+
   it('scenario referencing a non-existent piece type emits CNL_VALIDATOR_SCENARIO_PLACEMENT_PIECE_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
@@ -159,6 +173,82 @@ describe('validateGameSpec scenario cross-reference validation', () => {
 
     const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PLACEMENT_SEAT_MISMATCH');
     assert.equal(matches.length, 1);
+  });
+
+  it('scenario seat references outside seat catalog emit CNL_VALIDATOR_REFERENCE_MISSING with precise paths', () => {
+    const diagnostics = validateGameSpec(
+      createDocWithScenario({
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
+        outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
+        seatPools: [{ seat: 'arvn', availableZoneId: 'available-arvn:none' }],
+      }),
+    );
+
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_REFERENCE_MISSING');
+    assert.equal(
+      matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.initialPlacements.0.seat'),
+      true,
+    );
+    assert.equal(
+      matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.outOfPlay.0.seat'),
+      true,
+    );
+    assert.equal(
+      matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.seatPools.0.seat'),
+      true,
+    );
+  });
+
+  it('piece-catalog seat references outside seat catalog emit CNL_VALIDATOR_REFERENCE_MISSING', () => {
+    const doc = createDocWithScenario({});
+    doc.dataAssets = [
+      { id: 'test-map', kind: 'map', payload: createMapPayload() },
+      { id: 'test-seats', kind: 'seatCatalog', payload: createSeatCatalogPayload() },
+      {
+        id: 'test-pieces',
+        kind: 'pieceCatalog',
+        payload: {
+          ...createPieceCatalogPayload(),
+          pieceTypes: [
+            {
+              id: 'us-troops',
+              seat: 'arvn',
+              statusDimensions: [],
+              transitions: [],
+            },
+            {
+              id: 'nva-guerrillas',
+              seat: 'nva',
+              statusDimensions: ['activity'],
+              transitions: [
+                { dimension: 'activity', from: 'underground', to: 'active' },
+                { dimension: 'activity', from: 'active', to: 'underground' },
+              ],
+            },
+          ],
+          inventory: [
+            { pieceTypeId: 'us-troops', seat: 'arvn', total: 30 },
+            { pieceTypeId: 'nva-guerrillas', seat: 'nva', total: 20 },
+          ],
+        },
+      },
+      {
+        id: 'test-scenario',
+        kind: 'scenario',
+        payload: {
+          mapAssetId: 'test-map',
+          seatCatalogAssetId: 'test-seats',
+          pieceCatalogAssetId: 'test-pieces',
+          scenarioName: 'Test',
+          yearRange: '1964-1972',
+        },
+      },
+    ];
+
+    const diagnostics = validateGameSpec(doc);
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_REFERENCE_MISSING');
+    assert.equal(matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat'), true);
+    assert.equal(matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat'), true);
   });
 
   it('scenario with track initialization out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {

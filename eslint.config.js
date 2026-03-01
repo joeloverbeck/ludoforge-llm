@@ -9,6 +9,22 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ["packages/engine/src/cnl/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/kernel/*contract*.js", "**/kernel/*contract*.ts"],
+              message: "Import shared contracts from ../contracts/* instead of kernel/*contract* modules.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.ts"],
     languageOptions: {
       globals: {

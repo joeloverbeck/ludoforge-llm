@@ -1,6 +1,6 @@
 # SEATRES-026: Model scenario-selection failure reasons and suppress dependent cascades
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler data-asset derivation reason model and suppression policy
@@ -12,9 +12,9 @@ When scenario selection fails (`CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS` or `
 
 ## Assumption Reassessment (2026-03-01)
 
-1. `deriveSectionsFromDataAssets()` now tracks typed failure reasons for map/pieceCatalog/seatCatalog selection, but scenario-selection failure is still modeled as a boolean (`failed`) and not threaded into derivation reason policy.
-2. `compiler-core` suppression now keys on derivation reasons; because scenario reasons are missing, scenario-root-cause failures do not suppress dependent cascade diagnostics.
-3. This gap is not currently captured by active tickets focused on map/piece/seat reason typing.
+1. `deriveSectionsFromDataAssets()` tracks typed derivation failures for map/pieceCatalog/seatCatalog only. Scenario selection itself returns typed `failureReason` (`missing-reference` / `ambiguous-selection`) via `selectScenarioRefWithPolicy`, but that reason is currently used only for control flow (`skipAssetInference`) and not persisted in `derivationFailures`.
+2. `compiler-core` suppression is reason-aware (`DATA_ASSET_DERIVATION_SUPPRESSION_POLICY`), but it can only act on the recorded derivation failure arrays. Because scenario-root-cause failures are not recorded there, dependent cascades remain unsuppressed in scenario-failure paths.
+3. Existing tests already cover direct scenario diagnostics (`CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS`, `CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING`) and existing map/piece/seat suppression behavior, but they do not currently assert suppression of dependent `doc.zones` and `CNL_COMPILER_SEAT_CATALOG_REQUIRED` cascades when scenario selection is the root cause.
 
 ## Architecture Check
 
@@ -26,8 +26,8 @@ When scenario selection fails (`CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS` or `
 
 ### 1. Extend derivation reason model to include scenario selection failures
 
-1. Introduce typed scenario-selection reasons (for example `scenario-ambiguous`, `scenario-selector-missing`) in data-asset derivation output.
-2. Thread scenario reasons through the same derivation/suppression contract used by compiler-core.
+1. Introduce explicit scenario-root-cause derivation reasons in `compile-data-assets` (for example `scenario-selector-missing`, `scenario-ambiguous`) and project them into map/pieceCatalog/seatCatalog derivation failure sets when scenario selection blocks downstream inference.
+2. Keep diagnostic code surfaces unchanged (no aliasing/back-compat shims): retain existing scenario diagnostic codes while expanding suppression eligibility reasons.
 
 ### 2. Apply reason-aware suppression for scenario-root-cause cascades
 
@@ -60,6 +60,7 @@ When scenario selection fails (`CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS` or `
 1. Ambiguous scenario selection does not emit dependent `doc.zones` required-section cascade when explicit zones are absent.
 2. Missing `metadata.defaultScenarioAssetId` target in card-driven docs does not emit dependent `CNL_COMPILER_SEAT_CATALOG_REQUIRED` cascade.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
+4. Workspace quality gates for touched areas: `pnpm turbo typecheck` and `pnpm turbo lint`
 
 ### Invariants
 
@@ -82,3 +83,22 @@ Rationale: prevents regressions across parse/compile pipeline integration bounda
 3. `node --test packages/engine/dist/test/integration/compile-pipeline.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-02
+- **What Changed**:
+  - Added explicit scenario-root-cause derivation reasons in `compile-data-assets` (`scenario-selector-missing`, `scenario-ambiguous`) and propagated them into map/pieceCatalog/seatCatalog derivation failure sets when scenario selection fails.
+  - Extended compiler suppression policy to treat those scenario-root-cause reasons as valid cascade-gating inputs for map/piece/seat dependent diagnostics.
+  - Added/updated regression coverage in unit and integration suites to assert:
+    - ambiguous scenario selection suppresses dependent `doc.zones` required-section cascade
+    - missing `metadata.defaultScenarioAssetId` selector target suppresses dependent `CNL_COMPILER_SEAT_CATALOG_REQUIRED` in card-driven docs
+- **Deviations From Original Plan**:
+  - No architectural deviation from intent; implementation used explicit scenario-specific derivation reasons (rather than generic reason reuse) to preserve root-cause clarity while keeping diagnostics strict.
+- **Verification Results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js` passed.
+  - `node --test packages/engine/dist/test/integration/compile-pipeline.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`# tests 354`, `# pass 354`, `# fail 0`).
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

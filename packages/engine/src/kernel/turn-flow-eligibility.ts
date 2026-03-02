@@ -23,7 +23,10 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
-import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import {
+  assertCardMetadataSeatOrderRuntimeInvariant,
+  requireCardDrivenActiveSeat,
+} from './turn-flow-runtime-invariants.js';
 import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
@@ -645,9 +648,11 @@ const resolveCardSeatOrder = (
     return null;
   }
   const mapping = config.turnFlow.cardSeatOrderMapping;
+  let resolvedCard = false;
   for (const deck of def.eventDecks ?? []) {
     const card = deck.cards.find((c) => c.id === cardId);
     if (card !== undefined) {
+      resolvedCard = true;
       const rawOrder = card.metadata?.[metadataKey];
       if (Array.isArray(rawOrder) && rawOrder.every((s): s is string => typeof s === 'string') && rawOrder.length > 0) {
         const resolved = mapping === undefined
@@ -662,9 +667,16 @@ const resolveCardSeatOrder = (
             `Turn-flow runtime invariant failed: card metadata seat order token could not resolve (cardId=${cardId}, metadataKey=${metadataKey}, token=${seatToken}).`,
           );
         }
+        assertCardMetadataSeatOrderRuntimeInvariant(resolved, { cardId, metadataKey });
         return resolved;
       }
     }
+  }
+  if (!resolvedCard) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `Turn-flow runtime invariant failed: resolveCardSeatOrder could not resolve played cardId=${cardId} for metadataKey=${metadataKey}.`,
+    );
   }
   return null;
 };

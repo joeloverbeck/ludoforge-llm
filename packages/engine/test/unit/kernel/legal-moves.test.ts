@@ -432,6 +432,177 @@ phase: [asPhaseId('main')],
     assert.equal(nextState.turnOrderState.runtime.currentCard.secondEligible, 'nva');
   });
 
+  it('throws when played card token cardId cannot resolve to event card for metadata seat-order', () => {
+    const def = {
+      ...makeBaseDef(),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'draw:none',
+          discardZone: 'discard:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              metadata: {
+                seatOrder: ['US', 'NVA'],
+              },
+            },
+          ],
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            cardSeatOrderMetadataKey: 'seatOrder',
+            cardSeatOrderMapping: {
+              US: 'us',
+              NVA: 'nva',
+            },
+            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: {
+        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'missing-card' } }],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+    });
+
+    assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /resolveCardSeatOrder could not resolve played cardId=missing-card/i);
+      assert.match(String(details.message), /metadataKey=seatOrder/i);
+      return true;
+    });
+  });
+
+  it('throws when card metadata seat-order resolves duplicate seats at runtime', () => {
+    const def = {
+      ...makeBaseDef(),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'draw:none',
+          discardZone: 'discard:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              metadata: {
+                seatOrder: ['US', 'US'],
+              },
+            },
+          ],
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            cardSeatOrderMetadataKey: 'seatOrder',
+            cardSeatOrderMapping: {
+              US: 'us',
+            },
+            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: {
+        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'card-1' } }],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+    });
+
+    assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /card metadata seat order shape invalid/i);
+      assert.match(String(details.message), /distinctSeatCount=1/i);
+      assert.match(String(details.message), /duplicates=\[us\]/i);
+      return true;
+    });
+  });
+
+  it('throws when card metadata seat-order resolves fewer than two distinct seats at runtime', () => {
+    const def = {
+      ...makeBaseDef(),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'draw:none',
+          discardZone: 'discard:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              metadata: {
+                seatOrder: ['US'],
+              },
+            },
+          ],
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            cardSeatOrderMetadataKey: 'seatOrder',
+            cardSeatOrderMapping: {
+              US: 'us',
+            },
+            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: {
+        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'card-1' } }],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+    });
+
+    assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.match(String(details.message), /card metadata seat order shape invalid/i);
+      assert.match(String(details.message), /distinctSeatCount=1/i);
+      assert.match(String(details.message), /duplicates=\[\]/i);
+      return true;
+    });
+  });
+
   it('rejects move.actionClass overrides that conflict with mapped class during option-matrix checks', () => {
     const passAction: ActionDef = {
       id: asActionId('pass'),

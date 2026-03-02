@@ -16,6 +16,29 @@ export const normalizeSeatOrder = (seats: readonly string[]): readonly string[] 
   return ordered;
 };
 
+export interface SeatOrderShapeAnalysis {
+  readonly duplicateSeats: readonly string[];
+  readonly distinctSeatCount: number;
+}
+
+export const analyzeSeatOrderShape = (seatOrder: readonly string[]): SeatOrderShapeAnalysis => {
+  const seen = new Set<string>();
+  const duplicateSeats: string[] = [];
+  for (const seat of seatOrder) {
+    if (seen.has(seat)) {
+      if (!duplicateSeats.includes(seat)) {
+        duplicateSeats.push(seat);
+      }
+      continue;
+    }
+    seen.add(seat);
+  }
+  return {
+    duplicateSeats,
+    distinctSeatCount: seen.size,
+  };
+};
+
 export interface SeatResolutionIndex {
   readonly seatIdByPlayerIndex: readonly (string | null)[];
   readonly playerIndexBySeatId: ReadonlyMap<string, number>;

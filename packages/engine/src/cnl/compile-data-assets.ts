@@ -57,7 +57,9 @@ const COMPILER_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvaria
 export type DataAssetDerivationFailureReason =
   | 'invalid-payload'
   | 'missing-reference'
-  | 'ambiguous-selection';
+  | 'ambiguous-selection'
+  | 'scenario-selector-missing'
+  | 'scenario-ambiguous';
 
 export interface DataAssetDerivationFailures {
   readonly map: readonly DataAssetDerivationFailureReason[];
@@ -257,6 +259,13 @@ export function deriveSectionsFromDataAssets(
     }),
   });
   const selectedScenario = scenarioSelection.selected;
+  if (scenarioSelection.failureReason !== undefined) {
+    const scenarioFailureReason =
+      scenarioSelection.failureReason === 'missing-reference' ? 'scenario-selector-missing' : 'scenario-ambiguous';
+    derivationFailures.map.add(scenarioFailureReason);
+    derivationFailures.pieceCatalog.add(scenarioFailureReason);
+    derivationFailures.seatCatalog.add(scenarioFailureReason);
+  }
   const skipAssetInference = scenarioSelection.failureReason !== undefined;
   const compilerScenarioLinkedAssetDialect = {
     onMissingReference: ({ selectedPath, kind, selectedId, alternatives, entityId }: {

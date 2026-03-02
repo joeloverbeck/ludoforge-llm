@@ -89,9 +89,9 @@ type MutableCompileSectionResults = {
 const SCENARIO_DECK_SYNTHETIC_CARD_TOKEN_TYPE_ID = '__eventCard';
 const SCENARIO_DECK_PILE_COUP_MIX_STRATEGY_ID = 'pile-coup-mix-v1';
 const DATA_ASSET_DERIVATION_SUPPRESSION_POLICY = {
-  mapZonesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection'],
-  pieceCatalogTokenTypesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection'],
-  seatCatalogRequired: ['invalid-payload', 'missing-reference', 'ambiguous-selection'],
+  mapZonesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection', 'scenario-selector-missing', 'scenario-ambiguous'],
+  pieceCatalogTokenTypesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection', 'scenario-selector-missing', 'scenario-ambiguous'],
+  seatCatalogRequired: ['invalid-payload', 'missing-reference', 'ambiguous-selection', 'scenario-selector-missing', 'scenario-ambiguous'],
 } as const;
 
 type ScenarioDeckSelection = {

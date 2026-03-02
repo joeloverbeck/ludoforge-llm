@@ -296,6 +296,107 @@ describe('compiler structured section results', () => {
     assert.deepEqual(diagnostic?.alternatives, ['scenario-a']);
   });
 
+  it('suppresses required doc.zones cascade when scenario selection is ambiguous', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: null,
+      dataAssets: [
+        {
+          id: 'map-foundation',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        { id: 'scenario-a', kind: 'scenario' as const, payload: { mapAssetId: 'map-foundation' } },
+        { id: 'scenario-b', kind: 'scenario' as const, payload: { mapAssetId: 'map-foundation' } },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING'
+          && diagnostic.path === 'doc.zones',
+      ),
+      false,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING'),
+      true,
+    );
+  });
+
+  it('suppresses seat-catalog-required when metadata.defaultScenarioAssetId is missing', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      metadata: {
+        ...base.metadata,
+        defaultScenarioAssetId: 'scenario-missing',
+      },
+      dataAssets: [
+        {
+          id: 'seats-foundation',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }],
+          },
+        },
+        {
+          id: 'scenario-foundation',
+          kind: 'scenario' as const,
+          payload: {
+            seatCatalogAssetId: 'seats-foundation',
+            scenarioName: 'Foundation',
+            yearRange: '1964-1965',
+          },
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { seats: ['US', 'ARVN'], overrideWindows: [] },
+            actionClassByActionId: { pass: 'pass' } as const,
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      false,
+    );
+  });
+
   it('merges map-derived zones with explicit YAML zones when both are declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

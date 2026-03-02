@@ -1,5 +1,10 @@
 import type { Diagnostic } from './diagnostics.js';
-import { analyzeSeatOrderShape, normalizeSeatKey } from './seat-resolution.js';
+import {
+  analyzeSeatOrderShape,
+  buildSeatResolutionIndex,
+  normalizeSeatKey,
+  resolvePlayerIndexForTurnFlowSeat,
+} from './seat-resolution.js';
 import type { ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
@@ -88,6 +93,52 @@ export const validateCardSeatOrderMapping = (diagnostics: Diagnostic[], def: Gam
   }
 
   const turnFlow = def.turnOrder.config.turnFlow;
+  const seatResolutionIndex = buildSeatResolutionIndex(def, def.seats?.length ?? 0);
+  const firstSourceByCanonicalSeat = new Map<string, string>();
+  for (const [seatIndex, seatValue] of turnFlow.eligibility.seats.entries()) {
+    const path = `turnOrder.config.turnFlow.eligibility.seats[${seatIndex}]`;
+    if (typeof seatValue !== 'string') {
+      continue;
+    }
+    const playerIndex = resolvePlayerIndexForTurnFlowSeat(seatValue, seatResolutionIndex);
+    if (playerIndex === null) {
+      diagnostics.push({
+        code: 'TURN_FLOW_ELIGIBILITY_SEAT_UNRESOLVABLE',
+        path,
+        severity: 'error',
+        message: `turnFlow.eligibility.seats entry "${seatValue}" does not resolve to a declared canonical seat id in seats[].`,
+        suggestion: 'Use canonical seat ids declared in seats[].id.',
+      });
+      continue;
+    }
+
+    const canonicalSeat = seatResolutionIndex.seatIdByPlayerIndex[playerIndex];
+    if (typeof canonicalSeat !== 'string' || canonicalSeat.length === 0) {
+      diagnostics.push({
+        code: 'TURN_FLOW_ELIGIBILITY_SEAT_UNRESOLVABLE',
+        path,
+        severity: 'error',
+        message: `turnFlow.eligibility.seats entry "${seatValue}" resolves to player index ${playerIndex}, but that index has no canonical seat id in seats[].`,
+        suggestion: 'Define seats[] ids for all referenced turn-flow seat positions.',
+      });
+      continue;
+    }
+
+    const priorSource = firstSourceByCanonicalSeat.get(canonicalSeat);
+    if (priorSource !== undefined) {
+      diagnostics.push({
+        code: 'TURN_FLOW_ELIGIBILITY_SEAT_DUPLICATE_RESOLVED',
+        path,
+        severity: 'error',
+        message: `turnFlow.eligibility.seats entry "${seatValue}" resolves to canonical seat "${canonicalSeat}", which is already resolved by "${priorSource}".`,
+        suggestion: 'Ensure eligibility.seats resolves each canonical seat at most once.',
+      });
+      continue;
+    }
+
+    firstSourceByCanonicalSeat.set(canonicalSeat, seatValue);
+  }
+
   const seatSet = new Set(turnFlow.eligibility.seats);
   const mapping = turnFlow.cardSeatOrderMapping ?? {};
 

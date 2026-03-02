@@ -18,6 +18,7 @@ const withCardDrivenTurnFlow = (
   base: GameDef,
   cardSeatOrderMapping: Readonly<Record<string, string>>,
   seatOrder: readonly string[],
+  eligibilitySeats: readonly string[] = ['0', '1'],
 ): GameDef =>
   ({
     ...base,
@@ -31,7 +32,7 @@ const withCardDrivenTurnFlow = (
             leader: 'deck:none',
           },
           eligibility: {
-            seats: ['0', '1'],
+            seats: eligibilitySeats,
             overrideWindows: [],
           },
           actionClassByActionId: {
@@ -56,6 +57,50 @@ const withCardDrivenTurnFlow = (
   }) as unknown as GameDef;
 
 describe('validateGameDef reference checks', () => {
+  it('validates eligibility seats against canonical declared seats', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(
+      {
+        ...base,
+        seats: [{ id: 'US' }, { id: 'ARVN' }],
+      } as unknown as GameDef,
+      { US: 'US', ARVN: 'ARVN' },
+      ['US', 'ARVN'],
+      ['US', 'NVA'],
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_ELIGIBILITY_SEAT_UNRESOLVABLE'
+          && diag.path === 'turnOrder.config.turnFlow.eligibility.seats[1]',
+      ),
+    );
+  });
+
+  it('requires unique canonical seats across resolved eligibility seats', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(
+      {
+        ...base,
+        seats: [{ id: 'NVA' }, { id: 'US' }],
+      } as unknown as GameDef,
+      { north_vietnam: 'NVA', US: 'US' },
+      ['north_vietnam', 'US'],
+      ['NVA', 'north_vietnam'],
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_ELIGIBILITY_SEAT_DUPLICATE_RESOLVED'
+          && diag.path === 'turnOrder.config.turnFlow.eligibility.seats[1]',
+      ),
+    );
+  });
+
   it('validates cardSeatOrderMapping targets against eligibility seats', () => {
     const base = createValidGameDef();
     const def = withCardDrivenTurnFlow(base, { US: '0', NVA: '2' }, ['US', 'NVA']);

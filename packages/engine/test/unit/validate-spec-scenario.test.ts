@@ -251,6 +251,75 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat'), true);
   });
 
+  it('deduplicates piece-catalog seat diagnostics across scenarios sharing the same piece/seat-catalog pair', () => {
+    const doc = createDocWithScenario({});
+    doc.dataAssets = [
+      { id: 'test-map', kind: 'map', payload: createMapPayload() },
+      { id: 'test-seats', kind: 'seatCatalog', payload: createSeatCatalogPayload() },
+      {
+        id: 'test-pieces',
+        kind: 'pieceCatalog',
+        payload: {
+          ...createPieceCatalogPayload(),
+          pieceTypes: [
+            {
+              id: 'us-troops',
+              seat: 'arvn',
+              statusDimensions: [],
+              transitions: [],
+            },
+            {
+              id: 'nva-guerrillas',
+              seat: 'nva',
+              statusDimensions: ['activity'],
+              transitions: [
+                { dimension: 'activity', from: 'underground', to: 'active' },
+                { dimension: 'activity', from: 'active', to: 'underground' },
+              ],
+            },
+          ],
+          inventory: [
+            { pieceTypeId: 'us-troops', seat: 'arvn', total: 30 },
+            { pieceTypeId: 'nva-guerrillas', seat: 'nva', total: 20 },
+          ],
+        },
+      },
+      {
+        id: 'test-scenario-a',
+        kind: 'scenario',
+        payload: {
+          mapAssetId: 'test-map',
+          seatCatalogAssetId: 'test-seats',
+          pieceCatalogAssetId: 'test-pieces',
+          scenarioName: 'Test A',
+          yearRange: '1964-1972',
+        },
+      },
+      {
+        id: 'test-scenario-b',
+        kind: 'scenario',
+        payload: {
+          mapAssetId: 'test-map',
+          seatCatalogAssetId: 'test-seats',
+          pieceCatalogAssetId: 'test-pieces',
+          scenarioName: 'Test B',
+          yearRange: '1964-1972',
+        },
+      },
+    ];
+
+    const diagnostics = validateGameSpec(doc);
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_REFERENCE_MISSING').filter(
+      (diagnostic) =>
+        diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat' ||
+        diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat',
+    );
+
+    assert.equal(matches.length, 2);
+    assert.equal(matches.filter((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat').length, 1);
+    assert.equal(matches.filter((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat').length, 1);
+  });
+
   it('scenario with track initialization out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({

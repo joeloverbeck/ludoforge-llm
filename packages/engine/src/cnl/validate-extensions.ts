@@ -188,6 +188,8 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     }
   }
 
+  const validatedPieceCatalogIdsBySeatCatalogId = new Map<string, Set<string>>();
+
   for (const reference of scenarioRefs) {
     validateScenarioCrossReferences(
       reference.payload,
@@ -209,9 +211,24 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
 
     const resolvedPieceCatalog =
       reference.pieceCatalogAssetId === undefined ? undefined : resolvedPieceCatalogPayloads.get(reference.pieceCatalogAssetId);
+    const includePieceCatalogChecks = (() => {
+      if (resolvedPieceCatalog === undefined || reference.pieceCatalogAssetId === undefined) {
+        return false;
+      }
+
+      const validatedPieceCatalogIds =
+        validatedPieceCatalogIdsBySeatCatalogId.get(reference.seatCatalogAssetId) ?? new Set<string>();
+      if (validatedPieceCatalogIds.has(reference.pieceCatalogAssetId)) {
+        return false;
+      }
+
+      validatedPieceCatalogIds.add(reference.pieceCatalogAssetId);
+      validatedPieceCatalogIdsBySeatCatalogId.set(reference.seatCatalogAssetId, validatedPieceCatalogIds);
+      return true;
+    })();
     const seatIssues = collectInvalidSeatReferences({
       canonicalSeatIds: resolvedSeatCatalog.payload.seats.map((seat) => seat.id),
-      ...(resolvedPieceCatalog === undefined
+      ...(resolvedPieceCatalog === undefined || !includePieceCatalogChecks
         ? {}
         : {
             pieceCatalog: {

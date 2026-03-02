@@ -12,6 +12,7 @@ import type { GameSpecSourceMap } from './source-map.js';
 import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
+import { expandTemplates } from './expand-templates.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   type EffectLoweringSharedContext,
@@ -214,10 +215,16 @@ export function compileGameSpecToGameDef(
   options?: CompileOptions,
 ): CompileResult {
   const limits = resolveCompileLimits(options?.limits);
-  const conditionExpansion = expandConditionMacros(doc);
+  const templateExpansion = expandTemplates(doc);
+  const conditionExpansion = expandConditionMacros(templateExpansion.doc);
   const macroExpansion = expandEffectMacros(conditionExpansion.doc);
   const expanded = expandMacros(macroExpansion.doc, options);
-  const diagnostics: Diagnostic[] = [...conditionExpansion.diagnostics, ...macroExpansion.diagnostics, ...expanded.diagnostics];
+  const diagnostics: Diagnostic[] = [
+    ...templateExpansion.diagnostics,
+    ...conditionExpansion.diagnostics,
+    ...macroExpansion.diagnostics,
+    ...expanded.diagnostics,
+  ];
   const compiled = compileExpandedDoc(expanded.doc, diagnostics);
   let validatedGameDef: ValidatedGameDef | null = null;
 

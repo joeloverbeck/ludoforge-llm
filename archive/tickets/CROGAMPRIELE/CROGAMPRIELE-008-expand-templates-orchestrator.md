@@ -1,6 +1,6 @@
 # CROGAMPRIELE-008: expandTemplates orchestrator + compiler-core integration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compiler pipeline wiring
@@ -12,9 +12,9 @@ The five expansion passes (001-005) each create standalone functions. They need 
 
 ## Assumption Reassessment (2026-03-01)
 
-1. `compileGameSpecToGameDef` in `compiler-core.ts:204-231` currently starts with `expandConditionMacros(doc)`. The new orchestrator must run before this call.
-2. Each expansion pass returns `{ doc: GameSpecDoc; diagnostics: Diagnostic[] }`.
-3. The pipeline collects diagnostics: `[...conditionExpansion.diagnostics, ...macroExpansion.diagnostics, ...expanded.diagnostics]` (`compiler-core.ts:212`). Template diagnostics must be prepended.
+1. `compileGameSpecToGameDef` in `compiler-core.ts:212-239` currently starts with `expandConditionMacros(doc)` at line 217. The new orchestrator must run before this call.
+2. Each expansion pass returns `{ readonly doc: GameSpecDoc; readonly diagnostics: readonly Diagnostic[] }`.
+3. The pipeline collects diagnostics: `[...conditionExpansion.diagnostics, ...macroExpansion.diagnostics, ...expanded.diagnostics]` (`compiler-core.ts:220`). Template diagnostics must be prepended.
 4. Pass A4 (`expandZoneTemplates`) depends on seat IDs from seatCatalog data assets — it pre-scans `doc.dataAssets` internally, so no external dependency.
 5. Passes A1-A3 are independent and can run in any order. A4 is independent. A5 logically runs last (phase templates may reference zones/vars produced by earlier passes).
 
@@ -55,14 +55,14 @@ export function expandTemplates(doc: GameSpecDoc): { doc: GameSpecDoc; diagnosti
 
 ### 2. Wire into `compileGameSpecToGameDef` in `compiler-core.ts`
 
-At line 209 (currently `const conditionExpansion = expandConditionMacros(doc);`), insert before:
+At line 217 (currently `const conditionExpansion = expandConditionMacros(doc);`), insert before:
 
 ```typescript
 const templateExpansion = expandTemplates(doc);
 const conditionExpansion = expandConditionMacros(templateExpansion.doc);
 ```
 
-And prepend `templateExpansion.diagnostics` to the collected diagnostics at line 212:
+And prepend `templateExpansion.diagnostics` to the collected diagnostics at line 220:
 
 ```typescript
 const diagnostics: Diagnostic[] = [
@@ -119,3 +119,14 @@ Test that verifies the full pipeline: a doc with template patterns → `compileG
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/integration/expand-templates-integration.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+Implemented exactly as planned with minor corrections:
+
+- **expand-templates.ts**: Created orchestrator chaining A1→A5 passes, collecting diagnostics. Pure function, no mutation.
+- **compiler-core.ts**: Wired `expandTemplates` before `expandConditionMacros` at line 218. Template diagnostics prepended to the collected array.
+- **cnl/index.ts**: Added re-export.
+- **Integration test**: 6 tests (3 orchestrator unit, 3 pipeline integration) covering no-op passthrough, all-5-patterns compilation, diagnostic propagation, and regression.
+- **Ticket corrections**: Updated stale line numbers (204→212, 209→217, 212→220) and return type annotation (`Diagnostic[]` → `readonly Diagnostic[]`).
+- **Verification**: 3373 tests pass, typecheck clean, lint clean.

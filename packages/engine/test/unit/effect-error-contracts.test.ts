@@ -14,14 +14,18 @@ import {
   createRng,
   EFFECT_RUNTIME_REASONS,
   EffectBudgetExceededError,
+  effectRuntimeError,
   EffectRuntimeError,
   effectNotImplementedError,
   isEffectErrorCode,
+  isEffectRuntimeReason,
   type EffectErrorContext,
+  type EffectRuntimeContext,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
+  makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
 } from '../../src/kernel/index.js';
 
 describe('effect error context contracts', () => {
@@ -170,6 +174,43 @@ describe('effect error context contracts', () => {
         return true;
       },
     );
+  });
+
+  it('effectRuntimeError enforces typed turn-flow active-seat invariant context', () => {
+    const context: EffectRuntimeContext<'turnFlowRuntimeValidationFailed'> =
+      makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext({
+        invariant: 'turnFlow.activeSeat.unresolvable',
+        surface: 'applyGrantFreeOperation',
+        activePlayer: 0,
+        seatOrder: ['0', '1'],
+      });
+
+    const error = effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      'turn-flow invariant failed',
+      context,
+    );
+    assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
+    assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED);
+    assert.equal(error.context?.invariant, 'turnFlow.activeSeat.unresolvable');
+    assert.equal(error.context?.surface, 'applyGrantFreeOperation');
+    assert.equal(error.context?.activePlayer, 0);
+    assert.deepEqual(error.context?.seatOrder, ['0', '1']);
+  });
+
+  it('isEffectRuntimeReason narrows effect runtime context by reason', () => {
+    const error = effectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, 'invariant violated', {
+      mode: 'execution',
+      ownershipEnforcement: 'probe',
+    });
+
+    assert.equal(isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION), true);
+    if (!isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION)) {
+      assert.fail('expected reason-specific narrowing for internalInvariantViolation');
+    }
+    assert.equal(error.context.mode, 'execution');
+    assert.equal(error.context.ownershipEnforcement, 'probe');
+    assert.equal(isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED), false);
   });
 
   it('effect entry invariant violations emit internalInvariantViolation with mode/ownership context', () => {

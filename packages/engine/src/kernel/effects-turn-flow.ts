@@ -1,4 +1,7 @@
-import { effectRuntimeError } from './effect-error.js';
+import {
+  effectRuntimeError,
+  makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
+} from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
@@ -111,10 +114,7 @@ export const applyGrantFreeOperation = (
     throw effectRuntimeError(
       'turnFlowRuntimeValidationFailed',
       activeSeatUnresolvableInvariantMessage(activeSeatInvariant),
-      {
-        effectType: 'grantFreeOperation',
-        ...activeSeatInvariant,
-      },
+      makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext(activeSeatInvariant),
     );
   }
   const seat = resolveGrantSeat(grant.seat, activeSeat, runtime.seatOrder);

@@ -1,6 +1,7 @@
 import type { StackingViolation } from './stacking.js';
 import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectAST } from './types.js';
+import type { TurnFlowActiveSeatInvariantContext } from './runtime-error.js';
 
 export type EffectErrorCode =
   | 'EFFECT_RUNTIME'
@@ -11,10 +12,38 @@ export type EffectErrorCode =
   | 'SPATIAL_DESTINATION_NOT_ADJACENT'
   | 'STACKING_VIOLATION';
 
+export type TurnFlowActiveSeatUnresolvableEffectRuntimeContext = Readonly<{
+  readonly effectType: 'grantFreeOperation';
+}> & TurnFlowActiveSeatInvariantContext;
+
+type TurnFlowRuntimeValidationFailedGenericContext = Readonly<{
+  readonly effectType: string;
+  readonly invariant?: never;
+}> & Readonly<Record<string, unknown>>;
+
+export type TurnFlowRuntimeValidationFailedContext =
+  | TurnFlowRuntimeValidationFailedGenericContext
+  | TurnFlowActiveSeatUnresolvableEffectRuntimeContext;
+
+export type EffectRuntimeContextByReason = Readonly<{
+  readonly [R in Exclude<EffectRuntimeReason, 'turnFlowRuntimeValidationFailed'>]: Readonly<Record<string, unknown>>;
+}> & Readonly<{
+  readonly turnFlowRuntimeValidationFailed: TurnFlowRuntimeValidationFailedContext;
+}>;
+
+export type EffectRuntimeContext<R extends EffectRuntimeReason = EffectRuntimeReason> =
+  EffectRuntimeContextByReason[R];
+
+export type EffectRuntimeErrorContextForReason<R extends EffectRuntimeReason> = Readonly<{
+  readonly reason: R;
+}> & EffectRuntimeContext<R>;
+
+export type EffectRuntimeErrorContext = {
+  readonly [R in EffectRuntimeReason]: EffectRuntimeErrorContextForReason<R>;
+}[EffectRuntimeReason];
+
 export interface EffectErrorContextByCode {
-  readonly EFFECT_RUNTIME: Readonly<{
-    readonly reason: EffectRuntimeReason;
-  } & Record<string, unknown>>;
+  readonly EFFECT_RUNTIME: EffectRuntimeErrorContext;
   readonly EFFECT_NOT_IMPLEMENTED: Readonly<{
     readonly effectType: string;
     readonly effect?: EffectAST;
@@ -93,18 +122,36 @@ export function effectNotImplementedError(
   });
 }
 
-export const effectRuntimeError = (
-  reason: EffectRuntimeReason,
+export const makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext = (
+  context: TurnFlowActiveSeatInvariantContext,
+): TurnFlowActiveSeatUnresolvableEffectRuntimeContext => ({
+  effectType: 'grantFreeOperation',
+  ...context,
+});
+
+export function effectRuntimeError<R extends EffectRuntimeReason>(
+  reason: R,
   message: string,
-  context?: Readonly<Record<string, unknown>>,
-): EffectRuntimeError<'EFFECT_RUNTIME'> =>
-  new EffectRuntimeError('EFFECT_RUNTIME', message, {
+  context?: EffectRuntimeContext<R>,
+): EffectRuntimeError<'EFFECT_RUNTIME'> {
+  const runtimeContext = {
     reason,
     ...(context === undefined ? {} : context),
-  });
+  } as EffectRuntimeErrorContextForReason<R>;
+  return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext as EffectErrorContext<'EFFECT_RUNTIME'>);
+}
 
 export function isEffectRuntimeError(error: unknown): error is EffectRuntimeError {
   return error instanceof EffectRuntimeError;
+}
+
+export function isEffectRuntimeReason<R extends EffectRuntimeReason>(
+  error: unknown,
+  reason: R,
+): error is EffectRuntimeError<'EFFECT_RUNTIME'> & Readonly<{
+  readonly context: EffectRuntimeErrorContextForReason<R>;
+}> {
+  return isEffectErrorCode(error, 'EFFECT_RUNTIME') && error.context?.reason === reason;
 }
 
 export function isEffectErrorCode<C extends EffectErrorCode>(

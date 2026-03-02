@@ -331,8 +331,12 @@ phase: [asPhaseId('main')],
 
     assert.throws(() => legalMoves(def, state), (error: unknown) => {
       assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; message?: string };
+      const details = error as Error & { code?: unknown; message?: string; context?: Record<string, unknown> };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.invariant, 'turnFlow.activeSeat.unresolvable');
+      assert.equal(details.context?.surface, 'isActiveSeatEligibleForTurnFlow');
+      assert.equal(details.context?.activePlayer, 0);
+      assert.deepEqual(details.context?.seatOrder, ['0', '1']);
       assert.match(String(details.message), /could not resolve active seat/i);
       return true;
     });

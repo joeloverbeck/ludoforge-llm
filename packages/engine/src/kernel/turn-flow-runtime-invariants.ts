@@ -1,6 +1,24 @@
-import { kernelRuntimeError } from './runtime-error.js';
+import { kernelRuntimeError, type TurnFlowActiveSeatInvariantContext } from './runtime-error.js';
 import { buildSeatResolutionIndex, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import type { GameDef, GameState } from './types.js';
+
+export const TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT = 'turnFlow.activeSeat.unresolvable';
+
+export const makeActiveSeatUnresolvableInvariantContext = (
+  surface: string,
+  activePlayer: number,
+  seatOrder: readonly string[],
+): TurnFlowActiveSeatInvariantContext => ({
+  invariant: TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT,
+  surface,
+  activePlayer,
+  seatOrder: [...seatOrder],
+});
+
+export const activeSeatUnresolvableInvariantMessage = (
+  context: Pick<TurnFlowActiveSeatInvariantContext, 'surface' | 'activePlayer' | 'seatOrder'>,
+): string =>
+  `Turn-flow runtime invariant failed: ${context.surface} could not resolve active seat for activePlayer=${String(context.activePlayer)} seatOrder=[${context.seatOrder.join(', ')}]`;
 
 export const requireCardDrivenActiveSeat = (
   def: Pick<GameDef, 'seats' | 'turnOrder'>,
@@ -24,9 +42,15 @@ export const requireCardDrivenActiveSeat = (
     return seat;
   }
 
+  const context = makeActiveSeatUnresolvableInvariantContext(
+    surface,
+    Number(state.activePlayer),
+    state.turnOrderState.runtime.seatOrder,
+  );
   throw kernelRuntimeError(
     'RUNTIME_CONTRACT_INVALID',
-    `Turn-flow runtime invariant failed: ${surface} could not resolve active seat for activePlayer=${String(state.activePlayer)} seatOrder=[${state.turnOrderState.runtime.seatOrder.join(', ')}]`,
+    activeSeatUnresolvableInvariantMessage(context),
+    context,
   );
 };
 

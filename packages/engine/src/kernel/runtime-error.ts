@@ -33,13 +33,24 @@ export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves
 
 export type SelectorSurface = 'actor' | 'executor';
 
-export interface RuntimeContractInvalidContext {
+export interface SelectorRuntimeContractInvalidContext {
   readonly surface: SelectorBoundarySurface;
   readonly selector: SelectorSurface;
   readonly actionId: ActionDef['id'];
   readonly reason: RuntimeContractReason;
   readonly selectorContractViolations?: readonly ActionSelectorContractViolation[];
 }
+
+export interface TurnFlowActiveSeatInvariantContext {
+  readonly invariant: 'turnFlow.activeSeat.unresolvable';
+  readonly surface: string;
+  readonly activePlayer: number;
+  readonly seatOrder: readonly string[];
+}
+
+export type RuntimeContractInvalidContext =
+  | SelectorRuntimeContractInvalidContext
+  | TurnFlowActiveSeatInvariantContext;
 
 type IllegalMoveBaseContext<R extends IllegalMoveReason> = Readonly<{
   readonly actionId: Move['actionId'];

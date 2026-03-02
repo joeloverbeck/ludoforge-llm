@@ -8,6 +8,10 @@ import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
 import { buildSeatResolutionIndex, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import {
+  activeSeatUnresolvableInvariantMessage,
+  makeActiveSeatUnresolvableInvariantContext,
+} from './turn-flow-runtime-invariants.js';
 
 const resolveGrantSeat = (
   token: string,
@@ -99,13 +103,17 @@ export const applyGrantFreeOperation = (
     seatResolutionIndex,
   );
   if (activeSeat === null) {
+    const activeSeatInvariant = makeActiveSeatUnresolvableInvariantContext(
+      'applyGrantFreeOperation',
+      Number(ctx.activePlayer),
+      runtime.seatOrder,
+    );
     throw effectRuntimeError(
       'turnFlowRuntimeValidationFailed',
-      `grantFreeOperation could not resolve active seat for activePlayer=${String(ctx.activePlayer)}`,
+      activeSeatUnresolvableInvariantMessage(activeSeatInvariant),
       {
         effectType: 'grantFreeOperation',
-        activePlayer: Number(ctx.activePlayer),
-        seatOrder: runtime.seatOrder,
+        ...activeSeatInvariant,
       },
     );
   }

@@ -161,11 +161,29 @@ describe('runtime error context contracts', () => {
 
     assert.equal(error.code, 'RUNTIME_CONTRACT_INVALID');
     const context: KernelRuntimeErrorContext<'RUNTIME_CONTRACT_INVALID'> = error.context!;
+    assert.ok('selector' in context);
     assert.equal(context.surface, 'applyMove');
     assert.equal(context.selector, 'actor');
     assert.equal(context.actionId, action.id);
     assert.equal(context.reason, RUNTIME_CONTRACT_REASONS.INVALID_SELECTOR_SPEC);
     assert.deepEqual(context.selectorContractViolations, [{ role: 'actor', kind: 'bindingMalformed', binding: '$bad' }]);
+  });
+
+  it('runtime contract helper emits active-seat invariant context contract', () => {
+    const error = runtimeContractInvalidError('active seat could not resolve', {
+      invariant: 'turnFlow.activeSeat.unresolvable',
+      surface: 'isActiveSeatEligibleForTurnFlow',
+      activePlayer: 0,
+      seatOrder: ['0', '1'],
+    });
+
+    assert.equal(error.code, 'RUNTIME_CONTRACT_INVALID');
+    const context: KernelRuntimeErrorContext<'RUNTIME_CONTRACT_INVALID'> = error.context!;
+    assert.ok('invariant' in context);
+    assert.equal(context.invariant, 'turnFlow.activeSeat.unresolvable');
+    assert.equal(context.surface, 'isActiveSeatEligibleForTurnFlow');
+    assert.equal(context.activePlayer, 0);
+    assert.deepEqual(context.seatOrder, ['0', '1']);
   });
 
   it('kernelRuntimeError enforces per-code context contract for kernel-emitted codes', () => {

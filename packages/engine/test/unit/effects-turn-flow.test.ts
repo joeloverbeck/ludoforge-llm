@@ -198,9 +198,19 @@ describe('applyGrantFreeOperation', () => {
       grantFreeOperation: { seat: 'self', operationClass: 'operation' },
     } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
 
-    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) =>
-      isEffectErrorCode(err, 'EFFECT_RUNTIME'),
-    );
+    assert.throws(() => applyGrantFreeOperation(effect, ctx), (err: unknown) => {
+      if (!isEffectErrorCode(err, 'EFFECT_RUNTIME')) {
+        return false;
+      }
+      assert.equal(err.context?.reason, 'turnFlowRuntimeValidationFailed');
+      assert.equal(err.context?.effectType, 'grantFreeOperation');
+      assert.equal(err.context?.invariant, 'turnFlow.activeSeat.unresolvable');
+      assert.equal(err.context?.surface, 'applyGrantFreeOperation');
+      assert.equal(err.context?.activePlayer, 0);
+      assert.deepEqual(err.context?.seatOrder, ['0', '1', '2', '3']);
+      assert.match(String(err.message), /applyGrantFreeOperation could not resolve active seat/i);
+      return true;
+    });
   });
 
   it('generates unique grant IDs', () => {

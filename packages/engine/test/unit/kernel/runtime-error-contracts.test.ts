@@ -26,6 +26,7 @@ import {
   type TurnFlowActionClass,
   type TurnFlowActiveSeatInvariantSurface,
 } from '../../../src/kernel/index.js';
+import { assertActiveSeatInvariantContractParity } from '../../helpers/active-seat-invariant-parity-helpers.js';
 
 describe('runtime error context contracts', () => {
   const action: ActionDef = {
@@ -186,6 +187,14 @@ describe('runtime error context contracts', () => {
     assert.equal(context.surface, 'isActiveSeatEligibleForTurnFlow');
     assert.equal(context.activePlayer, 0);
     assert.deepEqual(context.seatOrder, ['0', '1']);
+  });
+
+  it('keeps active-seat invariant metadata/message parity between kernel and effect runtime contracts', () => {
+    assertActiveSeatInvariantContractParity({
+      surface: 'applyGrantFreeOperation',
+      activePlayer: 0,
+      seatOrder: ['0', '1'],
+    });
   });
 
   it('active-seat invariant surfaces are constrained to canonical literals', () => {

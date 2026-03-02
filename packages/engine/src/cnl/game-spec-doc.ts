@@ -63,6 +63,11 @@ export interface GameSpecZoneDef {
   }>;
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  readonly behavior?: {
+    readonly type: string;
+    readonly drawFrom?: string;
+    readonly reshuffleFrom?: string;
+  };
 }
 
 export interface GameSpecZoneTemplateDef {
@@ -86,8 +91,8 @@ export interface GameSpecTokenTypeDef {
 }
 
 export interface GameSpecTurnStructure {
-  readonly phases: readonly GameSpecPhaseDef[];
-  readonly interrupts?: readonly GameSpecPhaseDef[];
+  readonly phases: readonly (GameSpecPhaseDef | GameSpecPhaseFromTemplate)[];
+  readonly interrupts?: readonly (GameSpecPhaseDef | GameSpecPhaseFromTemplate)[];
 }
 
 export interface GameSpecFixedOrderTurnOrder {
@@ -121,6 +126,25 @@ export interface GameSpecPhaseDef {
   readonly id: string;
   readonly onEnter?: readonly unknown[];
   readonly onExit?: readonly unknown[];
+  readonly actionDefaults?: {
+    readonly pre?: unknown;
+    readonly afterEffects?: readonly unknown[];
+  };
+}
+
+export interface GameSpecPhaseTemplateParam {
+  readonly name: string;
+}
+
+export interface GameSpecPhaseTemplateDef {
+  readonly id: string;
+  readonly params: readonly GameSpecPhaseTemplateParam[];
+  readonly phase: Readonly<Record<string, unknown>>;
+}
+
+export interface GameSpecPhaseFromTemplate {
+  readonly fromTemplate: string;
+  readonly args: Readonly<Record<string, unknown>>;
 }
 
 export interface GameSpecEffect {
@@ -417,6 +441,7 @@ export interface GameSpecDoc {
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
+  readonly phaseTemplates: readonly GameSpecPhaseTemplateDef[] | null;
   readonly turnOrder: GameSpecTurnOrder | null;
   readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
   readonly derivedMetrics: readonly GameSpecDerivedMetricDef[] | null;
@@ -465,6 +490,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     tokenTypes: null,
     setup: null,
     turnStructure: null,
+    phaseTemplates: null,
     turnOrder: null,
     actionPipelines: null,
     derivedMetrics: null,

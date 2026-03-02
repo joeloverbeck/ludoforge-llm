@@ -21,7 +21,8 @@ describe('parse + validate full-spec integration', () => {
     const firstZone = parsed.doc.zones?.[0];
     assert.equal(firstZone !== undefined && 'id' in firstZone ? firstZone.id : undefined, 'deck');
     assert.equal(parsed.doc.actions?.[0]?.id, 'draw');
-    assert.equal(parsed.doc.turnStructure?.phases[0]?.id, 'main');
+    const firstPhase = parsed.doc.turnStructure?.phases[0];
+    assert.equal(firstPhase !== undefined && 'id' in firstPhase ? firstPhase.id : undefined, 'main');
   });
 
   it('reports stable deterministic diagnostics for a multi-issue spec end-to-end', () => {

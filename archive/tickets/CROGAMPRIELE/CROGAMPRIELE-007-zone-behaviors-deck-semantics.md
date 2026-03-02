@@ -1,6 +1,6 @@
 # CROGAMPRIELE-007: Zone behaviors — deck semantics kernel primitive (B2)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel types, draw effect handler, compiler zone materialization, cross-validation, GameSpecDoc types
@@ -10,14 +10,17 @@
 
 Both games manually orchestrate card/deck lifecycle: shuffle → draw-from-top → discard → reshuffle-when-empty. Every card/deck game will reinvent this pattern. The DSL says `moveToken` when the designer thinks "deal from deck." A `behavior` field on `ZoneDef` with deck semantics (`drawFrom` order + auto-reshuffle) eliminates this gap.
 
-## Assumption Reassessment (2026-03-01)
+## Assumption Reassessment (2026-03-02)
 
-1. `ZoneDef` in `types-core.ts:87-98` has `id`, `zoneKind?`, `isInternal?`, `ownerPlayerIndex?`, `owner`, `visibility`, `ordering`, `adjacentTo?`, `category?`, `attributes?`. No `behavior` field exists.
-2. `applyDraw` in `effects-token.ts:533-594` always takes from front of array (`sourceTokens.slice(0, moveCount)`). No random or bottom extraction.
-3. `applyShuffle` in `effects-token.ts` (around line 687) uses Fisher-Yates. This logic should be extracted to a shared utility for reshuffle reuse.
-4. `materializeZoneDefs` in `compile-zones.ts:20-108` maps `GameSpecZoneDef` properties into `ZoneDef` via `createZoneDef`. New `behavior` field needs to be passed through.
-5. `pushEffectZoneDiagnostics` in `cross-validate.ts:968-1024` validates zone references in effects. Zone-level `reshuffleFrom` validation needs a new validation block.
-6. `GameSpecZoneDef` in `game-spec-doc.ts:33-48` — `behavior` field needs to be added.
+1. `ZoneDef` in `types-core.ts:87-98` — confirmed. No `behavior` field exists.
+2. `applyDraw` in `effects-token.ts:533-596` always takes from front of array. No random or bottom extraction.
+3. `applyShuffle` in `effects-token.ts:705-715` uses Fisher-Yates. Extract to shared utility for reshuffle reuse.
+4. `materializeZoneDefs` in `compile-zones.ts:20-134` maps `GameSpecZoneDef` → `ZoneDef` via `createZoneDef` (lines 363-387, 10 positional params, 2 call sites at 93-106 and 111-125). Refactor to options object.
+5. `pushEffectZoneDiagnostics` in `cross-validate.ts:973-1029` validates zone references in effects. Zone-level `reshuffleFrom` validation needs a new validation block.
+6. `GameSpecZoneDef` in `game-spec-doc.ts:51-66` — `behavior` field needs to be added.
+7. `ZoneDefSchema` in `schemas-core.ts:67-87` uses `.strict()` (Zod). Must add `behavior` to Zod schema so compiled GameDefs with behavior pass validation. JSON Schema auto-generated via `buildSchemaArtifactMap()`.
+8. New compiler diagnostic codes needed in `compiler-diagnostic-codes.ts` for behavior validation.
+9. New xref diagnostic codes needed in `cross-validate-diagnostic-codes.ts` for `reshuffleFrom` validation.
 
 ## Architecture Check
 
@@ -112,21 +115,31 @@ Test file covering:
 ## Files to Touch
 
 - `packages/engine/src/kernel/types-core.ts` (modify — add `ZoneBehavior`, `DeckBehavior`, `behavior` on `ZoneDef`)
-- `packages/engine/src/kernel/effects-token.ts` (modify — `applyDraw` extraction order + auto-reshuffle)
-- `packages/engine/src/kernel/effects-token.ts` (modify — extract Fisher-Yates from `applyShuffle` to shared utility)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — add `behavior` to `ZoneDefSchema`)
+- `packages/engine/src/kernel/effects-token.ts` (modify — extract Fisher-Yates, `applyDraw` extraction order + auto-reshuffle)
 - `packages/engine/src/cnl/game-spec-doc.ts` (modify — add `behavior` to `GameSpecZoneDef`)
-- `packages/engine/src/cnl/compile-zones.ts` (modify — pass through `behavior` in `materializeZoneDefs`)
+- `packages/engine/src/cnl/compile-zones.ts` (modify — refactor `createZoneDef` to options, pass through `behavior`)
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` (modify — add 3 behavior codes)
 - `packages/engine/src/cnl/cross-validate.ts` (modify — validate `reshuffleFrom` zone references)
+- `packages/engine/src/cnl/cross-validate-diagnostic-codes.ts` (modify — add 2 xref codes)
+- `packages/engine/schemas/GameDef.schema.json` (regenerated)
 - `packages/engine/test/unit/effects-token-deck-behavior.test.ts` (new)
 - `packages/engine/test/unit/compile-zones-behavior.test.ts` (new)
 - `packages/engine/test/unit/cross-validate-zone-behavior.test.ts` (new)
+
+## Scope Additions (vs original ticket)
+
+- **Zod schema**: `behavior` field added to `ZoneDefSchema` in `schemas-core.ts` (required because `.strict()` rejects unknown fields)
+- **JSON Schema regeneration**: `GameDef.schema.json` regenerated from updated Zod schema
+- **Compiler diagnostic codes**: 3 new codes in `compiler-diagnostic-codes.ts` for behavior validation
+- **Xref diagnostic codes**: 2 new codes in `cross-validate-diagnostic-codes.ts` for `reshuffleFrom` validation
+- **`createZoneDef` refactor**: Positional params → options object (contained refactor, 2 call sites)
 
 ## Out of Scope
 
 - Future zone behavior types (e.g., `'market'`) — only `'deck'` is implemented
 - Wiring into `compiler-core.ts` (CROGAMPRIELE-008)
 - Phase action defaults (CROGAMPRIELE-006)
-- JSON Schema updates (CROGAMPRIELE-009)
 - Game spec migrations (CROGAMPRIELE-010, -011)
 - `shuffle` effect — unchanged, works independently of zone behaviors
 - Any changes to `applyMove` or legal move enumeration
@@ -170,3 +183,25 @@ Test file covering:
 3. `node --test packages/engine/dist/test/unit/compile-zones-behavior.test.js`
 4. `node --test packages/engine/dist/test/unit/cross-validate-zone-behavior.test.js`
 5. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-02
+
+**What changed**:
+- `types-core.ts`: Added `DeckBehavior` interface, `ZoneBehavior` discriminated union type, `behavior?` optional field on `ZoneDef`
+- `schemas-core.ts`: Added `DeckBehaviorSchema`, `ZoneBehaviorSchema`, `behavior` optional field on `ZoneDefSchema`
+- `game-spec-doc.ts`: Added `behavior?` to `GameSpecZoneDef`
+- `effects-token.ts`: Extracted `shuffleTokenArray` utility from `applyShuffle`; modified `applyDraw` with deck behavior support (drawFrom top/bottom/random, auto-reshuffle from designated zone)
+- `compile-zones.ts`: Refactored `createZoneDef` from 10 positional params to `CreateZoneDefOptions` interface; added `compileBehavior` helper with validation; passes `behavior` through to compiled `ZoneDef`
+- `compiler-diagnostic-codes.ts`: Added 3 codes (`CNL_COMPILER_ZONE_BEHAVIOR_TYPE_INVALID`, `CNL_COMPILER_ZONE_BEHAVIOR_DRAW_FROM_INVALID`, `CNL_COMPILER_ZONE_BEHAVIOR_ORDERING_MISMATCH`)
+- `cross-validate.ts`: Added zone behavior `reshuffleFrom` validation block (missing zone, self-reference)
+- `cross-validate-diagnostic-codes.ts`: Added 2 codes (`CNL_XREF_ZONE_BEHAVIOR_RESHUFFLE_MISSING`, `CNL_XREF_ZONE_BEHAVIOR_RESHUFFLE_SELF`)
+- `GameDef.schema.json`: Regenerated with `behavior` field
+- 3 new test files: `effects-token-deck-behavior.test.ts` (11 tests), `compile-zones-behavior.test.ts` (10 tests), `cross-validate-zone-behavior.test.ts` (5 tests)
+
+**Deviations from original ticket**:
+- Scope expanded to include Zod schema update, JSON Schema regeneration, compiler diagnostic codes, xref diagnostic codes, and `createZoneDef` refactor — all were necessary but not in the original ticket scope
+- `createZoneDef` refactored from positional params to options object (contained change, 2 call sites)
+
+**Verification**: `pnpm turbo build` passed, 3317 tests passed (0 failures), `pnpm turbo typecheck` passed, `pnpm turbo lint` passed, `pnpm -F @ludoforge/engine run schema:artifacts -- --check` passed

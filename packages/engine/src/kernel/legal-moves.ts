@@ -29,7 +29,7 @@ import type { GameDefRuntime } from './gamedef-runtime.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
-import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
+import type { ActionDef, GameDef, GameState, Move, MoveParamValue, PhaseDef, RuntimeWarning } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
@@ -219,6 +219,14 @@ function enumerateParams(
       return;
     }
     const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
+    const currentPhaseDef: PhaseDef | undefined =
+      def.turnStructure.phases.find(p => p.id === state.currentPhase) ??
+      (def.turnStructure.interrupts ?? []).find(p => p.id === state.currentPhase);
+    if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
+      if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
+        return;
+      }
+    }
     if (action.pre !== null && !evalCondition(action.pre, ctx)) {
       return;
     }

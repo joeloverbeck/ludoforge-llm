@@ -64,6 +64,16 @@ export const BooleanVariableDefSchema = z
 
 export const VariableDefSchema = z.discriminatedUnion('type', [IntVariableDefSchema, BooleanVariableDefSchema]);
 
+export const DeckBehaviorSchema = z
+  .object({
+    type: z.literal('deck'),
+    drawFrom: z.union([z.literal('top'), z.literal('bottom'), z.literal('random')]),
+    reshuffleFrom: StringSchema.optional(),
+  })
+  .strict();
+
+export const ZoneBehaviorSchema = DeckBehaviorSchema;
+
 export const ZoneDefSchema = z
   .object({
     id: StringSchema,
@@ -83,6 +93,7 @@ export const ZoneDefSchema = z
     ).optional(),
     category: StringSchema.optional(),
     attributes: z.record(StringSchema, AttributeValueSchema).optional(),
+    behavior: ZoneBehaviorSchema.optional(),
   })
   .strict();
 

@@ -10,13 +10,14 @@
 
 The GameDef JSON Schema (`packages/engine/schemas/GameDef.schema.json`) must reflect the new optional fields added by CROGAMPRIELE-006 (`PhaseDef.actionDefaults`) and CROGAMPRIELE-007 (`ZoneDef.behavior`). Schema artifacts must be regenerated and validated.
 
-## Assumption Reassessment (2026-03-01)
+## Assumption Reassessment (2026-03-02)
 
 1. JSON Schema artifacts are in `packages/engine/schemas/`.
 2. Schema generation/validation scripts are in `packages/engine/scripts/`.
 3. The `schema:artifacts` turborepo task regenerates schemas.
 4. Schema validation tests exist and run as part of `pnpm turbo test`.
 5. Both `actionDefaults` and `behavior` are optional fields — existing GameDefs without them must continue to validate.
+6. **CROGAMPRIELE-007 already delivered the `ZoneDef.behavior` schema update**: `DeckBehaviorSchema` and `ZoneBehaviorSchema` were added to `schemas-core.ts`, `behavior` was added to `ZoneDefSchema`, and `GameDef.schema.json` was regenerated and verified with `schema:artifacts --check`. The `ZoneDef.behavior` half of this ticket is already done. Only `PhaseDef.actionDefaults` remains.
 
 ## Architecture Check
 

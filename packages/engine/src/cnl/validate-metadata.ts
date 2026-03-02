@@ -205,6 +205,11 @@ function validateVariableSection(
       continue;
     }
 
+    if ('batch' in variable) {
+      // Batch entries are validated by expandBatchVars — skip here.
+      continue;
+    }
+
     validateUnknownKeys(variable, VARIABLE_KEYS, basePath, diagnostics, 'variable');
 
     const requiredStringFields: readonly ('name' | 'type')[] = ['name', 'type'];

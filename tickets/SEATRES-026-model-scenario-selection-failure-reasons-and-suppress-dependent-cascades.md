@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler data-asset derivation reason model and suppression policy
-**Deps**: tickets/SEATRES-025-typed-asset-selection-failure-reasons-and-cascade-gating-hardening.md
+**Deps**: archive/tickets/SEATRES/SEATRES-025-typed-asset-selection-failure-reasons-and-cascade-gating-hardening.md
 
 ## Problem
 

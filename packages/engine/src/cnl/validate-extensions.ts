@@ -28,7 +28,7 @@ import {
 } from './validate-spec-shared.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { validateScenarioCrossReferences } from './validate-zones.js';
-import { selectDataAssetById } from './data-asset-selection.js';
+import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
 
 interface DataAssetValidationContext {
   readonly hasMapAsset: boolean;
@@ -209,103 +209,119 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
       ? doc.metadata.defaultScenarioAssetId.trim()
       : undefined;
-  const selectedScenarioResult = selectDataAssetById(scenarioRefs, selectedScenarioAssetId, {
-    getId: (scenario) => scenario.entityId,
-  });
-  if (selectedScenarioResult.failureReason === 'missing-reference' && selectedScenarioAssetId !== undefined) {
-    pushMissingReferenceDiagnostic(
-      diagnostics,
-      'CNL_VALIDATOR_REFERENCE_MISSING',
-      'doc.metadata.defaultScenarioAssetId',
-      `metadata.defaultScenarioAssetId references unknown scenario asset "${selectedScenarioAssetId}".`,
-      selectedScenarioAssetId,
-      selectedScenarioResult.alternatives,
-      'Set metadata.defaultScenarioAssetId to an existing doc.dataAssets scenario id.',
-    );
-  }
-  if (selectedScenarioResult.failureReason === 'ambiguous-selection') {
-    diagnostics.push({
+  const selectedScenarioResult = selectScenarioRefWithPolicy(scenarioRefs, selectedScenarioAssetId, diagnostics, {
+    onMissingReference: ({ selectedScenarioAssetId: missingId, alternatives }) => {
+      const diagnostic: Diagnostic = {
+        code: 'CNL_VALIDATOR_REFERENCE_MISSING',
+        path: 'doc.metadata.defaultScenarioAssetId',
+        severity: 'error',
+        message: `metadata.defaultScenarioAssetId references unknown scenario asset "${missingId}".`,
+        suggestion: 'Set metadata.defaultScenarioAssetId to an existing doc.dataAssets scenario id.',
+        alternatives,
+      };
+      return diagnostic;
+    },
+    onAmbiguousSelection: ({ alternatives }) => ({
       code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
       path: 'doc.dataAssets',
       severity: 'error',
-      message: `Multiple scenario assets found (${selectedScenarioResult.alternatives.length}); explicit metadata.defaultScenarioAssetId is required for canonical seat checks.`,
+      message: `Multiple scenario assets found (${alternatives.length}); explicit metadata.defaultScenarioAssetId is required for canonical seat checks.`,
       suggestion: 'Set metadata.defaultScenarioAssetId to one scenario id.',
-      alternatives: [...selectedScenarioResult.alternatives],
-    });
-  }
+      alternatives,
+    }),
+  });
   if (selectedScenarioResult.selected === undefined) {
     return { hasMapAsset };
   }
 
   const selectedScenario = selectedScenarioResult.selected;
   const mapAssets = [...resolvedMapPayloads.keys()].map((id) => ({ id }));
-  const selectedMapResult = selectDataAssetById(mapAssets, selectedScenario.mapAssetId);
-  if (selectedMapResult.failureReason === 'ambiguous-selection') {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
-      path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple map assets found (${selectedMapResult.alternatives.length}); validator cannot infer which one to use for scenario cross-reference validation.`,
-      suggestion: 'Provide a scenario asset referencing exactly one map asset id.',
-      alternatives: [...selectedMapResult.alternatives],
-    });
-  }
+  selectScenarioLinkedAssetWithPolicy(mapAssets, selectedScenario.mapAssetId, diagnostics, {
+    kind: 'map',
+    selectedPath: selectedScenario.path,
+    dialect: {
+      onAmbiguousSelection: ({ alternatives }) => ({
+        code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
+        path: 'doc.dataAssets',
+        severity: 'error',
+        message: `Multiple map assets found (${alternatives.length}); validator cannot infer which one to use for scenario cross-reference validation.`,
+        suggestion: 'Provide a scenario asset referencing exactly one map asset id.',
+        alternatives,
+      }),
+    },
+  });
 
   const pieceCatalogAssets = [...resolvedPieceCatalogPayloads.entries()].map(([id, entry]) => ({
     id,
     path: entry.path,
     payload: entry.payload,
   }));
-  const selectedPieceCatalogResult = selectDataAssetById(pieceCatalogAssets, selectedScenario.pieceCatalogAssetId);
-  if (selectedPieceCatalogResult.failureReason === 'missing-reference' && selectedScenario.pieceCatalogAssetId !== undefined) {
-    pushMissingReferenceDiagnostic(
-      diagnostics,
-      'CNL_VALIDATOR_REFERENCE_MISSING',
-      `${selectedScenario.path}.pieceCatalogAssetId`,
-      `Unknown pieceCatalog data asset "${selectedScenario.pieceCatalogAssetId}".`,
-      selectedScenario.pieceCatalogAssetId,
-      selectedPieceCatalogResult.alternatives,
-      'Use one of the declared pieceCatalog data asset ids.',
-    );
-  }
-  if (selectedPieceCatalogResult.failureReason === 'ambiguous-selection') {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
-      path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple pieceCatalog assets found (${selectedPieceCatalogResult.alternatives.length}); validator cannot infer which one to use for canonical seat checks.`,
-      suggestion: 'Provide a scenario asset referencing exactly one pieceCatalog asset id.',
-      alternatives: [...selectedPieceCatalogResult.alternatives],
-    });
-  }
+  const selectedPieceCatalogResult = selectScenarioLinkedAssetWithPolicy(
+    pieceCatalogAssets,
+    selectedScenario.pieceCatalogAssetId,
+    diagnostics,
+    {
+      kind: 'pieceCatalog',
+      selectedPath: selectedScenario.path,
+      dialect: {
+        onMissingReference: ({ selectedPath, selectedId, alternatives }) => {
+          const diagnostic: Diagnostic = {
+            code: 'CNL_VALIDATOR_REFERENCE_MISSING',
+            path: `${selectedPath}.pieceCatalogAssetId`,
+            severity: 'error',
+            message: `Unknown pieceCatalog data asset "${selectedId}".`,
+            suggestion: 'Use one of the declared pieceCatalog data asset ids.',
+            alternatives,
+          };
+          return diagnostic;
+        },
+        onAmbiguousSelection: ({ alternatives }) => ({
+          code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
+          path: 'doc.dataAssets',
+          severity: 'error',
+          message: `Multiple pieceCatalog assets found (${alternatives.length}); validator cannot infer which one to use for canonical seat checks.`,
+          suggestion: 'Provide a scenario asset referencing exactly one pieceCatalog asset id.',
+          alternatives,
+        }),
+      },
+    },
+  );
 
   const seatCatalogAssets = [...resolvedSeatCatalogPayloads.entries()].map(([id, entry]) => ({
     id,
     path: entry.path,
     payload: entry.payload,
   }));
-  const selectedSeatCatalogResult = selectDataAssetById(seatCatalogAssets, selectedScenario.seatCatalogAssetId);
-  if (selectedSeatCatalogResult.failureReason === 'missing-reference' && selectedScenario.seatCatalogAssetId !== undefined) {
-    pushMissingReferenceDiagnostic(
-      diagnostics,
-      'CNL_VALIDATOR_REFERENCE_MISSING',
-      `${selectedScenario.path}.seatCatalogAssetId`,
-      `Unknown seatCatalog data asset "${selectedScenario.seatCatalogAssetId}".`,
-      selectedScenario.seatCatalogAssetId,
-      selectedSeatCatalogResult.alternatives,
-      'Use one of the declared seatCatalog data asset ids.',
-    );
-  }
-  if (selectedSeatCatalogResult.failureReason === 'ambiguous-selection') {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
-      path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple seatCatalog assets found (${selectedSeatCatalogResult.alternatives.length}); validator cannot infer which one to use for canonical seat checks.`,
-      suggestion: 'Provide a scenario asset referencing exactly one seatCatalog asset id.',
-      alternatives: [...selectedSeatCatalogResult.alternatives],
-    });
-  }
+  const selectedSeatCatalogResult = selectScenarioLinkedAssetWithPolicy(
+    seatCatalogAssets,
+    selectedScenario.seatCatalogAssetId,
+    diagnostics,
+    {
+      kind: 'seatCatalog',
+      selectedPath: selectedScenario.path,
+      dialect: {
+        onMissingReference: ({ selectedPath, selectedId, alternatives }) => {
+          const diagnostic: Diagnostic = {
+            code: 'CNL_VALIDATOR_REFERENCE_MISSING',
+            path: `${selectedPath}.seatCatalogAssetId`,
+            severity: 'error',
+            message: `Unknown seatCatalog data asset "${selectedId}".`,
+            suggestion: 'Use one of the declared seatCatalog data asset ids.',
+            alternatives,
+          };
+          return diagnostic;
+        },
+        onAmbiguousSelection: ({ alternatives }) => ({
+          code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
+          path: 'doc.dataAssets',
+          severity: 'error',
+          message: `Multiple seatCatalog assets found (${alternatives.length}); validator cannot infer which one to use for canonical seat checks.`,
+          suggestion: 'Provide a scenario asset referencing exactly one seatCatalog asset id.',
+          alternatives,
+        }),
+      },
+    },
+  );
   if (selectedSeatCatalogResult.selected === undefined) {
     return { hasMapAsset };
   }

@@ -266,6 +266,36 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('emits scenario selector missing diagnostics with alternatives', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'scenario-a',
+          kind: 'scenario' as const,
+          payload: {
+            scenarioName: 'Scenario A',
+            yearRange: '1964-1972',
+          },
+        },
+      ],
+      metadata: {
+        ...base.metadata,
+        defaultScenarioAssetId: 'scenario-missing',
+      },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const diagnostic = result.diagnostics.find(
+      (entry) => entry.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING',
+    );
+
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.metadata.defaultScenarioAssetId');
+    assert.deepEqual(diagnostic?.alternatives, ['scenario-a']);
+  });
+
   it('merges map-derived zones with explicit YAML zones when both are declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

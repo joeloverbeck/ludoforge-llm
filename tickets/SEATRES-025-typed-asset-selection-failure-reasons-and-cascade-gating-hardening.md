@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — compiler derivation-failure contracts and diagnostic gating
-**Deps**: tickets/SEATRES-024-extract-shared-data-asset-selection-policy-for-compiler-and-validator.md
+**Deps**: archive/tickets/SEATRES/SEATRES-024-extract-shared-data-asset-selection-policy-for-compiler-and-validator.md
 
 ## Problem
 

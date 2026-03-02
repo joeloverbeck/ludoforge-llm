@@ -1,4 +1,6 @@
+import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
 
 export type TokenTraitVocabulary = Readonly<Record<string, readonly string[]>>;
 
@@ -19,16 +21,42 @@ export function deriveTokenTraitVocabularyFromGameSpecDoc(doc: GameSpecDoc): Tok
     return null;
   }
 
-  const scenarioAssets = dataAssets.filter(
-    (asset): asset is { readonly id: string; readonly payload: unknown } =>
+  const scenarioAssets = dataAssets
+    .filter(
+      (asset): asset is { readonly id: string; readonly payload: unknown } =>
       isRecord(asset) &&
       asset.kind === 'scenario' &&
       typeof asset.id === 'string' &&
       asset.id.trim() !== '',
-  );
+    )
+    .map((asset) => ({
+      entityId: asset.id,
+      payload: asset.payload,
+    }));
 
-  const selectedScenario = selectScenarioAsset(doc, scenarioAssets);
-  const selectedPieceCatalog = selectPieceCatalogAsset(selectedScenario, pieceCatalogAssets);
+  const diagnostics: Diagnostic[] = [];
+  const selectedScenarioAssetId =
+    typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
+      ? doc.metadata.defaultScenarioAssetId
+      : undefined;
+  const selectedScenario = selectScenarioRefWithPolicy(scenarioAssets, selectedScenarioAssetId, diagnostics, {}).selected;
+  const selectedPieceCatalogAssetId =
+    selectedScenario !== undefined
+    && isRecord(selectedScenario.payload)
+    && typeof selectedScenario.payload.pieceCatalogAssetId === 'string'
+    && selectedScenario.payload.pieceCatalogAssetId.trim() !== ''
+      ? selectedScenario.payload.pieceCatalogAssetId
+      : undefined;
+  const selectedPieceCatalog = selectScenarioLinkedAssetWithPolicy(
+    pieceCatalogAssets,
+    selectedPieceCatalogAssetId,
+    diagnostics,
+    {
+      kind: 'pieceCatalog',
+      selectedPath: 'doc.dataAssets',
+      dialect: {},
+    },
+  ).selected;
   if (selectedPieceCatalog === undefined) {
     return null;
   }
@@ -74,49 +102,6 @@ export function deriveTokenTraitVocabularyFromPieceCatalogPayload(payload: unkno
   );
 }
 
-function selectScenarioAsset(
-  doc: GameSpecDoc,
-  scenarios: ReadonlyArray<{ readonly id: string; readonly payload: unknown }>,
-): { readonly id: string; readonly payload: unknown } | undefined {
-  const selectedScenarioAssetId =
-    typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
-      ? doc.metadata.defaultScenarioAssetId
-      : undefined;
-
-  if (selectedScenarioAssetId !== undefined) {
-    const normalized = normalizeIdentifier(selectedScenarioAssetId);
-    return scenarios.find((scenario) => normalizeIdentifier(scenario.id) === normalized);
-  }
-
-  if (scenarios.length === 1) {
-    return scenarios[0];
-  }
-
-  return undefined;
-}
-
-function selectPieceCatalogAsset(
-  scenario: { readonly id: string; readonly payload: unknown } | undefined,
-  pieceCatalogAssets: ReadonlyArray<{ readonly id: string; readonly payload: unknown }>,
-): { readonly id: string; readonly payload: unknown } | undefined {
-  if (scenario !== undefined && isRecord(scenario.payload)) {
-    const referencedCatalogId =
-      typeof scenario.payload.pieceCatalogAssetId === 'string' && scenario.payload.pieceCatalogAssetId.trim() !== ''
-        ? scenario.payload.pieceCatalogAssetId
-        : undefined;
-    if (referencedCatalogId !== undefined) {
-      const normalized = normalizeIdentifier(referencedCatalogId);
-      return pieceCatalogAssets.find((asset) => normalizeIdentifier(asset.id) === normalized);
-    }
-  }
-
-  if (pieceCatalogAssets.length === 1) {
-    return pieceCatalogAssets[0];
-  }
-
-  return undefined;
-}
-
 function readPieceTypes(payload: unknown): readonly Record<string, unknown>[] {
   if (!isRecord(payload) || !Array.isArray(payload.pieceTypes)) {
     return [];
@@ -136,10 +121,6 @@ function addCanonical(valuesByProp: Map<string, Set<string>>, prop: string, rawV
     valuesByProp.set(prop, values);
   }
   values.add(canonical);
-}
-
-function normalizeIdentifier(value: string): string {
-  return value.trim().normalize('NFC');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

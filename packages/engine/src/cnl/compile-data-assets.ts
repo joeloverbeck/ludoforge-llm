@@ -21,7 +21,7 @@ import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
-import { selectDataAssetById } from './data-asset-selection.js';
+import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
 import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {
   collectScenarioProjectionEntries,
@@ -238,20 +238,68 @@ export function deriveSectionsFromDataAssets(
 
   }
 
-  const scenarioSelection = selectScenarioRef(scenarioRefs, options.defaultScenarioAssetId, diagnostics);
+  const scenarioSelection = selectScenarioRefWithPolicy(scenarioRefs, options.defaultScenarioAssetId, diagnostics, {
+    onMissingReference: ({ selectedScenarioAssetId, alternatives }) => ({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING,
+      path: 'doc.metadata.defaultScenarioAssetId',
+      severity: 'error',
+      message: `metadata.defaultScenarioAssetId references unknown scenario asset "${selectedScenarioAssetId}".`,
+      suggestion: 'Set metadata.defaultScenarioAssetId to an existing doc.dataAssets scenario id.',
+      alternatives,
+    }),
+    onAmbiguousSelection: ({ alternatives }) => ({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS,
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple scenario assets found (${alternatives.length}); explicit metadata.defaultScenarioAssetId is required.`,
+      suggestion: 'Set metadata.defaultScenarioAssetId to one scenario id.',
+      alternatives,
+    }),
+  });
   const selectedScenario = scenarioSelection.selected;
-  const skipAssetInference = scenarioSelection.failed;
+  const skipAssetInference = scenarioSelection.failureReason !== undefined;
+  const compilerScenarioLinkedAssetDialect = {
+    onMissingReference: ({ selectedPath, kind, selectedId, alternatives, entityId }: {
+      readonly selectedPath: string;
+      readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
+      readonly selectedId: string;
+      readonly alternatives: readonly string[];
+      readonly entityId?: string;
+    }) => ({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_REF_MISSING,
+      path: `${selectedPath}.${kind}AssetId`,
+      severity: 'error' as const,
+      message: `Scenario references unknown ${kind} asset "${selectedId}".`,
+      suggestion: `Use an existing ${kind} asset id from doc.dataAssets.`,
+      alternatives: [...alternatives],
+      ...(entityId === undefined ? {} : { entityId }),
+    }),
+    onAmbiguousSelection: ({ kind, alternatives }: {
+      readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
+      readonly alternatives: readonly string[];
+    }) => ({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_AMBIGUOUS,
+      path: 'doc.dataAssets',
+      severity: 'error' as const,
+      message: `Multiple ${kind} assets found (${alternatives.length}); compiler cannot infer which one to use.`,
+      suggestion: `Provide a scenario asset referencing exactly one ${kind} asset id.`,
+      alternatives: [...alternatives],
+    }),
+  };
 
   const shouldResolveMap =
     !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length > 0);
   const selectedMapResult = shouldResolveMap
-    ? selectAssetById(
+    ? selectScenarioLinkedAssetWithPolicy(
         mapAssets,
         selectedScenario?.mapAssetId,
         diagnostics,
-        'map',
-        selectedScenario?.path ?? 'doc.dataAssets',
-        selectedScenario?.entityId,
+        {
+          kind: 'map',
+          selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
+          ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
+          dialect: compilerScenarioLinkedAssetDialect,
+        },
       )
     : { selected: undefined, failureReason: undefined };
   if (selectedMapResult.failureReason !== undefined) {
@@ -261,13 +309,16 @@ export function deriveSectionsFromDataAssets(
   const shouldResolvePieceCatalog =
     !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length > 0);
   const selectedPieceCatalogResult = shouldResolvePieceCatalog
-    ? selectAssetById(
+    ? selectScenarioLinkedAssetWithPolicy(
         pieceCatalogAssets,
         selectedScenario?.pieceCatalogAssetId,
         diagnostics,
-        'pieceCatalog',
-        selectedScenario?.path ?? 'doc.dataAssets',
-        selectedScenario?.entityId,
+        {
+          kind: 'pieceCatalog',
+          selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
+          ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
+          dialect: compilerScenarioLinkedAssetDialect,
+        },
       )
     : { selected: undefined, failureReason: undefined };
   if (selectedPieceCatalogResult.failureReason !== undefined) {
@@ -277,13 +328,16 @@ export function deriveSectionsFromDataAssets(
   const shouldResolveSeatCatalog =
     !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length > 0);
   const selectedSeatCatalogResult = shouldResolveSeatCatalog
-    ? selectAssetById(
+    ? selectScenarioLinkedAssetWithPolicy(
         seatCatalogAssets,
         selectedScenario?.seatCatalogAssetId,
         diagnostics,
-        'seatCatalog',
-        selectedScenario?.path ?? 'doc.dataAssets',
-        selectedScenario?.entityId,
+        {
+          kind: 'seatCatalog',
+          selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
+          ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
+          dialect: compilerScenarioLinkedAssetDialect,
+        },
       )
     : { selected: undefined, failureReason: undefined };
   if (selectedSeatCatalogResult.failureReason !== undefined) {
@@ -413,63 +467,6 @@ export function deriveSectionsFromDataAssets(
       selectedPieceCatalog === undefined
         ? null
         : deriveTokenTraitVocabularyFromPieceCatalogPayload(selectedPieceCatalog.payload),
-  };
-}
-
-function selectScenarioRef(
-  scenarios: ReadonlyArray<{
-    readonly payload: ScenarioPayload;
-    readonly mapAssetId?: string;
-    readonly pieceCatalogAssetId?: string;
-    readonly seatCatalogAssetId?: string;
-    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
-    readonly path: string;
-    readonly entityId: string;
-  }>,
-  selectedScenarioAssetId: string | undefined,
-  diagnostics: Diagnostic[],
-): {
-  readonly selected:
-    | {
-        readonly payload: ScenarioPayload;
-        readonly mapAssetId?: string;
-        readonly pieceCatalogAssetId?: string;
-        readonly seatCatalogAssetId?: string;
-        readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number; readonly path: string }>;
-        readonly path: string;
-        readonly entityId: string;
-      }
-    | undefined;
-  readonly failed: boolean;
-} {
-  const selection = selectDataAssetById(scenarios, selectedScenarioAssetId, {
-    getId: (scenario) => scenario.entityId,
-  });
-
-  if (selection.failureReason === 'missing-reference' && selectedScenarioAssetId !== undefined) {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING,
-      path: 'doc.metadata.defaultScenarioAssetId',
-      severity: 'error',
-      message: `metadata.defaultScenarioAssetId references unknown scenario asset "${selectedScenarioAssetId}".`,
-      suggestion: 'Set metadata.defaultScenarioAssetId to an existing doc.dataAssets scenario id.',
-      alternatives: selection.alternatives,
-    });
-  }
-  if (selection.failureReason === 'ambiguous-selection') {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS,
-      path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple scenario assets found (${selection.alternatives.length}); explicit metadata.defaultScenarioAssetId is required.`,
-      suggestion: 'Set metadata.defaultScenarioAssetId to one scenario id.',
-      alternatives: selection.alternatives,
-    });
-  }
-
-  return {
-    selected: selection.selected,
-    failed: selection.failureReason !== undefined,
   };
 }
 
@@ -1020,44 +1017,3 @@ const resolveScenarioTokenProps = (
   }
   return props;
 };
-
-function selectAssetById<TPayload, TAsset extends { readonly id: string; readonly payload: TPayload }>(
-  assets: ReadonlyArray<TAsset>,
-  selectedId: string | undefined,
-  diagnostics: Diagnostic[],
-  kind: 'map' | 'pieceCatalog' | 'seatCatalog',
-  selectedPath: string,
-  entityId?: string,
-): {
-  readonly selected: TAsset | undefined;
-  readonly failureReason: DataAssetDerivationFailureReason | undefined;
-} {
-  const selection = selectDataAssetById(assets, selectedId);
-
-  if (selection.failureReason === 'missing-reference' && selectedId !== undefined) {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_REF_MISSING,
-      path: `${selectedPath}.${kind}AssetId`,
-      severity: 'error',
-      message: `Scenario references unknown ${kind} asset "${selectedId}".`,
-      suggestion: `Use an existing ${kind} asset id from doc.dataAssets.`,
-      alternatives: selection.alternatives,
-      ...(entityId === undefined ? {} : { entityId }),
-    });
-  }
-  if (selection.failureReason === 'ambiguous-selection') {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_AMBIGUOUS,
-      path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple ${kind} assets found (${selection.alternatives.length}); compiler cannot infer which one to use.`,
-      suggestion: `Provide a scenario asset referencing exactly one ${kind} asset id.`,
-      alternatives: selection.alternatives,
-    });
-  }
-
-  return {
-    selected: selection.selected,
-    failureReason: selection.failureReason,
-  };
-}

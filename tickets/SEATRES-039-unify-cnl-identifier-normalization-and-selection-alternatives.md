@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — shared CNL identifier utility + data-asset selection helper hardening
-**Deps**: tickets/SEATRES-024-extract-shared-data-asset-selection-policy-for-compiler-and-validator.md
+**Deps**: archive/tickets/SEATRES/SEATRES-024-extract-shared-data-asset-selection-policy-for-compiler-and-validator.md
 
 ## Problem
 

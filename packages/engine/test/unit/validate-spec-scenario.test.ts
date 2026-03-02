@@ -488,6 +488,27 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     );
   });
 
+  it('metadata.defaultScenarioAssetId emits missing-reference diagnostic with alternatives when selector is unknown', () => {
+    const base = createDocWithScenario({});
+    const doc = {
+      ...base,
+      metadata: {
+        ...base.metadata!,
+      defaultScenarioAssetId: 'test-scenario-missing',
+      },
+    };
+
+    const diagnostics = validateGameSpec(doc);
+    const diagnostic = diagnostics.find(
+      (entry) =>
+        entry.code === 'CNL_VALIDATOR_REFERENCE_MISSING'
+        && entry.path === 'doc.metadata.defaultScenarioAssetId',
+    );
+
+    assert.notEqual(diagnostic, undefined);
+    assert.deepEqual(diagnostic?.alternatives, ['test-scenario']);
+  });
+
   it('scenario with track initialization out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({

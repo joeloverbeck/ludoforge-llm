@@ -527,31 +527,27 @@ describe('compiler structured section results', () => {
     };
 
     const result = compileGameSpecToGameDef(doc);
-    const missingRefDiagnostics = result.diagnostics.filter(
-      (diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING',
+    const seatRefDiagnostics = result.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_REF_MISSING',
     );
+    const expectedSeatPaths = [
+      'doc.dataAssets.2.payload.pieceTypes.0.seat',
+      'doc.dataAssets.2.payload.inventory.0.seat',
+      'doc.dataAssets.3.payload.initialPlacements.0.seat',
+      'doc.dataAssets.3.payload.outOfPlay.0.seat',
+      'doc.dataAssets.3.payload.seatPools.0.seat',
+    ];
 
     assert.equal(result.gameDef, null);
-    assert.equal(
-      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat'),
-      true,
-    );
-    assert.equal(
-      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat'),
-      true,
-    );
-    assert.equal(
-      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.initialPlacements.0.seat'),
-      true,
-    );
-    assert.equal(
-      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.outOfPlay.0.seat'),
-      true,
-    );
-    assert.equal(
-      missingRefDiagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.seatPools.0.seat'),
-      true,
-    );
+    for (const path of expectedSeatPaths) {
+      assert.equal(seatRefDiagnostics.some((diagnostic) => diagnostic.path === path), true);
+      assert.equal(
+        result.diagnostics.some(
+          (diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING' && diagnostic.path === path,
+        ),
+        false,
+      );
+    }
   });
 
   it('requires seat catalog for card-driven turn flow', () => {

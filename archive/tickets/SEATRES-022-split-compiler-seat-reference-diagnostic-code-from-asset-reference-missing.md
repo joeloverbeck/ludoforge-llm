@@ -1,6 +1,6 @@
 # SEATRES-022: Split compiler seat-reference diagnostics from asset-reference diagnostics
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — compiler diagnostic taxonomy for seat-reference failures
@@ -14,7 +14,8 @@ Compiler currently emits seat-reference failures under `CNL_COMPILER_DATA_ASSET_
 
 1. `CNL_COMPILER_DATA_ASSET_REF_MISSING` is currently emitted for scenario `map/pieceCatalog/seatCatalog` id misses.
 2. Seat-id misses in piece/scenario payload seat fields now also emit `CNL_COMPILER_DATA_ASSET_REF_MISSING`.
-3. Active tickets `SEATRES-013` through `SEATRES-019` do not cover compiler diagnostic taxonomy split for seat-reference misses.
+3. `compiler-structured-results.test.ts` currently asserts `CNL_COMPILER_DATA_ASSET_REF_MISSING` for both seat-id misses and asset-id misses, so taxonomy is intentionally coupled in tests today.
+4. Tickets `SEATRES-013` through `SEATRES-019` are no longer active in `tickets/`; this ticket must stand alone and should not assume dependency on active seat-resolution taxonomy work.
 
 ## Architecture Check
 
@@ -33,6 +34,13 @@ Compiler currently emits seat-reference failures under `CNL_COMPILER_DATA_ASSET_
 
 1. Continue using `CNL_COMPILER_DATA_ASSET_REF_MISSING` only for missing `mapAssetId` / `pieceCatalogAssetId` / `seatCatalogAssetId` references.
 2. Update affected tests to assert separated code domains.
+
+### 3. Architectural guardrails for long-term extensibility
+
+1. Keep failure-domain ownership explicit:
+`compile-data-assets.ts` emits seat-reference diagnostics with the seat-specific code, while id-based asset lookup continues using data-asset-ref code.
+2. Do not introduce compatibility aliases or dual-emission.
+3. Keep validator taxonomy unchanged (out of scope) to avoid cross-surface coupling in this ticket.
 
 ## Files to Touch
 
@@ -76,3 +84,23 @@ Rationale: keeps diagnostic inventory synchronized.
 3. `node --test packages/engine/dist/test/unit/compiler-diagnostic-registry-audit.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-02
+- **What changed**:
+  - Added compiler diagnostic code `CNL_COMPILER_SEAT_REF_MISSING`.
+  - Updated `compile-data-assets.ts` to emit `CNL_COMPILER_SEAT_REF_MISSING` for canonical seat-id reference misses in piece/scenario payload fields.
+  - Kept `CNL_COMPILER_DATA_ASSET_REF_MISSING` scoped to missing `mapAssetId` / `pieceCatalogAssetId` / `seatCatalogAssetId` lookups.
+  - Updated unit tests to enforce diagnostic-domain split and prevent regression back to overloaded taxonomy.
+  - Updated this ticket’s assumptions/scope to reflect current repository state before implementation.
+- **Deviations from original plan**:
+  - No registry-audit test code change was required; the existing audit remains valid with the new constant added to the canonical registry file.
+- **Verification results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/compiler-diagnostic-registry-audit.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo test` ✅
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅

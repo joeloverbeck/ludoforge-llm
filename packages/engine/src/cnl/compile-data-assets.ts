@@ -315,7 +315,7 @@ export function deriveSectionsFromDataAssets(
     for (const issue of seatIssues) {
       pushMissingReferenceDiagnostic(
         diagnostics,
-        CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_REF_MISSING,
+        CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_SEAT_REF_MISSING,
         issue.path,
         `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
         issue.seat,

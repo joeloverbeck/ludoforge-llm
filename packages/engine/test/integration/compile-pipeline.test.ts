@@ -1459,6 +1459,18 @@ actor: 'active',
       compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS'),
       true,
     );
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING'
+          && diagnostic.path === 'doc.zones',
+      ),
+      false,
+    );
+    assert.equal(
+      compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING'),
+      true,
+    );
   });
 
   it('uses metadata.defaultScenarioAssetId for deterministic scenario selection', () => {
@@ -1541,6 +1553,83 @@ actor: 'active',
     assert.notEqual(compiled.gameDef, null);
     assert.equal('defaultScenarioAssetId' in (compiled.gameDef?.metadata ?? {}), false);
     assert.equal(compiled.gameDef?.globalVars.find((variable) => variable.name === 'aid')?.init, 33);
+  });
+
+  it('suppresses seat-catalog-required when metadata.defaultScenarioAssetId target is missing', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-missing-default-scenario-seat-suppression',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      '  defaultScenarioAssetId: scenario-missing',
+      'dataAssets:',
+      '  - id: seats-foundation',
+      '    kind: seatCatalog',
+      '    payload:',
+      '      seats:',
+      '        - id: US',
+      '        - id: ARVN',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      seatCatalogAssetId: seats-foundation',
+      '      scenarioName: Foundation',
+      '      yearRange: 1964-1965',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'turnOrder:',
+      '  type: cardDriven',
+      '  config:',
+      '    turnFlow:',
+      '      cardLifecycle:',
+      '        played: deck:none',
+      '        lookahead: deck:none',
+      '        leader: deck:none',
+      '      eligibility:',
+      '        seats: ["US", "ARVN"]',
+      '        overrideWindows: []',
+      '      actionClassByActionId:',
+      '        pass: pass',
+      '      optionMatrix: []',
+      '      passRewards: []',
+      '      durationWindows: [turn, nextTurn, round, cycle]',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING',
+      ),
+      true,
+    );
+    assert.equal(
+      compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
+      false,
+    );
   });
 
   it('resolves scenario-relative table refs against metadata.defaultScenarioAssetId for runtime behavior', () => {

@@ -28,9 +28,19 @@ import {
 } from './validate-spec-shared.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { validateScenarioCrossReferences } from './validate-zones.js';
+import { selectDataAssetById } from './data-asset-selection.js';
 
 interface DataAssetValidationContext {
   readonly hasMapAsset: boolean;
+}
+
+interface ScenarioRefForSeatChecks {
+  readonly path: string;
+  readonly mapAssetId?: string;
+  readonly pieceCatalogAssetId?: string;
+  readonly seatCatalogAssetId?: string;
+  readonly payload: ScenarioPayload;
+  readonly entityId: string;
 }
 
 const DERIVED_METRIC_KEYS = ['id', 'computation', 'zoneFilter', 'requirements'] as const;
@@ -47,13 +57,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
   const mapAssetIds = new Set<string>();
   const pieceCatalogAssetIds = new Set<string>();
   const seatCatalogAssetIds = new Set<string>();
-  const scenarioRefs: Array<{
-    readonly path: string;
-    readonly mapAssetId?: string;
-    readonly pieceCatalogAssetId?: string;
-    readonly seatCatalogAssetId?: string;
-    readonly payload: ScenarioPayload;
-  }> = [];
+  const scenarioRefs: ScenarioRefForSeatChecks[] = [];
   const resolvedMapPayloads = new Map<string, MapPayload>();
   const resolvedPieceCatalogPayloads = new Map<string, { readonly path: string; readonly payload: PieceCatalogPayload }>();
   const resolvedSeatCatalogPayloads = new Map<string, { readonly path: string; readonly payload: SeatCatalogPayload }>();
@@ -143,6 +147,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       scenarioRefs.push({
         path: basePath,
         payload: payload as ScenarioPayload,
+        entityId: asset.id,
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
         ...(seatCatalogAssetId === undefined ? {} : { seatCatalogAssetId }),
@@ -188,8 +193,6 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     }
   }
 
-  const validatedPieceCatalogIdsBySeatCatalogId = new Map<string, Set<string>>();
-
   for (const reference of scenarioRefs) {
     validateScenarioCrossReferences(
       reference.payload,
@@ -200,59 +203,126 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       doc.globalMarkerLattices,
       diagnostics,
     );
+  }
 
-    if (reference.seatCatalogAssetId === undefined) {
-      continue;
-    }
-    const resolvedSeatCatalog = resolvedSeatCatalogPayloads.get(reference.seatCatalogAssetId);
-    if (resolvedSeatCatalog === undefined) {
-      continue;
-    }
-
-    const resolvedPieceCatalog =
-      reference.pieceCatalogAssetId === undefined ? undefined : resolvedPieceCatalogPayloads.get(reference.pieceCatalogAssetId);
-    const includePieceCatalogChecks = (() => {
-      if (resolvedPieceCatalog === undefined || reference.pieceCatalogAssetId === undefined) {
-        return false;
-      }
-
-      const validatedPieceCatalogIds =
-        validatedPieceCatalogIdsBySeatCatalogId.get(reference.seatCatalogAssetId) ?? new Set<string>();
-      if (validatedPieceCatalogIds.has(reference.pieceCatalogAssetId)) {
-        return false;
-      }
-
-      validatedPieceCatalogIds.add(reference.pieceCatalogAssetId);
-      validatedPieceCatalogIdsBySeatCatalogId.set(reference.seatCatalogAssetId, validatedPieceCatalogIds);
-      return true;
-    })();
-    const seatIssues = collectInvalidSeatReferences({
-      canonicalSeatIds: resolvedSeatCatalog.payload.seats.map((seat) => seat.id),
-      ...(resolvedPieceCatalog === undefined || !includePieceCatalogChecks
-        ? {}
-        : {
-            pieceCatalog: {
-              payload: resolvedPieceCatalog.payload,
-              path: resolvedPieceCatalog.path,
-            },
-          }),
-      scenario: {
-        payload: reference.payload,
-        path: reference.path,
-      },
+  const selectedScenarioAssetId =
+    typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
+      ? doc.metadata.defaultScenarioAssetId.trim()
+      : undefined;
+  const selectedScenarioResult = selectDataAssetById(scenarioRefs, selectedScenarioAssetId, {
+    getId: (scenario) => scenario.entityId,
+  });
+  if (selectedScenarioResult.failureReason === 'missing-reference' && selectedScenarioAssetId !== undefined) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'CNL_VALIDATOR_REFERENCE_MISSING',
+      'doc.metadata.defaultScenarioAssetId',
+      `metadata.defaultScenarioAssetId references unknown scenario asset "${selectedScenarioAssetId}".`,
+      selectedScenarioAssetId,
+      selectedScenarioResult.alternatives,
+      'Set metadata.defaultScenarioAssetId to an existing doc.dataAssets scenario id.',
+    );
+  }
+  if (selectedScenarioResult.failureReason === 'ambiguous-selection') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple scenario assets found (${selectedScenarioResult.alternatives.length}); explicit metadata.defaultScenarioAssetId is required for canonical seat checks.`,
+      suggestion: 'Set metadata.defaultScenarioAssetId to one scenario id.',
+      alternatives: [...selectedScenarioResult.alternatives],
     });
+  }
+  if (selectedScenarioResult.selected === undefined) {
+    return { hasMapAsset };
+  }
 
-    for (const issue of seatIssues) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'CNL_VALIDATOR_REFERENCE_MISSING',
-        issue.path,
-        `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
-        issue.seat,
-        resolvedSeatCatalog.payload.seats.map((seat) => seat.id),
-        'Use one of the declared seat catalog ids.',
-      );
-    }
+  const selectedScenario = selectedScenarioResult.selected;
+  const seatCatalogAssets = [...resolvedSeatCatalogPayloads.entries()].map(([id, entry]) => ({
+    id,
+    path: entry.path,
+    payload: entry.payload,
+  }));
+  const selectedSeatCatalogResult = selectDataAssetById(seatCatalogAssets, selectedScenario.seatCatalogAssetId);
+  if (selectedSeatCatalogResult.failureReason === 'missing-reference' && selectedScenario.seatCatalogAssetId !== undefined) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'CNL_VALIDATOR_REFERENCE_MISSING',
+      `${selectedScenario.path}.seatCatalogAssetId`,
+      `Unknown seatCatalog data asset "${selectedScenario.seatCatalogAssetId}".`,
+      selectedScenario.seatCatalogAssetId,
+      selectedSeatCatalogResult.alternatives,
+      'Use one of the declared seatCatalog data asset ids.',
+    );
+  }
+  if (selectedSeatCatalogResult.failureReason === 'ambiguous-selection') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple seatCatalog assets found (${selectedSeatCatalogResult.alternatives.length}); validator cannot infer which one to use for canonical seat checks.`,
+      suggestion: 'Provide a scenario asset referencing exactly one seatCatalog asset id.',
+      alternatives: [...selectedSeatCatalogResult.alternatives],
+    });
+  }
+  if (selectedSeatCatalogResult.selected === undefined) {
+    return { hasMapAsset };
+  }
+
+  const pieceCatalogAssets = [...resolvedPieceCatalogPayloads.entries()].map(([id, entry]) => ({
+    id,
+    path: entry.path,
+    payload: entry.payload,
+  }));
+  const selectedPieceCatalogResult = selectDataAssetById(pieceCatalogAssets, selectedScenario.pieceCatalogAssetId);
+  if (selectedPieceCatalogResult.failureReason === 'missing-reference' && selectedScenario.pieceCatalogAssetId !== undefined) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'CNL_VALIDATOR_REFERENCE_MISSING',
+      `${selectedScenario.path}.pieceCatalogAssetId`,
+      `Unknown pieceCatalog data asset "${selectedScenario.pieceCatalogAssetId}".`,
+      selectedScenario.pieceCatalogAssetId,
+      selectedPieceCatalogResult.alternatives,
+      'Use one of the declared pieceCatalog data asset ids.',
+    );
+  }
+  if (selectedPieceCatalogResult.failureReason === 'ambiguous-selection') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS',
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple pieceCatalog assets found (${selectedPieceCatalogResult.alternatives.length}); validator cannot infer which one to use for canonical seat checks.`,
+      suggestion: 'Provide a scenario asset referencing exactly one pieceCatalog asset id.',
+      alternatives: [...selectedPieceCatalogResult.alternatives],
+    });
+  }
+
+  const seatIssues = collectInvalidSeatReferences({
+    canonicalSeatIds: selectedSeatCatalogResult.selected.payload.seats.map((seat) => seat.id),
+    ...(selectedPieceCatalogResult.selected === undefined
+      ? {}
+      : {
+          pieceCatalog: {
+            payload: selectedPieceCatalogResult.selected.payload,
+            path: selectedPieceCatalogResult.selected.path,
+          },
+        }),
+    scenario: {
+      payload: selectedScenario.payload,
+      path: selectedScenario.path,
+    },
+  });
+
+  for (const issue of seatIssues) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'CNL_VALIDATOR_REFERENCE_MISSING',
+      issue.path,
+      `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
+      issue.seat,
+      selectedSeatCatalogResult.selected.payload.seats.map((seat) => seat.id),
+      'Use one of the declared seat catalog ids.',
+    );
   }
 
   return { hasMapAsset };

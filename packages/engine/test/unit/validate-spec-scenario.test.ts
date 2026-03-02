@@ -199,6 +199,58 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     );
   });
 
+  it('infers seat catalog for canonical seat checks when scenario selector is omitted and exactly one seat catalog exists', () => {
+    const diagnostics = validateGameSpec(
+      createDocWithScenario({
+        seatCatalogAssetId: undefined,
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
+      }),
+    );
+
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_REFERENCE_MISSING');
+    assert.equal(
+      matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.initialPlacements.0.seat'),
+      true,
+    );
+  });
+
+  it('emits seat-catalog ambiguity diagnostics and suppresses dependent seat-reference noise', () => {
+    const doc = createDocWithScenario({
+      seatCatalogAssetId: undefined,
+      initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
+    });
+    const mapAsset = doc.dataAssets?.[0];
+    const pieceCatalogAsset = doc.dataAssets?.[2];
+    const scenarioAsset = doc.dataAssets?.[3];
+    doc.dataAssets = [
+      mapAsset!,
+      { id: 'test-seats-a', kind: 'seatCatalog', payload: { seats: [{ id: 'us' }, { id: 'nva' }] } },
+      { id: 'test-seats-b', kind: 'seatCatalog', payload: { seats: [{ id: 'arvn' }, { id: 'vc' }] } },
+      pieceCatalogAsset!,
+      scenarioAsset!,
+    ];
+
+    const diagnostics = validateGameSpec(doc);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple seatCatalog assets found'),
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'
+          && diagnostic.path === 'doc.dataAssets.4.payload.initialPlacements.0.seat',
+      ),
+      false,
+    );
+  });
+
   it('piece-catalog seat references outside seat catalog emit CNL_VALIDATOR_REFERENCE_MISSING', () => {
     const doc = createDocWithScenario({});
     doc.dataAssets = [
@@ -251,7 +303,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat'), true);
   });
 
-  it('deduplicates piece-catalog seat diagnostics across scenarios sharing the same piece/seat-catalog pair', () => {
+  it('emits scenario ambiguity diagnostics and suppresses canonical seat checks when scenario selector is missing', () => {
     const doc = createDocWithScenario({});
     doc.dataAssets = [
       { id: 'test-map', kind: 'map', payload: createMapPayload() },
@@ -309,15 +361,24 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     ];
 
     const diagnostics = validateGameSpec(doc);
-    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_REFERENCE_MISSING').filter(
-      (diagnostic) =>
-        diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat' ||
-        diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat',
-    );
 
-    assert.equal(matches.length, 2);
-    assert.equal(matches.filter((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat').length, 1);
-    assert.equal(matches.filter((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat').length, 1);
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple scenario assets found'),
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.pieceTypes.0.seat'),
+      false,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.2.payload.inventory.0.seat'),
+      false,
+    );
   });
 
   it('scenario with track initialization out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {

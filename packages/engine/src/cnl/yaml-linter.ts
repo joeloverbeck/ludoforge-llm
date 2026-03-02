@@ -33,6 +33,7 @@ const CANONICAL_SECTION_KEYS = new Set<string>([
   'terminal',
   'actions',
   'triggers',
+  'phaseTemplates',
 ]);
 
 const BOOLEAN_LIKE = new Set(['yes', 'no', 'true', 'false', 'on', 'off']);

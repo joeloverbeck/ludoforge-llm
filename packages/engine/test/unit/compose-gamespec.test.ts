@@ -55,6 +55,26 @@ describe('composeGameSpec', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPOSE_IMPORT_CYCLE'), true);
   });
 
+  it('merges phaseTemplates list sections across fragments without data loss', () => {
+    const sources: Record<string, string> = {
+      '/spec/root.md': '```yaml\nimports:\n  - ./a.md\nphaseTemplates:\n  - id: "tmpl-root"\n    params: []\n    phase: { id: "root-phase" }\n```',
+      '/spec/a.md': '```yaml\nphaseTemplates:\n  - id: "tmpl-a"\n    params:\n      - name: "x"\n    phase: { id: "a-phase" }\n```',
+    };
+
+    const result = composeGameSpec('/spec/root.md', {
+      loadSource: (sourceId) => sources[sourceId] ?? null,
+      resolveImport,
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(
+      result.doc.phaseTemplates?.map((tmpl) => tmpl.id),
+      ['tmpl-a', 'tmpl-root'],
+    );
+    assert.ok(result.sourceMap.byPath['phaseTemplates[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['phaseTemplates[1].id'] !== undefined);
+  });
+
   it('emits singleton conflict diagnostics when duplicate singleton sections are imported', () => {
     const sources: Record<string, string> = {
       '/spec/root.md': '```yaml\nimports:\n  - ./a.md\n  - ./b.md\n```',

@@ -376,6 +376,51 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.sourceMap.byPath['actions[1].id']?.blockIndex, 1);
   });
 
+  it('parses phaseTemplates section and anchors merged list paths', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'phaseTemplates:',
+      '  - id: "betting-round"',
+      '    params:',
+      '      - name: "minBet"',
+      '    phase:',
+      '      id: "bet"',
+      '      steps:',
+      '        - action: "placeBet"',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.phaseTemplates?.length, 1);
+    assert.equal(result.doc.phaseTemplates?.[0]?.id, 'betting-round');
+    assert.deepEqual(result.doc.phaseTemplates?.[0]?.params, [{ name: 'minBet' }]);
+    assert.ok(result.sourceMap.byPath['phaseTemplates[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['phaseTemplates[0].params[0].name'] !== undefined);
+  });
+
+  it('appends repeated phaseTemplates sections preserving encounter order', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'phaseTemplates:',
+      '  - id: "tmpl-a"',
+      '    params: []',
+      '    phase: { id: "a" }',
+      '```',
+      '```yaml',
+      'phaseTemplates:',
+      '  - id: "tmpl-b"',
+      '    params: []',
+      '    phase: { id: "b" }',
+      '```',
+    ].join('\n'));
+
+    assert.deepEqual(
+      result.doc.phaseTemplates?.map((tmpl) => tmpl.id),
+      ['tmpl-a', 'tmpl-b'],
+    );
+    assert.equal(result.sourceMap.byPath['phaseTemplates[0].id']?.blockIndex, 0);
+    assert.equal(result.sourceMap.byPath['phaseTemplates[1].id']?.blockIndex, 1);
+  });
+
   it('emits ambiguity diagnostics when fallback cannot resolve uniquely', () => {
     const result = parseGameSpec([
       '```yaml',

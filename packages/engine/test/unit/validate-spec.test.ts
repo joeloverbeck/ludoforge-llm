@@ -1195,6 +1195,60 @@ describe('validateGameSpec structural rules', () => {
     assert.deepEqual(first, second);
   });
 
+  it('produces no diagnostics for a globalVars batch entry', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      globalVars: [
+        { batch: { names: ['a', 'b'], type: 'int', init: 0, min: 0, max: 10 } },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.globalVars')),
+      false,
+    );
+  });
+
+  it('produces no diagnostics for a perPlayerVars batch entry', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      perPlayerVars: [
+        { batch: { names: ['x', 'y'], type: 'boolean', init: false } },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.perPlayerVars')),
+      false,
+    );
+  });
+
+  it('validates individual vars normally when mixed with batch entries', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      globalVars: [
+        { name: 'score', type: 'int', init: 0, min: 0, max: 10 },
+        { batch: { names: ['a', 'b'], type: 'int', init: 0, min: 0, max: 10 } },
+        { name: '', type: 'int', init: 0, min: 0, max: 10 },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    // The batch entry (index 1) should produce no diagnostics.
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.globalVars.1')),
+      false,
+    );
+    // The invalid individual entry (index 2, empty name) should still be caught.
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.path === 'doc.globalVars.2.name' &&
+          diagnostic.code === 'CNL_VALIDATOR_VARIABLE_REQUIRED_FIELD_MISSING',
+      ),
+      true,
+    );
+  });
+
   it('does not throw and does not mutate input for malformed content', () => {
     const malformedDoc = {
       ...createStructurallyValidDoc(),

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-013: Validator batch-entry awareness for variable sections
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — validator logic
@@ -8,7 +8,7 @@
 
 ## Problem
 
-`validateVariableSection` in `validate-metadata.ts:186-219` does not know about `GameSpecBatchVarDef` entries. When `validateGameSpec` runs on a doc containing batch var entries (before template expansion), it produces false-positive diagnostics:
+`validateVariableSection` in `validate-metadata.ts:186-282` does not know about `GameSpecBatchVarDef` entries. When `validateGameSpec` runs on a doc containing batch var entries (before template expansion), it produces false-positive diagnostics:
 
 1. `CNL_VALIDATOR_UNKNOWN_KEY` warning for the `batch` key (since `VARIABLE_KEYS` is `['name', 'type', 'init', 'min', 'max']`).
 2. `CNL_VALIDATOR_VARIABLE_REQUIRED_FIELD_MISSING` error for missing `name` field.
@@ -20,7 +20,7 @@ Note: `globalMarkerLattices` (the batch markers counterpart) does not have this 
 
 ## Assumption Reassessment (2026-03-01)
 
-1. `validateVariableSection` in `validate-metadata.ts:186-219` iterates `globalVars` and `perPlayerVars` entries, calling `isRecord()` → `validateUnknownKeys()` → required field checks.
+1. `validateVariableSection` in `validate-metadata.ts:186-282` iterates `globalVars` and `perPlayerVars` entries, calling `isRecord()` → `validateUnknownKeys()` → required field checks.
 2. `VARIABLE_KEYS` in `validate-spec-shared.ts:24` is `['name', 'type', 'init', 'min', 'max']` — does not include `'batch'`.
 3. Production spec test helpers (`compileProductionSpec` in `test/helpers/production-spec-helpers.ts`) call `validateGameSpec` before `compileGameSpecToGameDef` and assert zero error diagnostics.
 4. `validateGameSpec` is a separate pre-flight step, NOT called inside `compileGameSpecToGameDef`. Callers invoke it independently.
@@ -86,3 +86,14 @@ Add a test confirming that `validateGameSpec` on a doc with batch var entries pr
 
 1. `pnpm turbo build`
 2. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+Added a 3-line `'batch' in variable` early-continue to `validateVariableSection` (line 208 of `validate-metadata.ts`), after the `isRecord()` guard and before `validateUnknownKeys`. Batch entries are validated by `expandBatchVars` during compilation — the validator now skips them to avoid false-positive diagnostics.
+
+3 new tests in `validate-spec.test.ts`:
+- `globalVars` batch entry produces no diagnostics
+- `perPlayerVars` batch entry produces no diagnostics
+- Mixed individual + batch entries: batch skipped, invalid individual still caught
+
+All 3349 tests pass, build/typecheck/lint clean.

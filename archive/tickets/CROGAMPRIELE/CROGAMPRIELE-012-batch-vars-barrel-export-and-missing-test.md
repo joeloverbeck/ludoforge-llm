@@ -1,6 +1,6 @@
 # CROGAMPRIELE-012: Batch vars barrel export and missing test coverage
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — barrel export, unit test
@@ -71,3 +71,10 @@ Add a test case that constructs a `GameSpecBatchVarDef` with an invalid `type` v
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-batch-vars.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- Added `export * from './expand-batch-vars.js';` to `packages/engine/src/cnl/index.ts` (line 5), grouped with other batch-related expansion exports.
+- Added test 12 to `packages/engine/test/unit/expand-batch-vars.test.ts`: constructs a `GameSpecBatchVarDef` with `batch.type: 'string'` (cast via `as unknown`), asserts `CNL_COMPILER_BATCH_VAR_INVALID_TYPE` diagnostic is emitted. Renumbered former test 12 to test 13.
+- All 4 diagnostic codes in `COMPILER_DIAGNOSTIC_CODES_BATCH_VARS` now have test coverage.
+- Full suite: 3346 tests pass, 0 fail. Typecheck and lint clean.

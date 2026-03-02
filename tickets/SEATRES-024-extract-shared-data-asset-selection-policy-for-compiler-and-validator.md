@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — shared CNL selection policy module + call-site migration
-**Deps**: tickets/SEATRES-023-align-validator-map-piece-selection-with-compiler-inference.md
+**Deps**: archive/tickets/SEATRES/SEATRES-023-align-validator-map-piece-selection-with-compiler-inference.md
 
 ## Problem
 

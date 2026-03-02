@@ -208,6 +208,64 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('emits map ambiguity diagnostics for scenario-linked selection when selector is omitted', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: null,
+      dataAssets: [
+        {
+          id: 'map-a',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'map-b',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'bravo:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'scenario',
+          kind: 'scenario' as const,
+          payload: {
+            scenarioName: 'Map Ambiguity',
+            yearRange: '1964-1972',
+          },
+        },
+      ],
+    };
+
+    const compilerResult = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      compilerResult.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple map assets found'),
+      ),
+      true,
+    );
+  });
+
   it('merges map-derived zones with explicit YAML zones when both are declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
@@ -316,6 +374,52 @@ describe('compiler structured section results', () => {
 
     assert.equal(
       result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple pieceCatalog assets found'),
+      ),
+      true,
+    );
+  });
+
+  it('emits pieceCatalog ambiguity diagnostics for scenario-linked selection when selector is omitted', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      tokenTypes: null,
+      dataAssets: [
+        {
+          id: 'pieces-a',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        {
+          id: 'pieces-b',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'nva-regular', seat: 'nva', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'nva-regular', seat: 'nva', total: 1 }],
+          },
+        },
+        {
+          id: 'scenario',
+          kind: 'scenario' as const,
+          payload: {
+            scenarioName: 'Piece Ambiguity',
+            yearRange: '1964-1972',
+          },
+        },
+      ],
+    };
+
+    const compilerResult = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      compilerResult.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
           && diagnostic.path === 'doc.dataAssets'

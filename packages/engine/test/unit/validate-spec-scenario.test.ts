@@ -251,6 +251,113 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     );
   });
 
+  it('emits map ambiguity diagnostics when scenario mapAssetId is omitted and multiple maps exist', () => {
+    const doc = createDocWithScenario({
+      mapAssetId: undefined,
+    });
+    const seatCatalogAsset = doc.dataAssets?.[1];
+    const pieceCatalogAsset = doc.dataAssets?.[2];
+    const scenarioAsset = doc.dataAssets?.[3];
+    doc.dataAssets = [
+      {
+        id: 'test-map-a',
+        kind: 'map',
+        payload: createMapPayload(),
+      },
+      {
+        id: 'test-map-b',
+        kind: 'map',
+        payload: createMapPayload(),
+      },
+      seatCatalogAsset!,
+      pieceCatalogAsset!,
+      scenarioAsset!,
+    ];
+
+    const diagnostics = validateGameSpec(doc);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple map assets found'),
+      ),
+      true,
+    );
+  });
+
+  it('does not emit map ambiguity diagnostics when scenario mapAssetId explicitly selects one map', () => {
+    const doc = createDocWithScenario({
+      mapAssetId: 'test-map-b',
+    });
+    const seatCatalogAsset = doc.dataAssets?.[1];
+    const pieceCatalogAsset = doc.dataAssets?.[2];
+    const scenarioAsset = doc.dataAssets?.[3];
+    doc.dataAssets = [
+      {
+        id: 'test-map-a',
+        kind: 'map',
+        payload: createMapPayload(),
+      },
+      {
+        id: 'test-map-b',
+        kind: 'map',
+        payload: createMapPayload(),
+      },
+      seatCatalogAsset!,
+      pieceCatalogAsset!,
+      scenarioAsset!,
+    ];
+
+    const diagnostics = validateGameSpec(doc);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.message.includes('Multiple map assets found'),
+      ),
+      false,
+    );
+  });
+
+  it('emits piece-catalog ambiguity diagnostics when scenario pieceCatalogAssetId is omitted and multiple piece catalogs exist', () => {
+    const doc = createDocWithScenario({
+      pieceCatalogAssetId: undefined,
+    });
+    const mapAsset = doc.dataAssets?.[0];
+    const seatCatalogAsset = doc.dataAssets?.[1];
+    const scenarioAsset = doc.dataAssets?.[3];
+    doc.dataAssets = [
+      mapAsset!,
+      seatCatalogAsset!,
+      {
+        id: 'test-pieces-a',
+        kind: 'pieceCatalog',
+        payload: createPieceCatalogPayload(),
+      },
+      {
+        id: 'test-pieces-b',
+        kind: 'pieceCatalog',
+        payload: createPieceCatalogPayload(),
+      },
+      scenarioAsset!,
+    ];
+
+    const diagnostics = validateGameSpec(doc);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_DATA_ASSET_AMBIGUOUS'
+          && diagnostic.path === 'doc.dataAssets'
+          && diagnostic.message.includes('Multiple pieceCatalog assets found'),
+      ),
+      true,
+    );
+  });
+
   it('piece-catalog seat references outside seat catalog emit CNL_VALIDATOR_REFERENCE_MISSING', () => {
     const doc = createDocWithScenario({});
     doc.dataAssets = [

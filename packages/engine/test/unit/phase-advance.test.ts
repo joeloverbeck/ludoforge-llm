@@ -1,5 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { collectCallExpressionsByIdentifier, expressionToText, parseTypeScriptSource } from '../helpers/kernel-source-ast-guard.js';
+import { readKernelSource } from '../helpers/kernel-source-guard.js';
 
 import {
   advancePhase,
@@ -930,5 +932,31 @@ phase: [asPhaseId('p2')],
     const next = advancePhase(def, state);
     assert.equal(next.globalVars.aid, 0);
     assert.equal(next.activeLastingEffects, undefined);
+  });
+});
+
+describe('phase-advance seat-resolution lifecycle architecture guard', () => {
+  it('threads operation-scoped seat-resolution context through advanceToDecisionPoint coup loop', () => {
+    const source = readKernelSource('src/kernel/phase-advance.ts');
+    const sourceFile = parseTypeScriptSource(source, 'phase-advance.ts');
+
+    const createCalls = collectCallExpressionsByIdentifier(sourceFile, 'createSeatResolutionContext');
+    assert.equal(
+      createCalls.some((call) => expressionToText(sourceFile, call).includes('createSeatResolutionContext(def, state.playerCount)')),
+      true,
+      'phase-advance.ts must build operation-scoped seat-resolution context',
+    );
+
+    const coupImplicitCalls = collectCallExpressionsByIdentifier(sourceFile, 'coupPhaseImplicitPass');
+    assert.equal(
+      coupImplicitCalls.some((call) => expressionToText(sourceFile, call).includes('coupPhaseImplicitPass(def, nextState, seatResolution)')),
+      true,
+      'advanceToDecisionPoint must pass operation-scoped seatResolution to coupPhaseImplicitPass',
+    );
+    assert.equal(
+      coupImplicitCalls.some((call) => expressionToText(sourceFile, call).includes('coupPhaseImplicitPass(def, nextState)')),
+      false,
+      'advanceToDecisionPoint must not call coupPhaseImplicitPass without seatResolution',
+    );
   });
 });

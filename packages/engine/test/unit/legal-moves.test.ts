@@ -8,6 +8,7 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
+  createSeatResolutionContext,
   legalChoicesDiscover,
   legalMoves,
   type GameDef,
@@ -892,7 +893,7 @@ phase: [asPhaseId('main')],
       { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] } },
       { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] } },
       { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: ['c'] } },
-    ]);
+    ], createSeatResolutionContext(def, state.playerCount));
 
     assert.deepEqual(filtered, [
       { actionId: asActionId('pass'), params: {} },

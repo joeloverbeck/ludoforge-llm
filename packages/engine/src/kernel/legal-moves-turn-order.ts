@@ -10,6 +10,7 @@ import { toMoveIdentityKey } from './move-identity.js';
 import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
+import type { SeatResolutionContext } from './seat-resolution.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -220,7 +221,12 @@ function moveMatchesSelector(def: GameDef, move: Move, selector: TurnFlowInterru
   return true;
 }
 
-export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves: readonly Move[]): readonly Move[] {
+export function applyTurnFlowWindowFilters(
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  seatResolution: SeatResolutionContext,
+): readonly Move[] {
   const turnFlow = cardDrivenConfig(def)?.turnFlow;
   if (turnFlow === undefined) {
     return moves;
@@ -230,7 +236,7 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
   const pivotalActionIds = new Set(turnFlow.pivotal?.actionIds ?? []);
   const inPreActionWindow = (cardDrivenRuntime(state)?.currentCard.nonPassCount ?? 0) === 0;
   const activeSeat = state.turnOrderState.type === 'cardDriven'
-    ? requireCardDrivenActiveSeat(def, state, 'applyTurnFlowWindowFilters')
+    ? requireCardDrivenActiveSeat(def, state, 'applyTurnFlowWindowFilters', seatResolution)
     : String(state.activePlayer);
   const precedence = turnFlow.pivotal?.interrupt?.precedence ?? [];
   const interruptWinnerSeat =
@@ -321,6 +327,7 @@ export function applyPendingFreeOperationVariants(
   def: GameDef,
   state: GameState,
   moves: readonly Move[],
+  seatResolution: SeatResolutionContext,
   options?: {
     readonly budgets?: Partial<MoveEnumerationBudgets>;
     readonly onWarning?: (warning: RuntimeWarning) => void;
@@ -332,7 +339,7 @@ export function applyPendingFreeOperationVariants(
   }
 
   const pendingGrants = runtime.pendingFreeOperationGrants ?? [];
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'applyPendingFreeOperationVariants');
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'applyPendingFreeOperationVariants', seatResolution);
   if (!pendingGrants.some((grant) => grant.seat === activeSeat)) {
     return moves;
   }
@@ -353,7 +360,7 @@ export function applyPendingFreeOperationVariants(
       ...move,
       freeOperation: true,
     };
-    if (!isFreeOperationApplicableForMove(def, state, candidate)) {
+    if (!isFreeOperationApplicableForMove(def, state, candidate, seatResolution)) {
       continue;
     }
     const checkpoint = resolveMoveDecisionSequence(def, state, candidate, {
@@ -371,7 +378,7 @@ export function applyPendingFreeOperationVariants(
     ) {
       continue;
     }
-    if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate)) {
+    if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate, seatResolution)) {
       continue;
     }
 

@@ -1,5 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import {
+  collectCallExpressionsByIdentifier,
+  expressionToText,
+  parseTypeScriptSource,
+} from '../../helpers/kernel-source-ast-guard.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 import {
   asActionId,
@@ -1998,5 +2004,66 @@ phase: [asPhaseId('main')],
     const moves = legalMoves(def, state);
     assert.equal(moves.some((move) => move.actionId === actionId && Object.keys(move.params).length === 0), false);
     assert.deepEqual(moves, []);
+  });
+});
+
+describe('legalMoves seat-resolution lifecycle architecture guard', () => {
+  it('builds one operation-scoped seat-resolution context and threads it through turn-order stages', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+
+    const createCalls = collectCallExpressionsByIdentifier(sourceFile, 'createSeatResolutionContext');
+    assert.equal(createCalls.length >= 1, true, 'legal-moves.ts must create seat-resolution context for operation scope');
+
+    const isActiveSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'isActiveSeatEligibleForTurnFlow');
+    assert.equal(
+      isActiveSeatCalls.some((call) => expressionToText(sourceFile, call).includes('isActiveSeatEligibleForTurnFlow(def, state, seatResolution)')),
+      true,
+      'legalMoves must pass operation-scoped seatResolution to isActiveSeatEligibleForTurnFlow',
+    );
+
+    const windowFilterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
+    assert.equal(
+      windowFilterCalls.some((call) => expressionToText(sourceFile, call).includes('applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution)')),
+      true,
+      'legalMoves must pass operation-scoped seatResolution to applyTurnFlowWindowFilters',
+    );
+
+    const freeOpVariantCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyPendingFreeOperationVariants');
+    assert.equal(
+      freeOpVariantCalls.some((call) => expressionToText(sourceFile, call).includes('applyPendingFreeOperationVariants(def, state, windowFilteredMoves, seatResolution,')),
+      true,
+      'legalMoves must pass operation-scoped seatResolution to applyPendingFreeOperationVariants',
+    );
+  });
+
+  it('requires legal-moves turn-order helpers to consume explicit seat-resolution context', () => {
+    const source = readKernelSource('src/kernel/legal-moves-turn-order.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves-turn-order.ts');
+
+    const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
+    assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
+    for (const call of activeSeatCalls) {
+      const text = expressionToText(sourceFile, call);
+      assert.equal(
+        text.includes(', seatResolution)'),
+        true,
+        `requireCardDrivenActiveSeat calls in legal-moves-turn-order.ts must pass seatResolution: ${text}`,
+      );
+    }
+
+    const freeApplicableCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove');
+    assert.equal(
+      freeApplicableCalls.some((call) => expressionToText(sourceFile, call).includes('isFreeOperationApplicableForMove(def, state, candidate, seatResolution)')),
+      true,
+      'applyPendingFreeOperationVariants must thread seatResolution into free-operation applicability checks',
+    );
+
+    const freeGrantedCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove');
+    assert.equal(
+      freeGrantedCalls.some((call) => expressionToText(sourceFile, call).includes('isFreeOperationGrantedForMove(def, state, candidate, seatResolution)')),
+      true,
+      'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
+    );
   });
 });

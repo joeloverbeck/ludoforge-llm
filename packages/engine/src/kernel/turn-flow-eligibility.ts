@@ -706,7 +706,11 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
   return withActiveFromFirstEligible(nextState, candidates.first, seatResolution);
 };
 
-export const isActiveSeatEligibleForTurnFlow = (def: GameDef, state: GameState): boolean => {
+export const isActiveSeatEligibleForTurnFlow = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+): boolean => {
   if (state.turnOrderState.type === 'simultaneous') {
     return state.turnOrderState.submitted[state.activePlayer] !== true;
   }
@@ -716,7 +720,7 @@ export const isActiveSeatEligibleForTurnFlow = (def: GameDef, state: GameState):
     return true;
   }
 
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow');
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow', seatResolution);
 
   return (
     activeSeat === runtime.currentCard.firstEligible ||
@@ -740,6 +744,7 @@ const analyzeFreeOperationGrantMatch = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: SeatResolutionContext,
   options?: {
     readonly evaluateZoneFilters?: boolean;
     readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
@@ -748,7 +753,7 @@ const analyzeFreeOperationGrantMatch = (
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
     return null;
   }
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'analyzeFreeOperationGrantMatch');
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'analyzeFreeOperationGrantMatch', seatResolution);
   const actionClass = moveOperationClass(def, move);
   const actionId = String(move.actionId);
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
@@ -882,6 +887,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: SeatResolutionContext,
   options?: {
     readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
@@ -893,7 +899,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     };
   }
 
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, {
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, {
     evaluateZoneFilters: true,
     zoneFilterErrorSurface: options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
   });
@@ -907,7 +913,6 @@ export const resolveFreeOperationDiscoveryAnalysis = (
   const applicable = analysis.actionMatchedGrants;
   const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0];
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
-  const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const executionPlayer = executionSeat === undefined
     ? state.activePlayer
     : parsePlayerId(executionSeat, seatResolution) ?? state.activePlayer;
@@ -939,22 +944,24 @@ export const isFreeOperationApplicableForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: SeatResolutionContext,
 ): boolean => {
   if (move.freeOperation !== true) {
     return true;
   }
-  return (analyzeFreeOperationGrantMatch(def, state, move)?.actionMatchedGrants.length ?? 0) > 0;
+  return (analyzeFreeOperationGrantMatch(def, state, move, seatResolution)?.actionMatchedGrants.length ?? 0) > 0;
 };
 
 export const isFreeOperationGrantedForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: SeatResolutionContext,
 ): boolean => {
   if (move.freeOperation !== true) {
     return true;
   }
-  const analysis = analyzeFreeOperationGrantMatch(def, state, move, { evaluateZoneFilters: true });
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, { evaluateZoneFilters: true });
   if (analysis === null) {
     return false;
   }
@@ -1209,12 +1216,13 @@ export const consumeTurnFlowFreeOperationGrant = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: SeatResolutionContext,
 ): FreeOperationGrantConsumptionResult => {
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'consumeTurnFlowFreeOperationGrant');
+  const activeSeat = requireCardDrivenActiveSeat(def, state, 'consumeTurnFlowFreeOperationGrant', seatResolution);
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = pending.findIndex(
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),

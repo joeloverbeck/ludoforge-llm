@@ -80,7 +80,7 @@ const validateCoupSeatOrderAtPhaseEntry = (
 const resolveCurrentCoupSeat = (
   def: GameDef,
   state: GameState,
-  seatResolution?: SeatResolutionContext,
+  seatResolution: SeatResolutionContext,
 ): string => {
   return requireCardDrivenActiveSeat(def, state, 'resolveCurrentCoupSeat', seatResolution);
 };
@@ -347,15 +347,14 @@ export const advancePhase = (
 const coupPhaseImplicitPass = (
   def: GameDef,
   state: GameState,
-  seatResolution?: SeatResolutionContext,
+  seatResolution: SeatResolutionContext,
 ): GameState | null => {
   if (!isInCoupPhase(def, state) || state.turnOrderState.type !== 'cardDriven') {
     return null;
   }
 
   const runtime = state.turnOrderState.runtime;
-  const operationSeatResolution = seatResolution ?? createSeatResolutionContext(def, state.playerCount);
-  const currentSeat = resolveCurrentCoupSeat(def, state, operationSeatResolution);
+  const currentSeat = resolveCurrentCoupSeat(def, state, seatResolution);
   const acted = new Set([...runtime.currentCard.actedSeats, currentSeat]);
   const passed = new Set([...runtime.currentCard.passedSeats, currentSeat]);
 
@@ -367,7 +366,7 @@ const coupPhaseImplicitPass = (
   }
 
   const nextSeat = remaining[0]!;
-  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(nextSeat, operationSeatResolution.index);
+  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(nextSeat, seatResolution.index);
   if (nextSeatPlayerIndex === null) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
@@ -410,6 +409,7 @@ export const advanceToDecisionPoint = (
   }
 
   const maxAutoAdvancesPerMove = 2 * state.playerCount * phaseCount + 1;
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
   let nextState = state;
   let advances = 0;
 
@@ -429,7 +429,7 @@ export const advanceToDecisionPoint = (
     }
 
     if (phaseValid) {
-      const coupCycled = coupPhaseImplicitPass(def, nextState);
+      const coupCycled = coupPhaseImplicitPass(def, nextState, seatResolution);
       if (coupCycled !== null) {
         nextState = coupCycled;
         advances += 1;

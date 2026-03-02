@@ -5,6 +5,7 @@ import { asPlayerId } from '../../../src/kernel/branded.js';
 import { createSeatResolutionContext } from '../../../src/kernel/seat-resolution.js';
 import { requireCardDrivenActiveSeat } from '../../../src/kernel/turn-flow-runtime-invariants.js';
 import type { GameDef, GameState } from '../../../src/kernel/types.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const makeDef = (): GameDef =>
   ({
@@ -80,6 +81,20 @@ describe('turn-flow-runtime-invariants', () => {
     assert.equal(
       requireCardDrivenActiveSeat(def, state, 'testSurface', seatResolution),
       'NVA',
+    );
+  });
+
+  it('forbids implicit seat-resolution fallback in active-seat invariant helper', () => {
+    const source = readKernelSource('src/kernel/turn-flow-runtime-invariants.ts');
+    assert.doesNotMatch(
+      source,
+      /seatResolution\?:\s*SeatResolutionContext/u,
+      'requireCardDrivenActiveSeat must require explicit seatResolution context',
+    );
+    assert.doesNotMatch(
+      source,
+      /createSeatResolutionContext\(/u,
+      'turn-flow runtime invariants must not build seat-resolution context implicitly',
     );
   });
 });

@@ -23,6 +23,7 @@ import {
 } from './decision-sequence-satisfiability.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import { createSeatResolutionContext } from './seat-resolution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import {
   toFreeOperationChoiceIllegalReason,
@@ -495,7 +496,8 @@ const legalChoicesWithPreparedContextInternal = (
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
   let freeOperationAnalysis: ReturnType<typeof resolveFreeOperationDiscoveryAnalysis> | undefined;
   if (partialMove.freeOperation === true) {
-    const analysis = resolveFreeOperationDiscoveryAnalysis(def, state, partialMove, {
+    const seatResolution = createSeatResolutionContext(def, state.playerCount);
+    const analysis = resolveFreeOperationDiscoveryAnalysis(def, state, partialMove, seatResolution, {
       zoneFilterErrorSurface: 'legalChoices',
     });
     const deniedCause = toFreeOperationDeniedCauseForLegality(analysis.denial.cause);

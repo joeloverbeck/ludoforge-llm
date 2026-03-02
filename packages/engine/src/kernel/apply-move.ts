@@ -38,6 +38,7 @@ import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
+import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
@@ -103,6 +104,7 @@ const resolveMatchedPipelineForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
   cachedRuntime?: GameDefRuntime,
 ): ActionPipelineDef | undefined => {
   const action = findAction(def, move.actionId);
@@ -112,9 +114,7 @@ const resolveMatchedPipelineForMove = (
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const freeOperationAnalysis = move.freeOperation === true
-    ? resolveFreeOperationDiscoveryAnalysis(def, state, move, {
-      zoneFilterErrorSurface: 'turnFlowEligibility',
-    })
+    ? resolveFreeOperationDiscoveryAnalysis(def, state, move, seatResolution, { zoneFilterErrorSurface: 'turnFlowEligibility' })
     : null;
   const executionPlayer = freeOperationAnalysis?.executionPlayer ?? (() => {
       const resolution = resolveActionExecutor({
@@ -170,11 +170,10 @@ const resolveMoveFreeOperationAnalysis = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
 ): MoveFreeOperationAnalysis | null =>
   move.freeOperation === true
-    ? resolveFreeOperationDiscoveryAnalysis(def, state, move, {
-      zoneFilterErrorSurface: 'turnFlowEligibility',
-    })
+    ? resolveFreeOperationDiscoveryAnalysis(def, state, move, seatResolution, { zoneFilterErrorSurface: 'turnFlowEligibility' })
     : null;
 
 const operationAllowsSpecialActivity = (
@@ -365,13 +364,18 @@ interface MovePreflightContext {
   readonly isFreeOperationPipeline: boolean;
 }
 
-const validateTurnFlowWindowAccess = (def: GameDef, state: GameState, move: Move): void => {
+const validateTurnFlowWindowAccess = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): void => {
   if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
       detail: 'turnFlow option matrix rejected move action class',
     });
   }
-  if (applyTurnFlowWindowFilters(def, state, [move]).length === 0) {
+  if (applyTurnFlowWindowFilters(def, state, [move], seatResolution).length === 0) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
       detail: 'turnFlow window filters rejected move',
     });
@@ -383,13 +387,14 @@ const validateSpecialActivityCompoundConstraints = (
   state: GameState,
   move: Move,
   action: ActionDef,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
   cachedRuntime?: GameDefRuntime,
 ): void => {
   if (move.compound === undefined) {
     return;
   }
   const saMove = move.compound.specialActivity;
-  const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, cachedRuntime);
+  const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, seatResolution, cachedRuntime);
   if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
       operationActionId: action.id,
@@ -445,6 +450,7 @@ const resolveMovePreflightContext = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
   adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>,
   runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>,
   mode: 'validation' | 'execution',
@@ -456,7 +462,7 @@ const resolveMovePreflightContext = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
   const resolvedFreeOperationAnalysis = move.freeOperation === true
-    ? (freeOperationAnalysis ?? resolveMoveFreeOperationAnalysis(def, state, move))
+    ? (freeOperationAnalysis ?? resolveMoveFreeOperationAnalysis(def, state, move, seatResolution))
     : null;
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const preflightEvalCtx = mode === 'validation'
@@ -543,7 +549,7 @@ const resolveMovePreflightContext = (
     ? undefined
     : toExecutionPipeline(action, actionPipeline);
   validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
-  validateSpecialActivityCompoundConstraints(def, state, move, action, cachedRuntime);
+  validateSpecialActivityCompoundConstraints(def, state, move, action, seatResolution, cachedRuntime);
 
   const isFreeOperationPipeline = move.freeOperation === true && executionProfile !== undefined;
   const costValidationPassed = resolvePipelineCostValidationStatus(
@@ -570,6 +576,7 @@ const validateMove = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
   cachedRuntime?: GameDefRuntime,
 ): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
@@ -579,7 +586,7 @@ const validateMove = (
       submittedActionClass: classMismatch.submitted,
     });
   }
-  const freeOperationAnalysis = resolveMoveFreeOperationAnalysis(def, state, move);
+  const freeOperationAnalysis = resolveMoveFreeOperationAnalysis(def, state, move, seatResolution);
   const deniedFreeOperationCause = freeOperationAnalysis === null
     ? null
     : toFreeOperationDeniedCauseForLegality(freeOperationAnalysis.denial.cause);
@@ -594,6 +601,7 @@ const validateMove = (
     def,
     state,
     move,
+    seatResolution,
     adjacencyGraph,
     runtimeTableIndex,
     'validation',
@@ -611,7 +619,7 @@ const validateMove = (
   validateDecisionSequenceForMove(def, state, move, {
     allowIncomplete,
   });
-  validateTurnFlowWindowAccess(def, state, move);
+  validateTurnFlowWindowAccess(def, state, move, seatResolution);
   return {
     preflight,
   };
@@ -686,19 +694,21 @@ const executeMoveAction = (
   def: GameDef,
   state: GameState,
   move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
   options: ExecutionOptions | undefined,
   coreOptions: ApplyMoveCoreOptions | undefined,
   shared: SharedMoveExecutionContext,
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
-  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, cachedRuntime);
+  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, seatResolution, cachedRuntime);
   const freeOperationAnalysis = validated === null
-    ? resolveMoveFreeOperationAnalysis(def, state, move)
+    ? resolveMoveFreeOperationAnalysis(def, state, move, seatResolution)
     : null;
   const preflight = validated?.preflight ?? resolveMovePreflightContext(
     def,
     state,
     move,
+    seatResolution,
     shared.adjacencyGraph,
     shared.runtimeTableIndex,
     'execution',
@@ -783,6 +793,7 @@ const executeMoveAction = (
       def,
       effectState,
       move.compound.specialActivity,
+      seatResolution,
       options,
       shared.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: shared.phaseTransitionBudget },
       shared,
@@ -1020,11 +1031,12 @@ const applyMoveCore = (
     ...(runtime.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: runtime.phaseTransitionBudget }),
     ...(runtime.executionPolicy === undefined ? {} : { executionPolicy: runtime.executionPolicy }),
   };
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
-  const executed = executeMoveAction(def, state, move, options, coreOptions, shared, cachedRuntime);
+  const executed = executeMoveAction(def, state, move, seatResolution, options, coreOptions, shared, cachedRuntime);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
-      const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move);
+      const consumed = consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move, seatResolution);
       return {
         state: consumed.state,
         traceEntries: consumed.traceEntries,
@@ -1142,7 +1154,7 @@ const applySimultaneousSubmission = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
-  validateMove(def, state, move, cachedRuntime);
+  validateMove(def, state, move, createSeatResolutionContext(def, state.playerCount), cachedRuntime);
 
   const currentPlayer = Number(state.activePlayer);
   const submittedBefore = state.turnOrderState.submitted;

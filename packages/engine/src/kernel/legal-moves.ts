@@ -27,6 +27,7 @@ import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 
@@ -373,8 +374,9 @@ export const enumerateLegalMoves = (
   validateTurnFlowRuntimeStateInvariants(state);
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
-  if (!isActiveSeatEligibleForTurnFlow(def, state)) {
+  if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {
     return { moves: [], warnings };
   }
 
@@ -483,8 +485,8 @@ export const enumerateLegalMoves = (
     }
   }
 
-  const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves);
-  const finalMoves = applyPendingFreeOperationVariants(def, state, windowFilteredMoves, {
+  const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);
+  const finalMoves = applyPendingFreeOperationVariants(def, state, windowFilteredMoves, seatResolution, {
     budgets: enumeration.budgets,
     onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
   });

@@ -317,6 +317,39 @@
                 }
               ]
             }
+          },
+          "behavior": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "deck"
+              },
+              "drawFrom": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "top"
+                  },
+                  {
+                    "type": "string",
+                    "const": "bottom"
+                  },
+                  {
+                    "type": "string",
+                    "const": "random"
+                  }
+                ]
+              },
+              "reshuffleFrom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "drawFrom"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [

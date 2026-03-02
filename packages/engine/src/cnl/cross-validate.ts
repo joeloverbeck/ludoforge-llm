@@ -543,6 +543,34 @@ export function crossValidateSpec(
     }
   }
 
+  // Zone behavior reshuffleFrom cross-validation
+  if (sections.zones !== null) {
+    for (const zone of sections.zones) {
+      if (zone.behavior?.type !== 'deck' || zone.behavior.reshuffleFrom === undefined) {
+        continue;
+      }
+      const reshuffleFrom = String(zone.behavior.reshuffleFrom);
+      if (reshuffleFrom === zone.id) {
+        diagnostics.push({
+          code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ZONE_BEHAVIOR_RESHUFFLE_SELF,
+          path: `doc.zones[${zone.id}].behavior.reshuffleFrom`,
+          severity: 'error',
+          message: `Zone "${zone.id}" behavior reshuffleFrom references itself.`,
+          suggestion: 'Set reshuffleFrom to a different zone, such as a discard pile.',
+        });
+      } else {
+        pushMissingZoneRefDiagnostic(
+          diagnostics,
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ZONE_BEHAVIOR_RESHUFFLE_MISSING,
+          `doc.zones[${zone.id}].behavior.reshuffleFrom`,
+          reshuffleFrom,
+          zoneTargets,
+          `Zone "${zone.id}" behavior reshuffleFrom references unknown zone "${reshuffleFrom}".`,
+        );
+      }
+    }
+  }
+
   diagnostics.sort((left, right) => {
     const pathCompare = left.path.localeCompare(right.path);
     if (pathCompare !== 0) {

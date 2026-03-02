@@ -8,7 +8,7 @@ import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, Token } from './types.js';
+import type { EffectAST, Rng, Token } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
@@ -558,17 +558,87 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
 
-  const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'draw', 'from');
+  let sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'draw', 'from');
   resolveZoneTokens(ctx, toZoneId, 'draw', 'to');
 
-  if (count === 0 || sourceTokens.length === 0 || fromZoneId === toZoneId) {
+  if (count === 0 || fromZoneId === toZoneId) {
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
+  const zoneDef = ctx.def.zones.find(z => z.id === fromZoneId);
+  const behavior = zoneDef?.behavior;
+  let currentState = ctx.state;
+  let currentRng = ctx.rng;
+
+  // Auto-reshuffle: if source is a deck with reshuffleFrom and insufficient tokens
+  if (
+    behavior?.type === 'deck' &&
+    behavior.reshuffleFrom !== undefined &&
+    sourceTokens.length < count
+  ) {
+    const reshuffleZoneId = String(behavior.reshuffleFrom);
+    const reshuffleTokens = currentState.zones[reshuffleZoneId];
+    if (reshuffleTokens !== undefined && reshuffleTokens.length > 0) {
+      const combined = [...sourceTokens, ...reshuffleTokens];
+      const shuffled = shuffleTokenArray(combined, currentRng);
+      currentRng = shuffled.rng;
+      currentState = {
+        ...currentState,
+        zones: {
+          ...currentState.zones,
+          [fromZoneId]: shuffled.tokens,
+          [reshuffleZoneId]: [],
+        },
+      };
+      sourceTokens = shuffled.tokens;
+    }
+  }
+
+  if (sourceTokens.length === 0) {
+    return { state: currentState, rng: currentRng, emittedEvents: [] };
+  }
+
   const moveCount = Math.min(count, sourceTokens.length);
-  const movedTokens = sourceTokens.slice(0, moveCount);
-  const sourceAfter = sourceTokens.slice(moveCount);
-  const destinationTokens = ctx.state.zones[toZoneId]!;
+  let movedTokens: readonly Token[];
+  let sourceAfter: readonly Token[];
+
+  if (behavior?.type === 'deck') {
+    switch (behavior.drawFrom) {
+      case 'bottom': {
+        const splitPoint = sourceTokens.length - moveCount;
+        movedTokens = sourceTokens.slice(splitPoint);
+        sourceAfter = sourceTokens.slice(0, splitPoint);
+        break;
+      }
+      case 'random': {
+        const indices: number[] = [];
+        const available = [...Array(sourceTokens.length).keys()];
+        let drawRng = currentRng;
+        for (let i = 0; i < moveCount; i += 1) {
+          const [picked, advancedRng] = nextInt(drawRng, 0, available.length - 1);
+          drawRng = advancedRng;
+          indices.push(available[picked]!);
+          available.splice(picked, 1);
+        }
+        currentRng = drawRng;
+        movedTokens = indices.map(idx => sourceTokens[idx]!);
+        const pickedSet = new Set(indices);
+        sourceAfter = sourceTokens.filter((_, idx) => !pickedSet.has(idx));
+        break;
+      }
+      default: {
+        // 'top' — default behavior, same as non-deck zones
+        movedTokens = sourceTokens.slice(0, moveCount);
+        sourceAfter = sourceTokens.slice(moveCount);
+        break;
+      }
+    }
+  } else {
+    movedTokens = sourceTokens.slice(0, moveCount);
+    sourceAfter = sourceTokens.slice(moveCount);
+  }
+
+  const destinationTokens = currentState.zones[toZoneId]!;
   const destinationAfter = [...movedTokens, ...destinationTokens];
 
   for (const movedToken of movedTokens) {
@@ -583,14 +653,14 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
 
   return {
     state: {
-      ...ctx.state,
+      ...currentState,
       zones: {
-        ...ctx.state.zones,
+        ...currentState.zones,
         [fromZoneId]: sourceAfter,
         [toZoneId]: destinationAfter,
       },
     },
-    rng: ctx.rng,
+    rng: currentRng,
     emittedEvents: movedTokens.map(() => ({ type: 'tokenEntered', zone: toZone })),
   };
 };
@@ -684,6 +754,24 @@ export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unkn
   };
 };
 
+export function shuffleTokenArray(tokens: readonly Token[], rng: Rng): { readonly tokens: readonly Token[]; readonly rng: Rng } {
+  if (tokens.length <= 1) {
+    return { tokens, rng };
+  }
+  const shuffled = [...tokens];
+  let nextRng = rng;
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const [swapIndex, advancedRng] = nextInt(nextRng, 0, index);
+    nextRng = advancedRng;
+    if (swapIndex !== index) {
+      const temp = shuffled[index]!;
+      shuffled[index] = shuffled[swapIndex]!;
+      shuffled[swapIndex] = temp;
+    }
+  }
+  return { tokens: shuffled, rng: nextRng };
+}
+
 export const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
@@ -702,26 +790,16 @@ export const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unkn
     return { state: ctx.state, rng: ctx.rng };
   }
 
-  const shuffledTokens = [...zoneTokens];
-  let nextRng = ctx.rng;
-  for (let index = shuffledTokens.length - 1; index > 0; index -= 1) {
-    const [swapIndex, advancedRng] = nextInt(nextRng, 0, index);
-    nextRng = advancedRng;
-    if (swapIndex !== index) {
-      const temp = shuffledTokens[index]!;
-      shuffledTokens[index] = shuffledTokens[swapIndex]!;
-      shuffledTokens[swapIndex] = temp;
-    }
-  }
+  const result = shuffleTokenArray(zoneTokens, ctx.rng);
 
   return {
     state: {
       ...ctx.state,
       zones: {
         ...ctx.state.zones,
-        [zoneId]: shuffledTokens,
+        [zoneId]: result.tokens,
       },
     },
-    rng: nextRng,
+    rng: result.rng,
   };
 };

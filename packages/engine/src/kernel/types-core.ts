@@ -84,6 +84,14 @@ export interface ZoneAdjacency {
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
 }
 
+export interface DeckBehavior {
+  readonly type: 'deck';
+  readonly drawFrom: 'top' | 'bottom' | 'random';
+  readonly reshuffleFrom?: ZoneId;
+}
+
+export type ZoneBehavior = DeckBehavior;
+
 export interface ZoneDef {
   readonly id: ZoneId;
   readonly zoneKind?: 'board' | 'aux';
@@ -95,6 +103,7 @@ export interface ZoneDef {
   readonly adjacentTo?: readonly ZoneAdjacency[];
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  readonly behavior?: ZoneBehavior;
 }
 
 export interface TokenTypeTransition {

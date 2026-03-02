@@ -63,6 +63,11 @@ export interface GameSpecZoneDef {
   }>;
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  readonly behavior?: {
+    readonly type: string;
+    readonly drawFrom?: string;
+    readonly reshuffleFrom?: string;
+  };
 }
 
 export interface GameSpecZoneTemplateDef {

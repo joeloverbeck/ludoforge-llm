@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { asZoneId } from '../kernel/branded.js';
-import type { ZoneDef } from '../kernel/types.js';
+import type { ZoneBehavior, ZoneDef } from '../kernel/types.js';
 import type { GameSpecZoneDef } from './game-spec-doc.js';
 import { normalizeZoneOwnerQualifier } from './compile-selectors.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
@@ -88,39 +88,42 @@ export function materializeZoneDefs(
       continue;
     }
 
+    const behavior = compileBehavior(zone, ordering, zonePath, diagnostics);
+
     mergeZoneOwnership(ownershipMap, base, owner);
     if (owner === 'none') {
       outputZones.push(
-        createZoneDef(
-          `${base}:none`,
-          'none',
-          undefined,
-          zone.isInternal,
+        createZoneDef({
+          id: `${base}:none`,
+          owner: 'none',
+          isInternal: zone.isInternal,
           visibility,
           ordering,
-          normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
+          adjacentTo: normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
           zoneKind,
-          zone.category,
-          zone.attributes,
-        ),
+          category: zone.category,
+          attributes: zone.attributes,
+          ...(behavior === undefined ? {} : { behavior }),
+        }),
       );
       continue;
     }
 
     for (let playerId = 0; playerId < playersMax; playerId += 1) {
       outputZones.push(
-        createZoneDef(
-          `${base}:${playerId}`,
-          'player',
-          playerId,
-          zone.isInternal,
+        createZoneDef({
+          id: `${base}:${playerId}`,
+          owner: 'player',
+          ownerPlayerIndex: playerId,
+          isInternal: zone.isInternal,
           visibility,
           ordering,
-          normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
+          adjacentTo: normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
           zoneKind,
-          zone.category,
-          zone.attributes,
-        ),
+          category: zone.category,
+          attributes: zone.attributes,
+          ...(behavior === undefined ? {} : { behavior }),
+        }),
       );
     }
   }
@@ -360,28 +363,84 @@ function tryStaticConcatResolution(
   return { value: parts.join(''), diagnostics: [] };
 }
 
-function createZoneDef(
-  id: string,
-  owner: ZoneDef['owner'],
-  ownerPlayerIndex: ZoneDef['ownerPlayerIndex'],
-  isInternal: ZoneDef['isInternal'],
-  visibility: ZoneDef['visibility'],
-  ordering: ZoneDef['ordering'],
-  adjacentTo: ZoneDef['adjacentTo'],
-  zoneKind: 'board' | 'aux',
-  category: GameSpecZoneDef['category'],
-  attributes: GameSpecZoneDef['attributes'],
-): ZoneDef {
+interface CreateZoneDefOptions {
+  readonly id: string;
+  readonly owner: ZoneDef['owner'];
+  readonly ownerPlayerIndex?: ZoneDef['ownerPlayerIndex'];
+  readonly isInternal?: ZoneDef['isInternal'];
+  readonly visibility: ZoneDef['visibility'];
+  readonly ordering: ZoneDef['ordering'];
+  readonly adjacentTo?: ZoneDef['adjacentTo'];
+  readonly zoneKind: 'board' | 'aux';
+  readonly category?: GameSpecZoneDef['category'];
+  readonly attributes?: GameSpecZoneDef['attributes'];
+  readonly behavior?: ZoneBehavior;
+}
+
+function createZoneDef(options: CreateZoneDefOptions): ZoneDef {
   return {
-    id: asZoneId(id),
-    zoneKind,
-    owner,
-    ...(ownerPlayerIndex === undefined ? {} : { ownerPlayerIndex }),
-    ...(isInternal === undefined ? {} : { isInternal }),
-    visibility,
-    ordering,
-    ...(adjacentTo === undefined ? {} : { adjacentTo }),
-    ...(category === undefined ? {} : { category }),
-    ...(attributes === undefined ? {} : { attributes }),
+    id: asZoneId(options.id),
+    zoneKind: options.zoneKind,
+    owner: options.owner,
+    ...(options.ownerPlayerIndex === undefined ? {} : { ownerPlayerIndex: options.ownerPlayerIndex }),
+    ...(options.isInternal === undefined ? {} : { isInternal: options.isInternal }),
+    visibility: options.visibility,
+    ordering: options.ordering,
+    ...(options.adjacentTo === undefined ? {} : { adjacentTo: options.adjacentTo }),
+    ...(options.category === undefined ? {} : { category: options.category }),
+    ...(options.attributes === undefined ? {} : { attributes: options.attributes }),
+    ...(options.behavior === undefined ? {} : { behavior: options.behavior }),
+  };
+}
+
+const VALID_DRAW_FROM = new Set(['top', 'bottom', 'random']);
+
+function compileBehavior(
+  zone: GameSpecZoneDef,
+  ordering: ZoneDef['ordering'],
+  zonePath: string,
+  diagnostics: Diagnostic[],
+): ZoneBehavior | undefined {
+  if (zone.behavior === undefined) {
+    return undefined;
+  }
+
+  if (zone.behavior.type !== 'deck') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_BEHAVIOR_TYPE_INVALID,
+      path: `${zonePath}.behavior.type`,
+      severity: 'error',
+      message: `Zone behavior type "${String(zone.behavior.type)}" is invalid.`,
+      suggestion: 'Use behavior type "deck".',
+    });
+    return undefined;
+  }
+
+  const drawFrom = zone.behavior.drawFrom ?? 'top';
+  if (!VALID_DRAW_FROM.has(drawFrom)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_BEHAVIOR_DRAW_FROM_INVALID,
+      path: `${zonePath}.behavior.drawFrom`,
+      severity: 'error',
+      message: `Zone behavior drawFrom "${drawFrom}" is invalid.`,
+      suggestion: 'Use drawFrom "top", "bottom", or "random".',
+    });
+    return undefined;
+  }
+
+  if (ordering !== 'stack') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_ZONE_BEHAVIOR_ORDERING_MISMATCH,
+      path: `${zonePath}.behavior`,
+      severity: 'warning',
+      message: `Zone has deck behavior but ordering is "${ordering}" instead of "stack".`,
+      suggestion: 'Set ordering to "stack" for zones with deck behavior.',
+    });
+  }
+
+  return {
+    type: 'deck',
+    drawFrom: drawFrom as 'top' | 'bottom' | 'random',
+    ...(zone.behavior.reshuffleFrom === undefined ? {} : { reshuffleFrom: asZoneId(zone.behavior.reshuffleFrom) }),
   };
 }

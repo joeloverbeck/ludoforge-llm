@@ -121,6 +121,10 @@ export interface GameSpecPhaseDef {
   readonly id: string;
   readonly onEnter?: readonly unknown[];
   readonly onExit?: readonly unknown[];
+  readonly actionDefaults?: {
+    readonly pre?: unknown;
+    readonly afterEffects?: readonly unknown[];
+  };
 }
 
 export interface GameSpecPhaseTemplateParam {

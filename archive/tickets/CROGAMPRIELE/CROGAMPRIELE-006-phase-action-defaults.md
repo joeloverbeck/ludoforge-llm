@@ -1,6 +1,6 @@
 # CROGAMPRIELE-006: Phase action defaults kernel primitive (B1)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel types, legal move enumeration, action resolution, compiler lowering, GameSpecDoc types
@@ -18,7 +18,7 @@ Both games repeat the same preconditions and post-effects across every action in
 4. Usage increment happens at `apply-move.ts:872` via `incrementActionUsage`.
 5. Trigger dispatch happens at `apply-move.ts:874-911`, after usage increment.
 6. `lowerTurnStructure` in `compile-lowering.ts:232-292` lowers phases via inner `lowerPhaseDefs` mapper. `lowerEffectsWithDiagnostics` at lines 1041-1060 handles effect array lowering.
-7. `GameSpecPhaseDef` in `game-spec-doc.ts:88-92` has `id`, `onEnter?`, `onExit?`. No `actionDefaults` yet.
+7. `GameSpecPhaseDef` in `game-spec-doc.ts:120-124` has `id`, `onEnter?`, `onExit?`. No `actionDefaults` yet.
 
 ## Architecture Check
 
@@ -158,3 +158,25 @@ Test file covering:
 3. `node --test packages/engine/dist/test/unit/apply-move-phase-action-defaults.test.js`
 4. `node --test packages/engine/dist/test/unit/compile-lowering-action-defaults.test.js`
 5. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+Implemented phase-level `actionDefaults` kernel primitive with `pre` (ConditionAST) and `afterEffects` (EffectAST[]).
+
+### Changes Made
+- `types-core.ts`: Added `actionDefaults` optional field to `PhaseDef`
+- `game-spec-doc.ts`: Added `actionDefaults` optional field to `GameSpecPhaseDef`
+- `legal-moves.ts`: Phase `actionDefaults.pre` evaluated before `action.pre` with AND short-circuit
+- `apply-move.ts`: Originating phase captured before effects; `afterEffects` applied between event execution and `incrementActionUsage`
+- `compile-lowering.ts`: `actionDefaults.pre` lowered via `lowerOptionalCondition`, `afterEffects` via `lowerEffectsWithDiagnostics`; `null` pre mapped to `undefined`
+
+### Tests Added (18 total)
+- `legal-moves-phase-action-defaults.test.ts` — 6 tests (phase+action pre AND, short-circuit, null pre, interrupts)
+- `apply-move-phase-action-defaults.test.ts` — 6 tests (afterEffects timing, state visibility, trigger ordering, phase transition edge case, determinism)
+- `compile-lowering-action-defaults.test.ts` — 6 tests (pre/afterEffects lowering, empty/null handling, both fields)
+
+### Verification
+- Build: clean
+- 3291 tests pass (0 fail)
+- Typecheck: clean
+- Lint: clean

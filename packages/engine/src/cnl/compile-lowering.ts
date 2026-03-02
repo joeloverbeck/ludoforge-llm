@@ -274,10 +274,39 @@ export function lowerTurnStructure(
         )
         : undefined;
 
+      const actionDefaults = isRecord(phase.actionDefaults)
+        ? (() => {
+          const rawPre = lowerOptionalCondition(
+            phase.actionDefaults.pre,
+            diagnostics,
+            `${path}.actionDefaults.pre`,
+            context,
+          );
+          const pre = rawPre === null ? undefined : rawPre;
+          const afterEffects = Array.isArray(phase.actionDefaults.afterEffects)
+            ? lowerEffectsWithDiagnostics(
+              phase.actionDefaults.afterEffects,
+              diagnostics,
+              `${path}.actionDefaults.afterEffects`,
+              context,
+              [],
+            )
+            : undefined;
+          if (pre === undefined && afterEffects === undefined) {
+            return undefined;
+          }
+          return {
+            ...(pre === undefined ? {} : { pre }),
+            ...(afterEffects === undefined ? {} : { afterEffects }),
+          };
+        })()
+        : undefined;
+
       return {
         id: asPhaseId(phase.id),
         ...(onEnter === undefined ? {} : { onEnter }),
         ...(onExit === undefined ? {} : { onExit }),
+        ...(actionDefaults === undefined ? {} : { actionDefaults }),
       };
     });
   };

@@ -53,6 +53,7 @@ import type {
   Move,
   MoveParamScalar,
   MoveParamValue,
+  PhaseDef,
   Rng,
   TurnFlowDeferredEventEffectPayload,
   TurnFlowReleasedDeferredEventEffect,
@@ -804,6 +805,10 @@ const executeMoveAction = (
     executionTraceEntries.push(...saResult.triggerFirings);
   };
 
+  const originatingPhaseDef: PhaseDef | undefined =
+    def.turnStructure.phases.find(p => p.id === effectState.currentPhase) ??
+    (def.turnStructure.interrupts ?? []).find(p => p.id === effectState.currentPhase);
+
   if (move.compound?.timing === 'before') {
     applyCompoundSA();
   }
@@ -878,6 +883,29 @@ const executeMoveAction = (
   effectRng = lastingActivation.rng;
   if (lastingActivation.emittedEvents.length > 0) {
     emittedEvents.push(...lastingActivation.emittedEvents);
+  }
+
+  if (originatingPhaseDef?.actionDefaults?.afterEffects !== undefined &&
+      originatingPhaseDef.actionDefaults.afterEffects.length > 0) {
+    const afterResult = applyEffects(
+      originatingPhaseDef.actionDefaults.afterEffects,
+      createExecutionEffectContext({
+        ...effectCtx,
+        state: effectState,
+        rng: effectRng,
+        traceContext: {
+          eventContext: 'actionEffect',
+          actionId: String(action.id),
+          effectPathRoot: `action:${String(action.id)}.afterEffects`,
+        },
+        effectPath: '',
+      }),
+    );
+    effectState = afterResult.state;
+    effectRng = afterResult.rng;
+    if (afterResult.emittedEvents !== undefined) {
+      emittedEvents.push(...afterResult.emittedEvents);
+    }
   }
 
   const stateWithUsage = incrementActionUsage(effectState, action.id);

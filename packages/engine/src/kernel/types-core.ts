@@ -130,6 +130,10 @@ export interface PhaseDef {
   readonly id: PhaseId;
   readonly onEnter?: readonly EffectAST[];
   readonly onExit?: readonly EffectAST[];
+  readonly actionDefaults?: {
+    readonly pre?: ConditionAST;
+    readonly afterEffects?: readonly EffectAST[];
+  };
 }
 
 export interface TurnStructure {

@@ -24,6 +24,10 @@ export interface SeatResolutionIndex {
   readonly playerIndexByNormalizedCardSeatKey: ReadonlyMap<string, number>;
 }
 
+export interface SeatResolutionContext {
+  readonly index: SeatResolutionIndex;
+}
+
 export const buildSeatResolutionIndex = (
   def: Pick<GameDef, 'seats' | 'turnOrder'>,
   playerCount: number,
@@ -78,6 +82,13 @@ export const buildSeatResolutionIndex = (
     playerIndexByNormalizedCardSeatKey,
   };
 };
+
+export const createSeatResolutionContext = (
+  def: Pick<GameDef, 'seats' | 'turnOrder'>,
+  playerCount: number,
+): SeatResolutionContext => ({
+  index: buildSeatResolutionIndex(def, playerCount),
+});
 
 export const resolvePlayerIndexForSeatValue = (
   seatValue: string,

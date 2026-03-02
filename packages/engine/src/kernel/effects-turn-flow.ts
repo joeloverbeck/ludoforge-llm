@@ -7,7 +7,7 @@ import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
-import { buildSeatResolutionIndex, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
 import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,
@@ -96,11 +96,11 @@ export const applyGrantFreeOperation = (
   }
 
   const runtime = ctx.state.turnOrderState.runtime;
-  const seatResolutionIndex = buildSeatResolutionIndex(ctx.def, ctx.state.playerCount);
+  const seatResolution = createSeatResolutionContext(ctx.def, ctx.state.playerCount);
   const activeSeat = resolveTurnFlowSeatForPlayerIndex(
     runtime.seatOrder,
     Number(ctx.activePlayer),
-    seatResolutionIndex,
+    seatResolution.index,
   );
   if (activeSeat === null) {
     const activeSeatInvariant = makeActiveSeatUnresolvableInvariantContext(

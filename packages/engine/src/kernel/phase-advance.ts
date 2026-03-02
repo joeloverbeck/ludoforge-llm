@@ -8,7 +8,11 @@ import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { buildSeatResolutionIndex, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
+import {
+  createSeatResolutionContext,
+  resolvePlayerIndexForTurnFlowSeat,
+  type SeatResolutionContext,
+} from './seat-resolution.js';
 import { terminalResult } from './terminal.js';
 import type { ExecutionCollector, GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -45,7 +49,7 @@ const isInCoupPhase = (def: GameDef, state: GameState): boolean =>
 
 const validateCoupSeatOrderAtPhaseEntry = (
   coupSeatOrder: readonly string[],
-  seatResolutionIndex: ReturnType<typeof buildSeatResolutionIndex>,
+  seatResolution: SeatResolutionContext,
   playerCount: number,
 ): void => {
   const unresolvedSeats: string[] = [];
@@ -53,7 +57,7 @@ const validateCoupSeatOrderAtPhaseEntry = (
   const seenSeats = new Set<string>();
 
   for (const seat of coupSeatOrder) {
-    if (resolvePlayerIndexForTurnFlowSeat(seat, seatResolutionIndex) === null) {
+    if (resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index) === null) {
       unresolvedSeats.push(seat);
     }
     if (seenSeats.has(seat) && !duplicateSeats.includes(seat)) {
@@ -76,8 +80,9 @@ const validateCoupSeatOrderAtPhaseEntry = (
 const resolveCurrentCoupSeat = (
   def: GameDef,
   state: GameState,
+  seatResolution?: SeatResolutionContext,
 ): string => {
-  return requireCardDrivenActiveSeat(def, state, 'resolveCurrentCoupSeat');
+  return requireCardDrivenActiveSeat(def, state, 'resolveCurrentCoupSeat', seatResolution);
 };
 
 /**
@@ -88,7 +93,12 @@ const resolveCurrentCoupSeat = (
  * Returns the state unchanged if the target phase is not a coup phase or
  * the turn order is not card-driven.
  */
-const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameState['currentPhase']): GameState => {
+const applyCoupPhaseEntryReset = (
+  def: GameDef,
+  state: GameState,
+  phaseId: GameState['currentPhase'],
+  seatResolution: SeatResolutionContext,
+): GameState => {
   if (def.turnOrder?.type !== 'cardDriven' || state.turnOrderState.type !== 'cardDriven') {
     return state;
   }
@@ -103,10 +113,9 @@ const applyCoupPhaseEntryReset = (def: GameDef, state: GameState, phaseId: GameS
   ) as Readonly<Record<string, boolean>>;
   const firstSeat = coupSeatOrder[0] ?? null;
   const secondSeat = coupSeatOrder[1] ?? null;
-  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
-  validateCoupSeatOrderAtPhaseEntry(coupSeatOrder, seatResolutionIndex, state.playerCount);
+  validateCoupSeatOrderAtPhaseEntry(coupSeatOrder, seatResolution, state.playerCount);
   const resolvedFirstSeatPlayerIndex =
-    firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(firstSeat, seatResolutionIndex);
+    firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(firstSeat, seatResolution.index);
   return {
     ...state,
     activePlayer:
@@ -250,6 +259,7 @@ export const advancePhase = (
   collector?: ExecutionCollector,
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const phases = effectiveTurnPhases(def, state);
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
   if (currentPhaseIndex < 0) {
@@ -269,7 +279,7 @@ export const advancePhase = (
     redirected = applyCoupPhaseEntryReset(def, resetPhaseUsage({
       ...redirected,
       currentPhase: targetPhase.id,
-    }), targetPhase.id);
+    }), targetPhase.id, seatResolution);
     return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
   }
 
@@ -289,7 +299,7 @@ export const advancePhase = (
     nextState = applyCoupPhaseEntryReset(def, resetPhaseUsage({
       ...nextState,
       currentPhase: nextPhase.id,
-    }), nextPhase.id);
+    }), nextPhase.id, seatResolution);
 
     return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
   }
@@ -324,7 +334,7 @@ export const advancePhase = (
       ...rolledForCoupCheck,
       currentPhase: initialPhase,
     }),
-  ), initialPhase);
+  ), initialPhase, seatResolution);
   const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
   return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, collector, 'lifecycle', cachedRuntime);
 };
@@ -337,13 +347,15 @@ export const advancePhase = (
 const coupPhaseImplicitPass = (
   def: GameDef,
   state: GameState,
+  seatResolution?: SeatResolutionContext,
 ): GameState | null => {
   if (!isInCoupPhase(def, state) || state.turnOrderState.type !== 'cardDriven') {
     return null;
   }
 
   const runtime = state.turnOrderState.runtime;
-  const currentSeat = resolveCurrentCoupSeat(def, state);
+  const operationSeatResolution = seatResolution ?? createSeatResolutionContext(def, state.playerCount);
+  const currentSeat = resolveCurrentCoupSeat(def, state, operationSeatResolution);
   const acted = new Set([...runtime.currentCard.actedSeats, currentSeat]);
   const passed = new Set([...runtime.currentCard.passedSeats, currentSeat]);
 
@@ -355,8 +367,7 @@ const coupPhaseImplicitPass = (
   }
 
   const nextSeat = remaining[0]!;
-  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
-  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(nextSeat, seatResolutionIndex);
+  const nextSeatPlayerIndex = resolvePlayerIndexForTurnFlowSeat(nextSeat, operationSeatResolution.index);
   if (nextSeatPlayerIndex === null) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',

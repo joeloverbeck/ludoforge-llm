@@ -13,7 +13,12 @@ import {
 } from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { buildSeatResolutionIndex, normalizeSeatOrder, resolvePlayerIndexForTurnFlowSeat } from './seat-resolution.js';
+import {
+  createSeatResolutionContext,
+  normalizeSeatOrder,
+  resolvePlayerIndexForTurnFlowSeat,
+  type SeatResolutionContext,
+} from './seat-resolution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
@@ -594,13 +599,16 @@ const computePostCardEligibility = (
   return eligibility;
 };
 
-const withActiveFromFirstEligible = (def: GameDef, state: GameState, firstEligible: string | null): GameState => {
+const withActiveFromFirstEligible = (
+  state: GameState,
+  firstEligible: string | null,
+  seatResolution: SeatResolutionContext,
+): GameState => {
   if (firstEligible === null) {
     return state;
   }
 
-  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
-  const playerId = resolvePlayerIndexForTurnFlowSeat(firstEligible, seatResolutionIndex);
+  const playerId = resolvePlayerIndexForTurnFlowSeat(firstEligible, seatResolution.index);
   if (playerId === null) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
@@ -614,7 +622,11 @@ const withActiveFromFirstEligible = (def: GameDef, state: GameState, firstEligib
   };
 };
 
-const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[] | null => {
+const resolveCardSeatOrder = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+): readonly string[] | null => {
   const config = cardDrivenConfig(def);
   if (config === null) {
     return null;
@@ -633,7 +645,6 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
     return null;
   }
   const mapping = config.turnFlow.cardSeatOrderMapping;
-  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
   for (const deck of def.eventDecks ?? []) {
     const card = deck.cards.find((c) => c.id === cardId);
     if (card !== undefined) {
@@ -643,7 +654,7 @@ const resolveCardSeatOrder = (def: GameDef, state: GameState): readonly string[]
           ? rawOrder
           : rawOrder.map((value) => mapping[value] ?? value);
         for (const seatToken of resolved) {
-          if (resolvePlayerIndexForTurnFlowSeat(seatToken, seatResolutionIndex) !== null) {
+          if (resolvePlayerIndexForTurnFlowSeat(seatToken, seatResolution.index) !== null) {
             continue;
           }
           throw kernelRuntimeError(
@@ -664,9 +675,10 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
     return state;
   }
 
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const seats = flow.eligibility.seats;
   const defaultSeatOrder = normalizeSeatOrder(seats);
-  const cardSeatOrder = resolveCardSeatOrder(def, state);
+  const cardSeatOrder = resolveCardSeatOrder(def, state, seatResolution);
   const seatOrder = cardSeatOrder ?? defaultSeatOrder;
   const eligibility = Object.fromEntries(seatOrder.map((seat) => [seat, true])) as Readonly<Record<string, boolean>>;
   const candidates = computeCandidates(seatOrder, eligibility, new Set());
@@ -691,7 +703,7 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
     },
   };
 
-  return withActiveFromFirstEligible(def, nextState, candidates.first);
+  return withActiveFromFirstEligible(nextState, candidates.first, seatResolution);
 };
 
 export const isActiveSeatEligibleForTurnFlow = (def: GameDef, state: GameState): boolean => {
@@ -895,9 +907,10 @@ export const resolveFreeOperationDiscoveryAnalysis = (
   const applicable = analysis.actionMatchedGrants;
   const prioritized = applicable.find((grant) => grant.executeAsSeat !== undefined) ?? applicable[0];
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const executionPlayer = executionSeat === undefined
     ? state.activePlayer
-    : parsePlayerId(def, executionSeat, state.playerCount) ?? state.activePlayer;
+    : parsePlayerId(executionSeat, seatResolution) ?? state.activePlayer;
 
   const zoneFilters: ConditionAST[] = applicable
     .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
@@ -915,12 +928,10 @@ export const resolveFreeOperationDiscoveryAnalysis = (
 };
 
 const parsePlayerId = (
-  def: GameDef,
   seat: string,
-  playerCount: number,
+  seatResolution: SeatResolutionContext,
 ): ReturnType<typeof asPlayerId> | null => {
-  const seatResolutionIndex = buildSeatResolutionIndex(def, playerCount);
-  const parsed = resolvePlayerIndexForTurnFlowSeat(seat, seatResolutionIndex);
+  const parsed = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);
   return parsed === null ? null : asPlayerId(parsed);
 };
 
@@ -960,8 +971,14 @@ export const applyTurnFlowEligibilityAfterMove = (
   if (runtime === null) {
     return { state, traceEntries: [] };
   }
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'applyTurnFlowEligibilityAfterMove');
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    'applyTurnFlowEligibilityAfterMove',
+    seatResolution,
+  );
 
   const coupPhaseIds = def.turnOrder?.type === 'cardDriven'
     ? new Set((def.turnOrder.config.coupPlan?.phases ?? []).map((p) => p.id))
@@ -1133,7 +1150,7 @@ export const applyTurnFlowEligibilityAfterMove = (
       baseState = lifecycle.state;
       traceEntries.push(...lifecycle.traceEntries);
       boundaryDurations = resolveBoundaryDurationsAtTurnEnd(lifecycle.traceEntries);
-      const cardSeatOrder = resolveCardSeatOrder(def, baseState);
+      const cardSeatOrder = resolveCardSeatOrder(def, baseState, seatResolution);
       if (cardSeatOrder !== null) {
         nextSeatOrder = cardSeatOrder;
       }
@@ -1181,7 +1198,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   };
 
   return {
-    state: withActiveFromFirstEligible(def, stateWithTurnFlow, nextTurn.firstEligible),
+    state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible, seatResolution),
     traceEntries,
     ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),

@@ -1,5 +1,9 @@
 import { kernelRuntimeError, type TurnFlowActiveSeatInvariantContext } from './runtime-error.js';
-import { buildSeatResolutionIndex, resolveTurnFlowSeatForPlayerIndex } from './seat-resolution.js';
+import {
+  createSeatResolutionContext,
+  resolveTurnFlowSeatForPlayerIndex,
+  type SeatResolutionContext,
+} from './seat-resolution.js';
 import type { GameDef, GameState } from './types.js';
 
 export const TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT = 'turnFlow.activeSeat.unresolvable';
@@ -24,6 +28,7 @@ export const requireCardDrivenActiveSeat = (
   def: Pick<GameDef, 'seats' | 'turnOrder'>,
   state: GameState,
   surface: string,
+  seatResolution?: SeatResolutionContext,
 ): string => {
   if (state.turnOrderState.type !== 'cardDriven') {
     throw kernelRuntimeError(
@@ -32,11 +37,11 @@ export const requireCardDrivenActiveSeat = (
     );
   }
 
-  const seatResolutionIndex = buildSeatResolutionIndex(def, state.playerCount);
+  const operationSeatResolution = seatResolution ?? createSeatResolutionContext(def, state.playerCount);
   const seat = resolveTurnFlowSeatForPlayerIndex(
     state.turnOrderState.runtime.seatOrder,
     Number(state.activePlayer),
-    seatResolutionIndex,
+    operationSeatResolution.index,
   );
   if (seat !== null) {
     return seat;

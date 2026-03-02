@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildSeatResolutionIndex,
+  createSeatResolutionContext,
   normalizeSeatKey,
   resolvePlayerIndexForSeatValue,
   resolvePlayerIndexForTurnFlowSeat,
@@ -81,5 +82,31 @@ describe('seat-resolution helpers', () => {
     assert.equal(resolvePlayerIndexForTurnFlowSeat('US', index), 0);
     assert.equal(resolveTurnFlowSeatForPlayerIndex(['US', 'NVA'], 1, index), 'NVA');
     assert.equal(resolveTurnFlowSeatForPlayerIndex(['US', 'NVA'], 1, index), 'NVA');
+  });
+
+  it('creates operation-scoped context with index parity for turn-flow lookups', () => {
+    const def = {
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardSeatOrderMapping: {
+              US: 'us',
+              NVA: 'nva',
+            },
+          },
+        },
+      },
+    } as unknown as Pick<GameDef, 'seats' | 'turnOrder'>;
+
+    const index = buildSeatResolutionIndex(def, 2);
+    const context = createSeatResolutionContext(def, 2);
+    assert.deepEqual(
+      context.index.seatIdByPlayerIndex,
+      index.seatIdByPlayerIndex,
+    );
+    assert.equal(resolvePlayerIndexForTurnFlowSeat('US', context.index), 0);
+    assert.equal(resolveTurnFlowSeatForPlayerIndex(['US', 'NVA'], 1, context.index), 'NVA');
   });
 });

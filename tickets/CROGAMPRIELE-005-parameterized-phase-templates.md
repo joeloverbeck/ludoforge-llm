@@ -1,6 +1,6 @@
 # CROGAMPRIELE-005: Parameterized phase templates compiler pass (A5)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler pipeline (new expansion pass), GameSpecDoc types
@@ -12,8 +12,8 @@ Texas Hold'em's flop, turn, and river phases share ~90% of their `onEnter` logic
 
 ## Assumption Reassessment (2026-03-01)
 
-1. `GameSpecPhaseDef` exists in `game-spec-doc.ts:88-92` with `id`, optional `onEnter`, optional `onExit`.
-2. `GameSpecTurnStructure.phases` is `readonly GameSpecPhaseDef[]` (`game-spec-doc.ts:57`).
+1. `GameSpecPhaseDef` exists in `game-spec-doc.ts:120-124` with `id`, optional `onEnter`, optional `onExit`.
+2. `GameSpecTurnStructure.phases` is `readonly (GameSpecPhaseDef | GameSpecPhaseFromTemplate)[]` (`game-spec-doc.ts:89`).
 3. `GameSpecDoc` has no `phaseTemplates` field currently — it must be added.
 4. Parameter substitution is simple string replacement on scalar values in the template body. The spec uses `"{paramName}"` as the pattern — a quoted string that gets replaced with the arg value.
 5. Phase templates can include `actionDefaults` (from CROGAMPRIELE-006), but the expansion pass does not need to understand `actionDefaults` semantically — it just copies the template body with substitutions.

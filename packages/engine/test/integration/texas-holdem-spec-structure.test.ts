@@ -110,7 +110,7 @@ describe('texas hold\'em spec structure', () => {
     assert.equal((parsed.doc.setup ?? []).length > 0, true);
 
     assert.deepEqual(
-      parsed.doc.turnStructure?.phases.map((phase) => phase.id),
+      parsed.doc.turnStructure?.phases.map((phase) => 'id' in phase ? phase.id : phase.fromTemplate),
       ['hand-setup', 'preflop', 'flop', 'turn', 'river', 'showdown', 'hand-cleanup'],
     );
     assert.deepEqual(
@@ -275,8 +275,9 @@ describe('texas hold\'em spec structure', () => {
     const parsed = parseGameSpec(markdown);
     assertNoErrors(parsed);
 
-    const showdown = parsed.doc.turnStructure?.phases.find((phase) => phase.id === 'showdown');
+    const showdown = parsed.doc.turnStructure?.phases.find((phase) => 'id' in phase && phase.id === 'showdown');
     assert.ok(showdown);
+    assert.ok('onEnter' in showdown);
 
     const serialized = JSON.stringify(showdown.onEnter);
     assert.equal(serialized.includes('"macro":"award-uncontested-pot"'), true);

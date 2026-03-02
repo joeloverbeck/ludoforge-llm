@@ -894,3 +894,136 @@ describe('GameDefSchema with stackingConstraints', () => {
     assert.equal(result.success, true);
   });
 });
+
+describe('GameDefSchema with PhaseDef.actionDefaults', () => {
+  it('accepts GameDef with valid actionDefaults containing pre and afterEffects', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              pre: { op: '==', left: 1, right: 1 },
+              afterEffects: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }],
+            },
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts GameDef with actionDefaults containing only pre', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              pre: { op: '>', left: 1, right: 0 },
+            },
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts GameDef with actionDefaults containing only afterEffects', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              afterEffects: [{ shuffle: { zone: 'deck:none' } }],
+            },
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts GameDef with empty actionDefaults object', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {},
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts GameDef without actionDefaults (backward compatible)', () => {
+    const result = GameDefSchema.safeParse(minimalGameDef);
+    assert.equal(result.success, true);
+  });
+
+  it('rejects actionDefaults with unknown properties', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              pre: { op: '==', left: 1, right: 1 },
+              bogus: 'not-allowed',
+            },
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it('rejects actionDefaults with non-ConditionAST pre value', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              pre: 'not-a-condition',
+            },
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it('rejects actionDefaults with non-array afterEffects value', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              afterEffects: 'not-an-array',
+            },
+          },
+        ],
+      },
+    });
+
+    assert.equal(result.success, false);
+  });
+});

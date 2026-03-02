@@ -546,6 +546,25 @@
                 "items": {
                   "$ref": "#/definitions/anon_13805886"
                 }
+              },
+              "actionDefaults": {
+                "type": "object",
+                "properties": {
+                  "pre": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_35634e7a"
+                      }
+                    ]
+                  },
+                  "afterEffects": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_13805886"
+                    }
+                  }
+                },
+                "additionalProperties": false
               }
             },
             "required": [
@@ -573,6 +592,25 @@
                 "items": {
                   "$ref": "#/definitions/anon_13805886"
                 }
+              },
+              "actionDefaults": {
+                "type": "object",
+                "properties": {
+                  "pre": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_35634e7a"
+                      }
+                    ]
+                  },
+                  "afterEffects": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_13805886"
+                    }
+                  }
+                },
+                "additionalProperties": false
               }
             },
             "required": [

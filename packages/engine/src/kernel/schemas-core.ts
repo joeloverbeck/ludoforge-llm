@@ -143,11 +143,19 @@ export const LimitDefSchema = z
   })
   .strict();
 
+export const ActionDefaultsSchema = z
+  .object({
+    pre: ConditionASTSchema.optional(),
+    afterEffects: z.array(EffectASTSchema).optional(),
+  })
+  .strict();
+
 export const PhaseDefSchema = z
   .object({
     id: StringSchema,
     onEnter: z.array(EffectASTSchema).optional(),
     onExit: z.array(EffectASTSchema).optional(),
+    actionDefaults: ActionDefaultsSchema.optional(),
   })
   .strict();
 

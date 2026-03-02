@@ -304,7 +304,30 @@ describe('expandBatchVars', () => {
     assert.equal(vars[3]!.name, 'bravo');
   });
 
-  // Test 12: Boolean batch ignores min/max if present
+  // Test 12: Invalid batch.type → diagnostic
+  it('emits CNL_COMPILER_BATCH_VAR_INVALID_TYPE for an unrecognised type', () => {
+    const batch: GameSpecBatchVarDef = {
+      batch: {
+        names: ['bad_var'],
+        type: 'string' as unknown as 'int' | 'boolean',
+        init: '',
+      },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      globalVars: [batch],
+    };
+
+    const result = expandBatchVars(doc);
+    assert.ok(
+      result.diagnostics.some(
+        (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BATCH_VAR_INVALID_TYPE,
+      ),
+    );
+  });
+
+  // Test 13: Boolean batch ignores min/max if present
   it('does not carry min/max through for boolean batches even if specified', () => {
     const batch: GameSpecBatchVarDef = {
       batch: {

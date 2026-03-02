@@ -2,6 +2,7 @@ export * from './expand-effect-macros.js';
 export * from './expand-condition-macros.js';
 export * from './expand-macros.js';
 export * from './expand-batch-markers.js';
+export * from './expand-batch-vars.js';
 export * from './expand-piece-generation.js';
 export * from './expand-zone-templates.js';
 export * from './expand-phase-templates.js';

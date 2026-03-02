@@ -26,6 +26,14 @@ actions:
     cost: []
     effects: []
     limits: []
+phaseTemplates:
+  - id: "scoring-round"
+    params:
+      - name: "multiplier"
+    phase:
+      id: "score"
+      steps:
+        - action: "tally"
 terminal:
   conditions:
     - when:

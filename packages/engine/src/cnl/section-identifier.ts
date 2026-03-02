@@ -20,6 +20,7 @@ export const CANONICAL_SECTION_KEYS = [
   'triggers',
   'effectMacros',
   'conditionMacros',
+  'phaseTemplates',
 ] as const;
 
 export type CanonicalSectionKey = (typeof CANONICAL_SECTION_KEYS)[number];
@@ -179,6 +180,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isSetupShape(value)) {
     matches.push('setup');
   }
+  if (isPhaseTemplatesShape(value)) {
+    matches.push('phaseTemplates');
+  }
 
   return matches;
 }
@@ -275,6 +279,15 @@ function isSetupShape(value: Record<string, unknown>): boolean {
     return false;
   }
   return Object.keys(value).every((key) => !SETUP_FALLBACK_BLOCKER.has(key));
+}
+
+function isPhaseTemplatesShape(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value.phaseTemplates) &&
+    value.phaseTemplates.every(
+      (entry) => isRecord(entry) && typeof entry.id === 'string' && Array.isArray(entry.params),
+    )
+  );
 }
 
 function stripSectionKey(value: Record<string, unknown>): Record<string, unknown> {

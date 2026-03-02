@@ -33,7 +33,24 @@
         }
       ]
     },
-    "phaseTemplates": null,
+    "phaseTemplates": [
+      {
+        "id": "scoring-round",
+        "params": [
+          {
+            "name": "multiplier"
+          }
+        ],
+        "phase": {
+          "id": "score",
+          "steps": [
+            {
+              "action": "tally"
+            }
+          ]
+        }
+      }
+    ],
     "turnOrder": null,
     "actionPipelines": null,
     "derivedMetrics": null,
@@ -79,7 +96,9 @@
     "zones[0].id",
     "turnStructure.phases[0].id",
     "actions[0].id",
-    "terminal.conditions[0].result.type"
+    "terminal.conditions[0].result.type",
+    "phaseTemplates[0].id",
+    "phaseTemplates[0].params[0].name"
   ],
   "expectedParseDiagnosticCodes": [
     "CNL_YAML_002",

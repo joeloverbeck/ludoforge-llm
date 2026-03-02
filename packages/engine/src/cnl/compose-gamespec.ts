@@ -22,6 +22,7 @@ const LIST_SECTIONS = [
   'triggers',
   'effectMacros',
   'conditionMacros',
+  'phaseTemplates',
 ] as const;
 
 interface ParsedSource {
@@ -305,6 +306,9 @@ function assignListSection(
       break;
     case 'conditionMacros':
       mutable.conditionMacros = value as MutableGameSpecDoc['conditionMacros'];
+      break;
+    case 'phaseTemplates':
+      mutable.phaseTemplates = value as MutableGameSpecDoc['phaseTemplates'];
       break;
   }
 }

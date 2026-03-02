@@ -1,6 +1,6 @@
 # CROGAMPRIELE-014: Parser and compose awareness for `phaseTemplates` section
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — parser, section identifier, compose pipeline
@@ -12,13 +12,14 @@ CROGAMPRIELE-005 added a top-level `phaseTemplates` field to `GameSpecDoc` and t
 
 Without this ticket, YAML `phaseTemplates:` blocks in game specs are silently dropped: `section-identifier.ts` does not recognize the key, `parser.ts` has no merge handler, and `compose-gamespec.ts` cannot merge it across fragments. The field will always be `null` at parse time, which blocks CROGAMPRIELE-010 and CROGAMPRIELE-011 (spec migrations that need spec authors to write `phaseTemplates:` YAML).
 
-## Assumption Reassessment (2026-03-02)
+## Assumption Reassessment (2026-03-02, verified)
 
-1. `CANONICAL_SECTION_KEYS` in `section-identifier.ts:1-23` does not include `'phaseTemplates'`. Confirmed.
-2. `mergeSection()` in `parser.ts:201-236` has no case for `'phaseTemplates'`. Confirmed.
-3. `compose-gamespec.ts` `LIST_SECTIONS` (lines 9-25) does not include `'phaseTemplates'`. `assignListSection` (lines 257-310) has no case. Confirmed.
-4. `getListSectionLength` in `parser.ts:432-451` does not include `'phaseTemplates'`. Confirmed.
-5. `GameSpecDoc.phaseTemplates` is typed `readonly GameSpecPhaseTemplateDef[] | null` (line 435 of `game-spec-doc.ts`). It is an array, so it belongs in list-section handling (not singleton).
+1. `CANONICAL_SECTION_KEYS` in `section-identifier.ts:1-23` does not include `'phaseTemplates'`. **Confirmed.**
+2. `mergeSection()` in `parser.ts:207-236` has no case for `'phaseTemplates'`. **Confirmed.**
+3. `compose-gamespec.ts` `LIST_SECTIONS` (lines 9-25) does not include `'phaseTemplates'`. `assignListSection` (lines 257-310) has no case. **Confirmed.**
+4. `getListSectionLength` in `parser.ts:432-457` does not include `'phaseTemplates'`. **Confirmed.**
+5. `GameSpecDoc.phaseTemplates` is typed `readonly GameSpecPhaseTemplateDef[] | null` (line 444 of `game-spec-doc.ts`). It is an array, so it belongs in list-section handling (not singleton). **Confirmed.**
+6. `packages/engine/test/unit/section-identifier.test.ts` does **not exist** — must be **created**, not modified.
 
 ## Architecture Check
 
@@ -88,7 +89,8 @@ Add a `phaseTemplates` YAML block to `full-valid-spec.md` and update `full-valid
 - `packages/engine/src/cnl/section-identifier.ts` (modify — add to array, add fingerprint)
 - `packages/engine/src/cnl/parser.ts` (modify — add list-section case + type union)
 - `packages/engine/src/cnl/compose-gamespec.ts` (modify — add to `LIST_SECTIONS` + `assignListSection`)
-- `packages/engine/test/unit/section-identifier.test.ts` (modify — add fingerprint test)
+- `packages/engine/src/cnl/yaml-linter.ts` (modify — add `'phaseTemplates'` to its own `CANONICAL_SECTION_KEYS` set, which is a separate duplicate of the main set)
+- `packages/engine/test/unit/section-identifier.test.ts` (**create** — add fingerprint test)
 - `packages/engine/test/unit/parser.test.ts` (modify — add phaseTemplates parse test)
 - `packages/engine/test/fixtures/cnl/full-valid-spec.md` (modify — add phaseTemplates block)
 - `packages/engine/test/fixtures/cnl/full-valid-spec.golden.json` (modify — update expected doc)

@@ -22,7 +22,9 @@ import {
   type IllegalMoveReasonsWithOptionalContext,
   type KernelRuntimeErrorContext,
   type Move,
+  TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES,
   type TurnFlowActionClass,
+  type TurnFlowActiveSeatInvariantSurface,
 } from '../../../src/kernel/index.js';
 
 describe('runtime error context contracts', () => {
@@ -184,6 +186,21 @@ describe('runtime error context contracts', () => {
     assert.equal(context.surface, 'isActiveSeatEligibleForTurnFlow');
     assert.equal(context.activePlayer, 0);
     assert.deepEqual(context.seatOrder, ['0', '1']);
+  });
+
+  it('active-seat invariant surfaces are constrained to canonical literals', () => {
+    const expectedSurfaces = [
+      'analyzeFreeOperationGrantMatch',
+      'applyGrantFreeOperation',
+      'applyPendingFreeOperationVariants',
+      'applyTurnFlowEligibilityAfterMove',
+      'applyTurnFlowWindowFilters',
+      'consumeTurnFlowFreeOperationGrant',
+      'isActiveSeatEligibleForTurnFlow',
+      'resolveCurrentCoupSeat',
+    ] as const satisfies readonly TurnFlowActiveSeatInvariantSurface[];
+
+    assert.deepEqual(TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES, expectedSurfaces);
   });
 
   it('kernelRuntimeError enforces per-code context contract for kernel-emitted codes', () => {

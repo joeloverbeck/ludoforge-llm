@@ -75,11 +75,11 @@ describe('turn-flow-runtime-invariants', () => {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
     assert.equal(
-      requireCardDrivenActiveSeat(def, state, 'testSurface', seatResolution),
+      requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow', seatResolution),
       'NVA',
     );
     assert.equal(
-      requireCardDrivenActiveSeat(def, state, 'testSurface', seatResolution),
+      requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow', seatResolution),
       'NVA',
     );
   });

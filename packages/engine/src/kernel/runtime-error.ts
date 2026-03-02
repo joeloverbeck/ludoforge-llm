@@ -33,6 +33,20 @@ export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves
 
 export type SelectorSurface = 'actor' | 'executor';
 
+export const TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES = [
+  'analyzeFreeOperationGrantMatch',
+  'applyGrantFreeOperation',
+  'applyPendingFreeOperationVariants',
+  'applyTurnFlowEligibilityAfterMove',
+  'applyTurnFlowWindowFilters',
+  'consumeTurnFlowFreeOperationGrant',
+  'isActiveSeatEligibleForTurnFlow',
+  'resolveCurrentCoupSeat',
+] as const;
+
+export type TurnFlowActiveSeatInvariantSurface =
+  (typeof TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES)[number];
+
 export interface SelectorRuntimeContractInvalidContext {
   readonly surface: SelectorBoundarySurface;
   readonly selector: SelectorSurface;
@@ -43,7 +57,7 @@ export interface SelectorRuntimeContractInvalidContext {
 
 export interface TurnFlowActiveSeatInvariantContext {
   readonly invariant: 'turnFlow.activeSeat.unresolvable';
-  readonly surface: string;
+  readonly surface: TurnFlowActiveSeatInvariantSurface;
   readonly activePlayer: number;
   readonly seatOrder: readonly string[];
 }

@@ -1,4 +1,8 @@
-import { kernelRuntimeError, type TurnFlowActiveSeatInvariantContext } from './runtime-error.js';
+import {
+  kernelRuntimeError,
+  type TurnFlowActiveSeatInvariantContext,
+  type TurnFlowActiveSeatInvariantSurface,
+} from './runtime-error.js';
 import {
   analyzeSeatOrderShape,
   resolveTurnFlowSeatForPlayerIndex,
@@ -9,7 +13,7 @@ import type { GameDef, GameState } from './types.js';
 export const TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT = 'turnFlow.activeSeat.unresolvable';
 
 export const makeActiveSeatUnresolvableInvariantContext = (
-  surface: string,
+  surface: TurnFlowActiveSeatInvariantSurface,
   activePlayer: number,
   seatOrder: readonly string[],
 ): TurnFlowActiveSeatInvariantContext => ({
@@ -27,7 +31,7 @@ export const activeSeatUnresolvableInvariantMessage = (
 export const requireCardDrivenActiveSeat = (
   def: Pick<GameDef, 'seats' | 'turnOrder'>,
   state: GameState,
-  surface: string,
+  surface: TurnFlowActiveSeatInvariantSurface,
   seatResolution: SeatResolutionContext,
 ): string => {
   if (state.turnOrderState.type !== 'cardDriven') {

@@ -26,7 +26,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run clean && tsc",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",

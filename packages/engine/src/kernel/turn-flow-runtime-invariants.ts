@@ -1,5 +1,6 @@
 import { kernelRuntimeError, type TurnFlowActiveSeatInvariantContext } from './runtime-error.js';
 import {
+  analyzeSeatOrderShape,
   resolveTurnFlowSeatForPlayerIndex,
   type SeatResolutionContext,
 } from './seat-resolution.js';
@@ -76,4 +77,22 @@ export const validateTurnFlowRuntimeStateInvariants = (state: GameState): void =
       );
     }
   }
+};
+
+export const assertCardMetadataSeatOrderRuntimeInvariant = (
+  seatOrder: readonly string[],
+  context: {
+    readonly cardId: string;
+    readonly metadataKey: string;
+  },
+): void => {
+  const shape = analyzeSeatOrderShape(seatOrder);
+  if (shape.duplicateSeats.length === 0 && shape.distinctSeatCount >= 2) {
+    return;
+  }
+
+  throw kernelRuntimeError(
+    'RUNTIME_CONTRACT_INVALID',
+    `Turn-flow runtime invariant failed: card metadata seat order shape invalid (cardId=${context.cardId}, metadataKey=${context.metadataKey}, distinctSeatCount=${shape.distinctSeatCount}, duplicates=[${shape.duplicateSeats.join(', ')}]).`,
+  );
 };

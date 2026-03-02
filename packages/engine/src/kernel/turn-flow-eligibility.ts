@@ -23,7 +23,10 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
-import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import {
+  assertCardMetadataSeatOrderRuntimeInvariant,
+  requireCardDrivenActiveSeat,
+} from './turn-flow-runtime-invariants.js';
 import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
@@ -662,6 +665,7 @@ const resolveCardSeatOrder = (
             `Turn-flow runtime invariant failed: card metadata seat order token could not resolve (cardId=${cardId}, metadataKey=${metadataKey}, token=${seatToken}).`,
           );
         }
+        assertCardMetadataSeatOrderRuntimeInvariant(resolved, { cardId, metadataKey });
         return resolved;
       }
     }

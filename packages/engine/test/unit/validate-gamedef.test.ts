@@ -113,6 +113,36 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('errors when card metadata seat-order resolves duplicate seats', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(base, { US: '0', NVA: '1' }, ['US', 'NVA', 'US']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DUPLICATE_SEAT'
+          && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder[2]'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('errors when card metadata seat-order has fewer than two distinct seats', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(base, { US: '0' }, ['US']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_INSUFFICIENT_DISTINCT_SEATS'
+          && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
   it('emits deterministic duplicate action diagnostics', () => {
     const base = createValidGameDef();
     const def = {

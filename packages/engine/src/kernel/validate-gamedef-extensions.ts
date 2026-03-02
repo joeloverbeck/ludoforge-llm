@@ -1,5 +1,5 @@
 import type { Diagnostic } from './diagnostics.js';
-import { normalizeSeatKey } from './seat-resolution.js';
+import { analyzeSeatOrderShape, normalizeSeatKey } from './seat-resolution.js';
 import type { ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
@@ -164,6 +164,32 @@ export const validateCardSeatOrderMapping = (diagnostics: Diagnostic[], def: Gam
           severity: 'error',
           message: `Card seat-order value "${sourceSeat}" resolves to "${mappedSeat}", which is not in turnFlow.eligibility.seats.`,
           suggestion: 'Add or correct cardSeatOrderMapping, or align card metadata seat-order values with turnFlow.eligibility.seats.',
+        });
+      }
+
+      const resolvedSeatOrder = rawSeatOrder.map((sourceSeat) => mapping[sourceSeat] ?? sourceSeat);
+      const shape = analyzeSeatOrderShape(resolvedSeatOrder);
+      if (shape.duplicateSeats.length > 0) {
+        const firstDuplicateIndex = resolvedSeatOrder.findIndex(
+          (seat, index) => resolvedSeatOrder.indexOf(seat) !== index,
+        );
+        if (firstDuplicateIndex >= 0) {
+          diagnostics.push({
+            code: 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DUPLICATE_SEAT',
+            path: `eventDecks[${deckIndex}].cards[${cardIndex}].metadata.${metadataKey}[${firstDuplicateIndex}]`,
+            severity: 'error',
+            message: `Card seat-order resolves duplicate seat "${resolvedSeatOrder[firstDuplicateIndex] ?? ''}" in metadata key "${metadataKey}".`,
+            suggestion: 'Ensure each card seat-order resolves to unique seats.',
+          });
+        }
+      }
+      if (shape.distinctSeatCount < 2) {
+        diagnostics.push({
+          code: 'TURN_FLOW_CARD_SEAT_ORDER_INSUFFICIENT_DISTINCT_SEATS',
+          path: `eventDecks[${deckIndex}].cards[${cardIndex}].metadata.${metadataKey}`,
+          severity: 'error',
+          message: `Card seat-order resolves to ${shape.distinctSeatCount} distinct seat(s); at least 2 are required.`,
+          suggestion: 'Provide a card seat-order with at least two distinct seats.',
         });
       }
     }

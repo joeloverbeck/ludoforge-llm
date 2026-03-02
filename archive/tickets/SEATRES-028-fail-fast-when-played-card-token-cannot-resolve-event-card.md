@@ -1,6 +1,6 @@
 # SEATRES-028: Fail fast when played-card token cannot resolve event card
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — turn-flow runtime invariant enforcement for played-card identity contract
@@ -10,11 +10,11 @@
 
 In card-driven mode, seat-order resolution can silently fall back to default order when the `played` zone token’s `cardId` cannot be resolved to any declared event card. This masks corrupted/invalid runtime card state and reintroduces non-deterministic fallback behavior.
 
-## Assumption Reassessment (2026-03-01)
+## Assumption Reassessment (2026-03-02)
 
 1. `resolveCardSeatOrder()` reads `played` token `cardId` and scans event decks, but when no matching card is found it returns `null` and initialization falls back to default seat order.
-2. Current validation enforces metadata value correctness for known cards, but does not protect runtime state from unknown `cardId` tokens injected in played/lookahead lifecycle state.
-3. Existing active tickets `SEATRES-016` through `SEATRES-026` do not cover this specific played-card identity fail-fast invariant.
+2. Existing coverage already enforces several seat-order invariants (compile-time unknown seat tokens in metadata and runtime metadata shape/token resolution), but does not fail fast when runtime `played` `cardId` cannot resolve to any declared event card.
+3. `SEATRES-016` through `SEATRES-022` are archived dependencies/history, not active tickets; this ticket remains independently scoped to runtime played-card identity enforcement.
 
 ## Architecture Check
 
@@ -27,7 +27,7 @@ In card-driven mode, seat-order resolution can silently fall back to default ord
 ### 1. Enforce played-card identity invariant in seat-order resolution
 
 1. In `resolveCardSeatOrder()`, when `cardSeatOrderMetadataKey` is configured and a `played` token has string `cardId` that does not resolve to any `eventDecks[].cards[].id`, throw deterministic `RUNTIME_CONTRACT_INVALID`.
-2. Include context in message (at minimum `cardId` and surface).
+2. Include context in message (at minimum `cardId`, `metadataKey`, and surface).
 
 ### 2. Lock behavior with targeted tests
 
@@ -38,7 +38,6 @@ In card-driven mode, seat-order resolution can silently fall back to default ord
 
 - `packages/engine/src/kernel/turn-flow-eligibility.ts` (modify)
 - `packages/engine/test/unit/kernel/legal-moves.test.ts` (modify/add)
-- `packages/engine/test/integration/fitl-turn-flow-golden.test.ts` (modify/add if best coverage point)
 
 ## Out of Scope
 
@@ -64,7 +63,6 @@ In card-driven mode, seat-order resolution can silently fall back to default ord
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/legal-moves.test.ts` — unknown played card id invariant failure case.
-2. `packages/engine/test/integration/fitl-turn-flow-golden.test.ts` — integration-level guard for invalid played-card identity (if added there).
 
 ### Commands
 
@@ -73,3 +71,19 @@ In card-driven mode, seat-order resolution can silently fall back to default ord
 3. `node --test packages/engine/dist/test/integration/fitl-turn-flow-golden.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-02
+- **What changed**:
+  - Added runtime fail-fast invariant in `resolveCardSeatOrder()` so unresolved played token `cardId` throws `RUNTIME_CONTRACT_INVALID` instead of silently falling back to default seat order.
+  - Added unit regression coverage for unresolved played-card identity in `packages/engine/test/unit/kernel/legal-moves.test.ts`.
+  - Updated this ticket's assumptions to match current code/test reality (including archived dependency status).
+- **Deviations from original plan**:
+  - No integration test changes were required; targeted unit coverage plus existing integration coverage provided sufficient invariant protection without broadening fixture churn.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js` passed.
+  - `node --test packages/engine/dist/test/integration/fitl-turn-flow-golden.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (`354 passed, 0 failed`).
+  - `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` passed.

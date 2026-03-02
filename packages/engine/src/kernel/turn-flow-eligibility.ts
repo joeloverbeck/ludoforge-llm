@@ -648,9 +648,11 @@ const resolveCardSeatOrder = (
     return null;
   }
   const mapping = config.turnFlow.cardSeatOrderMapping;
+  let resolvedCard = false;
   for (const deck of def.eventDecks ?? []) {
     const card = deck.cards.find((c) => c.id === cardId);
     if (card !== undefined) {
+      resolvedCard = true;
       const rawOrder = card.metadata?.[metadataKey];
       if (Array.isArray(rawOrder) && rawOrder.every((s): s is string => typeof s === 'string') && rawOrder.length > 0) {
         const resolved = mapping === undefined
@@ -669,6 +671,12 @@ const resolveCardSeatOrder = (
         return resolved;
       }
     }
+  }
+  if (!resolvedCard) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `Turn-flow runtime invariant failed: resolveCardSeatOrder could not resolve played cardId=${cardId} for metadataKey=${metadataKey}.`,
+    );
   }
   return null;
 };

@@ -1,5 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import {
+  collectCallExpressionsByIdentifier,
+  expressionToText,
+  parseTypeScriptSource,
+} from '../../helpers/kernel-source-ast-guard.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 import {
   applyMove,
@@ -2211,5 +2217,30 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     assert.equal(traceEntry.insertAfterStage, 2);
     assert.equal(traceEntry.totalStages, 3);
     assert.equal(traceEntry.skippedStageCount, 0);
+  });
+});
+
+describe('applyMove seat-resolution lifecycle architecture guard', () => {
+  it('threads explicit seatResolution through turn-flow preflight window filtering', () => {
+    const source = readKernelSource('src/kernel/apply-move.ts');
+    const sourceFile = parseTypeScriptSource(source, 'apply-move.ts');
+
+    const validateTurnFlowWindowAccessCalls = collectCallExpressionsByIdentifier(sourceFile, 'validateTurnFlowWindowAccess');
+    assert.equal(
+      validateTurnFlowWindowAccessCalls.some(
+        (call) => expressionToText(sourceFile, call).includes('validateTurnFlowWindowAccess(def, state, move, seatResolution)'),
+      ),
+      true,
+      'validateMove must thread seatResolution into validateTurnFlowWindowAccess',
+    );
+
+    const windowFilterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
+    assert.equal(
+      windowFilterCalls.some(
+        (call) => expressionToText(sourceFile, call).includes('applyTurnFlowWindowFilters(def, state, [move], seatResolution)'),
+      ),
+      true,
+      'validateTurnFlowWindowAccess must pass explicit seatResolution to applyTurnFlowWindowFilters',
+    );
   });
 });

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-005: Parameterized phase templates compiler pass (A5)
 
-**Status**: COMPLETED
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler pipeline (new expansion pass), GameSpecDoc types
@@ -138,3 +138,28 @@ Test file covering:
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-phase-templates.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-02
+
+### What actually changed
+
+- **`packages/engine/src/cnl/game-spec-doc.ts`**: Added `GameSpecPhaseTemplateParam`, `GameSpecPhaseTemplateDef`, `GameSpecPhaseFromTemplate` types. Added `phaseTemplates` field to `GameSpecDoc`. Widened `GameSpecTurnStructure.phases` to `(GameSpecPhaseDef | GameSpecPhaseFromTemplate)[]`. Also widened `interrupts` to accept `fromTemplate` entries. Updated `createEmptyGameSpecDoc()`.
+- **`packages/engine/src/cnl/expand-phase-templates.ts`** (new, 217 lines): Pure function `expandPhaseTemplates()` implementing the full algorithm — template lookup, param validation, deep string substitution with type coercion, duplicate ID detection. Shared `expandPhaseArray()` helper handles both phases and interrupts.
+- **`packages/engine/test/unit/expand-phase-templates.test.ts`** (new, 17 tests): Covers all acceptance criteria plus zero-param templates, boolean arg coercion, interrupt expansion, input immutability, and referential identity on no-op.
+- **`packages/engine/src/cnl/compiler-diagnostic-codes.ts`**: Added 4 diagnostic codes (`PHASE_TEMPLATE_MISSING`, `PHASE_TEMPLATE_PARAM_MISSING`, `PHASE_TEMPLATE_PARAM_EXTRA`, `PHASE_TEMPLATE_DUPLICATE_ID`).
+- **`packages/engine/src/cnl/index.ts`**: Added barrel export for `expand-phase-templates`.
+
+### Deviations from original plan
+
+- Ticket originally listed 12 test scenarios; implementation has 17 tests (added boolean coercion, interrupt expansion, null turnStructure no-op, input immutability, zero-param template).
+- `compiler-diagnostic-codes.ts` and `cnl/index.ts` were not listed in "Files to Touch" but were necessary for proper integration and diagnostic reporting.
+- Interrupt expansion was an implicit requirement from the algorithm description (step 6) — implemented and tested.
+
+### Verification results
+
+- 17/17 unit tests pass
+- Full suite: 3273 tests, 0 failures
+- `pnpm turbo typecheck` clean
+- `pnpm turbo lint` clean

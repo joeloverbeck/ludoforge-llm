@@ -420,7 +420,33 @@ describe('expandPhaseTemplates', () => {
     assert.equal(second.id, 'manual_interrupt');
   });
 
-  // Test 16: Input doc not mutated
+  // Test 17: Zero-param template acts as a reusable phase snippet
+  it('expands zero-param template as a plain copy', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'fixedPhase',
+      params: [],
+      phase: { id: 'cleanup', onEnter: [{ resetMarkers: true }], onExit: [{ log: 'done' }] },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [{ fromTemplate: 'fixedPhase', args: {} }],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.doc.turnStructure!.phases.length, 1);
+
+    const phase = result.doc.turnStructure!.phases[0] as unknown as Record<string, unknown>;
+    assert.equal(phase.id, 'cleanup');
+    assert.deepEqual(phase.onEnter, [{ resetMarkers: true }]);
+    assert.deepEqual(phase.onExit, [{ log: 'done' }]);
+  });
+
+  // Test 18: Input doc not mutated
   it('does not mutate the input doc', () => {
     const template: GameSpecPhaseTemplateDef = {
       id: 'tmpl',

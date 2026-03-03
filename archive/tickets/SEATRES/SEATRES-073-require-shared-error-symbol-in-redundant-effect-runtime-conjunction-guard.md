@@ -1,10 +1,10 @@
 # SEATRES-073: Require shared error symbol in redundant effect-runtime conjunction guard
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: Yes — AST guard precision tightening in test helper
-**Deps**: archive/tickets/SEATRES/SEATRES-068-remove-redundant-effect-runtime-code-check-at-reason-guards.md, tickets/SEATRES-072-add-unit-coverage-for-redundant-effect-runtime-conjunction-ast-guard.md
+**Engine Changes**: No runtime behavior changes — test guard precision tightening in test helper
+**Deps**: archive/tickets/SEATRES/SEATRES-068-remove-redundant-effect-runtime-code-check-at-reason-guards.md, archive/tickets/SEATRES/SEATRES-072-add-unit-coverage-for-redundant-effect-runtime-conjunction-ast-guard.md
 
 ## Problem
 
@@ -14,7 +14,7 @@ The current redundant-conjunction AST detector matches `isEffectErrorCode(..., '
 
 1. `collectRedundantEffectRuntimeReasonConjunctions(...)` currently checks only call identity and runtime code literal shape.
 2. The detector currently does not compare the first argument identity across the two calls.
-3. No active ticket in `tickets/*` currently scopes this precision tightening.
+3. `tickets/SEATRES-074-generalize-redundant-effect-runtime-conjunction-guard-kernel-wide.md` is active and depends on this precision tightening, but scopes kernel-wide policy expansion rather than helper matching semantics.
 
 ## Architecture Check
 
@@ -64,7 +64,7 @@ The current redundant-conjunction AST detector matches `isEffectErrorCode(..., '
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel-source-ast-guard.test.ts` — add shared-symbol vs mixed-symbol detection cases. Rationale: precision lock for AST detector behavior.
-2. `packages/engine/test/unit/effect-error-contracts.test.ts` — keep existing usage passing under tightened detector. Rationale: consumer guard contract stability.
+2. `packages/engine/test/unit/effect-error-contracts.test.ts` — no test content changes expected; execute to confirm existing guard contract checks still pass under tightened helper semantics.
 
 ### Commands
 
@@ -73,3 +73,22 @@ The current redundant-conjunction AST detector matches `isEffectErrorCode(..., '
 3. `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Tightened `collectRedundantEffectRuntimeReasonConjunctions(...)` so a conjunction is reported only when `isEffectErrorCode(..., 'EFFECT_RUNTIME')` and `isEffectRuntimeReason(...)` reference canonically equivalent first-argument error expressions.
+  - Refined the comparison from source-text equality to structural AST equivalence, including syntax-wrapper normalization (`as` assertions and non-null assertions), to avoid brittle false negatives.
+  - Preserved operand-order support (`A && B` and `B && A`).
+  - Added mixed-symbol non-match fixtures and structural-equivalence fixtures to `kernel-source-ast-guard` unit coverage.
+  - Corrected ticket assumptions/dependencies to reflect `SEATRES-072` archival path and `SEATRES-074` active-scope relationship.
+- **Deviations From Original Plan**:
+  - No changes were required in `effect-error-contracts.test.ts`; existing tests already exercised the helper transitively and passed unchanged.
+- **Verification Results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel-source-ast-guard.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (367/367).
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

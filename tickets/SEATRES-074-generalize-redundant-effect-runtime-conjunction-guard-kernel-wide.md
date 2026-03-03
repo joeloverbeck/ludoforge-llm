@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel-wide source-contract enforcement for effect-runtime reason guard usage
-**Deps**: archive/tickets/SEATRES/SEATRES-066-generalize-effect-runtime-reason-literal-guard-to-kernel-wide-invariant.md, archive/tickets/SEATRES/SEATRES-068-remove-redundant-effect-runtime-code-check-at-reason-guards.md, tickets/SEATRES-073-require-shared-error-symbol-in-redundant-effect-runtime-conjunction-guard.md
+**Deps**: archive/tickets/SEATRES/SEATRES-066-generalize-effect-runtime-reason-literal-guard-to-kernel-wide-invariant.md, archive/tickets/SEATRES/SEATRES-068-remove-redundant-effect-runtime-code-check-at-reason-guards.md, archive/tickets/SEATRES/SEATRES-073-require-shared-error-symbol-in-redundant-effect-runtime-conjunction-guard.md
 
 ## Problem
 

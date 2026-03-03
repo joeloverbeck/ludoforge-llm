@@ -188,9 +188,26 @@ describe('kernel source ast guard helpers', () => {
       const disjunction =
         isEffectErrorCode(err, 'EFFECT_RUNTIME')
         || isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+      const mixedSymbolConjunctionA =
+        isEffectErrorCode(err, 'EFFECT_RUNTIME')
+        && isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+      const mixedSymbolConjunctionB =
+        isEffectRuntimeReason(anotherError, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH)
+        && isEffectErrorCode(err, 'EFFECT_RUNTIME');
     `;
 
     const matches = collectRedundantEffectRuntimeReasonConjunctions(source, 'fixture-non-redundant.ts');
     assert.equal(matches.length, 0);
+  });
+
+  it('collects conjunctions when error expressions are structurally equivalent despite syntax wrappers', () => {
+    const source = `
+      const wrappedExpressionGuard =
+        isEffectErrorCode((errorRecord.current as unknown as EffectRuntimeError)!['runtimeError'], 'EFFECT_RUNTIME')
+        && isEffectRuntimeReason(errorRecord.current['runtimeError'], EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+    `;
+
+    const matches = collectRedundantEffectRuntimeReasonConjunctions(source, 'fixture-structural-equivalence.ts');
+    assert.equal(matches.length, 1);
   });
 });

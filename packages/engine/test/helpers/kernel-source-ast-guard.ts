@@ -516,26 +516,102 @@ export const resolveCallIdentifierFromExpression = (
   return resolveCallIdentifierFromExpression(initializer, sourceFile, initializer, nextVisited);
 };
 
-const isEffectRuntimeCodeCheckCall = (
+const extractEffectRuntimeCodeCheckErrorArgument = (
   node: ts.Expression,
-): boolean => {
+): ts.Expression | undefined => {
   const unwrapped = unwrapTypeScriptExpression(node);
   if (!ts.isCallExpression(unwrapped) || !ts.isIdentifier(unwrapped.expression) || unwrapped.expression.text !== 'isEffectErrorCode') {
-    return false;
+    return undefined;
   }
   if (unwrapped.arguments.length < 2) {
-    return false;
+    return undefined;
+  }
+  const errorArgument = unwrapped.arguments[0];
+  if (errorArgument === undefined) {
+    return undefined;
   }
   const codeArgument = unwrapTypeScriptExpression(unwrapped.arguments[1]!);
-  return (
+  const isRuntimeCodeCheck = (
     (ts.isStringLiteral(codeArgument) || ts.isNoSubstitutionTemplateLiteral(codeArgument))
     && codeArgument.text === 'EFFECT_RUNTIME'
   );
+  return isRuntimeCodeCheck ? unwrapTypeScriptExpression(errorArgument) : undefined;
 };
 
-const isEffectRuntimeReasonCheckCall = (node: ts.Expression): boolean => {
+const extractEffectRuntimeReasonCheckErrorArgument = (node: ts.Expression): ts.Expression | undefined => {
   const unwrapped = unwrapTypeScriptExpression(node);
-  return ts.isCallExpression(unwrapped) && ts.isIdentifier(unwrapped.expression) && unwrapped.expression.text === 'isEffectRuntimeReason';
+  if (!ts.isCallExpression(unwrapped) || !ts.isIdentifier(unwrapped.expression) || unwrapped.expression.text !== 'isEffectRuntimeReason') {
+    return undefined;
+  }
+  const errorArgument = unwrapped.arguments[0];
+  return errorArgument === undefined ? undefined : unwrapTypeScriptExpression(errorArgument);
+};
+
+const normalizeComparableExpression = (expression: ts.Expression): ts.Expression => {
+  let current = unwrapTypeScriptExpression(expression);
+  while (ts.isNonNullExpression(current)) {
+    current = unwrapTypeScriptExpression(current.expression);
+  }
+  return current;
+};
+
+const areStructurallyEquivalentExpressions = (left: ts.Expression, right: ts.Expression): boolean => {
+  const normalizedLeft = normalizeComparableExpression(left);
+  const normalizedRight = normalizeComparableExpression(right);
+
+  if (normalizedLeft.kind !== normalizedRight.kind) {
+    return false;
+  }
+
+  if (ts.isIdentifier(normalizedLeft) && ts.isIdentifier(normalizedRight)) {
+    return normalizedLeft.text === normalizedRight.text;
+  }
+
+  if (normalizedLeft.kind === ts.SyntaxKind.ThisKeyword || normalizedLeft.kind === ts.SyntaxKind.SuperKeyword) {
+    return true;
+  }
+
+  if (ts.isPropertyAccessExpression(normalizedLeft) && ts.isPropertyAccessExpression(normalizedRight)) {
+    return (
+      normalizedLeft.name.text === normalizedRight.name.text
+      && areStructurallyEquivalentExpressions(normalizedLeft.expression, normalizedRight.expression)
+    );
+  }
+
+  if (ts.isElementAccessExpression(normalizedLeft) && ts.isElementAccessExpression(normalizedRight)) {
+    if (!areStructurallyEquivalentExpressions(normalizedLeft.expression, normalizedRight.expression)) {
+      return false;
+    }
+    if (normalizedLeft.argumentExpression === undefined || normalizedRight.argumentExpression === undefined) {
+      return normalizedLeft.argumentExpression === normalizedRight.argumentExpression;
+    }
+    return areStructurallyEquivalentExpressions(normalizedLeft.argumentExpression, normalizedRight.argumentExpression);
+  }
+
+  if (ts.isCallExpression(normalizedLeft) && ts.isCallExpression(normalizedRight)) {
+    if (!areStructurallyEquivalentExpressions(normalizedLeft.expression, normalizedRight.expression)) {
+      return false;
+    }
+    if (normalizedLeft.arguments.length !== normalizedRight.arguments.length) {
+      return false;
+    }
+    return normalizedLeft.arguments.every((argument, index) =>
+      areStructurallyEquivalentExpressions(argument, normalizedRight.arguments[index]!),
+    );
+  }
+
+  if (
+    (ts.isStringLiteral(normalizedLeft) || ts.isNoSubstitutionTemplateLiteral(normalizedLeft))
+    && (ts.isStringLiteral(normalizedRight) || ts.isNoSubstitutionTemplateLiteral(normalizedRight))
+  ) {
+    return normalizedLeft.text === normalizedRight.text;
+  }
+
+  if (ts.isNumericLiteral(normalizedLeft) && ts.isNumericLiteral(normalizedRight)) {
+    return normalizedLeft.text === normalizedRight.text;
+  }
+
+  return false;
 };
 
 export const collectRedundantEffectRuntimeReasonConjunctions = (
@@ -549,9 +625,17 @@ export const collectRedundantEffectRuntimeReasonConjunctions = (
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
       const left = unwrapTypeScriptExpression(node.left);
       const right = unwrapTypeScriptExpression(node.right);
+      const leftRuntimeCodeErrorArg = extractEffectRuntimeCodeCheckErrorArgument(left);
+      const rightRuntimeCodeErrorArg = extractEffectRuntimeCodeCheckErrorArgument(right);
+      const leftRuntimeReasonErrorArg = extractEffectRuntimeReasonCheckErrorArgument(left);
+      const rightRuntimeReasonErrorArg = extractEffectRuntimeReasonCheckErrorArgument(right);
       const isMatch = (
-        (isEffectRuntimeCodeCheckCall(left) && isEffectRuntimeReasonCheckCall(right))
-        || (isEffectRuntimeReasonCheckCall(left) && isEffectRuntimeCodeCheckCall(right))
+        (leftRuntimeCodeErrorArg !== undefined
+          && rightRuntimeReasonErrorArg !== undefined
+          && areStructurallyEquivalentExpressions(leftRuntimeCodeErrorArg, rightRuntimeReasonErrorArg))
+        || (leftRuntimeReasonErrorArg !== undefined
+          && rightRuntimeCodeErrorArg !== undefined
+          && areStructurallyEquivalentExpressions(leftRuntimeReasonErrorArg, rightRuntimeCodeErrorArg))
       );
       if (isMatch) {
         matches.push(node);

@@ -12,6 +12,17 @@ function splitAndChainSteps(script: string): readonly string[] {
     .filter((step) => step.length > 0);
 }
 
+function unwrapDistLockWrapper(script: string): string {
+  const wrappedCommandMatch = script.match(
+    /run-with-dist-lock\.mjs\s+(?:"([^"]+)"|'([^']+)')/u,
+  );
+  if (!wrappedCommandMatch) {
+    return script;
+  }
+
+  return wrappedCommandMatch[1] ?? wrappedCommandMatch[2] ?? script;
+}
+
 function isCleanStep(step: string): boolean {
   return (
     /^(?:pnpm|npm)\s+run\s+clean(?:\s|$)/u.test(step) ||
@@ -25,7 +36,7 @@ function isTypeScriptCompileStep(step: string): boolean {
 }
 
 function assertCleanBeforeCompileInvariant(buildScript: string): void {
-  const steps = splitAndChainSteps(buildScript);
+  const steps = splitAndChainSteps(unwrapDistLockWrapper(buildScript));
   const cleanIndex = steps.findIndex((step) => isCleanStep(step));
   const compileIndex = steps.findIndex((step) => isTypeScriptCompileStep(step));
 
@@ -56,6 +67,7 @@ describe('engine build script clean policy', () => {
 
   it('accepts equivalent clean-before-compile script shapes', () => {
     assertCleanBeforeCompileInvariant('rimraf dist && pnpm exec tsc -p tsconfig.json');
+    assertCleanBeforeCompileInvariant('node scripts/run-with-dist-lock.mjs "pnpm run clean && tsc"');
   });
 
   it('rejects build scripts that compile without cleaning first', () => {

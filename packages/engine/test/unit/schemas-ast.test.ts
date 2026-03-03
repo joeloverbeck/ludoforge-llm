@@ -358,6 +358,49 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('enforces canonical bind fields for removeByPriority', () => {
+    const valid: EffectAST = {
+      removeByPriority: {
+        budget: 2,
+        groups: [
+          {
+            bind: '$candidate',
+            over: { query: 'tokensInZone', zone: 'deck:none' },
+            to: 'market:none',
+            countBind: '$removed',
+          },
+        ],
+        remainingBind: '$remaining',
+      },
+    };
+
+    assert.deepEqual(EffectASTSchema.parse(valid), valid);
+
+    const nonCanonicalGroupBind = EffectASTSchema.safeParse({
+      removeByPriority: {
+        ...valid.removeByPriority,
+        groups: [{ ...valid.removeByPriority.groups[0], bind: 'candidate' }],
+      },
+    });
+    assert.equal(nonCanonicalGroupBind.success, false);
+
+    const nonCanonicalCountBind = EffectASTSchema.safeParse({
+      removeByPriority: {
+        ...valid.removeByPriority,
+        groups: [{ ...valid.removeByPriority.groups[0], countBind: 'removed' }],
+      },
+    });
+    assert.equal(nonCanonicalCountBind.success, false);
+
+    const nonCanonicalRemainingBind = EffectASTSchema.safeParse({
+      removeByPriority: {
+        ...valid.removeByPriority,
+        remainingBind: 'remaining',
+      },
+    });
+    assert.equal(nonCanonicalRemainingBind.success, false);
+  });
+
   it('parses spatial ConditionAST variants', () => {
     const conditions: ConditionAST[] = [
       { op: 'adjacent', left: 'board:a', right: 'board:b' },

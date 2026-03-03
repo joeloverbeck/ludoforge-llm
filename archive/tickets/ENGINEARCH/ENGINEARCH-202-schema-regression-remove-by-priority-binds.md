@@ -1,6 +1,6 @@
 # ENGINEARCH-202: Add AST Schema Regression Coverage for `removeByPriority` Canonical Bind Fields
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — unit test coverage and schema-contract lock-in
@@ -8,19 +8,21 @@
 
 ## Problem
 
-`removeByPriority` bind fields are now canonicalized in schema and validation, but there is no direct AST schema regression test proving non-canonical values are rejected at schema level.
+`removeByPriority` bind fields are canonicalized in schema and validation, but there is no direct AST schema regression test proving non-canonical values are rejected at schema level.
 
 ## Assumption Reassessment (2026-03-03)
 
 1. Current behavior-validation tests cover non-canonical `removeByPriority` bind fields and expect diagnostics.
-2. Current schema tests do not explicitly cover invalid non-canonical values for `removeByPriority.groups[].bind`, `.countBind`, or `.remainingBind`.
-3. Mismatch: schema contract changed without dedicated schema regression lock; scope is corrected to add targeted schema tests.
+2. Current schema tests include a canonical `removeByPriority` example only inside a broad parse smoke test, not a dedicated regression lock.
+3. Current schema tests do not explicitly cover invalid non-canonical values for `removeByPriority.groups[].bind`, `.countBind`, or `.remainingBind`.
+4. Mismatch: schema contract changed without dedicated schema regression lock; scope is corrected to add targeted schema tests.
 
 ## Architecture Check
 
 1. Schema-level regression tests are a cleaner contract guard than relying only on downstream behavior validation.
 2. This is fully engine-agnostic and contract-level; no game-specific logic is introduced.
 3. No compatibility behavior is introduced; tests enforce strict canonical inputs only.
+4. Compared to the prior architecture (implicit coverage only), explicit schema-boundary regression checks are a cleaner long-term guard because they fail at the contract source, not downstream validators.
 
 ## What to Change
 
@@ -31,9 +33,9 @@ In `schemas-ast` unit tests, add cases that fail when:
 - `removeByPriority.groups[].countBind` is non-canonical
 - `removeByPriority.remainingBind` is non-canonical
 
-### 2. Add passing canonical case
+### 2. Keep explicit canonical control
 
-Add a positive control showing canonical `$name` bind fields validate.
+Keep a positive control showing canonical `$name` bind fields validate while adding focused failing assertions.
 
 ## Files to Touch
 
@@ -49,7 +51,7 @@ Add a positive control showing canonical `$name` bind fields validate.
 
 ### Tests That Must Pass
 
-1. `schemas-ast` tests include explicit `removeByPriority` canonical binding coverage (both invalid and valid).
+1. `schemas-ast` tests include explicit `removeByPriority` canonical binding coverage (invalid field variants plus canonical control).
 2. Existing suite: `pnpm turbo test`.
 
 ### Invariants
@@ -68,3 +70,11 @@ Add a positive control showing canonical `$name` bind fields validate.
 1. `pnpm turbo build`
 2. `node --test "packages/engine/dist/test/unit/schemas-ast.test.js"`
 3. `pnpm turbo test`
+
+## Outcome
+
+- Added an explicit schema regression test in `packages/engine/test/unit/schemas-ast.test.ts` that verifies:
+  - canonical `removeByPriority` bind fields parse successfully
+  - non-canonical `groups[].bind`, `groups[].countBind`, and `remainingBind` are rejected by AST schema validation
+- No runtime/compiler/kernel production logic changed.
+- Scope remained test-only and engine-agnostic as planned, with clarified assumptions about existing broad parse coverage.

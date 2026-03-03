@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import ts from 'typescript';
 import {
   collectCallExpressionsByIdentifier,
+  isPropertyAccessOnIdentifier,
   parseTypeScriptSource,
   unwrapTypeScriptExpression,
 } from '../../helpers/kernel-source-ast-guard.js';
@@ -2135,6 +2136,10 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     );
   };
 
+  const isActiveSeatSurfaceConstantArgument = (argument: ts.Expression): boolean => {
+    return isPropertyAccessOnIdentifier(argument, 'TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS');
+  };
+
   it('builds one operation-scoped seat-resolution context and threads it through turn-order stages', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
@@ -2200,9 +2205,10 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
         call.arguments.length === 4 &&
           isIdentifierArgument(call.arguments[0]!, 'def') &&
           isIdentifierArgument(call.arguments[1]!, 'state') &&
+          isActiveSeatSurfaceConstantArgument(call.arguments[2]!) &&
           isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
         true,
-        'requireCardDrivenActiveSeat calls in legal-moves-turn-order.ts must pass explicit seatResolution context',
+        'requireCardDrivenActiveSeat calls in legal-moves-turn-order.ts must pass canonical surface constant and explicit seatResolution context',
       );
     }
 

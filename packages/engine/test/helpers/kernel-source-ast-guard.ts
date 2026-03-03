@@ -309,6 +309,18 @@ export const unwrapTypeScriptExpression = (expression: ts.Expression): ts.Expres
   return expression;
 };
 
+export const isPropertyAccessOnIdentifier = (
+  expression: ts.Expression,
+  identifier: string,
+): boolean => {
+  const unwrapped = unwrapTypeScriptExpression(expression);
+  return (
+    ts.isPropertyAccessExpression(unwrapped) &&
+    ts.isIdentifier(unwrapped.expression) &&
+    unwrapped.expression.text === identifier
+  );
+};
+
 export const collectTopLevelObjectLiteralInitializers = (
   sourceFile: ts.SourceFile,
 ): ReadonlyMap<string, ts.ObjectLiteralExpression> => {

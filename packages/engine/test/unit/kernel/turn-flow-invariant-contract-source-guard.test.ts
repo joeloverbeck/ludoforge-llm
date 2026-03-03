@@ -1,7 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import ts from 'typescript';
-import { parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
+import {
+  collectCallExpressionsByIdentifier,
+  isPropertyAccessOnIdentifier,
+  parseTypeScriptSource,
+} from '../../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const collectImportSpecifiers = (sourceFile: ts.SourceFile): readonly string[] => {
@@ -53,6 +57,12 @@ const collectNamedReExportsByModule = (sourceFile: ts.SourceFile): ReadonlyMap<s
   return exports;
 };
 
+const isCanonicalActiveSeatSurfaceArgument = (
+  argument: ts.Expression,
+): boolean => {
+  return isPropertyAccessOnIdentifier(argument, 'TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS');
+};
+
 describe('turn-flow invariant contract source guard', () => {
   it('keeps runtime invariant emitters wired to the canonical invariant-contract module', () => {
     const runtimeInvariantSource = readKernelSource('src/kernel/turn-flow-runtime-invariants.ts');
@@ -102,6 +112,50 @@ describe('turn-flow invariant contract source guard', () => {
         false,
         'emitters must not inline card seat-order invariant message text',
       );
+    }
+  });
+
+  it('requires canonical active-seat surface constants at emitter call sites', () => {
+    const emitterFiles = [
+      'src/kernel/turn-flow-eligibility.ts',
+      'src/kernel/phase-advance.ts',
+      'src/kernel/effects-turn-flow.ts',
+    ] as const;
+
+    for (const file of emitterFiles) {
+      const source = readKernelSource(file);
+      const sourceFile = parseTypeScriptSource(source, file);
+
+      const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
+      if (file !== 'src/kernel/effects-turn-flow.ts') {
+        assert.equal(activeSeatCalls.length > 0, true, `${file} should call requireCardDrivenActiveSeat`);
+        for (const call of activeSeatCalls) {
+          assert.equal(
+            call.arguments.length >= 3 && isCanonicalActiveSeatSurfaceArgument(call.arguments[2]!),
+            true,
+            `${file} must pass TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.* as requireCardDrivenActiveSeat third argument`,
+          );
+        }
+      }
+
+      if (file === 'src/kernel/effects-turn-flow.ts') {
+        const invariantContextCalls = collectCallExpressionsByIdentifier(
+          sourceFile,
+          'makeActiveSeatUnresolvableInvariantContext',
+        );
+        assert.equal(
+          invariantContextCalls.length > 0,
+          true,
+          'effects-turn-flow.ts should call makeActiveSeatUnresolvableInvariantContext',
+        );
+        for (const call of invariantContextCalls) {
+          assert.equal(
+            call.arguments.length >= 1 && isCanonicalActiveSeatSurfaceArgument(call.arguments[0]!),
+            true,
+            'effects-turn-flow.ts must pass TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.* as invariant context first argument',
+          );
+        }
+      }
     }
   });
 

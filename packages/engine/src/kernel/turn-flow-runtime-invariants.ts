@@ -81,7 +81,7 @@ export const assertCardMetadataSeatOrderRuntimeInvariant = (
   },
 ): void => {
   const shape = analyzeSeatOrderShape(seatOrder);
-  if (shape.duplicateSeats.length === 0 && isCardSeatOrderDistinctSeatCountValid(shape)) {
+  if (shape.duplicateSeats.length === 0 && isCardSeatOrderDistinctSeatCountValid(shape.distinctSeatCount)) {
     return;
   }
 

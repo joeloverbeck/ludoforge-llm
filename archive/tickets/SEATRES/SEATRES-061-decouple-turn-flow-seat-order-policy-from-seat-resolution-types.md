@@ -1,6 +1,6 @@
 # SEATRES-061: Decouple turn-flow seat-order policy contract from seat-resolution types
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel policy contract typing + validator/runtime call sites
@@ -13,8 +13,8 @@
 ## Assumption Reassessment (2026-03-03)
 
 1. `packages/engine/src/kernel/turn-flow-seat-order-policy.ts` currently imports `SeatOrderShapeAnalysis` from `seat-resolution.ts`.
-2. Validator/runtime call sites only need `distinctSeatCount` for cardinality policy checks; they do not require full seat-resolution typing.
-3. Existing active tickets do not currently scope removing this type-level coupling for the new policy module.
+2. Current call sites (`validate-gamedef-extensions.ts`, `turn-flow-runtime-invariants.ts`) only use `shape.distinctSeatCount` for policy checks; they do not require seat-resolution-owned types.
+3. `tickets/SEATRES-062-add-contract-guard-for-shared-card-seat-order-cardinality-policy-usage.md` covers single-source helper usage drift, but does not remove this type-level dependency edge.
 
 ## Architecture Check
 
@@ -32,14 +32,15 @@
 ### 2. Update call sites and tests
 
 1. Update validator/runtime invariant call sites to pass only the required value.
-2. Ensure existing tests continue passing and add/adjust a unit test if needed to lock the decoupled helper contract.
+2. Add/adjust tests to lock the decoupled helper contract and prevent reintroduction of direct policy-module dependency on `seat-resolution.ts`.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/turn-flow-seat-order-policy.ts` (modify)
 - `packages/engine/src/kernel/validate-gamedef-extensions.ts` (modify)
 - `packages/engine/src/kernel/turn-flow-runtime-invariants.ts` (modify)
-- `packages/engine/test/unit/kernel/turn-flow-runtime-invariants.test.ts` (modify/add if needed)
+- `packages/engine/test/unit/kernel/turn-flow-seat-order-policy.test.ts` (add)
+- `packages/engine/test/unit/validate-gamedef.test.ts` (modify/add if needed)
 
 ## Out of Scope
 
@@ -63,11 +64,27 @@
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/turn-flow-runtime-invariants.test.ts` — confirm runtime invariant behavior unchanged after decoupled policy helper signature.
+1. `packages/engine/test/unit/kernel/turn-flow-seat-order-policy.test.ts` — assert policy helper accepts primitive `distinctSeatCount` input and policy module has no `seat-resolution` import edge.
+2. `packages/engine/test/unit/validate-gamedef.test.ts` — retain cardinality behavior check while call site passes primitive distinct-seat count to shared policy helper.
 
 ### Commands
 
 1. `pnpm turbo build`
-2. `node --test packages/engine/dist/test/unit/kernel/turn-flow-runtime-invariants.test.js`
+2. `node --test packages/engine/dist/test/unit/kernel/turn-flow-seat-order-policy.test.js packages/engine/dist/test/unit/kernel/turn-flow-runtime-invariants.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Decoupled `turn-flow-seat-order-policy.ts` from `seat-resolution.ts` by changing the helper contract to `distinctSeatCount: number`.
+  - Updated validator/runtime call sites to pass `shape.distinctSeatCount` instead of a `SeatOrderShapeAnalysis`-derived object.
+  - Added `packages/engine/test/unit/kernel/turn-flow-seat-order-policy.test.ts` to lock primitive-input policy behavior and enforce no `seat-resolution` import edge in the policy module.
+- **Deviation from original plan**:
+  - Test scope was corrected from only `turn-flow-runtime-invariants.test.ts` to include a dedicated policy-boundary test as the direct architectural guard for this ticket.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/turn-flow-seat-order-policy.test.js packages/engine/dist/test/unit/kernel/turn-flow-runtime-invariants.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

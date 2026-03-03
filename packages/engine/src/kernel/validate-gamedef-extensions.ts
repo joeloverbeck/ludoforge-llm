@@ -238,7 +238,7 @@ export const validateCardSeatOrderMapping = (diagnostics: Diagnostic[], def: Gam
           });
         }
       }
-      if (!isCardSeatOrderDistinctSeatCountValid(shape)) {
+      if (!isCardSeatOrderDistinctSeatCountValid(shape.distinctSeatCount)) {
         diagnostics.push({
           code: 'TURN_FLOW_CARD_SEAT_ORDER_INSUFFICIENT_DISTINCT_SEATS',
           path: `eventDecks[${deckIndex}].cards[${cardIndex}].metadata.${metadataKey}`,

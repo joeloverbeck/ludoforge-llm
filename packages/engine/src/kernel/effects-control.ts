@@ -5,6 +5,7 @@ import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
 import { emitTrace, emitWarning } from './execution-collector.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
@@ -108,7 +109,7 @@ export const applyForEach = (
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
-    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'forEach.limit must evaluate to a non-negative integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
       effectType: 'forEach',
       limit: evaluatedLimit,
     });
@@ -211,7 +212,7 @@ export const applyReduce = (
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
-    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'reduce.limit must evaluate to a non-negative integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
       effectType: 'reduce',
       limit: evaluatedLimit,
     });
@@ -283,7 +284,7 @@ export const applyReduce = (
 
 const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number => {
   if (typeof budgetExpr !== 'number' || !Number.isSafeInteger(budgetExpr) || budgetExpr < 0) {
-    throw effectRuntimeError('controlFlowRuntimeValidationFailed', `${effectType}.budget must evaluate to a non-negative integer`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, `${effectType}.budget must evaluate to a non-negative integer`, {
       effectType,
       budget: budgetExpr,
     });
@@ -322,7 +323,7 @@ export const applyRemoveByPriority = (
 
       for (const item of bounded) {
         if (typeof item !== 'string' && !isTokenLike(item)) {
-          throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'removeByPriority groups must resolve to token items', {
+          throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'removeByPriority groups must resolve to token items', {
             effectType: 'removeByPriority',
             bind: group.bind,
             actualType: typeof item,

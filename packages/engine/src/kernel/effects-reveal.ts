@@ -14,6 +14,7 @@ import {
 import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, RevealGrant } from './types.js';
 
@@ -30,7 +31,7 @@ export const applyConceal = (
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.conceal.zone, evalCtx, {
-      code: 'concealRuntimeValidationFailed',
+      code: EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
       effectType: 'conceal',
       scope: 'zone',
       resolutionFailureMessage: 'conceal.zone resolution failed',
@@ -39,7 +40,7 @@ export const applyConceal = (
   );
 
   if (ctx.state.zones[zoneId] === undefined) {
-    throw effectRuntimeError('concealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED, `Zone state not found for selector result: ${zoneId}`, {
       effectType: 'conceal',
       field: 'zone',
       zoneId,
@@ -59,7 +60,7 @@ export const applyConceal = (
     } else {
       from = canonicalizeObserverSelection(
         resolvePlayersWithNormalization(effect.conceal.from, evalCtx, {
-          code: 'concealRuntimeValidationFailed',
+          code: EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
           effectType: 'conceal',
           scope: 'from',
           resolutionFailureMessage: 'conceal.from selector resolution failed',
@@ -109,7 +110,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.reveal.zone, evalCtx, {
-      code: 'revealRuntimeValidationFailed',
+      code: EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED,
       effectType: 'reveal',
       scope: 'zone',
       resolutionFailureMessage: 'reveal.zone resolution failed',
@@ -118,7 +119,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
   );
 
   if (ctx.state.zones[zoneId] === undefined) {
-    throw effectRuntimeError('revealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED, `Zone state not found for selector result: ${zoneId}`, {
       effectType: 'reveal',
       field: 'zone',
       zoneId,
@@ -132,7 +133,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
   } else {
     observers = canonicalizeObserverSelection(
       resolvePlayersWithNormalization(effect.reveal.to, evalCtx, {
-        code: 'revealRuntimeValidationFailed',
+        code: EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED,
         effectType: 'reveal',
         scope: 'to',
         resolutionFailureMessage: 'reveal.to selector resolution failed',

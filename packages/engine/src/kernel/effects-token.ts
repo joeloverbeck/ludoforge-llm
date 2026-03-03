@@ -6,6 +6,7 @@ import { nextInt } from './prng.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, Rng, Token } from './types.js';
@@ -50,7 +51,7 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
       .sort((left, right) => left.localeCompare(right));
     if (missingSeatTokenTypes.length > 0) {
       throw effectRuntimeError(
-        'tokenRuntimeValidationFailed',
+        EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
         'Stacking constraint seat filters require canonical tokenType.seat mapping.',
         {
           effectType,
@@ -88,7 +89,7 @@ const resolveZoneTokens = (
 ): readonly Token[] => {
   const zoneTokens = ctx.state.zones[zoneId];
   if (zoneTokens === undefined) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Zone state not found for selector result: ${zoneId}`, {
       effectType,
       field,
       zoneId,
@@ -103,7 +104,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
   const bindings = resolveEffectBindings(ctx);
   const boundValue = bindings[tokenBinding];
   if (boundValue === undefined) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token binding not found: ${tokenBinding}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token binding not found: ${tokenBinding}`, {
       effectType,
       tokenBinding,
       availableBindings: Object.keys(bindings).sort(),
@@ -118,7 +119,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
     return boundValue.id;
   }
 
-  throw effectRuntimeError('tokenRuntimeValidationFailed', `Token binding ${tokenBinding} must resolve to Token or TokenId`, {
+  throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token binding ${tokenBinding} must resolve to Token or TokenId`, {
     effectType,
     tokenBinding,
     actualType: typeof boundValue,
@@ -174,7 +175,7 @@ const resolveMoveTokenAdjacentDestination = (
 
   if (typeof boundDestination !== 'string') {
     throw effectRuntimeError(
-      'tokenRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
       `moveTokenAdjacent destination binding ${direction} must resolve to ZoneId string`,
       {
         effectType: 'moveTokenAdjacent',
@@ -192,14 +193,14 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveToken.from, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'moveToken',
     scope: 'from',
     resolutionFailureMessage: 'moveToken.from zone resolution failed',
     onResolutionFailure,
   });
   const toZone = resolveZoneWithNormalization(effect.moveToken.to, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'moveToken',
     scope: 'to',
     resolutionFailureMessage: 'moveToken.to zone resolution failed',
@@ -214,7 +215,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token not found in any zone: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
       fromZoneId,
@@ -222,7 +223,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   }
 
   if (occurrences.length > 1) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token appears in multiple zones: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
       zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
@@ -231,7 +232,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
 
   const occurrence = occurrences[0]!;
   if (occurrence.zoneId !== fromZoneId) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token is not in resolved from zone: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token is not in resolved from zone: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
       expectedFrom: fromZoneId,
@@ -306,7 +307,7 @@ export const applyMoveTokenAdjacent = (
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveTokenAdjacent.from, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'moveTokenAdjacent',
     scope: 'from',
     resolutionFailureMessage: 'moveTokenAdjacent.from zone resolution failed',
@@ -342,7 +343,7 @@ export const applyCreateToken = (effect: Extract<EffectAST, { readonly createTok
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.createToken.zone, evalCtx, {
-      code: 'tokenRuntimeValidationFailed',
+      code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
       effectType: 'createToken',
       scope: 'zone',
       resolutionFailureMessage: 'createToken.zone resolution failed',
@@ -353,7 +354,7 @@ export const applyCreateToken = (effect: Extract<EffectAST, { readonly createTok
 
   const ordinal = ctx.state.nextTokenOrdinal;
   if (!Number.isSafeInteger(ordinal) || ordinal < 0) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', 'nextTokenOrdinal must be a non-negative safe integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, 'nextTokenOrdinal must be a non-negative safe integer', {
       effectType: 'createToken',
       nextTokenOrdinal: ordinal,
     });
@@ -400,14 +401,14 @@ export const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyT
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token not found in any zone: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
       effectType: 'destroyToken',
       tokenId,
     });
   }
 
   if (occurrences.length > 1) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token appears in multiple zones: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'destroyToken',
       tokenId,
       zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
@@ -444,14 +445,14 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token not found in any zone: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
       effectType: 'setTokenProp',
       tokenId,
     });
   }
 
   if (occurrences.length > 1) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token appears in multiple zones: ${tokenId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'setTokenProp',
       tokenId,
       zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
@@ -464,7 +465,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
   if (tokenTypeDef !== undefined) {
     const propType = tokenTypeDef.props[prop];
     if (propType === undefined) {
-      throw effectRuntimeError('tokenRuntimeValidationFailed', `Property "${prop}" is not defined on token type "${occurrence.token.type}"`, {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Property "${prop}" is not defined on token type "${occurrence.token.type}"`, {
         effectType: 'setTokenProp',
         tokenId,
         prop,
@@ -484,7 +485,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
       const newValue = String(evaluatedValue);
       const isValid = transitionsForProp.some((t) => t.from === currentValue && t.to === newValue);
       if (!isValid) {
-        throw effectRuntimeError('tokenRuntimeValidationFailed', `Invalid transition for "${prop}": "${currentValue}" → "${newValue}"`, {
+        throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Invalid transition for "${prop}": "${currentValue}" → "${newValue}"`, {
           effectType: 'setTokenProp',
           tokenId,
           prop,
@@ -533,7 +534,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
 export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: EffectContext): EffectResult => {
   const count = effect.draw.count;
   if (!Number.isSafeInteger(count) || count < 0) {
-    throw effectRuntimeError('tokenRuntimeValidationFailed', 'draw.count must be a non-negative integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, 'draw.count must be a non-negative integer', {
       effectType: 'draw',
       count,
     });
@@ -542,14 +543,14 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const fromZone = resolveZoneWithNormalization(effect.draw.from, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'draw',
     scope: 'from',
     resolutionFailureMessage: 'draw.from zone resolution failed',
     onResolutionFailure,
   });
   const toZone = resolveZoneWithNormalization(effect.draw.to, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'draw',
     scope: 'to',
     resolutionFailureMessage: 'draw.to zone resolution failed',
@@ -669,14 +670,14 @@ export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unkn
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveAll.from, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'moveAll',
     scope: 'from',
     resolutionFailureMessage: 'moveAll.from zone resolution failed',
     onResolutionFailure,
   });
   const toZone = resolveZoneWithNormalization(effect.moveAll.to, evalCtx, {
-    code: 'tokenRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
     effectType: 'moveAll',
     scope: 'to',
     resolutionFailureMessage: 'moveAll.to zone resolution failed',
@@ -777,7 +778,7 @@ export const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unkn
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.shuffle.zone, evalCtx, {
-      code: 'tokenRuntimeValidationFailed',
+      code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
       effectType: 'shuffle',
       scope: 'zone',
       resolutionFailureMessage: 'shuffle.zone resolution failed',

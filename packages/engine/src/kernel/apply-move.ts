@@ -1,7 +1,7 @@
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
-import { isEffectErrorCode } from './effect-error.js';
+import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import {
   executeEventMove,
@@ -21,7 +21,7 @@ import {
   collectDecisionBindingsFromEffects,
   deriveDecisionBindingsFromMoveParams,
 } from './move-runtime-bindings.js';
-import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
+import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError, kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -322,7 +322,10 @@ const validateDecisionSequenceForMove = (
       ...(result.nextDecision?.name === undefined ? {} : { nextDecisionName: result.nextDecision.name }),
     });
   } catch (err) {
-    if (isEffectErrorCode(err, 'EFFECT_RUNTIME') && err.context?.reason === 'choiceRuntimeValidationFailed') {
+    if (
+      isEffectErrorCode(err, 'EFFECT_RUNTIME')
+      && isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)
+    ) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
         detail: err.message,
       });

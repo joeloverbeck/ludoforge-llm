@@ -5,6 +5,7 @@ import {
   effectNotImplementedError,
 } from './effect-error.js';
 import { assertEffectContextEntryInvariant } from './effect-context-invariants.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import {
   applyChooseN,
   applyChooseOne,
@@ -43,7 +44,7 @@ import type { EffectAST, TriggerEvent } from './types.js';
 const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
   const maxEffectOps = getMaxEffectOps(ctx);
   if (!Number.isInteger(maxEffectOps) || maxEffectOps < 0) {
-    throw effectRuntimeError('effectBudgetConfigInvalid', 'maxEffectOps must be a non-negative integer', { maxEffectOps });
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.EFFECT_BUDGET_CONFIG_INVALID, 'maxEffectOps must be a non-negative integer', { maxEffectOps });
   }
 
   return { remaining: maxEffectOps, max: maxEffectOps };

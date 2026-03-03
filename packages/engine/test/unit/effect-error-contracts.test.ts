@@ -207,13 +207,13 @@ describe('effect error context contracts', () => {
   it('effectRuntimeError reason matrix enforces required vs optional/no-context contracts', () => {
     const requiredContextReasons = [
       EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
     ] as const;
     const optionalContextReasons = [
       EFFECT_RUNTIME_REASONS.EFFECT_BUDGET_CONFIG_INVALID,
       EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
       EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED,
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
       EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED,
       EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
       EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
@@ -269,17 +269,24 @@ describe('effect error context contracts', () => {
       effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'turn-flow context required', {
         effectType: 'grantFreeOperation',
       });
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'choice context required', {
+        effectType: 'chooseOne',
+      });
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH, 'probe mismatch context required', {
+        effectType: 'chooseOne',
+      });
       // @ts-expect-error required-context reason must reject missing context
       effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'missing required context');
+      // @ts-expect-error required-context reason must reject missing context
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'missing required context');
+      // @ts-expect-error required-context reason must reject missing context
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH, 'missing required context');
 
       for (const reason of optionalContextReasons) {
         effectRuntimeError(reason, 'optional context reason without payload');
       }
       effectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, 'optional with payload', {
         mode: 'execution',
-      });
-      effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'optional with payload', {
-        effectType: 'chooseOne',
       });
     };
     void assertCompileTimeReasonMatrix;
@@ -297,9 +304,50 @@ describe('effect error context contracts', () => {
       () => untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'missing effectType', {}),
       /turnFlowRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context\./,
     );
+    assert.throws(
+      () => untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'missing context'),
+      /choiceRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context\./,
+    );
+    assert.throws(
+      () => untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH, 'missing context'),
+      /choiceProbeAuthorityMismatch requires effectType in EFFECT_RUNTIME context\./,
+    );
     assert.doesNotThrow(() =>
       untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, 'optional context omitted'),
     );
+  });
+
+  it('effect runtime reason consumption avoids raw string literal checks in kernel guard sites', () => {
+    const applyMoveSource = readKernelSource('src/kernel/apply-move.ts');
+    const legalChoicesSource = readKernelSource('src/kernel/legal-choices.ts');
+
+    assert.match(applyMoveSource, /isEffectRuntimeReason\(\s*err,\s*EFFECT_RUNTIME_REASONS\.CHOICE_RUNTIME_VALIDATION_FAILED\s*\)/u);
+    assert.doesNotMatch(applyMoveSource, /context\?\.reason\s*===\s*'choiceRuntimeValidationFailed'/u);
+    assert.match(legalChoicesSource, /isEffectRuntimeReason\(\s*error,\s*EFFECT_RUNTIME_REASONS\.CHOICE_PROBE_AUTHORITY_MISMATCH\s*\)/u);
+    assert.doesNotMatch(legalChoicesSource, /context\?\.reason\s*===\s*'choiceProbeAuthorityMismatch'/u);
+  });
+
+  it('effect emitters use canonical reason constants instead of string literal reason ids', () => {
+    const emitterFiles = [
+      'src/kernel/effect-dispatch.ts',
+      'src/kernel/effects-choice.ts',
+      'src/kernel/effects-control.ts',
+      'src/kernel/effects-resource.ts',
+      'src/kernel/effects-reveal.ts',
+      'src/kernel/effects-subset.ts',
+      'src/kernel/effects-token.ts',
+      'src/kernel/effects-turn-flow.ts',
+      'src/kernel/effects-var.ts',
+    ] as const;
+
+    for (const file of emitterFiles) {
+      const source = readKernelSource(file);
+      assert.doesNotMatch(
+        source,
+        /effectRuntimeError\(\s*'[^']+'\s*,/u,
+        `${file} must not pass raw reason string literals to effectRuntimeError`,
+      );
+    }
   });
 
   it('effectRuntimeError construction path stays free of unsafe context casts', () => {

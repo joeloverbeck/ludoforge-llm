@@ -1,6 +1,7 @@
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import {
   readScopedIntVarValue,
   resolveRuntimeScopedEndpointWithMalformedSupport,
@@ -27,7 +28,7 @@ const expectInteger = (
   field: 'amount' | 'min' | 'max',
 ): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
-    throw effectRuntimeError('resourceRuntimeValidationFailed', `${effectType}.${field} must evaluate to a finite safe integer`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED, `${effectType}.${field} must evaluate to a finite safe integer`, {
       effectType,
       field,
       actualType: typeof value,
@@ -86,7 +87,7 @@ const resolveEndpoint = (
   ctx: EffectContext,
 ): ResolvedEndpoint => {
   const runtimeEndpoint = resolveRuntimeScopedEndpointWithMalformedSupport(endpoint, evalCtx, {
-    code: 'resourceRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
     effectType: 'transferVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
     pvarResolutionFailureMessage: 'transferVar pvar endpoint resolution failed',
@@ -101,13 +102,13 @@ const resolveEndpoint = (
       scope: 'global',
       var: runtimeEndpoint.var,
     };
-    const variableDef = resolveScopedIntVarDef(ctx, { scope: 'global', var: runtimeEndpoint.var }, 'transferVar', 'resourceRuntimeValidationFailed');
+    const variableDef = resolveScopedIntVarDef(ctx, { scope: 'global', var: runtimeEndpoint.var }, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED);
     return {
       scope: 'global',
       var: runtimeEndpoint.var,
       min: variableDef.min,
       max: variableDef.max,
-      before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', 'resourceRuntimeValidationFailed'),
+      before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
     };
   }
 
@@ -121,7 +122,7 @@ const resolveEndpoint = (
       ctx,
       { scope: 'pvar', var: runtimeEndpoint.var },
       'transferVar',
-      'resourceRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
     );
     return {
       scope: 'pvar',
@@ -129,7 +130,7 @@ const resolveEndpoint = (
       player: runtimeEndpoint.player,
       min: perPlayerVarDef.min,
       max: perPlayerVarDef.max,
-      before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', 'resourceRuntimeValidationFailed'),
+      before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
     };
   }
 
@@ -142,7 +143,7 @@ const resolveEndpoint = (
     ctx,
     { scope: 'zoneVar', var: runtimeEndpoint.var },
     'transferVar',
-    'resourceRuntimeValidationFailed',
+    EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
   );
   return {
     scope: 'zone',
@@ -150,7 +151,7 @@ const resolveEndpoint = (
     zone: runtimeEndpoint.zone,
     min: zoneVarDef.min,
     max: zoneVarDef.max,
-    before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', 'resourceRuntimeValidationFailed'),
+    before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
   };
 };
 

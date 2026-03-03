@@ -7,6 +7,7 @@ import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { isTurnFlowActionClass } from '../contracts/index.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
@@ -51,7 +52,7 @@ const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): b
     return true;
   }
   if (!Number.isSafeInteger(budget.remaining) || budget.remaining < 0) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'phaseTransitionBudget.remaining must be a non-negative integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'phaseTransitionBudget.remaining must be a non-negative integer', {
       effectType,
       remaining: budget.remaining,
     });
@@ -85,7 +86,7 @@ export const applyGrantFreeOperation = (
   ctx: EffectContext,
 ): EffectResult => {
   if (ctx.state.turnOrderState.type !== 'cardDriven') {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation requires cardDriven turn order state', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation requires cardDriven turn order state', {
       effectType: 'grantFreeOperation',
       turnOrderType: ctx.state.turnOrderState.type,
     });
@@ -93,7 +94,7 @@ export const applyGrantFreeOperation = (
 
   const grant = effect.grantFreeOperation;
   if (!isTurnFlowActionClass(grant.operationClass)) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation.operationClass is invalid', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation.operationClass is invalid', {
       effectType: 'grantFreeOperation',
       operationClass: grant.operationClass,
     });
@@ -113,14 +114,14 @@ export const applyGrantFreeOperation = (
       runtime.seatOrder,
     );
     throw effectRuntimeError(
-      'turnFlowRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
       activeSeatUnresolvableInvariantMessage(activeSeatInvariant),
       makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext(activeSeatInvariant),
     );
   }
   const seat = resolveGrantSeat(grant.seat, activeSeat, runtime.seatOrder);
   if (seat === null) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.seat is unknown: ${grant.seat}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `grantFreeOperation.seat is unknown: ${grant.seat}`, {
       effectType: 'grantFreeOperation',
       seat: grant.seat,
       availableSeats: runtime.seatOrder,
@@ -131,7 +132,7 @@ export const applyGrantFreeOperation = (
   if (grant.executeAsSeat !== undefined) {
     const resolvedExecuteAs = resolveGrantSeat(grant.executeAsSeat, activeSeat, runtime.seatOrder);
     if (resolvedExecuteAs === null) {
-      throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.executeAsSeat is unknown: ${grant.executeAsSeat}`, {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `grantFreeOperation.executeAsSeat is unknown: ${grant.executeAsSeat}`, {
         effectType: 'grantFreeOperation',
         executeAsSeat: grant.executeAsSeat,
         availableSeats: runtime.seatOrder,
@@ -142,7 +143,7 @@ export const applyGrantFreeOperation = (
 
   const uses = grant.uses ?? 1;
   if (!Number.isSafeInteger(uses) || uses <= 0) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation.uses must be a positive integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation.uses must be a positive integer', {
       effectType: 'grantFreeOperation',
       uses,
     });
@@ -154,7 +155,7 @@ export const applyGrantFreeOperation = (
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${grantId}:${grant.sequence.chain}`;
   const sequenceIndex = grant.sequence?.step;
   if (sequenceIndex !== undefined && (!Number.isSafeInteger(sequenceIndex) || sequenceIndex < 0)) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation.sequence.step must be a non-negative integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation.sequence.step must be a non-negative integer', {
       effectType: 'grantFreeOperation',
       sequenceStep: sequenceIndex,
     });
@@ -195,7 +196,7 @@ export const applyGotoPhaseExact = (
   const targetPhase = effect.gotoPhaseExact.phase;
   const phaseIds = ctx.def.turnStructure.phases.map((phase) => phase.id);
   if (!phaseIds.some((phaseId) => phaseId === targetPhase)) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhaseExact.phase is unknown: ${targetPhase}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `gotoPhaseExact.phase is unknown: ${targetPhase}`, {
       effectType: 'gotoPhaseExact',
       phase: targetPhase,
       phaseCandidates: phaseIds,
@@ -205,7 +206,7 @@ export const applyGotoPhaseExact = (
   const currentPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === ctx.state.currentPhase);
   const targetPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === targetPhase);
   if (currentPhaseIndex < 0 || targetPhaseIndex < 0) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhaseExact could not resolve current/target phase indices`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `gotoPhaseExact could not resolve current/target phase indices`, {
       effectType: 'gotoPhaseExact',
       currentPhase: ctx.state.currentPhase,
       targetPhase,
@@ -214,7 +215,7 @@ export const applyGotoPhaseExact = (
 
   if (targetPhaseIndex < currentPhaseIndex) {
     throw effectRuntimeError(
-      'turnFlowRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
       `gotoPhaseExact cannot cross a turn boundary (current=${String(ctx.state.currentPhase)}, target=${targetPhase})`,
       {
         effectType: 'gotoPhaseExact',
@@ -273,7 +274,7 @@ const resolvePhaseId = (
   const phaseDefs = [...ctx.def.turnStructure.phases, ...(ctx.def.turnStructure.interrupts ?? [])];
   const candidate = phaseDefs.find((entry) => entry.id === phase)?.id;
   if (candidate === undefined) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `${effectType}.${field} is unknown: ${phase}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `${effectType}.${field} is unknown: ${phase}`, {
       effectType,
       field,
       phase,
@@ -324,7 +325,7 @@ export const applyPopInterruptPhase = (
   }
   const activeStack = ctx.state.interruptPhaseStack ?? [];
   if (activeStack.length === 0) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'popInterruptPhase requires a non-empty interruptPhaseStack', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'popInterruptPhase requires a non-empty interruptPhaseStack', {
       effectType: 'popInterruptPhase',
     });
   }
@@ -336,7 +337,7 @@ export const applyPopInterruptPhase = (
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'popInterruptPhase found no frame to resume after phaseExit', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'popInterruptPhase found no frame to resume after phaseExit', {
       effectType: 'popInterruptPhase',
     });
   }

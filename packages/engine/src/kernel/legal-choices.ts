@@ -1,6 +1,6 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
-import { isEffectErrorCode } from './effect-error.js';
+import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import {
   isDeclaredActionParamValueInDomain,
@@ -35,6 +35,7 @@ import {
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionDef,
   ChoiceOption,
@@ -126,10 +127,8 @@ const executeDiscoveryEffectsProbe = (
 const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
 const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
-  if (!isEffectErrorCode(error, 'EFFECT_RUNTIME')) {
-    return false;
-  }
-  return error.context?.reason === 'choiceProbeAuthorityMismatch';
+  return isEffectErrorCode(error, 'EFFECT_RUNTIME')
+    && isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
 };
 
 const countCombinationsCapped = (n: number, k: number, cap: number): number => {

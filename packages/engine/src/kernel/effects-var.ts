@@ -1,5 +1,6 @@
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveSinglePlayerWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import {
   readScopedIntVarValue,
@@ -23,7 +24,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `${effectType}.${field} must evaluate to a finite safe integer`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, `${effectType}.${field} must evaluate to a finite safe integer`, {
       effectType,
       field,
       actualType: typeof value,
@@ -36,7 +37,7 @@ const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: '
 
 const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): boolean => {
   if (typeof value !== 'boolean') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `${effectType}.${field} must evaluate to boolean`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, `${effectType}.${field} must evaluate to boolean`, {
       effectType,
       field,
       actualType: typeof value,
@@ -66,7 +67,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedValue = evalValue(value, evalCtx);
   const endpoint = resolveRuntimeScopedEndpoint(effect.setVar, evalCtx, {
-    code: 'variableRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
     pvarResolutionFailureMessage: 'setVar pvar selector resolution failed',
@@ -77,10 +78,10 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     ctx,
     { scope: effect.setVar.scope, var: variableName },
     'setVar',
-    'variableRuntimeValidationFailed',
+    EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
   );
   if (endpoint.scope === 'zone' && variableDef.type !== 'int') {
-    throw effectRuntimeError('variableRuntimeValidationFailed', `setVar on zone variable only supports int type: ${variableName}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, `setVar on zone variable only supports int type: ${variableName}`, {
       effectType: 'setVar',
       scope: 'zoneVar',
       var: variableName,
@@ -90,8 +91,8 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 
   const currentValue =
     variableDef.type === 'int'
-      ? readScopedIntVarValue(ctx, endpoint, 'setVar', 'variableRuntimeValidationFailed')
-      : readScopedVarValue(ctx, endpoint, 'setVar', 'variableRuntimeValidationFailed');
+      ? readScopedIntVarValue(ctx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED)
+      : readScopedVarValue(ctx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue =
     variableDef.type === 'int'
       ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
@@ -118,7 +119,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
   const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, {
-    code: 'variableRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'addVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
     pvarResolutionFailureMessage: 'addVar pvar selector resolution failed',
@@ -129,14 +130,14 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     ctx,
     { scope: effect.addVar.scope, var: variableName },
     'addVar',
-    'variableRuntimeValidationFailed',
+    EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
   );
   if (variableDef.type !== 'int') {
     const message =
       effect.addVar.scope === 'zoneVar'
         ? `addVar cannot target non-int zone variable: ${variableName}`
         : `addVar cannot target non-int variable: ${variableName}`;
-    throw effectRuntimeError('variableRuntimeValidationFailed', message, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED, message, {
       effectType: 'addVar',
       scope: effect.addVar.scope,
       var: variableName,
@@ -144,7 +145,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     });
   }
 
-  const currentValue = readScopedIntVarValue(ctx, endpoint, 'addVar', 'variableRuntimeValidationFailed');
+  const currentValue = readScopedIntVarValue(ctx, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
   const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
@@ -165,7 +166,7 @@ export const applySetActivePlayer = (
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const nextActive = resolveSinglePlayerWithNormalization(effect.setActivePlayer.player, evalCtx, {
-    code: 'variableRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setActivePlayer',
     scope: 'activePlayer',
     cardinalityMessage: 'setActivePlayer requires exactly one resolved player',

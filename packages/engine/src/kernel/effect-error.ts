@@ -1,5 +1,5 @@
 import type { StackingViolation } from './stacking.js';
-import type { EffectRuntimeReason } from './runtime-reasons.js';
+import { EFFECT_RUNTIME_REASONS, type EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectAST } from './types.js';
 import type { TurnFlowActiveSeatInvariantContext } from './runtime-error.js';
 
@@ -25,16 +25,38 @@ export type TurnFlowRuntimeValidationFailedContext =
   | TurnFlowRuntimeValidationFailedGenericContext
   | TurnFlowActiveSeatUnresolvableEffectRuntimeContext;
 
+type EffectRuntimeGenericContext = Readonly<Record<string, unknown>>;
+
+export type ChoiceRuntimeValidationFailedContext = Readonly<{
+  readonly effectType: string;
+}> & EffectRuntimeGenericContext;
+
+export type ChoiceProbeAuthorityMismatchContext = Readonly<{
+  readonly effectType: string;
+}> & EffectRuntimeGenericContext;
+
 export type EffectRuntimeContextByReason = Readonly<{
-  readonly [R in Exclude<EffectRuntimeReason, 'turnFlowRuntimeValidationFailed'>]: Readonly<Record<string, unknown>>;
-}> & Readonly<{
-  readonly turnFlowRuntimeValidationFailed: TurnFlowRuntimeValidationFailedContext;
+  readonly [EFFECT_RUNTIME_REASONS.EFFECT_BUDGET_CONFIG_INVALID]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED]: ChoiceRuntimeValidationFailedContext;
+  readonly [EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH]: ChoiceProbeAuthorityMismatchContext;
+  readonly [EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
+  readonly [EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED]: TurnFlowRuntimeValidationFailedContext;
+  readonly [EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED]: EffectRuntimeGenericContext;
 }>;
 
 export type EffectRuntimeContext<R extends EffectRuntimeReason = EffectRuntimeReason> =
   EffectRuntimeContextByReason[R];
 
-export type EffectRuntimeReasonsRequiringContext = 'turnFlowRuntimeValidationFailed';
+export type EffectRuntimeReasonsRequiringContext =
+  | typeof EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED
+  | typeof EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED
+  | typeof EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH;
 
 export type EffectRuntimeReasonsWithNoContext = never;
 
@@ -147,13 +169,21 @@ export const makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext = (
 
 const TURN_FLOW_RUNTIME_REQUIRED_CONTEXT_FIELDS: readonly (keyof EffectRuntimeContext<'turnFlowRuntimeValidationFailed'> & string)[] =
   ['effectType'];
+const CHOICE_RUNTIME_REQUIRED_CONTEXT_FIELDS: readonly (keyof EffectRuntimeContext<'choiceRuntimeValidationFailed'> & string)[] =
+  ['effectType'];
+const CHOICE_PROBE_MISMATCH_REQUIRED_CONTEXT_FIELDS: readonly (keyof EffectRuntimeContext<'choiceProbeAuthorityMismatch'> & string)[] =
+  ['effectType'];
 
 const validateRequiredEffectRuntimeContextFields = (
   reason: EffectRuntimeReason,
   context: unknown,
 ): void => {
-  const requiredFields = reason === 'turnFlowRuntimeValidationFailed'
+  const requiredFields = reason === EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED
     ? TURN_FLOW_RUNTIME_REQUIRED_CONTEXT_FIELDS
+    : reason === EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED
+      ? CHOICE_RUNTIME_REQUIRED_CONTEXT_FIELDS
+      : reason === EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
+        ? CHOICE_PROBE_MISMATCH_REQUIRED_CONTEXT_FIELDS
     : undefined;
   if (requiredFields === undefined || requiredFields.length === 0) {
     return;
@@ -176,6 +206,22 @@ const isTurnFlowRuntimeValidationFailedContext = (
   && typeof (context as Record<string, unknown>).effectType === 'string'
 );
 
+const isChoiceRuntimeValidationFailedContext = (
+  context: unknown,
+): context is EffectRuntimeContext<'choiceRuntimeValidationFailed'> => (
+  typeof context === 'object'
+  && context !== null
+  && typeof (context as Record<string, unknown>).effectType === 'string'
+);
+
+const isChoiceProbeAuthorityMismatchContext = (
+  context: unknown,
+): context is EffectRuntimeContext<'choiceProbeAuthorityMismatch'> => (
+  typeof context === 'object'
+  && context !== null
+  && typeof (context as Record<string, unknown>).effectType === 'string'
+);
+
 export function effectRuntimeError<R extends EffectRuntimeReason>(
   reason: R,
   message: string,
@@ -188,18 +234,43 @@ export function effectRuntimeError(
 ): EffectRuntimeError<'EFFECT_RUNTIME'> {
   const context = args[0];
   validateRequiredEffectRuntimeContextFields(reason, context);
-  if (reason === 'turnFlowRuntimeValidationFailed') {
+  if (reason === EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED) {
     if (!isTurnFlowRuntimeValidationFailedContext(context)) {
       throw new TypeError('turnFlowRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context.');
     }
-    const runtimeContext: EffectRuntimeErrorContextForReason<'turnFlowRuntimeValidationFailed'> = {
+    const runtimeContext: EffectRuntimeErrorContextForReason<typeof EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED> = {
       reason,
       ...context,
     };
     return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext);
   }
 
-  const runtimeContext: EffectRuntimeErrorContextForReason<Exclude<EffectRuntimeReason, 'turnFlowRuntimeValidationFailed'>> = {
+  if (reason === EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED) {
+    if (!isChoiceRuntimeValidationFailedContext(context)) {
+      throw new TypeError('choiceRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context.');
+    }
+    const runtimeContext: EffectRuntimeErrorContextForReason<typeof EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED> = {
+      reason,
+      ...context,
+    };
+    return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext);
+  }
+
+  if (reason === EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH) {
+    if (!isChoiceProbeAuthorityMismatchContext(context)) {
+      throw new TypeError('choiceProbeAuthorityMismatch requires effectType in EFFECT_RUNTIME context.');
+    }
+    const runtimeContext: EffectRuntimeErrorContextForReason<typeof EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH> = {
+      reason,
+      ...context,
+    };
+    return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext);
+  }
+
+  const runtimeContext: EffectRuntimeErrorContextForReason<Exclude<
+    EffectRuntimeReason,
+    EffectRuntimeReasonsRequiringContext
+  >> = {
     reason,
     ...(context ?? {}),
   };

@@ -10,6 +10,7 @@ import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, PlayerSel } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
@@ -35,7 +36,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
   const lattice = ctx.def.markerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `Unknown marker lattice: ${markerId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown marker lattice: ${markerId}`, {
       effectType,
       markerId,
       availableLattices: (ctx.def.markerLattices ?? []).map((l) => l.id).sort(),
@@ -48,7 +49,7 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
 const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
   const lattice = ctx.def.globalMarkerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `Unknown global marker lattice: ${markerId}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown global marker lattice: ${markerId}`, {
       effectType,
       markerId,
       availableLattices: (ctx.def.globalMarkerLattices ?? []).map((l) => l.id).sort(),
@@ -68,7 +69,7 @@ const resolveChoiceDecisionPlayer = (
   try {
     return resolveSinglePlayerSel(chooser, evalCtx);
   } catch (error) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `${effectType}.chooser must resolve to exactly one player`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `${effectType}.chooser must resolve to exactly one player`, {
       effectType,
       chooser,
       bind,
@@ -92,7 +93,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const providedDecisionPlayer = ctx.decisionAuthority.player;
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       bindTemplate: effect.chooseOne.bind,
@@ -125,7 +126,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
         },
       };
     }
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       decisionId,
@@ -137,8 +138,8 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const selected = ctx.moveParams[decisionId];
   if (effect.chooseOne.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
     const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
-      ? 'choiceProbeAuthorityMismatch'
-      : 'choiceRuntimeValidationFailed';
+      ? EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
+      : EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
     throw effectRuntimeError(
       runtimeReason,
       `chooseOne decision owner mismatch for "${resolvedBind}" (${decisionId})`,
@@ -156,7 +157,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const selectedComparable = toChoiceComparableValue(selected);
   if (selectedComparable === null || !normalizedOptions.includes(selectedComparable)) {
     throw effectRuntimeError(
-      'choiceRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
       `invalid selection for chooseOne "${resolvedBind}" (${decisionId}): outside options domain`,
       {
       effectType: 'chooseOne',
@@ -189,7 +190,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const providedDecisionPlayer = ctx.decisionAuthority.player;
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN must use either exact n or range max/min cardinality', {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN must use either exact n or range max/min cardinality', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -197,7 +198,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MIN_EVAL_INVALID') {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN minimum cardinality must evaluate to a non-negative integer', {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN minimum cardinality must evaluate to a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -206,7 +207,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN maximum cardinality must evaluate to a non-negative integer', {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN maximum cardinality must evaluate to a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -215,7 +216,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MIN_INVALID') {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN minimum cardinality must be a non-negative integer', {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN minimum cardinality must be a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -223,14 +224,14 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MAX_INVALID') {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN maximum cardinality must be a non-negative integer', {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN maximum cardinality must be a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
         max: issue.value,
       });
     }
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN min cannot exceed max', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN min cannot exceed max', {
       effectType: 'chooseN',
       bind,
       bindTemplate,
@@ -241,7 +242,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
 
   const options = evalQuery(chooseN.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN options domain item is not move-param encodable: ${bind}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN options domain item is not move-param encodable: ${bind}`, {
       effectType: 'chooseN',
       bind,
       decisionId,
@@ -276,7 +277,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         },
       };
     }
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN missing move param binding: ${bind} (${decisionId})`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionId})`, {
       effectType: 'chooseN',
       bind,
       decisionId,
@@ -287,8 +288,8 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const selectedValue = ctx.moveParams[decisionId];
   if (chooseN.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
     const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
-      ? 'choiceProbeAuthorityMismatch'
-      : 'choiceRuntimeValidationFailed';
+      ? EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
+      : EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
     throw effectRuntimeError(
       runtimeReason,
       `chooseN decision owner mismatch for "${bind}" (${decisionId})`,
@@ -303,7 +304,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     );
   }
   if (!Array.isArray(selectedValue)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN move param must be an array: ${bind}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN move param must be an array: ${bind}`, {
       effectType: 'chooseN',
       bind,
       actualType: typeof selectedValue,
@@ -312,7 +313,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   }
 
   if (selectedValue.length < minCardinality || selectedValue.length > clampedMax) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection cardinality mismatch for: ${bind}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection cardinality mismatch for: ${bind}`, {
       effectType: 'chooseN',
       bind,
       min: minCardinality,
@@ -325,7 +326,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   for (let index = 0; index < selectedValue.length; index += 1) {
     const comparable = toChoiceComparableValue(selectedValue[index]);
     if (comparable === null) {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection is not move-param encodable: ${bind}`, {
+      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection is not move-param encodable: ${bind}`, {
         effectType: 'chooseN',
         bind,
         decisionId,
@@ -339,7 +340,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   for (let left = 0; left < normalizedSelected.length; left += 1) {
     for (let right = left + 1; right < normalizedSelected.length; right += 1) {
       if (Object.is(normalizedSelected[left], normalizedSelected[right])) {
-        throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selections must be unique: ${bind}`, {
+        throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selections must be unique: ${bind}`, {
           effectType: 'chooseN',
           bind,
           duplicateValue: normalizedSelected[left],
@@ -350,7 +351,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   for (const selected of normalizedSelected) {
     if (!normalizedOptions.includes(selected)) {
       throw effectRuntimeError(
-        'choiceRuntimeValidationFailed',
+        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
         `invalid selection for chooseN "${bind}" (${decisionId}): outside options domain`,
         {
           effectType: 'chooseN',
@@ -386,7 +387,7 @@ export const applyRollRandom = (
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
 
   if (typeof minValue !== 'number' || !Number.isSafeInteger(minValue)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'rollRandom.min must evaluate to a safe integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'rollRandom.min must evaluate to a safe integer', {
       effectType: 'rollRandom',
       actualType: typeof minValue,
       value: minValue,
@@ -394,7 +395,7 @@ export const applyRollRandom = (
   }
 
   if (typeof maxValue !== 'number' || !Number.isSafeInteger(maxValue)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'rollRandom.max must evaluate to a safe integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'rollRandom.max must evaluate to a safe integer', {
       effectType: 'rollRandom',
       actualType: typeof maxValue,
       value: maxValue,
@@ -402,7 +403,7 @@ export const applyRollRandom = (
   }
 
   if (minValue > maxValue) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
       effectType: 'rollRandom',
       min: minValue,
       max: maxValue,
@@ -433,7 +434,7 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const spaceId = resolveZoneWithNormalization(space, evalCtx, {
-    code: 'choiceRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setMarker',
     scope: 'space',
     resolutionFailureMessage: 'setMarker.space zone resolution failed',
@@ -442,7 +443,7 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'setMarker.state must evaluate to a string', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'setMarker.state must evaluate to a string', {
       effectType: 'setMarker',
       actualType: typeof evaluatedState,
       value: evaluatedState,
@@ -451,7 +452,7 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
 
   const lattice = resolveMarkerLattice(ctx, marker, 'setMarker');
   if (!lattice.states.includes(evaluatedState)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setMarker',
       marker,
       state: evaluatedState,
@@ -480,7 +481,7 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const spaceId = resolveZoneWithNormalization(space, evalCtx, {
-    code: 'choiceRuntimeValidationFailed',
+    code: EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
     effectType: 'shiftMarker',
     scope: 'space',
     resolutionFailureMessage: 'shiftMarker.space zone resolution failed',
@@ -489,7 +490,7 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'shiftMarker.delta must evaluate to a safe integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'shiftMarker.delta must evaluate to a safe integer', {
       effectType: 'shiftMarker',
       actualType: typeof evaluatedDelta,
       value: evaluatedDelta,
@@ -502,7 +503,7 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
   const currentIndex = lattice.states.indexOf(currentState);
 
   if (currentIndex < 0) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Current marker state "${currentState}" not found in lattice "${marker}"`, {
       effectType: 'shiftMarker',
       marker,
       currentState,
@@ -541,7 +542,7 @@ export const applySetGlobalMarker = (
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'setGlobalMarker.state must evaluate to a string', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'setGlobalMarker.state must evaluate to a string', {
       effectType: 'setGlobalMarker',
       actualType: typeof evaluatedState,
       value: evaluatedState,
@@ -550,7 +551,7 @@ export const applySetGlobalMarker = (
 
   const lattice = resolveGlobalMarkerLattice(ctx, marker, 'setGlobalMarker');
   if (!lattice.states.includes(evaluatedState)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setGlobalMarker',
       marker,
       state: evaluatedState,
@@ -579,7 +580,7 @@ export const applyShiftGlobalMarker = (
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'shiftGlobalMarker.delta must evaluate to a safe integer', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'shiftGlobalMarker.delta must evaluate to a safe integer', {
       effectType: 'shiftGlobalMarker',
       actualType: typeof evaluatedDelta,
       value: evaluatedDelta,
@@ -591,7 +592,7 @@ export const applyShiftGlobalMarker = (
   const currentIndex = lattice.states.indexOf(currentState);
 
   if (currentIndex < 0) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Current marker state "${currentState}" not found in lattice "${marker}"`, {
       effectType: 'shiftGlobalMarker',
       marker,
       currentState,
@@ -629,28 +630,28 @@ export const applyFlipGlobalMarker = (
   const evaluatedStateB = evalValue(stateBExpr, evalCtx);
 
   if (typeof evaluatedMarker !== 'string') {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker.marker must evaluate to a string', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker.marker must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedMarker,
       value: evaluatedMarker,
     });
   }
   if (typeof evaluatedStateA !== 'string') {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker.stateA must evaluate to a string', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker.stateA must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedStateA,
       value: evaluatedStateA,
     });
   }
   if (typeof evaluatedStateB !== 'string') {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker.stateB must evaluate to a string', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker.stateB must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedStateB,
       value: evaluatedStateB,
     });
   }
   if (evaluatedStateA === evaluatedStateB) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker requires two distinct states', {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker requires two distinct states', {
       effectType: 'flipGlobalMarker',
       marker: evaluatedMarker,
       stateA: evaluatedStateA,
@@ -661,7 +662,7 @@ export const applyFlipGlobalMarker = (
   const lattice = resolveGlobalMarkerLattice(ctx, evaluatedMarker, 'flipGlobalMarker');
   if (!lattice.states.includes(evaluatedStateA)) {
     throw effectRuntimeError(
-      'choiceRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
       `Invalid stateA "${evaluatedStateA}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
       {
         effectType: 'flipGlobalMarker',
@@ -673,7 +674,7 @@ export const applyFlipGlobalMarker = (
   }
   if (!lattice.states.includes(evaluatedStateB)) {
     throw effectRuntimeError(
-      'choiceRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
       `Invalid stateB "${evaluatedStateB}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
       {
         effectType: 'flipGlobalMarker',
@@ -692,7 +693,7 @@ export const applyFlipGlobalMarker = (
     nextState = evaluatedStateA;
   } else {
     throw effectRuntimeError(
-      'choiceRuntimeValidationFailed',
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
       `flipGlobalMarker current state "${currentState}" is not flippable between "${evaluatedStateA}" and "${evaluatedStateB}"`,
       {
         effectType: 'flipGlobalMarker',

@@ -318,17 +318,43 @@ describe('effect error context contracts', () => {
     );
   });
 
-  it('effect runtime reason consumption avoids raw string literal checks in kernel guard sites', () => {
-    const applyMoveSource = readKernelSource('src/kernel/apply-move.ts');
-    const legalChoicesSource = readKernelSource('src/kernel/legal-choices.ts');
-    const redundantApplyMoveGuards = collectRedundantEffectRuntimeReasonConjunctions(applyMoveSource, 'apply-move.ts');
-    const redundantLegalChoicesGuards = collectRedundantEffectRuntimeReasonConjunctions(legalChoicesSource, 'legal-choices.ts');
+  it('kernel effect-runtime reason consumers avoid redundant conjunction guards and keep known canonical guard sites', () => {
+    const kernelModules = listKernelModulesByPrefix('');
+    const reasonConsumerModules = kernelModules
+      .filter((moduleName) => readKernelSource(`src/kernel/${moduleName}`).includes('isEffectRuntimeReason('))
+      .sort();
 
+    assert.ok(reasonConsumerModules.length > 0, 'Expected discoverable isEffectRuntimeReason consumers in src/kernel');
+
+    const redundantGuardViolations: string[] = [];
+    for (const moduleName of reasonConsumerModules) {
+      const file = `src/kernel/${moduleName}`;
+      const source = readKernelSource(file);
+      const matches = collectRedundantEffectRuntimeReasonConjunctions(source, moduleName);
+      for (const match of matches) {
+        const sourceFile = match.getSourceFile();
+        const start = sourceFile.getLineAndCharacterOfPosition(match.getStart(sourceFile));
+        const normalizedExpression = match.getText(sourceFile).replace(/\s+/gu, ' ').trim();
+        redundantGuardViolations.push(
+          `${file}:${start.line + 1}:${start.character + 1}: ${normalizedExpression}`,
+        );
+      }
+    }
+
+    assert.equal(
+      redundantGuardViolations.length,
+      0,
+      `Redundant EFFECT_RUNTIME + reason conjunction guard(s) detected in kernel reason consumers.\n`
+        + `Use canonical single-guard isEffectRuntimeReason(...) only.\n`
+        + redundantGuardViolations.join('\n'),
+    );
+
+    const applyMoveSource = readKernelSource('src/kernel/apply-move.ts');
     assert.match(applyMoveSource, /isEffectRuntimeReason\(\s*err,\s*EFFECT_RUNTIME_REASONS\.CHOICE_RUNTIME_VALIDATION_FAILED\s*\)/u);
-    assert.equal(redundantApplyMoveGuards.length, 0, 'apply-move.ts must not use redundant EFFECT_RUNTIME + reason conjunction guards');
     assert.doesNotMatch(applyMoveSource, /context\?\.reason\s*===\s*'choiceRuntimeValidationFailed'/u);
+
+    const legalChoicesSource = readKernelSource('src/kernel/legal-choices.ts');
     assert.match(legalChoicesSource, /isEffectRuntimeReason\(\s*error,\s*EFFECT_RUNTIME_REASONS\.CHOICE_PROBE_AUTHORITY_MISMATCH\s*\)/u);
-    assert.equal(redundantLegalChoicesGuards.length, 0, 'legal-choices.ts must not use redundant EFFECT_RUNTIME + reason conjunction guards');
     assert.doesNotMatch(legalChoicesSource, /context\?\.reason\s*===\s*'choiceProbeAuthorityMismatch'/u);
   });
 

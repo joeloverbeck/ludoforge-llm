@@ -1,6 +1,6 @@
 # SEATRES-074: Generalize redundant effect-runtime conjunction guard kernel-wide
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel-wide source-contract enforcement for effect-runtime reason guard usage
@@ -13,8 +13,15 @@ Current coverage enforces redundant-effect-runtime conjunction absence only in t
 ## Assumption Reassessment (2026-03-03)
 
 1. `effect-error-contracts.test.ts` currently checks only `apply-move.ts` and `legal-choices.ts` for this anti-pattern.
-2. Helper infrastructure exists to discover kernel modules and parse source contracts.
-3. No active ticket in `tickets/*` currently scopes kernel-wide enforcement of this specific redundant conjunction invariant.
+2. In `src/kernel`, only those same two modules currently consume `isEffectRuntimeReason(...)`; the test is correct for current files but not future-proof.
+3. Helper infrastructure already exists to support kernel-wide discovery and AST detection (`listKernelModulesByPrefix`, `readKernelSource`, `collectRedundantEffectRuntimeReasonConjunctions`).
+4. No active ticket in `tickets/*` currently scopes kernel-wide enforcement of this specific redundant conjunction invariant.
+
+## Scope Correction (2026-03-03)
+
+1. Replace static per-file assertions for redundant conjunction absence with dynamic kernel-module discovery of `isEffectRuntimeReason(...)` consumers.
+2. Keep targeted per-file assertions only for module-specific expectations (for example raw reason-string checks tied to known guard sites).
+3. Emit a single aggregated failure message listing violating files and locations, so regression remediation is direct.
 
 ## Architecture Check
 
@@ -26,9 +33,9 @@ Current coverage enforces redundant-effect-runtime conjunction absence only in t
 
 ### 1. Extend source-contract policy scope
 
-1. Discover kernel modules that consume `isEffectRuntimeReason(...)`.
+1. Discover all `src/kernel/*.ts` modules and filter to modules that consume `isEffectRuntimeReason(...)`.
 2. For those modules, assert absence of redundant `isEffectErrorCode(..., 'EFFECT_RUNTIME') && isEffectRuntimeReason(...)` conjunctions using AST detection.
-3. Keep existing targeted assertions only where they add additional value (for example reason-specific presence checks).
+3. Keep targeted assertions only where they add additional value (for example reason-specific presence checks in `apply-move.ts` and `legal-choices.ts`).
 
 ### 2. Add clear diagnostic messaging for violations
 
@@ -74,3 +81,22 @@ Current coverage enforces redundant-effect-runtime conjunction absence only in t
 3. `node --test packages/engine/dist/test/unit/kernel-source-ast-guard.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Updated `effect-error-contracts.test.ts` to discover all `src/kernel/*.ts` reason-consumer modules (`isEffectRuntimeReason(...)`) and enforce the redundant conjunction invariant kernel-wide.
+  - Added aggregated violation diagnostics with `file:line:column` and normalized offending expression text.
+  - Retained targeted canonical guard-site assertions for `apply-move.ts` and `legal-choices.ts` (raw string literal anti-pattern checks).
+  - Reassessed and corrected ticket assumptions/scope to reflect current repository reality and future-proof invariant enforcement.
+- **Deviations from Original Plan**:
+  - No helper changes were required in `kernel-source-guard.ts` or `kernel-source-ast-guard.ts`; existing helper capabilities were sufficient.
+  - `kernel-source-ast-guard.test.ts` required no changes because helper behavior did not change.
+- **Verification Results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/kernel-source-ast-guard.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

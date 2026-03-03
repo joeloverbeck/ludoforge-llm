@@ -394,7 +394,7 @@ git commit -m "test: add Turn 1 Move 2 — NVA pass"
 **Step 1: Discover the exact move structure**
 
 Before writing the final test, we need to discover how the ARVN compound move (Train + Govern) is represented. This is the most complex move in Turn 1 because it involves:
-1. Choosing `arvnOp` as the action
+1. Choosing `train` as the action
 2. The `operationPlusSpecialActivity` action class
 3. Train with choices: target Saigon, choose ARVN cubes, place 6, pacify 1 level
 4. Govern with choices: target An Loc + Can Tho, both in 'aid' mode
@@ -405,15 +405,15 @@ Add a **diagnostic section** that enumerates legal moves for ARVN and logs the s
   it('turn 1 move 3: ARVN Train in Saigon + Govern in An Loc & Can Tho', () => {
     // First, enumerate legal moves to understand the move structure
     const legal = legalMoves(def, state);
-    const arvnOpMoves = legal.filter((m) => String(m.actionId) === 'arvnOp');
+    const trainMoves = legal.filter((m) => String(m.actionId) === 'train');
 
-    // The ARVN should have arvnOp available with operationPlusSpecialActivity class
-    assert.ok(arvnOpMoves.length > 0, 'ARVN should have arvnOp legal moves');
+    // The ARVN should have train available with operationPlusSpecialActivity class
+    assert.ok(trainMoves.length > 0, 'ARVN should have train legal moves');
 
-    // Find the template move for arvnOp
-    const template = arvnOpMoves[0]!;
+    // Find the template move for train
+    const template = trainMoves[0]!;
 
-    // Build the compound move: arvnOp (Train) + govern (Special Activity)
+    // Build the compound move: train (Train) + govern (Special Activity)
     // First resolve the govern (special activity) move
     const governTemplate: Move = {
       actionId: asActionId('govern'),
@@ -434,7 +434,7 @@ Add a **diagnostic section** that enumerates legal moves for ARVN and logs the s
       'ARVN govern',
     );
 
-    // Now build the compound arvnOp move with train choices + govern as special activity
+    // Now build the compound train move with train choices + govern as special activity
     const compoundMove = completeMoveDecisionSequenceOrThrow(
       {
         ...template,
@@ -488,14 +488,14 @@ Add a **diagnostic section** that enumerates legal moves for ARVN and logs the s
 Important notes for the implementor:
 - **This is the hardest task.** The compound move structure may not match the above exactly. Key debugging approach:
   1. First, enumerate `legalMoves(def, state)` and log all moves to understand what's available.
-  2. Check if `arvnOp` is the right actionId or if the engine uses `train` directly with an actionClass.
+  2. The engine uses `train` directly as the actionId with an actionClass.
   3. The compound move payload structure (`compound.specialActivity`, `compound.timing`) is defined in `types-core.ts:517-520`. The govern move must be a fully-resolved `Move` object.
   4. If `completeMoveDecisionSequenceOrThrow` fails, read the error message — it tells you which choice name (`request.name`) it's stuck on and what options are available. Use that to fix the decision callback.
 - **Choice name discovery**: If choice names differ from what's shown above (e.g., `$trainChoice` vs `trainChoice`), the error from `completeMoveDecisionSequenceOrThrow` will say `choice="actualName"` — use that value.
 - **Piece placement**: The engine places from `available-ARVN:none`. After placing 6 ARVN troops into Saigon, the available zone should have 6 fewer ARVN troops.
 - **Minh leader bonus**: The `train-arvn-profile` has a final stage `rvn-leader-minh-aid-bonus` that adds +5 aid when `activeLeader` marker is `minh`. This fires automatically as part of the train action pipeline.
 - **Govern disjointness**: The `govern-profile` has `compoundParamConstraints` requiring `targetSpaces` to be disjoint between the operation and special activity. Since Train targets Saigon and Govern targets An Loc + Can Tho, this constraint is satisfied.
-- If the compound approach doesn't work (some engines model this differently), try executing `arvnOp` first (with train decisions), then check if govern appears as a separate legal move afterward. The option matrix allows Op & Special Activity to be sequential.
+- If the compound approach doesn't work (some engines model this differently), try executing `train` first (with train decisions), then check if govern appears as a separate legal move afterward. The option matrix allows Op & Special Activity to be sequential.
 
 **Step 2: Build and run**
 

@@ -41,8 +41,6 @@ turnOrder:
         pass: pass
         event: event
         pivotalEvent: event
-        usOp: operation
-        arvnOp: operation
         # COIN Operations
         train: operation
         patrol: operation
@@ -1118,8 +1116,6 @@ actions:
           delta: { op: '*', left: { ref: binding, name: amount }, right: -1 }
       - addVar: { scope: global, var: nvaResources, delta: { ref: binding, name: amount } }
     limits: []
-  - { id: usOp, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: arvnOp, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: resolveCommitment
     actor: active
     executor: 'US'
@@ -4966,64 +4962,6 @@ actionPipelines:
               delta: 1
     atomicity: atomic
     linkedWindows: [vc-special-window]
-  # ── Phantom joint operation stubs (to be removed — see Spec 54) ──
-  - id: us-op-profile
-    actionId: usOp
-    applicability: { op: '==', left: { ref: activePlayer }, right: 0 }
-    legality: null
-    costValidation:
-        conditionMacro: us-joint-op-arvn-spend-eligible
-        args:
-          resourceExpr:
-            ref: pvar
-            player: arvn
-            var: resources
-          costExpr: 5
-    costEffects:
-        - addVar:
-            scope: pvar
-            player: arvn
-            var: resources
-            delta: -5
-    targeting:
-      select: allEligible
-      order: lexicographicSpaceId
-    stages:
-      - stage: us-resolve
-        effects:
-          - addVar:
-              scope: global
-              var: usOpCount
-              delta: 1
-    atomicity: atomic
-  - id: arvn-op-profile
-    actionId: arvnOp
-    applicability: { op: '==', left: { ref: activePlayer }, right: 1 }
-    legality: null
-    costValidation:
-        op: ">="
-        left:
-          ref: pvar
-          player: active
-          var: resources
-        right: 5
-    costEffects:
-        - addVar:
-            scope: pvar
-            player: active
-            var: resources
-            delta: -5
-    targeting:
-      select: allEligible
-      order: lexicographicSpaceId
-    stages:
-      - stage: arvn-resolve
-        effects:
-          - addVar:
-              scope: global
-              var: arvnOpCount
-              delta: 1
-    atomicity: atomic
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Global / Per-Player Variables

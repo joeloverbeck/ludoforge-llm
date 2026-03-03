@@ -88,6 +88,13 @@ function substitutePattern(
 }
 
 // ---------------------------------------------------------------------------
+// Limits
+// ---------------------------------------------------------------------------
+
+/** Maximum number of piece types a single `generate` block may produce. */
+export const MAX_GENERATED_PIECE_TYPES = 5_000;
+
+// ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
@@ -136,6 +143,23 @@ function validateGenerateBlock(
       message: 'dimensions array must have at least one entry.',
     });
     valid = false;
+  }
+
+  // Combinatorial explosion guard (pre-materialization — no array allocated)
+  if (block.dimensions.length > 0) {
+    const combinationCount = block.dimensions.reduce(
+      (acc, dim) => acc * dim.values.length,
+      1,
+    );
+    if (combinationCount > MAX_GENERATED_PIECE_TYPES) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PIECE_GEN_COMBINATION_LIMIT_EXCEEDED,
+        path,
+        severity: 'error',
+        message: `generate block produces ${combinationCount} combinations, exceeding limit of ${MAX_GENERATED_PIECE_TYPES}.`,
+      });
+      valid = false;
+    }
   }
 
   // Check each dimension

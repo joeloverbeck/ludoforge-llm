@@ -267,7 +267,7 @@ export function deriveSectionsFromDataAssets(
   }
 
   const scenarioSelection = selectScenarioRef(scenarioRefs, options.defaultScenarioAssetId);
-  emitScenarioSelectionDiagnostics(scenarioSelection, options.defaultScenarioAssetId, diagnostics, {
+  emitScenarioSelectionDiagnostics(scenarioSelection, diagnostics, {
     onMissingReference: ({ selectedScenarioAssetId, alternatives }) => ({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING,
       path: 'doc.metadata.defaultScenarioAssetId',
@@ -326,8 +326,8 @@ export function deriveSectionsFromDataAssets(
     !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length > 0);
   const selectedMapResult = shouldResolveMap
     ? selectScenarioLinkedAsset(mapAssets, selectedScenario?.mapAssetId)
-    : { selected: undefined, failureReason: undefined, alternatives: [] };
-  emitScenarioLinkedAssetSelectionDiagnostics(selectedMapResult, selectedScenario?.mapAssetId, diagnostics, {
+    : { requestedId: selectedScenario?.mapAssetId, selected: undefined, failureReason: undefined, alternatives: [] };
+  emitScenarioLinkedAssetSelectionDiagnostics(selectedMapResult, diagnostics, {
     kind: 'map',
     selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
     ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
@@ -341,10 +341,9 @@ export function deriveSectionsFromDataAssets(
     !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length > 0);
   const selectedPieceCatalogResult = shouldResolvePieceCatalog
     ? selectScenarioLinkedAsset(pieceCatalogAssets, selectedScenario?.pieceCatalogAssetId)
-    : { selected: undefined, failureReason: undefined, alternatives: [] };
+    : { requestedId: selectedScenario?.pieceCatalogAssetId, selected: undefined, failureReason: undefined, alternatives: [] };
   emitScenarioLinkedAssetSelectionDiagnostics(
     selectedPieceCatalogResult,
-    selectedScenario?.pieceCatalogAssetId,
     diagnostics,
     {
       kind: 'pieceCatalog',
@@ -361,8 +360,8 @@ export function deriveSectionsFromDataAssets(
     !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length > 0);
   const selectedSeatCatalogResult = shouldResolveSeatCatalog
     ? selectScenarioLinkedAsset(seatCatalogAssets, selectedScenario?.seatCatalogAssetId)
-    : { selected: undefined, failureReason: undefined, alternatives: [] };
-  emitScenarioLinkedAssetSelectionDiagnostics(selectedSeatCatalogResult, selectedScenario?.seatCatalogAssetId, diagnostics, {
+    : { requestedId: selectedScenario?.seatCatalogAssetId, selected: undefined, failureReason: undefined, alternatives: [] };
+  emitScenarioLinkedAssetSelectionDiagnostics(selectedSeatCatalogResult, diagnostics, {
     kind: 'seatCatalog',
     selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
     ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),

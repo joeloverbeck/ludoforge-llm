@@ -1,6 +1,6 @@
 # SEATRES-059: Harden scenario selection adapter contract to eliminate input mismatch
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL scenario selection policy contract hardening
@@ -14,7 +14,7 @@ The new scenario selection diagnostic adapters currently accept `selection` and 
 
 1. `emitScenarioSelectionDiagnostics(...)` and `emitScenarioLinkedAssetSelectionDiagnostics(...)` currently take requested ids separately from selection results. Verified in `packages/engine/src/cnl/scenario-linked-asset-selection-policy.ts`.
 2. Current compiler/validator call sites pass coherent inputs and behavior is correct today. Verified in `compile-data-assets.ts` and `validate-extensions.ts`.
-3. No active ticket in `tickets/*` currently scopes adapter-input cohesion hardening for this API surface. Scope is new and does not duplicate active tickets.
+3. `tickets/SEATRES-060-enforce-physical-module-boundary-between-scenario-selection-core-and-diagnostics.md` is active and depends on this ticket, but it scopes module-boundary extraction rather than adapter-input cohesion. Scope remains non-duplicative.
 
 ## Architecture Check
 
@@ -51,7 +51,7 @@ The new scenario selection diagnostic adapters currently accept `selection` and 
 
 ### Tests That Must Pass
 
-1. Adapter API no longer allows selection/id mismatch at call sites.
+1. Adapter API no longer accepts a separately passed requested id; missing-reference emission derives requested-id context directly from the selection result object.
 2. Missing-reference diagnostics continue to include the correct requested id and alternatives.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
 
@@ -76,3 +76,22 @@ The new scenario selection diagnostic adapters currently accept `selection` and 
 4. `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js`
 5. `pnpm -F @ludoforge/engine test`
 6. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Hardened `ScenarioSelectionResult` so it now carries `requestedId`.
+  - Updated scenario and linked-asset diagnostic emitters to derive missing-reference ids from `selection.requestedId` instead of accepting a separate id parameter.
+  - Migrated compiler and validator call sites to the hardened emitter signatures.
+  - Added/updated unit assertions to lock requested-id cohesion and verify user-visible diagnostics still include the missing selector id.
+- **Deviations from original plan**:
+  - No scope deviation on implementation.
+  - Assumption notes were clarified to acknowledge `SEATRES-060` as a dependent, non-duplicative active ticket.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/data-asset-selection-policy.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (360/360).
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

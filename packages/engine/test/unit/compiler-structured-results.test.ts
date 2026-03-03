@@ -293,6 +293,7 @@ describe('compiler structured section results', () => {
 
     assert.notEqual(diagnostic, undefined);
     assert.equal(diagnostic?.path, 'doc.metadata.defaultScenarioAssetId');
+    assert.ok(diagnostic?.message.includes('scenario-missing'));
     assert.deepEqual(diagnostic?.alternatives, ['scenario-a']);
   });
 

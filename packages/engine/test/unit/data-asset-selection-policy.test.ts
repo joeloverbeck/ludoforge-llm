@@ -21,7 +21,7 @@ describe('scenario-linked asset selection policy', () => {
   it('emits scenario missing-reference diagnostics through the configured dialect adapter', () => {
     const diagnostics: Diagnostic[] = [];
     const result = selectScenarioRef([{ entityId: 'scenario-a' }], 'scenario-missing');
-    emitScenarioSelectionDiagnostics(result, 'scenario-missing', diagnostics, {
+    emitScenarioSelectionDiagnostics(result, diagnostics, {
       onMissingReference: ({ selectedScenarioAssetId, alternatives }) => ({
         code: 'MISSING',
         path: 'doc.metadata.defaultScenarioAssetId',
@@ -32,6 +32,7 @@ describe('scenario-linked asset selection policy', () => {
 
     assert.equal(result.selected, undefined);
     assert.equal(result.failureReason, 'missing-reference');
+    assert.equal(result.requestedId, 'scenario-missing');
     assert.equal(diagnostics.length, 1);
     assert.deepEqual(
       {
@@ -49,7 +50,7 @@ describe('scenario-linked asset selection policy', () => {
     const diagnostics: Diagnostic[] = [];
 
     const result = selectScenarioLinkedAsset([{ id: 'map-a' }, { id: 'map-b' }], undefined);
-    emitScenarioLinkedAssetSelectionDiagnostics(result, undefined, diagnostics, {
+    emitScenarioLinkedAssetSelectionDiagnostics(result, diagnostics, {
       kind: 'map',
       selectedPath: 'doc.dataAssets.0.payload',
       dialect: {
@@ -84,7 +85,7 @@ describe('scenario-linked asset selection policy', () => {
       [{ id: ' map-a ' }, { id: 'map-a' }, { id: 'ma\u0301p-b' }, { id: 'máp-b' }],
       undefined,
     );
-    emitScenarioLinkedAssetSelectionDiagnostics(result, undefined, diagnostics, {
+    emitScenarioLinkedAssetSelectionDiagnostics(result, diagnostics, {
       kind: 'map',
       selectedPath: 'doc.dataAssets.0.payload',
       dialect: {
@@ -117,7 +118,7 @@ describe('scenario-linked asset selection policy', () => {
     const diagnostics: Diagnostic[] = [];
 
     const result = selectScenarioLinkedAsset([{ id: 'seat-a' }], 'seat-missing');
-    emitScenarioLinkedAssetSelectionDiagnostics(result, 'seat-missing', diagnostics, {
+    emitScenarioLinkedAssetSelectionDiagnostics(result, diagnostics, {
       kind: 'seatCatalog',
       selectedPath: 'doc.dataAssets.0.payload',
       dialect: {},
@@ -126,5 +127,26 @@ describe('scenario-linked asset selection policy', () => {
     assert.equal(result.selected, undefined);
     assert.equal(result.failureReason, 'missing-reference');
     assert.equal(diagnostics.length, 0);
+  });
+
+  it('always derives linked-asset missing diagnostics from selection.requestedId', () => {
+    const diagnostics: Diagnostic[] = [];
+    const result = selectScenarioLinkedAsset([{ id: 'seat-a' }], 'seat-missing');
+    emitScenarioLinkedAssetSelectionDiagnostics(result, diagnostics, {
+      kind: 'seatCatalog',
+      selectedPath: 'doc.dataAssets.0.payload',
+      dialect: {
+        onMissingReference: ({ selectedId, alternatives }) => ({
+          code: 'MISSING',
+          path: 'doc.dataAssets.0.payload.seatCatalogAssetId',
+          severity: 'error',
+          message: `${selectedId}:${alternatives.join(',')}`,
+        }),
+      },
+    });
+
+    assert.equal(result.requestedId, 'seat-missing');
+    assert.equal(diagnostics.length, 1);
+    assert.equal(diagnostics[0]?.message, 'seat-missing:seat-a');
   });
 });

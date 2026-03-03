@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL policy module ownership and import-boundary hardening
-**Deps**: archive/tickets/SEATRES/SEATRES-044-split-scenario-linked-selection-core-from-diagnostic-adapters.md, tickets/SEATRES-059-harden-scenario-selection-adapter-contract-to-eliminate-input-mismatch.md
+**Deps**: archive/tickets/SEATRES/SEATRES-044-split-scenario-linked-selection-core-from-diagnostic-adapters.md, archive/tickets/SEATRES/SEATRES-059-harden-scenario-selection-adapter-contract-to-eliminate-input-mismatch.md
 
 ## Problem
 

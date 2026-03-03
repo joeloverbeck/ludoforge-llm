@@ -520,6 +520,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     );
 
     assert.notEqual(diagnostic, undefined);
+    assert.ok(diagnostic?.message.includes('test-scenario-missing'));
     assert.deepEqual(diagnostic?.alternatives, ['test-scenario']);
   });
 

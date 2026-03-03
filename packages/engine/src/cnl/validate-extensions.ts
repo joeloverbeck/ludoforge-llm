@@ -80,7 +80,7 @@ function selectCanonicalScenarioLinkedAsset<TAsset extends { readonly id: string
   }
 
   const selection = selectScenarioLinkedAsset(assets, selectedId);
-  emitScenarioLinkedAssetSelectionDiagnostics(selection, selectedId, diagnostics, {
+  emitScenarioLinkedAssetSelectionDiagnostics(selection, diagnostics, {
     kind: options.kind,
     selectedPath: options.selectedPath,
     ...(options.entityId === undefined ? {} : { entityId: options.entityId }),
@@ -257,7 +257,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       ? doc.metadata.defaultScenarioAssetId.trim()
       : undefined;
   const selectedScenarioResult = selectScenarioRef(scenarioRefs, selectedScenarioAssetId);
-  emitScenarioSelectionDiagnostics(selectedScenarioResult, selectedScenarioAssetId, diagnostics, {
+  emitScenarioSelectionDiagnostics(selectedScenarioResult, diagnostics, {
     onMissingReference: ({ selectedScenarioAssetId: missingId, alternatives }) => {
       const diagnostic: Diagnostic = {
         code: 'CNL_VALIDATOR_REFERENCE_MISSING',

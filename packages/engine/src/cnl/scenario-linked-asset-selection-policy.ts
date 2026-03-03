@@ -44,6 +44,7 @@ export interface ScenarioLinkedAssetSelectionDiagnosticOptions {
 }
 
 export interface ScenarioSelectionResult<TAsset> {
+  readonly requestedId: string | undefined;
   readonly selected: TAsset | undefined;
   readonly failureReason: DataAssetSelectionFailureReason | undefined;
   readonly alternatives: readonly string[];
@@ -58,6 +59,7 @@ export function selectScenarioRef<TScenario extends { readonly entityId: string 
   });
 
   return {
+    requestedId: selectedScenarioAssetId,
     selected: selection.selected,
     failureReason: selection.failureReason,
     alternatives: selection.alternatives,
@@ -66,18 +68,17 @@ export function selectScenarioRef<TScenario extends { readonly entityId: string 
 
 export function emitScenarioSelectionDiagnostics(
   selection: ScenarioSelectionResult<unknown>,
-  selectedScenarioAssetId: string | undefined,
   diagnostics: Diagnostic[],
   dialect: ScenarioSelectionDialect,
 ): void {
   if (
     selection.failureReason === 'missing-reference'
-    && selectedScenarioAssetId !== undefined
+    && selection.requestedId !== undefined
     && dialect.onMissingReference !== undefined
   ) {
     diagnostics.push(
       dialect.onMissingReference({
-        selectedScenarioAssetId,
+        selectedScenarioAssetId: selection.requestedId,
         alternatives: [...selection.alternatives],
       }),
     );
@@ -99,6 +100,7 @@ export function selectScenarioLinkedAsset<TAsset extends { readonly id: string }
   const selection = selectDataAssetById(assets, selectedId);
 
   return {
+    requestedId: selectedId,
     selected: selection.selected,
     failureReason: selection.failureReason,
     alternatives: selection.alternatives,
@@ -107,19 +109,18 @@ export function selectScenarioLinkedAsset<TAsset extends { readonly id: string }
 
 export function emitScenarioLinkedAssetSelectionDiagnostics(
   selection: ScenarioSelectionResult<unknown>,
-  selectedId: string | undefined,
   diagnostics: Diagnostic[],
   options: ScenarioLinkedAssetSelectionDiagnosticOptions,
 ): void {
   if (
     selection.failureReason === 'missing-reference'
-    && selectedId !== undefined
+    && selection.requestedId !== undefined
     && options.dialect.onMissingReference !== undefined
   ) {
     diagnostics.push(
       options.dialect.onMissingReference({
         kind: options.kind,
-        selectedId,
+        selectedId: selection.requestedId,
         selectedPath: options.selectedPath,
         alternatives: [...selection.alternatives],
         ...(options.entityId === undefined ? {} : { entityId: options.entityId }),

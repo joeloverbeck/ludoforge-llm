@@ -114,10 +114,16 @@ export interface RenderInterruptFrame {
   readonly resumePhase: string;
 }
 
+export interface RenderEligibilityEntry {
+  readonly label: string;
+  readonly factionId: string;
+}
+
 export interface RenderEventCard {
   readonly id: string;
   readonly title: string;
   readonly orderNumber: number | null;
+  readonly eligibility: readonly RenderEligibilityEntry[] | null;
 }
 
 export interface RenderEventDeck {

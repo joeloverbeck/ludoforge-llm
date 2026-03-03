@@ -459,8 +459,8 @@ describe('deriveRenderModel state metadata', () => {
         displayName: 'Strategy',
         drawZoneId: 'draw:none',
         discardZoneId: 'discard:none',
-        playedCard: { id: 'card-a', title: 'Card A', orderNumber: null },
-        lookaheadCard: { id: 'card-b', title: 'Card B', orderNumber: null },
+        playedCard: { id: 'card-a', title: 'Card A', orderNumber: null, eligibility: null },
+        lookaheadCard: { id: 'card-b', title: 'Card B', orderNumber: null, eligibility: null },
         deckSize: 2,
         discardSize: 1,
       },
@@ -495,11 +495,13 @@ describe('deriveRenderModel state metadata', () => {
       id: 'card-a',
       title: 'Card A',
       orderNumber: null,
+      eligibility: null,
     });
     expect(model.eventDecks[0]?.lookaheadCard).toEqual({
       id: 'card-b',
       title: 'Card B',
       orderNumber: null,
+      eligibility: null,
     });
   });
 
@@ -1239,5 +1241,170 @@ describe('deriveRenderModel state metadata', () => {
     const opActionIds = opGroup?.actions.map((action) => action.actionId) ?? [];
     expect(opActionIds).toContain('train');
     expect(opActionIds).not.toContain('advise');
+  });
+
+  it('derives eligibility from card metadata via cardSeatOrderMetadataKey', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 500, 2).state;
+    const { def: metaDef, state: metaState } = withStateMetadata(baseDef, baseState);
+    const baseTurnOrder = metaDef.turnOrder;
+    if (baseTurnOrder === undefined || baseTurnOrder.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order for eligibility test fixture.');
+    }
+
+    const def: GameDef = {
+      ...metaDef,
+      eventDecks: [{
+        id: 'strategy',
+        drawZone: 'draw:none',
+        discardZone: 'discard:none',
+        cards: [
+          { id: 'card-a', title: 'Card A', sideMode: 'single', metadata: { seatOrder: ['ARVN', 'VC', 'US', 'NVA'] } },
+          { id: 'card-b', title: 'Card B', sideMode: 'single', metadata: { seatOrder: ['US', 'NVA', 'ARVN', 'VC'] } },
+        ],
+      }],
+      turnOrder: {
+        ...baseTurnOrder,
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrder.config,
+          turnFlow: {
+            ...baseTurnOrder.config.turnFlow,
+            cardSeatOrderMetadataKey: 'seatOrder',
+            cardSeatOrderMapping: {
+              ARVN: 'arvn',
+              VC: 'vc',
+              US: 'us',
+              NVA: 'nva',
+            },
+          },
+        },
+      },
+    };
+
+    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+
+    expect(model.eventDecks[0]?.playedCard?.eligibility).toEqual([
+      { label: 'ARVN', factionId: 'arvn' },
+      { label: 'VC', factionId: 'vc' },
+      { label: 'US', factionId: 'us' },
+      { label: 'NVA', factionId: 'nva' },
+    ]);
+    expect(model.eventDecks[0]?.lookaheadCard?.eligibility).toEqual([
+      { label: 'US', factionId: 'us' },
+      { label: 'NVA', factionId: 'nva' },
+      { label: 'ARVN', factionId: 'arvn' },
+      { label: 'VC', factionId: 'vc' },
+    ]);
+  });
+
+  it('produces null eligibility when cards have no seatOrder metadata', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 501, 2).state;
+    const { def: metaDef, state: metaState } = withStateMetadata(baseDef, baseState);
+    const baseTurnOrder = metaDef.turnOrder;
+    if (baseTurnOrder === undefined || baseTurnOrder.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order for eligibility test fixture.');
+    }
+
+    const def: GameDef = {
+      ...metaDef,
+      eventDecks: [{
+        id: 'strategy',
+        drawZone: 'draw:none',
+        discardZone: 'discard:none',
+        cards: [
+          { id: 'card-a', title: 'Card A', sideMode: 'single' },
+          { id: 'card-b', title: 'Card B', sideMode: 'single' },
+        ],
+      }],
+      turnOrder: {
+        ...baseTurnOrder,
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrder.config,
+          turnFlow: {
+            ...baseTurnOrder.config.turnFlow,
+            cardSeatOrderMetadataKey: 'seatOrder',
+          },
+        },
+      },
+    };
+
+    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+
+    expect(model.eventDecks[0]?.playedCard?.eligibility).toBeNull();
+    expect(model.eventDecks[0]?.lookaheadCard?.eligibility).toBeNull();
+  });
+
+  it('produces null eligibility for non-cardDriven turn orders', () => {
+    const def = compileFixture();
+    const baseState = initialState(def, 502, 2).state;
+    const defWithEvents: GameDef = {
+      ...def,
+      eventDecks: [{
+        id: 'strategy',
+        drawZone: 'draw',
+        discardZone: 'discard',
+        cards: [
+          { id: 'card-a', title: 'Card A', sideMode: 'single', metadata: { seatOrder: ['US', 'NVA'] } },
+        ],
+      }],
+    };
+
+    const model = deriveRenderModel(baseState, defWithEvents, makeRenderContext(baseState.playerCount));
+
+    // No card-driven turn order means no seat order config, so eligibility should be null
+    const playedCard = model.eventDecks[0]?.playedCard;
+    const lookaheadCard = model.eventDecks[0]?.lookaheadCard;
+    // Cards may not be resolved (no cardLifecycle), but if they were, eligibility would be null
+    if (playedCard !== null && playedCard !== undefined) {
+      expect(playedCard.eligibility).toBeNull();
+    }
+    if (lookaheadCard !== null && lookaheadCard !== undefined) {
+      expect(lookaheadCard.eligibility).toBeNull();
+    }
+  });
+
+  it('falls back to raw entry value as factionId when cardSeatOrderMapping is absent', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 503, 2).state;
+    const { def: metaDef, state: metaState } = withStateMetadata(baseDef, baseState);
+    const baseTurnOrder = metaDef.turnOrder;
+    if (baseTurnOrder === undefined || baseTurnOrder.type !== 'cardDriven') {
+      throw new Error('Expected card-driven turn order for eligibility test fixture.');
+    }
+
+    const def: GameDef = {
+      ...metaDef,
+      eventDecks: [{
+        id: 'strategy',
+        drawZone: 'draw:none',
+        discardZone: 'discard:none',
+        cards: [
+          { id: 'card-a', title: 'Card A', sideMode: 'single', metadata: { seatOrder: ['us', 'nva'] } },
+          { id: 'card-b', title: 'Card B', sideMode: 'single', metadata: { seatOrder: ['nva', 'us'] } },
+        ],
+      }],
+      turnOrder: {
+        ...baseTurnOrder,
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrder.config,
+          turnFlow: {
+            ...baseTurnOrder.config.turnFlow,
+            cardSeatOrderMetadataKey: 'seatOrder',
+            // No cardSeatOrderMapping — factionId should equal the raw label
+          },
+        },
+      },
+    };
+
+    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+
+    expect(model.eventDecks[0]?.playedCard?.eligibility).toEqual([
+      { label: 'us', factionId: 'us' },
+      { label: 'nva', factionId: 'nva' },
+    ]);
   });
 });

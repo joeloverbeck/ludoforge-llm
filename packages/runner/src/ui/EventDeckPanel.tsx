@@ -1,10 +1,11 @@
-import type { ReactElement } from 'react';
+import { Fragment, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { RenderEventCard, RenderEventDeck } from '../model/render-model.js';
 import type { GameStore } from '../store/game-store.js';
 import styles from './EventDeckPanel.module.css';
+import { buildFactionColorValue } from './faction-color-style.js';
 
 interface EventDeckPanelProps {
   readonly store: StoreApi<GameStore>;
@@ -26,6 +27,18 @@ function CardWidget({ label, card, testId }: CardWidgetProps): ReactElement {
       {card !== null && card.orderNumber !== null && (
         <span className={styles.cardNumber} data-testid={`${testId}-number`}>
           #{card.orderNumber}
+        </span>
+      )}
+      {card?.eligibility != null && card.eligibility.length > 0 && (
+        <span className={styles.eligibility} data-testid={`${testId}-eligibility`}>
+          {card.eligibility.map((entry, i) => (
+            <Fragment key={entry.factionId}>
+              {i > 0 && <span className={styles.eligibilitySeparator}> · </span>}
+              <span style={{ color: buildFactionColorValue(entry.factionId, i) }}>
+                {entry.label}
+              </span>
+            </Fragment>
+          ))}
         </span>
       )}
     </div>

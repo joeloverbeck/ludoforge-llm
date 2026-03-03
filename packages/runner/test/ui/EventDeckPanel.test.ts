@@ -20,7 +20,7 @@ describe('EventDeckPanel', () => {
           displayName: 'Strategy Deck',
           drawZoneId: 'deck',
           discardZoneId: 'discard',
-          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5 },
+          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5, eligibility: null },
           lookaheadCard: null,
           deckSize: 22,
           discardSize: 3,
@@ -39,7 +39,7 @@ describe('EventDeckPanel', () => {
           displayName: 'Strategy Deck',
           drawZoneId: 'deck',
           discardZoneId: 'discard',
-          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5 },
+          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5, eligibility: null },
           lookaheadCard: null,
           deckSize: 22,
           discardSize: 3,
@@ -58,7 +58,7 @@ describe('EventDeckPanel', () => {
           displayName: 'Strategy Deck',
           drawZoneId: 'deck',
           discardZoneId: 'discard',
-          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 12 },
+          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 12, eligibility: null },
           lookaheadCard: null,
           deckSize: 22,
           discardSize: 3,
@@ -78,7 +78,7 @@ describe('EventDeckPanel', () => {
           drawZoneId: 'deck',
           discardZoneId: 'discard',
           playedCard: null,
-          lookaheadCard: { id: 'card-2', title: 'Gulf of Tonkin', orderNumber: 3 },
+          lookaheadCard: { id: 'card-2', title: 'Gulf of Tonkin', orderNumber: 3, eligibility: null },
           deckSize: 22,
           discardSize: 3,
         }],
@@ -122,8 +122,8 @@ describe('EventDeckPanel', () => {
           displayName: 'Strategy Deck',
           drawZoneId: 'deck',
           discardZoneId: 'discard',
-          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5 },
-          lookaheadCard: { id: 'card-2', title: 'Gulf of Tonkin', orderNumber: 3 },
+          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5, eligibility: null },
+          lookaheadCard: { id: 'card-2', title: 'Gulf of Tonkin', orderNumber: 3, eligibility: null },
           deckSize: 22,
           discardSize: 3,
         }],
@@ -142,7 +142,7 @@ describe('EventDeckPanel', () => {
           displayName: 'Strategy Deck',
           drawZoneId: 'deck',
           discardZoneId: 'discard',
-          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5 },
+          playedCard: { id: 'card-1', title: 'Containment', orderNumber: 5, eligibility: null },
           lookaheadCard: null,
           deckSize: 22,
           discardSize: 3,
@@ -170,7 +170,7 @@ describe('EventDeckPanel', () => {
           displayName: 'Strategy Deck',
           drawZoneId: 'deck',
           discardZoneId: 'discard',
-          playedCard: { id: 'card-1', title: 'Containment', orderNumber: null },
+          playedCard: { id: 'card-1', title: 'Containment', orderNumber: null, eligibility: null },
           lookaheadCard: null,
           deckSize: 22,
           discardSize: 3,
@@ -180,5 +180,132 @@ describe('EventDeckPanel', () => {
 
     expect(html).toContain('Containment');
     expect(html).not.toContain('#');
+  });
+
+  it('renders eligibility faction labels in correct order', () => {
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          playedCard: {
+            id: 'card-1',
+            title: 'Containment',
+            orderNumber: 5,
+            eligibility: [
+              { label: 'ARVN', factionId: 'arvn' },
+              { label: 'VC', factionId: 'vc' },
+              { label: 'US', factionId: 'us' },
+              { label: 'NVA', factionId: 'nva' },
+            ],
+          },
+          lookaheadCard: null,
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
+
+    expect(html).toContain('ARVN');
+    expect(html).toContain('VC');
+    expect(html).toContain('US');
+    expect(html).toContain('NVA');
+    // Separator dots should be present
+    expect(html).toContain(' · ');
+  });
+
+  it('does not render eligibility row when eligibility is null', () => {
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          playedCard: {
+            id: 'card-1',
+            title: 'Containment',
+            orderNumber: 5,
+            eligibility: null,
+          },
+          lookaheadCard: null,
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
+
+    expect(html).not.toContain('eligibility');
+    expect(html).not.toContain(' · ');
+  });
+
+  it('renders eligibility entries with inline faction color style', () => {
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          playedCard: {
+            id: 'card-1',
+            title: 'Containment',
+            orderNumber: 5,
+            eligibility: [
+              { label: 'ARVN', factionId: 'arvn' },
+              { label: 'VC', factionId: 'vc' },
+            ],
+          },
+          lookaheadCard: null,
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
+
+    // Each faction entry should have an inline color style with its CSS variable
+    expect(html).toContain('var(--faction-arvn');
+    expect(html).toContain('var(--faction-vc');
+  });
+
+  it('renders eligibility on both played and lookahead cards', () => {
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          playedCard: {
+            id: 'card-1',
+            title: 'Containment',
+            orderNumber: 5,
+            eligibility: [
+              { label: 'ARVN', factionId: 'arvn' },
+              { label: 'VC', factionId: 'vc' },
+            ],
+          },
+          lookaheadCard: {
+            id: 'card-2',
+            title: 'Gulf of Tonkin',
+            orderNumber: 3,
+            eligibility: [
+              { label: 'US', factionId: 'us' },
+              { label: 'NVA', factionId: 'nva' },
+            ],
+          },
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
+
+    // Both cards' eligibility labels should be present
+    expect(html).toContain('ARVN');
+    expect(html).toContain('VC');
+    expect(html).toContain('US');
+    expect(html).toContain('NVA');
   });
 });

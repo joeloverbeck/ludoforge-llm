@@ -22,6 +22,7 @@ import type {
   RenderChoiceTarget,
   RenderChoiceUi,
   RenderChoiceUiInvalidReason,
+  RenderEligibilityEntry,
   RenderEventCard,
   RenderEventDeck,
   RenderGlobalMarker,
@@ -54,6 +55,7 @@ interface StaticRenderDerivation {
 interface EventCardProjection {
   readonly title: string;
   readonly orderNumber: number | null;
+  readonly eligibility: readonly RenderEligibilityEntry[] | null;
 }
 
 interface GameDefEventDeckProjection {
@@ -296,10 +298,27 @@ function isAttributeRecordEqual(
 function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
   const cardTitleById = new Map<string, string>();
   const eventDecks: GameDefEventDeckProjection[] = [];
+
+  const seatOrderMetadataKey = def.turnOrder?.type === 'cardDriven'
+    ? def.turnOrder.config.turnFlow.cardSeatOrderMetadataKey ?? null
+    : null;
+  const seatOrderMapping: Readonly<Record<string, string>> = def.turnOrder?.type === 'cardDriven'
+    ? def.turnOrder.config.turnFlow.cardSeatOrderMapping ?? {}
+    : {};
+
   for (const deck of def.eventDecks ?? []) {
     const cardsById = new Map<string, EventCardProjection>();
     for (const card of deck.cards) {
-      cardsById.set(card.id, { title: card.title, orderNumber: card.order ?? null });
+      const rawSeatOrder = seatOrderMetadataKey !== null
+        ? card.metadata?.[seatOrderMetadataKey]
+        : undefined;
+      const eligibility: readonly RenderEligibilityEntry[] | null = Array.isArray(rawSeatOrder) && rawSeatOrder.length > 0
+        ? rawSeatOrder.map((entry: unknown) => ({
+            label: String(entry),
+            factionId: seatOrderMapping[String(entry)] ?? String(entry),
+          }))
+        : null;
+      cardsById.set(card.id, { title: card.title, orderNumber: card.order ?? null, eligibility });
       cardTitleById.set(card.id, card.title);
     }
 
@@ -537,6 +556,7 @@ function resolveEventCard(
     id: cardId,
     title: projection.title,
     orderNumber: projection.orderNumber,
+    eligibility: projection.eligibility,
   };
 }
 

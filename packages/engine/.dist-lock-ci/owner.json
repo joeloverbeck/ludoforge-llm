@@ -1,1 +1,0 @@
-{"pid":14,"command":"pnpm run schema:artifacts:check && node scripts/run-tests.mjs","createdAt":1772576425655}

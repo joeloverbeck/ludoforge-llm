@@ -32,10 +32,12 @@ import { validateScenarioCrossReferences } from './validate-zones.js';
 import {
   emitScenarioLinkedAssetSelectionDiagnostics,
   emitScenarioSelectionDiagnostics,
+  type ScenarioLinkedAssetSelectionDialect,
+} from './scenario-linked-asset-selection-diagnostics.js';
+import {
   selectScenarioLinkedAsset,
   selectScenarioRef,
-  type ScenarioLinkedAssetSelectionDialect,
-} from './scenario-linked-asset-selection-policy.js';
+} from './scenario-linked-asset-selection-core.js';
 import type { DataAssetSelectionFailureReason } from './data-asset-selection.js';
 
 interface DataAssetValidationContext {

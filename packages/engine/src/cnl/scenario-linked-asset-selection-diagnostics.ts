@@ -1,6 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { DataAssetSelectionFailureReason } from './data-asset-selection.js';
-import { selectDataAssetById } from './data-asset-selection.js';
+import type { ScenarioSelectionResult } from './scenario-linked-asset-selection-core.js';
 
 export type ScenarioLinkedAssetKind = 'map' | 'pieceCatalog' | 'seatCatalog';
 
@@ -43,29 +42,6 @@ export interface ScenarioLinkedAssetSelectionDiagnosticOptions {
   readonly dialect: ScenarioLinkedAssetSelectionDialect;
 }
 
-export interface ScenarioSelectionResult<TAsset> {
-  readonly requestedId: string | undefined;
-  readonly selected: TAsset | undefined;
-  readonly failureReason: DataAssetSelectionFailureReason | undefined;
-  readonly alternatives: readonly string[];
-}
-
-export function selectScenarioRef<TScenario extends { readonly entityId: string }>(
-  scenarios: ReadonlyArray<TScenario>,
-  selectedScenarioAssetId: string | undefined,
-): ScenarioSelectionResult<TScenario> {
-  const selection = selectDataAssetById(scenarios, selectedScenarioAssetId, {
-    getId: (scenario) => scenario.entityId,
-  });
-
-  return {
-    requestedId: selectedScenarioAssetId,
-    selected: selection.selected,
-    failureReason: selection.failureReason,
-    alternatives: selection.alternatives,
-  };
-}
-
 export function emitScenarioSelectionDiagnostics(
   selection: ScenarioSelectionResult<unknown>,
   diagnostics: Diagnostic[],
@@ -91,20 +67,6 @@ export function emitScenarioSelectionDiagnostics(
       }),
     );
   }
-}
-
-export function selectScenarioLinkedAsset<TAsset extends { readonly id: string }>(
-  assets: ReadonlyArray<TAsset>,
-  selectedId: string | undefined,
-): ScenarioSelectionResult<TAsset> {
-  const selection = selectDataAssetById(assets, selectedId);
-
-  return {
-    requestedId: selectedId,
-    selected: selection.selected,
-    failureReason: selection.failureReason,
-    alternatives: selection.alternatives,
-  };
 }
 
 export function emitScenarioLinkedAssetSelectionDiagnostics(

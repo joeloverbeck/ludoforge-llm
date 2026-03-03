@@ -5,11 +5,13 @@ import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import {
   emitScenarioLinkedAssetSelectionDiagnostics,
   emitScenarioSelectionDiagnostics,
+} from '../../src/cnl/scenario-linked-asset-selection-diagnostics.js';
+import {
   selectScenarioLinkedAsset,
   selectScenarioRef,
-} from '../../src/cnl/scenario-linked-asset-selection-policy.js';
+} from '../../src/cnl/scenario-linked-asset-selection-core.js';
 
-describe('scenario-linked asset selection policy', () => {
+describe('scenario-linked asset selection core and diagnostics adapters', () => {
   it('selects scenario refs without requiring diagnostics arrays', () => {
     const result = selectScenarioRef([{ entityId: 'scenario-a' }], 'scenario-a');
 

@@ -1,5 +1,5 @@
 import type { GameSpecDoc } from './game-spec-doc.js';
-import { selectScenarioLinkedAsset, selectScenarioRef } from './scenario-linked-asset-selection-policy.js';
+import { selectScenarioLinkedAsset, selectScenarioRef } from './scenario-linked-asset-selection-core.js';
 
 export type TokenTraitVocabulary = Readonly<Record<string, readonly string[]>>;
 

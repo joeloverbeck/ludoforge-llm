@@ -1,6 +1,6 @@
 # SEATRES-060: Enforce physical module boundary between scenario selection core and diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-03)
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL policy module ownership and import-boundary hardening
@@ -14,7 +14,7 @@ The API was split into pure selection and diagnostic adapters, but both still li
 
 1. `scenario-linked-asset-selection-policy.ts` currently exports both pure selectors and diagnostic emitters. Verified.
 2. The same module imports `Diagnostic`, so pure-selection consumers still depend on a mixed module boundary. Verified.
-3. No active ticket in `tickets/*` currently scopes extracting this into separate core and adapter modules with strict import boundaries. Scope is new.
+3. `tickets/SEATRES-071-extract-unresolved-scenario-selection-result-helper-and-branch-guards.md` is active but explicitly depends on this ticket and still targets the mixed module; this ticket must land first to establish canonical module ownership. Verified.
 
 ## Architecture Check
 
@@ -39,6 +39,7 @@ The API was split into pure selection and diagnostic adapters, but both still li
 1. Update compiler, validator, and token-trait vocabulary imports to the new module ownership.
 2. Remove the old mixed module once migration is complete.
 3. Add a lint-style boundary test to prevent reintroducing diagnostic imports into the pure core.
+4. Keep scope limited to module ownership/boundary hardening only (no behavior changes); any unresolved-selection helper extraction remains in `SEATRES-071`.
 
 ## Files to Touch
 
@@ -76,13 +77,22 @@ The API was split into pure selection and diagnostic adapters, but both still li
 
 1. `packages/engine/test/unit/data-asset-selection-policy.test.ts` (or successor split tests) — assert pure-core selection behavior and adapter behavior parity post-split. Rationale: behavior-preserving refactor guard.
 2. `packages/engine/test/unit/token-trait-vocabulary.test.ts` — confirm token-trait derivation consumes pure core without diagnostics coupling. Rationale: protects non-diagnostic consumer boundary.
-3. `packages/engine/test/unit/lint/<scenario-selection-boundary-policy>.test.ts` — assert pure-core module does not import diagnostic types/modules. Rationale: prevents architectural drift.
+3. `packages/engine/test/unit/lint/cnl-scenario-selection-core-diagnostics-import-boundary-policy.test.ts` — assert pure-core module does not import diagnostic types/modules. Rationale: prevents architectural drift.
 
 ### Commands
 
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/data-asset-selection-policy.test.js`
 3. `node --test packages/engine/dist/test/unit/token-trait-vocabulary.test.js`
-4. `node --test packages/engine/dist/test/unit/lint/<scenario-selection-boundary-policy>.test.js`
+4. `node --test packages/engine/dist/test/unit/lint/cnl-scenario-selection-core-diagnostics-import-boundary-policy.test.js`
 5. `pnpm -F @ludoforge/engine test`
 6. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+Implemented as planned with behavior-preserving boundaries:
+
+1. Added canonical pure-core selection module `scenario-linked-asset-selection-core.ts` and canonical diagnostics adapter module `scenario-linked-asset-selection-diagnostics.ts`.
+2. Migrated compiler, validator, token-trait vocabulary, and unit tests to canonical module ownership and deleted the mixed `scenario-linked-asset-selection-policy.ts` module (no compatibility aliases/shims).
+3. Added lint-style architectural guard `packages/engine/test/unit/lint/cnl-scenario-selection-core-diagnostics-import-boundary-policy.test.ts` to prevent diagnostics imports in the pure core.
+4. Verified with `pnpm turbo build`, focused unit/lint tests, full `pnpm -F @ludoforge/engine test`, and `pnpm turbo typecheck && pnpm turbo lint`.

@@ -27,9 +27,11 @@ import {
 import {
   emitScenarioLinkedAssetSelectionDiagnostics,
   emitScenarioSelectionDiagnostics,
+} from './scenario-linked-asset-selection-diagnostics.js';
+import {
   selectScenarioLinkedAsset,
   selectScenarioRef,
-} from './scenario-linked-asset-selection-policy.js';
+} from './scenario-linked-asset-selection-core.js';
 import type { DataAssetSelectionFailureReason } from './data-asset-selection.js';
 import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {

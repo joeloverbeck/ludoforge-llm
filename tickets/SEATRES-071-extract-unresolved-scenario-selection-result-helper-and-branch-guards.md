@@ -3,8 +3,8 @@
 **Status**: PENDING
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: Yes — CNL scenario-selection policy/helper extraction and compiler branch coverage
-**Deps**: archive/tickets/SEATRES/SEATRES-059-harden-scenario-selection-adapter-contract-to-eliminate-input-mismatch.md, tickets/SEATRES-060-enforce-physical-module-boundary-between-scenario-selection-core-and-diagnostics.md
+**Engine Changes**: Yes — CNL scenario-selection core/helper extraction and compiler branch coverage
+**Deps**: archive/tickets/SEATRES/SEATRES-059-harden-scenario-selection-adapter-contract-to-eliminate-input-mismatch.md, archive/tickets/SEATRES/SEATRES-060-enforce-physical-module-boundary-between-scenario-selection-core-and-diagnostics.md
 
 ## Problem
 
@@ -12,7 +12,7 @@
 
 ## Assumption Reassessment (2026-03-03)
 
-1. `ScenarioSelectionResult` now includes `requestedId` and is consumed by diagnostic emitters. Verified in `packages/engine/src/cnl/scenario-linked-asset-selection-policy.ts`.
+1. `ScenarioSelectionResult` now includes `requestedId` and is consumed by diagnostics adapters. Verified in `packages/engine/src/cnl/scenario-linked-asset-selection-core.ts` and `packages/engine/src/cnl/scenario-linked-asset-selection-diagnostics.ts`.
 2. Compiler call sites currently construct unresolved fallback objects inline instead of via shared policy helper. Verified in `packages/engine/src/cnl/compile-data-assets.ts`.
 3. Existing active tickets do not currently scope extraction of unresolved fallback construction into a canonical helper plus dedicated fallback branch tests. Scope is new.
 
@@ -26,7 +26,7 @@
 
 ### 1. Introduce canonical unresolved-result helper
 
-1. Add a helper in scenario-selection policy ownership that returns unresolved `ScenarioSelectionResult` values.
+1. Add a helper in scenario-selection core ownership that returns unresolved `ScenarioSelectionResult` values.
 2. Keep helper semantics deterministic (`selected: undefined`, `failureReason: undefined`, empty alternatives, explicit `requestedId` passthrough).
 
 ### 2. Migrate compiler fallback call sites
@@ -41,14 +41,14 @@
 
 ## Files to Touch
 
-- `packages/engine/src/cnl/scenario-linked-asset-selection-policy.ts` (modify)
+- `packages/engine/src/cnl/scenario-linked-asset-selection-core.ts` (modify)
 - `packages/engine/src/cnl/compile-data-assets.ts` (modify)
-- `packages/engine/test/unit/data-asset-selection-policy.test.ts` (modify)
+- `packages/engine/test/unit/scenario-linked-asset-selection.test.ts` (modify)
 - `packages/engine/test/unit/compiler-structured-results.test.ts` (modify)
 
 ## Out of Scope
 
-- Physical core/diagnostic module split tracked in `tickets/SEATRES-060-enforce-physical-module-boundary-between-scenario-selection-core-and-diagnostics.md`
+- Physical core/diagnostic module split completed in `archive/tickets/SEATRES/SEATRES-060-enforce-physical-module-boundary-between-scenario-selection-core-and-diagnostics.md`
 - Any runtime/kernel simulation behavior changes
 - Game-specific data/schema edits in GameSpecDoc or visual-config files
 
@@ -69,13 +69,13 @@
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/data-asset-selection-policy.test.ts` — verify unresolved helper shape and requested-id passthrough. Rationale: contract lock for helper semantics.
+1. `packages/engine/test/unit/scenario-linked-asset-selection.test.ts` — verify unresolved helper shape and requested-id passthrough. Rationale: contract lock for helper semantics.
 2. `packages/engine/test/unit/compiler-structured-results.test.ts` — cover no-resolution fallback branches and diagnostics parity. Rationale: behavior guard at compiler surface.
 
 ### Commands
 
 1. `pnpm turbo build`
-2. `node --test packages/engine/dist/test/unit/data-asset-selection-policy.test.js`
+2. `node --test packages/engine/dist/test/unit/scenario-linked-asset-selection.test.js`
 3. `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo typecheck && pnpm turbo lint`

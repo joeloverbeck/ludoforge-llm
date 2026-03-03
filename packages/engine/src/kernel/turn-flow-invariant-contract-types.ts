@@ -1,16 +1,4 @@
-export const TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES = [
-  'analyzeFreeOperationGrantMatch',
-  'applyGrantFreeOperation',
-  'applyPendingFreeOperationVariants',
-  'applyTurnFlowEligibilityAfterMove',
-  'applyTurnFlowWindowFilters',
-  'consumeTurnFlowFreeOperationGrant',
-  'isActiveSeatEligibleForTurnFlow',
-  'resolveCurrentCoupSeat',
-] as const;
-
-export type TurnFlowActiveSeatInvariantSurface =
-  (typeof TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES)[number];
+import type { TurnFlowActiveSeatInvariantSurface } from './turn-flow-active-seat-invariant-surfaces.js';
 
 export const TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT = 'turnFlow.activeSeat.unresolvable';
 export const TURN_FLOW_CARD_METADATA_SEAT_ORDER_SHAPE_INVALID_INVARIANT =

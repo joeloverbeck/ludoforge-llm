@@ -4,6 +4,7 @@ import ts from 'typescript';
 
 import { asPlayerId } from '../../../src/kernel/branded.js';
 import { createSeatResolutionContext } from '../../../src/kernel/seat-resolution.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from '../../../src/kernel/turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from '../../../src/kernel/turn-flow-runtime-invariants.js';
 import type { GameDef, GameState } from '../../../src/kernel/types.js';
 import { collectCallExpressionsByIdentifier, parseTypeScriptSource, unwrapTypeScriptExpression } from '../../helpers/kernel-source-ast-guard.js';
@@ -77,11 +78,21 @@ describe('turn-flow-runtime-invariants', () => {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
     assert.equal(
-      requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow', seatResolution),
+      requireCardDrivenActiveSeat(
+        def,
+        state,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+        seatResolution,
+      ),
       'NVA',
     );
     assert.equal(
-      requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow', seatResolution),
+      requireCardDrivenActiveSeat(
+        def,
+        state,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+        seatResolution,
+      ),
       'NVA',
     );
   });

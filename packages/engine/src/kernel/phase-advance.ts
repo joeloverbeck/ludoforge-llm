@@ -6,6 +6,7 @@ import type { GameDefRuntime } from './gamedef-runtime.js';
 import { legalMoves } from './legal-moves.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
@@ -82,7 +83,12 @@ const resolveCurrentCoupSeat = (
   state: GameState,
   seatResolution: SeatResolutionContext,
 ): string => {
-  return requireCardDrivenActiveSeat(def, state, 'resolveCurrentCoupSeat', seatResolution);
+  return requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.RESOLVE_CURRENT_COUP_SEAT,
+    seatResolution,
+  );
 };
 
 /**

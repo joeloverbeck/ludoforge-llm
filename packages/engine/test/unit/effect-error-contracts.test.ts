@@ -26,6 +26,7 @@ import {
   type GameDef,
   type GameState,
   makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
+  TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS,
 } from '../../src/kernel/index.js';
 
 describe('effect error context contracts', () => {
@@ -180,7 +181,7 @@ describe('effect error context contracts', () => {
     const context: EffectRuntimeContext<'turnFlowRuntimeValidationFailed'> =
       makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext({
         invariant: 'turnFlow.activeSeat.unresolvable',
-        surface: 'applyGrantFreeOperation',
+        surface: TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION,
         activePlayer: 0,
         seatOrder: ['0', '1'],
       });
@@ -193,7 +194,7 @@ describe('effect error context contracts', () => {
     assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
     assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED);
     assert.equal(error.context?.invariant, 'turnFlow.activeSeat.unresolvable');
-    assert.equal(error.context?.surface, 'applyGrantFreeOperation');
+    assert.equal(error.context?.surface, TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION);
     assert.equal(error.context?.activePlayer, 0);
     assert.deepEqual(error.context?.seatOrder, ['0', '1']);
   });

@@ -8,13 +8,9 @@ import type {
   TurnFlowActiveSeatInvariantContext,
 } from './turn-flow-invariant-contract-types.js';
 import type { ActionDef, ActionPipelineDef, GameState, Move, TurnFlowActionClass } from './types.js';
-export {
-  TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES,
-} from './turn-flow-invariant-contract-types.js';
 export type {
   CardMetadataSeatOrderShapeInvariantContext,
   TurnFlowActiveSeatInvariantContext,
-  TurnFlowActiveSeatInvariantSurface,
 } from './turn-flow-invariant-contract-types.js';
 
 export type KernelRuntimeErrorCode =

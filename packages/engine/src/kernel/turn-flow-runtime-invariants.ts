@@ -1,7 +1,7 @@
 import {
   kernelRuntimeError,
-  type TurnFlowActiveSeatInvariantSurface,
 } from './runtime-error.js';
+import type { TurnFlowActiveSeatInvariantSurface } from './turn-flow-active-seat-invariant-surfaces.js';
 import {
   activeSeatUnresolvableInvariantMessage,
   cardMetadataSeatOrderShapeInvariantMessage,

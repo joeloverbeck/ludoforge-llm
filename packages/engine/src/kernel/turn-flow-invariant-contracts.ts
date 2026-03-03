@@ -1,10 +1,10 @@
 import { CARD_SEAT_ORDER_MIN_DISTINCT_SEATS } from './turn-flow-seat-order-policy.js';
+import type { TurnFlowActiveSeatInvariantSurface } from './turn-flow-active-seat-invariant-surfaces.js';
 import {
   TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT,
   TURN_FLOW_CARD_METADATA_SEAT_ORDER_SHAPE_INVALID_INVARIANT,
   type CardMetadataSeatOrderShapeInvariantContext,
   type TurnFlowActiveSeatInvariantContext,
-  type TurnFlowActiveSeatInvariantSurface,
 } from './turn-flow-invariant-contract-types.js';
 export {
   TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT,
@@ -13,8 +13,8 @@ export {
 export type {
   CardMetadataSeatOrderShapeInvariantContext,
   TurnFlowActiveSeatInvariantContext,
-  TurnFlowActiveSeatInvariantSurface,
 } from './turn-flow-invariant-contract-types.js';
+export type { TurnFlowActiveSeatInvariantSurface } from './turn-flow-active-seat-invariant-surfaces.js';
 
 export const makeActiveSeatUnresolvableInvariantContext = (
   surface: TurnFlowActiveSeatInvariantSurface,

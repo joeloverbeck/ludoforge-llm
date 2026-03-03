@@ -24,6 +24,7 @@ export * from './terminal.js';
 export * from './determinism.js';
 export * from './diagnostics.js';
 export * from './turn-flow-error.js';
+export * from './turn-flow-active-seat-invariant-surfaces.js';
 export * from './turn-flow-invariant-contract-types.js';
 export * from './turn-flow-invariant-contracts.js';
 export * from './turn-flow-seat-order-policy.js';

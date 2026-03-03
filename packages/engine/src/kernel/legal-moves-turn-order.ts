@@ -11,6 +11,7 @@ import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from '.
 import type { TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
 import type { SeatResolutionContext } from './seat-resolution.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -236,7 +237,12 @@ export function applyTurnFlowWindowFilters(
   const pivotalActionIds = new Set(turnFlow.pivotal?.actionIds ?? []);
   const inPreActionWindow = (cardDrivenRuntime(state)?.currentCard.nonPassCount ?? 0) === 0;
   const activeSeat = state.turnOrderState.type === 'cardDriven'
-    ? requireCardDrivenActiveSeat(def, state, 'applyTurnFlowWindowFilters', seatResolution)
+    ? requireCardDrivenActiveSeat(
+      def,
+      state,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_TURN_FLOW_WINDOW_FILTERS,
+      seatResolution,
+    )
     : String(state.activePlayer);
   const precedence = turnFlow.pivotal?.interrupt?.precedence ?? [];
   const interruptWinnerSeat =
@@ -339,7 +345,12 @@ export function applyPendingFreeOperationVariants(
   }
 
   const pendingGrants = runtime.pendingFreeOperationGrants ?? [];
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'applyPendingFreeOperationVariants', seatResolution);
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_PENDING_FREE_OPERATION_VARIANTS,
+    seatResolution,
+  );
   if (!pendingGrants.some((grant) => grant.seat === activeSeat)) {
     return moves;
   }

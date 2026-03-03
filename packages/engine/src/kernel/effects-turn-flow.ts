@@ -15,6 +15,7 @@ import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,
 } from './turn-flow-invariant-contracts.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 
 const resolveGrantSeat = (
   token: string,
@@ -107,7 +108,7 @@ export const applyGrantFreeOperation = (
   );
   if (activeSeat === null) {
     const activeSeatInvariant = makeActiveSeatUnresolvableInvariantContext(
-      'applyGrantFreeOperation',
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION,
       Number(ctx.activePlayer),
       runtime.seatOrder,
     );

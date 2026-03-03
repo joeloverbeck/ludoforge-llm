@@ -23,6 +23,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import {
   assertCardMetadataSeatOrderRuntimeInvariant,
   requireCardDrivenActiveSeat,
@@ -732,7 +733,12 @@ export const isActiveSeatEligibleForTurnFlow = (
     return true;
   }
 
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'isActiveSeatEligibleForTurnFlow', seatResolution);
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+    seatResolution,
+  );
 
   return (
     activeSeat === runtime.currentCard.firstEligible ||
@@ -765,7 +771,12 @@ const analyzeFreeOperationGrantMatch = (
   if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
     return null;
   }
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'analyzeFreeOperationGrantMatch', seatResolution);
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ANALYZE_FREE_OPERATION_GRANT_MATCH,
+    seatResolution,
+  );
   const actionClass = moveOperationClass(def, move);
   const actionId = String(move.actionId);
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
@@ -995,7 +1006,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
-    'applyTurnFlowEligibilityAfterMove',
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_TURN_FLOW_ELIGIBILITY_AFTER_MOVE,
     seatResolution,
   );
 
@@ -1234,7 +1245,12 @@ export const consumeTurnFlowFreeOperationGrant = (
     return { state, traceEntries: [], releasedDeferredEventEffects: [] };
   }
   const runtime = state.turnOrderState.runtime;
-  const activeSeat = requireCardDrivenActiveSeat(def, state, 'consumeTurnFlowFreeOperationGrant', seatResolution);
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.CONSUME_TURN_FLOW_FREE_OPERATION_GRANT,
+    seatResolution,
+  );
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = pending.findIndex(
     (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),

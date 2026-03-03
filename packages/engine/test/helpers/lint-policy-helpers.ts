@@ -53,3 +53,43 @@ export function listTypeScriptFiles(rootDir: string): string[] {
   }
   return files;
 }
+
+export function findModuleSpecifiers(source: string): string[] {
+  const specifiers: string[] = [];
+  for (const match of source.matchAll(
+    /\bimport\s+[^'"]*?\sfrom\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]|^\s*export\s+[^'"]*?\sfrom\s*['"]([^'"]+)['"]/gmu,
+  )) {
+    const specifier = match[1] ?? match[2] ?? match[3];
+    if (specifier) {
+      specifiers.push(specifier);
+    }
+  }
+  for (const match of source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/gmu)) {
+    const specifier = match[1];
+    if (specifier) {
+      specifiers.push(specifier);
+    }
+  }
+  return specifiers;
+}
+
+type ImportViolationContext = {
+  readonly filePath: string;
+  readonly specifier: string;
+};
+
+export function findImportBoundaryViolations(
+  files: readonly string[],
+  isViolation: (context: ImportViolationContext) => boolean,
+): string[] {
+  const violations: string[] = [];
+  for (const filePath of files) {
+    const source = readFileSync(filePath, 'utf8');
+    for (const specifier of findModuleSpecifiers(source)) {
+      if (isViolation({ filePath, specifier })) {
+        violations.push(`${filePath} -> ${specifier}`);
+      }
+    }
+  }
+  return violations;
+}

@@ -2,7 +2,16 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
-import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createRng, isEffectErrorCode } from '../../src/kernel/index.js';
+import {
+  asPhaseId,
+  asPlayerId,
+  buildAdjacencyGraph,
+  createCollector,
+  createRng,
+  EFFECT_RUNTIME_REASONS,
+  isEffectErrorCode,
+  type EffectRuntimeReason,
+} from '../../src/kernel/index.js';
 import type { EffectContext } from '../../src/kernel/effect-context.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
 import {
@@ -145,6 +154,44 @@ const assertScopedEndpointTypingContracts = () => {
 };
 
 assertScopedEndpointTypingContracts();
+
+const assertScopedVarReasonTypingContracts = () => {
+  type ScopedVarReasonCode = Parameters<typeof resolveScopedVarDef>[3];
+  type ScopedVarReasonIsSubset = AssertTrue<ScopedVarReasonCode extends EffectRuntimeReason ? true : false>;
+  type VariableReasonIncluded = AssertTrue<
+    IsEqual<
+      Extract<ScopedVarReasonCode, typeof EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED>,
+      typeof EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED
+    >
+  >;
+  type ResourceReasonIncluded = AssertTrue<
+    IsEqual<
+      Extract<ScopedVarReasonCode, typeof EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED>,
+      typeof EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED
+    >
+  >;
+  type ChoiceReasonExcluded = AssertTrue<
+    IsEqual<Extract<ScopedVarReasonCode, typeof EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED>, never>
+  >;
+
+  void (null as unknown as ScopedVarReasonIsSubset);
+  void (null as unknown as VariableReasonIncluded);
+  void (null as unknown as ResourceReasonIncluded);
+  void (null as unknown as ChoiceReasonExcluded);
+
+  const ctx = makeCtx();
+  const variableReasonCode: ScopedVarReasonCode = EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED;
+  const resourceReasonCode: ScopedVarReasonCode = EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED;
+
+  resolveScopedVarDef(ctx, { scope: 'global', var: 'score' }, 'setVar', variableReasonCode);
+  resolveScopedIntVarDef(ctx, { scope: 'zoneVar', var: 'supply' }, 'transferVar', resourceReasonCode);
+
+  // @ts-expect-error scoped-var helper code domain must reject choice runtime reasons.
+  const invalidReasonCode: ScopedVarReasonCode = EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
+  void invalidReasonCode;
+};
+
+assertScopedVarReasonTypingContracts();
 
 const assertScopedWriteTypingContracts = () => {
   const globalWrite: ScopedVarWrite = { endpoint: { scope: 'global', var: 'flag' }, value: true };

@@ -5,13 +5,14 @@ import {
   selectorResolutionFailurePolicyForMode,
 } from './selector-resolution-normalization.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { GameState, IntVariableDef, PlayerSel, VariableDef, VariableValue, ZoneRef } from './types.js';
 
 type ScopedVarDefinitionScope = 'global' | 'pvar' | 'zoneVar';
-type ScopedVarRuntimeErrorCode = EffectRuntimeReason;
+type ScopedVarRuntimeErrorCode =
+  | typeof EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED
+  | typeof EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED;
 type ScopedVarEffectType = string;
 
 type DefinitionScopeEndpoint = Readonly<{

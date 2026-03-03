@@ -1,6 +1,6 @@
 # SEATRES-043: Enforce strict scenario selector failure in token-trait vocabulary
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL token-trait vocabulary selection semantics + unit coverage
@@ -10,11 +10,12 @@
 
 `deriveTokenTraitVocabularyFromGameSpecDoc()` can still derive a vocabulary via singleton piece-catalog inference even when `metadata.defaultScenarioAssetId` is explicitly set but does not resolve. This permissive fallback weakens explicit-selection invariants and makes behavior less predictable for generic GameSpecDoc-driven compilation.
 
-## Assumption Reassessment (2026-03-02)
+## Assumption Reassessment (2026-03-03)
 
-1. `token-trait-vocabulary.ts` now uses shared scenario-linked selection policy helpers, but does not gate downstream inference on explicit scenario-selector failure.
-2. Compiler/validator paths already enforce explicit scenario-selector failures with diagnostics and no dependent inference on failure.
-3. No active ticket in `tickets/*` currently scopes strict-failure behavior for token-trait vocabulary derivation.
+1. `token-trait-vocabulary.ts` uses shared scenario-linked selection helpers but still does not gate downstream piece-catalog inference on explicit scenario-selector `missing-reference` failure. **Verified in current code.**
+2. Existing token-trait vocabulary unit coverage does not lock the explicit-missing-selector + singleton piece-catalog no-fallback contract. **Verified in current tests.**
+3. Compiler/validator paths already enforce explicit scenario-selector failures with diagnostics and stop dependent inference on failure. **Verified in `compile-data-assets.ts` and `validate-extensions.ts`.**
+4. `SEATRES-044` is active and overlaps the same module for API decoupling; strict-failure behavior in this ticket must remain scoped to behavior/test contracts, not policy API refactor.
 
 ## Architecture Check
 
@@ -46,6 +47,7 @@
 - Compiler/validator diagnostic code changes
 - Runtime/kernel selection behavior changes
 - Visual configuration (`visual-config.yaml`) behavior
+- Selection-policy API layering/diagnostic decoupling tracked in `SEATRES-044`
 
 ## Acceptance Criteria
 
@@ -73,3 +75,19 @@
 2. `node --test packages/engine/dist/test/unit/token-trait-vocabulary.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Updated ticket assumptions to match current code/tests and to explicitly scope out overlapping API-layering work tracked by `SEATRES-044`.
+  - Enforced strict behavior in `deriveTokenTraitVocabularyFromGameSpecDoc`: when `metadata.defaultScenarioAssetId` is explicitly provided and scenario selection fails with `missing-reference`, derivation now returns `null` immediately (no singleton piece-catalog fallback).
+  - Added regression coverage for explicit unknown scenario selector + singleton piece catalog => `null`.
+- **Deviations from Original Plan**:
+  - No functional deviations in implementation.
+  - Ticket content was refined first to correct current-state assumptions and scope boundaries before code changes.
+- **Verification Results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/token-trait-vocabulary.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

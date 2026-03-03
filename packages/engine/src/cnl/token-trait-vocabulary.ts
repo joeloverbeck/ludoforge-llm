@@ -39,7 +39,11 @@ export function deriveTokenTraitVocabularyFromGameSpecDoc(doc: GameSpecDoc): Tok
     typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
       ? doc.metadata.defaultScenarioAssetId
       : undefined;
-  const selectedScenario = selectScenarioRefWithPolicy(scenarioAssets, selectedScenarioAssetId, diagnostics, {}).selected;
+  const selectedScenarioResult = selectScenarioRefWithPolicy(scenarioAssets, selectedScenarioAssetId, diagnostics, {});
+  if (selectedScenarioAssetId !== undefined && selectedScenarioResult.failureReason === 'missing-reference') {
+    return null;
+  }
+  const selectedScenario = selectedScenarioResult.selected;
   const selectedPieceCatalogAssetId =
     selectedScenario !== undefined
     && isRecord(selectedScenario.payload)

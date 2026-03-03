@@ -31,6 +31,33 @@ describe('deriveTokenTraitVocabularyFromGameSpecDoc', () => {
     assert.deepEqual(deriveTokenTraitVocabularyFromGameSpecDoc(doc), { posture: ['ready'] });
   });
 
+  it('returns null when metadata.defaultScenarioAssetId references an unknown scenario even with a singleton pieceCatalog', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'demo', players: { min: 2, max: 2 }, defaultScenarioAssetId: 'scenario-missing' },
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [
+              {
+                id: 'unit-a',
+                seat: 'us',
+                runtimeProps: { posture: 'ready' },
+                statusDimensions: [],
+                transitions: [],
+              },
+            ],
+            inventory: [{ pieceTypeId: 'unit-a', seat: 'us', total: 1 }],
+          },
+        },
+      ],
+    };
+
+    assert.equal(deriveTokenTraitVocabularyFromGameSpecDoc(doc), null);
+  });
+
   it('returns null when scenario selection is ambiguous and pieceCatalog cannot be inferred', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

@@ -116,7 +116,7 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
     assert.equal(result.state.globalVars.afterCounter, 1, 'afterEffects should see counter >= 1');
   });
 
-  it('triggers fire AFTER afterEffects complete', () => {
+  it('actionResolved trigger sees afterEffects state changes', () => {
     const def = makeBaseDef({
       actions: [simpleAction],
       phases: [{
@@ -124,16 +124,22 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
         actionDefaults: { afterEffects: [incrementAfterCounter] },
       }],
       triggers: [{
-        id: asTriggerId('checkAfter'),
+        id: asTriggerId('checkAfterState'),
         event: { type: 'actionResolved', action: asActionId('doThing') },
-        effects: [{ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } }],
+        effects: [{
+          if: {
+            when: { op: '>=', left: { ref: 'gvar', var: 'afterCounter' }, right: 1 },
+            then: [{ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } }],
+          },
+        }],
       }],
     });
     const state = makeBaseState();
     const move: Move = { actionId: asActionId('doThing'), params: {} };
     const result = applyMove(def, state, move);
     assert.equal(result.state.globalVars.afterCounter, 1, 'afterEffects should run');
-    assert.equal(result.state.globalVars.triggerFired, 1, 'trigger should fire after afterEffects');
+    assert.equal(result.state.globalVars.triggerFired, 1,
+      'trigger should see afterCounter >= 1, proving it runs after afterEffects');
   });
 
   it('afterEffects of originating phase run even if action effects cause phase transition', () => {

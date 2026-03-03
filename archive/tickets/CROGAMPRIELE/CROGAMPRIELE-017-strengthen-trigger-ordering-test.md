@@ -1,6 +1,6 @@
 # CROGAMPRIELE-017: Strengthen trigger-sees-afterEffects-state test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — test-only
@@ -88,3 +88,13 @@ If `triggerFired === 0`, the trigger ran before afterEffects — proving the tes
 
 1. `node --test packages/engine/dist/test/unit/apply-move-phase-action-defaults.test.js`
 2. `pnpm turbo build && pnpm turbo test --force`
+
+## Outcome
+
+**Completion date**: 2026-03-03
+
+**What changed**: Replaced the weak "triggers fire AFTER afterEffects complete" test (which asserted two independent increments) with a stronger "actionResolved trigger sees afterEffects state changes" test. The new test uses a conditional effect in the trigger (`afterCounter >= 1`) to prove causal ordering — the trigger only increments `triggerFired` if it observes the afterEffects' state mutation.
+
+**Deviations from plan**: The ticket proposed adding a new test alongside the existing one. Instead, we replaced the weaker test entirely (user decision), since the causal-ordering test is strictly stronger and subsumes the old test. No redundancy.
+
+**Verification**: 8/8 tests pass in the target file; 3399/3399 tests pass in full suite (`pnpm turbo test --force`).

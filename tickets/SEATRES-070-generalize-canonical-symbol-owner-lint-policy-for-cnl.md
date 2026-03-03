@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL lint policy architecture
-**Deps**: tickets/SEATRES-069-enforce-no-alias-re-export-boundary-for-seat-diagnostic-suggestion-policy.md
+**Deps**: archive/tickets/SEATRES/SEATRES-069-enforce-no-alias-re-export-boundary-for-seat-diagnostic-suggestion-policy.md
 
 ## Problem
 

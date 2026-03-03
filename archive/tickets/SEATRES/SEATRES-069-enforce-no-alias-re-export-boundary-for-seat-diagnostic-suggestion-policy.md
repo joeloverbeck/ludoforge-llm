@@ -1,6 +1,6 @@
 # SEATRES-069: Enforce no-alias re-export boundary for seat diagnostic suggestion policy
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL lint policy guardrails
@@ -69,3 +69,21 @@ Add focused assertions that only `seat-reference-diagnostic-suggestion-policy.ts
 2. `node --test packages/engine/dist/test/unit/lint/cnl-seat-reference-diagnostic-suggestion-policy.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Extended `cnl-seat-reference-diagnostic-suggestion-policy.test.ts` with explicit assertions that fail when non-canonical CNL modules:
+    - named re-export seat suggestion symbols, or
+    - wildcard re-export from `./seat-reference-diagnostic-suggestion-policy.js`.
+  - Added canonical-export-surface assertions ensuring seat suggestion symbols are only exported from `seat-reference-diagnostic-suggestion-policy.ts`.
+- **Deviations from original plan**:
+  - No deviations; implementation stayed within the planned single test file.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/lint/cnl-seat-reference-diagnostic-suggestion-policy.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

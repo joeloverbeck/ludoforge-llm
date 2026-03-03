@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
+import { readKernelSource } from '../helpers/kernel-source-guard.js';
 import {
   applyEffect,
   applyEffects,
@@ -298,6 +299,34 @@ describe('effect error context contracts', () => {
     );
     assert.doesNotThrow(() =>
       untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, 'optional context omitted'),
+    );
+  });
+
+  it('effectRuntimeError construction path stays free of unsafe context casts', () => {
+    const source = readKernelSource('src/kernel/effect-error.ts');
+    const constructionSectionMatch = source.match(
+      /export function effectRuntimeError\s*\(\s*reason:\s*EffectRuntimeReason[\s\S]*?export function isEffectRuntimeError/u,
+    );
+    const constructionSection = constructionSectionMatch?.[0];
+
+    assert.notEqual(
+      constructionSection,
+      undefined,
+      'Failed to locate effectRuntimeError implementation section for architecture guard',
+    );
+    if (constructionSection === undefined) {
+      return;
+    }
+
+    assert.doesNotMatch(
+      constructionSection,
+      /\bas\s+EffectRuntimeErrorContextForReason(?:<[^>]+>)?\b/u,
+      'effectRuntimeError construction must not assert reason context via cast; keep type-proofed branch construction',
+    );
+    assert.doesNotMatch(
+      constructionSection,
+      /\bas\s+EffectErrorContext<'EFFECT_RUNTIME'>\b/u,
+      'effectRuntimeError construction must not cast to EFFECT_RUNTIME context',
     );
   });
 

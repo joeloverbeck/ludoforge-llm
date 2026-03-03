@@ -7,6 +7,7 @@ import {
   TURN_FLOW_REQUIRED_KEYS,
 } from '../contracts/index.js';
 import { compareSourceSpans, resolveSpanForDiagnosticPath } from './diagnostic-source-map.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 import type { GameSpecSourceMap } from './source-map.js';
 
 export {
@@ -253,10 +254,6 @@ export function compareDiagnostics(left: Diagnostic, right: Diagnostic, sourceMa
   }
 
   return left.code.localeCompare(right.code);
-}
-
-export function normalizeIdentifier(value: string): string {
-  return value.trim().normalize('NFC');
 }
 
 export function isNonEmptyString(value: unknown): value is string {

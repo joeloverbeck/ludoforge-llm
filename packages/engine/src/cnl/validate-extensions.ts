@@ -19,13 +19,13 @@ import {
   TURN_FLOW_PASS_REWARD_KEYS,
   isFiniteNumber,
   isRecord,
-  normalizeIdentifier,
   pushDuplicateNormalizedIdDiagnostics,
   pushMissingReferenceDiagnostic,
   validateEnumField,
   validateIdentifierField,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { validateScenarioCrossReferences } from './validate-zones.js';
 import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';

@@ -1,5 +1,5 @@
 import type { PieceCatalogPayload, ScenarioPayload } from '../kernel/types.js';
-import { normalizeIdentifier } from './validate-spec-shared.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 
 export interface InvalidSeatReference {
   readonly path: string;

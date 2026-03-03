@@ -16,8 +16,8 @@ import {
   lowerEffectsWithDiagnostics,
   lowerOptionalCondition,
   missingCapabilityDiagnostic,
-  normalizeIdentifier,
 } from './compile-lowering.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 
 /** Bindings injected at runtime by the kernel into every action pipeline. */
 const ACTION_PIPELINE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '__freeOperation'];

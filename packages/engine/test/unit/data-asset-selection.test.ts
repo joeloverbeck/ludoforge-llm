@@ -17,6 +17,27 @@ describe('selectDataAssetById', () => {
     assert.deepEqual(result.alternatives, ['seat-a', 'seat-b']);
   });
 
+  it('deduplicates alternatives by normalized identity', () => {
+    const result = selectDataAssetById(
+      [
+        { id: ' seat-a ' },
+        { id: 'seat-a' },
+        { id: 'se\u0301at-b' },
+        { id: 'séat-b' },
+      ],
+      'seat-missing',
+    );
+    assert.equal(result.selected, undefined);
+    assert.equal(result.failureReason, 'missing-reference');
+    assert.deepEqual(result.alternatives, ['seat-a', 'séat-b']);
+  });
+
+  it('resolves explicit id under normalized whitespace and unicode equivalence', () => {
+    const result = selectDataAssetById([{ id: 'séat-b' }, { id: 'seat-c' }], ' se\u0301at-b ');
+    assert.equal(result.selected?.id, 'séat-b');
+    assert.equal(result.failureReason, undefined);
+  });
+
   it('infers singleton when selector is omitted', () => {
     const result = selectDataAssetById([{ id: 'seat-a' }], undefined);
     assert.equal(result.selected?.id, 'seat-a');

@@ -9,8 +9,8 @@ import {
   type ConditionLoweringSharedContext,
   type EffectLoweringSharedContext,
   missingCapabilityDiagnostic,
-  normalizeIdentifier,
 } from './compile-lowering.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 
 export function lowerEventCards(
   cards: readonly EventCardDef[],

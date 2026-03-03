@@ -21,11 +21,11 @@ All three implement the same "entire-string match → direct assignment; else `r
 1. The three locations listed above all exist and implement the same algorithm. **Verified.**
 2. `substituteParams` in `expand-phase-templates.ts` is more general (deep object/array recursion), but the ID-only resolution in the two validators is a strict subset of that logic. **Verified.**
 3. `GameSpecPhaseTemplateDef` type defines `phase` as `Readonly<Record<string, unknown>>`, so `template.phase.id` is typed `unknown`. **Verified.**
-4. `normalizeIdentifier` is already shared from `validate-spec-shared.ts`. **Verified.**
+4. `normalizeIdentifier` now lives in `identifier-utils.ts` and is consumed by validator/shared modules; it is no longer defined in `validate-spec-shared.ts`. **Verified.**
 
 ## Architecture Check
 
-1. Extracting a focused `resolvePhaseIdFromTemplate(entry, phaseTemplates)` helper into `validate-spec-shared.ts` centralizes the algorithm in one place. The general `substituteParams` in `expand-phase-templates.ts` can delegate to this for the ID-specific case, or remain separate if deep recursion stays needed.
+1. Extracting a focused `resolvePhaseIdFromTemplate(entry, phaseTemplates)` helper into `validate-spec-shared.ts` centralizes the algorithm in one place, while importing canonical normalization from `identifier-utils.ts`. The general `substituteParams` in `expand-phase-templates.ts` can delegate to this for the ID-specific case, or remain separate if deep recursion stays needed.
 2. No game-specific logic involved — this is purely compiler infrastructure.
 3. No backwards-compatibility shims. The three call sites simply replace inline logic with the shared helper.
 

@@ -1,6 +1,6 @@
 # SEATRES-039: Unify CNL identifier normalization and canonicalize selection alternatives
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — shared CNL identifier utility + data-asset selection helper hardening
@@ -13,8 +13,10 @@ Identifier normalization currently exists in multiple CNL modules, and the new s
 ## Assumption Reassessment (2026-03-02)
 
 1. `normalizeIdentifier` is currently duplicated in at least `compile-lowering.ts` and `validate-spec-shared.ts`.
-2. `data-asset-selection.ts` currently imports `normalizeIdentifier` from `validate-spec-shared.ts`, coupling generic selection policy to validator helper layering.
-3. Active tickets do not explicitly require consolidating normalization into one canonical utility module or deduplicating selector alternatives by normalized identity.
+2. Compile call sites (`compile-event-cards.ts`, `compile-operations.ts`) currently depend on the `compile-lowering.ts` copy while validator/cross-validation paths depend on the `validate-spec-shared.ts` copy.
+3. `data-asset-selection.ts` currently imports normalization from `validate-spec-shared.ts`, which couples generic selection logic to validator-oriented shared helpers.
+4. There is no existing `packages/engine/test/unit/validate-spec-shared.test.ts`; normalization coverage must be added in existing selector/asset tests or a new focused test file.
+5. Active tickets do not explicitly require consolidating normalization into one canonical utility module or deduplicating selector alternatives by normalized identity.
 
 ## Architecture Check
 
@@ -27,7 +29,7 @@ Identifier normalization currently exists in multiple CNL modules, and the new s
 ### 1. Create canonical CNL identifier utility and migrate call sites
 
 1. Introduce a shared CNL utility module (for example `identifier-utils.ts`) exporting `normalizeIdentifier`.
-2. Migrate compile-path and validator-path callers to the new module.
+2. Migrate compile-path and validator/cross-validation callers to the new module.
 3. Remove duplicated normalization implementations from previous modules once all call sites are migrated.
 
 ### 2. Canonicalize data-asset selection alternatives
@@ -41,9 +43,16 @@ Identifier normalization currently exists in multiple CNL modules, and the new s
 - `packages/engine/src/cnl/` (add shared identifier utility module)
 - `packages/engine/src/cnl/data-asset-selection.ts` (modify)
 - `packages/engine/src/cnl/compile-lowering.ts` (modify)
+- `packages/engine/src/cnl/compile-event-cards.ts` (modify)
+- `packages/engine/src/cnl/compile-operations.ts` (modify)
 - `packages/engine/src/cnl/validate-spec-shared.ts` (modify)
+- `packages/engine/src/cnl/validate-extensions.ts` (modify)
+- `packages/engine/src/cnl/validate-actions.ts` (modify)
+- `packages/engine/src/cnl/validate-spec-core.ts` (modify)
+- `packages/engine/src/cnl/cross-validate.ts` (modify)
+- `packages/engine/src/cnl/seat-reference-validation.ts` (modify)
 - `packages/engine/test/unit/data-asset-selection.test.ts` (modify/add)
-- `packages/engine/test/unit/validate-spec-shared.test.ts` (modify/add if normalizeIdentifier contract coverage lives there)
+- `packages/engine/test/unit/*` (add/modify focused normalization test coverage in existing or new file)
 
 ## Out of Scope
 
@@ -70,11 +79,43 @@ Identifier normalization currently exists in multiple CNL modules, and the new s
 
 1. `packages/engine/test/unit/data-asset-selection.test.ts` — add normalized-collision alternatives dedupe assertions. Rationale: locks deterministic alternative-list contract.
 2. `packages/engine/test/unit/data-asset-selection.test.ts` — add explicit-id resolution case under whitespace/Unicode-normalized equivalents. Rationale: guards canonical matching invariants.
-3. `packages/engine/test/unit/validate-spec-shared.test.ts` (or equivalent) — update coverage to reference canonical utility location if needed. Rationale: prevents silent drift from duplicate implementations.
+3. `packages/engine/test/unit/identifier-utils.test.ts` (or equivalent) — add focused canonical normalization contract assertions. Rationale: prevents silent drift when compile/validate call sites are consolidated.
 
 ### Commands
 
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/data-asset-selection.test.js`
-3. `pnpm -F @ludoforge/engine test`
-4. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+3. `node --test packages/engine/dist/test/unit/identifier-utils.test.js`
+4. `pnpm -F @ludoforge/engine test`
+5. `pnpm turbo typecheck`
+6. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Added canonical CNL identifier utility: `packages/engine/src/cnl/identifier-utils.ts`.
+  - Removed duplicate `normalizeIdentifier` implementations from:
+    - `packages/engine/src/cnl/compile-lowering.ts`
+    - `packages/engine/src/cnl/validate-spec-shared.ts`
+  - Migrated compile/validate/cross-validation callers to canonical utility in:
+    - `packages/engine/src/cnl/compile-event-cards.ts`
+    - `packages/engine/src/cnl/compile-operations.ts`
+    - `packages/engine/src/cnl/data-asset-selection.ts`
+    - `packages/engine/src/cnl/validate-actions.ts`
+    - `packages/engine/src/cnl/validate-spec-core.ts`
+    - `packages/engine/src/cnl/validate-extensions.ts`
+    - `packages/engine/src/cnl/cross-validate.ts`
+    - `packages/engine/src/cnl/seat-reference-validation.ts`
+  - Canonicalized selector alternatives in `selectDataAssetById()` by normalized-identity dedupe + stable sorting.
+  - Added/strengthened tests:
+    - `packages/engine/test/unit/data-asset-selection.test.ts`
+    - `packages/engine/test/unit/identifier-utils.test.ts`
+- **Deviations from original plan**:
+  - Replaced planned `validate-spec-shared` test updates with a new dedicated utility test file (`identifier-utils.test.ts`) because `validate-spec-shared.test.ts` does not exist.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/data-asset-selection.test.js packages/engine/dist/test/unit/identifier-utils.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

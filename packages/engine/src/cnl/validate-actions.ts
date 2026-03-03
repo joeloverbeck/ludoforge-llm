@@ -9,11 +9,11 @@ import {
   TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
   isRecord,
-  normalizeIdentifier,
   uniqueSorted,
   validateIdentifierField,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 import { isReservedCompilerMetadataKey } from './reserved-compiler-metadata.js';
 
 const EFFECT_KIND_KEYS: ReadonlySet<string> = new Set(SUPPORTED_EFFECT_KINDS as readonly string[]);

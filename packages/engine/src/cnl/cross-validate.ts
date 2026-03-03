@@ -4,8 +4,9 @@ import { buildCardDrivenTurnFlowSemanticRequirements, evaluateActionSelectorCont
 import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 import type { SeatIdentityContract } from './seat-identity-contract.js';
-import { isRecord, normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
+import { isRecord, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 
 export function crossValidateSpec(
   sections: CompileSectionResults,

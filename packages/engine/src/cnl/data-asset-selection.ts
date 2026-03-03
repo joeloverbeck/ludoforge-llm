@@ -1,4 +1,4 @@
-import { normalizeIdentifier } from './validate-spec-shared.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 
 export type DataAssetSelectionFailureReason = 'missing-reference' | 'ambiguous-selection';
 
@@ -18,7 +18,8 @@ export function selectDataAssetById<TAsset>(
   options: SelectDataAssetByIdOptions<TAsset> = {},
 ): DataAssetSelectionResult<TAsset> {
   const getId = options.getId ?? ((asset: TAsset): string => (asset as { readonly id: string }).id);
-  const alternatives = assets.map((asset) => getId(asset)).sort((left, right) => left.localeCompare(right));
+  const alternatives = [...new Set(assets.map((asset) => normalizeIdentifier(getId(asset))))]
+    .sort((left, right) => left.localeCompare(right));
 
   if (selectedId !== undefined) {
     const normalizedSelectedId = normalizeIdentifier(selectedId);

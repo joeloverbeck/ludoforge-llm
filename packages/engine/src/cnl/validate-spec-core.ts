@@ -17,12 +17,12 @@ import {
   TRIGGER_KEYS,
   compareDiagnostics,
   isRecord,
-  normalizeIdentifier,
   optionalIdentifierField,
   pushDuplicateNormalizedIdDiagnostics,
   pushMissingReferenceDiagnostic,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { normalizeIdentifier } from './identifier-utils.js';
 import { validateZones } from './validate-zones.js';
 
 export interface ValidateGameSpecOptions {

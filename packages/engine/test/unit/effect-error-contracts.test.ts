@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
-import { readKernelSource } from '../helpers/kernel-source-guard.js';
+import { listKernelModulesByPrefix, readKernelSource } from '../helpers/kernel-source-guard.js';
 import {
   applyEffect,
   applyEffects,
@@ -327,25 +327,38 @@ describe('effect error context contracts', () => {
     assert.doesNotMatch(legalChoicesSource, /context\?\.reason\s*===\s*'choiceProbeAuthorityMismatch'/u);
   });
 
-  it('effect emitters use canonical reason constants instead of string literal reason ids', () => {
-    const emitterFiles = [
-      'src/kernel/effect-dispatch.ts',
-      'src/kernel/effects-choice.ts',
-      'src/kernel/effects-control.ts',
-      'src/kernel/effects-resource.ts',
-      'src/kernel/effects-reveal.ts',
-      'src/kernel/effects-subset.ts',
-      'src/kernel/effects-token.ts',
-      'src/kernel/effects-turn-flow.ts',
-      'src/kernel/effects-var.ts',
-    ] as const;
+  it('kernel effect-runtime reason surfaces reject raw string literals', () => {
+    const kernelModules = listKernelModulesByPrefix('');
+    const effectRuntimeEmitterModules = kernelModules
+      .filter((moduleName) => readKernelSource(`src/kernel/${moduleName}`).includes('effectRuntimeError('))
+      .sort();
 
-    for (const file of emitterFiles) {
+    assert.ok(effectRuntimeEmitterModules.length > 0, 'Expected discoverable effectRuntimeError emitters in src/kernel');
+    for (const moduleName of effectRuntimeEmitterModules) {
+      const file = `src/kernel/${moduleName}`;
       const source = readKernelSource(file);
       assert.doesNotMatch(
         source,
-        /effectRuntimeError\(\s*'[^']+'\s*,/u,
+        /effectRuntimeError\(\s*['"`][^'"`]+['"`]\s*,/u,
         `${file} must not pass raw reason string literals to effectRuntimeError`,
+      );
+    }
+
+    const normalizedResolverModules = kernelModules
+      .filter((moduleName) => {
+        const source = readKernelSource(`src/kernel/${moduleName}`);
+        return /resolve(?:SinglePlayer|Players|Zone)WithNormalization\(/u.test(source);
+      })
+      .sort();
+
+    assert.ok(normalizedResolverModules.length > 0, 'Expected discoverable selector-normalization modules in src/kernel');
+    for (const moduleName of normalizedResolverModules) {
+      const file = `src/kernel/${moduleName}`;
+      const source = readKernelSource(file);
+      assert.doesNotMatch(
+        source,
+        /\bcode\s*:\s*['"`][^'"`]+['"`]/u,
+        `${file} must not pass raw reason string literals through normalization code fields`,
       );
     }
   });

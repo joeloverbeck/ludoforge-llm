@@ -113,7 +113,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
       const state = makeSweepReadyState(def, seed, { faction: 'US', marker: 'shaded' });
       const result = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('sweep'),
-        params: { targetSpaces: [SWEEP_SPACE] },
+        params: { $targetSpaces: [SWEEP_SPACE] },
       });
 
       const usInCasualties = countFactionTokens(result.state, 'casualties-US:none', 'US');
@@ -140,7 +140,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
       const state = makeSweepReadyState(def, seed, { faction: 'ARVN', marker: 'shaded' });
       const result = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('sweep'),
-        params: { targetSpaces: [SWEEP_SPACE] },
+        params: { $targetSpaces: [SWEEP_SPACE] },
       });
 
       const arvnInAvailable = countFactionTokens(result.state, 'available-ARVN:none', 'ARVN');
@@ -170,7 +170,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
       });
       const result = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('sweep'),
-        params: { targetSpaces: [SWEEP_SPACE, SWEEP_SPACE_2] },
+        params: { $targetSpaces: [SWEEP_SPACE, SWEEP_SPACE_2] },
       });
 
       const space1Lost = countFactionTokens(result.state, SWEEP_SPACE, 'US') < 2;
@@ -194,7 +194,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
       const state = makeSweepReadyState(def, seed, { faction: 'US', marker: 'inactive' });
       const result = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('sweep'),
-        params: { targetSpaces: [SWEEP_SPACE] },
+        params: { $targetSpaces: [SWEEP_SPACE] },
       });
 
       const usInCasualties = countFactionTokens(result.state, 'casualties-US:none', 'US');
@@ -211,7 +211,7 @@ describe('FITL Booby Traps shaded sweep integration', () => {
       const state = makeSweepReadyState(def, seed, { faction: 'US', marker: 'unshaded' });
       const result = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('sweep'),
-        params: { targetSpaces: [SWEEP_SPACE] },
+        params: { $targetSpaces: [SWEEP_SPACE] },
       });
 
       const usInCasualties = countFactionTokens(result.state, 'casualties-US:none', 'US');

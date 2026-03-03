@@ -80,7 +80,7 @@ const runVcMarchWithMainForceBns = (def: GameDef, marker: MarkerState, seed: num
   return applyMoveWithResolvedDecisionIds(def, setup, {
     actionId: asActionId('march'),
     params: {
-      targetSpaces: [LOC_SPACE],
+      $targetSpaces: [LOC_SPACE],
       [`$movingGuerrillas@${LOC_SPACE}`]: [mover1, mover2],
       [`$movingTroops@${LOC_SPACE}`]: [],
     },
@@ -116,7 +116,7 @@ const runNvaAttackWithPt76 = (def: GameDef, marker: MarkerState, seed: number, f
     actionId: asActionId('attack'),
     freeOperation,
     params: {
-      targetSpaces: [ATTACK_SPACE],
+      $targetSpaces: [ATTACK_SPACE],
       $attackMode: 'troops-attack',
     },
   }).state;
@@ -160,13 +160,13 @@ const runNvaAttackDamageWithPt76 = (def: GameDef, marker: MarkerState, seed: num
     actionId: asActionId('attack'),
     freeOperation: true,
     params: {
-      targetSpaces: [ATTACK_SPACE],
+      $targetSpaces: [ATTACK_SPACE],
       $attackMode: 'troops-attack',
     },
   }).state;
 };
 
-const bombardSelectionIsLegal = (def: GameDef, marker: MarkerState, targetSpaces: string[], seed: number): boolean => {
+const bombardSelectionIsLegal = (def: GameDef, marker: MarkerState, $targetSpaces: string[], seed: number): boolean => {
   const start = withGlobalMarker(
     {
       ...makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' }),
@@ -189,7 +189,7 @@ const bombardSelectionIsLegal = (def: GameDef, marker: MarkerState, targetSpaces
   try {
     applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('bombard'),
-      params: { targetSpaces },
+      params: { $targetSpaces },
     });
     return true;
   } catch {

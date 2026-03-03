@@ -2428,6 +2428,101 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports non-canonical binder declarations across behavior surfaces', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              forEach: {
+                bind: 'row',
+                countBind: 'count',
+                over: { query: 'players' },
+                effects: [],
+                in: [],
+              },
+            },
+            {
+              reduce: {
+                itemBind: 'item',
+                accBind: 'acc',
+                over: { query: 'intsInRange', min: 1, max: 2 },
+                initial: 0,
+                next: 0,
+                resultBind: 'sum',
+                in: [],
+              },
+            },
+            { let: { bind: 'tmp', value: 1, in: [] } },
+            { bindValue: { bind: 'tmp', value: 1 } },
+            {
+              evaluateSubset: {
+                source: { query: 'players' },
+                subsetSize: 1,
+                subsetBind: 'subset',
+                compute: [],
+                scoreExpr: 1,
+                resultBind: 'score',
+                bestSubsetBind: 'best',
+                in: [],
+              },
+            },
+            { chooseOne: { internalDecisionId: 'decision:$pick', bind: 'pick', options: { query: 'players' } } },
+            { chooseN: { internalDecisionId: 'decision:$pick', bind: 'pickN', options: { query: 'players' }, n: 1 } },
+            { rollRandom: { bind: 'die', min: 1, max: 6, in: [] } },
+            {
+              transferVar: {
+                from: { scope: 'global', var: 'money' },
+                to: { scope: 'global', var: 'money' },
+                amount: 1,
+                actualBind: 'actual',
+              },
+            },
+            {
+              bindValue: {
+                bind: '$ok',
+                value: {
+                  aggregate: {
+                    op: 'sum',
+                    query: { query: 'intsInRange', min: 1, max: 2 },
+                    bind: 'n',
+                    valueExpr: 1,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const expected = [
+      'EFFECT_FOR_EACH_BIND_INVALID',
+      'EFFECT_FOR_EACH_COUNT_BIND_INVALID',
+      'EFFECT_REDUCE_ITEM_BIND_INVALID',
+      'EFFECT_REDUCE_ACC_BIND_INVALID',
+      'EFFECT_REDUCE_RESULT_BIND_INVALID',
+      'EFFECT_LET_BIND_INVALID',
+      'EFFECT_BIND_VALUE_BIND_INVALID',
+      'EFFECT_EVALUATE_SUBSET_BIND_INVALID',
+      'EFFECT_EVALUATE_SUBSET_RESULT_BIND_INVALID',
+      'EFFECT_EVALUATE_SUBSET_BEST_BIND_INVALID',
+      'EFFECT_CHOOSE_ONE_BIND_INVALID',
+      'EFFECT_CHOOSE_N_BIND_INVALID',
+      'EFFECT_ROLL_RANDOM_BIND_INVALID',
+      'EFFECT_TRANSFER_VAR_ACTUAL_BIND_INVALID',
+      'VALUE_EXPR_AGGREGATE_BIND_INVALID',
+    ];
+
+    for (const code of expected) {
+      assert.ok(diagnostics.some((diag) => diag.code === code), `missing diagnostic code ${code}`);
+    }
+  });
+
   it('reports missing intsInVarRange source variable', () => {
     const base = createValidGameDef();
     const def = {

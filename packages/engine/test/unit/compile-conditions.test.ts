@@ -77,6 +77,29 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('rejects non-canonical aggregate bind tokens', () => {
+    const result = lowerValueNode(
+      {
+        aggregate: {
+          op: 'sum',
+          query: { query: 'intsInRange', min: 1, max: 3 },
+          bind: 'n',
+          valueExpr: 1,
+        },
+      },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.setVar.value.aggregate.bind');
+    assert.equal(
+      result.diagnostics[0]?.message,
+      'aggregate.bind "n" must be a canonical "$name" token.',
+    );
+  });
+
   it('emits warning when aggregate bind shadows an outer scope binding', () => {
     const result = lowerValueNode(
       {

@@ -18,6 +18,7 @@ import type {
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import {
+  collectDeclaredBinderCandidatesFromEffectNode,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
   tokenFilterPropAlternatives,
@@ -132,6 +133,104 @@ const validateCanonicalBinding = (
     message: `${messagePrefix} "${binding}" must be a canonical "$name" token.`,
     suggestion: 'Use a canonical binding token like "$candidate".',
   });
+};
+
+const EFFECT_DECLARED_BINDER_POLICY_BY_PATTERN: Readonly<Record<string, { readonly code: string; readonly surface: string }>> = {
+  'transferVar.actualBind': {
+    code: 'EFFECT_TRANSFER_VAR_ACTUAL_BIND_INVALID',
+    surface: 'transferVar.actualBind',
+  },
+  'forEach.bind': {
+    code: 'EFFECT_FOR_EACH_BIND_INVALID',
+    surface: 'forEach.bind',
+  },
+  'forEach.countBind': {
+    code: 'EFFECT_FOR_EACH_COUNT_BIND_INVALID',
+    surface: 'forEach.countBind',
+  },
+  'reduce.itemBind': {
+    code: 'EFFECT_REDUCE_ITEM_BIND_INVALID',
+    surface: 'reduce.itemBind',
+  },
+  'reduce.accBind': {
+    code: 'EFFECT_REDUCE_ACC_BIND_INVALID',
+    surface: 'reduce.accBind',
+  },
+  'reduce.resultBind': {
+    code: 'EFFECT_REDUCE_RESULT_BIND_INVALID',
+    surface: 'reduce.resultBind',
+  },
+  'evaluateSubset.subsetBind': {
+    code: 'EFFECT_EVALUATE_SUBSET_BIND_INVALID',
+    surface: 'evaluateSubset.subsetBind',
+  },
+  'evaluateSubset.resultBind': {
+    code: 'EFFECT_EVALUATE_SUBSET_RESULT_BIND_INVALID',
+    surface: 'evaluateSubset.resultBind',
+  },
+  'evaluateSubset.bestSubsetBind': {
+    code: 'EFFECT_EVALUATE_SUBSET_BEST_BIND_INVALID',
+    surface: 'evaluateSubset.bestSubsetBind',
+  },
+  'removeByPriority.remainingBind': {
+    code: 'EFFECT_REMOVE_BY_PRIORITY_REMAINING_BIND_INVALID',
+    surface: 'removeByPriority.remainingBind',
+  },
+  'removeByPriority.groups.*.bind': {
+    code: 'EFFECT_REMOVE_BY_PRIORITY_BIND_INVALID',
+    surface: 'removeByPriority.groups[].bind',
+  },
+  'removeByPriority.groups.*.countBind': {
+    code: 'EFFECT_REMOVE_BY_PRIORITY_COUNT_BIND_INVALID',
+    surface: 'removeByPriority.groups[].countBind',
+  },
+  'let.bind': {
+    code: 'EFFECT_LET_BIND_INVALID',
+    surface: 'let.bind',
+  },
+  'bindValue.bind': {
+    code: 'EFFECT_BIND_VALUE_BIND_INVALID',
+    surface: 'bindValue.bind',
+  },
+  'chooseOne.bind': {
+    code: 'EFFECT_CHOOSE_ONE_BIND_INVALID',
+    surface: 'chooseOne.bind',
+  },
+  'chooseN.bind': {
+    code: 'EFFECT_CHOOSE_N_BIND_INVALID',
+    surface: 'chooseN.bind',
+  },
+  'rollRandom.bind': {
+    code: 'EFFECT_ROLL_RANDOM_BIND_INVALID',
+    surface: 'rollRandom.bind',
+  },
+};
+
+function normalizeDeclaredBinderDiagnosticPath(path: string): string {
+  return path.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
+}
+
+const validateDeclaredCanonicalBindingsOnEffect = (
+  diagnostics: Diagnostic[],
+  effect: EffectAST,
+  path: string,
+): void => {
+  for (const candidate of collectDeclaredBinderCandidatesFromEffectNode(effect as unknown as Record<string, unknown>)) {
+    if (typeof candidate.value !== 'string') {
+      continue;
+    }
+    const policy = EFFECT_DECLARED_BINDER_POLICY_BY_PATTERN[candidate.pattern];
+    if (policy === undefined) {
+      continue;
+    }
+    validateCanonicalBinding(
+      diagnostics,
+      candidate.value,
+      `${path}.${normalizeDeclaredBinderDiagnosticPath(candidate.path)}`,
+      policy.code,
+      policy.surface,
+    );
+  }
 };
 
 const validateReference = (
@@ -332,6 +431,13 @@ export const validateValueExpr = (
 
   validateOptionsQuery(diagnostics, valueExpr.aggregate.query, `${path}.aggregate.query`, context);
   if (valueExpr.aggregate.op !== 'count') {
+    validateCanonicalBinding(
+      diagnostics,
+      valueExpr.aggregate.bind,
+      `${path}.aggregate.bind`,
+      'VALUE_EXPR_AGGREGATE_BIND_INVALID',
+      'aggregate.bind',
+    );
     validateNumericValueExpr(
       diagnostics,
       valueExpr.aggregate.valueExpr,
@@ -1111,6 +1217,8 @@ export const validateEffectAst = (
   path: string,
   context: ValidationContext,
 ): void => {
+  validateDeclaredCanonicalBindingsOnEffect(diagnostics, effect, path);
+
   if ('setVar' in effect) {
     validateScopedVarReference(diagnostics, effect.setVar.scope, effect.setVar.var, `${path}.setVar.var`, context);
 
@@ -1384,34 +1492,8 @@ export const validateEffectAst = (
 
   if ('removeByPriority' in effect) {
     validateNumericValueExpr(diagnostics, effect.removeByPriority.budget, `${path}.removeByPriority.budget`, context);
-    if (effect.removeByPriority.remainingBind !== undefined) {
-      validateCanonicalBinding(
-        diagnostics,
-        effect.removeByPriority.remainingBind,
-        `${path}.removeByPriority.remainingBind`,
-        'EFFECT_REMOVE_BY_PRIORITY_REMAINING_BIND_INVALID',
-        'removeByPriority.remainingBind',
-      );
-    }
-
     effect.removeByPriority.groups.forEach((group, index) => {
       const groupPath = `${path}.removeByPriority.groups[${index}]`;
-      validateCanonicalBinding(
-        diagnostics,
-        group.bind,
-        `${groupPath}.bind`,
-        'EFFECT_REMOVE_BY_PRIORITY_BIND_INVALID',
-        'removeByPriority.groups[].bind',
-      );
-      if (group.countBind !== undefined) {
-        validateCanonicalBinding(
-          diagnostics,
-          group.countBind,
-          `${groupPath}.countBind`,
-          'EFFECT_REMOVE_BY_PRIORITY_COUNT_BIND_INVALID',
-          'removeByPriority.groups[].countBind',
-        );
-      }
       validateOptionsQuery(diagnostics, group.over, `${groupPath}.over`, context);
       validateZoneRef(diagnostics, group.to, `${groupPath}.to`, context);
       if (group.from !== undefined) {

@@ -198,7 +198,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const final = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('assault'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         $abramsSpace: [space],
         $arvnFollowupSpaces: [],
       },
@@ -243,7 +243,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const final = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('assault'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         $abramsSpace: [space],
         $arvnFollowupSpaces: [],
       },
@@ -293,7 +293,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const final = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('assault'),
       params: {
-        targetSpaces: [abramsSpace, normalSpace],
+        $targetSpaces: [abramsSpace, normalSpace],
         $abramsSpace: [abramsSpace],
         $arvnFollowupSpaces: [],
       },
@@ -342,7 +342,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('assault'),
-      params: { targetSpaces: [space] },
+      params: { $targetSpaces: [space] },
     }).state;
 
     assert.equal(
@@ -395,7 +395,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       {
         actionId: asActionId('assault'),
         params: {
-          targetSpaces: [lowland, highland],
+          $targetSpaces: [lowland, highland],
           $arvnFollowupSpaces: [],
         },
       },
@@ -454,7 +454,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('assault'),
-      params: { targetSpaces: [space] },
+      params: { $targetSpaces: [space] },
     }).state;
 
     assert.equal(
@@ -491,7 +491,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, configured, {
           actionId: asActionId('assault'),
-          params: { targetSpaces: [a, b, c], $arvnFollowupSpaces: [] },
+          params: { $targetSpaces: [a, b, c], $arvnFollowupSpaces: [] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
@@ -529,7 +529,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.ok(arcSlotSelector.length >= 1, 'Expected explicit Arc Light no-COIN Province selector');
 
     const mainSelectorUsesReducedCap = findDeep(profile.stages, (node: any) =>
-      node?.chooseN?.bind === 'spaces' &&
+      node?.chooseN?.bind === '$spaces' &&
       node?.chooseN?.max?.if?.else?.op === '-' &&
       node?.chooseN?.max?.if?.else?.left === 6 &&
       node?.chooseN?.max?.if?.else?.right?.aggregate?.query?.name === '$arcLightNoCoinProvinces',
@@ -575,7 +575,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'no',
       },
     });
@@ -626,7 +626,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     });
@@ -672,7 +672,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       return applyMoveWithResolvedDecisionIds(def, configured, {
         actionId: asActionId('airStrike'),
         params: {
-          spaces: [space],
+          $spaces: [space],
           $degradeTrail: 'yes',
         },
       }).state.globalVars.trail as number;
@@ -720,7 +720,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const result = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'no',
       },
     }).state;
@@ -759,7 +759,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const legal = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [regularSpace],
+        $spaces: [regularSpace],
         $arcLightNoCoinProvinces: [arcSpace],
         $degradeTrail: 'no',
       },
@@ -781,7 +781,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
         applyMoveWithResolvedDecisionIds(def, setup, {
           actionId: asActionId('airStrike'),
           params: {
-            spaces: [regularSpace],
+            $spaces: [regularSpace],
             $arcLightNoCoinProvinces: [arcSpace, secondArcSpace],
             $degradeTrail: 'no',
           },
@@ -829,7 +829,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const legal = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [provinceWithBase],
+        $spaces: [provinceWithBase],
         $arcLightNoCoinProvinces: [arcProvince],
         $degradeTrail: 'no',
       },
@@ -846,7 +846,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
         applyMoveWithResolvedDecisionIds(def, setup, {
           actionId: asActionId('airStrike'),
           params: {
-            spaces: [provinceWithBase],
+            $spaces: [provinceWithBase],
             $arcLightNoCoinProvinces: [cityWithoutCoin],
             $degradeTrail: 'no',
           },
@@ -900,7 +900,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [twoHitSpace, oneHitSpace],
+        $spaces: [twoHitSpace, oneHitSpace],
         $degradeTrail: 'no',
       },
     }).state;
@@ -943,7 +943,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [target],
+        $spaces: [target],
         $degradeTrail: 'no',
       },
     }).state;
@@ -980,7 +980,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
       applyMoveWithResolvedDecisionIds(def, setup, {
         actionId: asActionId('airStrike'),
         params: {
-          spaces: [regularSpace],
+          $spaces: [regularSpace],
           $arcLightNoCoinProvinces: [arcSpace],
           $degradeTrail: 'no',
         },
@@ -1023,7 +1023,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
         applyMoveWithResolvedDecisionIds(def, setup, {
           actionId: asActionId('airStrike'),
           params: {
-            spaces: [spaceA, spaceB],
+            $spaces: [spaceA, spaceB],
             $arcLightNoCoinProvinces: [arcSpace],
             $degradeTrail: 'no',
           },

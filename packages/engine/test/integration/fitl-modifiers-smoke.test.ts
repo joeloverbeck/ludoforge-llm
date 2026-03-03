@@ -71,7 +71,7 @@ describe('FITL cross-system modifier smoke', () => {
     assert.doesNotThrow(() =>
       applyMoveWithResolvedDecisionIds(def, base, {
         actionId: asActionId('airStrike'),
-        params: { spaces: [], $degradeTrail: 'no' },
+        params: { $spaces: [], $degradeTrail: 'no' },
       }),
     );
 
@@ -80,7 +80,7 @@ describe('FITL cross-system modifier smoke', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, blocked, {
           actionId: asActionId('airStrike'),
-          params: { spaces: [], $degradeTrail: 'no' },
+          params: { $spaces: [], $degradeTrail: 'no' },
         }),
       /Illegal move/,
       'Momentum prohibition must take precedence over capability side effects',
@@ -114,7 +114,7 @@ describe('FITL cross-system modifier smoke', () => {
     const result = applyMoveWithResolvedDecisionIds(def, configured, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -148,7 +148,7 @@ describe('FITL cross-system modifier smoke', () => {
       applyMoveWithResolvedDecisionIds(def, withGlobalMarker(withLeader(setup, 'minh'), 'cap_caps', caps), {
         actionId: asActionId('train'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
           $trainChoice: 'rangers',
           $subActionSpaces: [],
         },
@@ -210,7 +210,7 @@ describe('FITL cross-system modifier smoke', () => {
         {
           actionId: asActionId('train'),
           params: {
-            targetSpaces: [space],
+            $targetSpaces: [space],
             $trainChoice: 'rangers',
             $subActionSpaces: [space],
             $subAction: 'pacify',
@@ -239,7 +239,7 @@ describe('FITL cross-system modifier smoke', () => {
         applyMoveWithResolvedDecisionIds(def, blocked, {
           actionId: asActionId('airLift'),
           params: {
-            spaces: ['saigon:none'],
+            $spaces: ['saigon:none'],
           },
         }),
       /Illegal move/,

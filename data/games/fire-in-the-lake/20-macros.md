@@ -443,10 +443,10 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -509,7 +509,7 @@ effectMacros:
     effects:
       - forEach:
           bind: $space
-          over: { query: binding, name: targetSpaces }
+          over: { query: binding, name: $targetSpaces }
           effects:
             - forEach:
                 bind: $ambushingGuerrilla
@@ -733,13 +733,13 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
           then:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -755,7 +755,7 @@ effectMacros:
                 max: 1
           else:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -792,13 +792,13 @@ effectMacros:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: includeTroops, type: value }
       - { name: resourceVar, type: string }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
           then:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -838,7 +838,7 @@ effectMacros:
                 max: 1
           else:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -894,13 +894,13 @@ effectMacros:
   - id: insurgent-rally-select-spaces
     params:
       - { name: resourceVar, type: string }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
           then:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -916,7 +916,7 @@ effectMacros:
                 max: 1
           else:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -1183,13 +1183,13 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
           then:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -1223,7 +1223,7 @@ effectMacros:
                 max: 1
           else:
             - chooseN:
-                bind: targetSpaces
+                bind: $targetSpaces
                 options:
                   query: mapSpaces
                   filter:
@@ -1269,10 +1269,10 @@ effectMacros:
   - id: bombard-select-spaces
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -1334,10 +1334,10 @@ effectMacros:
   - id: advise-select-spaces
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -1355,10 +1355,10 @@ effectMacros:
   - id: govern-select-spaces-standard
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -1398,10 +1398,10 @@ effectMacros:
   - id: raid-select-spaces
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -1415,10 +1415,10 @@ effectMacros:
   - id: infiltrate-select-spaces
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -1462,10 +1462,10 @@ effectMacros:
   - id: tax-select-spaces
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:
@@ -1511,10 +1511,10 @@ effectMacros:
   - id: subvert-select-spaces
     params:
       - { name: maxSpaces, type: number }
-    exports: [targetSpaces]
+    exports: [$targetSpaces]
     effects:
       - chooseN:
-          bind: targetSpaces
+          bind: $targetSpaces
           options:
             query: mapSpaces
             filter:

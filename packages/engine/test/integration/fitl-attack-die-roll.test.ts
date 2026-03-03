@@ -196,7 +196,7 @@ describe('FITL attack die roll integration', () => {
       const move = {
         actionId: asActionId('attack'),
         params: {
-          targetSpaces: [ATTACK_SPACE],
+          $targetSpaces: [ATTACK_SPACE],
           $attackMode: 'guerrilla-attack',
         },
       };
@@ -219,7 +219,7 @@ describe('FITL attack die roll integration', () => {
       const move = {
         actionId: asActionId('attack'),
         params: {
-          targetSpaces: [ATTACK_SPACE],
+          $targetSpaces: [ATTACK_SPACE],
           $attackMode: 'guerrilla-attack',
         },
       };
@@ -267,7 +267,7 @@ describe('FITL attack die roll integration', () => {
       applyMoveWithResolvedDecisionIds(def, makeVcAttackReadyState(def, seed), {
         actionId: asActionId('attack'),
         params: {
-          targetSpaces: [ATTACK_SPACE],
+          $targetSpaces: [ATTACK_SPACE],
         },
       }).state;
 

@@ -1231,6 +1231,18 @@ function lowerAggregate(
   if (typeof source.bind !== 'string' || source.bind.length === 0) {
     return missingCapability(`${path}.bind`, 'aggregate bind', source.bind, ['non-empty string']);
   }
+  if (!isCanonicalBindingIdentifier(source.bind)) {
+    return {
+      value: null,
+      diagnostics: [{
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        path: `${path}.bind`,
+        severity: 'error',
+        message: `aggregate.bind "${source.bind}" must be a canonical "$name" token.`,
+        suggestion: 'Use a canonical binding token like "$n".',
+      }],
+    };
+  }
   if (source.prop !== undefined) {
     return missingCapability(`${path}.prop`, 'aggregate prop', source.prop, ['use aggregate.bind + aggregate.valueExpr']);
   }

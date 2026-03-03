@@ -243,13 +243,13 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     const baseMove = {
       actionId: asActionId('patrol'),
       params: {
-        targetLoCs: [locA, locB],
+        $targetLoCs: [locA, locB],
         $assaultLoCs: [],
       },
     };
     const resolved = resolveMoveDecisionSequence(def, configured, baseMove, {
       choose: (request) => {
-        if (request.name === 'targetLoCs') {
+        if (request.name === '$targetLoCs') {
           return [locA, locB];
         }
         if (request.name.includes('assaultLoCs')) {
@@ -315,13 +315,13 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     const baseMove = {
       actionId: asActionId('patrol'),
       params: {
-        targetLoCs: [loc],
+        $targetLoCs: [loc],
         $assaultLoCs: [],
       },
     };
     const resolved = resolveMoveDecisionSequence(def, configured, baseMove, {
       choose: (request) => {
-        if (request.name === 'targetLoCs') {
+        if (request.name === '$targetLoCs') {
           return [loc];
         }
         if (request.name.includes('assaultLoCs')) {

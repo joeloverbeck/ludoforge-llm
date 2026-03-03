@@ -304,7 +304,7 @@ valueExprSchemaInternal = z.union([
             .object({
               op: z.union([z.literal('sum'), z.literal('min'), z.literal('max')]),
               query: OptionsQuerySchema,
-              bind: StringSchema,
+              bind: CanonicalBindingIdentifierSchema,
               valueExpr: NumericValueExprSchema,
             })
             .strict(),
@@ -358,7 +358,7 @@ numericValueExprSchemaInternal = z.union([
             .object({
               op: z.union([z.literal('sum'), z.literal('min'), z.literal('max')]),
               query: OptionsQuerySchema,
-              bind: StringSchema,
+              bind: CanonicalBindingIdentifierSchema,
               valueExpr: NumericValueExprSchema,
             })
             .strict(),
@@ -447,7 +447,7 @@ effectAstSchemaInternal = z.union([
           amount: NumericValueExprSchema,
           min: NumericValueExprSchema.optional(),
           max: NumericValueExprSchema.optional(),
-          actualBind: StringSchema.optional(),
+          actualBind: CanonicalBindingIdentifierSchema.optional(),
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
@@ -559,12 +559,12 @@ effectAstSchemaInternal = z.union([
     .object({
       forEach: z
         .object({
-          bind: StringSchema,
+          bind: CanonicalBindingIdentifierSchema,
           macroOrigin: MacroOriginSchema.optional(),
           over: OptionsQuerySchema,
           effects: z.array(EffectASTSchema),
           limit: NumericValueExprSchema.optional(),
-          countBind: StringSchema.optional(),
+          countBind: CanonicalBindingIdentifierSchema.optional(),
           in: z.array(EffectASTSchema).optional(),
         })
         .strict(),
@@ -574,15 +574,15 @@ effectAstSchemaInternal = z.union([
     .object({
       reduce: z
         .object({
-          itemBind: StringSchema,
-          accBind: StringSchema,
+          itemBind: CanonicalBindingIdentifierSchema,
+          accBind: CanonicalBindingIdentifierSchema,
           itemMacroOrigin: MacroOriginSchema.optional(),
           accMacroOrigin: MacroOriginSchema.optional(),
           over: OptionsQuerySchema,
           initial: ValueExprSchema,
           next: ValueExprSchema,
           limit: NumericValueExprSchema.optional(),
-          resultBind: StringSchema,
+          resultBind: CanonicalBindingIdentifierSchema,
           resultMacroOrigin: MacroOriginSchema.optional(),
           in: z.array(EffectASTSchema),
         })
@@ -617,7 +617,7 @@ effectAstSchemaInternal = z.union([
     .object({
       let: z
         .object({
-          bind: StringSchema,
+          bind: CanonicalBindingIdentifierSchema,
           value: ValueExprSchema,
           in: z.array(EffectASTSchema),
           macroOrigin: MacroOriginSchema.optional(),
@@ -629,7 +629,7 @@ effectAstSchemaInternal = z.union([
     .object({
       bindValue: z
         .object({
-          bind: StringSchema,
+          bind: CanonicalBindingIdentifierSchema,
           value: ValueExprSchema,
           macroOrigin: MacroOriginSchema.optional(),
         })
@@ -642,11 +642,11 @@ effectAstSchemaInternal = z.union([
         .object({
           source: OptionsQuerySchema,
           subsetSize: NumericValueExprSchema,
-          subsetBind: StringSchema,
+          subsetBind: CanonicalBindingIdentifierSchema,
           compute: z.array(EffectASTSchema),
           scoreExpr: NumericValueExprSchema,
-          resultBind: StringSchema,
-          bestSubsetBind: StringSchema.optional(),
+          resultBind: CanonicalBindingIdentifierSchema,
+          bestSubsetBind: CanonicalBindingIdentifierSchema.optional(),
           in: z.array(EffectASTSchema),
           macroOrigin: MacroOriginSchema.optional(),
         })
@@ -658,7 +658,7 @@ effectAstSchemaInternal = z.union([
       chooseOne: z
         .object({
           internalDecisionId: StringSchema,
-          bind: StringSchema,
+          bind: CanonicalBindingIdentifierSchema,
           options: OptionsQuerySchema,
           chooser: PlayerSelSchema.optional(),
           macroOrigin: MacroOriginSchema.optional(),
@@ -672,7 +672,7 @@ effectAstSchemaInternal = z.union([
         z
           .object({
             internalDecisionId: StringSchema,
-            bind: StringSchema,
+            bind: CanonicalBindingIdentifierSchema,
             options: OptionsQuerySchema,
             chooser: PlayerSelSchema.optional(),
             n: NumberSchema,
@@ -682,7 +682,7 @@ effectAstSchemaInternal = z.union([
         z
           .object({
             internalDecisionId: StringSchema,
-            bind: StringSchema,
+            bind: CanonicalBindingIdentifierSchema,
             options: OptionsQuerySchema,
             chooser: PlayerSelSchema.optional(),
             min: NumericValueExprSchema.optional(),
@@ -697,7 +697,7 @@ effectAstSchemaInternal = z.union([
     .object({
       rollRandom: z
         .object({
-          bind: StringSchema,
+          bind: CanonicalBindingIdentifierSchema,
           min: NumericValueExprSchema,
           max: NumericValueExprSchema,
           in: z.array(EffectASTSchema),

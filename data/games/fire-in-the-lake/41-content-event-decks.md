@@ -3816,7 +3816,7 @@ eventDecks:
                   right: 0
                 then:
                   - forEach:
-                      bind: tetCard
+                      bind: $tetCard
                       over:
                         query: tokensInZone
                         zone: played:none
@@ -3825,7 +3825,7 @@ eventDecks:
                       limit: 1
                       effects:
                         - moveToken:
-                            token: tetCard
+                            token: $tetCard
                             from: played:none
                             to: { zoneExpr: leader:none }
                 else:

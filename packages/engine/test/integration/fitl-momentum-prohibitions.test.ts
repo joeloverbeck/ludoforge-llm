@@ -223,7 +223,7 @@ describe('FITL momentum prohibition preconditions', () => {
       applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('airStrike'),
         params: {
-          spaces: [],
+          $spaces: [],
           $degradeTrail: 'no',
         },
       });
@@ -251,7 +251,7 @@ describe('FITL momentum prohibition preconditions', () => {
       applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('airLift'),
         params: {
-          spaces: ['saigon:none'],
+          $spaces: ['saigon:none'],
         },
       });
 
@@ -288,7 +288,7 @@ describe('FITL momentum prohibition preconditions', () => {
         applyMoveWithResolvedDecisionIds(def, usState, {
           actionId: asActionId('assault'),
           params: {
-            targetSpaces: [space],
+            $targetSpaces: [space],
             $arvnFollowupSpaces: [],
           },
         }),
@@ -316,7 +316,7 @@ describe('FITL momentum prohibition preconditions', () => {
       applyMoveWithResolvedDecisionIds(def, arvnState, {
         actionId: asActionId('assault'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
         },
       }),
     );
@@ -350,7 +350,7 @@ describe('FITL momentum prohibition preconditions', () => {
         applyMoveWithResolvedDecisionIds(def, nvaState, {
           actionId: asActionId('ambushNva'),
           params: {
-            targetSpaces: [nvaSpace],
+            $targetSpaces: [nvaSpace],
             [`$ambushTargetMode@${nvaSpace}`]: 'self',
           },
         }),
@@ -380,7 +380,7 @@ describe('FITL momentum prohibition preconditions', () => {
         applyMoveWithResolvedDecisionIds(def, vcState, {
           actionId: asActionId('ambushVc'),
           params: {
-            targetSpaces: [vcSpace],
+            $targetSpaces: [vcSpace],
             [`$ambushTargetMode@${vcSpace}`]: 'self',
           },
         }),
@@ -416,7 +416,7 @@ describe('FITL momentum prohibition preconditions', () => {
         applyMoveWithResolvedDecisionIds(def, infiltrateState, {
           actionId: asActionId('infiltrate'),
           params: {
-            targetSpaces: [infilSpace],
+            $targetSpaces: [infilSpace],
             [`$infiltrateMode@${infilSpace}`]: 'build-up',
             [`$infiltrateGuerrillasToReplace@${infilSpace}`]: [],
           },
@@ -495,7 +495,7 @@ describe('FITL momentum prohibition preconditions', () => {
         applyMoveWithResolvedDecisionIds(def, bombardState, {
           actionId: asActionId('bombard'),
           params: {
-            targetSpaces: [bombardSpace],
+            $targetSpaces: [bombardSpace],
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
@@ -505,8 +505,8 @@ describe('FITL momentum prohibition preconditions', () => {
     const twoSpaceAdviseMove = legalMoves(def, adviseBase).find(
       (move) =>
         move.actionId === asActionId('advise') &&
-        Array.isArray(move.params.targetSpaces) &&
-        move.params.targetSpaces.length === 2,
+        Array.isArray(move.params.$targetSpaces) &&
+        move.params.$targetSpaces.length === 2,
     );
     if (twoSpaceAdviseMove !== undefined) {
       assert.doesNotThrow(() =>
@@ -523,7 +523,7 @@ describe('FITL momentum prohibition preconditions', () => {
       const adviseMoves = legalMoves(def, adviseBase).filter((move) => move.actionId === asActionId('advise'));
       assert.equal(
         adviseMoves.every(
-          (move) => !Array.isArray(move.params.targetSpaces) || move.params.targetSpaces.length <= 1,
+          (move) => !Array.isArray(move.params.$targetSpaces) || move.params.$targetSpaces.length <= 1,
         ),
         true,
         'Expected advise to expose only one-space targeting in this deterministic setup',
@@ -538,7 +538,7 @@ describe('FITL momentum prohibition preconditions', () => {
       applyMoveWithResolvedDecisionIds(def, raidBase, {
         actionId: asActionId('raid'),
         params: {
-          targetSpaces: [raidA, raidB],
+          $targetSpaces: [raidA, raidB],
           [`$raidIncomingFrom@${raidA}`]: [],
           [`$raidIncomingFrom@${raidB}`]: [],
           [`$raidRemove@${raidA}`]: 'no',
@@ -552,7 +552,7 @@ describe('FITL momentum prohibition preconditions', () => {
         applyMoveWithResolvedDecisionIds(def, withMom(raidBase, { mom_typhoonKate: true }), {
           actionId: asActionId('raid'),
           params: {
-            targetSpaces: [raidA, raidB],
+            $targetSpaces: [raidA, raidB],
             [`$raidIncomingFrom@${raidA}`]: [],
             [`$raidIncomingFrom@${raidB}`]: [],
             [`$raidRemove@${raidA}`]: 'no',
@@ -591,7 +591,7 @@ describe('FITL momentum prohibition preconditions', () => {
     const withoutOriskany = applyMoveWithResolvedDecisionIds(def, baseState, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     });
@@ -600,7 +600,7 @@ describe('FITL momentum prohibition preconditions', () => {
     const withOriskany = applyMoveWithResolvedDecisionIds(def, withMom(baseState, { mom_oriskany: true }), {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     });

@@ -144,7 +144,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('infiltrate'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         [`$infiltrateMode@${space}`]: 'build-up',
         [`$infiltrateGuerrillasToReplace@${space}`]: [asTokenId('inf-g1')],
       },
@@ -202,7 +202,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('infiltrate'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         [`$infiltrateMode@${space}`]: 'takeover',
         [`$infiltrateTakeoverReplace@${space}`]: 'yes',
         [`$infiltrateTakeoverTargetType@${space}`]: 'base',
@@ -281,7 +281,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const usResult = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('bombard'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         [`$bombardFaction@${space}`]: 'US',
         [`$bombardTroops@${space}`]: [asTokenId('bomb-us-1')],
       },
@@ -305,7 +305,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const arvnResult = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('bombard'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         [`$bombardFaction@${space}`]: 'ARVN',
         [`$bombardTroops@${space}`]: [asTokenId('bomb-arvn-1')],
       },
@@ -356,7 +356,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('ambushNva'),
       params: {
-        targetSpaces: [locSpace],
+        $targetSpaces: [locSpace],
         [`$ambushTargetMode@${locSpace}`]: 'adjacent',
         [`$ambushAdjacentTargets@${locSpace}`]: [adjacentTarget],
       },
@@ -418,7 +418,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('tax'),
       params: {
-        targetSpaces: [locSpace, provinceSpace],
+        $targetSpaces: [locSpace, provinceSpace],
       },
     });
 
@@ -508,7 +508,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('tax'),
       params: {
-        targetSpaces: [pop0Province],
+        $targetSpaces: [pop0Province],
       },
     });
 
@@ -550,7 +550,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('tax'),
       params: {
-        targetSpaces: [provinceSpace],
+        $targetSpaces: [provinceSpace],
       },
     });
 
@@ -614,7 +614,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('subvert'),
       params: {
-        targetSpaces: [removeSpace, replaceSpace],
+        $targetSpaces: [removeSpace, replaceSpace],
         [`$subvertMode@${removeSpace}`]: 'remove-2',
         [`$subvertRemovedCubes@${removeSpace}`]: [asTokenId('sub-arvn-t1'), asTokenId('sub-arvn-t2')],
         [`$subvertMode@${replaceSpace}`]: 'replace-1',
@@ -683,7 +683,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('ambushVc'),
       params: {
-        targetSpaces: [locSpace],
+        $targetSpaces: [locSpace],
         [`$ambushTargetMode@${locSpace}`]: 'adjacent',
         [`$ambushAdjacentTargets@${locSpace}`]: [adjacentTarget],
       },
@@ -733,7 +733,7 @@ describe('FITL NVA/VC special activities integration', () => {
         if (details.reason !== undefined) {
           assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
         } else {
-          assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed/);
+          assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed|outside options domain/);
         }
         return true;
       },
@@ -771,9 +771,9 @@ describe('FITL NVA/VC special activities integration', () => {
 
     const result = applyMoveWithResolvedDecisionIds(compiled.gameDef!, seeded, {
       actionId: asActionId('rally'),
-      params: { targetSpaces: [] },
+      params: { $targetSpaces: [] },
       compound: {
-        specialActivity: { actionId: asActionId('bombard'), params: { targetSpaces: [assaultSpace] } },
+        specialActivity: { actionId: asActionId('bombard'), params: { $targetSpaces: [assaultSpace] } },
         timing: 'after',
       },
     });
@@ -803,7 +803,7 @@ describe('FITL NVA/VC special activities integration', () => {
           targetSpaces: ['quang-tri-thua-thien:none'],
           '$movingGuerrillas@quang-tri-thua-thien:none': [],
           '$movingTroops@quang-tri-thua-thien:none': [],
-          chainSpaces: [],
+          $chainSpaces: [],
         },
         compound: {
           specialActivity: {

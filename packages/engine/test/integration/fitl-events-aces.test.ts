@@ -146,7 +146,7 @@ describe('FITL card-6 Aces', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, grantReadyState, {
           ...freeAirStrike!,
-          params: { ...freeAirStrike!.params, spaces: [SOUTH_PROVINCE] },
+          params: { ...freeAirStrike!.params, $spaces: [SOUTH_PROVINCE] },
         }),
       /Illegal move|outside options domain|cardinality mismatch|ACTION_NOT_LEGAL_IN_CURRENT_STATE/,
       'Aces must reject South Vietnam targets',
@@ -156,7 +156,7 @@ describe('FITL card-6 Aces', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, grantReadyState, {
           ...freeAirStrike!,
-          params: { ...freeAirStrike!.params, spaces: [NORTH_VIETNAM, CENTRAL_LAOS] },
+          params: { ...freeAirStrike!.params, $spaces: [NORTH_VIETNAM, CENTRAL_LAOS] },
         }),
       /Illegal move|outside options domain|cardinality mismatch|ACTION_NOT_LEGAL_IN_CURRENT_STATE/,
       'Aces must enforce exactly one target space',
@@ -164,7 +164,7 @@ describe('FITL card-6 Aces', () => {
 
     const afterFreeStrike = applyMoveWithResolvedDecisionIds(def, grantReadyState, {
       ...freeAirStrike!,
-      params: { ...freeAirStrike!.params, spaces: [NORTH_VIETNAM] },
+      params: { ...freeAirStrike!.params, $spaces: [NORTH_VIETNAM] },
     }).state;
 
     assert.equal(

@@ -46,7 +46,7 @@ describe('FITL Rule 1.4.1 US map sourcing exception', () => {
       {
         actionId: asActionId('train'),
         params: {
-          targetSpaces: [targetSpace],
+          $targetSpaces: [targetSpace],
           $trainChoice: 'place-irregulars',
           $subActionSpaces: [],
         },

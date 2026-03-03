@@ -11792,12 +11792,12 @@
             {
               "actionId": "airStrike",
               "maxParam": {
-                "name": "spaces",
+                "name": "$spaces",
                 "max": 2
               },
               "maxParamsTotal": {
                 "names": [
-                  "spaces",
+                  "$spaces",
                   "$arcLightNoCoinProvinces"
                 ],
                 "max": 2
@@ -11806,7 +11806,7 @@
             {
               "actionId": "airLift",
               "maxParam": {
-                "name": "spaces",
+                "name": "$spaces",
                 "max": 2
               }
             }
@@ -11915,7 +11915,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.0.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -11978,7 +11978,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.0.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -12049,7 +12049,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -13439,7 +13439,7 @@
                       "bind": "$subActionSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 2,
                       "min": 0
@@ -13453,7 +13453,7 @@
                       "bind": "$subActionSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 1,
                       "min": 0
@@ -13897,7 +13897,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -13979,7 +13979,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -14069,7 +14069,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -14999,7 +14999,7 @@
                       "bind": "$subActionSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 2,
                       "min": 0
@@ -15013,7 +15013,7 @@
                       "bind": "$subActionSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 1,
                       "min": 0
@@ -15644,7 +15644,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.2.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetLoCs",
+                      "bind": "$targetLoCs",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -15668,7 +15668,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.2.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetLoCs",
+                      "bind": "$targetLoCs",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -15700,7 +15700,7 @@
                 "bind": "$loc",
                 "over": {
                   "query": "binding",
-                  "name": "targetLoCs"
+                  "name": "$targetLoCs"
                 },
                 "effects": [
                   {
@@ -15884,7 +15884,7 @@
                 "bind": "$actLoc",
                 "over": {
                   "query": "binding",
-                  "name": "targetLoCs"
+                  "name": "$targetLoCs"
                 },
                 "effects": [
                   {
@@ -15966,7 +15966,7 @@
                 "bind": "$assaultLoCs",
                 "options": {
                   "query": "binding",
-                  "name": "targetLoCs"
+                  "name": "$targetLoCs"
                 },
                 "max": 1,
                 "min": 0
@@ -16779,7 +16779,7 @@
                             },
                             "set": {
                               "ref": "binding",
-                              "name": "targetLoCs"
+                              "name": "$targetLoCs"
                             }
                           }
                         },
@@ -16872,7 +16872,7 @@
                       },
                       "over": {
                         "query": "binding",
-                        "name": "targetLoCs"
+                        "name": "$targetLoCs"
                       },
                       "effects": [
                         {
@@ -17022,7 +17022,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.3.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetLoCs",
+                      "bind": "$targetLoCs",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -17046,7 +17046,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetLoCs",
+                      "bind": "$targetLoCs",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -17078,7 +17078,7 @@
                 "bind": "$loc",
                 "over": {
                   "query": "binding",
-                  "name": "targetLoCs"
+                  "name": "$targetLoCs"
                 },
                 "effects": [
                   {
@@ -17246,7 +17246,7 @@
                 "bind": "$actLoc",
                 "over": {
                   "query": "binding",
-                  "name": "targetLoCs"
+                  "name": "$targetLoCs"
                 },
                 "effects": [
                   {
@@ -17328,7 +17328,7 @@
                 "bind": "$assaultLoCs",
                 "options": {
                   "query": "binding",
-                  "name": "targetLoCs"
+                  "name": "$targetLoCs"
                 },
                 "max": 1,
                 "min": 0
@@ -18100,7 +18100,7 @@
                             },
                             "set": {
                               "ref": "binding",
-                              "name": "targetLoCs"
+                              "name": "$targetLoCs"
                             }
                           }
                         },
@@ -18193,7 +18193,7 @@
                       },
                       "over": {
                         "query": "binding",
-                        "name": "targetLoCs"
+                        "name": "$targetLoCs"
                       },
                       "effects": [
                         {
@@ -18281,7 +18281,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.4.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -18344,7 +18344,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.4.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -18396,7 +18396,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.4.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -18459,7 +18459,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -18643,7 +18643,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -18829,7 +18829,7 @@
                       "bind": "$__macro_cap_sweep_cobras_unshaded_removal_actionPipelines_4__stages_3__effects_0__cobrasSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 2,
                       "min": 0
@@ -19016,7 +19016,7 @@
                       },
                       "over": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "effects": [
                         {
@@ -19158,7 +19158,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.5.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -19221,7 +19221,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.5.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -19284,7 +19284,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.5.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -19354,7 +19354,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -19729,7 +19729,7 @@
                       "bind": "$__macro_cap_sweep_cobras_unshaded_removal_actionPipelines_5__stages_2__effects_0__cobrasSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 2,
                       "min": 0
@@ -19916,7 +19916,7 @@
                       },
                       "over": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "effects": [
                         {
@@ -20064,7 +20064,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.6.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -20143,7 +20143,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.6.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -20211,7 +20211,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.6.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -20291,7 +20291,7 @@
                 "bind": "$abramsSpace",
                 "options": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "max": {
                   "if": {
@@ -20320,7 +20320,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -21369,7 +21369,7 @@
                                 },
                                 "set": {
                                   "ref": "binding",
-                                  "name": "targetSpaces"
+                                  "name": "$targetSpaces"
                                 }
                               },
                               {
@@ -22120,7 +22120,7 @@
                       "bind": "$arvnFollowupSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 1,
                       "min": 0
@@ -22979,7 +22979,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.7.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -23050,7 +23050,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.7.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -23149,7 +23149,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -24158,7 +24158,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.8.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -24219,7 +24219,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -24304,7 +24304,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -25383,7 +25383,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -25444,7 +25444,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -25529,7 +25529,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -26437,7 +26437,7 @@
                       "bind": "$cadresAgitateSpaces",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "max": 1,
                       "min": 0
@@ -26578,7 +26578,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -26689,7 +26689,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -26837,7 +26837,7 @@
                 "bind": "$destSpace",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -27317,7 +27317,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.10.stages[2].effects.0.if.then.0.chooseN",
-                      "bind": "chainSpaces",
+                      "bind": "$chainSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -27387,7 +27387,7 @@
                       "bind": "$destSpace",
                       "over": {
                         "query": "binding",
-                        "name": "chainSpaces"
+                        "name": "$chainSpaces"
                       },
                       "effects": [
                         {
@@ -27875,7 +27875,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.11.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -27986,7 +27986,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -28134,7 +28134,7 @@
                 "bind": "$destSpace",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -28632,7 +28632,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.12.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -28695,7 +28695,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.12.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -28808,7 +28808,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -28890,7 +28890,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -29588,7 +29588,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.13.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -29651,7 +29651,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.13.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -29764,7 +29764,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -29801,7 +29801,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -30162,7 +30162,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.14.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -30315,7 +30315,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.14.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -30505,7 +30505,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -30820,7 +30820,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -30973,7 +30973,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.15.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -31163,7 +31163,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -31489,7 +31489,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.16.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -31541,7 +31541,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -31601,7 +31601,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -33244,7 +33244,7 @@
             {
               "chooseN": {
                 "internalDecisionId": "decision:doc.actionPipelines.17.stages[0].effects.0.chooseN",
-                "bind": "spaces",
+                "bind": "$spaces",
                 "options": {
                   "query": "mapSpaces",
                   "filter": {
@@ -33284,7 +33284,7 @@
                       },
                       "set": {
                         "ref": "binding",
-                        "name": "spaces"
+                        "name": "$spaces"
                       }
                     }
                   },
@@ -33319,7 +33319,7 @@
                       "bind": "$usLiftDestination@{$usTroop}",
                       "options": {
                         "query": "binding",
-                        "name": "spaces"
+                        "name": "$spaces"
                       }
                     }
                   },
@@ -33384,7 +33384,7 @@
                           },
                           "set": {
                             "ref": "binding",
-                            "name": "spaces"
+                            "name": "$spaces"
                           }
                         }
                       },
@@ -33416,7 +33416,7 @@
                           },
                           "set": {
                             "ref": "binding",
-                            "name": "spaces"
+                            "name": "$spaces"
                           }
                         }
                       },
@@ -33453,7 +33453,7 @@
                       "bind": "$coinLiftDestination@{$coinLiftPiece}",
                       "options": {
                         "query": "binding",
-                        "name": "spaces"
+                        "name": "$spaces"
                       }
                     }
                   },
@@ -33669,7 +33669,7 @@
             {
               "chooseN": {
                 "internalDecisionId": "decision:doc.actionPipelines.18.stages[0].effects.1.chooseN",
-                "bind": "spaces",
+                "bind": "$spaces",
                 "options": {
                   "query": "mapSpaces",
                   "filter": {
@@ -33867,7 +33867,7 @@
                   "sources": [
                     {
                       "query": "binding",
-                      "name": "spaces"
+                      "name": "$spaces"
                     },
                     {
                       "query": "binding",
@@ -34601,7 +34601,7 @@
                                 "sources": [
                                   {
                                     "query": "binding",
-                                    "name": "spaces"
+                                    "name": "$spaces"
                                   },
                                   {
                                     "query": "binding",
@@ -34729,7 +34729,7 @@
                                                 "sources": [
                                                   {
                                                     "query": "binding",
-                                                    "name": "spaces"
+                                                    "name": "$spaces"
                                                   },
                                                   {
                                                     "query": "binding",
@@ -34808,7 +34808,7 @@
                                                 "sources": [
                                                   {
                                                     "query": "binding",
-                                                    "name": "spaces"
+                                                    "name": "$spaces"
                                                   },
                                                   {
                                                     "query": "binding",
@@ -34953,7 +34953,7 @@
                                     "sources": [
                                       {
                                         "query": "binding",
-                                        "name": "spaces"
+                                        "name": "$spaces"
                                       },
                                       {
                                         "query": "binding",
@@ -35032,7 +35032,7 @@
                                     "sources": [
                                       {
                                         "query": "binding",
-                                        "name": "spaces"
+                                        "name": "$spaces"
                                       },
                                       {
                                         "query": "binding",
@@ -35155,7 +35155,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.19.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -35291,7 +35291,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.19.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -35416,7 +35416,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.19.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -35564,7 +35564,7 @@
                       "bind": "$mandateNoShiftSpace",
                       "options": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       }
                     }
                   }
@@ -35576,7 +35576,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -36706,7 +36706,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.21.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -36730,7 +36730,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -36762,7 +36762,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -37443,7 +37443,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.22.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -37537,7 +37537,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.22.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -37639,7 +37639,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -39305,7 +39305,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.23.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -39461,7 +39461,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.23.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -39606,7 +39606,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.23.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -39762,7 +39762,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -40124,7 +40124,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.24.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -40259,7 +40259,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.24.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -40383,7 +40383,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.24.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -40522,7 +40522,7 @@
                 },
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -41102,7 +41102,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.25.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -41216,7 +41216,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.25.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -41338,7 +41338,7 @@
                 "bind": "$space",
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -41650,7 +41650,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.26.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -41800,7 +41800,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.26.stages[0].effects.0.if.else.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -41986,7 +41986,7 @@
                       "bind": "$space",
                       "over": {
                         "query": "binding",
-                        "name": "targetSpaces"
+                        "name": "$targetSpaces"
                       },
                       "effects": [
                         {
@@ -42467,7 +42467,7 @@
                   {
                     "chooseN": {
                       "internalDecisionId": "decision:doc.actionPipelines.27.stages[0].effects.0.if.then.0.chooseN",
-                      "bind": "targetSpaces",
+                      "bind": "$targetSpaces",
                       "options": {
                         "query": "mapSpaces",
                         "filter": {
@@ -42602,7 +42602,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.27.stages[0].effects.0.if.else.0.if.then.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -42726,7 +42726,7 @@
                         {
                           "chooseN": {
                             "internalDecisionId": "decision:doc.actionPipelines.27.stages[0].effects.0.if.else.0.if.else.0.chooseN",
-                            "bind": "targetSpaces",
+                            "bind": "$targetSpaces",
                             "options": {
                               "query": "mapSpaces",
                               "filter": {
@@ -42865,7 +42865,7 @@
                 },
                 "over": {
                   "query": "binding",
-                  "name": "targetSpaces"
+                  "name": "$targetSpaces"
                 },
                 "effects": [
                   {
@@ -60186,7 +60186,7 @@
                   "then": [
                     {
                       "forEach": {
-                        "bind": "tetCard",
+                        "bind": "$tetCard",
                         "over": {
                           "query": "tokensInZone",
                           "zone": "played:none",
@@ -60201,7 +60201,7 @@
                         "effects": [
                           {
                             "moveToken": {
-                              "token": "tetCard",
+                              "token": "$tetCard",
                               "from": "played:none",
                               "to": {
                                 "zoneExpr": "leader:none"

@@ -19,7 +19,7 @@ import {
   type RemoveByPriorityMacroOriginGroupBindField,
   type ReduceMacroOriginBindingAnnotationSpec,
 } from '../../src/cnl/binder-surface-registry.js';
-import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/cnl/binder-surface-contract.js';
+import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/contracts/index.js';
 import { SUPPORTED_EFFECT_KINDS } from '../../src/cnl/effect-kind-registry.js';
 
 function discoverDiscriminatorKinds(

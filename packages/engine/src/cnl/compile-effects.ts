@@ -7,7 +7,9 @@ import {
 } from '../kernel/choice-options-runtime-shape-diagnostic.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
+  collectDeclaredBinderCandidatesFromEffectNode,
   hasBindingIdentifier,
+  isCanonicalBindingIdentifier,
   isTurnFlowActionClass,
   rankBindingIdentifierAlternatives,
 } from '../contracts/index.js';
@@ -137,6 +139,10 @@ function lowerEffectNode(
   const reservedBindingNamespaceDiagnostics = collectReservedCompilerBindingNamespaceDiagnostics(source, path);
   if (reservedBindingNamespaceDiagnostics.length > 0) {
     return { value: null, diagnostics: reservedBindingNamespaceDiagnostics };
+  }
+  const declaredBindingDiagnostics = collectDeclaredBindingDeclarationDiagnostics(source, path);
+  if (declaredBindingDiagnostics.length > 0) {
+    return { value: null, diagnostics: declaredBindingDiagnostics };
   }
 
   if (isRecord(source.setVar)) {
@@ -1211,7 +1217,6 @@ function lowerRemoveByPriorityEffect(
       });
       return;
     }
-
     diagnostics.push(...scope.shadowWarning(entry.bind, `${groupPath}.bind`));
     const condCtx = makeConditionContext(context, scope);
     const over = lowerQueryNode(entry.over, condCtx, `${groupPath}.over`);
@@ -1367,7 +1372,6 @@ function lowerEvaluateSubsetEffect(
       '{ evaluateSubset: { source, subsetSize, subsetBind, compute, scoreExpr, resultBind, bestSubsetBind?, in } }',
     ]);
   }
-
   const condCtx = makeConditionContext(context, scope);
   const loweredSource = lowerQueryNode(source.source, condCtx, `${path}.source`);
   const loweredSubsetSize = lowerNumericValueNode(source.subsetSize, condCtx, `${path}.subsetSize`);
@@ -2299,6 +2303,34 @@ function validateBindingReference(value: string, scope: BindingScope, path: stri
       alternatives: scope.alternativesFor(value),
     },
   ];
+}
+
+function normalizeDeclaredBinderDiagnosticPath(path: string): string {
+  return path;
+}
+
+function normalizeDeclaredBinderSurface(pattern: string): string {
+  return pattern.replace(/\.?\*/g, '[]');
+}
+
+function collectDeclaredBindingDeclarationDiagnostics(
+  source: Record<string, unknown>,
+  path: string,
+): readonly Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const candidate of collectDeclaredBinderCandidatesFromEffectNode(source)) {
+    if (typeof candidate.value !== 'string' || isCanonicalBindingIdentifier(candidate.value)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+      path: `${path}.${normalizeDeclaredBinderDiagnosticPath(candidate.path)}`,
+      severity: 'error',
+      message: `${normalizeDeclaredBinderSurface(candidate.pattern)} "${candidate.value}" must be a canonical "$name" token.`,
+      suggestion: 'Use a canonical binding token like "$candidate".',
+    });
+  }
+  return diagnostics;
 }
 
 function validatePrefixedBindingReference(value: string, scope: BindingScope, path: string): readonly Diagnostic[] {

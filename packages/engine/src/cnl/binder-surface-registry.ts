@@ -2,11 +2,12 @@ import type { EffectAST } from '../kernel/types.js';
 import {
   EFFECT_BINDER_SURFACE_CONTRACT,
   NON_EFFECT_BINDER_SURFACE_CONTRACT,
+  collectBinderPathCandidates,
   type BinderPathSegment,
   type BinderSurfacePaths,
   type EffectBinderSurfaceDefinition,
   type NonEffectBinderSurfaceDefinition,
-} from './binder-surface-contract.js';
+} from '../contracts/index.js';
 import { SUPPORTED_EFFECT_KINDS, type SupportedEffectKind } from './effect-kind-registry.js';
 
 export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, EffectBinderSurfaceDefinition>> =
@@ -64,36 +65,6 @@ export const NON_EFFECT_BINDER_REFERENCER_SURFACES: readonly ConditionalReferenc
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function collectPathValues(
-  node: unknown,
-  segments: readonly BinderPathSegment[],
-  path: string,
-  into: BinderDeclarationCandidate[],
-): void {
-  if (segments.length === 0) {
-    into.push({ path, value: node });
-    return;
-  }
-
-  const segment = segments[0]!;
-  const rest = segments.slice(1);
-  if (segment === '*') {
-    if (!Array.isArray(node)) {
-      return;
-    }
-    for (let index = 0; index < node.length; index += 1) {
-      collectPathValues(node[index], rest, `${path}.${index}`, into);
-    }
-    return;
-  }
-
-  if (!isRecord(node) || !(segment in node)) {
-    return;
-  }
-
-  collectPathValues(node[segment], rest, `${path}.${segment}`, into);
 }
 
 function cloneDeep<TValue>(value: TValue): TValue {
@@ -204,7 +175,8 @@ export function collectDeclaredBinderCandidates(effectNode: Record<string, unkno
 
     const binderPaths = EFFECT_BINDER_SURFACES[kind].declaredBinderPaths;
     for (const binderPath of binderPaths) {
-      collectPathValues(effectBody, binderPath, kind, candidates);
+      const declaredAtPath = collectBinderPathCandidates(effectBody, binderPath, kind);
+      candidates.push(...declaredAtPath.map((candidate) => ({ path: candidate.path, value: candidate.value })));
     }
   }
   return candidates;
@@ -371,7 +343,8 @@ export function collectSequentialBindings(effect: EffectAST): readonly string[] 
 
     const candidates: BinderDeclarationCandidate[] = [];
     for (const path of EFFECT_BINDER_SURFACES[kind].sequentiallyVisibleBinderPaths) {
-      collectPathValues(effectBody, path, kind, candidates);
+      const sequentialAtPath = collectBinderPathCandidates(effectBody, path, kind);
+      candidates.push(...sequentialAtPath.map((candidate) => ({ path: candidate.path, value: candidate.value })));
     }
     for (const candidate of candidates) {
       if (typeof candidate.value === 'string') {
@@ -381,12 +354,22 @@ export function collectSequentialBindings(effect: EffectAST): readonly string[] 
 
     for (const scopeDefinition of EFFECT_BINDER_SURFACES[kind].nestedSequentialBindingScopes ?? []) {
       const nestedScopeCandidates: BinderDeclarationCandidate[] = [];
-      collectPathValues(effectBody, scopeDefinition.nestedEffectsPath, kind, nestedScopeCandidates);
+      nestedScopeCandidates.push(
+        ...collectBinderPathCandidates(effectBody, scopeDefinition.nestedEffectsPath, kind).map((candidate) => ({
+          path: candidate.path,
+          value: candidate.value,
+        })),
+      );
 
       const excluded = new Set<string>();
       for (const excludedPath of scopeDefinition.excludedBinderPaths) {
         const excludedCandidates: BinderDeclarationCandidate[] = [];
-        collectPathValues(effectBody, excludedPath, kind, excludedCandidates);
+        excludedCandidates.push(
+          ...collectBinderPathCandidates(effectBody, excludedPath, kind).map((candidate) => ({
+            path: candidate.path,
+            value: candidate.value,
+          })),
+        );
         for (const candidate of excludedCandidates) {
           if (typeof candidate.value === 'string') {
             excluded.add(candidate.value);

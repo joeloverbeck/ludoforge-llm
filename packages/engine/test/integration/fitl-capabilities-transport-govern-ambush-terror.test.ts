@@ -270,7 +270,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
         applyMoveWithResolvedDecisionIds(def, base('shaded', 7101), {
           actionId: asActionId('govern'),
           params: {
-            targetSpaces: [spaceA, spaceB],
+            $targetSpaces: [spaceA, spaceB],
             [`$governMode@${spaceA}`]: 'patronage',
             [`$governMode@${spaceB}`]: 'patronage',
           },
@@ -282,7 +282,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const inactive = applyMoveWithResolvedDecisionIds(def, base('inactive', 7102), {
       actionId: asActionId('govern'),
       params: {
-        targetSpaces: [spaceA, spaceB],
+        $targetSpaces: [spaceA, spaceB],
         [`$governMode@${spaceA}`]: 'patronage',
         [`$governMode@${spaceB}`]: 'patronage',
       },
@@ -293,7 +293,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     const unshaded = applyMoveWithResolvedDecisionIds(def, base('unshaded', 7103), {
       actionId: asActionId('govern'),
       params: {
-        targetSpaces: [spaceA, spaceB],
+        $targetSpaces: [spaceA, spaceB],
         $mandateNoShiftSpace: spaceA,
         [`$governMode@${spaceA}`]: 'patronage',
         [`$governMode@${spaceB}`]: 'patronage',
@@ -340,7 +340,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       applyMoveWithResolvedDecisionIds(def, setup, {
         actionId: asActionId('ambushNva'),
         params: {
-          targetSpaces: [spaceA, spaceB],
+          $targetSpaces: [spaceA, spaceB],
           [`$ambushTargetMode@${spaceA}`]: 'self',
           [`$ambushTargetMode@${spaceB}`]: 'self',
         },
@@ -385,7 +385,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       return applyMoveWithResolvedDecisionIds(def, setup, {
         actionId: asActionId('ambushVc'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
           [`$ambushTargetMode@${space}`]: 'self',
         },
       }).state;
@@ -427,7 +427,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
       return applyMoveWithResolvedDecisionIds(def, setup, {
         actionId: asActionId('terror'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
         },
       }).state;
     };

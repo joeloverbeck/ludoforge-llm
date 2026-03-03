@@ -107,7 +107,7 @@ describe('FITL COIN operations integration', () => {
     const selected = completeProfileMoveDeterministically(
       { ...template!, actionClass: 'limitedOperation' },
       (request) => {
-        if (request.name === 'targetSpaces') return [space];
+        if (request.name === '$targetSpaces') return [space];
         if (request.name === '$arvnFollowupSpaces') return [];
         return pickDeterministicDecisionValue(request);
       },
@@ -164,7 +164,7 @@ describe('FITL COIN operations integration', () => {
     const selected = completeProfileMoveDeterministically(
       { ...template!, actionClass: 'limitedOperation' },
       (request) => {
-        if (request.name === 'targetSpaces') return [targetSpace];
+        if (request.name === '$targetSpaces') return [targetSpace];
         if (request.name === '$movingAdjacentTroops') return [troopId];
         if (request.name === '$hopLocs') return [];
         if (request.name === '$movingHopTroops') return [];
@@ -433,7 +433,7 @@ describe('FITL COIN operations integration', () => {
   describe('sweep-arvn-profile runtime behavior', () => {
     const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
       (request: ChoicePendingRequest) => {
-        if (request.name === 'targetSpaces') return [targetSpace];
+        if (request.name === '$targetSpaces') return [targetSpace];
         if (request.name.startsWith('$movingTroops@')) return [...movingTroops];
         return pickDeterministicDecisionValue(request);
       };
@@ -1016,7 +1016,7 @@ describe('FITL COIN operations integration', () => {
       const selected = completeProfileMoveDeterministically(
         { ...template!, actionClass: 'limitedOperation' },
         (request) => {
-          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [];
           return pickDeterministicDecisionValue(request);
         },
@@ -1070,7 +1070,7 @@ describe('FITL COIN operations integration', () => {
       const selected = completeProfileMoveDeterministically(
         { ...template!, actionClass: 'limitedOperation' },
         (request) => {
-          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [];
           return pickDeterministicDecisionValue(request);
         },
@@ -1123,7 +1123,7 @@ describe('FITL COIN operations integration', () => {
       const selected = completeProfileMoveDeterministically(
         { ...template!, actionClass: 'limitedOperation' },
         (request) => {
-          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [];
           return pickDeterministicDecisionValue(request);
         },
@@ -1176,7 +1176,7 @@ describe('FITL COIN operations integration', () => {
       const selected = completeProfileMoveDeterministically(
         { ...template!, actionClass: 'limitedOperation' },
         (request) => {
-          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [space];
           return pickDeterministicDecisionValue(request);
         },
@@ -1357,7 +1357,7 @@ describe('FITL COIN operations integration', () => {
       const selected = completeProfileMoveDeterministically(
         { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
         (request) => {
-          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$targetSpaces') return [space];
           return pickDeterministicDecisionValue(request);
         },
         def,
@@ -1426,7 +1426,7 @@ describe('FITL COIN operations integration', () => {
       const selected = completeProfileMoveDeterministically(
         { ...template!, actionClass: 'operation' },
         (request) => {
-          if (request.name === 'targetSpaces') return [citySpace, highlandSpace];
+          if (request.name === '$targetSpaces') return [citySpace, highlandSpace];
           return pickDeterministicDecisionValue(request);
         },
         def,

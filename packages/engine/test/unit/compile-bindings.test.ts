@@ -245,24 +245,24 @@ describe('compile-effects binding scope validation', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.if.then.0.addVar.delta.name');
   });
 
-  it('allows let blocks to export nested sequential bindings without $-prefix semantics', () => {
+  it('allows let blocks to export nested sequential bindings with canonical binding declarations', () => {
     const result = lowerEffectArray(
       [
         {
           let: {
-            bind: 'local',
+            bind: '$local',
             value: 3,
             in: [
               {
                 bindValue: {
-                  bind: 'exported',
-                  value: { op: '+', left: { ref: 'binding', name: 'local' }, right: 2 },
+                  bind: '$exported',
+                  value: { op: '+', left: { ref: 'binding', name: '$local' }, right: 2 },
                 },
               },
             ],
           },
         },
-        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: 'exported' } } },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$exported' } } },
       ],
       context,
       'doc.actions.0.effects',
@@ -275,28 +275,28 @@ describe('compile-effects binding scope validation', () => {
     );
   });
 
-  it('allows reduce blocks to export nested sequential bindings without $-prefix semantics', () => {
+  it('allows reduce blocks to export nested sequential bindings with canonical binding declarations', () => {
     const result = lowerEffectArray(
       [
         {
           reduce: {
-            itemBind: 'n',
-            accBind: 'acc',
+            itemBind: '$n',
+            accBind: '$acc',
             over: { query: 'intsInRange', min: 1, max: 3 },
             initial: 0,
-            next: { op: '+', left: { ref: 'binding', name: 'acc' }, right: { ref: 'binding', name: 'n' } },
-            resultBind: 'sum',
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$sum',
             in: [
               {
                 bindValue: {
-                  bind: 'exported',
-                  value: { ref: 'binding', name: 'sum' },
+                  bind: '$exported',
+                  value: { ref: 'binding', name: '$sum' },
                 },
               },
             ],
           },
         },
-        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: 'exported' } } },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$exported' } } },
       ],
       context,
       'doc.actions.0.effects',

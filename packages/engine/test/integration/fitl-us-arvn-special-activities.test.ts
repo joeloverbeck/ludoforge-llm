@@ -135,7 +135,7 @@ describe('FITL US/ARVN special activities integration', () => {
           };
         };
       };
-      return candidate.chooseN?.bind === 'spaces' &&
+      return candidate.chooseN?.bind === '$spaces' &&
         candidate.chooseN?.options?.query === 'mapSpaces' &&
         candidate.chooseN?.options?.filter?.condition?.op === '!=' &&
         candidate.chooseN?.options?.filter?.condition?.left?.ref === 'zoneProp' &&
@@ -174,7 +174,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('advise'),
       params: {
-        targetSpaces: [space],
+        $targetSpaces: [space],
         [`$adviseMode@${space}`]: 'activate-remove',
         $adviseAid: 'yes',
       },
@@ -245,7 +245,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airLift'),
       params: {
-        spaces: [spaceA, spaceB, spaceC],
+        $spaces: [spaceA, spaceB, spaceC],
         $usLiftTroops: ['lift-us-1', 'lift-us-2', 'lift-us-3'],
         '$usLiftDestination@lift-us-1': spaceB,
         '$usLiftDestination@lift-us-2': spaceC,
@@ -277,7 +277,7 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(def, modifiedStart, {
           actionId: asActionId('airLift'),
           params: {
-            spaces: [spaceA, spaceB, spaceC],
+            $spaces: [spaceA, spaceB, spaceC],
             $usLiftTroops: [],
             $coinLiftPieces: ['lift-arvn-1', 'lift-arvn-2', 'lift-arvn-3', 'lift-ranger-1', 'lift-irregular-1'],
           },
@@ -362,7 +362,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     });
@@ -438,7 +438,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('govern'),
       params: {
-        targetSpaces: [aidSpace, patronageSpace],
+        $targetSpaces: [aidSpace, patronageSpace],
         [`$governMode@${aidSpace}`]: 'aid',
         [`$governMode@${patronageSpace}`]: 'patronage',
       },
@@ -462,7 +462,7 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(def, state, {
           actionId: asActionId('govern'),
           params: {
-            targetSpaces: ['saigon:none'],
+            $targetSpaces: ['saigon:none'],
             '$governMode@saigon:none': 'aid',
           },
         }),
@@ -547,7 +547,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('raid'),
       params: {
-        targetSpaces: [targetSpace],
+        $targetSpaces: [targetSpace],
         [`$raidIncomingFrom@${targetSpace}`]: [adjacentSource],
         [`$raidRemove@${targetSpace}`]: 'yes',
       },
@@ -597,7 +597,7 @@ describe('FITL US/ARVN special activities integration', () => {
           specialActivity: {
             actionId: asActionId('advise'),
             params: {
-              targetSpaces: ['quang-nam:none'],
+              $targetSpaces: ['quang-nam:none'],
               '$adviseMode@quang-nam:none': 'assault',
               $adviseAid: 'no',
             },
@@ -625,7 +625,7 @@ describe('FITL US/ARVN special activities integration', () => {
     );
   });
 
-  it('rejects Advise during compound Train when SA spaces overlap operation targetSpaces', () => {
+  it('rejects Advise during compound Train when SA spaces overlap operation $targetSpaces', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
 
@@ -637,7 +637,7 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
           actionId: asActionId('train'),
           params: {
-            targetSpaces: [space],
+            $targetSpaces: [space],
             $trainChoice: 'police',
             $subActionSpaces: [],
           },
@@ -645,7 +645,7 @@ describe('FITL US/ARVN special activities integration', () => {
             specialActivity: {
               actionId: asActionId('advise'),
               params: {
-                targetSpaces: [space],
+                $targetSpaces: [space],
                 [`$adviseMode@${space}`]: 'assault',
                 $adviseAid: 'no',
               },
@@ -698,7 +698,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('advise'),
       params: {
-        targetSpaces: [spaceActivate, spaceAssault],
+        $targetSpaces: [spaceActivate, spaceAssault],
         [`$adviseMode@${spaceActivate}`]: 'activate-remove',
         [`$adviseMode@${spaceAssault}`]: 'assault',
         $targetFactionFirst: 'VC',
@@ -734,7 +734,7 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('advise'),
           params: {
-            targetSpaces: [spaceA],
+            $targetSpaces: [spaceA],
             [`$adviseMode@${spaceA}`]: 'sweep',
             $adviseAid: 'no',
           },
@@ -746,7 +746,7 @@ describe('FITL US/ARVN special activities integration', () => {
       applyMoveWithResolvedDecisionIds(def, monsoonState, {
         actionId: asActionId('advise'),
         params: {
-          targetSpaces: [spaceA, spaceB],
+          $targetSpaces: [spaceA, spaceB],
           [`$adviseMode@${spaceA}`]: 'activate-remove',
           [`$adviseMode@${spaceB}`]: 'assault',
           $adviseAid: 'no',
@@ -779,7 +779,7 @@ describe('FITL US/ARVN special activities integration', () => {
       applyMoveWithResolvedDecisionIds(def, monsoonState, {
         actionId: asActionId('airLift'),
         params: {
-          spaces: [spaceA, spaceB],
+          $spaces: [spaceA, spaceB],
         },
       }),
     );
@@ -788,7 +788,7 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('airLift'),
           params: {
-            spaces: [spaceA, spaceB, spaceC],
+            $spaces: [spaceA, spaceB, spaceC],
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
@@ -798,7 +798,7 @@ describe('FITL US/ARVN special activities integration', () => {
       applyMoveWithResolvedDecisionIds(def, monsoonState, {
         actionId: asActionId('airStrike'),
         params: {
-          spaces: [spaceA, spaceB],
+          $spaces: [spaceA, spaceB],
           $degradeTrail: 'no',
         },
       }),
@@ -808,7 +808,7 @@ describe('FITL US/ARVN special activities integration', () => {
         applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('airStrike'),
           params: {
-            spaces: [spaceA, spaceB, spaceC],
+            $spaces: [spaceA, spaceB, spaceC],
             $degradeTrail: 'no',
           },
         }),

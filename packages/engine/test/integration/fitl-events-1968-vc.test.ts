@@ -85,9 +85,9 @@ describe('FITL 1968 VC-first event-card production spec', () => {
           };
         }
       | undefined;
-    assert.equal(tetMove?.forEach?.bind, 'tetCard');
+    assert.equal(tetMove?.forEach?.bind, '$tetCard');
     assert.equal(tetMove?.forEach?.limit, 1);
-    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.token, 'tetCard');
+    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.token, '$tetCard');
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.from, 'played:none');
     assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.to?.zoneExpr, 'leader:none');
     assert.equal(

@@ -167,7 +167,7 @@ describe('FITL limited operation integration', () => {
           actionId: asActionId('attack'),
           actionClass: 'limitedOperation',
           params: {
-            targetSpaces: [SPACE_A, SPACE_B],
+            $targetSpaces: [SPACE_A, SPACE_B],
             $attackMode: 'troops-attack',
           },
         }),
@@ -179,7 +179,7 @@ describe('FITL limited operation integration', () => {
       actionId: asActionId('attack'),
       actionClass: 'limitedOperation',
       params: {
-        targetSpaces: [SPACE_A],
+        $targetSpaces: [SPACE_A],
         $attackMode: 'troops-attack',
       },
     }).state;
@@ -238,7 +238,7 @@ describe('FITL limited operation integration', () => {
           actionId: asActionId('attack'),
           actionClass: 'limitedOperation',
           params: {
-            targetSpaces: [SPACE_A, SPACE_B],
+            $targetSpaces: [SPACE_A, SPACE_B],
           },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
@@ -249,7 +249,7 @@ describe('FITL limited operation integration', () => {
       actionId: asActionId('attack'),
       actionClass: 'limitedOperation',
       params: {
-        targetSpaces: [SPACE_A],
+        $targetSpaces: [SPACE_A],
       },
     }).state;
 
@@ -296,7 +296,7 @@ describe('FITL limited operation integration', () => {
           actionId: asActionId('train'),
           actionClass: 'limitedOperation',
           params: {
-            targetSpaces: [trainSpace],
+            $targetSpaces: [trainSpace],
             $trainChoice: 'govern',
             $subActionSpaces: [],
           },
@@ -304,7 +304,7 @@ describe('FITL limited operation integration', () => {
             specialActivity: {
               actionId: asActionId('advise'),
               params: {
-                targetSpaces: [adviseSpace],
+                $targetSpaces: [adviseSpace],
                 [`$adviseMode@${adviseSpace}`]: 'activate-remove',
                 $adviseAid: 'no',
               },

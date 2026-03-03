@@ -1,5 +1,3 @@
-import type { SupportedEffectKind } from './effect-kind-registry.js';
-
 export type BinderPathSegment = string | '*';
 export type BinderPath = readonly BinderPathSegment[];
 
@@ -291,7 +289,9 @@ export const EFFECT_BINDER_SURFACE_CONTRACT = {
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
-} as const satisfies Readonly<Record<SupportedEffectKind, EffectBinderSurfaceDefinition>>;
+} as const satisfies Readonly<Record<string, EffectBinderSurfaceDefinition>>;
+
+export type SupportedEffectKind = keyof typeof EFFECT_BINDER_SURFACE_CONTRACT;
 
 export const NON_EFFECT_BINDER_SURFACE_CONTRACT: readonly NonEffectBinderSurfaceDefinition[] = [
   {
@@ -418,3 +418,87 @@ export const NON_EFFECT_BINDER_SURFACE_CONTRACT: readonly NonEffectBinderSurface
     zoneSelectorReferencerPaths: ZONE_PATH,
   },
 ];
+
+export interface BinderDeclarationCandidate {
+  readonly path: string;
+  readonly pattern: string;
+  readonly value: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function collectPathValues(
+  node: unknown,
+  segments: readonly BinderPathSegment[],
+  patternSegments: readonly BinderPathSegment[],
+  path: string,
+  into: BinderDeclarationCandidate[],
+): void {
+  if (segments.length === 0) {
+    into.push({
+      path,
+      pattern: patternSegments.join('.'),
+      value: node,
+    });
+    return;
+  }
+
+  const segment = segments[0]!;
+  const rest = segments.slice(1);
+
+  if (segment === '*') {
+    if (!Array.isArray(node)) {
+      return;
+    }
+    for (let index = 0; index < node.length; index += 1) {
+      collectPathValues(node[index], rest, patternSegments, `${path}.${index}`, into);
+    }
+    return;
+  }
+
+  if (!isRecord(node) || !(segment in node)) {
+    return;
+  }
+
+  collectPathValues(node[segment], rest, patternSegments, `${path}.${segment}`, into);
+}
+
+function splitPathSegments(path: string): readonly string[] {
+  return path.length === 0 ? [] : path.split('.');
+}
+
+export function collectBinderPathCandidates(
+  node: unknown,
+  binderPath: readonly BinderPathSegment[],
+  basePath: string,
+  basePattern: string = basePath,
+): readonly BinderDeclarationCandidate[] {
+  const candidates: BinderDeclarationCandidate[] = [];
+  collectPathValues(
+    node,
+    binderPath,
+    [...splitPathSegments(basePattern), ...binderPath],
+    basePath,
+    candidates,
+  );
+  return candidates;
+}
+
+export function collectDeclaredBinderCandidatesFromEffectNode(
+  effectNode: Record<string, unknown>,
+): readonly BinderDeclarationCandidate[] {
+  const candidates: BinderDeclarationCandidate[] = [];
+  for (const [kind, surface] of Object.entries(EFFECT_BINDER_SURFACE_CONTRACT)) {
+    const effectBody = effectNode[kind];
+    if (!isRecord(effectBody)) {
+      continue;
+    }
+
+    for (const binderPath of surface.declaredBinderPaths) {
+      candidates.push(...collectBinderPathCandidates(effectBody, binderPath, kind));
+    }
+  }
+  return candidates;
+}

@@ -5,6 +5,7 @@
  */
 export * from './action-capability-contract.js';
 export * from './action-selector-contract-registry.js';
+export * from './binder-surface-contract.js';
 export * from './binding-identifier-contract.js';
 export * from './player-selector-vocabulary.js';
 export * from './token-filter-prop-contract.js';

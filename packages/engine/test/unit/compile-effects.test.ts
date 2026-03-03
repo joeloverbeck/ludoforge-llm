@@ -241,6 +241,72 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce'), true);
   });
 
+  it('rejects non-canonical binder declarations across effect surfaces', () => {
+    const result = lowerEffectArray(
+      [
+        { forEach: { bind: 'item', over: { query: 'players' }, effects: [] } },
+        { forEach: { bind: '$item', countBind: 'count', over: { query: 'players' }, effects: [], in: [] } },
+        { reduce: { itemBind: 'item', accBind: '$acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: '$sum', in: [] } },
+        { let: { bind: 'tmp', value: 1, in: [] } },
+        { bindValue: { bind: 'tmp', value: 1 } },
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: 'subset',
+            compute: [],
+            scoreExpr: 0,
+            resultBind: '$score',
+            bestSubsetBind: 'best',
+            in: [],
+          },
+        },
+        { chooseOne: { bind: 'pick', options: { query: 'players' } } },
+        { chooseN: { bind: 'pickN', options: { query: 'players' }, n: 1 } },
+        { rollRandom: { bind: 'die', min: 1, max: 6, in: [] } },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [{ bind: 'target', over: { query: 'players' }, to: 'deck' }],
+            remainingBind: 'remaining',
+          },
+        },
+        {
+          transferVar: {
+            from: { scope: 'global', var: 'money' },
+            to: { scope: 'global', var: 'money' },
+            amount: 1,
+            actualBind: 'actual',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    const expectedPaths = [
+      'doc.actions.0.effects.0.forEach.bind',
+      'doc.actions.0.effects.1.forEach.countBind',
+      'doc.actions.0.effects.2.reduce.itemBind',
+      'doc.actions.0.effects.3.let.bind',
+      'doc.actions.0.effects.4.bindValue.bind',
+      'doc.actions.0.effects.5.evaluateSubset.subsetBind',
+      'doc.actions.0.effects.6.chooseOne.bind',
+      'doc.actions.0.effects.7.chooseN.bind',
+      'doc.actions.0.effects.8.rollRandom.bind',
+      'doc.actions.0.effects.9.removeByPriority.groups.0.bind',
+      'doc.actions.0.effects.10.transferVar.actualBind',
+    ];
+    for (const expectedPath of expectedPaths) {
+      assert.equal(
+        result.diagnostics.some((diagnostic) => diagnostic.path === expectedPath),
+        true,
+        `missing diagnostic at ${expectedPath}`,
+      );
+    }
+  });
+
   it('preserves trusted compiler macroOrigin on control-flow binders during lowering', () => {
     const macroDef: EffectMacroDef = {
       id: 'collect-forced-bets',

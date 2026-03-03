@@ -60,7 +60,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, base, {
           actionId: asActionId('sweep'),
-          params: { targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1]] },
+          params: { $targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1]] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
@@ -69,7 +69,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     const twoBefore = Number(twoSpace.globalVars.arvnResources);
     const twoResult = applyMoveWithResolvedDecisionIds(def, twoSpace, {
       actionId: asActionId('sweep'),
-      params: { targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1]] },
+      params: { $targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1]] },
     }).state;
     assert.equal(twoResult.globalVars.arvnResources, twoBefore - 6, 'Sweep should spend 3 per selected space (2 spaces)');
 
@@ -77,7 +77,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     const threeBefore = Number(threeSpace.globalVars.arvnResources);
     const threeResult = applyMoveWithResolvedDecisionIds(def, threeSpace, {
       actionId: asActionId('sweep'),
-      params: { targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1], SWEEP_SPACES[2]] },
+      params: { $targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1], SWEEP_SPACES[2]] },
     }).state;
     assert.equal(threeResult.globalVars.arvnResources, threeBefore - 9, 'Sweep should spend 3 per selected space (3 spaces)');
   });
@@ -92,7 +92,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, state, {
           actionId: asActionId('assault'),
-          params: { targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
+          params: { $targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
@@ -107,7 +107,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
     const before = Number(state.globalVars.arvnResources);
     const result = applyMoveWithResolvedDecisionIds(def, state, {
       actionId: asActionId('assault'),
-      params: { targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
+      params: { $targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
     }).state;
     assert.equal(result.globalVars.arvnResources, before, 'Body Count ARVN Assault should not spend ARVN resources');
   });
@@ -129,7 +129,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, sweepCapped, {
           actionId: asActionId('sweep'),
-          params: { targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1]] },
+          params: { $targetSpaces: [SWEEP_SPACES[0], SWEEP_SPACES[1]] },
         }),
       /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'With cap_caps shaded and 3 resources, Sweep should cap at 1 space',
@@ -150,7 +150,7 @@ describe('FITL ARVN Sweep/Assault affordability', () => {
       () =>
         applyMoveWithResolvedDecisionIds(def, assaultWithAbramsShaded, {
           actionId: asActionId('assault'),
-          params: { targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
+          params: { $targetSpaces: [ASSAULT_SPACES[0], ASSAULT_SPACES[1], ASSAULT_SPACES[2]] },
         }),
       'ARVN Assault should not inherit cap_abrams shaded max-2 space limit',
     );

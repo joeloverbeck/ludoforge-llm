@@ -550,6 +550,55 @@ describe('AST and selector schemas', () => {
     assert.equal(missingSource.success, false);
   });
 
+  it('enforces canonical binder declarations across effect and aggregate surfaces', () => {
+    const invalidEffects = [
+      { forEach: { bind: 'token', over: { query: 'players' }, effects: [] } },
+      { forEach: { bind: '$token', countBind: 'count', over: { query: 'players' }, effects: [], in: [] } },
+      { reduce: { itemBind: 'item', accBind: '$acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: '$out', in: [] } },
+      { let: { bind: 'value', value: 1, in: [] } },
+      { bindValue: { bind: 'value', value: 1 } },
+      {
+        evaluateSubset: {
+          source: { query: 'players' },
+          subsetSize: 1,
+          subsetBind: 'subset',
+          compute: [],
+          scoreExpr: 0,
+          resultBind: '$score',
+          bestSubsetBind: 'best',
+          in: [],
+        },
+      },
+      { chooseOne: { internalDecisionId: 'decision:$pick', bind: 'pick', options: { query: 'players' } } },
+      { chooseN: { internalDecisionId: 'decision:$pick', bind: 'pick', options: { query: 'players' }, n: 1 } },
+      { rollRandom: { bind: 'die', min: 1, max: 6, in: [] } },
+      {
+        transferVar: {
+          from: { scope: 'global', var: 'bank' },
+          to: { scope: 'global', var: 'pot' },
+          amount: 1,
+          actualBind: 'actual',
+        },
+      },
+    ];
+
+    for (const effect of invalidEffects) {
+      assert.equal(EffectASTSchema.safeParse(effect).success, false);
+    }
+
+    assert.equal(
+      ValueExprSchema.safeParse({
+        aggregate: {
+          op: 'sum',
+          query: { query: 'intsInRange', min: 1, max: 2 },
+          bind: 'n',
+          valueExpr: 1,
+        },
+      }).success,
+      false,
+    );
+  });
+
   it('parses binding query', () => {
     const query: OptionsQuery = { query: 'binding', name: 'targetSpaces' };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);

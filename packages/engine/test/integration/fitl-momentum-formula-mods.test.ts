@@ -85,7 +85,7 @@ describe('FITL momentum formula modifiers', () => {
     const withoutMomentum = applyMoveWithResolvedDecisionIds(def, base, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -95,7 +95,7 @@ describe('FITL momentum formula modifiers', () => {
     const withWildWeasels = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_wildWeasels: true }), {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space],
+        $spaces: [space],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -106,7 +106,7 @@ describe('FITL momentum formula modifiers', () => {
     const multiSpaceWithWildWeasels = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_wildWeasels: true }), {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [space, secondSpace],
+        $spaces: [space, secondSpace],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -124,7 +124,7 @@ describe('FITL momentum formula modifiers', () => {
     const degradeOnly = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_wildWeasels: true }), {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [],
+        $spaces: [],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -205,7 +205,7 @@ describe('FITL momentum formula modifiers', () => {
     const changedBaseline = applyMoveWithResolvedDecisionIds(def, base, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [],
+        $spaces: [],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -213,7 +213,7 @@ describe('FITL momentum formula modifiers', () => {
     const changed = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_adsid: true }), {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [],
+        $spaces: [],
         $degradeTrail: 'yes',
       },
     }).state;
@@ -228,7 +228,7 @@ describe('FITL momentum formula modifiers', () => {
     const unchangedBaseline = applyMoveWithResolvedDecisionIds(def, base, {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [],
+        $spaces: [],
         $degradeTrail: 'no',
       },
     }).state;
@@ -236,7 +236,7 @@ describe('FITL momentum formula modifiers', () => {
     const unchanged = applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_adsid: true }), {
       actionId: asActionId('airStrike'),
       params: {
-        spaces: [],
+        $spaces: [],
         $degradeTrail: 'no',
       },
     }).state;
@@ -263,7 +263,7 @@ describe('FITL momentum formula modifiers', () => {
     const multiChange = applyMoveWithResolvedDecisionIds(def, withMom(baseNva, { mom_adsid: true }), {
       actionId: asActionId('rally'),
       params: {
-        targetSpaces: [],
+        $targetSpaces: [],
         $improveTrail: 'yes',
         $trailImproveSpaces: [CENTRAL_LAOS, SOUTHERN_LAOS],
       },
@@ -384,8 +384,8 @@ describe('FITL momentum formula modifiers', () => {
     const result = applyMoveWithResolvedDecisionIds(def, withMom(state, { mom_claymores: true }), {
       actionId: asActionId('march'),
       params: {
-        targetSpaces: [LOC_SPACE],
-        chainSpaces: [],
+        $targetSpaces: [LOC_SPACE],
+        $chainSpaces: [],
         [`$movingGuerrillas@${LOC_SPACE}`]: [mover],
         [`$movingTroops@${LOC_SPACE}`]: [],
       },
@@ -428,8 +428,8 @@ describe('FITL momentum formula modifiers', () => {
     const result = applyMoveWithResolvedDecisionIds(def, withMom(state, { mom_claymores: true }), {
       actionId: asActionId('march'),
       params: {
-        targetSpaces: [LOC_SPACE],
-        chainSpaces: [],
+        $targetSpaces: [LOC_SPACE],
+        $chainSpaces: [],
         [`$movingGuerrillas@${LOC_SPACE}`]: [mover],
         [`$movingTroops@${LOC_SPACE}`]: [],
       },
@@ -469,7 +469,7 @@ describe('FITL momentum formula modifiers', () => {
         applyMoveWithResolvedDecisionIds(def, withMom(base, { mom_559thTransportGrp: true }), {
           actionId: asActionId('infiltrate'),
           params: {
-            targetSpaces: [first, second],
+            $targetSpaces: [first, second],
             [`$infiltrateMode@${first}`]: 'build-up',
             [`$infiltrateMode@${second}`]: 'build-up',
             [`$infiltrateGuerrillasToReplace@${first}`]: [],
@@ -516,7 +516,7 @@ describe('FITL momentum formula modifiers', () => {
     const assaultFinal = applyMoveWithResolvedDecisionIds(def, assaultWithBodyCountState, {
       actionId: asActionId('assault'),
       params: {
-        targetSpaces: [assaultSpace],
+        $targetSpaces: [assaultSpace],
         $arvnFollowupSpaces: [],
       },
     }).state;

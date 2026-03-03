@@ -73,7 +73,7 @@ describe('FITL RVN leader lingering effects', () => {
       applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
         actionId: asActionId('train'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
           $trainChoice: 'rangers',
           $subActionSpaces: [],
         },
@@ -110,7 +110,7 @@ describe('FITL RVN leader lingering effects', () => {
       applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
         actionId: asActionId('train'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
           $trainChoice: 'place-irregulars',
           $subActionSpaces: [],
         },
@@ -232,7 +232,7 @@ describe('FITL RVN leader lingering effects', () => {
       applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
         actionId: asActionId('govern'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
           [`$governMode@${space}`]: 'patronage',
         },
       }).state;
@@ -286,7 +286,7 @@ describe('FITL RVN leader lingering effects', () => {
       return applyMoveWithResolvedDecisionIds(def, withActiveLeader(setup, leader), {
         actionId: asActionId('train'),
         params: {
-          targetSpaces: [space],
+          $targetSpaces: [space],
           $trainChoice: 'rangers',
           $subActionSpaces: [space],
           $subAction: 'pacify',

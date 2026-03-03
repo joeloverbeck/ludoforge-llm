@@ -55,7 +55,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     };
 
     const selected = completePatrolMove(def, state, (request) => {
-      if (request.name === 'targetLoCs') return [targetLoc];
+      if (request.name === '$targetLoCs') return [targetLoc];
       if (request.name === '$movingCubes') return [cubeId];
       if (request.name === '$assaultLoCs') return [];
       return pickDeterministicDecisionValue(request);
@@ -83,7 +83,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     };
 
     const selected = completePatrolMove(def, state, (request) => {
-      if (request.name === 'targetLoCs') return [targetLoc];
+      if (request.name === '$targetLoCs') return [targetLoc];
       if (request.name === '$movingCubes') return [cubeId];
       if (request.name === '$assaultLoCs') return [];
       return pickDeterministicDecisionValue(request);
@@ -116,7 +116,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     };
 
     const selected = completePatrolMove(def, state, (request) => {
-      if (request.name === 'targetLoCs') return [targetLoc];
+      if (request.name === '$targetLoCs') return [targetLoc];
       if (request.name === '$movingCubes') return [cubeId];
       if (request.name === '$assaultLoCs') return [];
       return pickDeterministicDecisionValue(request);
@@ -147,7 +147,7 @@ describe('FITL patrol multi-hop sourcing integration', () => {
     };
 
     const selected = completePatrolMove(def, state, (request) => {
-      if (request.name === 'targetLoCs') return [targetLoc];
+      if (request.name === '$targetLoCs') return [targetLoc];
       if (request.name === '$movingCubes') {
         const movingCubeOptions = request.options.map((option) => String(option.value));
         assert.equal(movingCubeOptions.includes(cubeId), false, 'Blocked chain should not expose the 2+ hop source cube');

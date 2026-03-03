@@ -113,7 +113,7 @@ describe('FITL Cobras capability integration', () => {
       {
         actionId: asActionId('sweep'),
         params: {
-          targetSpaces: [SWEEP_A, SWEEP_B, SWEEP_C],
+          $targetSpaces: [SWEEP_A, SWEEP_B, SWEEP_C],
         },
       },
       {
@@ -159,7 +159,7 @@ describe('FITL Cobras capability integration', () => {
       {
         actionId: asActionId('sweep'),
         params: {
-          targetSpaces: [SWEEP_A, SWEEP_B],
+          $targetSpaces: [SWEEP_A, SWEEP_B],
         },
       },
       {
@@ -215,7 +215,7 @@ describe('FITL Cobras capability integration', () => {
 
       const final = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('assault'),
-        params: { targetSpaces: [ASSAULT_A] },
+        params: { $targetSpaces: [ASSAULT_A] },
       }).state;
 
       assert.equal(
@@ -250,7 +250,7 @@ describe('FITL Cobras capability integration', () => {
       const final = applyMoveWithResolvedDecisionIds(def, state, {
         actionId: asActionId('assault'),
         params: {
-          targetSpaces: [ASSAULT_A, ASSAULT_B],
+          $targetSpaces: [ASSAULT_A, ASSAULT_B],
           $arvnFollowupSpaces: [],
         },
       }).state;
@@ -287,14 +287,14 @@ describe('FITL Cobras capability integration', () => {
       const withoutFollowup = applyMoveWithResolvedDecisionIds(def, base, {
         actionId: asActionId('assault'),
         params: {
-          targetSpaces: [ASSAULT_A],
+          $targetSpaces: [ASSAULT_A],
           $arvnFollowupSpaces: [],
         },
       }).state;
       const withFollowup = applyMoveWithResolvedDecisionIds(def, base, {
         actionId: asActionId('assault'),
         params: {
-          targetSpaces: [ASSAULT_A],
+          $targetSpaces: [ASSAULT_A],
           $arvnFollowupSpaces: [ASSAULT_A],
         },
       }).state;

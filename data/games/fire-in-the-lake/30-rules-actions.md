@@ -103,9 +103,9 @@ turnOrder:
           - { actionId: sweep }
           - { actionId: march }
           - actionId: airStrike
-            maxParam: { name: spaces, max: 2 }
-            maxParamsTotal: { names: [spaces, $arcLightNoCoinProvinces], max: 2 }
-          - { actionId: airLift, maxParam: { name: spaces, max: 2 } }
+            maxParam: { name: $spaces, max: 2 }
+            maxParamsTotal: { names: [$spaces, $arcLightNoCoinProvinces], max: 2 }
+          - { actionId: airLift, maxParam: { name: $spaces, max: 2 } }
         blockPivotal: true
       pivotal:
         actionIds: [pivotalEvent]
@@ -1161,7 +1161,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -1178,7 +1178,7 @@ actionPipelines:
                     max: 1
               else:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -1198,7 +1198,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - chooseOne:
                     bind: $trainChoice
@@ -1288,7 +1288,7 @@ actionPipelines:
                     bind: $subActionSpaces
                     options:
                       query: binding
-                      name: targetSpaces
+                      name: $targetSpaces
                     min: 0
                     max: 2
               else:
@@ -1296,7 +1296,7 @@ actionPipelines:
                     bind: $subActionSpaces
                     options:
                       query: binding
-                      name: targetSpaces
+                      name: $targetSpaces
                     min: 0
                     max: 1
           - forEach:
@@ -1417,7 +1417,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -1449,7 +1449,7 @@ actionPipelines:
                     max: 1
               else:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -1483,7 +1483,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 # ARVN Train: place 1-2 Rangers or up to 6 ARVN cubes
                 # at Cities or at US/ARVN Bases
@@ -1548,13 +1548,13 @@ actionPipelines:
               then:
                 - chooseN:
                     bind: $subActionSpaces
-                    options: { query: binding, name: targetSpaces }
+                    options: { query: binding, name: $targetSpaces }
                     min: 0
                     max: 2
               else:
                 - chooseN:
                     bind: $subActionSpaces
-                    options: { query: binding, name: targetSpaces }
+                    options: { query: binding, name: $targetSpaces }
                     min: 0
                     max: 1
           - forEach:
@@ -1669,7 +1669,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetLoCs
+                    bind: $targetLoCs
                     options:
                       query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
@@ -1677,7 +1677,7 @@ actionPipelines:
                     max: 1
               else:
                 - chooseN:
-                    bind: targetLoCs
+                    bind: $targetLoCs
                     options:
                       query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
@@ -1688,7 +1688,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $loc
-              over: { query: binding, name: targetLoCs }
+              over: { query: binding, name: $targetLoCs }
               effects:
                 - chooseN:
                     bind: $movingCubes
@@ -1749,7 +1749,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $actLoc
-              over: { query: binding, name: targetLoCs }
+              over: { query: binding, name: $targetLoCs }
               effects:
                 - let:
                     bind: $usCubeCount
@@ -1769,7 +1769,7 @@ actionPipelines:
         effects:
           - chooseN:
               bind: $assaultLoCs
-              options: { query: binding, name: targetLoCs }
+              options: { query: binding, name: $targetLoCs }
               min: 0
               max: 1
           - forEach:
@@ -1802,7 +1802,7 @@ actionPipelines:
         effects:
           - macro: cap-patrol-m48-shaded-moved-cube-penalty
             args:
-              targetLoCs: targetLoCs
+              targetLoCs: $targetLoCs
               movedFaction: US
     atomicity: atomic
   # ── patrol-arvn-profile ─────────────────────────────────────────────────────
@@ -1837,7 +1837,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetLoCs
+                    bind: $targetLoCs
                     options:
                       query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
@@ -1845,7 +1845,7 @@ actionPipelines:
                     max: 1
               else:
                 - chooseN:
-                    bind: targetLoCs
+                    bind: $targetLoCs
                     options:
                       query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
@@ -1856,7 +1856,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $loc
-              over: { query: binding, name: targetLoCs }
+              over: { query: binding, name: $targetLoCs }
               effects:
                 - chooseN:
                     bind: $movingCubes
@@ -1913,7 +1913,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $actLoc
-              over: { query: binding, name: targetLoCs }
+              over: { query: binding, name: $targetLoCs }
               effects:
                 - let:
                     bind: $arvnCubeCount
@@ -1933,7 +1933,7 @@ actionPipelines:
         effects:
           - chooseN:
               bind: $assaultLoCs
-              options: { query: binding, name: targetLoCs }
+              options: { query: binding, name: $targetLoCs }
               min: 0
               max: 1
           - forEach:
@@ -1958,7 +1958,7 @@ actionPipelines:
         effects:
           - macro: cap-patrol-m48-shaded-moved-cube-penalty
             args:
-              targetLoCs: targetLoCs
+              targetLoCs: $targetLoCs
               movedFaction: ARVN
     atomicity: atomic
   # ── sweep-us-profile ──────────────────────────────────────────────────────────
@@ -1981,7 +1981,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -1999,7 +1999,7 @@ actionPipelines:
                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_caps }, right: shaded }
                     then:
                       - chooseN:
-                          bind: targetSpaces
+                          bind: $targetSpaces
                           options:
                             query: mapSpaces
                             filter:
@@ -2014,7 +2014,7 @@ actionPipelines:
                           max: 2
                     else:
                       - chooseN:
-                          bind: targetSpaces
+                          bind: $targetSpaces
                           options:
                             query: mapSpaces
                             filter:
@@ -2032,7 +2032,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - chooseN:
                     bind: $movingAdjacentTroops
@@ -2061,7 +2061,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - macro: sweep-activation
                   args:
@@ -2072,12 +2072,12 @@ actionPipelines:
         effects:
           - macro: cap-sweep-cobras-unshaded-removal
             args:
-              targetSpaces: targetSpaces
+              targetSpaces: $targetSpaces
       - stage: cap-booby-traps-troop-cost
         effects:
           - macro: cap-sweep-booby-traps-shaded-cost
             args:
-              targetSpaces: targetSpaces
+              targetSpaces: $targetSpaces
               actorFaction: US
     atomicity: atomic
   - id: sweep-arvn-profile
@@ -2094,7 +2094,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -2112,7 +2112,7 @@ actionPipelines:
                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_caps }, right: shaded }
                     then:
                       - chooseN:
-                          bind: targetSpaces
+                          bind: $targetSpaces
                           options:
                             query: mapSpaces
                             filter:
@@ -2133,7 +2133,7 @@ actionPipelines:
                               right: 3
                     else:
                       - chooseN:
-                          bind: targetSpaces
+                          bind: $targetSpaces
                           options:
                             query: mapSpaces
                             filter:
@@ -2154,7 +2154,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
@@ -2191,12 +2191,12 @@ actionPipelines:
         effects:
           - macro: cap-sweep-cobras-unshaded-removal
             args:
-              targetSpaces: targetSpaces
+              targetSpaces: $targetSpaces
       - stage: cap-booby-traps-troop-cost
         effects:
           - macro: cap-sweep-booby-traps-shaded-cost
             args:
-              targetSpaces: targetSpaces
+              targetSpaces: $targetSpaces
               actorFaction: ARVN
     atomicity: atomic
   - id: assault-us-profile
@@ -2217,7 +2217,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -2236,7 +2236,7 @@ actionPipelines:
                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_abrams }, right: shaded }
                     then:
                       - chooseN:
-                          bind: targetSpaces
+                          bind: $targetSpaces
                           options:
                             query: mapSpaces
                             filter:
@@ -2252,7 +2252,7 @@ actionPipelines:
                           max: 2
                     else:
                       - chooseN:
-                          bind: targetSpaces
+                          bind: $targetSpaces
                           options:
                             query: mapSpaces
                             filter:
@@ -2270,7 +2270,7 @@ actionPipelines:
         effects:
           - chooseN:
               bind: $abramsSpace
-              options: { query: binding, name: targetSpaces }
+              options: { query: binding, name: $targetSpaces }
               min: 0
               max:
                 if:
@@ -2281,7 +2281,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - macro: cap-assault-cobras-shaded-cost
                   args:
@@ -2326,7 +2326,7 @@ actionPipelines:
         effects:
           - macro: cap-assault-m48-unshaded-bonus-removal
             args:
-              targetSpaces: targetSpaces
+              targetSpaces: $targetSpaces
       - stage: arvn-followup
         effects:
           - if:
@@ -2341,7 +2341,7 @@ actionPipelines:
               then:
                 - chooseN:
                     bind: $arvnFollowupSpaces
-                    options: { query: binding, name: targetSpaces }
+                    options: { query: binding, name: $targetSpaces }
                     min: 0
                     max: 1
                 - forEach:
@@ -2393,7 +2393,7 @@ actionPipelines:
               when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -2409,7 +2409,7 @@ actionPipelines:
                     max: 1
               else:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -2434,7 +2434,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when:
@@ -2496,7 +2496,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
@@ -2651,7 +2651,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
@@ -2746,7 +2746,7 @@ actionPipelines:
               then:
                 - chooseN:
                     bind: $cadresAgitateSpaces
-                    options: { query: binding, name: targetSpaces }
+                    options: { query: binding, name: $targetSpaces }
                     min: 0
                     max: 1
                 - forEach:
@@ -2796,7 +2796,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $destSpace
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - macro: insurgent-march-resolve-destination
                   args:
@@ -2815,7 +2815,7 @@ actionPipelines:
                   - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
               then:
                 - chooseN:
-                    bind: chainSpaces
+                    bind: $chainSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -2836,7 +2836,7 @@ actionPipelines:
               then:
                 - forEach:
                     bind: $destSpace
-                    over: { query: binding, name: chainSpaces }
+                    over: { query: binding, name: $chainSpaces }
                     effects:
                       - macro: insurgent-march-resolve-destination
                         args:
@@ -2864,7 +2864,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $destSpace
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - macro: insurgent-march-resolve-destination
                   args:
@@ -2896,7 +2896,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
@@ -2922,7 +2922,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - chooseOne:
                     bind: $attackMode
@@ -2994,7 +2994,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
@@ -3004,7 +3004,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - forEach:
                     bind: $g
@@ -3051,7 +3051,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - macro: insurgent-terror-resolve-space
                   args:
@@ -3079,7 +3079,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - macro: insurgent-terror-resolve-space
                   args:
@@ -3118,7 +3118,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - if:
                     when:
@@ -3240,7 +3240,7 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - chooseN:
-              bind: spaces
+              bind: $spaces
               options:
                 query: mapSpaces
                 filter:
@@ -3258,7 +3258,7 @@ actionPipelines:
                 spaceFilter:
                   op: in
                   item: { ref: zoneProp, zone: $zone, prop: id }
-                  set: { ref: binding, name: spaces }
+                  set: { ref: binding, name: $spaces }
                 filter:
                   - { prop: faction, eq: US }
                   - { prop: type, eq: troops }
@@ -3270,7 +3270,7 @@ actionPipelines:
               effects:
                 - chooseOne:
                     bind: '$usLiftDestination@{$usTroop}'
-                    options: { query: binding, name: spaces }
+                    options: { query: binding, name: $spaces }
                 - if:
                     when:
                       op: '!='
@@ -3292,7 +3292,7 @@ actionPipelines:
                     spaceFilter:
                       op: in
                       item: { ref: zoneProp, zone: $zone, prop: id }
-                      set: { ref: binding, name: spaces }
+                      set: { ref: binding, name: $spaces }
                     filter:
                       - { prop: faction, eq: ARVN }
                       - { prop: type, op: in, value: [troops, ranger] }
@@ -3300,7 +3300,7 @@ actionPipelines:
                     spaceFilter:
                       op: in
                       item: { ref: zoneProp, zone: $zone, prop: id }
-                      set: { ref: binding, name: spaces }
+                      set: { ref: binding, name: $spaces }
                     filter:
                       - { prop: faction, eq: US }
                       - { prop: type, eq: irregular }
@@ -3312,7 +3312,7 @@ actionPipelines:
               effects:
                 - chooseOne:
                     bind: '$coinLiftDestination@{$coinLiftPiece}'
-                    options: { query: binding, name: spaces }
+                    options: { query: binding, name: $spaces }
                 - if:
                     when:
                       op: '!='
@@ -3381,7 +3381,7 @@ actionPipelines:
                   then: 1
                   else: 0
           - chooseN:
-              bind: spaces
+              bind: $spaces
               options:
                 query: mapSpaces
                 filter:
@@ -3444,7 +3444,7 @@ actionPipelines:
               over:
                 query: concat
                 sources:
-                  - { query: binding, name: spaces }
+                  - { query: binding, name: $spaces }
                   - { query: binding, name: $arcLightNoCoinProvinces }
               effects:
                 - let:
@@ -3541,7 +3541,7 @@ actionPipelines:
                             query:
                               query: concat
                               sources:
-                                - { query: binding, name: spaces }
+                                - { query: binding, name: $spaces }
                                 - { query: binding, name: $arcLightNoCoinProvinces }
                         right: 0
               then:
@@ -3587,7 +3587,7 @@ actionPipelines:
                                             options:
                                               query: concat
                                               sources:
-                                                - { query: binding, name: spaces }
+                                                - { query: binding, name: $spaces }
                                                 - { query: binding, name: $arcLightNoCoinProvinces }
                                             min: 0
                                             max: 1
@@ -3615,7 +3615,7 @@ actionPipelines:
                                             options:
                                               query: concat
                                               sources:
-                                                - { query: binding, name: spaces }
+                                                - { query: binding, name: $spaces }
                                                 - { query: binding, name: $arcLightNoCoinProvinces }
                                             min: 0
                                             max: 1
@@ -3667,7 +3667,7 @@ actionPipelines:
                                 options:
                                   query: concat
                                   sources:
-                                    - { query: binding, name: spaces }
+                                    - { query: binding, name: $spaces }
                                     - { query: binding, name: $arcLightNoCoinProvinces }
                                 min: 0
                                 max: 1
@@ -3695,7 +3695,7 @@ actionPipelines:
                                 options:
                                   query: concat
                                   sources:
-                                    - { query: binding, name: spaces }
+                                    - { query: binding, name: $spaces }
                                     - { query: binding, name: $arcLightNoCoinProvinces }
                                 min: 0
                                 max: 1
@@ -3742,7 +3742,7 @@ actionPipelines:
               when: { op: '==', left: { ref: globalMarkerState, marker: cap_mandateOfHeaven }, right: shaded }
               then:
                 - chooseN:
-                    bind: targetSpaces
+                    bind: $targetSpaces
                     options:
                       query: mapSpaces
                       filter:
@@ -3795,10 +3795,10 @@ actionPipelines:
               then:
                 - chooseOne:
                     bind: $mandateNoShiftSpace
-                    options: { query: binding, name: targetSpaces }
+                    options: { query: binding, name: $targetSpaces }
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - chooseOne:
                     bind: '$governMode@{$space}'
@@ -4043,7 +4043,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - chooseN:
                     bind: '$raidIncomingFrom@{$space}'
@@ -4149,7 +4149,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - let:
                     bind: $nvaBaseCount
@@ -4450,7 +4450,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - let:
                     bind: $usTroopCount
@@ -4632,7 +4632,7 @@ actionPipelines:
         effects:
           - forEach:
               bind: $space
-              over: { query: binding, name: targetSpaces }
+              over: { query: binding, name: $targetSpaces }
               effects:
                 - forEach:
                     bind: $taxingGuerrilla
@@ -4770,7 +4770,7 @@ actionPipelines:
               in:
                 - forEach:
                     bind: $space
-                    over: { query: binding, name: targetSpaces }
+                    over: { query: binding, name: $targetSpaces }
                     effects:
                       - let:
                           bind: $arvnCubeCount

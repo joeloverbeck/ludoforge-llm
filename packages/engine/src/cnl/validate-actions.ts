@@ -4,6 +4,7 @@ import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import {
   ACTION_KEYS,
   END_CONDITION_KEYS,
+  FROM_TEMPLATE_PHASE_KEYS,
   PHASE_KEYS,
   TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
@@ -211,6 +212,66 @@ export function validateAuthoredCompilerMetadataBoundary(doc: GameSpecDoc, diagn
   }
 }
 
+/**
+ * Resolves the phase ID from a `fromTemplate` entry by looking up the template
+ * definition and substituting the `phaseId` arg into the template's phase.id.
+ */
+function resolveFromTemplatePhaseId(
+  entry: Record<string, unknown>,
+  doc: GameSpecDoc,
+  phasePath: string,
+  diagnostics: Diagnostic[],
+): string | undefined {
+  const templateName = entry.fromTemplate;
+  if (typeof templateName !== 'string' || templateName.trim() === '') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_FROM_TEMPLATE_NAME_INVALID',
+      path: `${phasePath}.fromTemplate`,
+      severity: 'error',
+      message: 'fromTemplate must be a non-empty string.',
+      suggestion: 'Set fromTemplate to the name of a declared phase template.',
+    });
+    return undefined;
+  }
+
+  const args = entry.args;
+  if (!isRecord(args)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_FROM_TEMPLATE_ARGS_INVALID',
+      path: `${phasePath}.args`,
+      severity: 'error',
+      message: 'fromTemplate entry must include an args object.',
+      suggestion: 'Add an args object with the required template parameters.',
+    });
+    return undefined;
+  }
+
+  // Find matching template to resolve the phase ID
+  const template = doc.phaseTemplates?.find((t) => t.id === templateName);
+  if (template === undefined || template === null) {
+    // Template not found — expansion will report this; just skip ID collection
+    return undefined;
+  }
+
+  // Resolve phase.id from template by substituting args
+  const rawPhaseId = template.phase.id;
+  if (typeof rawPhaseId !== 'string') {
+    return undefined;
+  }
+
+  // Perform entire-string param substitution (same logic as expand-phase-templates)
+  let resolvedId = rawPhaseId;
+  for (const [paramName, argValue] of Object.entries(args)) {
+    if (resolvedId === `{${paramName}}`) {
+      resolvedId = String(argValue);
+      break;
+    }
+    resolvedId = resolvedId.replaceAll(`{${paramName}}`, String(argValue));
+  }
+
+  return normalizeIdentifier(resolvedId);
+}
+
 export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
   const collectedPhaseIds: string[] = [];
   const turnStructure = doc.turnStructure;
@@ -251,10 +312,18 @@ export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[
         continue;
       }
 
-      validateUnknownKeys(phase, PHASE_KEYS, phasePath, diagnostics, 'phase');
-      const phaseId = validateIdentifierField(phase, 'id', `${phasePath}.id`, diagnostics, 'phase id');
-      if (phaseId !== undefined) {
-        collectedPhaseIds.push(phaseId);
+      if ('fromTemplate' in phase) {
+        validateUnknownKeys(phase, FROM_TEMPLATE_PHASE_KEYS, phasePath, diagnostics, 'fromTemplate phase');
+        const resolvedId = resolveFromTemplatePhaseId(phase, doc, phasePath, diagnostics);
+        if (resolvedId !== undefined) {
+          collectedPhaseIds.push(resolvedId);
+        }
+      } else {
+        validateUnknownKeys(phase, PHASE_KEYS, phasePath, diagnostics, 'phase');
+        const phaseId = validateIdentifierField(phase, 'id', `${phasePath}.id`, diagnostics, 'phase id');
+        if (phaseId !== undefined) {
+          collectedPhaseIds.push(phaseId);
+        }
       }
     }
   }
@@ -282,10 +351,18 @@ export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[
           continue;
         }
 
-        validateUnknownKeys(phase, PHASE_KEYS, phasePath, diagnostics, 'phase');
-        const phaseId = validateIdentifierField(phase, 'id', `${phasePath}.id`, diagnostics, 'interrupt phase id');
-        if (phaseId !== undefined) {
-          collectedPhaseIds.push(phaseId);
+        if ('fromTemplate' in phase) {
+          validateUnknownKeys(phase, FROM_TEMPLATE_PHASE_KEYS, phasePath, diagnostics, 'fromTemplate interrupt phase');
+          const resolvedId = resolveFromTemplatePhaseId(phase, doc, phasePath, diagnostics);
+          if (resolvedId !== undefined) {
+            collectedPhaseIds.push(resolvedId);
+          }
+        } else {
+          validateUnknownKeys(phase, PHASE_KEYS, phasePath, diagnostics, 'phase');
+          const phaseId = validateIdentifierField(phase, 'id', `${phasePath}.id`, diagnostics, 'interrupt phase id');
+          if (phaseId !== undefined) {
+            collectedPhaseIds.push(phaseId);
+          }
         }
       }
     }

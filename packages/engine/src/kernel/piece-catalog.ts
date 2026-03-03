@@ -30,7 +30,18 @@ export function validatePieceCatalogPayload(
   }
 
   const diagnostics: Diagnostic[] = [];
-  const catalog = parseResult.data as PieceCatalogPayload;
+  const rawData = parseResult.data as Record<string, unknown>;
+  const rawPieceTypes = rawData.pieceTypes as readonly Record<string, unknown>[];
+
+  // Filter out generate: blocks — they are pre-expansion templates validated after expansion
+  const hasGenerateBlocks = rawPieceTypes.some((entry) => 'generate' in entry);
+  const concretePieceTypes = rawPieceTypes.filter(
+    (entry): entry is PieceCatalogPayload['pieceTypes'][number] & Record<string, unknown> => !('generate' in entry),
+  ) as readonly PieceCatalogPayload['pieceTypes'][number][];
+  const catalog: PieceCatalogPayload = {
+    pieceTypes: concretePieceTypes,
+    inventory: (rawData.inventory ?? []) as PieceCatalogPayload['inventory'],
+  };
   const pieceTypeById = new Map<string, PieceCatalogPayload['pieceTypes'][number]>();
 
   catalog.pieceTypes.forEach((pieceType, index) => {
@@ -124,33 +135,37 @@ export function validatePieceCatalogPayload(
     inventoryCounts.set(entry.pieceTypeId, (inventoryCounts.get(entry.pieceTypeId) ?? 0) + 1);
   });
 
-  catalog.pieceTypes.forEach((pieceType, index) => {
-    const count = inventoryCounts.get(pieceType.id) ?? 0;
-    if (count === 0) {
-      diagnostics.push(withContext(
-        {
-          code: 'PIECE_INVENTORY_MISSING',
-          path: `asset.payload.pieceTypes[${index}].id`,
-          severity: 'error',
-          message: `Missing inventory declaration for piece type "${pieceType.id}".`,
-        },
-        context,
-      ));
-      return;
-    }
+  // Skip inventory cross-validation when generate blocks are present — expansion
+  // will produce both pieceTypes and inventory entries that are validated after expansion.
+  if (!hasGenerateBlocks) {
+    catalog.pieceTypes.forEach((pieceType, index) => {
+      const count = inventoryCounts.get(pieceType.id) ?? 0;
+      if (count === 0) {
+        diagnostics.push(withContext(
+          {
+            code: 'PIECE_INVENTORY_MISSING',
+            path: `asset.payload.pieceTypes[${index}].id`,
+            severity: 'error',
+            message: `Missing inventory declaration for piece type "${pieceType.id}".`,
+          },
+          context,
+        ));
+        return;
+      }
 
-    if (count > 1) {
-      diagnostics.push(withContext(
-        {
-          code: 'PIECE_INVENTORY_DUPLICATE',
-          path: `asset.payload.pieceTypes[${index}].id`,
-          severity: 'error',
-          message: `Piece type "${pieceType.id}" has duplicate inventory declarations.`,
-        },
-        context,
-      ));
-    }
-  });
+      if (count > 1) {
+        diagnostics.push(withContext(
+          {
+            code: 'PIECE_INVENTORY_DUPLICATE',
+            path: `asset.payload.pieceTypes[${index}].id`,
+            severity: 'error',
+            message: `Piece type "${pieceType.id}" has duplicate inventory declarations.`,
+          },
+          context,
+        ));
+      }
+    });
+  }
 
   return diagnostics;
 }

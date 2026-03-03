@@ -237,7 +237,27 @@ function validateDuplicateIdentifiers(doc: GameSpecDoc, diagnostics: Diagnostic[
 
   const phases = isRecord(doc.turnStructure) && Array.isArray(doc.turnStructure.phases) ? doc.turnStructure.phases : [];
   const phaseIds = phases
-    .map((phase) => (isRecord(phase) && typeof phase.id === 'string' ? normalizeIdentifier(phase.id) : undefined))
+    .map((phase) => {
+      if (!isRecord(phase)) return undefined;
+      // Direct phase entry
+      if (typeof phase.id === 'string') return normalizeIdentifier(phase.id);
+      // fromTemplate entry — resolve phase ID from template definition
+      if (typeof phase.fromTemplate === 'string' && isRecord(phase.args) && doc.phaseTemplates !== null) {
+        const template = doc.phaseTemplates.find((t) => t.id === phase.fromTemplate);
+        if (template !== undefined && typeof template.phase.id === 'string') {
+          let resolvedId = template.phase.id as string;
+          for (const [paramName, argValue] of Object.entries(phase.args)) {
+            if (resolvedId === `{${paramName}}`) {
+              resolvedId = String(argValue);
+              break;
+            }
+            resolvedId = resolvedId.replaceAll(`{${paramName}}`, String(argValue));
+          }
+          return normalizeIdentifier(resolvedId);
+        }
+      }
+      return undefined;
+    })
     .filter((value): value is string => value !== undefined && value.length > 0);
   pushDuplicateNormalizedIdDiagnostics(diagnostics, phaseIds, 'doc.turnStructure.phases', 'phase id');
 }

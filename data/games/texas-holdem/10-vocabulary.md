@@ -6,6 +6,10 @@ zones:
     owner: none
     visibility: hidden
     ordering: stack
+    behavior:
+      type: deck
+      drawFrom: top
+      reshuffleFrom: 'muck:none'
   - id: burn
     owner: none
     visibility: hidden

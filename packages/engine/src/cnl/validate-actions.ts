@@ -180,10 +180,35 @@ export function validateAuthoredCompilerMetadataBoundary(doc: GameSpecDoc, diagn
         }
         validateEffectArrayForAuthoredCompilerMetadata(phase.onEnter, `${basePath}.${index}.onEnter`, diagnostics);
         validateEffectArrayForAuthoredCompilerMetadata(phase.onExit, `${basePath}.${index}.onExit`, diagnostics);
+        if (isRecord(phase.actionDefaults)) {
+          validateEffectArrayForAuthoredCompilerMetadata(
+            phase.actionDefaults.afterEffects,
+            `${basePath}.${index}.actionDefaults.afterEffects`,
+            diagnostics,
+          );
+        }
       }
     };
     validatePhases(doc.turnStructure.phases, 'doc.turnStructure.phases');
     validatePhases(doc.turnStructure.interrupts, 'doc.turnStructure.interrupts');
+  }
+
+  if (doc.phaseTemplates !== null) {
+    for (const [index, template] of doc.phaseTemplates.entries()) {
+      if (!isRecord(template) || !isRecord(template.phase)) {
+        continue;
+      }
+      const basePath = `doc.phaseTemplates.${index}.phase`;
+      validateEffectArrayForAuthoredCompilerMetadata(template.phase.onEnter, `${basePath}.onEnter`, diagnostics);
+      validateEffectArrayForAuthoredCompilerMetadata(template.phase.onExit, `${basePath}.onExit`, diagnostics);
+      if (isRecord(template.phase.actionDefaults)) {
+        validateEffectArrayForAuthoredCompilerMetadata(
+          template.phase.actionDefaults.afterEffects,
+          `${basePath}.actionDefaults.afterEffects`,
+          diagnostics,
+        );
+      }
+    }
   }
 
   if (doc.actionPipelines !== null) {

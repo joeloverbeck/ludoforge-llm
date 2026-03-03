@@ -1,6 +1,6 @@
 # CROGAMPRIELE-027: Compiler metadata boundary check missing for actionDefaults.afterEffects
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl validator
@@ -27,8 +27,8 @@ If a spec author places reserved compiler metadata keys inside `actionDefaults.a
 
 ## Assumption Reassessment (2026-03-03)
 
-1. `validateAuthoredCompilerMetadataBoundary()` is at `validate-actions.ts:131-212`. **Verified.**
-2. The `validatePhases` closure at lines 172-183 checks `phase.onEnter` and `phase.onExit` but not `phase.actionDefaults`. **Verified.**
+1. `validateAuthoredCompilerMetadataBoundary()` is at `validate-actions.ts:150-213`. **Verified.**
+2. The `validatePhases` closure at lines 173-184 checks `phase.onEnter` and `phase.onExit` but not `phase.actionDefaults`. **Verified.**
 3. `actionDefaults` is typed as `{ pre?: ConditionAST[]; afterEffects?: EffectAST[] }` in the compiled `PhaseDef`. In the raw `GameSpecDoc`, `actionDefaults` is `unknown` on the phase record. **Verified.**
 4. `phaseTemplates` definitions are not checked at all by `validateAuthoredCompilerMetadataBoundary`. **Verified.**
 5. The `validateEffectArrayForAuthoredCompilerMetadata` helper accepts an `unknown` and checks if it's an array of records with `__compiler` keys. **Verified.**
@@ -86,13 +86,13 @@ if (doc.phaseTemplates !== null) {
 
 - Checking `actionDefaults.pre` for compiler metadata (pre is conditions, not effects — different shape)
 - Changes to the `actionDefaults` compilation pipeline
-- Adding new diagnostic codes — reuses existing `CNL_VALIDATOR_AUTHORED_COMPILER_METADATA`
+- Adding new diagnostic codes — reuses existing `CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN`
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. A phase with compiler metadata in `actionDefaults.afterEffects` emits `CNL_VALIDATOR_AUTHORED_COMPILER_METADATA`.
+1. A phase with compiler metadata in `actionDefaults.afterEffects` emits `CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN`.
 2. A phase template with compiler metadata in `phase.actionDefaults.afterEffects` emits the diagnostic.
 3. A phase with valid (non-metadata) `actionDefaults.afterEffects` produces no diagnostic.
 4. Existing suite: `pnpm turbo test`
@@ -106,11 +106,24 @@ if (doc.phaseTemplates !== null) {
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/cnl/validate-actions.test.ts` — Add test: compiler metadata in `actionDefaults.afterEffects` emits diagnostic.
-2. `packages/engine/test/unit/cnl/validate-actions.test.ts` — Add test: compiler metadata in phase template `actionDefaults.afterEffects` emits diagnostic.
-3. `packages/engine/test/unit/cnl/validate-actions.test.ts` — Add test: valid `actionDefaults.afterEffects` produces no diagnostic.
+1. `packages/engine/test/unit/validate-spec.test.ts` — Add test: compiler metadata in `actionDefaults.afterEffects` emits diagnostic.
+2. `packages/engine/test/unit/validate-spec.test.ts` — Add test: compiler metadata in phase template `actionDefaults.afterEffects` emits diagnostic.
+3. `packages/engine/test/unit/validate-spec.test.ts` — Add test: valid `actionDefaults.afterEffects` produces no diagnostic.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Implemented as planned.** No deviations from the ticket scope.
+
+### What changed
+- `packages/engine/src/cnl/validate-actions.ts`: Extended `validatePhases` closure to check `phase.actionDefaults.afterEffects` (+6 lines). Added `doc.phaseTemplates` loop checking `onEnter`, `onExit`, and `actionDefaults.afterEffects` (+15 lines).
+- `packages/engine/test/unit/validate-spec.test.ts`: Added 3 new tests covering the boundary gap.
+
+### Ticket corrections made during reassessment
+- Diagnostic code: `CNL_VALIDATOR_AUTHORED_COMPILER_METADATA` → `CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN`
+- Test file path: `test/unit/cnl/validate-actions.test.ts` → `test/unit/validate-spec.test.ts`
+- Line number references updated to match current source.

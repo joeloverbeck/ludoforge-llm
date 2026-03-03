@@ -3086,7 +3086,7 @@ eventDecks:
           seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Perimeter."
         unshaded:
-          text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates."
+          text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates. MOMENTUM"
           eligibilityOverrides:
             - { target: { kind: active }, eligible: true, windowId: remain-eligible }
           lastingEffects:
@@ -3099,7 +3099,7 @@ eventDecks:
                 - macro: set-global-flag-false
                   args: { varName: mom_claymores }
         shaded:
-          text: "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both."
+          text: "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties)."
           targets:
             - id: $targetSpace
               selector:
@@ -3133,27 +3133,49 @@ eventDecks:
               cardinality: { max: 1 }
           effects:
             - removeByPriority:
-                budget: 2
+                budget: 1
                 groups:
-                  - bind: targetCoinBase
+                  - bind: targetCoinBaseUs
                     over:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: faction, eq: US }
                         - { prop: type, eq: base }
                     to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetCoinBase, prop: faction }, ':none'] }
-                  - bind: targetInsurgent
+                      zoneExpr: casualties-US:none
+                  - bind: targetCoinBaseArvn
                     over:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: available-ARVN:none
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: targetInsurgentVc
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, eq: VC }
                         - { prop: type, eq: guerrilla }
                         - { prop: activity, eq: underground }
                     to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
+                      zoneExpr: available-VC:none
+                  - bind: targetInsurgentNva
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                        - { prop: activity, eq: underground }
+                    to:
+                      zoneExpr: available-NVA:none
       - id: card-15
         title: Medevac
         sideMode: dual

@@ -395,6 +395,51 @@ describe('FITL momentum formula modifiers', () => {
     assert.equal(moved, undefined, 'Claymores should remove the activated marching guerrilla');
   });
 
+  it('Claymores does not remove a marching guerrilla when the marching group does not activate', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('clay-no-activate-g');
+    const state = withActivePlayer(
+      {
+        ...initialState(def, 9105, 4).state,
+        globalVars: {
+          ...initialState(def, 9105, 4).state.globalVars,
+          nvaResources: 8,
+        },
+        zones: {
+          ...initialState(def, 9105, 4).state.zones,
+          [RALLY_SPACE]: [
+            {
+              id: mover,
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+            },
+          ],
+          [LOC_SPACE]: [
+            makeToken('clay-no-activate-us', 'troops', 'US', { type: 'troops' }),
+          ],
+        },
+      },
+      2,
+    );
+
+    const result = applyMoveWithResolvedDecisionIds(def, withMom(state, { mom_claymores: true }), {
+      actionId: asActionId('march'),
+      params: {
+        targetSpaces: [LOC_SPACE],
+        chainSpaces: [],
+        [`$movingGuerrillas@${LOC_SPACE}`]: [mover],
+        [`$movingTroops@${LOC_SPACE}`]: [],
+      },
+    }).state;
+
+    const moved = (result.zones[LOC_SPACE] ?? []).find((token) => token.id === mover);
+    assert.notEqual(moved, undefined, 'Claymores should not remove guerrillas from non-activated marching groups');
+    assert.equal(moved?.props.activity, 'underground', 'Non-activated marching guerrilla should remain underground');
+  });
+
   it('559th Transport Group caps Infiltrate target spaces to 1', () => {
     const { parsed, compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);

@@ -44695,13 +44695,26 @@
                   "when": {
                     "op": "==",
                     "left": {
-                      "ref": "globalMarkerState",
-                      "marker": "activeLeader"
+                      "ref": "gvar",
+                      "var": "mom_blowtorchKomer"
                     },
-                    "right": "ky"
+                    "right": true
                   },
-                  "then": 4,
-                  "else": 3
+                  "then": 1,
+                  "else": {
+                    "if": {
+                      "when": {
+                        "op": "==",
+                        "left": {
+                          "ref": "globalMarkerState",
+                          "marker": "activeLeader"
+                        },
+                        "right": "ky"
+                      },
+                      "then": 4,
+                      "else": 3
+                    }
+                  }
                 }
               }
             }
@@ -44913,13 +44926,26 @@
                   "when": {
                     "op": "==",
                     "left": {
-                      "ref": "globalMarkerState",
-                      "marker": "activeLeader"
+                      "ref": "gvar",
+                      "var": "mom_blowtorchKomer"
                     },
-                    "right": "ky"
+                    "right": true
                   },
-                  "then": -4,
-                  "else": -3
+                  "then": -1,
+                  "else": {
+                    "if": {
+                      "when": {
+                        "op": "==",
+                        "left": {
+                          "ref": "globalMarkerState",
+                          "marker": "activeLeader"
+                        },
+                        "right": "ky"
+                      },
+                      "then": -4,
+                      "else": -3
+                    }
+                  }
                 }
               }
             }
@@ -45243,13 +45269,26 @@
                 "when": {
                   "op": "==",
                   "left": {
-                    "ref": "globalMarkerState",
-                    "marker": "activeLeader"
+                    "ref": "gvar",
+                    "var": "mom_blowtorchKomer"
                   },
-                  "right": "ky"
+                  "right": true
                 },
-                "then": 4,
-                "else": 3
+                "then": 1,
+                "else": {
+                  "if": {
+                    "when": {
+                      "op": "==",
+                      "left": {
+                        "ref": "globalMarkerState",
+                        "marker": "activeLeader"
+                      },
+                      "right": "ky"
+                    },
+                    "then": 4,
+                    "else": 3
+                  }
+                }
               }
             }
           },
@@ -45460,13 +45499,26 @@
                   "when": {
                     "op": "==",
                     "left": {
-                      "ref": "globalMarkerState",
-                      "marker": "activeLeader"
+                      "ref": "gvar",
+                      "var": "mom_blowtorchKomer"
                     },
-                    "right": "ky"
+                    "right": true
                   },
-                  "then": -4,
-                  "else": -3
+                  "then": -1,
+                  "else": {
+                    "if": {
+                      "when": {
+                        "op": "==",
+                        "left": {
+                          "ref": "globalMarkerState",
+                          "marker": "activeLeader"
+                        },
+                        "right": "ky"
+                      },
+                      "then": -4,
+                      "else": -3
+                    }
+                  }
                 }
               }
             }
@@ -47245,44 +47297,23 @@
       "cost": [],
       "effects": [
         {
-          "let": {
-            "bind": "$__macro_coup_process_commitment_actions_14__effects_0__usTroopCasualties",
-            "value": {
-              "aggregate": {
-                "op": "count",
-                "query": {
-                  "query": "tokensInZone",
-                  "zone": "casualties-US:none",
-                  "filter": [
-                    {
-                      "prop": "faction",
-                      "op": "eq",
-                      "value": "US"
-                    },
-                    {
-                      "prop": "type",
-                      "op": "eq",
-                      "value": "troops"
-                    }
-                  ]
-                }
-              }
+          "if": {
+            "when": {
+              "op": "!=",
+              "left": {
+                "ref": "gvar",
+                "var": "mom_medevacUnshaded"
+              },
+              "right": true
             },
-            "in": [
+            "then": [
               {
-                "removeByPriority": {
-                  "budget": {
-                    "op": "floorDiv",
-                    "left": {
-                      "ref": "binding",
-                      "name": "$__macro_coup_process_commitment_actions_14__effects_0__usTroopCasualties"
-                    },
-                    "right": 3
-                  },
-                  "groups": [
-                    {
-                      "bind": "$__macro_coup_process_commitment_actions_14__effects_0__casualtyTroop",
-                      "over": {
+                "let": {
+                  "bind": "$__macro_coup_process_commitment_actions_14__effects_0__usTroopCasualties",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
                         "query": "tokensInZone",
                         "zone": "casualties-US:none",
                         "filter": [
@@ -47297,20 +47328,55 @@
                             "value": "troops"
                           }
                         ]
-                      },
-                      "to": {
-                        "zoneExpr": "out-of-play-US:none"
-                      },
-                      "macroOrigin": {
-                        "macroId": "coup-process-commitment",
-                        "stem": "casualtyTroop"
                       }
                     }
-                  ],
-                  "macroOrigin": {
-                    "macroId": "coup-process-commitment",
-                    "stem": "casualtyTroop"
-                  }
+                  },
+                  "in": [
+                    {
+                      "removeByPriority": {
+                        "budget": {
+                          "op": "floorDiv",
+                          "left": {
+                            "ref": "binding",
+                            "name": "$__macro_coup_process_commitment_actions_14__effects_0__usTroopCasualties"
+                          },
+                          "right": 3
+                        },
+                        "groups": [
+                          {
+                            "bind": "$__macro_coup_process_commitment_actions_14__effects_0__casualtyTroop",
+                            "over": {
+                              "query": "tokensInZone",
+                              "zone": "casualties-US:none",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "US"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            },
+                            "to": {
+                              "zoneExpr": "out-of-play-US:none"
+                            },
+                            "macroOrigin": {
+                              "macroId": "coup-process-commitment",
+                              "stem": "casualtyTroop"
+                            }
+                          }
+                        ],
+                        "macroOrigin": {
+                          "macroId": "coup-process-commitment",
+                          "stem": "casualtyTroop"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             ]
@@ -48944,44 +49010,23 @@
       "cost": [],
       "effects": [
         {
-          "let": {
-            "bind": "$__macro_coup_process_commitment_actions_38__effects_0__usTroopCasualties",
-            "value": {
-              "aggregate": {
-                "op": "count",
-                "query": {
-                  "query": "tokensInZone",
-                  "zone": "casualties-US:none",
-                  "filter": [
-                    {
-                      "prop": "faction",
-                      "op": "eq",
-                      "value": "US"
-                    },
-                    {
-                      "prop": "type",
-                      "op": "eq",
-                      "value": "troops"
-                    }
-                  ]
-                }
-              }
+          "if": {
+            "when": {
+              "op": "!=",
+              "left": {
+                "ref": "gvar",
+                "var": "mom_medevacUnshaded"
+              },
+              "right": true
             },
-            "in": [
+            "then": [
               {
-                "removeByPriority": {
-                  "budget": {
-                    "op": "floorDiv",
-                    "left": {
-                      "ref": "binding",
-                      "name": "$__macro_coup_process_commitment_actions_38__effects_0__usTroopCasualties"
-                    },
-                    "right": 3
-                  },
-                  "groups": [
-                    {
-                      "bind": "$__macro_coup_process_commitment_actions_38__effects_0__casualtyTroop",
-                      "over": {
+                "let": {
+                  "bind": "$__macro_coup_process_commitment_actions_38__effects_0__usTroopCasualties",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
                         "query": "tokensInZone",
                         "zone": "casualties-US:none",
                         "filter": [
@@ -48996,20 +49041,55 @@
                             "value": "troops"
                           }
                         ]
-                      },
-                      "to": {
-                        "zoneExpr": "out-of-play-US:none"
-                      },
-                      "macroOrigin": {
-                        "macroId": "coup-process-commitment",
-                        "stem": "casualtyTroop"
                       }
                     }
-                  ],
-                  "macroOrigin": {
-                    "macroId": "coup-process-commitment",
-                    "stem": "casualtyTroop"
-                  }
+                  },
+                  "in": [
+                    {
+                      "removeByPriority": {
+                        "budget": {
+                          "op": "floorDiv",
+                          "left": {
+                            "ref": "binding",
+                            "name": "$__macro_coup_process_commitment_actions_38__effects_0__usTroopCasualties"
+                          },
+                          "right": 3
+                        },
+                        "groups": [
+                          {
+                            "bind": "$__macro_coup_process_commitment_actions_38__effects_0__casualtyTroop",
+                            "over": {
+                              "query": "tokensInZone",
+                              "zone": "casualties-US:none",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "US"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            },
+                            "to": {
+                              "zoneExpr": "out-of-play-US:none"
+                            },
+                            "macroOrigin": {
+                              "macroId": "coup-process-commitment",
+                              "stem": "casualtyTroop"
+                            }
+                          }
+                        ],
+                        "macroOrigin": {
+                          "macroId": "coup-process-commitment",
+                          "stem": "casualtyTroop"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             ]
@@ -53535,7 +53615,7 @@
             "flavorText": "Helicopter evacuation doctrine expands."
           },
           "unshaded": {
-            "text": "Through Coup, all Troop casualties return to Available.",
+            "text": "This Commitment, all Troop Casualties Available. MOMENTUM",
             "lastingEffects": [
               {
                 "id": "mom-medevac-unshaded",
@@ -53562,7 +53642,16 @@
             ]
           },
           "shaded": {
-            "text": "Through Coup, US Troop casualties remain unavailable.",
+            "text": "Executing Faction remains Eligible. Until Coup, no Air Lift. MOMENTUM",
+            "eligibilityOverrides": [
+              {
+                "target": {
+                  "kind": "active"
+                },
+                "eligible": true,
+                "windowId": "remain-eligible"
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-medevac-shaded",
@@ -53608,7 +53697,16 @@
             "flavorText": "Pacification drive intensifies political pressure."
           },
           "unshaded": {
-            "text": "Through Coup, Pacification shifts 1 additional level toward Support. MOMENTUM",
+            "text": "Aid +10. This Support phase, Pacify costs 1 Resource per step or Terror. MOMENTUM",
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "aid",
+                  "delta": 10
+                }
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-blowtorch-komer",
@@ -53635,7 +53733,149 @@
             ]
           },
           "shaded": {
-            "text": "Pacification backlash: rural coercion increases opposition pressure."
+            "text": "Aid -10. Shift a space with Troops and Police 1 level toward Active Opposition.",
+            "effects": [
+              {
+                "addVar": {
+                  "scope": "global",
+                  "var": "aid",
+                  "delta": -10
+                }
+              },
+              {
+                "if": {
+                  "when": {
+                    "op": ">",
+                    "left": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": [
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "troops"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": [
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "police"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": 0
+                  },
+                  "then": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.31.shaded.effects.1.if.then.0.chooseOne",
+                        "bind": "$targetSpace",
+                        "options": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": [
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "troops"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": [
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "police"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "shiftMarker": {
+                        "space": {
+                          "zoneExpr": {
+                            "ref": "binding",
+                            "name": "$targetSpace"
+                          }
+                        },
+                        "marker": "supportOpposition",
+                        "delta": -1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -53657,7 +53897,7 @@
             "flavorText": "Perimeter."
           },
           "unshaded": {
-            "text": "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates.",
+            "text": "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates. MOMENTUM",
             "eligibilityOverrides": [
               {
                 "target": {
@@ -53693,7 +53933,7 @@
             ]
           },
           "shaded": {
-            "text": "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both.",
+            "text": "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties).",
             "targets": [
               {
                 "id": "$targetSpace",
@@ -53776,21 +54016,18 @@
             "effects": [
               {
                 "removeByPriority": {
-                  "budget": 2,
+                  "budget": 1,
                   "groups": [
                     {
-                      "bind": "targetCoinBase",
+                      "bind": "targetCoinBaseUs",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
                         "filter": [
                           {
                             "prop": "faction",
-                            "op": "in",
-                            "value": [
-                              "US",
-                              "ARVN"
-                            ]
+                            "op": "eq",
+                            "value": "US"
                           },
                           {
                             "prop": "type",
@@ -53800,32 +54037,48 @@
                         ]
                       },
                       "to": {
-                        "zoneExpr": {
-                          "concat": [
-                            "available-",
-                            {
-                              "ref": "tokenProp",
-                              "token": "$targetCoinBase",
-                              "prop": "faction"
-                            },
-                            ":none"
-                          ]
-                        }
+                        "zoneExpr": "casualties-US:none"
                       }
                     },
                     {
-                      "bind": "targetInsurgent",
+                      "bind": "targetCoinBaseArvn",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
                         "filter": [
                           {
                             "prop": "faction",
-                            "op": "in",
-                            "value": [
-                              "NVA",
-                              "VC"
-                            ]
+                            "op": "eq",
+                            "value": "ARVN"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "base"
+                          }
+                        ]
+                      },
+                      "to": {
+                        "zoneExpr": "available-ARVN:none"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "removeByPriority": {
+                  "budget": 1,
+                  "groups": [
+                    {
+                      "bind": "targetInsurgentVc",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "$targetSpace",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "VC"
                           },
                           {
                             "prop": "type",
@@ -53840,17 +54093,34 @@
                         ]
                       },
                       "to": {
-                        "zoneExpr": {
-                          "concat": [
-                            "available-",
-                            {
-                              "ref": "tokenProp",
-                              "token": "$targetInsurgent",
-                              "prop": "faction"
-                            },
-                            ":none"
-                          ]
-                        }
+                        "zoneExpr": "available-VC:none"
+                      }
+                    },
+                    {
+                      "bind": "targetInsurgentNva",
+                      "over": {
+                        "query": "tokensInZone",
+                        "zone": "$targetSpace",
+                        "filter": [
+                          {
+                            "prop": "faction",
+                            "op": "eq",
+                            "value": "NVA"
+                          },
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "guerrilla"
+                          },
+                          {
+                            "prop": "activity",
+                            "op": "eq",
+                            "value": "underground"
+                          }
+                        ]
+                      },
+                      "to": {
+                        "zoneExpr": "available-NVA:none"
                       }
                     }
                   ]

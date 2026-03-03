@@ -40,6 +40,14 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
     assert.equal(Array.isArray(claymoresFactionOrder), true);
     assert.equal((claymoresFactionOrder as readonly string[]).join(','), 'US,ARVN,VC,NVA');
     assert.equal(card?.tags?.includes('momentum'), true);
+    assert.equal(
+      card?.unshaded?.text,
+      'Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates. MOMENTUM',
+    );
+    assert.equal(
+      card?.shaded?.text,
+      'Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties).',
+    );
 
     assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
       { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
@@ -53,11 +61,17 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
       },
     ]);
 
-    const shadedRemoval = card?.shaded?.effects?.find((effect) => 'removeByPriority' in effect);
-    assert.notEqual(shadedRemoval, undefined);
-    if (shadedRemoval !== undefined && 'removeByPriority' in shadedRemoval) {
-      assert.equal(shadedRemoval.removeByPriority.budget, 2);
-      assert.equal(shadedRemoval.removeByPriority.groups.length, 2);
+    const shadedRemovals = (card?.shaded?.effects ?? []).filter((effect) => 'removeByPriority' in effect);
+    assert.equal(shadedRemovals.length, 2);
+    const first = shadedRemovals[0];
+    const second = shadedRemovals[1];
+    if (first !== undefined && 'removeByPriority' in first) {
+      assert.equal(first.removeByPriority.budget, 1);
+      assert.equal(first.removeByPriority.groups.length, 2);
+    }
+    if (second !== undefined && 'removeByPriority' in second) {
+      assert.equal(second.removeByPriority.budget, 1);
+      assert.equal(second.removeByPriority.groups.length, 2);
     }
   });
 });

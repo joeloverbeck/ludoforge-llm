@@ -139,10 +139,15 @@ The original ticket had an incorrect assumption: no `EffectTraceShuffle` type or
 - Schema artifacts (`Trace.schema.json`, `EvalReport.schema.json`) regenerated
 
 **Runner (UI):**
-- `effect-trace-kind-config.ts` — added `shuffle: 'shuffle'` preset mapping
+- `effect-trace-kind-config.ts` — added `shuffle` to `SKIPPED_TRACE_KINDS` and `isSkippedTraceKind`; preset set to `null` (no animation yet)
 - `trace-projection.ts` — added `shuffle` case with zone projection
 - `translate-effect-trace.ts` — added `shuffle` case with "Shuffled {zone}." message
-- `trace-to-descriptors.ts` — added `shuffle` case returning `null` (no animation yet)
+- `trace-to-descriptors.ts` — shuffle falls through to `isSkippedTraceEntry` path, producing `{ kind: 'skipped', traceKind: 'shuffle' }` consistent with other non-animated kinds
+
+**Runner tests (strengthened during post-implementation review):**
+- `preset-registry.test.ts` — added `resolveDefaultPresetIdForTraceKind('shuffle')` throw expectation
+- `trace-to-descriptors.test.ts` — added `shuffle` entry to comprehensive "maps all supported trace kinds" test
+- `effect-trace-kind-config.test.ts` — added `isSkippedTraceKind('shuffle')` assertion
 
 ### Verification
 - 3403 engine tests pass (15 in deck-behavior file, 4 new)

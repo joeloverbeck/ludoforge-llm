@@ -31,6 +31,30 @@ export function assertNoWarnings(
   assert.fail(`Expected 0 runtime warnings, got ${result.warnings.length}:\n${formatted}`);
 }
 
+export function assertDataAssetCascadeSuppression(options: {
+  readonly diagnostics: readonly Diagnostic[];
+  readonly cascadeCode: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING' | 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING';
+  readonly requiredSectionPath: 'doc.zones' | 'doc.tokenTypes';
+  readonly messageIncludes: string;
+  readonly suggestionIncludes: string;
+}): Diagnostic {
+  const cascadeDiagnostic = options.diagnostics.find((diagnostic) => diagnostic.code === options.cascadeCode);
+  if (cascadeDiagnostic === undefined) {
+    assert.fail(`Expected cascade diagnostic ${options.cascadeCode} to be present.`);
+  }
+  assert.equal(
+    options.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING'
+        && diagnostic.path === options.requiredSectionPath,
+    ),
+    false,
+  );
+  assert.equal(cascadeDiagnostic.message.includes(options.messageIncludes), true);
+  assert.equal(cascadeDiagnostic.suggestion?.includes(options.suggestionIncludes), true);
+  return cascadeDiagnostic;
+}
+
 export function formatDiagnostics(
   diagnostics: readonly Diagnostic[],
   sourceMap?: GameSpecSourceMap,

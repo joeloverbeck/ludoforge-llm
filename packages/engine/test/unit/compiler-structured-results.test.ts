@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import type { CompileSectionResults } from '../../src/cnl/index.js';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc, parseGameSpec } from '../../src/cnl/index.js';
-import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { assertDataAssetCascadeSuppression, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 describe('compiler structured section results', () => {
@@ -327,22 +327,46 @@ describe('compiler structured section results', () => {
       result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS'),
       true,
     );
+    assertDataAssetCascadeSuppression({
+      diagnostics: result.diagnostics,
+      cascadeCode: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING',
+      requiredSectionPath: 'doc.zones',
+      messageIncludes: 'Scenario selection is ambiguous',
+      suggestionIncludes: 'metadata.defaultScenarioAssetId',
+    });
+  });
+
+  it('suppresses required doc.tokenTypes cascade when scenario selection is ambiguous', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      tokenTypes: null,
+      dataAssets: [
+        {
+          id: 'pieces-foundation',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        { id: 'scenario-a', kind: 'scenario' as const, payload: { pieceCatalogAssetId: 'pieces-foundation' } },
+        { id: 'scenario-b', kind: 'scenario' as const, payload: { pieceCatalogAssetId: 'pieces-foundation' } },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
     assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING'
-          && diagnostic.path === 'doc.zones',
-      ),
-      false,
-    );
-    assert.equal(
-      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING'),
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS'),
       true,
     );
-    const zonesCascade = result.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING');
-    assert.notEqual(zonesCascade, undefined);
-    assert.equal(zonesCascade?.message.includes('Scenario selection is ambiguous'), true);
-    assert.equal(zonesCascade?.suggestion?.includes('metadata.defaultScenarioAssetId'), true);
+    assertDataAssetCascadeSuppression({
+      diagnostics: result.diagnostics,
+      cascadeCode: 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
+      requiredSectionPath: 'doc.tokenTypes',
+      messageIncludes: 'Scenario selection is ambiguous',
+      suggestionIncludes: 'metadata.defaultScenarioAssetId',
+    });
   });
 
   it('suppresses seat-catalog-required when metadata.defaultScenarioAssetId is missing', () => {
@@ -511,17 +535,13 @@ describe('compiler structured section results', () => {
     };
 
     const result = compileGameSpecToGameDef(doc);
-    const tokenTypesCascade = result.diagnostics.find(
-      (diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
-    );
-
-    assert.notEqual(tokenTypesCascade, undefined);
-    assert.equal(
-      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING' && diagnostic.path === 'doc.tokenTypes'),
-      false,
-    );
-    assert.equal(tokenTypesCascade?.message.includes('metadata.defaultScenarioAssetId references a missing scenario asset'), true);
-    assert.equal(tokenTypesCascade?.suggestion?.includes('doc.tokenTypes'), true);
+    assertDataAssetCascadeSuppression({
+      diagnostics: result.diagnostics,
+      cascadeCode: 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
+      requiredSectionPath: 'doc.tokenTypes',
+      messageIncludes: 'metadata.defaultScenarioAssetId references a missing scenario asset',
+      suggestionIncludes: 'doc.tokenTypes',
+    });
   });
 
   it('emits pieceCatalog ambiguity diagnostics when multiple piece catalogs exist without selector', () => {

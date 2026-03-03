@@ -205,18 +205,20 @@ zones:
     "the-parrots-beak:none":
       label: "The Parrots Beak"
 
+  hiddenZones:
+    - "deck:none"
+    - "lookahead:none"
+    - "played:none"
+
   layoutRoles:
     "available-ARVN:none": forcePool
     "available-NVA:none": forcePool
     "available-US:none": forcePool
     "available-VC:none": forcePool
     "casualties-US:none": forcePool
-    "deck:none": card
     "leader:none": card
-    "lookahead:none": card
     "out-of-play-ARVN:none": forcePool
     "out-of-play-US:none": forcePool
-    "played:none": card
 
 edges:
   default:

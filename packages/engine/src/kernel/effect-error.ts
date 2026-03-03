@@ -34,6 +34,22 @@ export type EffectRuntimeContextByReason = Readonly<{
 export type EffectRuntimeContext<R extends EffectRuntimeReason = EffectRuntimeReason> =
   EffectRuntimeContextByReason[R];
 
+export type EffectRuntimeReasonsRequiringContext = 'turnFlowRuntimeValidationFailed';
+
+export type EffectRuntimeReasonsWithNoContext = never;
+
+export type EffectRuntimeReasonsWithOptionalContext = Exclude<
+  EffectRuntimeReason,
+  EffectRuntimeReasonsWithNoContext | EffectRuntimeReasonsRequiringContext
+>;
+
+type EffectRuntimeContextArgs<R extends EffectRuntimeReason> =
+  R extends EffectRuntimeReasonsRequiringContext
+    ? [context: EffectRuntimeContext<R>]
+    : R extends EffectRuntimeReasonsWithNoContext
+      ? []
+      : [context?: EffectRuntimeContext<R>];
+
 export type EffectRuntimeErrorContextForReason<R extends EffectRuntimeReason> = Readonly<{
   readonly reason: R;
 }> & EffectRuntimeContext<R>;
@@ -129,16 +145,65 @@ export const makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext = (
   ...context,
 });
 
+const TURN_FLOW_RUNTIME_REQUIRED_CONTEXT_FIELDS: readonly (keyof EffectRuntimeContext<'turnFlowRuntimeValidationFailed'> & string)[] =
+  ['effectType'];
+
+const validateRequiredEffectRuntimeContextFields = (
+  reason: EffectRuntimeReason,
+  context: unknown,
+): void => {
+  const requiredFields = reason === 'turnFlowRuntimeValidationFailed'
+    ? TURN_FLOW_RUNTIME_REQUIRED_CONTEXT_FIELDS
+    : undefined;
+  if (requiredFields === undefined || requiredFields.length === 0) {
+    return;
+  }
+  const contextRecord = typeof context === 'object' && context !== null
+    ? (context as Record<string, unknown>)
+    : undefined;
+  for (const field of requiredFields) {
+    if (contextRecord?.[field] === undefined) {
+      throw new TypeError(`${reason} requires ${field} in EFFECT_RUNTIME context.`);
+    }
+  }
+};
+
+const isTurnFlowRuntimeValidationFailedContext = (
+  context: unknown,
+): context is EffectRuntimeContext<'turnFlowRuntimeValidationFailed'> => (
+  typeof context === 'object'
+  && context !== null
+  && typeof (context as Record<string, unknown>).effectType === 'string'
+);
+
 export function effectRuntimeError<R extends EffectRuntimeReason>(
   reason: R,
   message: string,
-  context?: EffectRuntimeContext<R>,
+  ...args: EffectRuntimeContextArgs<R>
+): EffectRuntimeError<'EFFECT_RUNTIME'>;
+export function effectRuntimeError(
+  reason: EffectRuntimeReason,
+  message: string,
+  ...args: [context?: EffectRuntimeContext<EffectRuntimeReason>]
 ): EffectRuntimeError<'EFFECT_RUNTIME'> {
-  const runtimeContext = {
+  const context = args[0];
+  validateRequiredEffectRuntimeContextFields(reason, context);
+  if (reason === 'turnFlowRuntimeValidationFailed') {
+    if (!isTurnFlowRuntimeValidationFailedContext(context)) {
+      throw new TypeError('turnFlowRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context.');
+    }
+    const runtimeContext: EffectRuntimeErrorContextForReason<'turnFlowRuntimeValidationFailed'> = {
+      reason,
+      ...context,
+    };
+    return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext);
+  }
+
+  const runtimeContext: EffectRuntimeErrorContextForReason<Exclude<EffectRuntimeReason, 'turnFlowRuntimeValidationFailed'>> = {
     reason,
-    ...(context === undefined ? {} : context),
-  } as EffectRuntimeErrorContextForReason<R>;
-  return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext as EffectErrorContext<'EFFECT_RUNTIME'>);
+    ...(context ?? {}),
+  };
+  return new EffectRuntimeError('EFFECT_RUNTIME', message, runtimeContext);
 }
 
 export function isEffectRuntimeError(error: unknown): error is EffectRuntimeError {

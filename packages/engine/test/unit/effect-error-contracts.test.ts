@@ -20,7 +20,11 @@ import {
   isEffectErrorCode,
   isEffectRuntimeReason,
   type EffectErrorContext,
+  type EffectRuntimeReason,
   type EffectRuntimeContext,
+  type EffectRuntimeReasonsRequiringContext,
+  type EffectRuntimeReasonsWithNoContext,
+  type EffectRuntimeReasonsWithOptionalContext,
   type EffectAST,
   type EffectContext,
   type GameDef,
@@ -197,6 +201,104 @@ describe('effect error context contracts', () => {
     assert.equal(error.context?.surface, TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION);
     assert.equal(error.context?.activePlayer, 0);
     assert.deepEqual(error.context?.seatOrder, ['0', '1']);
+  });
+
+  it('effectRuntimeError reason matrix enforces required vs optional/no-context contracts', () => {
+    const requiredContextReasons = [
+      EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
+    ] as const;
+    const optionalContextReasons = [
+      EFFECT_RUNTIME_REASONS.EFFECT_BUDGET_CONFIG_INVALID,
+      EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
+      EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,
+      EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
+      EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
+    ] as const;
+    const noContextReasons = [] as const;
+
+    type ListedRequiredReasons = (typeof requiredContextReasons)[number];
+    type ListedOptionalReasons = (typeof optionalContextReasons)[number];
+    type ListedNoContextReasons = (typeof noContextReasons)[number];
+    type ListedReasons = ListedRequiredReasons | ListedOptionalReasons | ListedNoContextReasons;
+
+    const assertRequiredReasonCoverage: Exclude<EffectRuntimeReasonsRequiringContext, ListedRequiredReasons> extends never
+      ? true
+      : never = true;
+    const assertOptionalReasonCoverage: Exclude<EffectRuntimeReasonsWithOptionalContext, ListedOptionalReasons> extends never
+      ? true
+      : never = true;
+    const assertNoContextReasonCoverage: Exclude<EffectRuntimeReasonsWithNoContext, ListedNoContextReasons> extends never
+      ? true
+      : never = true;
+    const assertNoExtraRequiredReasons: Exclude<ListedRequiredReasons, EffectRuntimeReasonsRequiringContext> extends never
+      ? true
+      : never = true;
+    const assertNoExtraOptionalReasons: Exclude<ListedOptionalReasons, EffectRuntimeReasonsWithOptionalContext> extends never
+      ? true
+      : never = true;
+    const assertNoExtraNoContextReasons: Exclude<ListedNoContextReasons, EffectRuntimeReasonsWithNoContext> extends never
+      ? true
+      : never = true;
+    const assertAllReasonsListed: Exclude<EffectRuntimeReason, ListedReasons> extends never ? true : never = true;
+    const assertOnlyEffectRuntimeReasonsListed: Exclude<ListedReasons, EffectRuntimeReason> extends never ? true : never = true;
+    void assertRequiredReasonCoverage;
+    void assertOptionalReasonCoverage;
+    void assertNoContextReasonCoverage;
+    void assertNoExtraRequiredReasons;
+    void assertNoExtraOptionalReasons;
+    void assertNoExtraNoContextReasons;
+    void assertAllReasonsListed;
+    void assertOnlyEffectRuntimeReasonsListed;
+    assert.equal(
+      requiredContextReasons.length + optionalContextReasons.length + noContextReasons.length,
+      Object.keys(EFFECT_RUNTIME_REASONS).length,
+    );
+    assert.equal(
+      new Set([...requiredContextReasons, ...optionalContextReasons, ...noContextReasons]).size,
+      Object.keys(EFFECT_RUNTIME_REASONS).length,
+    );
+
+    const assertCompileTimeReasonMatrix = (): void => {
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'turn-flow context required', {
+        effectType: 'grantFreeOperation',
+      });
+      // @ts-expect-error required-context reason must reject missing context
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'missing required context');
+
+      for (const reason of optionalContextReasons) {
+        effectRuntimeError(reason, 'optional context reason without payload');
+      }
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, 'optional with payload', {
+        mode: 'execution',
+      });
+      effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'optional with payload', {
+        effectType: 'chooseOne',
+      });
+    };
+    void assertCompileTimeReasonMatrix;
+
+    const untypedEffectRuntimeError = effectRuntimeError as unknown as (
+      reason: EffectRuntimeReason,
+      message: string,
+      context?: unknown,
+    ) => EffectRuntimeError<'EFFECT_RUNTIME'>;
+    assert.throws(
+      () => untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'missing context'),
+      /turnFlowRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context\./,
+    );
+    assert.throws(
+      () => untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'missing effectType', {}),
+      /turnFlowRuntimeValidationFailed requires effectType in EFFECT_RUNTIME context\./,
+    );
+    assert.doesNotThrow(() =>
+      untypedEffectRuntimeError(EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION, 'optional context omitted'),
+    );
   });
 
   it('isEffectRuntimeReason narrows effect runtime context by reason', () => {

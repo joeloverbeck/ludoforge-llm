@@ -62,7 +62,6 @@ interface GameDefEventDeckProjection {
   readonly drawZoneId: string;
   readonly discardZoneId: string;
   readonly cardsById: ReadonlyMap<string, EventCardProjection>;
-  readonly cardTitleById: ReadonlyMap<string, string>;
 }
 
 export function deriveRenderModel(
@@ -299,10 +298,8 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
   const eventDecks: GameDefEventDeckProjection[] = [];
   for (const deck of def.eventDecks ?? []) {
     const cardsById = new Map<string, EventCardProjection>();
-    const deckCardTitleById = new Map<string, string>();
     for (const card of deck.cards) {
       cardsById.set(card.id, { title: card.title, orderNumber: card.order ?? null });
-      deckCardTitleById.set(card.id, card.title);
       cardTitleById.set(card.id, card.title);
     }
 
@@ -312,7 +309,6 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
       drawZoneId: deck.drawZone,
       discardZoneId: deck.discardZone,
       cardsById,
-      cardTitleById: deckCardTitleById,
     });
   }
 

@@ -23,7 +23,7 @@ import {
 } from './decision-sequence-satisfiability.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import { createSeatResolutionContext } from './seat-resolution.js';
+import { createSeatResolutionContext, type SeatResolutionContext } from './seat-resolution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import {
   toFreeOperationChoiceIllegalReason,
@@ -63,6 +63,7 @@ interface LegalChoicesPreparedContext {
   readonly action: ActionDef;
   readonly adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
   readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
+  readonly seatResolution: SeatResolutionContext;
 }
 
 const buildDiscoveryEffectContextBase = (
@@ -493,10 +494,9 @@ const legalChoicesWithPreparedContextInternal = (
   evaluateProbeLegality: ProbeLegalityEvaluator,
   options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest => {
-  const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
+  const { def, state, action, adjacencyGraph, runtimeTableIndex, seatResolution } = context;
   let freeOperationAnalysis: ReturnType<typeof resolveFreeOperationDiscoveryAnalysis> | undefined;
   if (partialMove.freeOperation === true) {
-    const seatResolution = createSeatResolutionContext(def, state.playerCount);
     const analysis = resolveFreeOperationDiscoveryAnalysis(def, state, partialMove, seatResolution, {
       zoneFilterErrorSurface: 'legalChoices',
     });
@@ -653,6 +653,7 @@ export function legalChoicesDiscover(
     action,
     adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
+    seatResolution: createSeatResolutionContext(def, state.playerCount),
   };
   options?.onProbeContextPrepared?.();
   return legalChoicesWithPreparedContextStrict(context, partialMove, false, options);
@@ -681,6 +682,7 @@ export function legalChoicesEvaluate(
     action,
     adjacencyGraph: runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
+    seatResolution: createSeatResolutionContext(def, state.playerCount),
   };
   options?.onProbeContextPrepared?.();
   return legalChoicesWithPreparedContextStrict(context, partialMove, true, options);

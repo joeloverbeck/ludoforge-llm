@@ -25,6 +25,7 @@ import {
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
 } from '../../helpers/choice-ownership-parity-helpers.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -2895,6 +2896,15 @@ phase: [asPhaseId('main')],
       assert.deepEqual(
         legalChoicesDiscover(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
         { kind: 'illegal', complete: false, reason: 'freeOperationActionClassMismatch' },
+      );
+    });
+
+    it('keeps seat-resolution context creation at legal-choices operation boundaries', () => {
+      const source = readKernelSource('src/kernel/legal-choices.ts');
+      assert.doesNotMatch(
+        source,
+        /partialMove\.freeOperation\s*===\s*true[\s\S]{0,240}createSeatResolutionContext\(/u,
+        'free-operation branch must consume prebuilt seatResolution instead of rebuilding context',
       );
     });
   });

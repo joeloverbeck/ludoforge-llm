@@ -958,5 +958,15 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
       false,
       'advanceToDecisionPoint must not call coupPhaseImplicitPass without seatResolution',
     );
+
+    const coupFunctionStart = source.indexOf('const coupPhaseImplicitPass = (');
+    const decisionPointStart = source.indexOf('export const advanceToDecisionPoint = (');
+    assert.equal(coupFunctionStart >= 0 && decisionPointStart > coupFunctionStart, true);
+    const coupFunctionSource = source.slice(coupFunctionStart, decisionPointStart);
+    assert.equal(
+      coupFunctionSource.includes('createSeatResolutionContext('),
+      false,
+      'coupPhaseImplicitPass must not allocate seat-resolution context internally',
+    );
   });
 });

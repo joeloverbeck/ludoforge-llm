@@ -737,10 +737,10 @@ describe('compiler structured section results', () => {
           kind: 'pieceCatalog' as const,
           payload: {
             pieceTypes: [
-              { id: 'us-troops', seat: 'arvn', statusDimensions: [], transitions: [] },
+              { id: 'us-troops', seat: 'invalid-seat-id', statusDimensions: [], transitions: [] },
             ],
             inventory: [
-              { pieceTypeId: 'us-troops', seat: 'arvn', total: 2 },
+              { pieceTypeId: 'us-troops', seat: 'invalid-seat-id', total: 2 },
             ],
           },
         },
@@ -753,9 +753,11 @@ describe('compiler structured section results', () => {
             seatCatalogAssetId: 'seats',
             scenarioName: 'Seat Contract',
             yearRange: '1964-1972',
-            initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
-            outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
-            seatPools: [{ seat: 'arvn', availableZoneId: 'available-arvn:none', outOfPlayZoneId: 'out-of-play-arvn:none' }],
+            initialPlacements: [{ spaceId: 'saigon:none', pieceTypeId: 'us-troops', seat: 'invalid-seat-id', count: 1 }],
+            outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'invalid-seat-id', count: 1 }],
+            seatPools: [
+              { seat: 'invalid-seat-id', availableZoneId: 'available-arvn:none', outOfPlayZoneId: 'out-of-play-arvn:none' },
+            ],
           },
         },
       ],
@@ -778,6 +780,12 @@ describe('compiler structured section results', () => {
     assert.equal(seatRefDiagnostics.length, expectedSeatPaths.length);
     assert.equal(new Set(seatRefPaths).size, seatRefDiagnostics.length);
     assert.deepEqual(new Set(seatRefPaths), new Set(expectedSeatPaths));
+    assert.equal(
+      seatRefDiagnostics.every(
+        (diagnostic) => diagnostic.suggestion === 'Use one of the declared seat ids from the selected seat catalog.',
+      ),
+      true,
+    );
     for (const path of expectedSeatPaths) {
       assert.equal(seatRefDiagnostics.some((diagnostic) => diagnostic.path === path), true);
       assert.equal(

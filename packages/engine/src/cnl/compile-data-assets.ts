@@ -20,7 +20,10 @@ import type {
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
-import { pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
+import {
+  SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
+  pushMissingReferenceDiagnostic,
+} from './validate-spec-shared.js';
 import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
 import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {
@@ -383,7 +386,7 @@ export function deriveSectionsFromDataAssets(
         `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
         issue.seat,
         selectedSeatCatalog.payload.seats.map((seat) => seat.id),
-        'Use one of the declared seat catalog ids.',
+        SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
       );
     }
   }

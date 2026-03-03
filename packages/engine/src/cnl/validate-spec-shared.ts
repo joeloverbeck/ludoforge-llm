@@ -19,6 +19,11 @@ export {
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
+export const SEAT_REFERENCE_FALLBACK_SUGGESTION = 'Use one of the declared seat ids.';
+export const SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION =
+  'Use one of the declared seat ids from the selected seat catalog.';
+export const SELF_OR_SEAT_REFERENCE_FALLBACK_SUGGESTION = 'Use "self" or one of the declared seat ids.';
+
 export const METADATA_KEYS = ['id', 'name', 'description', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
 export const DATA_ASSET_KEYS = ['id', 'kind', 'payload', 'tableContracts'] as const;

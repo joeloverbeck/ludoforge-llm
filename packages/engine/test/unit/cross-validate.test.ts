@@ -250,7 +250,7 @@ describe('crossValidateSpec', () => {
             ...turnOrder.config.turnFlow,
             eligibility: {
               ...turnOrder.config.turnFlow.eligibility,
-              seats: ['0', '1'],
+              seats: ['invalid-seat-id'],
             },
           },
         },
@@ -268,9 +268,16 @@ describe('crossValidateSpec', () => {
     assert.deepEqual(seatIdentityContract.diagnostics, []);
 
     const diagnostics = crossValidateSpec(withIndexSeats, seatIdentityContract.contract);
+    const eligibilityDiagnostic = diagnostics.find(
+      (entry) => entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING',
+    );
     assert.equal(
       diagnostics.some((entry) => entry.code === 'CNL_XREF_TURN_FLOW_ELIGIBILITY_SEAT_MISSING'),
       true,
+    );
+    assert.equal(
+      eligibilityDiagnostic?.suggestion,
+      'Use one of the declared seat ids.',
     );
   });
 

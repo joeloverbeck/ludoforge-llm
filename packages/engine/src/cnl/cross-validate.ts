@@ -6,7 +6,12 @@ import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
 import { normalizeIdentifier } from './identifier-utils.js';
 import type { SeatIdentityContract } from './seat-identity-contract.js';
-import { isRecord, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
+import {
+  SEAT_REFERENCE_FALLBACK_SUGGESTION,
+  SELF_OR_SEAT_REFERENCE_FALLBACK_SUGGESTION,
+  isRecord,
+  pushMissingReferenceDiagnostic,
+} from './validate-spec-shared.js';
 
 export function crossValidateSpec(
   sections: CompileSectionResults,
@@ -123,7 +128,7 @@ export function crossValidateSpec(
           seat,
           seatTargets,
           `turnFlow.eligibility.seats[${seatIndex}] references unknown seat "${seat}".`,
-          'Use one of the declared seat catalog ids.',
+          SEAT_REFERENCE_FALLBACK_SUGGESTION,
         );
       }
     }
@@ -363,7 +368,7 @@ export function crossValidateSpec(
         checkpoint.seat,
         seatTargets,
         `Victory checkpoint "${checkpoint.id}" references unknown seat "${checkpoint.seat}".`,
-        'Use one of the declared seat ids.',
+        SEAT_REFERENCE_FALLBACK_SUGGESTION,
       );
     }
 
@@ -375,7 +380,7 @@ export function crossValidateSpec(
         margin.seat,
         seatTargets,
         `Victory margin references unknown seat "${margin.seat}".`,
-        'Use one of the declared seat ids.',
+        SEAT_REFERENCE_FALLBACK_SUGGESTION,
       );
     }
   }
@@ -529,7 +534,7 @@ export function crossValidateSpec(
           reward.seat,
           seatTargets,
           `turnOrder.config.turnFlow.passRewards[${rewardIndex}] references unknown seat "${reward.seat}".`,
-          'Use one of the declared seat catalog ids.',
+          SEAT_REFERENCE_FALLBACK_SUGGESTION,
         );
       }
       pushMissingIdentifierDiagnostic(
@@ -932,7 +937,7 @@ function validateEventFreeOperationGrants(
         grant.seat,
         seatTargets,
         `Event card "${cardId}" freeOperationGrant references unknown seat "${grant.seat}".`,
-        'Use one of the declared seat ids.',
+        SEAT_REFERENCE_FALLBACK_SUGGESTION,
       );
       if (grant.executeAsSeat !== undefined && grant.executeAsSeat !== 'self') {
         pushMissingIdentifierDiagnostic(
@@ -942,7 +947,7 @@ function validateEventFreeOperationGrants(
           grant.executeAsSeat,
           seatTargets,
           `Event card "${cardId}" freeOperationGrant executeAsSeat references unknown seat "${grant.executeAsSeat}".`,
-          'Use "self" or one of the declared seat ids.',
+          SELF_OR_SEAT_REFERENCE_FALLBACK_SUGGESTION,
         );
       }
     }
@@ -983,7 +988,7 @@ function validateEventEligibilityOverrides(
         override.target.seat,
         seatTargets,
         `Event card "${cardId}" eligibilityOverride references unknown seat "${override.target.seat}".`,
-        'Use one of the declared seat ids.',
+        SEAT_REFERENCE_FALLBACK_SUGGESTION,
       );
     }
 

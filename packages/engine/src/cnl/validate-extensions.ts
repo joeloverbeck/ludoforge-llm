@@ -20,6 +20,7 @@ import {
   isFiniteNumber,
   isRecord,
   pushDuplicateNormalizedIdDiagnostics,
+  SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
   pushMissingReferenceDiagnostic,
   validateEnumField,
   validateIdentifierField,
@@ -406,7 +407,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       `${issue.fieldLabel} references unknown seat "${issue.seat}".`,
       issue.seat,
       selectedSeatCatalogResult.selected.payload.seats.map((seat) => seat.id),
-      'Use one of the declared seat catalog ids.',
+      SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
     );
   }
 

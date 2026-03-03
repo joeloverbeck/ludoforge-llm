@@ -293,13 +293,21 @@ export class VisualConfigProvider {
   getPhaseBannerPhases(): ReadonlySet<string> {
     const phases = this.config?.phaseBanners?.phases;
     if (phases === undefined || phases.length === 0) {
-      return EMPTY_PHASE_BANNER_SET;
+      return EMPTY_STRING_SET;
     }
     return new Set(phases);
   }
+
+  getHiddenZones(): ReadonlySet<string> {
+    const hiddenZones = this.config?.zones?.hiddenZones;
+    if (hiddenZones === undefined || hiddenZones.length === 0) {
+      return EMPTY_STRING_SET;
+    }
+    return new Set(hiddenZones);
+  }
 }
 
-const EMPTY_PHASE_BANNER_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
+const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
 
 function applyEdgeStyle(
   target: { color: string | null; width: number; alpha: number },

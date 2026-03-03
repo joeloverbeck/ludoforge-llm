@@ -157,6 +157,25 @@ describe('validate-visual-config-refs', () => {
       )).toThrow(/Invalid visual config references/u);
   });
 
+  it('reports unknown hiddenZones references', () => {
+    const config: VisualConfig = {
+      version: 1,
+      zones: {
+        hiddenZones: ['missing:zone'],
+      },
+    };
+
+    const errors = validateVisualConfigRefs(config, fixtureContext());
+    expect(errors).toEqual([
+      {
+        category: 'zone',
+        configPath: 'zones.hiddenZones[0]',
+        referencedId: 'missing:zone',
+        message: 'Unknown zone id',
+      },
+    ]);
+  });
+
   it('validateAndCreateProvider returns provider when config is valid', () => {
     const provider = validateAndCreateProvider(
       {

@@ -114,13 +114,19 @@ export interface RenderInterruptFrame {
   readonly resumePhase: string;
 }
 
+export interface RenderEventCard {
+  readonly id: string;
+  readonly title: string;
+  readonly orderNumber: number | null;
+}
+
 export interface RenderEventDeck {
   readonly id: string;
   readonly displayName: string;
   readonly drawZoneId: string;
   readonly discardZoneId: string;
-  readonly currentCardId: string | null;
-  readonly currentCardTitle: string | null;
+  readonly playedCard: RenderEventCard | null;
+  readonly lookaheadCard: RenderEventCard | null;
   readonly deckSize: number;
   readonly discardSize: number;
 }

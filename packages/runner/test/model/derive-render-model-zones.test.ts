@@ -1126,4 +1126,96 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     expect(model.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(true);
     expect(model.zones.find((zone) => zone.id === 'reserve:none')?.isSelectable).toBe(false);
   });
+
+  it('excludes hidden zones from the render model', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        { id: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: 'hidden-zone', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+    });
+    const state = initialState(def, 42, 2).state;
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          zones: {
+            hiddenZones: ['hidden-zone:none'],
+          },
+        }),
+      }),
+    );
+
+    expect(model.zones.find((zone) => zone.id === 'board:none')).toBeDefined();
+    expect(model.zones.find((zone) => zone.id === 'hidden-zone:none')).toBeUndefined();
+  });
+
+  it('includes all zones when hiddenZones is an empty array', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        { id: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: 'aux', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+    });
+    const state = initialState(def, 42, 2).state;
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          zones: {
+            hiddenZones: [],
+          },
+        }),
+      }),
+    );
+
+    expect(model.zones.find((zone) => zone.id === 'board:none')).toBeDefined();
+    expect(model.zones.find((zone) => zone.id === 'aux:none')).toBeDefined();
+  });
+
+  it('excludes tokens in hidden zones from the render model', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        { id: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: 'hidden-zone', owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+    });
+
+    const state: GameState = {
+      ...initialState(def, 42, 2).state,
+      zones: {
+        'board:none': [token('visible-piece')],
+        'hidden-zone:none': [token('hidden-piece')],
+      },
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          zones: {
+            hiddenZones: ['hidden-zone:none'],
+          },
+        }),
+      }),
+    );
+
+    const allTokenIds = model.tokens.map((t) => t.id);
+    expect(allTokenIds).toContain('visible-piece');
+    expect(allTokenIds).not.toContain('hidden-piece');
+  });
 });

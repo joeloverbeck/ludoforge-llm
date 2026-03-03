@@ -8,7 +8,7 @@
 .deck {
   display: grid;
   gap: 2px;
-  min-width: 170px;
+  min-width: 260px;
   padding: var(--space-xs) var(--space-sm);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
@@ -22,10 +22,40 @@
   font-weight: 600;
 }
 
+.cardPair {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.cardWidget {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  padding: var(--space-xs);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface, rgba(255, 255, 255, 0.05));
+}
+
+.cardLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 .cardTitle {
   margin: 0;
   color: var(--text-primary);
   font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.cardNumber {
+  font-size: 10px;
+  color: var(--text-secondary);
 }
 
 .counts {

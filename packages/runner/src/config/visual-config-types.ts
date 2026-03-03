@@ -93,6 +93,7 @@ const ZonesConfigSchema = z.object({
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
+  hiddenZones: z.array(z.string()).optional(),
 });
 
 const EdgeVisualStyleSchema = z.object({

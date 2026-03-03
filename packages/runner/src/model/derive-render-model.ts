@@ -22,6 +22,7 @@ import type {
   RenderChoiceTarget,
   RenderChoiceUi,
   RenderChoiceUiInvalidReason,
+  RenderEventCard,
   RenderEventDeck,
   RenderGlobalMarker,
   RenderLastingEffect,
@@ -46,7 +47,13 @@ interface StaticRenderDerivation {
   readonly trackDefs: readonly NumericTrackDef[];
   readonly eventDecks: readonly GameDefEventDeckProjection[];
   readonly playedCardZoneId: string | null;
+  readonly lookaheadCardZoneId: string | null;
   readonly tokenTypeFactionById: ReadonlyMap<string, string>;
+}
+
+interface EventCardProjection {
+  readonly title: string;
+  readonly orderNumber: number | null;
 }
 
 interface GameDefEventDeckProjection {
@@ -54,7 +61,8 @@ interface GameDefEventDeckProjection {
   readonly displayName: string;
   readonly drawZoneId: string;
   readonly discardZoneId: string;
-  readonly cardsById: ReadonlyMap<string, string>;
+  readonly cardsById: ReadonlyMap<string, EventCardProjection>;
+  readonly cardTitleById: ReadonlyMap<string, string>;
 }
 
 export function deriveRenderModel(
@@ -91,7 +99,7 @@ export function deriveRenderModel(
   const tracks = deriveTracks(state, staticDerivation.trackDefs);
   const activeEffects = deriveActiveEffects(state, staticDerivation.cardTitleById);
   const interruptStack = state.interruptPhaseStack ?? [];
-  const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId);
+  const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId, staticDerivation.lookaheadCardZoneId);
   const players = derivePlayers(state, context, factionByPlayer);
   const turnOrder = deriveTurnOrder(state, seatResolution);
   const choiceUi = deriveChoiceUi(context, zones, tokens, players);
@@ -290,9 +298,11 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
   const cardTitleById = new Map<string, string>();
   const eventDecks: GameDefEventDeckProjection[] = [];
   for (const deck of def.eventDecks ?? []) {
-    const cardsById = new Map<string, string>();
+    const cardsById = new Map<string, EventCardProjection>();
+    const deckCardTitleById = new Map<string, string>();
     for (const card of deck.cards) {
-      cardsById.set(card.id, card.title);
+      cardsById.set(card.id, { title: card.title, orderNumber: card.order ?? null });
+      deckCardTitleById.set(card.id, card.title);
       cardTitleById.set(card.id, card.title);
     }
 
@@ -302,12 +312,16 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
       drawZoneId: deck.drawZone,
       discardZoneId: deck.discardZone,
       cardsById,
+      cardTitleById: deckCardTitleById,
     });
   }
 
-  const playedCardZoneId = def.turnOrder?.type === 'cardDriven'
-    ? def.turnOrder.config.turnFlow.cardLifecycle.played
+  const cardLifecycle = def.turnOrder?.type === 'cardDriven'
+    ? def.turnOrder.config.turnFlow.cardLifecycle
     : null;
+
+  const playedCardZoneId = cardLifecycle?.played ?? null;
+  const lookaheadCardZoneId = cardLifecycle?.lookahead ?? null;
 
   return {
     markerStatesById: buildMarkerStatesById(def.markerLattices),
@@ -316,6 +330,7 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
     trackDefs: def.tracks ?? [],
     eventDecks,
     playedCardZoneId,
+    lookaheadCardZoneId,
     tokenTypeFactionById: buildTokenTypeFactionById(def),
   };
 }
@@ -482,33 +497,46 @@ function deriveEventDecks(
   state: GameState,
   eventDecks: readonly GameDefEventDeckProjection[],
   playedCardZoneId: string | null,
+  lookaheadCardZoneId: string | null,
 ): readonly RenderEventDeck[] {
-  const playedCardId = resolvePlayedCardId(state, playedCardZoneId);
-  return eventDecks.map((deck) => {
-    const currentCardTitle = playedCardId === null ? null : deck.cardsById.get(playedCardId) ?? null;
-    return {
-      id: deck.id,
-      displayName: deck.displayName,
-      drawZoneId: deck.drawZoneId,
-      discardZoneId: deck.discardZoneId,
-      currentCardId: currentCardTitle === null ? null : playedCardId,
-      currentCardTitle,
-      deckSize: state.zones[deck.drawZoneId]?.length ?? 0,
-      discardSize: state.zones[deck.discardZoneId]?.length ?? 0,
-    };
-  });
+  const isCardDriven = state.turnOrderState.type === 'cardDriven';
+  const playedCardId = isCardDriven ? resolveTopCardId(state, playedCardZoneId) : null;
+  const lookaheadCardId = isCardDriven ? resolveTopCardId(state, lookaheadCardZoneId) : null;
+  return eventDecks.map((deck) => ({
+    id: deck.id,
+    displayName: deck.displayName,
+    drawZoneId: deck.drawZoneId,
+    discardZoneId: deck.discardZoneId,
+    playedCard: resolveEventCard(playedCardId, deck.cardsById),
+    lookaheadCard: resolveEventCard(lookaheadCardId, deck.cardsById),
+    deckSize: state.zones[deck.drawZoneId]?.length ?? 0,
+    discardSize: state.zones[deck.discardZoneId]?.length ?? 0,
+  }));
 }
 
-function resolvePlayedCardId(state: GameState, playedCardZoneId: string | null): string | null {
-  if (state.turnOrderState.type !== 'cardDriven') {
+function resolveTopCardId(state: GameState, zoneId: string | null): string | null {
+  if (zoneId === null) {
     return null;
   }
+  return state.zones[zoneId]?.[0]?.id ?? null;
+}
 
-  if (playedCardZoneId === null) {
+function resolveEventCard(
+  cardId: string | null,
+  cardsById: ReadonlyMap<string, EventCardProjection>,
+): RenderEventCard | null {
+  if (cardId === null) {
     return null;
   }
-
-  return state.zones[playedCardZoneId]?.[0]?.id ?? null;
+  const projection = cardsById.get(cardId);
+  if (projection === undefined) {
+    return null;
+  }
+  return {
+    id: cardId,
+    title: projection.title,
+    orderNumber: projection.orderNumber,
+  };
 }
 
 interface ZoneDerivationResult {
@@ -524,12 +552,16 @@ function deriveZones(
 ): ZoneDerivationResult {
   const zones: RenderZone[] = [];
   const visibleTokenIDsByZone = new Map<string, readonly string[]>();
+  const hiddenZones = context.visualConfigProvider.getHiddenZones();
 
   for (const zoneDef of def.zones) {
     if (zoneDef.isInternal === true) {
       continue;
     }
     const zoneID = String(zoneDef.id);
+    if (hiddenZones.has(zoneID)) {
+      continue;
+    }
     const ownerID = zoneDef.owner === 'player' ? parseOwnerPlayerId(zoneID, state.playerCount) : null;
     if (zoneDef.owner === 'player' && ownerID === null) {
       continue;

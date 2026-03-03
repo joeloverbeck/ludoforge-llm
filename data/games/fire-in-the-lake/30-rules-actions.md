@@ -134,6 +134,10 @@ turnOrder:
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)
 # ══════════════════════════════════════════════════════════════════════════════
+# Binding contract note:
+# - Action params here intentionally use plain identifiers (for example targetSpace).
+# - References such as `{ ref: binding, name: targetSpace }` are valid when the param is declared in scope.
+# - Canonical "$..." identifiers are still required on binder declaration/contract surfaces (for example effect/query bind fields).
 
 actions:
   - { id: pass, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }

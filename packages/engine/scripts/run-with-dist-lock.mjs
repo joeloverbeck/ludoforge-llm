@@ -8,6 +8,7 @@ const lockDir = join(process.cwd(), lockName);
 const lockMetaFile = join(lockDir, 'owner.json');
 const pollMs = 200;
 const staleMs = 30 * 60 * 1000;
+const maxWaitMs = Number.parseInt(process.env.ENGINE_DIST_LOCK_MAX_WAIT_MS ?? '', 10) || 5 * 60 * 1000;
 
 const command = process.argv.slice(2).join(' ').trim();
 
@@ -43,11 +44,29 @@ const isProcessAlive = (pid) => {
   }
 };
 
+const isExpectedLockOwnerProcess = (pid) => {
+  if (!isProcessAlive(pid)) {
+    return false;
+  }
+
+  if (process.platform !== 'linux') {
+    return true;
+  }
+
+  try {
+    const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+    return cmdline.includes('run-with-dist-lock.mjs');
+  } catch {
+    // If cmdline cannot be read, fall back to "alive" semantics.
+    return true;
+  }
+};
+
 const isStale = (metadataRaw) => {
   try {
     const metadata = JSON.parse(metadataRaw);
     const staleByAge = typeof metadata?.createdAt === 'number' && (Date.now() - metadata.createdAt) > staleMs;
-    const staleByPid = typeof metadata?.pid === 'number' && !isProcessAlive(metadata.pid);
+    const staleByPid = typeof metadata?.pid === 'number' && !isExpectedLockOwnerProcess(metadata.pid);
     return staleByAge || staleByPid;
   } catch {
     return false;
@@ -88,7 +107,17 @@ const release = () => {
 };
 
 const acquire = async () => {
+  const startedAt = Date.now();
   while (!tryAcquire()) {
+    if (Date.now() - startedAt > maxWaitMs) {
+      let owner = 'unreadable';
+      try {
+        owner = readFileSync(lockMetaFile, 'utf8');
+      } catch {
+        // Keep fallback owner string.
+      }
+      throw new Error(`Timed out waiting for dist lock "${lockName}" after ${maxWaitMs}ms. Current owner: ${owner}`);
+    }
     await sleep(pollMs);
   }
 };

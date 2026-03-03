@@ -80,6 +80,12 @@ Coup cards trigger coup rounds and may change RVN Leader. Pivotal events are fac
 
 Each card encoded as `EventCardDef` in the GameSpecDoc YAML. The `tags` and `metadata` fields are game-agnostic extensions — `tags` classifies cards for filtering/UI, `metadata` holds game-specific display data (period, factionOrder, flavorText) not interpreted by the kernel. Pivotal cards additionally declare a `playCondition` precondition.
 
+### Binding Authoring Contract (Canonical vs Plain Identifiers)
+
+- Use canonical binding identifiers (leading `$`) on declaration/contract surfaces such as effect/query `bind` fields and selector-binding contract surfaces.
+- Plain action parameter names (for example `targetSpace`) remain valid and are referenced by exact name (`{ ref: "binding", name: targetSpace }`) unless a specific surface explicitly requires canonical binding tokens.
+- Do not introduce alias forms or mixed conventions within a single surface. Follow the surface contract exactly.
+
 **Standard Dual-Use Card:**
 
 ```yaml

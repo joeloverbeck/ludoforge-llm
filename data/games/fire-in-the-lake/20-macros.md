@@ -2,6 +2,10 @@
 
 ```yaml
 effectMacros:
+  # Binding contract note:
+  # - Declared binder surfaces in this file use canonical "$..." identifiers.
+  # - Plain, non-prefixed names are reserved for regular action parameters in action docs, not macro-local bind declarations.
+
   # ── rvn-leader-pacification-cost ───────────────────────────────────────────
   # Shared ARVN pacification resource cost helper.
   # Ky modifies per-step/per-terror cost from 3 to 4.

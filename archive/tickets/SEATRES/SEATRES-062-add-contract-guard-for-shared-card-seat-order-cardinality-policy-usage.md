@@ -1,6 +1,6 @@
 # SEATRES-062: Add contract guard for shared card seat-order cardinality policy usage
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-03)
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel contract guard test coverage
@@ -13,7 +13,7 @@ Seat-order cardinality is now centralized, but there is no structural guard prev
 ## Assumption Reassessment (2026-03-03)
 
 1. Cardinality policy currently routes through `turn-flow-seat-order-policy.ts`, consumed by validator/runtime invariant modules.
-2. Existing tests validate behavior/messages, but no AST/source-level guard currently enforces that validator/runtime must call the shared policy helper.
+2. Existing source-guard tests already enforce other turn-flow contract boundaries (canonical invariant message/context wiring), but there is still no focused guard that validator/runtime cardinality checks must call the shared policy helper.
 3. Existing active tickets do not currently scope this specific single-source policy usage guard.
 
 ## Architecture Check
@@ -24,7 +24,7 @@ Seat-order cardinality is now centralized, but there is no structural guard prev
 
 ## What to Change
 
-### 1. Add structural contract test for policy usage
+### 1. Add focused structural contract test for policy usage
 
 1. Add a unit contract test that inspects `validate-gamedef-extensions.ts` and `turn-flow-runtime-invariants.ts` and asserts they reference `isCardSeatOrderDistinctSeatCountValid` (shared helper) for cardinality checks.
 2. Assert these files do not reintroduce direct literal threshold comparisons for card seat-order distinct-seat cardinality.
@@ -32,7 +32,7 @@ Seat-order cardinality is now centralized, but there is no structural guard prev
 ### 2. Keep deterministic and minimal guard surface
 
 1. Scope checks specifically to card seat-order cardinality surfaces to avoid brittle broad linting.
-2. Reuse existing source-guard helpers where possible.
+2. Reuse existing source-guard helpers and AST parsing utilities already used by kernel contract tests.
 
 ## Files to Touch
 
@@ -62,7 +62,7 @@ Seat-order cardinality is now centralized, but there is no structural guard prev
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/*card-seat-order-policy*-contract*.test.ts` — source-level guard against cardinality-policy drift.
+1. `packages/engine/test/unit/kernel/turn-flow-seat-order-policy-contract-source-guard.test.ts` — source-level guard against cardinality-policy drift in validator/runtime surfaces.
 
 ### Commands
 
@@ -70,3 +70,19 @@ Seat-order cardinality is now centralized, but there is no structural guard prev
 2. `node --test packages/engine/dist/test/unit/kernel/*card-seat-order-policy*-contract*.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Added `packages/engine/test/unit/kernel/turn-flow-seat-order-policy-contract-source-guard.test.ts`.
+  - The new test asserts that both `validate-gamedef-extensions.ts` and `turn-flow-runtime-invariants.ts` call `isCardSeatOrderDistinctSeatCountValid`.
+  - The new test also enforces that those modules do not compare `distinctSeatCount` directly to numeric literals via relational operators.
+- **Deviations from original plan**:
+  - No runtime/kernel source edits were needed because both target modules were already using the shared policy helper correctly.
+  - Scope was narrowed to the missing guard only; existing invariant-message source-guard coverage remained unchanged.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/turn-flow-seat-order-policy-contract-source-guard.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

@@ -151,7 +151,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       const rawPayload = asset.payload as Record<string, unknown>;
       const rawPieceTypes = Array.isArray(rawPayload.pieceTypes) ? rawPayload.pieceTypes : [];
       const concretePieceTypes = rawPieceTypes.filter(
-        (entry: unknown) => typeof entry === 'object' && entry !== null && 'id' in entry,
+        (entry: unknown) => typeof entry === 'object' && entry !== null && !('generate' in entry),
       );
       resolvedPieceCatalogPayloads.set(normalizedPcId, {
         path: `${path}.payload`,

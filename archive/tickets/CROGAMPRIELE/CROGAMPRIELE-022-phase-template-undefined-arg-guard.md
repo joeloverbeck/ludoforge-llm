@@ -1,6 +1,6 @@
 # CROGAMPRIELE-022: Guard against undefined arg values in phase template substitution
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — cnl expand-phase-templates, compiler-diagnostic-codes
@@ -17,12 +17,13 @@ This is a spec-authoring mistake that should be caught at expansion time with a 
 
 The existing param validation in `expandPhaseArray` (lines 90-121) checks that all declared params have *keys* in `args` and that no extra keys exist, but it does not check that the *values* are non-undefined. This is because `'roundId' in { roundId: undefined }` returns `true` in JavaScript.
 
-## Assumption Reassessment (2026-03-02)
+## Assumption Reassessment (2026-03-03)
 
 1. `substituteParams` is at `expand-phase-templates.ts:24-57`. Confirmed: no `undefined` check on arg values.
-2. `expandPhaseArray` param validation is at lines 90-121. Confirmed: uses `Object.keys(entry.args)` and `Set.has()` — both treat explicit `undefined` values as present keys.
-3. No existing diagnostic code for undefined arg values — confirmed by grepping `compiler-diagnostic-codes.ts` for `PARAM_UNDEFINED` or `ARG_UNDEFINED` (zero matches).
-4. The `args` field type on `GameSpecPhaseFromTemplate` is `Readonly<Record<string, unknown>>`, so `undefined` values are type-legal.
+2. `expandPhaseArray` param validation is at lines 99-123 (shifted from original 90-121 after CROGAMPRIELE-021 added provenance tracking). Uses `Object.keys(entry.args)` and `Set.has()` — both treat explicit `undefined` values as present keys.
+3. Skip gate (`hasMissing || hasExtra`) is at line 128 (was 119). Substitution call is at line 133 (was 124).
+4. No existing diagnostic code for undefined arg values — confirmed by grepping `compiler-diagnostic-codes.ts` for `PARAM_UNDEFINED` or `ARG_UNDEFINED` (zero matches).
+5. The `args` field type on `GameSpecPhaseFromTemplate` is `Readonly<Record<string, unknown>>`, so `undefined` values are type-legal.
 
 ## Architecture Check
 
@@ -34,7 +35,7 @@ The existing param validation in `expandPhaseArray` (lines 90-121) checks that a
 
 ### 1. Add arg value validation in `expandPhaseArray` (`expand-phase-templates.ts`)
 
-After the existing key validation loop (lines 90-121) and before the substitution call (line 124), add a check for `undefined` arg values:
+After the existing key validation loop (lines 99-123) and before the substitution call (line 133), add a check for `undefined` arg values:
 
 ```typescript
 for (const [name, value] of Object.entries(entry.args)) {
@@ -49,7 +50,7 @@ for (const [name, value] of Object.entries(entry.args)) {
 }
 ```
 
-Include this in the existing validation gate (the `hasMissing || hasExtra` check at line 119) so that `undefined` args also prevent expansion.
+Include this in the existing validation gate (the `hasMissing || hasExtra` check at line 128) so that `undefined` args also prevent expansion.
 
 ### 2. Add diagnostic code (`compiler-diagnostic-codes.ts`)
 
@@ -92,3 +93,17 @@ Add `CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED` to the `CNL_COMPILER_DIAGNOSTIC_
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "expand-phase-templates|expandPhaseTemplates"`
 2. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Implemented exactly as planned.** No deviations from the ticket scope.
+
+### Changes Made
+1. **`compiler-diagnostic-codes.ts`**: Added `CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED` to `COMPILER_DIAGNOSTIC_CODES_PHASE_TEMPLATES`.
+2. **`expand-phase-templates.ts`**: Added `undefined` value check loop after existing extra-key validation, plus `hasUndefined` flag in the skip gate.
+3. **`expand-phase-templates.test.ts`**: Added 2 tests — undefined arg emits diagnostic and blocks expansion; falsy-but-defined values (0, '', false) succeed normally.
+
+### Verification
+- 3424 engine+runner tests pass (0 fail)
+- Typecheck clean
+- Lint clean

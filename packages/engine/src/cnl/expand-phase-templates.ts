@@ -52,7 +52,13 @@ function substituteParams(
     return out;
   }
 
-  // Primitives (number, boolean, null, undefined)
+  // Primitives (number, boolean, null).
+  // Callers must never pass undefined args — guarded by expandPhaseArray.
+  if (value === undefined) {
+    throw new Error(
+      'substituteParams: value is undefined; caller must validate args before substitution',
+    );
+  }
   return value;
 }
 
@@ -100,8 +106,10 @@ function expandPhaseArray(
     const declaredNames = new Set(template.params.map((p) => p.name));
     const providedNames = new Set(Object.keys(entry.args));
 
+    let hasMissing = false;
     for (const name of declaredNames) {
       if (!providedNames.has(name)) {
+        hasMissing = true;
         diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_PARAM_MISSING,
           path: `${path}.args`,
@@ -111,8 +119,10 @@ function expandPhaseArray(
       }
     }
 
+    let hasExtra = false;
     for (const name of providedNames) {
       if (!declaredNames.has(name)) {
+        hasExtra = true;
         diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_PARAM_EXTRA,
           path: `${path}.args.${name}`,
@@ -122,10 +132,25 @@ function expandPhaseArray(
       }
     }
 
-    // Skip expansion if param validation failed
-    const hasMissing = [...declaredNames].some((n) => !providedNames.has(n));
-    const hasExtra = [...providedNames].some((n) => !declaredNames.has(n));
-    if (hasMissing || hasExtra) {
+    // Note: this loop catches explicitly-supplied args whose value is undefined
+    // (e.g. { args: { roundId: undefined } }).  Absent keys — where a declared
+    // param has no entry in args at all — are caught by the PARAM_MISSING loop
+    // above.  YAML-parsed input cannot produce undefined values (null/~ → JS
+    // null), so this guard defends against programmatic callers.
+    let hasUndefined = false;
+    for (const [name, value] of Object.entries(entry.args)) {
+      if (value === undefined) {
+        hasUndefined = true;
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED,
+          path: `${path}.args.${name}`,
+          severity: 'error',
+          message: `Arg "${name}" for template "${entry.fromTemplate}" is undefined.`,
+        });
+      }
+    }
+
+    if (hasMissing || hasExtra || hasUndefined) {
       continue;
     }
 

@@ -535,7 +535,79 @@ describe('expandPhaseTemplates', () => {
     assert.ok(dups[0]!.message.includes('templates'));
   });
 
-  // Test 21: Duplicate-ID diagnostic distinguishes literal vs template origin
+  // Test 21: Undefined arg value emits ARG_UNDEFINED diagnostic
+  it('emits PHASE_TEMPLATE_ARG_UNDEFINED when an arg value is undefined', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'roundId' }, { name: 'label' }],
+      phase: { id: '{roundId}', onEnter: [{ name: '{label}' }] },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          {
+            fromTemplate: 'tmpl',
+            args: { roundId: undefined, label: 'ok' },
+          } as unknown as GameSpecPhaseFromTemplate,
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const undefinedDiags = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED,
+    );
+    assert.equal(undefinedDiags.length, 1);
+    assert.ok(undefinedDiags[0]!.message.includes('"roundId"'));
+    assert.ok(undefinedDiags[0]!.message.includes('"tmpl"'));
+    assert.equal(undefinedDiags[0]!.path, 'turnStructure.phases[0].args.roundId');
+
+    // No expanded phase should be produced
+    assert.equal(result.doc.turnStructure!.phases.length, 0);
+  });
+
+  // Test 22: Falsy but defined arg values succeed without ARG_UNDEFINED
+  it('allows falsy but defined arg values (0, empty string, false)', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'count' }, { name: 'label' }, { name: 'flag' }],
+      phase: {
+        id: 'phase_{label}',
+        onEnter: [{ count: '{count}', flag: '{flag}' }],
+      },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          { fromTemplate: 'tmpl', args: { count: 0, label: '', flag: false } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const undefinedDiags = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED,
+    );
+    assert.equal(undefinedDiags.length, 0);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.doc.turnStructure!.phases.length, 1);
+
+    const phase = result.doc.turnStructure!.phases[0] as unknown as Record<string, unknown>;
+    assert.equal(phase.id, 'phase_');
+    const onEnter = phase.onEnter as readonly Record<string, unknown>[];
+    assert.equal(onEnter[0]!.count, 0);
+    assert.equal(onEnter[0]!.flag, false);
+  });
+
+  // Test 23: Duplicate-ID diagnostic distinguishes literal vs template origin
   it('distinguishes literal vs template origin in duplicate-ID diagnostic', () => {
     const template: GameSpecPhaseTemplateDef = {
       id: 'betting',

@@ -3,7 +3,19 @@ import { ILLEGAL_MOVE_REASON_MESSAGES, PIPELINE_RUNTIME_REASONS } from './runtim
 import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
+import type {
+  CardMetadataSeatOrderShapeInvariantContext,
+  TurnFlowActiveSeatInvariantContext,
+} from './turn-flow-invariant-contract-types.js';
 import type { ActionDef, ActionPipelineDef, GameState, Move, TurnFlowActionClass } from './types.js';
+export {
+  TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES,
+} from './turn-flow-invariant-contract-types.js';
+export type {
+  CardMetadataSeatOrderShapeInvariantContext,
+  TurnFlowActiveSeatInvariantContext,
+  TurnFlowActiveSeatInvariantSurface,
+} from './turn-flow-invariant-contract-types.js';
 
 export type KernelRuntimeErrorCode =
   | 'ILLEGAL_MOVE'
@@ -33,20 +45,6 @@ export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves
 
 export type SelectorSurface = 'actor' | 'executor';
 
-export const TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES = [
-  'analyzeFreeOperationGrantMatch',
-  'applyGrantFreeOperation',
-  'applyPendingFreeOperationVariants',
-  'applyTurnFlowEligibilityAfterMove',
-  'applyTurnFlowWindowFilters',
-  'consumeTurnFlowFreeOperationGrant',
-  'isActiveSeatEligibleForTurnFlow',
-  'resolveCurrentCoupSeat',
-] as const;
-
-export type TurnFlowActiveSeatInvariantSurface =
-  (typeof TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES)[number];
-
 export interface SelectorRuntimeContractInvalidContext {
   readonly surface: SelectorBoundarySurface;
   readonly selector: SelectorSurface;
@@ -55,16 +53,10 @@ export interface SelectorRuntimeContractInvalidContext {
   readonly selectorContractViolations?: readonly ActionSelectorContractViolation[];
 }
 
-export interface TurnFlowActiveSeatInvariantContext {
-  readonly invariant: 'turnFlow.activeSeat.unresolvable';
-  readonly surface: TurnFlowActiveSeatInvariantSurface;
-  readonly activePlayer: number;
-  readonly seatOrder: readonly string[];
-}
-
 export type RuntimeContractInvalidContext =
   | SelectorRuntimeContractInvalidContext
-  | TurnFlowActiveSeatInvariantContext;
+  | TurnFlowActiveSeatInvariantContext
+  | CardMetadataSeatOrderShapeInvariantContext;
 
 type IllegalMoveBaseContext<R extends IllegalMoveReason> = Readonly<{
   readonly actionId: Move['actionId'];

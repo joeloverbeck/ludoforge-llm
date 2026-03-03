@@ -11,7 +11,7 @@ import {
 import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,
-} from '../../src/kernel/turn-flow-runtime-invariants.js';
+} from '../../src/kernel/turn-flow-invariant-contracts.js';
 
 export interface ActiveSeatInvariantParityFixture {
   readonly surface: TurnFlowActiveSeatInvariantSurface;

@@ -189,6 +189,27 @@ describe('runtime error context contracts', () => {
     assert.deepEqual(context.seatOrder, ['0', '1']);
   });
 
+  it('runtime contract helper emits card seat-order shape invariant context contract', () => {
+    const error = runtimeContractInvalidError('card metadata seat order shape invalid', {
+      invariant: 'turnFlow.cardMetadataSeatOrder.shapeInvalid',
+      cardId: 'card-1',
+      metadataKey: 'seatOrder',
+      minDistinctSeatCount: 2,
+      distinctSeatCount: 1,
+      duplicates: ['us'],
+    });
+
+    assert.equal(error.code, 'RUNTIME_CONTRACT_INVALID');
+    const context: KernelRuntimeErrorContext<'RUNTIME_CONTRACT_INVALID'> = error.context!;
+    assert.ok('invariant' in context);
+    assert.equal(context.invariant, 'turnFlow.cardMetadataSeatOrder.shapeInvalid');
+    assert.equal(context.cardId, 'card-1');
+    assert.equal(context.metadataKey, 'seatOrder');
+    assert.equal(context.minDistinctSeatCount, 2);
+    assert.equal(context.distinctSeatCount, 1);
+    assert.deepEqual(context.duplicates, ['us']);
+  });
+
   it('keeps active-seat invariant metadata/message parity between kernel and effect runtime contracts', () => {
     assertActiveSeatInvariantContractParity({
       surface: 'applyGrantFreeOperation',

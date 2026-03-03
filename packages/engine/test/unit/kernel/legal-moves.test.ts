@@ -539,8 +539,14 @@ phase: [asPhaseId('main')],
 
     assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
       assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; message?: string };
+      const details = error as Error & { code?: unknown; message?: string; context?: Record<string, unknown> };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.invariant, 'turnFlow.cardMetadataSeatOrder.shapeInvalid');
+      assert.equal(details.context?.cardId, 'card-1');
+      assert.equal(details.context?.metadataKey, 'seatOrder');
+      assert.equal(details.context?.minDistinctSeatCount, CARD_SEAT_ORDER_MIN_DISTINCT_SEATS);
+      assert.equal(details.context?.distinctSeatCount, 1);
+      assert.deepEqual(details.context?.duplicates, ['us']);
       assert.match(String(details.message), /card metadata seat order shape invalid/i);
       assert.match(
         String(details.message),
@@ -600,8 +606,14 @@ phase: [asPhaseId('main')],
 
     assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
       assert.ok(error instanceof Error);
-      const details = error as Error & { code?: unknown; message?: string };
+      const details = error as Error & { code?: unknown; message?: string; context?: Record<string, unknown> };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.invariant, 'turnFlow.cardMetadataSeatOrder.shapeInvalid');
+      assert.equal(details.context?.cardId, 'card-1');
+      assert.equal(details.context?.metadataKey, 'seatOrder');
+      assert.equal(details.context?.minDistinctSeatCount, CARD_SEAT_ORDER_MIN_DISTINCT_SEATS);
+      assert.equal(details.context?.distinctSeatCount, 1);
+      assert.deepEqual(details.context?.duplicates, []);
       assert.match(String(details.message), /card metadata seat order shape invalid/i);
       assert.match(
         String(details.message),

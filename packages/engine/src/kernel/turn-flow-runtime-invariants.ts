@@ -1,36 +1,22 @@
 import {
   kernelRuntimeError,
-  type TurnFlowActiveSeatInvariantContext,
   type TurnFlowActiveSeatInvariantSurface,
 } from './runtime-error.js';
+import {
+  activeSeatUnresolvableInvariantMessage,
+  cardMetadataSeatOrderShapeInvariantMessage,
+  makeActiveSeatUnresolvableInvariantContext,
+  makeCardMetadataSeatOrderShapeInvariantContext,
+} from './turn-flow-invariant-contracts.js';
 import {
   analyzeSeatOrderShape,
   resolveTurnFlowSeatForPlayerIndex,
   type SeatResolutionContext,
 } from './seat-resolution.js';
 import {
-  CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
   isCardSeatOrderDistinctSeatCountValid,
 } from './turn-flow-seat-order-policy.js';
 import type { GameDef, GameState } from './types.js';
-
-export const TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT = 'turnFlow.activeSeat.unresolvable';
-
-export const makeActiveSeatUnresolvableInvariantContext = (
-  surface: TurnFlowActiveSeatInvariantSurface,
-  activePlayer: number,
-  seatOrder: readonly string[],
-): TurnFlowActiveSeatInvariantContext => ({
-  invariant: TURN_FLOW_ACTIVE_SEAT_UNRESOLVABLE_INVARIANT,
-  surface,
-  activePlayer,
-  seatOrder: [...seatOrder],
-});
-
-export const activeSeatUnresolvableInvariantMessage = (
-  context: Pick<TurnFlowActiveSeatInvariantContext, 'surface' | 'activePlayer' | 'seatOrder'>,
-): string =>
-  `Turn-flow runtime invariant failed: ${context.surface} could not resolve active seat for activePlayer=${String(context.activePlayer)} seatOrder=[${context.seatOrder.join(', ')}]`;
 
 export const requireCardDrivenActiveSeat = (
   def: Pick<GameDef, 'seats' | 'turnOrder'>,
@@ -99,8 +85,14 @@ export const assertCardMetadataSeatOrderRuntimeInvariant = (
     return;
   }
 
+  const invariantContext = makeCardMetadataSeatOrderShapeInvariantContext(
+    context,
+    shape.distinctSeatCount,
+    shape.duplicateSeats,
+  );
   throw kernelRuntimeError(
     'RUNTIME_CONTRACT_INVALID',
-    `Turn-flow runtime invariant failed: card metadata seat order shape invalid (cardId=${context.cardId}, metadataKey=${context.metadataKey}, minDistinctSeatCount=${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS}, distinctSeatCount=${shape.distinctSeatCount}, duplicates=[${shape.duplicateSeats.join(', ')}]).`,
+    cardMetadataSeatOrderShapeInvariantMessage(invariantContext),
+    invariantContext,
   );
 };

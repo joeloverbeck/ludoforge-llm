@@ -28,6 +28,7 @@ describe('runtime error contract layering guard', () => {
         '../contracts/index.js',
         './free-operation-denial-contract.js',
         './runtime-reasons.js',
+        './turn-flow-invariant-contract-types.js',
         './types.js',
       ],
       'runtime-error.ts must import only canonical contract/primitive kernel modules',

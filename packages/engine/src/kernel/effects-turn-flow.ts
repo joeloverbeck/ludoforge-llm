@@ -14,7 +14,7 @@ import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from '
 import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,
-} from './turn-flow-runtime-invariants.js';
+} from './turn-flow-invariant-contracts.js';
 
 const resolveGrantSeat = (
   token: string,

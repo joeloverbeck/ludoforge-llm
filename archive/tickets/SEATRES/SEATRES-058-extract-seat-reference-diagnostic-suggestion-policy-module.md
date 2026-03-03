@@ -1,10 +1,10 @@
 # SEATRES-058: Extract seat-reference diagnostic suggestion policy module
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL diagnostic policy module boundary
-**Deps**: archive/tickets/SEATRES-042-clarify-seat-reference-diagnostic-suggestion-wording.md
+**Deps**: archive/tickets/SEATRES/SEATRES-042-clarify-seat-reference-diagnostic-suggestion-wording.md
 
 ## Problem
 
@@ -12,9 +12,10 @@ Seat-reference suggestion policy is centralized as constants but currently lives
 
 ## Assumption Reassessment (2026-03-03)
 
-1. Seat-reference fallback suggestion constants are currently defined in `packages/engine/src/cnl/validate-spec-shared.ts` and consumed by compiler/xref/validator paths.
-2. Current behavior is functionally correct and tests pass, but ownership is mixed: generic validator utilities and seat-diagnostic language policy coexist in one shared file.
-3. No active ticket in `tickets/` currently scopes extracting seat-reference suggestion policy into a dedicated module.
+1. Seat-reference fallback suggestion constants are currently defined in `packages/engine/src/cnl/validate-spec-shared.ts` and consumed by compiler/xref/validator paths. **Verified.**
+2. Current behavior is functionally correct and tests pass, but ownership is mixed: generic validator utilities and seat-diagnostic language policy coexist in one shared file. **Verified.**
+3. Wording coverage for these policies exists across multiple suites, including validator scenario tests (`validate-spec-scenario.test.ts`) in addition to compiler/xref tests. **Verified.**
+4. No active ticket in `tickets/` currently scopes extracting seat-reference suggestion policy into a dedicated module. **Verified.**
 
 ## Architecture Check
 
@@ -45,6 +46,7 @@ Ensure existing wording assertions remain valid after import-boundary changes; a
 - `packages/engine/src/cnl/validate-spec-shared.ts` (modify)
 - `packages/engine/test/unit/compiler-structured-results.test.ts` (verify/no-op or modify if import-boundary effects require)
 - `packages/engine/test/unit/cross-validate.test.ts` (verify/no-op or modify if import-boundary effects require)
+- `packages/engine/test/unit/validate-spec-scenario.test.ts` (verify/no-op or modify if import-boundary effects require)
 
 ## Out of Scope
 
@@ -59,6 +61,7 @@ Ensure existing wording assertions remain valid after import-boundary changes; a
 1. Compiler/xref/validator seat-reference diagnostics preserve existing wording behavior exactly.
 2. No references to seat suggestion policy constants remain in `validate-spec-shared.ts`.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
+4. Validator scenario coverage remains intact for selected-catalog fallback wording assertions.
 
 ### Invariants
 
@@ -71,11 +74,35 @@ Ensure existing wording assertions remain valid after import-boundary changes; a
 
 1. `packages/engine/test/unit/compiler-structured-results.test.ts` — confirm compiler wording remains unchanged after boundary extraction. Rationale: prevents behavior drift during module move.
 2. `packages/engine/test/unit/cross-validate.test.ts` — confirm xref wording remains unchanged after boundary extraction. Rationale: protects multi-surface import migration.
+3. `packages/engine/test/unit/validate-spec-scenario.test.ts` — confirm validator wording remains unchanged for selected seat-catalog fallback. Rationale: protects validator diagnostic policy surface from import-boundary regressions.
 
 ### Commands
 
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js`
 3. `node --test packages/engine/dist/test/unit/cross-validate.test.js`
-4. `pnpm -F @ludoforge/engine test`
-5. `pnpm turbo lint`
+4. `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js`
+5. `pnpm -F @ludoforge/engine test`
+6. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Added canonical module `packages/engine/src/cnl/seat-reference-diagnostic-suggestion-policy.ts`.
+  - Moved seat-reference fallback suggestion constants out of `validate-spec-shared.ts` into that module.
+  - Updated consumers to import from the canonical policy module:
+    - `packages/engine/src/cnl/compile-data-assets.ts`
+    - `packages/engine/src/cnl/cross-validate.ts`
+    - `packages/engine/src/cnl/validate-extensions.ts`
+  - Corrected ticket assumptions/scope to include existing validator coverage in `validate-spec-scenario.test.ts`.
+- **Deviations From Original Plan**:
+  - No runtime/diagnostic behavior changes were needed; this remained a strict module-boundary refactor.
+  - No test-file edits were required because existing compiler/xref/validator assertions already covered the moved policy constants.
+- **Verification Results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/cross-validate.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo lint` passed.

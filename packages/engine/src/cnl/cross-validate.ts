@@ -5,10 +5,12 @@ import { buildActionSelectorContractViolationDiagnostic } from './action-selecto
 import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
 import { normalizeIdentifier } from './identifier-utils.js';
-import type { SeatIdentityContract } from './seat-identity-contract.js';
 import {
   SEAT_REFERENCE_FALLBACK_SUGGESTION,
   SELF_OR_SEAT_REFERENCE_FALLBACK_SUGGESTION,
+} from './seat-reference-diagnostic-suggestion-policy.js';
+import type { SeatIdentityContract } from './seat-identity-contract.js';
+import {
   isRecord,
   pushMissingReferenceDiagnostic,
 } from './validate-spec-shared.js';

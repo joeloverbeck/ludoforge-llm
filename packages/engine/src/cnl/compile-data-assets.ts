@@ -20,8 +20,8 @@ import type {
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
+import { SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION } from './seat-reference-diagnostic-suggestion-policy.js';
 import {
-  SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
   pushMissingReferenceDiagnostic,
 } from './validate-spec-shared.js';
 import {

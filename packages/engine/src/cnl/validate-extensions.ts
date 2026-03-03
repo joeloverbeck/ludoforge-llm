@@ -2,6 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import type { MapPayload, PieceCatalogPayload, ScenarioPayload, SeatCatalogPayload } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import { SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION } from './seat-reference-diagnostic-suggestion-policy.js';
 import {
   ACTION_PIPELINE_ATOMICITY_VALUES,
   ACTION_PIPELINE_KEYS,
@@ -20,7 +21,6 @@ import {
   isFiniteNumber,
   isRecord,
   pushDuplicateNormalizedIdDiagnostics,
-  SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
   pushMissingReferenceDiagnostic,
   validateEnumField,
   validateIdentifierField,

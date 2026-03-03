@@ -1249,6 +1249,67 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('detects duplicate phase ID when fromTemplate interrupt duplicates a direct phase', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [{ id: 'betting', params: [{ name: 'roundId' }], phase: { id: '{roundId}' } }],
+      turnStructure: {
+        phases: [{ id: 'preflop' }],
+        interrupts: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' &&
+          diagnostic.message.includes('phase id'),
+      ),
+      true,
+      'Expected a duplicate phase id diagnostic when interrupt resolves to same ID as a phase',
+    );
+  });
+
+  it('detects duplicate phase ID when fromTemplate interrupt duplicates a fromTemplate phase', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [{ id: 'betting', params: [{ name: 'roundId' }], phase: { id: '{roundId}' } }],
+      turnStructure: {
+        phases: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+        interrupts: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' &&
+          diagnostic.message.includes('phase id'),
+      ),
+      true,
+      'Expected a duplicate phase id diagnostic when both phase and interrupt resolve to same ID',
+    );
+  });
+
+  it('allows unique fromTemplate interrupt IDs without duplicate diagnostic', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [{ id: 'betting', params: [{ name: 'roundId' }], phase: { id: '{roundId}' } }],
+      turnStructure: {
+        phases: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+        interrupts: [{ fromTemplate: 'betting', args: { roundId: 'allin' } }],
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' && diagnostic.message.includes('phase id'),
+      ),
+      false,
+      'Expected no duplicate phase id diagnostic when interrupt and phase resolve to different IDs',
+    );
+  });
+
   it('does not throw and does not mutate input for malformed content', () => {
     const malformedDoc = {
       ...createStructurallyValidDoc(),

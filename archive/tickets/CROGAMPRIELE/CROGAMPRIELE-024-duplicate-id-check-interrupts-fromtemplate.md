@@ -1,6 +1,6 @@
 # CROGAMPRIELE-024: Duplicate-ID check misses fromTemplate in interrupts
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — cnl validator
@@ -25,10 +25,11 @@ turnStructure:
 
 ## Assumption Reassessment (2026-03-03)
 
-1. `validateDuplicateIdentifiers()` at `validate-spec-core.ts:238-262` only processes `doc.turnStructure.phases`. **Verified — line 238 reads `phases` only.**
+1. `validateDuplicateIdentifiers()` at `validate-spec-core.ts:224-256` only processes `doc.turnStructure.phases`. **Verified — line 239 reads `phases` only.**
 2. `validateTurnStructure()` at `validate-actions.ts:302-367` processes both `phases` and `interrupts`. **Verified.**
 3. Interrupt `fromTemplate` entries follow the same `{ fromTemplate, args }` shape as phase entries. **Verified — same `GameSpecPhaseFromTemplate` type.**
-4. `pushDuplicateNormalizedIdDiagnostics` at `validate-spec-core.ts:262` is the function that emits `CNL_VALIDATOR_DUPLICATE_ID` diagnostics. **Verified.**
+4. `pushDuplicateNormalizedIdDiagnostics` at `validate-spec-shared.ts:159` emits `CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED` diagnostics (NOT `CNL_VALIDATOR_DUPLICATE_ID` as originally stated). **Verified and corrected.**
+5. CROGAMPRIELE-023 has landed — `resolvePhaseIdFromTemplate` is available as a shared helper. **Verified.**
 
 ## Architecture Check
 
@@ -42,7 +43,7 @@ turnStructure:
 
 After collecting phase IDs from `doc.turnStructure.phases`, also collect from `doc.turnStructure.interrupts` using the same `fromTemplate` resolution logic. Pass the combined array to `pushDuplicateNormalizedIdDiagnostics`.
 
-If CROGAMPRIELE-023 lands first, use the shared `resolvePhaseIdFromTemplate` helper. Otherwise, inline the same logic (to be deduplicated later by CROGAMPRIELE-023).
+CROGAMPRIELE-023 has landed — use the shared `resolvePhaseIdFromTemplate` helper (already imported in `validate-spec-core.ts`).
 
 ## Files to Touch
 
@@ -50,16 +51,16 @@ If CROGAMPRIELE-023 lands first, use the shared `resolvePhaseIdFromTemplate` hel
 
 ## Out of Scope
 
-- Refactoring the resolution logic to a shared helper (that's CROGAMPRIELE-023)
-- Adding new diagnostic codes — reuses existing `CNL_VALIDATOR_DUPLICATE_ID`
+- Refactoring the resolution logic to a shared helper (done — CROGAMPRIELE-023 already landed)
+- Adding new diagnostic codes — reuses existing `CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED`
 - Changes to `validateTurnStructure` (already correct)
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. A spec with a `fromTemplate` interrupt producing the same phase ID as a `fromTemplate` phase emits `CNL_VALIDATOR_DUPLICATE_ID`.
-2. A spec with a `fromTemplate` interrupt producing the same phase ID as a direct phase emits `CNL_VALIDATOR_DUPLICATE_ID`.
+1. A spec with a `fromTemplate` interrupt producing the same phase ID as a `fromTemplate` phase emits `CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED`.
+2. A spec with a `fromTemplate` interrupt producing the same phase ID as a direct phase emits `CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED`.
 3. A spec with unique `fromTemplate` interrupt IDs produces no duplicate diagnostic.
 4. Existing suite: `pnpm turbo test`
 
@@ -72,10 +73,25 @@ If CROGAMPRIELE-023 lands first, use the shared `resolvePhaseIdFromTemplate` hel
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/cnl/validate-spec-core.test.ts` — Add test: `fromTemplate` interrupt duplicating a phase ID emits diagnostic.
-2. `packages/engine/test/unit/cnl/validate-spec-core.test.ts` — Add test: unique `fromTemplate` interrupt IDs produce no diagnostic.
+1. `packages/engine/test/unit/validate-spec.test.ts` — Add test: `fromTemplate` interrupt duplicating a phase ID emits diagnostic.
+2. `packages/engine/test/unit/validate-spec.test.ts` — Add test: unique `fromTemplate` interrupt IDs produce no diagnostic.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Changed vs originally planned:**
+
+The implementation matched the plan exactly. The only corrections were to the ticket itself:
+- Diagnostic code was `CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED` (not `CNL_VALIDATOR_DUPLICATE_ID`)
+- Test file path was `packages/engine/test/unit/validate-spec.test.ts` (not `packages/engine/test/unit/cnl/validate-spec-core.test.ts`)
+- CROGAMPRIELE-023 had already landed, so the shared `resolvePhaseIdFromTemplate` helper was used directly
+
+**Files modified:**
+- `packages/engine/src/cnl/validate-spec-core.ts` — Extended `validateDuplicateIdentifiers` to collect IDs from both `turnStructure.phases` and `turnStructure.interrupts`, with a local `resolvePhaseEntryId` helper to DRY the resolution logic
+- `packages/engine/test/unit/validate-spec.test.ts` — Added 3 tests covering interrupt-phase duplicate detection
+
+**Verification:** 3438 tests pass, typecheck clean, lint clean.

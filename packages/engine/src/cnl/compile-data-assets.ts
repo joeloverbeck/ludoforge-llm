@@ -30,6 +30,7 @@ import {
   selectScenarioLinkedAsset,
   selectScenarioRef,
 } from './scenario-linked-asset-selection-policy.js';
+import type { DataAssetSelectionFailureReason } from './data-asset-selection.js';
 import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {
   collectScenarioProjectionEntries,
@@ -73,6 +74,23 @@ export interface DataAssetDerivationFailures {
   readonly map: readonly DataAssetDerivationFailureReason[];
   readonly pieceCatalog: readonly DataAssetDerivationFailureReason[];
   readonly seatCatalog: readonly DataAssetDerivationFailureReason[];
+}
+
+function mapScenarioSelectionFailureReasonToDerivationReason(
+  reason: DataAssetSelectionFailureReason,
+): Extract<DataAssetDerivationFailureReason, 'scenario-selector-missing' | 'scenario-ambiguous'> {
+  switch (reason) {
+    case 'missing-reference':
+      return 'scenario-selector-missing';
+    case 'ambiguous-selection':
+      return 'scenario-ambiguous';
+    default:
+      return assertUnreachable(reason);
+  }
+}
+
+function assertUnreachable(value: never): never {
+  throw new Error(`Unhandled scenario selection failure reason: ${String(value)}`);
 }
 
 export function deriveSectionsFromDataAssets(
@@ -269,8 +287,7 @@ export function deriveSectionsFromDataAssets(
   });
   const selectedScenario = scenarioSelection.selected;
   if (scenarioSelection.failureReason !== undefined) {
-    const scenarioFailureReason =
-      scenarioSelection.failureReason === 'missing-reference' ? 'scenario-selector-missing' : 'scenario-ambiguous';
+    const scenarioFailureReason = mapScenarioSelectionFailureReasonToDerivationReason(scenarioSelection.failureReason);
     derivationFailures.map.add(scenarioFailureReason);
     derivationFailures.pieceCatalog.add(scenarioFailureReason);
     derivationFailures.seatCatalog.add(scenarioFailureReason);

@@ -296,6 +296,85 @@ describe('compiler structured section results', () => {
     assert.deepEqual(diagnostic?.alternatives, ['scenario-a']);
   });
 
+  it('suppresses required doc.zones cascade when metadata.defaultScenarioAssetId is missing', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: null,
+      metadata: {
+        ...base.metadata,
+        defaultScenarioAssetId: 'scenario-missing',
+      },
+      dataAssets: [
+        {
+          id: 'map-foundation',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        { id: 'scenario-a', kind: 'scenario' as const, payload: { mapAssetId: 'map-foundation' } },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING'),
+      true,
+    );
+    assertDataAssetCascadeSuppression({
+      diagnostics: result.diagnostics,
+      cascadeCode: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING',
+      requiredSectionPath: 'doc.zones',
+      messageIncludes: 'metadata.defaultScenarioAssetId references a missing scenario asset',
+      suggestionIncludes: 'metadata.defaultScenarioAssetId',
+    });
+  });
+
+  it('suppresses required doc.tokenTypes cascade when metadata.defaultScenarioAssetId is missing', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      tokenTypes: null,
+      metadata: {
+        ...base.metadata,
+        defaultScenarioAssetId: 'scenario-missing',
+      },
+      dataAssets: [
+        {
+          id: 'pieces-foundation',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        { id: 'scenario-a', kind: 'scenario' as const, payload: { pieceCatalogAssetId: 'pieces-foundation' } },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING'),
+      true,
+    );
+    assertDataAssetCascadeSuppression({
+      diagnostics: result.diagnostics,
+      cascadeCode: 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
+      requiredSectionPath: 'doc.tokenTypes',
+      messageIncludes: 'metadata.defaultScenarioAssetId references a missing scenario asset',
+      suggestionIncludes: 'metadata.defaultScenarioAssetId',
+    });
+  });
+
   it('suppresses required doc.zones cascade when scenario selection is ambiguous', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

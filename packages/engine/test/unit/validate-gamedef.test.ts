@@ -13,6 +13,8 @@ import {
   validateGameDefBoundary,
   validateInitialPlacementsAgainstStackingConstraints,
 } from '../../src/kernel/index.js';
+import { EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/contracts/index.js';
+import { collectEffectDeclaredBinderPolicyPatternsForTest } from '../../src/kernel/validate-gamedef-behavior.js';
 import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 const withCardDrivenTurnFlow = (
@@ -56,6 +58,16 @@ const withCardDrivenTurnFlow = (
       },
     ],
   }) as unknown as GameDef;
+
+const collectDeclaredEffectBinderPatternsFromContract = (): readonly string[] => {
+  const patterns: string[] = [];
+  for (const [effectKind, surface] of Object.entries(EFFECT_BINDER_SURFACE_CONTRACT)) {
+    for (const binderPath of surface.declaredBinderPaths) {
+      patterns.push(`${effectKind}.${binderPath.join('.')}`);
+    }
+  }
+  return patterns;
+};
 
 describe('validateGameDef reference checks', () => {
   it('validates eligibility seats against canonical declared seats', () => {
@@ -2521,6 +2533,17 @@ describe('validateGameDef reference checks', () => {
     for (const code of expected) {
       assert.ok(diagnostics.some((diag) => diag.code === code), `missing diagnostic code ${code}`);
     }
+  });
+
+  it('keeps declared effect binder policies in parity with binder-surface contract declarations', () => {
+    const declaredPatterns = [...collectDeclaredEffectBinderPatternsFromContract()].sort();
+    const policyPatterns = [...collectEffectDeclaredBinderPolicyPatternsForTest()].sort();
+
+    assert.deepEqual(
+      policyPatterns,
+      declaredPatterns,
+      'validator declared-binder policy keys must exactly match contract-declared effect binder patterns',
+    );
   });
 
   it('reports missing intsInVarRange source variable', () => {

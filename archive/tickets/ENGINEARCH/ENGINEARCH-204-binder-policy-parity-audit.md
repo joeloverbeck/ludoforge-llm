@@ -1,6 +1,6 @@
 # ENGINEARCH-204: Enforce Validator Policy Parity with Declared Binder Contract
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-04)
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — validator contract auditing tests
@@ -8,19 +8,21 @@
 
 ## Problem
 
-Declared binder surfaces are centralized in shared contracts, but validator canonical-binding policy is still a separate mapping table. If a new binder declaration path is added in contract and the validator mapping is not updated, enforcement can silently drift.
+Declared binder surfaces are centralized in shared contracts, but validator canonical-binding policy is maintained in a separate mapping table. The table is currently correct, but there is no deterministic test guard that prevents future drift when binder declarations change.
 
-## Assumption Reassessment (2026-03-03)
+## Assumption Reassessment (2026-03-04)
 
-1. `collectDeclaredBinderCandidatesFromEffectNode` now derives declared binder candidates from `EFFECT_BINDER_SURFACE_CONTRACT` in `src/contracts`.
+1. `collectDeclaredBinderCandidatesFromEffectNode` derives declared binder candidates from `EFFECT_BINDER_SURFACE_CONTRACT` in `src/contracts`.
 2. `validate-gamedef-behavior` enforces canonical declared binders via `EFFECT_DECLARED_BINDER_POLICY_BY_PATTERN`, which is manually curated.
-3. Mismatch: there is no explicit parity audit test proving every contract-declared binder pattern has validator policy coverage. Scope is corrected to add a deterministic parity guard.
+3. Current parity is complete (17 declared effect-binder patterns and 17 validator policy entries), but there is no explicit parity audit test.
+4. Scope remains to add a deterministic parity guard so future contract changes cannot drift silently.
 
 ## Architecture Check
 
-1. Contract-to-validator parity checks are cleaner than relying on developer discipline because they prevent silent contract drift.
+1. A parity audit test is a net architectural improvement versus the current state because it makes cross-module contract coupling explicit and enforceable in CI.
 2. This remains game-agnostic (pure contract consistency); no game-specific behavior is added to `GameDef` validation or simulation.
-3. No backward-compatibility aliases/shims are introduced; this only hardens strict canonical contract enforcement.
+3. No backward-compatibility aliases/shims are introduced; this hardens strict canonical contract enforcement.
+4. Ideal future architecture (out of scope): co-locate canonical-binding diagnostic metadata with binder-surface contract declarations so policy and declaration become a single source of truth.
 
 ## What to Change
 
@@ -71,3 +73,9 @@ Retain existing diagnostic codes/messages while adding only parity auditing cove
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
 3. `pnpm turbo lint`
+
+## Outcome
+
+1. Implemented as planned: added a testable validator policy-pattern export and a deterministic contract-vs-policy parity test for declared effect binders.
+2. Scope remained unchanged: no runtime/simulator behavior changes, no contract semantic changes, no game-specific logic.
+3. Validation result: `pnpm turbo test` and `pnpm turbo lint` both passed after fixing a transient stale dist-lock issue in the local workspace.

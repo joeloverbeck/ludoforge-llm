@@ -4,13 +4,17 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const lockName = process.env.ENGINE_DIST_LOCK_NAME || '.dist-lock';
-const lockDir = join(process.cwd(), lockName);
+const defaultLockRoot = join('/tmp', 'ludoforge-engine-dist-locks', process.cwd().replaceAll('/', '_'));
+const lockRoot = process.env.ENGINE_DIST_LOCK_DIR || defaultLockRoot;
+const lockDir = join(lockRoot, lockName);
 const lockMetaFile = join(lockDir, 'owner.json');
 const pollMs = 200;
 const staleMs = 30 * 60 * 1000;
 const maxWaitMs = Number.parseInt(process.env.ENGINE_DIST_LOCK_MAX_WAIT_MS ?? '', 10) || 5 * 60 * 1000;
 
 const command = process.argv.slice(2).join(' ').trim();
+
+mkdirSync(lockRoot, { recursive: true });
 
 if (!command) {
   console.error('run-with-dist-lock requires a command string');
@@ -57,8 +61,8 @@ const isExpectedLockOwnerProcess = (pid) => {
     const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf8');
     return cmdline.includes('run-with-dist-lock.mjs');
   } catch {
-    // If cmdline cannot be read, fall back to "alive" semantics.
-    return true;
+    // If cmdline cannot be read, treat the lock as stale so dead/unverifiable owners do not block dist indefinitely.
+    return false;
   }
 };
 

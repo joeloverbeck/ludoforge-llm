@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 const engineRoot = resolve(import.meta.dirname, '..', '..', '..');
 const lockScript = join(engineRoot, 'scripts/run-with-dist-lock.mjs');
 const tmpDir = '/tmp/ludoforge-engine-tests';
+const lockRoot = join(tmpDir, 'dist-locks');
 
 const cleanupPaths: string[] = [];
 
@@ -31,6 +32,7 @@ const runWithLockResult = (
       env: {
         ...process.env,
         ENGINE_DIST_LOCK_NAME: lockName,
+        ENGINE_DIST_LOCK_DIR: lockRoot,
         ...extraEnv,
       },
     });
@@ -55,7 +57,7 @@ describe('run-with-dist-lock script', () => {
     mkdirSync(tmpDir, { recursive: true });
     const outputFile = join(tmpDir, `dist-lock-order-${randomUUID()}.txt`);
     const lockName = `.dist-lock-test-${randomUUID()}`;
-    const lockPath = join(engineRoot, lockName);
+    const lockPath = join(lockRoot, lockName);
     cleanupPaths.push(outputFile);
     cleanupPaths.push(lockPath);
 
@@ -75,7 +77,7 @@ describe('run-with-dist-lock script', () => {
     mkdirSync(tmpDir, { recursive: true });
     const outputFile = join(tmpDir, `dist-lock-stale-reclaim-${randomUUID()}.txt`);
     const lockName = `.dist-lock-test-${randomUUID()}`;
-    const lockPath = join(engineRoot, lockName);
+    const lockPath = join(lockRoot, lockName);
     cleanupPaths.push(outputFile);
     cleanupPaths.push(lockPath);
 
@@ -97,7 +99,7 @@ describe('run-with-dist-lock script', () => {
 
   it('fails with a clear timeout when lock cannot be acquired in time', async () => {
     const lockName = `.dist-lock-test-${randomUUID()}`;
-    const lockPath = join(engineRoot, lockName);
+    const lockPath = join(lockRoot, lockName);
     cleanupPaths.push(lockPath);
 
     const holderCommand = 'node -e "setTimeout(() => process.exit(0), 400);"';

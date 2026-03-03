@@ -206,6 +206,10 @@ const EFFECT_DECLARED_BINDER_POLICY_BY_PATTERN: Readonly<Record<string, { readon
   },
 };
 
+export function collectEffectDeclaredBinderPolicyPatternsForTest(): readonly string[] {
+  return Object.keys(EFFECT_DECLARED_BINDER_POLICY_BY_PATTERN);
+}
+
 function normalizeDeclaredBinderDiagnosticPath(path: string): string {
   return path.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
 }

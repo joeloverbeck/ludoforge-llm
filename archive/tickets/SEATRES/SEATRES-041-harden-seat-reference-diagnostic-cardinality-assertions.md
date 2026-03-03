@@ -1,6 +1,6 @@
 # SEATRES-041: Harden seat-reference diagnostic cardinality assertions
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — compiler unit-test strictness
@@ -10,11 +10,13 @@
 
 Current unit coverage for seat-reference diagnostics checks path presence and code separation but does not assert exact cardinality. Duplicate emissions or unexpected extra seat-reference diagnostics could pass unnoticed.
 
-## Assumption Reassessment (2026-03-02)
+## Assumption Reassessment (2026-03-03)
 
 1. `compiler-structured-results.test.ts` currently verifies expected seat paths are present for `CNL_COMPILER_SEAT_REF_MISSING`.
 2. The test currently does not enforce exact count of seat-reference diagnostics for that scenario.
 3. No active ticket in `tickets/` currently targets strict cardinality assertion for this case.
+
+Reassessment result: assumptions still match current code/tests; no scope correction required before implementation.
 
 ## Architecture Check
 
@@ -66,4 +68,11 @@ Assert uniqueness by path for emitted seat-reference diagnostics in that scenari
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js`
 3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo lint`
 
+## Outcome
+
+1. Updated `packages/engine/test/unit/compiler-structured-results.test.ts` to enforce exact `CNL_COMPILER_SEAT_REF_MISSING` cardinality for the fixture scenario.
+2. Added explicit uniqueness assertion on seat-reference diagnostic paths and exact expected-path set equality.
+3. Preserved existing taxonomy-split assertions to ensure seat misses do not regress to `CNL_COMPILER_DATA_ASSET_REF_MISSING`.
+4. Executed planned tests plus lint successfully.

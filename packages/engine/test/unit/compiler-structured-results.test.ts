@@ -772,8 +772,12 @@ describe('compiler structured section results', () => {
       'doc.dataAssets.3.payload.outOfPlay.0.seat',
       'doc.dataAssets.3.payload.seatPools.0.seat',
     ];
+    const seatRefPaths = seatRefDiagnostics.map((diagnostic) => diagnostic.path);
 
     assert.equal(result.gameDef, null);
+    assert.equal(seatRefDiagnostics.length, expectedSeatPaths.length);
+    assert.equal(new Set(seatRefPaths).size, seatRefDiagnostics.length);
+    assert.deepEqual(new Set(seatRefPaths), new Set(expectedSeatPaths));
     for (const path of expectedSeatPaths) {
       assert.equal(seatRefDiagnostics.some((diagnostic) => diagnostic.path === path), true);
       assert.equal(

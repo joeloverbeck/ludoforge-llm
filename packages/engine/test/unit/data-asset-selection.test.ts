@@ -75,4 +75,11 @@ describe('selectDataAssetById', () => {
     assert.equal(result.selected?.entityId, 'scenario-a');
     assert.equal(result.failureReason, undefined);
   });
+
+  it('throws when assets without string id are selected without an explicit getId', () => {
+    assert.throws(
+      () => selectDataAssetById([{ entityId: 'scenario-a' } as unknown as { readonly id: string }], 'scenario-a'),
+      /requires options\.getId/i,
+    );
+  });
 });

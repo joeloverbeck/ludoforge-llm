@@ -1,6 +1,6 @@
 # SEATRES-071: Extract unresolved scenario-selection result helper and branch guards
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL scenario-selection core/helper extraction and compiler branch coverage
@@ -14,13 +14,14 @@
 
 1. `ScenarioSelectionResult` now includes `requestedId` and is consumed by diagnostics adapters. Verified in `packages/engine/src/cnl/scenario-linked-asset-selection-core.ts` and `packages/engine/src/cnl/scenario-linked-asset-selection-diagnostics.ts`.
 2. Compiler call sites currently construct unresolved fallback objects inline instead of via shared policy helper. Verified in `packages/engine/src/cnl/compile-data-assets.ts`.
-3. Existing active tickets do not currently scope extraction of unresolved fallback construction into a canonical helper plus dedicated fallback branch tests. Scope is new.
+3. Existing tests already cover much of scenario-selection suppression behavior (missing/ambiguous selector cascades and related diagnostics) in `packages/engine/test/unit/compiler-structured-results.test.ts`. The gap is narrower: there is no explicit canonical unresolved-result helper contract test and no targeted assertion that linked-asset missing/ambiguous diagnostics stay silent when inference is intentionally skipped.
 
 ## Architecture Check
 
 1. A single constructor/helper is cleaner than repeated inline object literals because it centralizes the selection-result contract and minimizes future API drift.
 2. This remains CNL policy infrastructure and keeps game-specific content in `GameSpecDoc`; `GameDef` and simulation/runtime remain game-agnostic.
-3. No backwards-compatibility shims: migrate compiler to the canonical helper and remove duplicated inline fallback objects.
+3. Compared with current architecture, this change is beneficial: it removes local contract duplication while preserving behavior and avoiding game-specific branching in engine code.
+4. No backwards-compatibility shims: migrate compiler to the canonical helper and remove duplicated inline fallback objects.
 
 ## What to Change
 
@@ -36,8 +37,8 @@
 
 ### 3. Add explicit fallback branch tests
 
-1. Add tests covering the no-resolution path for map/pieceCatalog/seatCatalog fallback selection results.
-2. Assert diagnostics remain suppressed/preserved according to existing policy when resolution is intentionally skipped.
+1. Add a core unit test that locks the canonical unresolved-result helper contract (`requestedId` passthrough, unresolved fields, empty alternatives).
+2. Add compiler tests that explicitly prove linked-asset missing/ambiguous diagnostics are not emitted for map/pieceCatalog/seatCatalog when scenario selection fails and `skipAssetInference` drives unresolved fallbacks.
 
 ## Files to Touch
 
@@ -69,8 +70,8 @@
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/scenario-linked-asset-selection.test.ts` — verify unresolved helper shape and requested-id passthrough. Rationale: contract lock for helper semantics.
-2. `packages/engine/test/unit/compiler-structured-results.test.ts` — cover no-resolution fallback branches and diagnostics parity. Rationale: behavior guard at compiler surface.
+1. `packages/engine/test/unit/scenario-linked-asset-selection.test.ts` — add explicit unresolved helper contract test and requested-id passthrough. Rationale: single-source contract guard for fallback construction.
+2. `packages/engine/test/unit/compiler-structured-results.test.ts` — add explicit no-inference branch assertions for map/pieceCatalog/seatCatalog linked-asset diagnostics. Rationale: guard that unresolved fallback selection does not regress diagnostics policy.
 
 ### Commands
 
@@ -79,3 +80,19 @@
 3. `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Added `createUnresolvedScenarioSelectionResult(...)` to `scenario-linked-asset-selection-core.ts` as the canonical unresolved `ScenarioSelectionResult` constructor.
+  - Replaced all three inline unresolved fallback literals in `compile-data-assets.ts` (map/pieceCatalog/seatCatalog) with the new helper.
+  - Added/updated unit coverage for helper contract semantics and explicit compiler no-inference diagnostic guards.
+- **Deviations from original plan**:
+  - Scope was refined after reassessment: existing tests already covered broad scenario-selection suppression behavior, so new tests focused specifically on unresolved helper contract and explicit no-inference linked-diagnostic silence.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/scenario-linked-asset-selection.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

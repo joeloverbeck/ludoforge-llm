@@ -505,6 +505,178 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('does not emit linked-asset missing diagnostics when scenario selection is unresolved', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      metadata: {
+        ...base.metadata,
+        defaultScenarioAssetId: 'scenario-missing',
+      },
+      dataAssets: [
+        {
+          id: 'map-foundation',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'pieces-foundation',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        {
+          id: 'seats-foundation',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }, { id: 'ARVN' }],
+          },
+        },
+        {
+          id: 'scenario-foundation',
+          kind: 'scenario' as const,
+          payload: {
+            mapAssetId: 'map-missing',
+            pieceCatalogAssetId: 'pieces-missing',
+            seatCatalogAssetId: 'seats-missing',
+            scenarioName: 'Foundation',
+            yearRange: '1964-1965',
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING'),
+      false,
+    );
+  });
+
+  it('does not emit linked-asset ambiguity diagnostics when scenario selection is ambiguous', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'map-a',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'map-b',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'bravo:none',
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+        {
+          id: 'pieces-a',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        {
+          id: 'pieces-b',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'nva-regular', seat: 'nva', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'nva-regular', seat: 'nva', total: 1 }],
+          },
+        },
+        {
+          id: 'seats-a',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'US' }],
+          },
+        },
+        {
+          id: 'seats-b',
+          kind: 'seatCatalog' as const,
+          payload: {
+            seats: [{ id: 'ARVN' }],
+          },
+        },
+        {
+          id: 'scenario-a',
+          kind: 'scenario' as const,
+          payload: {
+            mapAssetId: 'map-a',
+            pieceCatalogAssetId: 'pieces-a',
+            seatCatalogAssetId: 'seats-a',
+            scenarioName: 'Scenario A',
+            yearRange: '1964-1965',
+          },
+        },
+        {
+          id: 'scenario-b',
+          kind: 'scenario' as const,
+          payload: {
+            mapAssetId: 'map-b',
+            pieceCatalogAssetId: 'pieces-b',
+            seatCatalogAssetId: 'seats-b',
+            scenarioName: 'Scenario B',
+            yearRange: '1966-1967',
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS'
+          && (
+            diagnostic.message.includes('Multiple map assets found')
+            || diagnostic.message.includes('Multiple pieceCatalog assets found')
+            || diagnostic.message.includes('Multiple seatCatalog assets found')
+          ),
+      ),
+      false,
+    );
+  });
+
   it('merges map-derived zones with explicit YAML zones when both are declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

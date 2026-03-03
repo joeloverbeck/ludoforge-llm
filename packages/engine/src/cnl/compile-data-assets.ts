@@ -29,6 +29,7 @@ import {
   emitScenarioSelectionDiagnostics,
 } from './scenario-linked-asset-selection-diagnostics.js';
 import {
+  createUnresolvedScenarioSelectionResult,
   selectScenarioLinkedAsset,
   selectScenarioRef,
 } from './scenario-linked-asset-selection-core.js';
@@ -328,7 +329,7 @@ export function deriveSectionsFromDataAssets(
     !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length > 0);
   const selectedMapResult = shouldResolveMap
     ? selectScenarioLinkedAsset(mapAssets, selectedScenario?.mapAssetId)
-    : { requestedId: selectedScenario?.mapAssetId, selected: undefined, failureReason: undefined, alternatives: [] };
+    : createUnresolvedScenarioSelectionResult<(typeof mapAssets)[number]>(selectedScenario?.mapAssetId);
   emitScenarioLinkedAssetSelectionDiagnostics(selectedMapResult, diagnostics, {
     kind: 'map',
     selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
@@ -343,7 +344,7 @@ export function deriveSectionsFromDataAssets(
     !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length > 0);
   const selectedPieceCatalogResult = shouldResolvePieceCatalog
     ? selectScenarioLinkedAsset(pieceCatalogAssets, selectedScenario?.pieceCatalogAssetId)
-    : { requestedId: selectedScenario?.pieceCatalogAssetId, selected: undefined, failureReason: undefined, alternatives: [] };
+    : createUnresolvedScenarioSelectionResult<(typeof pieceCatalogAssets)[number]>(selectedScenario?.pieceCatalogAssetId);
   emitScenarioLinkedAssetSelectionDiagnostics(
     selectedPieceCatalogResult,
     diagnostics,
@@ -362,7 +363,7 @@ export function deriveSectionsFromDataAssets(
     !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length > 0);
   const selectedSeatCatalogResult = shouldResolveSeatCatalog
     ? selectScenarioLinkedAsset(seatCatalogAssets, selectedScenario?.seatCatalogAssetId)
-    : { requestedId: selectedScenario?.seatCatalogAssetId, selected: undefined, failureReason: undefined, alternatives: [] };
+    : createUnresolvedScenarioSelectionResult<(typeof seatCatalogAssets)[number]>(selectedScenario?.seatCatalogAssetId);
   emitScenarioLinkedAssetSelectionDiagnostics(selectedSeatCatalogResult, diagnostics, {
     kind: 'seatCatalog',
     selectedPath: selectedScenario?.path ?? 'doc.dataAssets',

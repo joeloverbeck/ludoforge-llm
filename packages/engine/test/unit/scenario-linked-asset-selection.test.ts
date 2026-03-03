@@ -7,6 +7,7 @@ import {
   emitScenarioSelectionDiagnostics,
 } from '../../src/cnl/scenario-linked-asset-selection-diagnostics.js';
 import {
+  createUnresolvedScenarioSelectionResult,
   selectScenarioLinkedAsset,
   selectScenarioRef,
 } from '../../src/cnl/scenario-linked-asset-selection-core.js';
@@ -18,6 +19,15 @@ describe('scenario-linked asset selection core and diagnostics adapters', () => 
     assert.equal(result.selected?.entityId, 'scenario-a');
     assert.equal(result.failureReason, undefined);
     assert.deepEqual(result.alternatives, ['scenario-a']);
+  });
+
+  it('creates unresolved scenario selection results with canonical fallback shape', () => {
+    const result = createUnresolvedScenarioSelectionResult<{ readonly id: string }>('map-selected');
+
+    assert.equal(result.requestedId, 'map-selected');
+    assert.equal(result.selected, undefined);
+    assert.equal(result.failureReason, undefined);
+    assert.deepEqual(result.alternatives, []);
   });
 
   it('emits scenario missing-reference diagnostics through the configured dialect adapter', () => {

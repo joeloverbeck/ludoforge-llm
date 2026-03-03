@@ -47,6 +47,11 @@ describe('FITL 1964 remaining event-card production spec', () => {
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-15');
     assert.notEqual(card, undefined);
     assert.equal(card?.tags?.includes('momentum'), true);
+    assert.equal(card?.unshaded?.text, 'This Commitment, all Troop Casualties Available. MOMENTUM');
+    assert.equal(card?.shaded?.text, 'Executing Faction remains Eligible. Until Coup, no Air Lift. MOMENTUM');
+    assert.deepEqual(card?.shaded?.eligibilityOverrides, [
+      { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+    ]);
 
     const unshadedMomentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-medevac-unshaded');
     assert.notEqual(unshadedMomentum, undefined);

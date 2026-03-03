@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   applyMove,
   asPlayerId,
+  asPhaseId,
   asTokenId,
   createRng,
   initialState,
@@ -17,6 +18,7 @@ import {
 import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
@@ -146,5 +148,66 @@ describe('FITL commitment phase production wiring', () => {
     );
     assert.equal(commitmentApplied.zones['casualties-US:none']?.length ?? 0, 0, 'Expected casualties-US to be emptied');
     assert.equal(commitmentApplied.currentPhase, 'main', 'Expected to return to main phase after resolveCommitment');
+  });
+
+  it('applies Medevac unshaded during commitment: no US troop casualties go out of play and effect persists through Coup', () => {
+    const def = compileDef();
+    const baseState = clearAllZones(initialState(def, 7310, 4).state);
+    const setup: GameState = {
+      ...baseState,
+      currentPhase: asPhaseId('commitment'),
+      activePlayer: asPlayerId(0),
+      interruptPhaseStack: [{ phase: asPhaseId('commitment'), resumePhase: asPhaseId('main') }],
+      globalVars: {
+        ...baseState.globalVars,
+        mom_medevacUnshaded: true,
+      },
+      zones: {
+        ...baseState.zones,
+        'casualties-US:none': [
+          makeToken('med-cas-t-1', 'troops', 'US'),
+          makeToken('med-cas-t-2', 'troops', 'US'),
+          makeToken('med-cas-t-3', 'troops', 'US'),
+          makeToken('med-cas-t-4', 'troops', 'US'),
+          makeToken('med-cas-t-5', 'troops', 'US'),
+          makeToken('med-cas-b-1', 'base', 'US'),
+          makeToken('med-cas-i-1', 'irregular', 'US'),
+        ],
+      },
+    };
+
+    const outOfPlayTroopsBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'troops');
+    const outOfPlayBasesBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'base');
+    const availableTroopsBefore = countTokens(setup, 'available-US:none', 'US', 'troops');
+    const availableIrregularBefore = countTokens(setup, 'available-US:none', 'US', 'irregular');
+
+    const commitmentMove = legalMoves(def, setup).find((move) => String(move.actionId) === 'resolveCommitment');
+    assert.notEqual(commitmentMove, undefined, 'Expected resolveCommitment move with Medevac momentum active');
+
+    const result = applyMoveWithResolvedDecisionIds(def, setup, commitmentMove!).state;
+
+    assert.equal(
+      countTokens(result, 'out-of-play-US:none', 'US', 'troops') - outOfPlayTroopsBefore,
+      0,
+      'Medevac unshaded should prevent troop casualties from moving out of play',
+    );
+    assert.equal(
+      countTokens(result, 'out-of-play-US:none', 'US', 'base') - outOfPlayBasesBefore,
+      1,
+      'Base casualties should still move out of play under Medevac',
+    );
+    assert.equal(
+      countTokens(result, 'available-US:none', 'US', 'troops') - availableTroopsBefore,
+      5,
+      'All troop casualties should move to Available under Medevac',
+    );
+    assert.equal(
+      countTokens(result, 'available-US:none', 'US', 'irregular') - availableIrregularBefore,
+      1,
+      'Other non-base casualties should still move to Available',
+    );
+    assert.equal(result.zones['casualties-US:none']?.length ?? 0, 0, 'Expected casualties-US to be emptied');
+    assert.equal(result.currentPhase, 'main', 'Expected to return to main phase after resolveCommitment');
+    assert.equal(result.globalVars.mom_medevacUnshaded, true, 'Medevac should remain in effect until Coup reset');
   });
 });

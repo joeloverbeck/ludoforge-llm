@@ -1981,33 +1981,36 @@ effectMacros:
     params: []
     exports: []
     effects:
-      - let:
-          bind: $usTroopCasualties
-          value:
-            aggregate:
-              op: count
-              query:
-                query: tokensInZone
-                zone: casualties-US:none
-                filter:
-                  - { prop: faction, eq: US }
-                  - { prop: type, eq: troops }
-          in:
-            - removeByPriority:
-                budget:
-                  op: floorDiv
-                  left: { ref: binding, name: $usTroopCasualties }
-                  right: 3
-                groups:
-                  - bind: $casualtyTroop
-                    over:
+      - if:
+          when: { op: '!=', left: { ref: gvar, var: mom_medevacUnshaded }, right: true }
+          then:
+            - let:
+                bind: $usTroopCasualties
+                value:
+                  aggregate:
+                    op: count
+                    query:
                       query: tokensInZone
                       zone: casualties-US:none
                       filter:
                         - { prop: faction, eq: US }
                         - { prop: type, eq: troops }
-                    to:
-                      zoneExpr: out-of-play-US:none
+                in:
+                  - removeByPriority:
+                      budget:
+                        op: floorDiv
+                        left: { ref: binding, name: $usTroopCasualties }
+                        right: 3
+                      groups:
+                        - bind: $casualtyTroop
+                          over:
+                            query: tokensInZone
+                            zone: casualties-US:none
+                            filter:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: troops }
+                          to:
+                            zoneExpr: out-of-play-US:none
       - moveAll:
           from: casualties-US:none
           to: out-of-play-US:none

@@ -3097,7 +3097,7 @@ eventDecks:
           seatOrder: ["US", "ARVN", "NVA", "VC"]
           flavorText: "Helicopter evacuation doctrine expands."
         unshaded:
-          text: "Through Coup, all Troop casualties return to Available."
+          text: "This Commitment, all Troop Casualties Available. MOMENTUM"
           lastingEffects:
             - id: mom-medevac-unshaded
               duration: round
@@ -3108,7 +3108,9 @@ eventDecks:
                 - macro: set-global-flag-false
                   args: { varName: mom_medevacUnshaded }
         shaded:
-          text: "Through Coup, US Troop casualties remain unavailable."
+          text: "Executing Faction remains Eligible. Until Coup, no Air Lift. MOMENTUM"
+          eligibilityOverrides:
+            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
           lastingEffects:
             - id: mom-medevac-shaded
               duration: round

@@ -189,4 +189,94 @@ describe('FITL coup commitment phase production wiring', () => {
       'Expected illegal destination override to be rejected by chooseOne option validation',
     );
   });
+
+  it('applies Medevac unshaded in coupCommitment by skipping troop out-of-play routing', () => {
+    const def = compileDef();
+    const base = makeCoupState(def, 7504, {
+      'casualties-US:none': [
+        makeToken('med-coup-cas-t-1', 'troops', 'US'),
+        makeToken('med-coup-cas-t-2', 'troops', 'US'),
+        makeToken('med-coup-cas-t-3', 'troops', 'US'),
+        makeToken('med-coup-cas-t-4', 'troops', 'US'),
+        makeToken('med-coup-cas-t-5', 'troops', 'US'),
+        makeToken('med-coup-cas-t-6', 'troops', 'US'),
+        makeToken('med-coup-cas-t-7', 'troops', 'US'),
+        makeToken('med-coup-cas-b-1', 'base', 'US'),
+      ],
+    });
+    const setup = {
+      ...base,
+      globalVars: {
+        ...base.globalVars,
+        mom_medevacUnshaded: true,
+      },
+    };
+
+    const outOfPlayTroopsBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'troops');
+    const outOfPlayBasesBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'base');
+    const availableTroopsBefore = countTokens(setup, 'available-US:none', 'US', 'troops');
+
+    const resolveMove = legalMoves(def, setup).find((move) => String(move.actionId) === 'coupCommitmentResolve');
+    assert.notEqual(resolveMove, undefined, 'Expected coupCommitmentResolve in coupCommitment phase');
+
+    const result = applyMoveWithResolvedDecisionIds(def, setup, resolveMove!).state;
+
+    assert.equal(
+      countTokens(result, 'out-of-play-US:none', 'US', 'troops') - outOfPlayTroopsBefore,
+      0,
+      'Medevac unshaded should prevent troop casualties from moving out of play in coupCommitment',
+    );
+    assert.equal(
+      countTokens(result, 'out-of-play-US:none', 'US', 'base') - outOfPlayBasesBefore,
+      1,
+      'Base casualties should still move out of play in coupCommitment',
+    );
+    assert.equal(
+      countTokens(result, 'available-US:none', 'US', 'troops') - availableTroopsBefore,
+      7,
+      'All troop casualties should move to Available in coupCommitment under Medevac',
+    );
+    assert.equal(result.zones['casualties-US:none']?.length ?? 0, 0, 'Expected casualties-US to be emptied');
+  });
+
+  it('does not alter casualty routing when only Medevac shaded is active', () => {
+    const def = compileDef();
+    const base = makeCoupState(def, 7505, {
+      'casualties-US:none': [
+        makeToken('med-shaded-cas-t-1', 'troops', 'US'),
+        makeToken('med-shaded-cas-t-2', 'troops', 'US'),
+        makeToken('med-shaded-cas-t-3', 'troops', 'US'),
+        makeToken('med-shaded-cas-t-4', 'troops', 'US'),
+        makeToken('med-shaded-cas-t-5', 'troops', 'US'),
+        makeToken('med-shaded-cas-t-6', 'troops', 'US'),
+        makeToken('med-shaded-cas-t-7', 'troops', 'US'),
+      ],
+    });
+    const setup = {
+      ...base,
+      globalVars: {
+        ...base.globalVars,
+        mom_medevacShaded: true,
+      },
+    };
+
+    const outOfPlayTroopsBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'troops');
+    const availableTroopsBefore = countTokens(setup, 'available-US:none', 'US', 'troops');
+
+    const resolveMove = legalMoves(def, setup).find((move) => String(move.actionId) === 'coupCommitmentResolve');
+    assert.notEqual(resolveMove, undefined, 'Expected coupCommitmentResolve in coupCommitment phase');
+
+    const result = applyMoveWithResolvedDecisionIds(def, setup, resolveMove!).state;
+
+    assert.equal(
+      countTokens(result, 'out-of-play-US:none', 'US', 'troops') - outOfPlayTroopsBefore,
+      2,
+      'Shaded Medevac should not change normal 1-in-3 troop casualty out-of-play routing',
+    );
+    assert.equal(
+      countTokens(result, 'available-US:none', 'US', 'troops') - availableTroopsBefore,
+      5,
+      'Shaded Medevac should not change normal troop casualty return to Available',
+    );
+  });
 });

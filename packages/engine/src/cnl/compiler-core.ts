@@ -94,6 +94,13 @@ const DATA_ASSET_DERIVATION_SUPPRESSION_POLICY = {
   pieceCatalogTokenTypesMissing: ['invalid-payload', 'missing-reference', 'ambiguous-selection', 'scenario-selector-missing', 'scenario-ambiguous'],
   seatCatalogRequired: ['invalid-payload', 'missing-reference', 'ambiguous-selection', 'scenario-selector-missing', 'scenario-ambiguous'],
 } as const;
+const DATA_ASSET_CASCADE_ROOT_CAUSE_PRIORITY: readonly DataAssetDerivationFailureReason[] = [
+  'scenario-selector-missing',
+  'scenario-ambiguous',
+  'missing-reference',
+  'ambiguous-selection',
+  'invalid-payload',
+];
 
 type ScenarioDeckSelection = {
   readonly path: string;
@@ -340,7 +347,7 @@ function compileExpandedDoc(
         DATA_ASSET_DERIVATION_SUPPRESSION_POLICY.mapZonesMissing,
       )
     ) {
-      diagnostics.push(dataAssetCascadeZonesDiagnostic());
+      diagnostics.push(dataAssetCascadeZonesDiagnostic(derivedFromAssets.derivationFailures.map));
     } else {
       diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
     }
@@ -379,7 +386,7 @@ function compileExpandedDoc(
       DATA_ASSET_DERIVATION_SUPPRESSION_POLICY.pieceCatalogTokenTypesMissing,
     )
   ) {
-    diagnostics.push(dataAssetCascadeTokenTypesDiagnostic());
+    diagnostics.push(dataAssetCascadeTokenTypesDiagnostic(derivedFromAssets.derivationFailures.pieceCatalog));
     tokenTypes = {
       value: [],
       failed: true,
@@ -713,24 +720,85 @@ function requiredSectionDiagnostic(path: string, section: string): Diagnostic {
   };
 }
 
-function dataAssetCascadeZonesDiagnostic(): Diagnostic {
-  return {
+function dataAssetCascadeZonesDiagnostic(reasons: readonly DataAssetDerivationFailureReason[]): Diagnostic {
+  return buildDataAssetCascadeDiagnostic({
     code: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING',
-    path: 'doc.dataAssets',
-    severity: 'warning',
-    message: 'Map data asset derivation failed and no explicit zones were provided; zones section is unavailable.',
-    suggestion: 'Fix the map data asset diagnostics or provide doc.zones explicitly in YAML.',
-  };
+    section: 'zones',
+    sectionPath: 'doc.zones',
+    assetKind: 'map',
+    reasons,
+  });
 }
 
-function dataAssetCascadeTokenTypesDiagnostic(): Diagnostic {
-  return {
+function dataAssetCascadeTokenTypesDiagnostic(reasons: readonly DataAssetDerivationFailureReason[]): Diagnostic {
+  return buildDataAssetCascadeDiagnostic({
     code: 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
-    path: 'doc.dataAssets',
-    severity: 'warning',
-    message: 'Piece catalog data asset derivation failed and no explicit tokenTypes were provided; tokenTypes section is unavailable.',
-    suggestion: 'Fix the pieceCatalog data asset diagnostics or provide doc.tokenTypes explicitly in YAML.',
-  };
+    section: 'tokenTypes',
+    sectionPath: 'doc.tokenTypes',
+    assetKind: 'pieceCatalog',
+    reasons,
+  });
+}
+
+function buildDataAssetCascadeDiagnostic(options: {
+  readonly code: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING' | 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING';
+  readonly section: 'zones' | 'tokenTypes';
+  readonly sectionPath: 'doc.zones' | 'doc.tokenTypes';
+  readonly assetKind: 'map' | 'pieceCatalog';
+  readonly reasons: readonly DataAssetDerivationFailureReason[];
+}): Diagnostic {
+  const rootCause = selectDataAssetCascadeRootCause(options.reasons);
+  const article = options.assetKind === 'map' ? 'map' : 'pieceCatalog';
+
+  switch (rootCause) {
+    case 'scenario-selector-missing':
+      return {
+        code: options.code,
+        path: 'doc.dataAssets',
+        severity: 'warning',
+        message: `Scenario selection failed because metadata.defaultScenarioAssetId references a missing scenario asset; no explicit ${options.section} were provided, so ${options.section} is unavailable.`,
+        suggestion: `Fix metadata.defaultScenarioAssetId to point to an existing scenario asset or provide ${options.sectionPath} explicitly in YAML.`,
+      };
+    case 'scenario-ambiguous':
+      return {
+        code: options.code,
+        path: 'doc.dataAssets',
+        severity: 'warning',
+        message: `Scenario selection is ambiguous; no explicit ${options.section} were provided, so ${options.section} is unavailable.`,
+        suggestion: `Set metadata.defaultScenarioAssetId to one scenario asset or provide ${options.sectionPath} explicitly in YAML.`,
+      };
+    case 'missing-reference':
+      return {
+        code: options.code,
+        path: 'doc.dataAssets',
+        severity: 'warning',
+        message: `${article} data asset selection failed due to a missing referenced asset; no explicit ${options.section} were provided, so ${options.section} is unavailable.`,
+        suggestion: `Fix missing ${article} asset references in the selected scenario or provide ${options.sectionPath} explicitly in YAML.`,
+      };
+    case 'ambiguous-selection':
+      return {
+        code: options.code,
+        path: 'doc.dataAssets',
+        severity: 'warning',
+        message: `${article} data asset selection is ambiguous; no explicit ${options.section} were provided, so ${options.section} is unavailable.`,
+        suggestion: `Configure the selected scenario to reference exactly one ${article} asset or provide ${options.sectionPath} explicitly in YAML.`,
+      };
+    case 'invalid-payload':
+    default:
+      return {
+        code: options.code,
+        path: 'doc.dataAssets',
+        severity: 'warning',
+        message: `${article} data asset derivation failed due to payload validation errors; no explicit ${options.section} were provided, so ${options.section} is unavailable.`,
+        suggestion: `Fix ${article} data asset diagnostics or provide ${options.sectionPath} explicitly in YAML.`,
+      };
+  }
+}
+
+function selectDataAssetCascadeRootCause(
+  reasons: readonly DataAssetDerivationFailureReason[],
+): DataAssetDerivationFailureReason | undefined {
+  return DATA_ASSET_CASCADE_ROOT_CAUSE_PRIORITY.find((reason) => reasons.includes(reason));
 }
 
 function shouldSuppressForDerivationFailure(

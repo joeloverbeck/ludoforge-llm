@@ -339,6 +339,10 @@ describe('compiler structured section results', () => {
       result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING'),
       true,
     );
+    const zonesCascade = result.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING');
+    assert.notEqual(zonesCascade, undefined);
+    assert.equal(zonesCascade?.message.includes('Scenario selection is ambiguous'), true);
+    assert.equal(zonesCascade?.suggestion?.includes('metadata.defaultScenarioAssetId'), true);
   });
 
   it('suppresses seat-catalog-required when metadata.defaultScenarioAssetId is missing', () => {
@@ -474,6 +478,50 @@ describe('compiler structured section results', () => {
       ),
       true,
     );
+  });
+
+  it('emits scenario-root-cause tokenTypes cascade wording when selector target is missing', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      tokenTypes: null,
+      metadata: {
+        ...base.metadata,
+        defaultScenarioAssetId: 'scenario-missing',
+      },
+      dataAssets: [
+        {
+          id: 'pieces-foundation',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [{ id: 'us-troops', seat: 'us', statusDimensions: [], transitions: [] }],
+            inventory: [{ pieceTypeId: 'us-troops', seat: 'us', total: 1 }],
+          },
+        },
+        {
+          id: 'scenario-foundation',
+          kind: 'scenario' as const,
+          payload: {
+            pieceCatalogAssetId: 'pieces-foundation',
+            scenarioName: 'Foundation',
+            yearRange: '1964-1965',
+          },
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const tokenTypesCascade = result.diagnostics.find(
+      (diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
+    );
+
+    assert.notEqual(tokenTypesCascade, undefined);
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_REQUIRED_SECTION_MISSING' && diagnostic.path === 'doc.tokenTypes'),
+      false,
+    );
+    assert.equal(tokenTypesCascade?.message.includes('metadata.defaultScenarioAssetId references a missing scenario asset'), true);
+    assert.equal(tokenTypesCascade?.suggestion?.includes('doc.tokenTypes'), true);
   });
 
   it('emits pieceCatalog ambiguity diagnostics when multiple piece catalogs exist without selector', () => {

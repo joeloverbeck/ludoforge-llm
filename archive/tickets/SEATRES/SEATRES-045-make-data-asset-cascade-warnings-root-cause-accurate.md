@@ -1,6 +1,6 @@
 # SEATRES-045: Make data-asset cascade warnings root-cause accurate
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-03)
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — compiler cascade-warning phrasing contract
@@ -15,6 +15,7 @@ Compiler cascade warnings currently use fixed map/piece-failure wording even whe
 1. `compile-data-assets.ts` now records scenario-root-cause derivation reasons (`scenario-selector-missing`, `scenario-ambiguous`) into map/piece/seat failure sets.
 2. `compiler-core.ts` cascade warnings (`CNL_DATA_ASSET_CASCADE_ZONES_MISSING`, `CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING`) still use static text claiming map/piece derivation failure.
 3. No active ticket in `tickets/*` currently scopes root-cause-aware message generation for these cascade warnings.
+4. `tickets/SEATRES-046-add-scenario-root-cause-token-types-cascade-regression-coverage.md` overlaps only on cascade presence/suppression coverage, not on message-text root-cause accuracy.
 
 ## Architecture Check
 
@@ -33,6 +34,11 @@ Compiler cascade warnings currently use fixed map/piece-failure wording even whe
 
 1. Keep suppression codes and gating behavior unchanged.
 2. Update suggestions to point to the actual blocking source (for example scenario selector resolution when relevant).
+
+### 3. Scope boundary to avoid overlap with SEATRES-046
+
+1. In this ticket, prioritize assertions on warning message/suggestion root-cause accuracy.
+2. Do not duplicate SEATRES-046-only coverage whose sole purpose is cascade presence/suppression without wording checks.
 
 ## Files to Touch
 
@@ -73,3 +79,10 @@ Compiler cascade warnings currently use fixed map/piece-failure wording even whe
 3. `node --test packages/engine/dist/test/integration/compile-pipeline.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- Implemented root-cause-aware cascade warning wording in `compiler-core` for `CNL_DATA_ASSET_CASCADE_ZONES_MISSING` and `CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING`, with deterministic reason priority (`scenario-selector-missing`, `scenario-ambiguous`, `missing-reference`, `ambiguous-selection`, `invalid-payload`).
+- Preserved suppression policy and diagnostic codes exactly as planned; no behavior change to gating/strictness.
+- Expanded unit and integration assertions to verify message/suggestion root-cause accuracy (not only diagnostic presence).
+- Updated one compiler golden fixture (`compile-fitl-assets-malformed.golden.json`) to reflect the improved tokenTypes cascade suggestion text for missing pieceCatalog references.

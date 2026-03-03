@@ -1545,6 +1545,10 @@ actor: 'active',
       compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING'),
       true,
     );
+    const zonesCascade = compiled.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING');
+    assert.notEqual(zonesCascade, undefined);
+    assert.equal(zonesCascade?.message.includes('Scenario selection is ambiguous'), true);
+    assert.equal(zonesCascade?.suggestion?.includes('metadata.defaultScenarioAssetId'), true);
   });
 
   it('uses metadata.defaultScenarioAssetId for deterministic scenario selection', () => {
@@ -1704,6 +1708,12 @@ actor: 'active',
       compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_SEAT_CATALOG_REQUIRED'),
       false,
     );
+    const tokenTypesCascade = compiled.diagnostics.find(
+      (diagnostic) => diagnostic.code === 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
+    );
+    assert.notEqual(tokenTypesCascade, undefined);
+    assert.equal(tokenTypesCascade?.message.includes('metadata.defaultScenarioAssetId references a missing scenario asset'), true);
+    assert.equal(tokenTypesCascade?.suggestion?.includes('doc.tokenTypes'), true);
   });
 
   it('resolves scenario-relative table refs against metadata.defaultScenarioAssetId for runtime behavior', () => {

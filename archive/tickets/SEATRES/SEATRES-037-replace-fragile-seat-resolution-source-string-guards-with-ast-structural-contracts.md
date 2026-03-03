@@ -1,6 +1,6 @@
 # SEATRES-037: Replace fragile seat-resolution source-string guards with AST structural contracts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — unit-test architecture guard hardening for seat-resolution lifecycle contracts
@@ -10,11 +10,12 @@
 
 Recent lifecycle architecture guards rely on exact source-string snippets. This is brittle and can fail on harmless formatting/identifier changes while missing true contract regressions if equivalent text still appears. The guard intent should be structural (AST-level), not formatting-coupled.
 
-## Assumption Reassessment (2026-03-02)
+## Assumption Reassessment (2026-03-03)
 
 1. Current guards in `kernel/legal-moves.test.ts` and `phase-advance.test.ts` use `expressionToText(...).includes(...)` with exact call-string fragments.
-2. `kernel/turn-flow-runtime-invariants.test.ts` uses direct regex checks against source text for forbidden patterns.
-3. Existing active tickets do not explicitly cover making these new lifecycle guards resilient to non-semantic refactors.
+2. `kernel/legal-moves.test.ts` currently contains lifecycle guard checks for both `src/kernel/legal-moves.ts` and `src/kernel/legal-moves-turn-order.ts`, and both are string-fragment coupled.
+3. `kernel/turn-flow-runtime-invariants.test.ts` uses direct regex checks against source text for forbidden patterns.
+4. Existing active tickets do not explicitly cover making these new lifecycle guards resilient to non-semantic refactors.
 
 ## Architecture Check
 
@@ -68,6 +69,7 @@ Recent lifecycle architecture guards rely on exact source-string snippets. This 
 1. `packages/engine/test/unit/kernel/legal-moves.test.ts` — replace string-includes guard checks with AST-structural assertions for context-threaded calls.
 2. `packages/engine/test/unit/phase-advance.test.ts` — replace string-includes coup-loop guard checks with structural call-shape assertions.
 3. `packages/engine/test/unit/kernel/turn-flow-runtime-invariants.test.ts` — replace/limit regex checks in favor of structural signature/import/call-contract assertions.
+4. `packages/engine/test/unit/kernel/legal-moves.test.ts` — ensure structural checks cover both `legal-moves.ts` and `legal-moves-turn-order.ts` guard boundaries.
 
 ### Commands
 
@@ -77,3 +79,23 @@ Recent lifecycle architecture guards rely on exact source-string snippets. This 
 4. `node --test packages/engine/dist/test/unit/kernel/turn-flow-runtime-invariants.test.js`
 5. `pnpm -F @ludoforge/engine test`
 6. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Replaced string-fragment source guards with AST-structural assertions in:
+    - `packages/engine/test/unit/kernel/legal-moves.test.ts`
+    - `packages/engine/test/unit/phase-advance.test.ts`
+    - `packages/engine/test/unit/kernel/turn-flow-runtime-invariants.test.ts`
+  - Guard contracts now assert call signatures/argument structure/function-boundary behavior directly, including explicit `seatResolution` threading and no implicit context creation.
+  - Scope clarification was applied to the ticket assumptions to explicitly include `legal-moves-turn-order.ts` coverage from the existing `legal-moves` architecture guard tests.
+- **Deviations From Original Plan**:
+  - No helper extension in `packages/engine/test/helpers/kernel-source-ast-guard.ts` was required; structural checks were implemented inline in the touched unit tests to keep changes minimal.
+- **Verification Results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/phase-advance.test.js` ✅
+  - `node --test packages/engine/dist/test/unit/kernel/turn-flow-runtime-invariants.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅ (356 passed, 0 failed)
+  - `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` ✅

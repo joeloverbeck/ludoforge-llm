@@ -1,10 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import ts from 'typescript';
 
 import { asPlayerId } from '../../../src/kernel/branded.js';
 import { createSeatResolutionContext } from '../../../src/kernel/seat-resolution.js';
 import { requireCardDrivenActiveSeat } from '../../../src/kernel/turn-flow-runtime-invariants.js';
 import type { GameDef, GameState } from '../../../src/kernel/types.js';
+import { collectCallExpressionsByIdentifier, parseTypeScriptSource, unwrapTypeScriptExpression } from '../../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const makeDef = (): GameDef =>
@@ -86,15 +88,77 @@ describe('turn-flow-runtime-invariants', () => {
 
   it('forbids implicit seat-resolution fallback in active-seat invariant helper', () => {
     const source = readKernelSource('src/kernel/turn-flow-runtime-invariants.ts');
-    assert.doesNotMatch(
-      source,
-      /seatResolution\?:\s*SeatResolutionContext/u,
-      'requireCardDrivenActiveSeat must require explicit seatResolution context',
-    );
-    assert.doesNotMatch(
-      source,
-      /createSeatResolutionContext\(/u,
+    const sourceFile = parseTypeScriptSource(source, 'turn-flow-runtime-invariants.ts');
+
+    const createCalls = collectCallExpressionsByIdentifier(sourceFile, 'createSeatResolutionContext');
+    assert.equal(
+      createCalls.length,
+      0,
       'turn-flow runtime invariants must not build seat-resolution context implicitly',
+    );
+
+    const requireCardDrivenActiveSeatDeclaration = sourceFile.statements
+      .filter(ts.isVariableStatement)
+      .flatMap((statement) => statement.declarationList.declarations)
+      .find(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === 'requireCardDrivenActiveSeat' &&
+          declaration.initializer !== undefined &&
+          (ts.isArrowFunction(unwrapTypeScriptExpression(declaration.initializer)) ||
+            ts.isFunctionExpression(unwrapTypeScriptExpression(declaration.initializer))),
+      );
+
+    assert.equal(
+      requireCardDrivenActiveSeatDeclaration !== undefined,
+      true,
+      'requireCardDrivenActiveSeat declaration must exist as a function value',
+    );
+    if (requireCardDrivenActiveSeatDeclaration === undefined || requireCardDrivenActiveSeatDeclaration.initializer === undefined) {
+      return;
+    }
+
+    const initializer = unwrapTypeScriptExpression(requireCardDrivenActiveSeatDeclaration.initializer);
+    assert.equal(ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer), true);
+    if (!ts.isArrowFunction(initializer) && !ts.isFunctionExpression(initializer)) {
+      return;
+    }
+
+    assert.equal(initializer.parameters.length, 4, 'requireCardDrivenActiveSeat must require explicit seatResolution parameter');
+    const seatResolutionParameter = initializer.parameters[3];
+    assert.equal(seatResolutionParameter !== undefined, true);
+    assert.equal(seatResolutionParameter?.questionToken === undefined, true, 'seatResolution parameter must not be optional');
+    assert.equal(
+      seatResolutionParameter?.name !== undefined && ts.isIdentifier(seatResolutionParameter.name)
+        ? seatResolutionParameter.name.text === 'seatResolution'
+        : false,
+      true,
+      'requireCardDrivenActiveSeat fourth parameter must be named seatResolution',
+    );
+    assert.equal(
+      seatResolutionParameter?.type !== undefined &&
+        ts.isTypeReferenceNode(seatResolutionParameter.type) &&
+        seatResolutionParameter.type.typeName.getText(sourceFile) === 'SeatResolutionContext',
+      true,
+      'requireCardDrivenActiveSeat seatResolution parameter must be typed as SeatResolutionContext',
+    );
+
+    const resolveSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'resolveTurnFlowSeatForPlayerIndex');
+    assert.equal(
+      resolveSeatCalls.some((call) => {
+        if (call.arguments.length !== 3) {
+          return false;
+        }
+        const thirdArgument = unwrapTypeScriptExpression(call.arguments[2]!);
+        return (
+          ts.isPropertyAccessExpression(thirdArgument) &&
+          ts.isIdentifier(thirdArgument.expression) &&
+          thirdArgument.expression.text === 'seatResolution' &&
+          thirdArgument.name.text === 'index'
+        );
+      }),
+      true,
+      'requireCardDrivenActiveSeat must resolve active seat through explicit seatResolution.index',
     );
   });
 });

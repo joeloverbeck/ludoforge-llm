@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import ts from 'typescript';
 import {
   collectCallExpressionsByIdentifier,
-  expressionToText,
   parseTypeScriptSource,
+  unwrapTypeScriptExpression,
 } from '../../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
@@ -2179,30 +2180,70 @@ phase: [asPhaseId('main')],
 });
 
 describe('legalMoves seat-resolution lifecycle architecture guard', () => {
+  const isIdentifierArgument = (argument: ts.Expression, identifier: string): boolean => {
+    const unwrapped = unwrapTypeScriptExpression(argument);
+    return ts.isIdentifier(unwrapped) && unwrapped.text === identifier;
+  };
+
+  const isPropertyAccessArgument = (argument: ts.Expression, objectName: string, propertyName: string): boolean => {
+    const unwrapped = unwrapTypeScriptExpression(argument);
+    return (
+      ts.isPropertyAccessExpression(unwrapped) &&
+      ts.isIdentifier(unwrapped.expression) &&
+      unwrapped.expression.text === objectName &&
+      unwrapped.name.text === propertyName
+    );
+  };
+
   it('builds one operation-scoped seat-resolution context and threads it through turn-order stages', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
 
     const createCalls = collectCallExpressionsByIdentifier(sourceFile, 'createSeatResolutionContext');
-    assert.equal(createCalls.length >= 1, true, 'legal-moves.ts must create seat-resolution context for operation scope');
+    assert.equal(
+      createCalls.some((call) =>
+        call.arguments.length === 2 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isPropertyAccessArgument(call.arguments[1]!, 'state', 'playerCount'),
+      ),
+      true,
+      'legal-moves.ts must create seat-resolution context from (def, state.playerCount)',
+    );
 
     const isActiveSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'isActiveSeatEligibleForTurnFlow');
     assert.equal(
-      isActiveSeatCalls.some((call) => expressionToText(sourceFile, call).includes('isActiveSeatEligibleForTurnFlow(def, state, seatResolution)')),
+      isActiveSeatCalls.some((call) =>
+        call.arguments.length === 3 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isIdentifierArgument(call.arguments[1]!, 'state') &&
+        isIdentifierArgument(call.arguments[2]!, 'seatResolution'),
+      ),
       true,
       'legalMoves must pass operation-scoped seatResolution to isActiveSeatEligibleForTurnFlow',
     );
 
     const windowFilterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
     assert.equal(
-      windowFilterCalls.some((call) => expressionToText(sourceFile, call).includes('applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution)')),
+      windowFilterCalls.some((call) =>
+        call.arguments.length === 4 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isIdentifierArgument(call.arguments[1]!, 'state') &&
+        isPropertyAccessArgument(call.arguments[2]!, 'enumeration', 'moves') &&
+        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
+      ),
       true,
       'legalMoves must pass operation-scoped seatResolution to applyTurnFlowWindowFilters',
     );
 
     const freeOpVariantCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyPendingFreeOperationVariants');
     assert.equal(
-      freeOpVariantCalls.some((call) => expressionToText(sourceFile, call).includes('applyPendingFreeOperationVariants(def, state, windowFilteredMoves, seatResolution,')),
+      freeOpVariantCalls.some((call) =>
+        call.arguments.length >= 4 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isIdentifierArgument(call.arguments[1]!, 'state') &&
+        isIdentifierArgument(call.arguments[2]!, 'windowFilteredMoves') &&
+        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
+      ),
       true,
       'legalMoves must pass operation-scoped seatResolution to applyPendingFreeOperationVariants',
     );
@@ -2215,24 +2256,38 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     const activeSeatCalls = collectCallExpressionsByIdentifier(sourceFile, 'requireCardDrivenActiveSeat');
     assert.equal(activeSeatCalls.length >= 2, true, 'turn-order helpers should resolve active seat at guarded boundaries');
     for (const call of activeSeatCalls) {
-      const text = expressionToText(sourceFile, call);
       assert.equal(
-        text.includes(', seatResolution)'),
+        call.arguments.length === 4 &&
+          isIdentifierArgument(call.arguments[0]!, 'def') &&
+          isIdentifierArgument(call.arguments[1]!, 'state') &&
+          isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
         true,
-        `requireCardDrivenActiveSeat calls in legal-moves-turn-order.ts must pass seatResolution: ${text}`,
+        'requireCardDrivenActiveSeat calls in legal-moves-turn-order.ts must pass explicit seatResolution context',
       );
     }
 
     const freeApplicableCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationApplicableForMove');
     assert.equal(
-      freeApplicableCalls.some((call) => expressionToText(sourceFile, call).includes('isFreeOperationApplicableForMove(def, state, candidate, seatResolution)')),
+      freeApplicableCalls.some((call) =>
+        call.arguments.length === 4 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isIdentifierArgument(call.arguments[1]!, 'state') &&
+        isIdentifierArgument(call.arguments[2]!, 'candidate') &&
+        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
+      ),
       true,
       'applyPendingFreeOperationVariants must thread seatResolution into free-operation applicability checks',
     );
 
     const freeGrantedCalls = collectCallExpressionsByIdentifier(sourceFile, 'isFreeOperationGrantedForMove');
     assert.equal(
-      freeGrantedCalls.some((call) => expressionToText(sourceFile, call).includes('isFreeOperationGrantedForMove(def, state, candidate, seatResolution)')),
+      freeGrantedCalls.some((call) =>
+        call.arguments.length === 4 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isIdentifierArgument(call.arguments[1]!, 'state') &&
+        isIdentifierArgument(call.arguments[2]!, 'candidate') &&
+        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
+      ),
       true,
       'applyPendingFreeOperationVariants must thread seatResolution into free-operation grant checks',
     );

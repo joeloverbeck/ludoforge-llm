@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { collectCallExpressionsByIdentifier, expressionToText, parseTypeScriptSource } from '../helpers/kernel-source-ast-guard.js';
+import ts from 'typescript';
+import { collectCallExpressionsByIdentifier, parseTypeScriptSource, unwrapTypeScriptExpression } from '../helpers/kernel-source-ast-guard.js';
 import { readKernelSource } from '../helpers/kernel-source-guard.js';
 
 import {
@@ -936,36 +937,94 @@ phase: [asPhaseId('p2')],
 });
 
 describe('phase-advance seat-resolution lifecycle architecture guard', () => {
+  const isIdentifierArgument = (argument: ts.Expression, identifier: string): boolean => {
+    const unwrapped = unwrapTypeScriptExpression(argument);
+    return ts.isIdentifier(unwrapped) && unwrapped.text === identifier;
+  };
+
+  const isPropertyAccessArgument = (argument: ts.Expression, objectName: string, propertyName: string): boolean => {
+    const unwrapped = unwrapTypeScriptExpression(argument);
+    return (
+      ts.isPropertyAccessExpression(unwrapped) &&
+      ts.isIdentifier(unwrapped.expression) &&
+      unwrapped.expression.text === objectName &&
+      unwrapped.name.text === propertyName
+    );
+  };
+
+  const findVariableFunctionBody = (sourceFile: ts.SourceFile, variableName: string): ts.Block | undefined => {
+    for (const statement of sourceFile.statements) {
+      if (!ts.isVariableStatement(statement)) {
+        continue;
+      }
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name) || declaration.name.text !== variableName || declaration.initializer === undefined) {
+          continue;
+        }
+        const initializer = unwrapTypeScriptExpression(declaration.initializer);
+        if (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) {
+          return ts.isBlock(initializer.body) ? initializer.body : undefined;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const collectCallsByIdentifierWithinNode = (node: ts.Node, identifier: string): readonly ts.CallExpression[] => {
+    const calls: ts.CallExpression[] = [];
+    const visit = (candidate: ts.Node): void => {
+      if (ts.isCallExpression(candidate) && ts.isIdentifier(candidate.expression) && candidate.expression.text === identifier) {
+        calls.push(candidate);
+      }
+      ts.forEachChild(candidate, visit);
+    };
+    visit(node);
+    return calls;
+  };
+
   it('threads operation-scoped seat-resolution context through advanceToDecisionPoint coup loop', () => {
     const source = readKernelSource('src/kernel/phase-advance.ts');
     const sourceFile = parseTypeScriptSource(source, 'phase-advance.ts');
 
     const createCalls = collectCallExpressionsByIdentifier(sourceFile, 'createSeatResolutionContext');
     assert.equal(
-      createCalls.some((call) => expressionToText(sourceFile, call).includes('createSeatResolutionContext(def, state.playerCount)')),
+      createCalls.some((call) =>
+        call.arguments.length === 2 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isPropertyAccessArgument(call.arguments[1]!, 'state', 'playerCount'),
+      ),
       true,
       'phase-advance.ts must build operation-scoped seat-resolution context',
     );
 
     const coupImplicitCalls = collectCallExpressionsByIdentifier(sourceFile, 'coupPhaseImplicitPass');
     assert.equal(
-      coupImplicitCalls.some((call) => expressionToText(sourceFile, call).includes('coupPhaseImplicitPass(def, nextState, seatResolution)')),
+      coupImplicitCalls.some((call) =>
+        call.arguments.length === 3 &&
+        isIdentifierArgument(call.arguments[0]!, 'def') &&
+        isIdentifierArgument(call.arguments[1]!, 'nextState') &&
+        isIdentifierArgument(call.arguments[2]!, 'seatResolution'),
+      ),
       true,
       'advanceToDecisionPoint must pass operation-scoped seatResolution to coupPhaseImplicitPass',
     );
     assert.equal(
-      coupImplicitCalls.some((call) => expressionToText(sourceFile, call).includes('coupPhaseImplicitPass(def, nextState)')),
+      coupImplicitCalls.some((call) => call.arguments.length === 2),
       false,
       'advanceToDecisionPoint must not call coupPhaseImplicitPass without seatResolution',
     );
 
-    const coupFunctionStart = source.indexOf('const coupPhaseImplicitPass = (');
-    const decisionPointStart = source.indexOf('export const advanceToDecisionPoint = (');
-    assert.equal(coupFunctionStart >= 0 && decisionPointStart > coupFunctionStart, true);
-    const coupFunctionSource = source.slice(coupFunctionStart, decisionPointStart);
+    const coupFunctionBody = findVariableFunctionBody(sourceFile, 'coupPhaseImplicitPass');
     assert.equal(
-      coupFunctionSource.includes('createSeatResolutionContext('),
-      false,
+      coupFunctionBody !== undefined,
+      true,
+      'phase-advance.ts must define coupPhaseImplicitPass function body',
+    );
+    const createCallsInCoupFunction =
+      coupFunctionBody === undefined ? [] : collectCallsByIdentifierWithinNode(coupFunctionBody, 'createSeatResolutionContext');
+    assert.equal(
+      createCallsInCoupFunction.length,
+      0,
       'coupPhaseImplicitPass must not allocate seat-resolution context internally',
     );
   });

@@ -1048,6 +1048,80 @@ actor: 'active',
     assert.deepEqual(missingDiagnostic?.alternatives, ['seats-foundation']);
   });
 
+  it('emits seat-reference diagnostic code for scenario seat pools with unknown seat ids', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-seat-reference-missing',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: seats-foundation',
+      '    kind: seatCatalog',
+      '    payload:',
+      '      seats:',
+      '        - id: US',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      seatCatalogAssetId: seats-foundation',
+      '      scenarioName: Foundation',
+      '      yearRange: 1964-1965',
+      '      seatPools:',
+      '        - seat: ARVN',
+      '          availableZoneId: available-ARVN:none',
+      '          outOfPlayZoneId: out-of-play-ARVN:none',
+      'zones:',
+      '  - id: fallback:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SEAT_REF_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.1.payload.seatPools.0.seat',
+      ),
+      true,
+    );
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.1.payload.seatCatalogAssetId',
+      ),
+      false,
+    );
+  });
+
   it('accepts selected piece catalog without embedded seat declarations', () => {
     const markdown = [
       '```yaml',

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   assertModuleExportContract,
   collectCallExpressionsByIdentifier,
+  collectRedundantEffectRuntimeReasonConjunctions,
   collectTopLevelExportSurface,
   collectTopLevelObjectLiteralInitializers,
   isIdentifierExported,
@@ -157,5 +158,39 @@ describe('kernel source ast guard helpers', () => {
     assert.equal(mixedSurface.hasExportAll, true);
     assert.equal(mixedSurface.hasDefaultExport, true);
     assert.equal(mixedSurface.hasExportAssignment, false);
+  });
+
+  it('collects redundant effect-runtime reason conjunctions for canonical anti-pattern shape', () => {
+    const source = `
+      const guardA =
+        isEffectErrorCode(err, 'EFFECT_RUNTIME')
+        && isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+      const guardB =
+        isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH)
+        && isEffectErrorCode(error, 'EFFECT_RUNTIME');
+      const guardC = isEffectErrorCode(err, 'EFFECT_RUNTIME') || isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+    `;
+
+    const matches = collectRedundantEffectRuntimeReasonConjunctions(source, 'fixture-redundant.ts');
+    assert.equal(matches.length, 2);
+  });
+
+  it('does not collect non-redundant conjunctions that only partially resemble the anti-pattern', () => {
+    const source = `
+      const singleRuntimeReasonGuard = isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+      const singleRuntimeCodeGuard = isEffectErrorCode(err, 'EFFECT_RUNTIME');
+      const nonRuntimeCodeConjunction =
+        isEffectErrorCode(err, 'CHOICE_RUNTIME')
+        && isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+      const unrelatedConjunction =
+        isEffectErrorCode(err, 'EFFECT_RUNTIME')
+        && isChoiceError(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+      const disjunction =
+        isEffectErrorCode(err, 'EFFECT_RUNTIME')
+        || isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED);
+    `;
+
+    const matches = collectRedundantEffectRuntimeReasonConjunctions(source, 'fixture-non-redundant.ts');
+    assert.equal(matches.length, 0);
   });
 });

@@ -7,6 +7,7 @@ import {
   TURN_FLOW_REQUIRED_KEYS,
 } from '../contracts/index.js';
 import { compareSourceSpans, resolveSpanForDiagnosticPath } from './diagnostic-source-map.js';
+import type { GameSpecPhaseTemplateDef } from './game-spec-doc.js';
 import { normalizeIdentifier } from './identifier-utils.js';
 import type { GameSpecSourceMap } from './source-map.js';
 
@@ -274,4 +275,43 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * Resolve a phase ID from a `fromTemplate` entry by substituting args into
+ * the template's `phase.id` field.
+ *
+ * This is the single canonical implementation of the "entire-string match →
+ * direct value; else replaceAll" algorithm used for phase-ID resolution.
+ * See also `substituteParams` in `expand-phase-templates.ts` for the deep
+ * object/array variant.
+ */
+export function resolvePhaseIdFromTemplate(
+  entry: { readonly fromTemplate: string; readonly args: Readonly<Record<string, unknown>> },
+  phaseTemplates: readonly GameSpecPhaseTemplateDef[] | null | undefined,
+): string | undefined {
+  if (phaseTemplates === null || phaseTemplates === undefined) {
+    return undefined;
+  }
+
+  const template = phaseTemplates.find((t) => t.id === entry.fromTemplate);
+  if (template === undefined) {
+    return undefined;
+  }
+
+  const rawPhaseId = template.phase.id;
+  if (typeof rawPhaseId !== 'string') {
+    return undefined;
+  }
+
+  let resolvedId = rawPhaseId;
+  for (const [paramName, argValue] of Object.entries(entry.args)) {
+    if (resolvedId === `{${paramName}}`) {
+      resolvedId = String(argValue);
+      break;
+    }
+    resolvedId = resolvedId.replaceAll(`{${paramName}}`, String(argValue));
+  }
+
+  return normalizeIdentifier(resolvedId);
 }

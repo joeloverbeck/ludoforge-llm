@@ -9,6 +9,7 @@ import {
   TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
   isRecord,
+  resolvePhaseIdFromTemplate,
   uniqueSorted,
   validateIdentifierField,
   validateUnknownKeys,
@@ -246,30 +247,7 @@ function resolveFromTemplatePhaseId(
     return undefined;
   }
 
-  // Find matching template to resolve the phase ID
-  const template = doc.phaseTemplates?.find((t) => t.id === templateName);
-  if (template === undefined || template === null) {
-    // Template not found — expansion will report this; just skip ID collection
-    return undefined;
-  }
-
-  // Resolve phase.id from template by substituting args
-  const rawPhaseId = template.phase.id;
-  if (typeof rawPhaseId !== 'string') {
-    return undefined;
-  }
-
-  // Perform entire-string param substitution (same logic as expand-phase-templates)
-  let resolvedId = rawPhaseId;
-  for (const [paramName, argValue] of Object.entries(args)) {
-    if (resolvedId === `{${paramName}}`) {
-      resolvedId = String(argValue);
-      break;
-    }
-    resolvedId = resolvedId.replaceAll(`{${paramName}}`, String(argValue));
-  }
-
-  return normalizeIdentifier(resolvedId);
+  return resolvePhaseIdFromTemplate({ fromTemplate: templateName, args }, doc.phaseTemplates);
 }
 
 export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {

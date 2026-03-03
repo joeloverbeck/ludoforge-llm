@@ -19,6 +19,10 @@ function isFromTemplateEntry(
 
 // ---------------------------------------------------------------------------
 // Deep substitution helper
+//
+// This performs deep object/array recursion and preserves raw arg types.
+// For the ID-only variant (string result, normalized), see
+// `resolvePhaseIdFromTemplate` in `validate-spec-shared.ts`.
 // ---------------------------------------------------------------------------
 
 function substituteParams(

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-023: Extract shared phase ID resolution helper (DRY)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — cnl validators + expand-phase-templates
@@ -91,3 +91,24 @@ Replace the inline `fromTemplate` resolution in `validateDuplicateIdentifiers()`
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+### What Changed vs Originally Planned
+
+All four deliverables completed as planned:
+
+1. **`validate-spec-shared.ts`** — Added `resolvePhaseIdFromTemplate()` with `GameSpecPhaseTemplateDef` type import. Signature accepts `null | undefined` for phaseTemplates (slightly more permissive than ticket spec's `null` only).
+2. **`validate-actions.ts`** — Replaced 20-line inline substitution block with single call to shared helper. Diagnostic wrapper retained.
+3. **`validate-spec-core.ts`** — Replaced 12-line inline substitution with single call to shared helper. Removed now-redundant `doc.phaseTemplates !== null` guard (helper handles null internally).
+4. **`expand-phase-templates.ts`** — Added cross-reference comment; `substituteParams` kept separate due to deep recursion and raw-type-preserving semantics.
+
+### Test file
+
+New: `packages/engine/test/unit/cnl/resolve-phase-id-from-template.test.ts` (11 tests) — named for the specific helper rather than the generic `validate-spec-shared.test.ts` proposed in the ticket, to maintain one-test-file-per-concern organization.
+
+### Verification
+
+- 3435/3435 engine tests pass
+- typecheck: clean
+- lint: clean

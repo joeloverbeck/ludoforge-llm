@@ -92,6 +92,11 @@ describe('traceToDescriptors', () => {
         provenance: traceEntryProvenance('lifecycleEvent'),
       },
       {
+        kind: 'shuffle',
+        zone: 'zone:deck',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
         kind: 'forEach',
         bind: '$token',
         matchCount: 5,
@@ -185,6 +190,10 @@ describe('traceToDescriptors', () => {
         phase: 'cleanup',
         preset: 'banner-overlay',
         isTriggered: false,
+      },
+      {
+        kind: 'skipped',
+        traceKind: 'shuffle',
       },
       {
         kind: 'skipped',

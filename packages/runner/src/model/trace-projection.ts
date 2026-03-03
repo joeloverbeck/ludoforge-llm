@@ -69,6 +69,14 @@ export function projectEffectTraceEntry(entry: EffectTraceEntry): EffectTracePro
         tokenIds: [entry.tokenId],
       };
 
+    case 'shuffle':
+      return {
+        kind: entry.kind,
+        isTriggered: isTriggeredEffectTraceEntry(entry),
+        zoneIds: [entry.zone],
+        tokenIds: [],
+      };
+
     case 'forEach':
     case 'reduce':
     case 'lifecycleEvent':

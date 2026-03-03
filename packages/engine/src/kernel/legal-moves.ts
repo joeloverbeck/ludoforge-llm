@@ -29,6 +29,7 @@ import type { GameDefRuntime } from './gamedef-runtime.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './seat-resolution.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { findPhaseDef } from './phase-lookup.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue, PhaseDef, RuntimeWarning } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
@@ -186,6 +187,7 @@ function enumerateParams(
   paramIndex: number,
   bindings: Readonly<Record<string, unknown>>,
   enumeration: MoveEnumerationState,
+  currentPhaseDef: PhaseDef | undefined,
 ): void {
   if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
     return;
@@ -219,9 +221,6 @@ function enumerateParams(
       return;
     }
     const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
-    const currentPhaseDef: PhaseDef | undefined =
-      def.turnStructure.phases.find(p => p.id === state.currentPhase) ??
-      (def.turnStructure.interrupts ?? []).find(p => p.id === state.currentPhase);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
       if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
@@ -277,6 +276,7 @@ function enumerateParams(
       paramIndex + 1,
       { ...bindings, [param.name]: value },
       enumeration,
+      currentPhaseDef,
     );
     if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
       return;
@@ -398,6 +398,7 @@ export const enumerateLegalMoves = (
   };
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
+  const currentPhaseDef = findPhaseDef(def, state.currentPhase);
 
   for (const action of def.actions) {
     if (enumeration.templateBudgetExceeded) {
@@ -453,7 +454,7 @@ export const enumerateLegalMoves = (
     }
 
     if (!hasActionPipeline) {
-      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, state, 0, {}, enumeration);
+      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, state, 0, {}, enumeration, currentPhaseDef);
       continue;
     }
 

@@ -238,7 +238,31 @@ function extractGlobalVarDefs(
   }
 
   for (const variable of globalVars) {
-    if (!isRecord(variable) || typeof variable.name !== 'string') {
+    if (!isRecord(variable)) {
+      continue;
+    }
+
+    // Handle batch: entries (pre-expansion)
+    if (isRecord(variable.batch) && Array.isArray(variable.batch.names)) {
+      const batchType = variable.batch.type;
+      if (batchType !== 'int' && batchType !== 'boolean') {
+        continue;
+      }
+      for (const name of variable.batch.names) {
+        if (typeof name !== 'string') {
+          continue;
+        }
+        result.set(name, {
+          name,
+          type: batchType,
+          ...(isFiniteNumber(variable.batch.min) ? { min: variable.batch.min } : {}),
+          ...(isFiniteNumber(variable.batch.max) ? { max: variable.batch.max } : {}),
+        });
+      }
+      continue;
+    }
+
+    if (typeof variable.name !== 'string') {
       continue;
     }
     if (variable.type !== 'int' && variable.type !== 'boolean') {
@@ -264,7 +288,23 @@ function extractGlobalMarkerLattices(
   }
 
   for (const lattice of globalMarkerLattices) {
-    if (!isRecord(lattice) || typeof lattice.id !== 'string' || !Array.isArray(lattice.states)) {
+    if (!isRecord(lattice)) {
+      continue;
+    }
+
+    // Handle batch: entries (pre-expansion)
+    if (isRecord(lattice.batch) && Array.isArray(lattice.batch.ids) && Array.isArray(lattice.batch.states)) {
+      const states = lattice.batch.states.filter((s: unknown): s is string => typeof s === 'string');
+      for (const id of lattice.batch.ids) {
+        if (typeof id !== 'string') {
+          continue;
+        }
+        result.set(id, { id, states });
+      }
+      continue;
+    }
+
+    if (typeof lattice.id !== 'string' || !Array.isArray(lattice.states)) {
       continue;
     }
     const states = lattice.states.filter((s: unknown): s is string => typeof s === 'string');

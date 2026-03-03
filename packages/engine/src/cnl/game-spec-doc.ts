@@ -48,6 +48,12 @@ export interface GameSpecBatchVarDef {
   };
 }
 
+export interface GameSpecZoneBehavior {
+  readonly type: string;
+  readonly drawFrom?: string;
+  readonly reshuffleFrom?: string;
+}
+
 export interface GameSpecZoneDef {
   readonly id: string;
   readonly zoneKind?: 'board' | 'aux';
@@ -63,11 +69,7 @@ export interface GameSpecZoneDef {
   }>;
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
-  readonly behavior?: {
-    readonly type: string;
-    readonly drawFrom?: string;
-    readonly reshuffleFrom?: string;
-  };
+  readonly behavior?: GameSpecZoneBehavior;
 }
 
 export interface GameSpecZoneTemplateDef {
@@ -81,6 +83,7 @@ export interface GameSpecZoneTemplateDef {
     readonly isInternal?: boolean;
     readonly category?: string;
     readonly attributes?: Readonly<Record<string, AttributeValue>>;
+    readonly behavior?: GameSpecZoneBehavior;
   };
 }
 

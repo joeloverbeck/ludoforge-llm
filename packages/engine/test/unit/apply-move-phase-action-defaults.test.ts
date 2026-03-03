@@ -116,7 +116,7 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
     assert.equal(result.state.globalVars.afterCounter, 1, 'afterEffects should see counter >= 1');
   });
 
-  it('triggers fire AFTER afterEffects complete', () => {
+  it('actionResolved trigger sees afterEffects state changes', () => {
     const def = makeBaseDef({
       actions: [simpleAction],
       phases: [{
@@ -124,16 +124,22 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
         actionDefaults: { afterEffects: [incrementAfterCounter] },
       }],
       triggers: [{
-        id: asTriggerId('checkAfter'),
+        id: asTriggerId('checkAfterState'),
         event: { type: 'actionResolved', action: asActionId('doThing') },
-        effects: [{ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } }],
+        effects: [{
+          if: {
+            when: { op: '>=', left: { ref: 'gvar', var: 'afterCounter' }, right: 1 },
+            then: [{ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } }],
+          },
+        }],
       }],
     });
     const state = makeBaseState();
     const move: Move = { actionId: asActionId('doThing'), params: {} };
     const result = applyMove(def, state, move);
     assert.equal(result.state.globalVars.afterCounter, 1, 'afterEffects should run');
-    assert.equal(result.state.globalVars.triggerFired, 1, 'trigger should fire after afterEffects');
+    assert.equal(result.state.globalVars.triggerFired, 1,
+      'trigger should see afterCounter >= 1, proving it runs after afterEffects');
   });
 
   it('afterEffects of originating phase run even if action effects cause phase transition', () => {
@@ -195,5 +201,57 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
     const result2 = applyMove(def, state, move);
     assert.deepEqual(result1.state.globalVars, result2.state.globalVars, 'results must be identical');
     assert.deepEqual(result1.state.rng, result2.state.rng, 'RNG state must be identical');
+  });
+
+  it('afterEffects trace entries use phaseAfterEffect eventContext', () => {
+    const def = makeBaseDef({
+      actions: [simpleAction],
+      phases: [{
+        id: asPhaseId('main'),
+        actionDefaults: { afterEffects: [incrementAfterCounter] },
+      }],
+    });
+    const state = makeBaseState();
+    const move: Move = { actionId: asActionId('doThing'), params: {} };
+    const result = applyMove(def, state, move, { trace: true });
+    const trace = result.effectTrace ?? [];
+    const afterEntries = trace.filter(
+      (entry) => entry.provenance.eventContext === 'phaseAfterEffect',
+    );
+    assert.ok(afterEntries.length > 0, 'should have at least one phaseAfterEffect trace entry');
+    for (const entry of afterEntries) {
+      assert.equal(entry.provenance.actionId, 'doThing', 'actionId should match');
+      assert.ok(
+        entry.provenance.effectPath.includes('afterEffects'),
+        'effectPath should contain afterEffects',
+      );
+    }
+  });
+
+  it('action effects use actionEffect eventContext distinct from afterEffects', () => {
+    const def = makeBaseDef({
+      actions: [simpleAction],
+      phases: [{
+        id: asPhaseId('main'),
+        actionDefaults: { afterEffects: [incrementAfterCounter] },
+      }],
+    });
+    const state = makeBaseState();
+    const move: Move = { actionId: asActionId('doThing'), params: {} };
+    const result = applyMove(def, state, move, { trace: true });
+    const trace = result.effectTrace ?? [];
+    const actionEntries = trace.filter(
+      (entry) => entry.provenance.eventContext === 'actionEffect',
+    );
+    const afterEntries = trace.filter(
+      (entry) => entry.provenance.eventContext === 'phaseAfterEffect',
+    );
+    assert.ok(actionEntries.length > 0, 'should have actionEffect trace entries');
+    assert.ok(afterEntries.length > 0, 'should have phaseAfterEffect trace entries');
+    assert.notEqual(
+      actionEntries[0]?.provenance.eventContext,
+      afterEntries[0]?.provenance.eventContext,
+      'action effects and afterEffects should have distinct eventContext values',
+    );
   });
 });

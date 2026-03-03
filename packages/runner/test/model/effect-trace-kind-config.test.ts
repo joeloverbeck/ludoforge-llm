@@ -22,6 +22,7 @@ describe('effect-trace-kind-config', () => {
     expect(isSkippedTraceKind('reduce')).toBe(true);
     expect(isSkippedTraceKind('reveal')).toBe(true);
     expect(isSkippedTraceKind('conceal')).toBe(true);
+    expect(isSkippedTraceKind('shuffle')).toBe(true);
     expect(isSkippedTraceKind('moveToken')).toBe(false);
   });
 });

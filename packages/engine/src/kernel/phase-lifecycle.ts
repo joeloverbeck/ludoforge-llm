@@ -1,6 +1,7 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector, emitTrace } from './execution-collector.js';
@@ -111,8 +112,7 @@ const resolveLifecycleEffects = (
   if (event.type !== 'phaseEnter' && event.type !== 'phaseExit') {
     return [];
   }
-  const phase = [...def.turnStructure.phases, ...(def.turnStructure.interrupts ?? [])]
-    .find((entry) => entry.id === event.phase);
+  const phase = findPhaseDef(def, event.phase);
   if (phase === undefined) {
     return [];
   }

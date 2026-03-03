@@ -1249,6 +1249,67 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('detects duplicate phase ID when fromTemplate interrupt duplicates a direct phase', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [{ id: 'betting', params: [{ name: 'roundId' }], phase: { id: '{roundId}' } }],
+      turnStructure: {
+        phases: [{ id: 'preflop' }],
+        interrupts: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' &&
+          diagnostic.message.includes('phase id'),
+      ),
+      true,
+      'Expected a duplicate phase id diagnostic when interrupt resolves to same ID as a phase',
+    );
+  });
+
+  it('detects duplicate phase ID when fromTemplate interrupt duplicates a fromTemplate phase', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [{ id: 'betting', params: [{ name: 'roundId' }], phase: { id: '{roundId}' } }],
+      turnStructure: {
+        phases: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+        interrupts: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' &&
+          diagnostic.message.includes('phase id'),
+      ),
+      true,
+      'Expected a duplicate phase id diagnostic when both phase and interrupt resolve to same ID',
+    );
+  });
+
+  it('allows unique fromTemplate interrupt IDs without duplicate diagnostic', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [{ id: 'betting', params: [{ name: 'roundId' }], phase: { id: '{roundId}' } }],
+      turnStructure: {
+        phases: [{ fromTemplate: 'betting', args: { roundId: 'preflop' } }],
+        interrupts: [{ fromTemplate: 'betting', args: { roundId: 'allin' } }],
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' && diagnostic.message.includes('phase id'),
+      ),
+      false,
+      'Expected no duplicate phase id diagnostic when interrupt and phase resolve to different IDs',
+    );
+  });
+
   it('does not throw and does not mutate input for malformed content', () => {
     const malformedDoc = {
       ...createStructurallyValidDoc(),
@@ -1261,5 +1322,84 @@ describe('validateGameSpec structural rules', () => {
     validateGameSpec(malformedDoc as unknown as Parameters<typeof validateGameSpec>[0]);
 
     assert.deepEqual(malformedDoc, before);
+  });
+
+  it('rejects reserved compiler metadata keys in phase actionDefaults.afterEffects', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              afterEffects: [
+                { setVar: { scope: 'global', var: 'score', value: 1, __compilerMeta: { source: 'authored' } } },
+              ],
+            },
+          },
+        ],
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    const reservedDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN',
+    );
+    assert.equal(reservedDiagnostics.length, 1);
+    assert.equal(
+      reservedDiagnostics[0]!.path,
+      'doc.turnStructure.phases.0.actionDefaults.afterEffects.0.setVar.__compilerMeta',
+    );
+  });
+
+  it('rejects reserved compiler metadata keys in phaseTemplate actionDefaults.afterEffects', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      phaseTemplates: [
+        {
+          id: 'betting',
+          params: [{ name: 'roundId' }],
+          phase: {
+            id: '{roundId}',
+            actionDefaults: {
+              afterEffects: [
+                { setVar: { scope: 'global', var: 'score', value: 1, __internal: true } },
+              ],
+            },
+          },
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    const reservedDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN',
+    );
+    assert.equal(reservedDiagnostics.length, 1);
+    assert.equal(
+      reservedDiagnostics[0]!.path,
+      'doc.phaseTemplates.0.phase.actionDefaults.afterEffects.0.setVar.__internal',
+    );
+  });
+
+  it('allows valid actionDefaults.afterEffects without reserved compiler metadata', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            actionDefaults: {
+              afterEffects: [
+                { setVar: { scope: 'global', var: 'score', value: 1 } },
+              ],
+            },
+          },
+        ],
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN'),
+      false,
+    );
   });
 });

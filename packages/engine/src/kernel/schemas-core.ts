@@ -484,6 +484,7 @@ export const EffectTraceProvenanceSchema = z
     eventContext: z.union([
       z.literal('actionCost'),
       z.literal('actionEffect'),
+      z.literal('phaseAfterEffect'),
       z.literal('lifecycleEffect'),
       z.literal('triggerEffect'),
       z.literal('lifecycleEvent'),
@@ -629,6 +630,13 @@ export const EffectTraceEntrySchema = z.union([
       kind: z.literal('destroyToken'),
       tokenId: StringSchema,
       type: StringSchema,
+      zone: StringSchema,
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('shuffle'),
       zone: StringSchema,
       provenance: EffectTraceProvenanceSchema,
     })

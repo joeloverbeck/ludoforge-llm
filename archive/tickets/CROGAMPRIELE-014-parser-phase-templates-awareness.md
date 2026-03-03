@@ -135,3 +135,17 @@ Add a `phaseTemplates` YAML block to `full-valid-spec.md` and update `full-valid
 2. `node --test packages/engine/dist/test/unit/section-identifier.test.js`
 3. `node --test packages/engine/dist/test/unit/parser.test.js`
 4. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+All deliverables implemented as originally planned — no deviations:
+
+- **`section-identifier.ts`**: Added `'phaseTemplates'` to `CANONICAL_SECTION_KEYS`, added `isPhaseTemplatesShape()` fingerprint wired into `identifyByFingerprint()`.
+- **`parser.ts`**: Added `'phaseTemplates'` to `mergeSection()` list-section case, `mergeListSection` type union and switch body, and `getListSectionLength` union.
+- **`compose-gamespec.ts`**: Added `'phaseTemplates'` to `LIST_SECTIONS` and `assignListSection` switch.
+- **`yaml-linter.ts`**: Added `'phaseTemplates'` to its `CANONICAL_SECTION_KEYS` set.
+- **`section-identifier.test.ts`** (new, 5 tests): Covers fingerprint recognition, rejection of malformed entries, and explicit section annotation.
+- **`parser.test.ts`**: Added phaseTemplates parse test.
+- **`full-valid-spec.md`** / **`full-valid-spec.golden.json`**: Golden fixture updated with non-null `phaseTemplates` block.
+
+Verification: build passes, 3391 tests pass (0 failures), typecheck clean, lint clean.

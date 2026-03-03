@@ -1,6 +1,6 @@
 # CROGAMPRIELE-020: Add combinatorial explosion guard to piece generation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl expand-piece-generation, compiler-diagnostic-codes
@@ -14,10 +14,10 @@ The five other expansion passes already have implicit bounds (batch markers/vars
 
 ## Assumption Reassessment (2026-03-02)
 
-1. `cartesianProduct()` is at `expand-piece-generation.ts:27-40`. Confirmed: recursive, no size check.
+1. `cartesianProduct()` is at `expand-piece-generation.ts:27-44`. Confirmed: recursive, no size check.
 2. `expandPieceCatalogAsset()` calls it at line 221 and iterates the result unbounded at line 223.
 3. No existing guard or diagnostic code for combinatorial limits exists — confirmed by grepping `compiler-diagnostic-codes.ts` for `PIECE_GEN_MAX` or `PIECE_GEN_COMBO` (zero matches).
-4. `validateGenerateBlock()` (lines 94-139) validates structural correctness but not combinatorial size.
+4. `validateGenerateBlock()` (lines 94-183) validates structural correctness but not combinatorial size.
 
 ## Architecture Check
 
@@ -95,3 +95,15 @@ Add `CNL_COMPILER_PIECE_GEN_COMBINATION_LIMIT_EXCEEDED` to the `CNL_COMPILER_DIA
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "expand-piece-generation|expandPieceGeneration"`
 2. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+Implementation matched the ticket plan exactly. No deviations.
+
+### Changes made
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` — added `CNL_COMPILER_PIECE_GEN_COMBINATION_LIMIT_EXCEEDED` to `COMPILER_DIAGNOSTIC_CODES_PIECE_GENERATION`
+- `packages/engine/src/cnl/expand-piece-generation.ts` — added exported `MAX_GENERATED_PIECE_TYPES` constant (5,000) and pre-materialization guard in `validateGenerateBlock()` that computes the product of dimension value counts without allocating the Cartesian product array
+- `packages/engine/test/unit/expand-piece-generation.test.ts` — added 2 new tests (tests 13-14, renumbered existing test 13 to 15)
+
+### Ticket assumption corrections
+- Updated line number references: `cartesianProduct()` 27-40 → 27-44, `validateGenerateBlock()` 94-139 → 94-183 (function grew with dimension/derivedProp checks since ticket was written)

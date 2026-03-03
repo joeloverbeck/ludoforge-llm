@@ -317,6 +317,57 @@ describe('FITL production data integration compilation', () => {
     assert.deepEqual(activeLeader?.states, ['minh', 'khanh', 'youngTurks', 'ky', 'thieu']);
     assert.equal(activeLeader?.defaultState, 'minh');
 
+    const leaderFlipped = globalMarkerById.get('leaderFlipped');
+    assert.notEqual(leaderFlipped, undefined, 'Expected leaderFlipped global marker lattice');
+    assert.deepEqual(leaderFlipped?.states, ['normal', 'flipped']);
+    assert.equal(leaderFlipped?.defaultState, 'normal');
+
+    // Total global marker lattice count: 19 capability + activeLeader + leaderFlipped = 21
+    assert.equal(
+      compiledGlobalMarkerLattices.length,
+      21,
+      'Expected exactly 21 global marker lattices (19 capability + activeLeader + leaderFlipped)',
+    );
+
+    // Batch-expanded operation counters must all exist as compiled globalVars
+    const compiledGlobalVarNames = new Set((compiled.gameDef?.globalVars ?? []).map((v) => v.name));
+    const expectedOpCounters = [
+      'trainCount', 'patrolCount', 'sweepCount', 'assaultCount', 'rallyCount',
+      'marchCount', 'attackCount', 'adviseCount', 'airLiftCount', 'airStrikeCount',
+      'governCount', 'transportCount', 'raidCount', 'infiltrateCount', 'bombardCount',
+      'nvaAmbushCount', 'taxCount', 'subvertCount', 'vcAmbushCount',
+    ];
+    for (const name of expectedOpCounters) {
+      assert.equal(compiledGlobalVarNames.has(name), true, `Expected batch-expanded operation counter "${name}" in compiled globalVars`);
+    }
+    assert.equal(compiledGlobalVarNames.has('usOpCount'), true, 'Expected batch-expanded usOpCount in compiled globalVars');
+    assert.equal(compiledGlobalVarNames.has('arvnOpCount'), true, 'Expected batch-expanded arvnOpCount in compiled globalVars');
+
+    // Batch-expanded momentum flags must all exist as compiled globalVars
+    const expectedMomentumFlags = [
+      'mom_wildWeasels', 'mom_adsid', 'mom_rollingThunder', 'mom_medevacUnshaded',
+      'mom_medevacShaded', 'mom_blowtorchKomer', 'mom_claymores', 'mom_daNang',
+      'mom_mcnamaraLine', 'mom_oriskany', 'mom_bombingPause', 'mom_559thTransportGrp',
+      'mom_bodyCount', 'mom_generalLansdale', 'mom_typhoonKate',
+    ];
+    for (const name of expectedMomentumFlags) {
+      assert.equal(compiledGlobalVarNames.has(name), true, `Expected batch-expanded momentum flag "${name}" in compiled globalVars`);
+    }
+
+    // Deck zone must have behavior field
+    const deckZone = (compiled.gameDef?.zones ?? []).find((z) => String(z.id) === 'deck:none');
+    assert.ok(deckZone, 'Expected deck zone in compiled GameDef');
+    assert.deepEqual(
+      (deckZone as { behavior?: { type: string; drawFrom?: string } }).behavior,
+      { type: 'deck', drawFrom: 'top' },
+      'Deck zone must have deck behavior with drawFrom: top',
+    );
+
+    // No batch or template artifacts should remain in the compiled GameDef
+    const gameDefJson = JSON.stringify(compiled.gameDef);
+    assert.equal(gameDefJson.includes('"batch"'), false, 'No batch artifacts should remain in compiled GameDef');
+    assert.equal(gameDefJson.includes('"template"'), false, 'No template artifacts should remain in compiled GameDef');
+
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(
       (asset) => asset.id === 'fitl-piece-catalog-production' && asset.kind === 'pieceCatalog',
     );

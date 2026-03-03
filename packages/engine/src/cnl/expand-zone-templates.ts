@@ -114,6 +114,16 @@ export function expandZoneTemplates(doc: GameSpecDoc): {
         ...(tmpl.attributes !== undefined
           ? { attributes: tmpl.attributes }
           : {}),
+        ...(tmpl.behavior !== undefined
+          ? {
+              behavior: tmpl.behavior.reshuffleFrom !== undefined
+                ? {
+                    ...tmpl.behavior,
+                    reshuffleFrom: tmpl.behavior.reshuffleFrom.replace(/\{seat\}/g, seatId),
+                  }
+                : tmpl.behavior,
+            }
+          : {}),
       };
       expanded.push(zoneDef);
     }

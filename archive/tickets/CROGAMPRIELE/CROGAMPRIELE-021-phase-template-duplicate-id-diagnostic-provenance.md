@@ -1,6 +1,6 @@
 # CROGAMPRIELE-021: Include template provenance in phase duplicate-ID diagnostic
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — cnl expand-phase-templates
@@ -101,3 +101,13 @@ Change `seenIds` from `Set<string>` to `Map<string, string | undefined>` where t
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "expand-phase-templates|expandPhaseTemplates"`
 2. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Implemented as planned.** Option A was used: `expandPhaseArray` now returns `ExpandedPhaseEntry` tuples (compiler-internal `{ phase, fromTemplate? }`) instead of bare `GameSpecPhaseDef[]`. A `formatDuplicateIdMessage` helper produces provenance-aware messages for four collision scenarios (same-template, cross-template, literal-vs-template in both directions). `seenIds` was upgraded from `Set<string>` to `Map<string, string | undefined>`.
+
+**Files changed:**
+- `packages/engine/src/cnl/expand-phase-templates.ts` — added `ExpandedPhaseEntry` interface, `formatDuplicateIdMessage` helper; updated `expandPhaseArray` return type and `expandPhaseTemplates` duplicate-ID check + doc output destructuring.
+- `packages/engine/test/unit/expand-phase-templates.test.ts` — added 3 new tests (19-21) covering same-template, cross-template, and literal-vs-template collision diagnostics.
+
+**No deviations from plan.** All acceptance criteria met. 3422/3422 tests pass, typecheck and lint clean.

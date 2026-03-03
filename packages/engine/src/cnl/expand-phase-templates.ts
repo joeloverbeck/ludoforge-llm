@@ -19,6 +19,10 @@ function isFromTemplateEntry(
 
 // ---------------------------------------------------------------------------
 // Deep substitution helper
+//
+// This performs deep object/array recursion and preserves raw arg types.
+// For the ID-only variant (string result, normalized), see
+// `resolvePhaseIdFromTemplate` in `validate-spec-shared.ts`.
 // ---------------------------------------------------------------------------
 
 function substituteParams(
@@ -52,8 +56,24 @@ function substituteParams(
     return out;
   }
 
-  // Primitives (number, boolean, null, undefined)
+  // Primitives (number, boolean, null).
+  // Callers must never pass undefined args — guarded by expandPhaseArray.
+  if (value === undefined) {
+    throw new Error(
+      'substituteParams: value is undefined; caller must validate args before substitution',
+    );
+  }
   return value;
+}
+
+// ---------------------------------------------------------------------------
+// Provenance tuple — compiler-internal, never surfaces in GameDef
+// ---------------------------------------------------------------------------
+
+interface ExpandedPhaseEntry {
+  readonly phase: GameSpecPhaseDef;
+  readonly fromTemplate?: string;
+  readonly inputIndex: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,12 +85,12 @@ function expandPhaseArray(
   templateMap: ReadonlyMap<string, GameSpecPhaseTemplateDef>,
   pathPrefix: string,
   diagnostics: Diagnostic[],
-): readonly GameSpecPhaseDef[] {
-  const expanded: GameSpecPhaseDef[] = [];
+): readonly ExpandedPhaseEntry[] {
+  const expanded: ExpandedPhaseEntry[] = [];
 
   for (const [entryIdx, entry] of entries.entries()) {
     if (!isFromTemplateEntry(entry)) {
-      expanded.push(entry);
+      expanded.push({ phase: entry, inputIndex: entryIdx });
       continue;
     }
 
@@ -91,8 +111,10 @@ function expandPhaseArray(
     const declaredNames = new Set(template.params.map((p) => p.name));
     const providedNames = new Set(Object.keys(entry.args));
 
+    let hasMissing = false;
     for (const name of declaredNames) {
       if (!providedNames.has(name)) {
+        hasMissing = true;
         diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_PARAM_MISSING,
           path: `${path}.args`,
@@ -102,8 +124,10 @@ function expandPhaseArray(
       }
     }
 
+    let hasExtra = false;
     for (const name of providedNames) {
       if (!declaredNames.has(name)) {
+        hasExtra = true;
         diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_PARAM_EXTRA,
           path: `${path}.args.${name}`,
@@ -113,19 +137,67 @@ function expandPhaseArray(
       }
     }
 
-    // Skip expansion if param validation failed
-    const hasMissing = [...declaredNames].some((n) => !providedNames.has(n));
-    const hasExtra = [...providedNames].some((n) => !declaredNames.has(n));
-    if (hasMissing || hasExtra) {
+    // Note: this loop catches explicitly-supplied args whose value is undefined
+    // (e.g. { args: { roundId: undefined } }).  Absent keys — where a declared
+    // param has no entry in args at all — are caught by the PARAM_MISSING loop
+    // above.  YAML-parsed input cannot produce undefined values (null/~ → JS
+    // null), so this guard defends against programmatic callers.
+    let hasUndefined = false;
+    for (const [name, value] of Object.entries(entry.args)) {
+      if (value === undefined) {
+        hasUndefined = true;
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED,
+          path: `${path}.args.${name}`,
+          severity: 'error',
+          message: `Arg "${name}" for template "${entry.fromTemplate}" is undefined.`,
+        });
+      }
+    }
+
+    if (hasMissing || hasExtra || hasUndefined) {
       continue;
     }
 
     // Perform substitution
     const substituted = substituteParams(template.phase, entry.args) as Record<string, unknown>;
-    expanded.push(substituted as unknown as GameSpecPhaseDef);
+    expanded.push({
+      phase: substituted as unknown as GameSpecPhaseDef,
+      fromTemplate: entry.fromTemplate,
+      inputIndex: entryIdx,
+    });
   }
 
   return expanded;
+}
+
+// ---------------------------------------------------------------------------
+// Diagnostic message helper
+// ---------------------------------------------------------------------------
+
+function formatDuplicateIdMessage(
+  phaseId: string,
+  firstTemplate: string | undefined,
+  currentTemplate: string | undefined,
+): string {
+  const base = `Duplicate phase id "${phaseId}" after template expansion`;
+
+  if (firstTemplate !== undefined && currentTemplate !== undefined) {
+    if (firstTemplate === currentTemplate) {
+      return `${base} (from template "${currentTemplate}").`;
+    }
+    return `${base} (templates "${firstTemplate}" and "${currentTemplate}").`;
+  }
+
+  if (currentTemplate !== undefined) {
+    return `${base} (conflicts with template "${currentTemplate}"; first occurrence is a literal phase).`;
+  }
+
+  if (firstTemplate !== undefined) {
+    return `${base} (conflicts with template "${firstTemplate}"; duplicate is a literal phase).`;
+  }
+
+  return `${base}.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,24 +254,26 @@ export function expandPhaseTemplates(doc: GameSpecDoc): {
         )
       : undefined;
 
-  // Check for duplicate IDs across all expanded phases
-  const seenIds = new Set<string>();
-  const allPhases = [
-    ...expandedPhases.map((p, i) => ({ phase: p, path: `turnStructure.phases[${i}]` })),
-    ...(expandedInterrupts ?? []).map((p, i) => ({ phase: p, path: `turnStructure.interrupts[${i}]` })),
+  // Check for duplicate IDs across all expanded phases.
+  // seenIds maps phase ID → template name of first occurrence (undefined = literal).
+  const seenIds = new Map<string, string | undefined>();
+  const allEntries = [
+    ...expandedPhases.map((e) => ({ ...e, path: `turnStructure.phases[${e.inputIndex}]` })),
+    ...(expandedInterrupts ?? []).map((e) => ({ ...e, path: `turnStructure.interrupts[${e.inputIndex}]` })),
   ];
 
-  for (const { phase, path } of allPhases) {
+  for (const { phase, fromTemplate, path } of allEntries) {
     if (phase.id !== undefined && seenIds.has(phase.id)) {
+      const firstTemplate = seenIds.get(phase.id);
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
         path,
         severity: 'error',
-        message: `Duplicate phase id "${phase.id}" after template expansion.`,
+        message: formatDuplicateIdMessage(phase.id, firstTemplate, fromTemplate),
       });
     }
     if (phase.id !== undefined) {
-      seenIds.add(phase.id);
+      seenIds.set(phase.id, fromTemplate);
     }
   }
 
@@ -207,8 +281,10 @@ export function expandPhaseTemplates(doc: GameSpecDoc): {
     doc: {
       ...doc,
       turnStructure: {
-        phases: expandedPhases,
-        ...(expandedInterrupts !== undefined ? { interrupts: expandedInterrupts } : {}),
+        phases: expandedPhases.map((e) => e.phase),
+        ...(expandedInterrupts !== undefined
+          ? { interrupts: expandedInterrupts.map((e) => e.phase) }
+          : {}),
       },
       phaseTemplates: null,
     },

@@ -20,6 +20,7 @@ import {
   optionalIdentifierField,
   pushDuplicateNormalizedIdDiagnostics,
   pushMissingReferenceDiagnostic,
+  resolvePhaseIdFromTemplate,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
 import { normalizeIdentifier } from './identifier-utils.js';
@@ -235,29 +236,22 @@ function validateDuplicateIdentifiers(doc: GameSpecDoc, diagnostics: Diagnostic[
     pushDuplicateNormalizedIdDiagnostics(diagnostics, actionIds, 'doc.actions', 'action id');
   }
 
+  const resolvePhaseEntryId = (phase: unknown): string | undefined => {
+    if (!isRecord(phase)) return undefined;
+    if (typeof phase.id === 'string') return normalizeIdentifier(phase.id);
+    if (typeof phase.fromTemplate === 'string' && isRecord(phase.args)) {
+      return resolvePhaseIdFromTemplate(
+        { fromTemplate: phase.fromTemplate, args: phase.args as Readonly<Record<string, unknown>> },
+        doc.phaseTemplates,
+      );
+    }
+    return undefined;
+  };
+
   const phases = isRecord(doc.turnStructure) && Array.isArray(doc.turnStructure.phases) ? doc.turnStructure.phases : [];
-  const phaseIds = phases
-    .map((phase) => {
-      if (!isRecord(phase)) return undefined;
-      // Direct phase entry
-      if (typeof phase.id === 'string') return normalizeIdentifier(phase.id);
-      // fromTemplate entry — resolve phase ID from template definition
-      if (typeof phase.fromTemplate === 'string' && isRecord(phase.args) && doc.phaseTemplates !== null) {
-        const template = doc.phaseTemplates.find((t) => t.id === phase.fromTemplate);
-        if (template !== undefined && typeof template.phase.id === 'string') {
-          let resolvedId = template.phase.id as string;
-          for (const [paramName, argValue] of Object.entries(phase.args)) {
-            if (resolvedId === `{${paramName}}`) {
-              resolvedId = String(argValue);
-              break;
-            }
-            resolvedId = resolvedId.replaceAll(`{${paramName}}`, String(argValue));
-          }
-          return normalizeIdentifier(resolvedId);
-        }
-      }
-      return undefined;
-    })
+  const interrupts = isRecord(doc.turnStructure) && Array.isArray(doc.turnStructure.interrupts) ? doc.turnStructure.interrupts : [];
+  const allPhaseIds = [...phases, ...interrupts]
+    .map(resolvePhaseEntryId)
     .filter((value): value is string => value !== undefined && value.length > 0);
-  pushDuplicateNormalizedIdDiagnostics(diagnostics, phaseIds, 'doc.turnStructure.phases', 'phase id');
+  pushDuplicateNormalizedIdDiagnostics(diagnostics, allPhaseIds, 'doc.turnStructure.phases', 'phase id');
 }

@@ -36,6 +36,7 @@ import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from 
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
+import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createSeatResolutionContext } from './seat-resolution.js';
@@ -53,7 +54,6 @@ import type {
   Move,
   MoveParamScalar,
   MoveParamValue,
-  PhaseDef,
   Rng,
   TurnFlowDeferredEventEffectPayload,
   TurnFlowReleasedDeferredEventEffect,
@@ -808,9 +808,7 @@ const executeMoveAction = (
     executionTraceEntries.push(...saResult.triggerFirings);
   };
 
-  const originatingPhaseDef: PhaseDef | undefined =
-    def.turnStructure.phases.find(p => p.id === effectState.currentPhase) ??
-    (def.turnStructure.interrupts ?? []).find(p => p.id === effectState.currentPhase);
+  const originatingPhaseDef = findPhaseDef(def, effectState.currentPhase);
 
   if (move.compound?.timing === 'before') {
     applyCompoundSA();
@@ -897,7 +895,7 @@ const executeMoveAction = (
         state: effectState,
         rng: effectRng,
         traceContext: {
-          eventContext: 'actionEffect',
+          eventContext: 'phaseAfterEffect',
           actionId: String(action.id),
           effectPathRoot: `action:${String(action.id)}.afterEffects`,
         },

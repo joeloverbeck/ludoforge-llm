@@ -9,6 +9,7 @@ import {
   TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
   isRecord,
+  resolvePhaseIdFromTemplate,
   uniqueSorted,
   validateIdentifierField,
   validateUnknownKeys,
@@ -179,10 +180,35 @@ export function validateAuthoredCompilerMetadataBoundary(doc: GameSpecDoc, diagn
         }
         validateEffectArrayForAuthoredCompilerMetadata(phase.onEnter, `${basePath}.${index}.onEnter`, diagnostics);
         validateEffectArrayForAuthoredCompilerMetadata(phase.onExit, `${basePath}.${index}.onExit`, diagnostics);
+        if (isRecord(phase.actionDefaults)) {
+          validateEffectArrayForAuthoredCompilerMetadata(
+            phase.actionDefaults.afterEffects,
+            `${basePath}.${index}.actionDefaults.afterEffects`,
+            diagnostics,
+          );
+        }
       }
     };
     validatePhases(doc.turnStructure.phases, 'doc.turnStructure.phases');
     validatePhases(doc.turnStructure.interrupts, 'doc.turnStructure.interrupts');
+  }
+
+  if (doc.phaseTemplates !== null) {
+    for (const [index, template] of doc.phaseTemplates.entries()) {
+      if (!isRecord(template) || !isRecord(template.phase)) {
+        continue;
+      }
+      const basePath = `doc.phaseTemplates.${index}.phase`;
+      validateEffectArrayForAuthoredCompilerMetadata(template.phase.onEnter, `${basePath}.onEnter`, diagnostics);
+      validateEffectArrayForAuthoredCompilerMetadata(template.phase.onExit, `${basePath}.onExit`, diagnostics);
+      if (isRecord(template.phase.actionDefaults)) {
+        validateEffectArrayForAuthoredCompilerMetadata(
+          template.phase.actionDefaults.afterEffects,
+          `${basePath}.actionDefaults.afterEffects`,
+          diagnostics,
+        );
+      }
+    }
   }
 
   if (doc.actionPipelines !== null) {
@@ -246,30 +272,7 @@ function resolveFromTemplatePhaseId(
     return undefined;
   }
 
-  // Find matching template to resolve the phase ID
-  const template = doc.phaseTemplates?.find((t) => t.id === templateName);
-  if (template === undefined || template === null) {
-    // Template not found — expansion will report this; just skip ID collection
-    return undefined;
-  }
-
-  // Resolve phase.id from template by substituting args
-  const rawPhaseId = template.phase.id;
-  if (typeof rawPhaseId !== 'string') {
-    return undefined;
-  }
-
-  // Perform entire-string param substitution (same logic as expand-phase-templates)
-  let resolvedId = rawPhaseId;
-  for (const [paramName, argValue] of Object.entries(args)) {
-    if (resolvedId === `{${paramName}}`) {
-      resolvedId = String(argValue);
-      break;
-    }
-    resolvedId = resolvedId.replaceAll(`{${paramName}}`, String(argValue));
-  }
-
-  return normalizeIdentifier(resolvedId);
+  return resolvePhaseIdFromTemplate({ fromTemplate: templateName, args }, doc.phaseTemplates);
 }
 
 export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {

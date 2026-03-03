@@ -75,6 +75,7 @@ describe('preset-registry', () => {
     expect(() => resolveDefaultPresetIdForTraceKind('reduce')).toThrow(/does not map to a visual/u);
     expect(() => resolveDefaultPresetIdForTraceKind('reveal')).toThrow(/does not map to a visual/u);
     expect(() => resolveDefaultPresetIdForTraceKind('conceal')).toThrow(/does not map to a visual/u);
+    expect(() => resolveDefaultPresetIdForTraceKind('shuffle')).toThrow(/does not map to a visual/u);
   });
 
   it('supports runtime extension without mutating built-ins', () => {

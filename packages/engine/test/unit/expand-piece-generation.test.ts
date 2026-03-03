@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { expandPieceGeneration } from '../../src/cnl/expand-piece-generation.js';
+import {
+  expandPieceGeneration,
+  MAX_GENERATED_PIECE_TYPES,
+} from '../../src/cnl/expand-piece-generation.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../../src/cnl/compiler-diagnostic-codes.js';
 import { createEmptyGameSpecDoc, type GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
 
@@ -27,7 +30,7 @@ describe('expandPieceGeneration', () => {
                 idPattern: 'card-{suit}-{rank}',
                 seat: 'none',
                 statusDimensions: ['location'],
-                transitions: [{ from: 'deck', to: 'hand' }],
+                transitions: [{ dimension: 'location', from: 'deck', to: 'hand' }],
                 dimensions: [
                   { name: 'suit', values: ['hearts', 'diamonds', 'clubs', 'spades'] },
                   {
@@ -459,7 +462,102 @@ describe('expandPieceGeneration', () => {
     );
   });
 
-  // Test 13: Multiple pieceCatalog assets expanded independently
+  // Test 13: Combination limit exceeded
+  it('emits CNL_COMPILER_PIECE_GEN_COMBINATION_LIMIT_EXCEEDED when dimension product exceeds limit', () => {
+    // Two dimensions whose product exceeds MAX_GENERATED_PIECE_TYPES:
+    // e.g., 100 × 51 = 5_100 > 5_000
+    const dim1Values = Array.from({ length: 100 }, (_, i) => `a${i}`);
+    const dim2Values = Array.from({ length: 51 }, (_, i) => `b${i}`);
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      dataAssets: [
+        makePieceCatalogAsset({
+          pieceTypes: [
+            {
+              generate: {
+                idPattern: 'item-{d1}-{d2}',
+                seat: 'none',
+                statusDimensions: [],
+                transitions: [],
+                dimensions: [
+                  { name: 'd1', values: dim1Values },
+                  { name: 'd2', values: dim2Values },
+                ],
+                inventoryPerCombination: 1,
+              },
+            },
+          ],
+          inventory: [],
+        }),
+      ],
+    };
+
+    const result = expandPieceGeneration(doc);
+    const limitDiag = result.diagnostics.filter(
+      (d) =>
+        d.code ===
+        CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PIECE_GEN_COMBINATION_LIMIT_EXCEEDED,
+    );
+    assert.equal(limitDiag.length, 1);
+    assert.ok(limitDiag[0]!.message.includes('5100'));
+    assert.ok(limitDiag[0]!.message.includes(String(MAX_GENERATED_PIECE_TYPES)));
+
+    // No piece types should be expanded for this block
+    const payload = result.doc.dataAssets![0]!.payload as {
+      pieceTypes: readonly unknown[];
+    };
+    assert.equal(payload.pieceTypes.length, 0);
+  });
+
+  // Test 14: Exact boundary succeeds
+  it('allows generate block at exact combination limit boundary', () => {
+    // Two dimensions whose product equals MAX_GENERATED_PIECE_TYPES exactly:
+    // 50 × 100 = 5_000
+    const dim1Values = Array.from({ length: 50 }, (_, i) => `a${i}`);
+    const dim2Values = Array.from({ length: 100 }, (_, i) => `b${i}`);
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      dataAssets: [
+        makePieceCatalogAsset({
+          pieceTypes: [
+            {
+              generate: {
+                idPattern: 'item-{d1}-{d2}',
+                seat: 'none',
+                statusDimensions: [],
+                transitions: [],
+                dimensions: [
+                  { name: 'd1', values: dim1Values },
+                  { name: 'd2', values: dim2Values },
+                ],
+                inventoryPerCombination: 1,
+              },
+            },
+          ],
+          inventory: [],
+        }),
+      ],
+    };
+
+    const result = expandPieceGeneration(doc);
+    // No limit diagnostic should be emitted
+    const limitDiag = result.diagnostics.filter(
+      (d) =>
+        d.code ===
+        CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PIECE_GEN_COMBINATION_LIMIT_EXCEEDED,
+    );
+    assert.equal(limitDiag.length, 0);
+    assert.deepEqual(result.diagnostics, []);
+
+    const payload = result.doc.dataAssets![0]!.payload as {
+      pieceTypes: readonly Record<string, unknown>[];
+    };
+    assert.equal(payload.pieceTypes.length, MAX_GENERATED_PIECE_TYPES);
+  });
+
+  // Test 15: Multiple pieceCatalog assets expanded independently
   it('expands multiple pieceCatalog assets independently', () => {
     const doc: GameSpecDoc = {
       ...baseDoc(),

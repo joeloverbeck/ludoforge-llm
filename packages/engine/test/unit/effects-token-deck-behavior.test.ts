@@ -16,6 +16,7 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 import { shuffleTokenArray } from '../../src/kernel/effects-token.js';
+import type { EffectTraceEntry } from '../../src/kernel/types-core.js';
 
 const token = (id: string): Token => ({ id: asTokenId(id), type: 'card', props: {} });
 
@@ -374,5 +375,178 @@ describe('deck behavior — zone without behavior', () => {
       result.state.zones['deck:none']?.map(t => t.id),
       ['d3'],
     );
+  });
+});
+
+describe('deck behavior — trace emission: auto-reshuffle', () => {
+  it('emits moveToken traces for bulk transfer and a shuffle trace for the deck', () => {
+    const deckZone = makeDeckZone({
+      behavior: { type: 'deck', drawFrom: 'top', reshuffleFrom: asZoneId('discard:none') },
+    });
+    const discardZone: ZoneDef = { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' };
+    const handZone: ZoneDef = { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' };
+    const def = makeDef([deckZone, discardZone, handZone]);
+    const state = makeState({
+      'deck:none': [token('d1')],
+      'discard:none': [token('x1'), token('x2'), token('x3')],
+      'hand:0': [],
+    });
+    const collector = createCollector({ trace: true });
+    const ctx = makeExecutionEffectContext({
+      def,
+      state,
+      rng: createRng(7n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      moveParams: {},
+      collector,
+    });
+
+    applyEffect(
+      { draw: { from: 'deck:none', to: 'hand:0', count: 3 } },
+      ctx,
+    );
+
+    const trace = collector.trace!;
+    // Reshuffle should emit moveToken for each discard token (x1, x2, x3) moved to deck
+    const reshuffleMoveTraces = trace.filter(
+      (e: EffectTraceEntry): e is EffectTraceEntry & { readonly kind: 'moveToken' } =>
+        e.kind === 'moveToken' && 'from' in e && (e as { from: string }).from === 'discard:none' && (e as { to: string }).to === 'deck:none',
+    );
+    assert.equal(reshuffleMoveTraces.length, 3, 'should emit 3 moveToken traces for reshuffle bulk transfer');
+    const reshuffledIds = reshuffleMoveTraces.map(e => e.tokenId).sort();
+    assert.deepEqual(reshuffledIds, ['x1', 'x2', 'x3']);
+
+    // Should emit exactly one shuffle trace for the deck zone
+    const shuffleTraces = trace.filter((e: EffectTraceEntry) => e.kind === 'shuffle');
+    assert.equal(shuffleTraces.length, 1, 'should emit exactly 1 shuffle trace');
+    assert.equal((shuffleTraces[0] as EffectTraceEntry & { readonly zone: string }).zone, 'deck:none');
+
+    // Draw traces should also be present (tokens drawn from deck to hand)
+    const drawMoveTraces = trace.filter(
+      (e: EffectTraceEntry): e is EffectTraceEntry & { readonly kind: 'moveToken' } =>
+        e.kind === 'moveToken' && 'from' in e && (e as { from: string }).from === 'deck:none' && (e as { to: string }).to === 'hand:0',
+    );
+    assert.equal(drawMoveTraces.length, 3, 'should emit 3 moveToken traces for the draw');
+
+    // Ordering: reshuffle moves come before shuffle, shuffle comes before draw moves
+    const reshuffleFirstIdx = trace.findIndex(
+      (e: EffectTraceEntry) => e.kind === 'moveToken' && 'from' in e && (e as { from: string }).from === 'discard:none',
+    );
+    const shuffleIdx = trace.findIndex((e: EffectTraceEntry) => e.kind === 'shuffle');
+    const drawFirstIdx = trace.findIndex(
+      (e: EffectTraceEntry) => e.kind === 'moveToken' && 'from' in e && (e as { from: string }).from === 'deck:none',
+    );
+    assert.ok(reshuffleFirstIdx < shuffleIdx, 'reshuffle moves should precede shuffle trace');
+    assert.ok(shuffleIdx < drawFirstIdx, 'shuffle trace should precede draw moves');
+  });
+
+  it('emits no reshuffle traces when deck has sufficient tokens', () => {
+    const deckZone = makeDeckZone({
+      behavior: { type: 'deck', drawFrom: 'top', reshuffleFrom: asZoneId('discard:none') },
+    });
+    const discardZone: ZoneDef = { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' };
+    const handZone: ZoneDef = { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' };
+    const def = makeDef([deckZone, discardZone, handZone]);
+    const state = makeState({
+      'deck:none': [token('d1'), token('d2'), token('d3')],
+      'discard:none': [token('x1'), token('x2')],
+      'hand:0': [],
+    });
+    const collector = createCollector({ trace: true });
+    const ctx = makeExecutionEffectContext({
+      def,
+      state,
+      rng: createRng(1n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      moveParams: {},
+      collector,
+    });
+
+    applyEffect(
+      { draw: { from: 'deck:none', to: 'hand:0', count: 2 } },
+      ctx,
+    );
+
+    const trace = collector.trace!;
+    // No shuffle traces — deck had enough tokens
+    const shuffleTraces = trace.filter((e: EffectTraceEntry) => e.kind === 'shuffle');
+    assert.equal(shuffleTraces.length, 0, 'no shuffle trace when deck has sufficient tokens');
+    // No moveToken from discard
+    const reshuffleMoveTraces = trace.filter(
+      (e: EffectTraceEntry) => e.kind === 'moveToken' && 'from' in e && (e as { from: string }).from === 'discard:none',
+    );
+    assert.equal(reshuffleMoveTraces.length, 0, 'no reshuffle moveToken traces when deck has sufficient tokens');
+    // Only draw moveToken traces
+    const drawTraces = trace.filter(
+      (e: EffectTraceEntry) => e.kind === 'moveToken' && 'from' in e && (e as { from: string }).from === 'deck:none',
+    );
+    assert.equal(drawTraces.length, 2);
+  });
+});
+
+describe('deck behavior — trace emission: applyShuffle', () => {
+  it('emits a shuffle trace entry when zone has multiple tokens', () => {
+    const deckZone = makeDeckZone();
+    const def = makeDef([deckZone]);
+    const state = makeState({
+      'deck:none': [token('a'), token('b'), token('c')],
+    });
+    const collector = createCollector({ trace: true });
+    const ctx = makeExecutionEffectContext({
+      def,
+      state,
+      rng: createRng(42n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      moveParams: {},
+      collector,
+    });
+
+    applyEffect({ shuffle: { zone: 'deck:none' } }, ctx);
+
+    const trace = collector.trace!;
+    assert.equal(trace.length, 1, 'should emit exactly 1 trace entry');
+    assert.equal(trace[0]!.kind, 'shuffle');
+    assert.equal((trace[0] as EffectTraceEntry & { readonly zone: string }).zone, 'deck:none');
+  });
+
+  it('emits no trace when zone has 0 or 1 tokens', () => {
+    const deckZone = makeDeckZone();
+    const def = makeDef([deckZone]);
+
+    // 0 tokens
+    const emptyCollector = createCollector({ trace: true });
+    const emptyCtx = makeExecutionEffectContext({
+      def,
+      state: makeState({ 'deck:none': [] }),
+      rng: createRng(1n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      moveParams: {},
+      collector: emptyCollector,
+    });
+    applyEffect({ shuffle: { zone: 'deck:none' } }, emptyCtx);
+    assert.equal(emptyCollector.trace!.length, 0, 'no trace for 0 tokens');
+
+    // 1 token
+    const singleCollector = createCollector({ trace: true });
+    const singleCtx = makeExecutionEffectContext({
+      def,
+      state: makeState({ 'deck:none': [token('a')] }),
+      rng: createRng(1n),
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      moveParams: {},
+      collector: singleCollector,
+    });
+    applyEffect({ shuffle: { zone: 'deck:none' } }, singleCtx);
+    assert.equal(singleCollector.trace!.length, 0, 'no trace for 1 token');
   });
 });

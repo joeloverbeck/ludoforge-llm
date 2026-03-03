@@ -381,6 +381,88 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
+  it('accepts a generate block with valid transitions', () => {
+    const result = PieceCatalogPayloadSchema.safeParse({
+      pieceTypes: [
+        {
+          generate: {
+            idPattern: 'card-{suit}-{rank}',
+            seat: 'none',
+            statusDimensions: ['location'],
+            transitions: [{ dimension: 'location', from: 'deck', to: 'hand' }],
+            dimensions: [
+              { name: 'suit', values: ['hearts', 'spades'] },
+              { name: 'rank', values: ['A', 'K'] },
+            ],
+            inventoryPerCombination: 1,
+          },
+        },
+      ],
+      inventory: [],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects a generate block with malformed transition (missing dimension)', () => {
+    const result = PieceCatalogPayloadSchema.safeParse({
+      pieceTypes: [
+        {
+          generate: {
+            idPattern: 'card-{suit}',
+            seat: 'none',
+            statusDimensions: ['location'],
+            transitions: [{ from: 'deck', to: 'hand' }],
+            dimensions: [{ name: 'suit', values: ['hearts'] }],
+            inventoryPerCombination: 1,
+          },
+        },
+      ],
+      inventory: [],
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it('accepts a generate block with custom (non-FITL) dimension and values', () => {
+    const result = PieceCatalogPayloadSchema.safeParse({
+      pieceTypes: [
+        {
+          generate: {
+            idPattern: 'token-{color}',
+            seat: 'player1',
+            statusDimensions: ['ownership', 'visibility'],
+            transitions: [
+              { dimension: 'ownership', from: 'unowned', to: 'owned' },
+              { dimension: 'visibility', from: 'hidden', to: 'revealed' },
+            ],
+            dimensions: [{ name: 'color', values: ['red', 'blue'] }],
+            inventoryPerCombination: 1,
+          },
+        },
+      ],
+      inventory: [],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts a concrete piece type with custom dimensions and values', () => {
+    const result = PieceCatalogPayloadSchema.safeParse({
+      pieceTypes: [
+        {
+          id: 'card-ace',
+          seat: 'none',
+          statusDimensions: ['location'],
+          transitions: [{ dimension: 'location', from: 'deck', to: 'hand' }],
+        },
+      ],
+      inventory: [{ pieceTypeId: 'card-ace', seat: 'none', total: 4 }],
+    });
+
+    assert.equal(result.success, true);
+  });
+
   it('parses a minimal valid GameDef with zero issues', () => {
     const result = GameDefSchema.safeParse(minimalGameDef);
     assert.equal(result.success, true);

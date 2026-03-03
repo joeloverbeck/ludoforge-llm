@@ -1236,6 +1236,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1363,6 +1367,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1435,6 +1443,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1501,6 +1513,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",
@@ -1588,6 +1604,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",
@@ -1681,6 +1701,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1767,6 +1791,10 @@
                                 {
                                   "type": "string",
                                   "const": "actionEffect"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "phaseAfterEffect"
                                 },
                                 {
                                   "type": "string",
@@ -1864,6 +1892,10 @@
                                 },
                                 {
                                   "type": "string",
+                                  "const": "phaseAfterEffect"
+                                },
+                                {
+                                  "type": "string",
                                   "const": "lifecycleEffect"
                                 },
                                 {
@@ -1954,6 +1986,10 @@
                                 {
                                   "type": "string",
                                   "const": "actionEffect"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "phaseAfterEffect"
                                 },
                                 {
                                   "type": "string",
@@ -2182,6 +2218,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -2269,6 +2309,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -2334,6 +2378,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",
@@ -2407,6 +2455,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -2438,6 +2490,72 @@
                     "kind",
                     "tokenId",
                     "type",
+                    "zone",
+                    "provenance"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "shuffle"
+                    },
+                    "zone": {
+                      "type": "string"
+                    },
+                    "provenance": {
+                      "type": "object",
+                      "properties": {
+                        "phase": {
+                          "type": "string"
+                        },
+                        "eventContext": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "actionCost"
+                            },
+                            {
+                              "type": "string",
+                              "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "lifecycleEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "triggerEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "lifecycleEvent"
+                            }
+                          ]
+                        },
+                        "actionId": {
+                          "type": "string"
+                        },
+                        "effectPath": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "phase",
+                        "eventContext",
+                        "effectPath"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "kind",
                     "zone",
                     "provenance"
                   ],

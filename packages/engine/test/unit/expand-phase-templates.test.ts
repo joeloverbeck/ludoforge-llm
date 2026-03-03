@@ -472,4 +472,232 @@ describe('expandPhaseTemplates', () => {
     // Input doc must be unchanged
     assert.equal(JSON.stringify(doc), originalJson);
   });
+
+  // Test 19: Duplicate-ID diagnostic includes template name (same template)
+  it('includes template name in duplicate-ID diagnostic for same-template collision', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'betting',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.ok(dups[0]!.message.includes('"betting"'));
+    assert.ok(dups[0]!.message.includes('from template'));
+  });
+
+  // Test 20: Duplicate-ID diagnostic names both templates (cross-template collision)
+  it('names both templates in duplicate-ID diagnostic for cross-template collision', () => {
+    const tmplA: GameSpecPhaseTemplateDef = {
+      id: 'betting',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+    const tmplB: GameSpecPhaseTemplateDef = {
+      id: 'rounds',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [tmplA, tmplB],
+      turnStructure: {
+        phases: [
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+          { fromTemplate: 'rounds', args: { pid: 'preflop' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.ok(dups[0]!.message.includes('"betting"'));
+    assert.ok(dups[0]!.message.includes('"rounds"'));
+    assert.ok(dups[0]!.message.includes('templates'));
+  });
+
+  // Test 21: Undefined arg value emits ARG_UNDEFINED diagnostic
+  it('emits PHASE_TEMPLATE_ARG_UNDEFINED when an arg value is undefined', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'roundId' }, { name: 'label' }],
+      phase: { id: '{roundId}', onEnter: [{ name: '{label}' }] },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          {
+            fromTemplate: 'tmpl',
+            args: { roundId: undefined, label: 'ok' },
+          } as unknown as GameSpecPhaseFromTemplate,
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const undefinedDiags = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED,
+    );
+    assert.equal(undefinedDiags.length, 1);
+    assert.ok(undefinedDiags[0]!.message.includes('"roundId"'));
+    assert.ok(undefinedDiags[0]!.message.includes('"tmpl"'));
+    assert.equal(undefinedDiags[0]!.path, 'turnStructure.phases[0].args.roundId');
+
+    // No expanded phase should be produced
+    assert.equal(result.doc.turnStructure!.phases.length, 0);
+  });
+
+  // Test 22: Falsy but defined arg values succeed without ARG_UNDEFINED
+  it('allows falsy but defined arg values (0, empty string, false)', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'count' }, { name: 'label' }, { name: 'flag' }],
+      phase: {
+        id: 'phase_{label}',
+        onEnter: [{ count: '{count}', flag: '{flag}' }],
+      },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          { fromTemplate: 'tmpl', args: { count: 0, label: '', flag: false } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const undefinedDiags = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_ARG_UNDEFINED,
+    );
+    assert.equal(undefinedDiags.length, 0);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.doc.turnStructure!.phases.length, 1);
+
+    const phase = result.doc.turnStructure!.phases[0] as unknown as Record<string, unknown>;
+    assert.equal(phase.id, 'phase_');
+    const onEnter = phase.onEnter as readonly Record<string, unknown>[];
+    assert.equal(onEnter[0]!.count, 0);
+    assert.equal(onEnter[0]!.flag, false);
+  });
+
+  // Test 24: Duplicate-ID diagnostic path uses input index when earlier entries are skipped
+  it('uses input index (not output index) in duplicate-ID path when earlier entries are skipped', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          // Entry 0: will be skipped (extra param causes validation error)
+          { fromTemplate: 'tmpl', args: { pid: 'ok', extra: 'bad' } },
+          // Entry 1: expands to id "dup"
+          { fromTemplate: 'tmpl', args: { pid: 'dup' } },
+          // Entry 2: also expands to id "dup" — duplicate
+          { fromTemplate: 'tmpl', args: { pid: 'dup' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    // The path must reference the INPUT index (2), not the output index (1)
+    assert.equal(dups[0]!.path, 'turnStructure.phases[2]');
+  });
+
+  // Test 25: Duplicate-ID path uses input index for interrupts when earlier entries are skipped
+  it('uses input index in duplicate-ID path for interrupts when earlier entries are skipped', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'iid' }],
+      phase: { id: '{iid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [{ id: 'main' }],
+        interrupts: [
+          // Entry 0: skipped (missing param)
+          { fromTemplate: 'tmpl', args: {} } as unknown as GameSpecPhaseFromTemplate,
+          // Entry 1: expands to id "int_dup"
+          { fromTemplate: 'tmpl', args: { iid: 'int_dup' } },
+          // Entry 2: duplicate
+          { fromTemplate: 'tmpl', args: { iid: 'int_dup' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.equal(dups[0]!.path, 'turnStructure.interrupts[2]');
+  });
+
+  // Test 23: Duplicate-ID diagnostic distinguishes literal vs template origin
+  it('distinguishes literal vs template origin in duplicate-ID diagnostic', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'betting',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          { id: 'preflop' } as GameSpecPhaseDef,
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.ok(dups[0]!.message.includes('"betting"'));
+    assert.ok(dups[0]!.message.includes('literal phase'));
+  });
 });

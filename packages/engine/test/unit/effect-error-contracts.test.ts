@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
+import { collectRedundantEffectRuntimeReasonConjunctions } from '../helpers/kernel-source-ast-guard.js';
 import { listKernelModulesByPrefix, readKernelSource } from '../helpers/kernel-source-guard.js';
 import {
   applyEffect,
@@ -320,10 +321,14 @@ describe('effect error context contracts', () => {
   it('effect runtime reason consumption avoids raw string literal checks in kernel guard sites', () => {
     const applyMoveSource = readKernelSource('src/kernel/apply-move.ts');
     const legalChoicesSource = readKernelSource('src/kernel/legal-choices.ts');
+    const redundantApplyMoveGuards = collectRedundantEffectRuntimeReasonConjunctions(applyMoveSource, 'apply-move.ts');
+    const redundantLegalChoicesGuards = collectRedundantEffectRuntimeReasonConjunctions(legalChoicesSource, 'legal-choices.ts');
 
     assert.match(applyMoveSource, /isEffectRuntimeReason\(\s*err,\s*EFFECT_RUNTIME_REASONS\.CHOICE_RUNTIME_VALIDATION_FAILED\s*\)/u);
+    assert.equal(redundantApplyMoveGuards.length, 0, 'apply-move.ts must not use redundant EFFECT_RUNTIME + reason conjunction guards');
     assert.doesNotMatch(applyMoveSource, /context\?\.reason\s*===\s*'choiceRuntimeValidationFailed'/u);
     assert.match(legalChoicesSource, /isEffectRuntimeReason\(\s*error,\s*EFFECT_RUNTIME_REASONS\.CHOICE_PROBE_AUTHORITY_MISMATCH\s*\)/u);
+    assert.equal(redundantLegalChoicesGuards.length, 0, 'legal-choices.ts must not use redundant EFFECT_RUNTIME + reason conjunction guards');
     assert.doesNotMatch(legalChoicesSource, /context\?\.reason\s*===\s*'choiceProbeAuthorityMismatch'/u);
   });
 

@@ -515,3 +515,51 @@ export const resolveCallIdentifierFromExpression = (
   nextVisited.add(unwrapped.text);
   return resolveCallIdentifierFromExpression(initializer, sourceFile, initializer, nextVisited);
 };
+
+const isEffectRuntimeCodeCheckCall = (
+  node: ts.Expression,
+): boolean => {
+  const unwrapped = unwrapTypeScriptExpression(node);
+  if (!ts.isCallExpression(unwrapped) || !ts.isIdentifier(unwrapped.expression) || unwrapped.expression.text !== 'isEffectErrorCode') {
+    return false;
+  }
+  if (unwrapped.arguments.length < 2) {
+    return false;
+  }
+  const codeArgument = unwrapTypeScriptExpression(unwrapped.arguments[1]!);
+  return (
+    (ts.isStringLiteral(codeArgument) || ts.isNoSubstitutionTemplateLiteral(codeArgument))
+    && codeArgument.text === 'EFFECT_RUNTIME'
+  );
+};
+
+const isEffectRuntimeReasonCheckCall = (node: ts.Expression): boolean => {
+  const unwrapped = unwrapTypeScriptExpression(node);
+  return ts.isCallExpression(unwrapped) && ts.isIdentifier(unwrapped.expression) && unwrapped.expression.text === 'isEffectRuntimeReason';
+};
+
+export const collectRedundantEffectRuntimeReasonConjunctions = (
+  source: string,
+  fileName: string,
+): readonly ts.BinaryExpression[] => {
+  const sourceFile = parseTypeScriptSource(source, fileName);
+  const matches: ts.BinaryExpression[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      const left = unwrapTypeScriptExpression(node.left);
+      const right = unwrapTypeScriptExpression(node.right);
+      const isMatch = (
+        (isEffectRuntimeCodeCheckCall(left) && isEffectRuntimeReasonCheckCall(right))
+        || (isEffectRuntimeReasonCheckCall(left) && isEffectRuntimeCodeCheckCall(right))
+      );
+      if (isMatch) {
+        matches.push(node);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return matches;
+};

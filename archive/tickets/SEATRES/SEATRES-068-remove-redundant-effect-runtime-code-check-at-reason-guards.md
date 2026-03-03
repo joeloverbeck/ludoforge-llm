@@ -1,6 +1,6 @@
 # SEATRES-068: Remove redundant effect-runtime code checks at reason-guard consumers
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — guard usage cleanup in runtime reason consumer sites
@@ -13,8 +13,9 @@ Some consumers perform `isEffectErrorCode(error, 'EFFECT_RUNTIME') && isEffectRu
 ## Assumption Reassessment (2026-03-03)
 
 1. `isEffectRuntimeReason(...)` currently checks `isEffectErrorCode(error, 'EFFECT_RUNTIME')` internally.
-2. Updated consumer paths (`apply-move.ts`, `legal-choices.ts`) still include redundant outer `isEffectErrorCode` checks.
-3. No active ticket currently removes this duplication and standardizes consumer guard style.
+2. Updated consumer paths (`apply-move.ts`, `legal-choices.ts`) still include redundant outer `isEffectErrorCode` checks at current guard sites.
+3. Existing unit coverage verifies canonical reason constants and raw-literal avoidance, but does not yet guard against redundant outer `isEffectErrorCode(..., 'EFFECT_RUNTIME')` conjunctions at these consumer sites.
+4. No active ticket currently removes this duplication and standardizes consumer guard style.
 
 ## Architecture Check
 
@@ -28,11 +29,13 @@ Some consumers perform `isEffectErrorCode(error, 'EFFECT_RUNTIME') && isEffectRu
 
 1. Replace redundant `isEffectErrorCode(..., 'EFFECT_RUNTIME') && isEffectRuntimeReason(...)` with `isEffectRuntimeReason(...)` in targeted consumers.
 2. Keep behavior and error mapping unchanged.
+3. Remove any now-unused `isEffectErrorCode` imports from updated modules.
 
 ### 2. Add guard-style regression coverage
 
 1. Extend source-guard assertions to enforce canonical single-guard usage at known consumer sites.
 2. Assert absence of redundant pre-check patterns where `isEffectRuntimeReason` is already used.
+3. Keep existing raw-literal reason guard assertions intact.
 
 ## Files to Touch
 
@@ -51,8 +54,9 @@ Some consumers perform `isEffectErrorCode(error, 'EFFECT_RUNTIME') && isEffectRu
 ### Tests That Must Pass
 
 1. `apply-move` and `legal-choices` use `isEffectRuntimeReason(...)` directly for reason-specific branching.
-2. Existing behavior remains unchanged for illegal move mapping and probe mismatch handling.
-3. Existing suite: `pnpm -F @ludoforge/engine test`
+2. Updated modules compile without unused-import regressions.
+3. Existing behavior remains unchanged for illegal move mapping and probe mismatch handling.
+4. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
 
@@ -71,3 +75,22 @@ Some consumers perform `isEffectErrorCode(error, 'EFFECT_RUNTIME') && isEffectRu
 2. `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Simplified runtime reason handling in `apply-move.ts` and `legal-choices.ts` by removing redundant `isEffectErrorCode(..., 'EFFECT_RUNTIME')` checks where `isEffectRuntimeReason(...)` is used.
+  - Preserved existing non-runtime `isEffectErrorCode(..., 'STACKING_VIOLATION')` handling in `legal-choices.ts`.
+  - Strengthened `effect-error-contracts.test.ts` source-guard assertions to reject the redundant conjunction pattern at both targeted consumer sites.
+  - Upgraded the redundant-conjunction source guard from regex matching to a TypeScript AST-based detector in `test/helpers/kernel-source-ast-guard.ts`, reducing false positives/negatives from formatting or wrapping changes.
+- **Deviations from original plan**:
+  - The initial scope note about removing now-unused `isEffectErrorCode` imports only applied to `apply-move.ts`; `legal-choices.ts` still requires `isEffectErrorCode` for stacking-violation handling.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.
+  - Re-validated after AST guard upgrade: `pnpm turbo build`, `node --test packages/engine/dist/test/unit/effect-error-contracts.test.js`, `pnpm -F @ludoforge/engine test`, `pnpm turbo lint` all passed.

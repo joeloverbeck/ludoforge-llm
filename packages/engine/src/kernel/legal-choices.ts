@@ -127,8 +127,7 @@ const executeDiscoveryEffectsProbe = (
 const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
 const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
-  return isEffectErrorCode(error, 'EFFECT_RUNTIME')
-    && isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
+  return isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
 };
 
 const countCombinationsCapped = (n: number, k: number, cap: number): number => {

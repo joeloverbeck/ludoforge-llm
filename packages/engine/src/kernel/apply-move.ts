@@ -1,7 +1,7 @@
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
-import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
+import { isEffectRuntimeReason } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import {
   executeEventMove,
@@ -322,10 +322,7 @@ const validateDecisionSequenceForMove = (
       ...(result.nextDecision?.name === undefined ? {} : { nextDecisionName: result.nextDecision.name }),
     });
   } catch (err) {
-    if (
-      isEffectErrorCode(err, 'EFFECT_RUNTIME')
-      && isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)
-    ) {
+    if (isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
         detail: err.message,
       });

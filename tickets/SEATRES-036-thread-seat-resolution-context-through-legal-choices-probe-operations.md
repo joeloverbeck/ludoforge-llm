@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel legal-choices free-operation discovery/probe call chains
-**Deps**: tickets/SEATRES-035-remove-implicit-seat-resolution-context-fallback-from-active-seat-invariants.md
+**Deps**: archive/tickets/SEATRES/SEATRES-035-remove-implicit-seat-resolution-context-fallback-from-active-seat-invariants.md
 
 ## Problem
 

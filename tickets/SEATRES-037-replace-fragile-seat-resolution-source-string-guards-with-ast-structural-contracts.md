@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — unit-test architecture guard hardening for seat-resolution lifecycle contracts
-**Deps**: tickets/SEATRES-035-remove-implicit-seat-resolution-context-fallback-from-active-seat-invariants.md
+**Deps**: archive/tickets/SEATRES/SEATRES-035-remove-implicit-seat-resolution-context-fallback-from-active-seat-invariants.md
 
 ## Problem
 

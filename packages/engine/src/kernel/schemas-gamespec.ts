@@ -1,14 +1,11 @@
 import { z } from 'zod';
 import { BooleanSchema, IntegerSchema, NumberSchema, StringSchema } from './schemas-ast.js';
 
-export const PieceStatusDimensionSchema = z.union([z.literal('activity'), z.literal('tunnel')]);
-
-export const PieceStatusValueSchema = z.union([
-  z.literal('underground'),
-  z.literal('active'),
-  z.literal('untunneled'),
-  z.literal('tunneled'),
-]);
+// Game-agnostic: any non-empty string is a valid dimension name or status value.
+// Each game defines its own dimensions (e.g. 'activity', 'tunnel', 'location')
+// and status values (e.g. 'underground', 'active', 'deck', 'hand').
+export const PieceStatusDimensionSchema = StringSchema.min(1);
+export const PieceStatusValueSchema = StringSchema.min(1);
 
 export const PieceStatusTransitionSchema = z
   .object({
@@ -57,8 +54,8 @@ export const PieceGenerateBlockSchema = z
       .object({
         idPattern: StringSchema.min(1),
         seat: StringSchema.min(1),
-        statusDimensions: z.array(z.union([PieceStatusDimensionSchema, StringSchema])),
-        transitions: z.array(z.unknown()),
+        statusDimensions: z.array(PieceStatusDimensionSchema),
+        transitions: z.array(PieceStatusTransitionSchema),
         dimensions: z.array(PieceGenerateDimensionSchema).min(1),
         derivedProps: z.record(StringSchema, PieceGenerateDerivedPropSchema).optional(),
         inventoryPerCombination: IntegerSchema.min(1),

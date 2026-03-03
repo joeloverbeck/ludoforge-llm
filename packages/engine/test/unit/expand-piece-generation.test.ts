@@ -30,7 +30,7 @@ describe('expandPieceGeneration', () => {
                 idPattern: 'card-{suit}-{rank}',
                 seat: 'none',
                 statusDimensions: ['location'],
-                transitions: [{ from: 'deck', to: 'hand' }],
+                transitions: [{ dimension: 'location', from: 'deck', to: 'hand' }],
                 dimensions: [
                   { name: 'suit', values: ['hearts', 'diamonds', 'clubs', 'spades'] },
                   {

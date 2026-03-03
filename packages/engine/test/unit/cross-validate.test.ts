@@ -845,6 +845,42 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
+  it('eventDeck freeOperationGrants with unknown executeAsSeat and no close alternative uses self-or-seat fallback suggestion', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                freeOperationGrants: [
+                  {
+                    seat: 'us',
+                    executeAsSeat: 'coalition-seat',
+                    sequence: { chain: 'unknown-execute-as-fallback', step: 0 },
+                    operationClass: 'operation',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.executeAsSeat');
+    assert.equal(diagnostic?.suggestion, 'Use "self" or one of the declared seat ids.');
+    assert.equal(diagnostic?.alternatives, undefined);
+  });
+
   it('eventDeck freeOperationGrants with valid faction/action references produce no grant cross-ref diagnostics', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);

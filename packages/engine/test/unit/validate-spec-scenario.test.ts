@@ -113,6 +113,8 @@ function diagnosticsWithCode(diagnostics: readonly Diagnostic[], code: string): 
   return diagnostics.filter((d) => d.code === code);
 }
 
+const SELECTED_SEAT_CATALOG_FALLBACK = 'Use one of the declared seat ids from the selected seat catalog.';
+
 describe('validateGameSpec scenario cross-reference validation', () => {
   it('scenario with valid placements referencing existing map spaces produces no placement errors', () => {
     const diagnostics = validateGameSpec(
@@ -175,16 +177,28 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(matches.length, 1);
   });
 
-  it('scenario seat references outside seat catalog emit CNL_VALIDATOR_REFERENCE_MISSING with precise paths', () => {
+  it('scenario seat references outside seat catalog emit CNL_VALIDATOR_REFERENCE_MISSING with precise paths and fallback suggestion', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
-        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
-        outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'arvn', count: 1 }],
-        seatPools: [{ seat: 'arvn', availableZoneId: 'available-arvn:none' }],
+        initialPlacements: [{ spaceId: 'saigon', pieceTypeId: 'us-troops', seat: 'coalition-seat', count: 1 }],
+        outOfPlay: [{ pieceTypeId: 'us-troops', seat: 'coalition-seat', count: 1 }],
+        seatPools: [{ seat: 'coalition-seat', availableZoneId: 'available-arvn:none' }],
       }),
     );
 
     const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_REFERENCE_MISSING');
+    const expectedSeatPaths = new Set<string>([
+      'doc.dataAssets.3.payload.initialPlacements.0.seat',
+      'doc.dataAssets.3.payload.outOfPlay.0.seat',
+      'doc.dataAssets.3.payload.seatPools.0.seat',
+    ]);
+    const seatDiagnostics = matches.filter((diagnostic) => expectedSeatPaths.has(diagnostic.path));
+
+    assert.equal(seatDiagnostics.length, expectedSeatPaths.size);
+    assert.equal(
+      seatDiagnostics.every((diagnostic) => diagnostic.suggestion === SELECTED_SEAT_CATALOG_FALLBACK),
+      true,
+    );
     assert.equal(
       matches.some((diagnostic) => diagnostic.path === 'doc.dataAssets.3.payload.initialPlacements.0.seat'),
       true,

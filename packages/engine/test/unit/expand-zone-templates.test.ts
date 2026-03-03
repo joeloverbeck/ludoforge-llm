@@ -431,6 +431,100 @@ describe('expandZoneTemplates', () => {
     assert.equal(result.doc.zones!.length, 9);
   });
 
+  // ---------- Template properties: behavior propagation ----------
+  it('copies behavior to each expanded zone', () => {
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      dataAssets: [seatCatalogAsset(['a', 'b'])],
+      zones: [
+        makeTemplate({
+          idPattern: 'draw-{seat}',
+          ordering: 'stack',
+          behavior: { type: 'deck', drawFrom: 'top' },
+        }),
+      ],
+    };
+
+    const result = expandZoneTemplates(doc);
+
+    assert.deepEqual(result.diagnostics, []);
+    const zones = result.doc.zones! as readonly GameSpecZoneDef[];
+    assert.equal(zones.length, 2);
+    for (const zone of zones) {
+      assert.deepEqual(zone.behavior, { type: 'deck', drawFrom: 'top' });
+    }
+  });
+
+  // ---------- Template properties: behavior with reshuffleFrom {seat} substitution ----------
+  it('substitutes {seat} in behavior.reshuffleFrom for each expanded zone', () => {
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      dataAssets: [seatCatalogAsset(['US', 'ARVN'])],
+      zones: [
+        makeTemplate({
+          idPattern: 'draw-{seat}',
+          ordering: 'stack',
+          behavior: { type: 'deck', drawFrom: 'top', reshuffleFrom: 'discard-{seat}' },
+        }),
+      ],
+    };
+
+    const result = expandZoneTemplates(doc);
+
+    assert.deepEqual(result.diagnostics, []);
+    const zones = result.doc.zones! as readonly GameSpecZoneDef[];
+    assert.equal(zones.length, 2);
+    assert.deepEqual(zones[0]!.behavior, {
+      type: 'deck',
+      drawFrom: 'top',
+      reshuffleFrom: 'discard-US',
+    });
+    assert.deepEqual(zones[1]!.behavior, {
+      type: 'deck',
+      drawFrom: 'top',
+      reshuffleFrom: 'discard-ARVN',
+    });
+  });
+
+  // ---------- Template properties: behavior with literal reshuffleFrom (no {seat}) ----------
+  it('preserves literal reshuffleFrom when it contains no {seat} placeholder', () => {
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      dataAssets: [seatCatalogAsset(['a'])],
+      zones: [
+        makeTemplate({
+          idPattern: 'draw-{seat}',
+          ordering: 'stack',
+          behavior: { type: 'deck', drawFrom: 'top', reshuffleFrom: 'shared-discard' },
+        }),
+      ],
+    };
+
+    const result = expandZoneTemplates(doc);
+
+    assert.deepEqual(result.diagnostics, []);
+    const zones = result.doc.zones! as readonly GameSpecZoneDef[];
+    assert.deepEqual(zones[0]!.behavior, {
+      type: 'deck',
+      drawFrom: 'top',
+      reshuffleFrom: 'shared-discard',
+    });
+  });
+
+  // ---------- Template properties: behavior absent = no regression ----------
+  it('does not add behavior when absent from template', () => {
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      dataAssets: [seatCatalogAsset(['a'])],
+      zones: [makeTemplate()],
+    };
+
+    const result = expandZoneTemplates(doc);
+
+    const zones = result.doc.zones! as readonly GameSpecZoneDef[];
+    assert.equal(zones[0]!.behavior, undefined);
+  });
+
   // ---------- Ordering: visibility + ordering preserved ----------
   it('copies visibility and ordering from template to each expanded zone', () => {
     const doc: GameSpecDoc = {

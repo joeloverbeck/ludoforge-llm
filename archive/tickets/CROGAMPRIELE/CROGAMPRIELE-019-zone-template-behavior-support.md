@@ -1,6 +1,6 @@
 # CROGAMPRIELE-019: Add behavior field to zone templates
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl game-spec-doc types, zone template expansion
@@ -53,12 +53,15 @@ Add a conditional spread for `behavior` alongside the existing optional fields:
 - `packages/engine/src/cnl/expand-zone-templates.ts` (modify — propagate `behavior` in expansion loop)
 - `packages/engine/test/unit/expand-zone-templates.test.ts` (modify — add test for behavior propagation)
 
+### 3. Substitute `{seat}` in `behavior.reshuffleFrom` during expansion (`expand-zone-templates.ts`)
+
+When propagating `behavior`, apply `{seat}` substitution to `reshuffleFrom` (if present) so per-player deck+discard combos work end-to-end. `drawFrom` is a draw direction (`'top'`/`'bottom'`), not a zone reference, so no substitution needed there.
+
 ## Out of Scope
 
 - Compiler validation changes (already handled by `compileBehavior` in `compile-zones.ts`)
 - Cross-validation changes (already handled for `reshuffleFrom` in `cross-validate.ts`)
 - New behavior types beyond `'deck'`
-- Adjusting `reshuffleFrom` references during template expansion (the zone ID pattern uses `{seat}` — `reshuffleFrom` is a literal zone ID, not a template pattern)
 
 ## Acceptance Criteria
 
@@ -86,3 +89,14 @@ Add a conditional spread for `behavior` alongside the existing optional fields:
 1. `pnpm turbo build`
 2. `node --test packages/engine/dist/test/unit/expand-zone-templates.test.js`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**Scope expanded** vs original plan: added `{seat}` substitution in `behavior.reshuffleFrom` during expansion (originally marked out of scope). This makes per-player deck+discard combos work end-to-end through templates.
+
+**Files changed**:
+- `packages/engine/src/cnl/game-spec-doc.ts` — extracted `GameSpecZoneBehavior` interface (DRY), used by both `GameSpecZoneDef` and `GameSpecZoneTemplateDef`
+- `packages/engine/src/cnl/expand-zone-templates.ts` — propagate `behavior` in expansion loop with `{seat}` substitution in `reshuffleFrom`
+- `packages/engine/test/unit/expand-zone-templates.test.ts` — 4 new tests (behavior propagation, reshuffleFrom substitution, literal reshuffleFrom, behavior-absent regression)
+
+**Verification**: 3407 engine tests pass, typecheck clean, lint clean.

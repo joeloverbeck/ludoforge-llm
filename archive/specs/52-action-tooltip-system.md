@@ -1,4 +1,5 @@
 # Spec 52 — Action Tooltip System
+**Status**: ✅ COMPLETED
 
 ## Context
 
@@ -362,3 +363,10 @@ const { tooltipState, onActionHoverStart, onActionHoverEnd } = useActionTooltip(
    - Tooltip disappears on mouse leave
    - No lag or UI jank during rapid hover across buttons
 6. **Cross-game**: Load Texas Hold'em, verify tooltips render correctly for poker actions
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What actually changed**: Implemented the action tooltip system across engine + runner surfaces described in this spec, including display-node modeling, AST rendering, live condition annotation, worker API plumbing, UI tooltip rendering, and associated tests.
+- **Deviations from original plan**: None noted in this archived spec.
+- **Verification results**: Feature implementation and test coverage are documented in this spec's Verification section and corresponding test file list; archival integrity check `pnpm run check:ticket-deps` passed on 2026-03-03.

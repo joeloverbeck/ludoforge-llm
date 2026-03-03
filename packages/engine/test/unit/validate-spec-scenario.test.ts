@@ -509,6 +509,50 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.deepEqual(diagnostic?.alternatives, ['test-scenario']);
   });
 
+  it('emits exactly one missing-reference diagnostic for selected scenario seatCatalogAssetId', () => {
+    const base = createDocWithScenario({
+      seatCatalogAssetId: 'missing-seats',
+    });
+    const doc = {
+      ...base,
+      metadata: {
+        ...base.metadata!,
+        defaultScenarioAssetId: 'test-scenario',
+      },
+    };
+
+    const diagnostics = validateGameSpec(doc);
+    const matches = diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'
+        && diagnostic.path === 'doc.dataAssets.3.payload.seatCatalogAssetId',
+    );
+
+    assert.equal(matches.length, 1);
+  });
+
+  it('emits exactly one missing-reference diagnostic for selected scenario pieceCatalogAssetId', () => {
+    const base = createDocWithScenario({
+      pieceCatalogAssetId: 'missing-pieces',
+    });
+    const doc = {
+      ...base,
+      metadata: {
+        ...base.metadata!,
+        defaultScenarioAssetId: 'test-scenario',
+      },
+    };
+
+    const diagnostics = validateGameSpec(doc);
+    const matches = diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'
+        && diagnostic.path === 'doc.dataAssets.3.payload.pieceCatalogAssetId',
+    );
+
+    assert.equal(matches.length, 1);
+  });
+
   it('scenario with track initialization out of bounds emits CNL_VALIDATOR_SCENARIO_TRACK_VALUE_OUT_OF_BOUNDS', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({

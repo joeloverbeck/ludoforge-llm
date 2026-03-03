@@ -29,6 +29,7 @@ import {
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { validateScenarioCrossReferences } from './validate-zones.js';
 import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
+import type { DataAssetSelectionFailureReason } from './data-asset-selection.js';
 
 interface DataAssetValidationContext {
   readonly hasMapAsset: boolean;
@@ -48,6 +49,52 @@ const DERIVED_METRIC_ZONE_FILTER_KEYS = ['zoneIds', 'zoneKinds', 'category', 'at
 const DERIVED_METRIC_REQUIREMENT_KEYS = ['key', 'expectedType'] as const;
 const DERIVED_METRIC_COMPUTATION_VALUES = ['markerTotal', 'controlledPopulation', 'totalEcon'] as const;
 const DERIVED_METRIC_ZONE_KIND_VALUES = ['board', 'aux'] as const;
+
+interface CanonicalScenarioLinkedAssetSelectionMissingReferenceContext {
+  readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
+  readonly selectedId: string;
+  readonly selectedPath: string;
+  readonly alternatives: readonly string[];
+  readonly entityId?: string;
+}
+
+interface CanonicalScenarioLinkedAssetSelectionAmbiguousContext {
+  readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
+  readonly alternatives: readonly string[];
+}
+
+interface CanonicalScenarioLinkedAssetSelectionOptions {
+  readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
+  readonly selectedPath: string;
+  readonly entityId?: string;
+  readonly suppressKnownMissingReference?: boolean;
+  readonly dialect: {
+    readonly onMissingReference?: (context: CanonicalScenarioLinkedAssetSelectionMissingReferenceContext) => Diagnostic;
+    readonly onAmbiguousSelection?: (context: CanonicalScenarioLinkedAssetSelectionAmbiguousContext) => Diagnostic;
+  };
+}
+
+function selectCanonicalScenarioLinkedAsset<TAsset extends { readonly id: string }>(
+  assets: ReadonlyArray<TAsset>,
+  selectedId: string | undefined,
+  diagnostics: Diagnostic[],
+  options: CanonicalScenarioLinkedAssetSelectionOptions,
+): { readonly selected: TAsset | undefined; readonly failureReason: DataAssetSelectionFailureReason | undefined } {
+  const selectedIdAlreadyKnownMissing =
+    options.suppressKnownMissingReference === true
+    && selectedId !== undefined
+    && !assets.some((asset) => normalizeIdentifier(asset.id) === selectedId);
+  if (selectedIdAlreadyKnownMissing) {
+    return { selected: undefined, failureReason: 'missing-reference' };
+  }
+
+  return selectScenarioLinkedAssetWithPolicy(assets, selectedId, diagnostics, {
+    kind: options.kind,
+    selectedPath: options.selectedPath,
+    ...(options.entityId === undefined ? {} : { entityId: options.entityId }),
+    dialect: options.dialect,
+  });
+}
 
 export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]): DataAssetValidationContext {
   if (doc.dataAssets === null) {
@@ -243,7 +290,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
 
   const selectedScenario = selectedScenarioResult.selected;
   const mapAssets = [...resolvedMapPayloads.keys()].map((id) => ({ id }));
-  selectScenarioLinkedAssetWithPolicy(mapAssets, selectedScenario.mapAssetId, diagnostics, {
+  selectCanonicalScenarioLinkedAsset(mapAssets, selectedScenario.mapAssetId, diagnostics, {
     kind: 'map',
     selectedPath: selectedScenario.path,
     dialect: {
@@ -263,13 +310,14 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     path: entry.path,
     payload: entry.payload,
   }));
-  const selectedPieceCatalogResult = selectScenarioLinkedAssetWithPolicy(
+  const selectedPieceCatalogResult = selectCanonicalScenarioLinkedAsset(
     pieceCatalogAssets,
     selectedScenario.pieceCatalogAssetId,
     diagnostics,
     {
       kind: 'pieceCatalog',
       selectedPath: selectedScenario.path,
+      suppressKnownMissingReference: true,
       dialect: {
         onMissingReference: ({ selectedPath, selectedId, alternatives }) => {
           const diagnostic: Diagnostic = {
@@ -299,13 +347,14 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     path: entry.path,
     payload: entry.payload,
   }));
-  const selectedSeatCatalogResult = selectScenarioLinkedAssetWithPolicy(
+  const selectedSeatCatalogResult = selectCanonicalScenarioLinkedAsset(
     seatCatalogAssets,
     selectedScenario.seatCatalogAssetId,
     diagnostics,
     {
       kind: 'seatCatalog',
       selectedPath: selectedScenario.path,
+      suppressKnownMissingReference: true,
       dialect: {
         onMissingReference: ({ selectedPath, selectedId, alternatives }) => {
           const diagnostic: Diagnostic = {

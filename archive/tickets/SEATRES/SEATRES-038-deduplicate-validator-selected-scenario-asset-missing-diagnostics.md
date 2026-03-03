@@ -1,6 +1,6 @@
 # SEATRES-038: Deduplicate validator selected-scenario missing-asset diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — validator data-asset diagnostics and scenario-selection seat-check flow
@@ -13,8 +13,11 @@ Validator currently emits duplicate `CNL_VALIDATOR_REFERENCE_MISSING` diagnostic
 ## Assumption Reassessment (2026-03-02)
 
 1. `validateDataAssets()` now performs both broad per-scenario reference checks and selected-scenario canonical seat-check selection checks.
-2. In current code, missing selected-scenario `pieceCatalogAssetId` and `seatCatalogAssetId` can be emitted twice under `CNL_VALIDATOR_REFERENCE_MISSING` with the same path.
-3. Active tickets `SEATRES-022` through `SEATRES-037` do not explicitly cover duplicate-validator-diagnostic suppression for these selected-scenario missing-reference paths.
+2. In current code, missing selected-scenario `pieceCatalogAssetId` and `seatCatalogAssetId` are each emitted in two places under `CNL_VALIDATOR_REFERENCE_MISSING` with the same selector path:
+   - per-scenario reference validation loop (`scenarioRefs` walk), and
+   - selected-scenario canonical seat-check linked-asset selection.
+3. Current tests in `validate-spec-scenario.test.ts` cover ambiguity/missing-reference presence but do not assert one-diagnostic cardinality for these selected-scenario missing-reference selector paths.
+4. Active tickets `SEATRES-022` through `SEATRES-037` do not explicitly cover duplicate-validator-diagnostic suppression for these selected-scenario missing-reference paths.
 
 ## Architecture Check
 
@@ -26,9 +29,10 @@ Validator currently emits duplicate `CNL_VALIDATOR_REFERENCE_MISSING` diagnostic
 
 ### 1. Eliminate duplicate selected-scenario missing-reference emissions
 
-1. Keep one authoritative emission for missing `scenario.pieceCatalogAssetId` / `scenario.seatCatalogAssetId`.
-2. Prevent second emission in selected-scenario canonical seat-check path when the same failure has already been reported.
+1. Keep one authoritative emission for missing `scenario.pieceCatalogAssetId` / `scenario.seatCatalogAssetId` at the selector path.
+2. Prevent second emission in selected-scenario canonical seat-check path when the selector already points to a missing asset id.
 3. Preserve ambiguity diagnostics and seat-reference cascade suppression behavior introduced by prior seat-selection parity work.
+4. Avoid generic post-hoc diagnostic de-dup filters; gate canonical seat-check linked-asset selection from re-emitting known selector missing-reference failures.
 
 ### 2. Add regression tests for one-diagnostic-per-missing-reference behavior
 
@@ -53,6 +57,7 @@ Validator currently emits duplicate `CNL_VALIDATOR_REFERENCE_MISSING` diagnostic
 1. Missing selected-scenario `seatCatalogAssetId` yields exactly one `CNL_VALIDATOR_REFERENCE_MISSING` diagnostic at the assetId path.
 2. Missing selected-scenario `pieceCatalogAssetId` yields exactly one `CNL_VALIDATOR_REFERENCE_MISSING` diagnostic at the assetId path.
 3. Existing suite: `pnpm -F @ludoforge/engine test`
+4. Repo quality gates for touched code: `pnpm turbo typecheck` and `pnpm turbo lint`
 
 ### Invariants
 
@@ -72,3 +77,12 @@ Validator currently emits duplicate `CNL_VALIDATOR_REFERENCE_MISSING` diagnostic
 2. `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+1. Implemented targeted deduplication by gating canonical selected-scenario linked-asset selection when the selected scenario already references a missing `pieceCatalogAssetId` or `seatCatalogAssetId`; this keeps one authoritative `CNL_VALIDATOR_REFERENCE_MISSING` emission at the selector path.
+2. Added explicit regression assertions for one-diagnostic cardinality on:
+   - `doc.dataAssets.3.payload.seatCatalogAssetId`
+   - `doc.dataAssets.3.payload.pieceCatalogAssetId`
+3. Consolidated canonical map/piece/seat linked-asset resolution under one validator-local helper (`selectCanonicalScenarioLinkedAsset`) so missing-reference suppression policy is centralized and future linked-asset additions use one contract.
+4. Verified with build, focused unit test, full engine test suite, workspace `test`, workspace typecheck, and workspace lint; all passed.

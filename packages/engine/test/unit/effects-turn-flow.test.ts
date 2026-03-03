@@ -206,10 +206,10 @@ describe('applyGrantFreeOperation', () => {
       assert.equal(err.context?.reason, 'turnFlowRuntimeValidationFailed');
       assert.equal(err.context?.effectType, 'grantFreeOperation');
       assert.equal(err.context?.invariant, 'turnFlow.activeSeat.unresolvable');
-      assert.equal(err.context?.surface, TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION);
+      assert.equal(err.context?.surface, TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_APPLICATION);
       assert.equal(err.context?.activePlayer, 0);
       assert.deepEqual(err.context?.seatOrder, ['0', '1', '2', '3']);
-      assert.match(String(err.message), /turnFlow\.activeSeat\.applyGrantFreeOperation could not resolve active seat/i);
+      assert.match(String(err.message), /turnFlow\.activeSeat\.freeOperationGrantApplication could not resolve active seat/i);
       return true;
     });
   });

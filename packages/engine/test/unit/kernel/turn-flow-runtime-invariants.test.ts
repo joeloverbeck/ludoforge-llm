@@ -81,7 +81,7 @@ describe('turn-flow-runtime-invariants', () => {
       requireCardDrivenActiveSeat(
         def,
         state,
-        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
         seatResolution,
       ),
       'NVA',
@@ -90,7 +90,7 @@ describe('turn-flow-runtime-invariants', () => {
       requireCardDrivenActiveSeat(
         def,
         state,
-        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
         seatResolution,
       ),
       'NVA',

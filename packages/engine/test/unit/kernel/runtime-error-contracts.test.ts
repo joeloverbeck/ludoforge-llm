@@ -176,7 +176,7 @@ describe('runtime error context contracts', () => {
   it('runtime contract helper emits active-seat invariant context contract', () => {
     const error = runtimeContractInvalidError('active seat could not resolve', {
       invariant: 'turnFlow.activeSeat.unresolvable',
-      surface: TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+      surface: TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
       activePlayer: 0,
       seatOrder: ['0', '1'],
     });
@@ -185,7 +185,7 @@ describe('runtime error context contracts', () => {
     const context: KernelRuntimeErrorContext<'RUNTIME_CONTRACT_INVALID'> = error.context!;
     assert.ok('invariant' in context);
     assert.equal(context.invariant, 'turnFlow.activeSeat.unresolvable');
-    assert.equal(context.surface, TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW);
+    assert.equal(context.surface, TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK);
     assert.equal(context.activePlayer, 0);
     assert.deepEqual(context.seatOrder, ['0', '1']);
   });
@@ -213,7 +213,7 @@ describe('runtime error context contracts', () => {
 
   it('keeps active-seat invariant metadata/message parity between kernel and effect runtime contracts', () => {
     assertActiveSeatInvariantContractParity({
-      surface: TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION,
+      surface: TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_APPLICATION,
       activePlayer: 0,
       seatOrder: ['0', '1'],
     });
@@ -221,17 +221,45 @@ describe('runtime error context contracts', () => {
 
   it('active-seat invariant surfaces are constrained to canonical literals', () => {
     const expectedSurfaces = [
-      'turnFlow.activeSeat.analyzeFreeOperationGrantMatch',
-      'turnFlow.activeSeat.applyGrantFreeOperation',
-      'turnFlow.activeSeat.applyPendingFreeOperationVariants',
-      'turnFlow.activeSeat.applyTurnFlowEligibilityAfterMove',
-      'turnFlow.activeSeat.applyTurnFlowWindowFilters',
-      'turnFlow.activeSeat.consumeTurnFlowFreeOperationGrant',
-      'turnFlow.activeSeat.isActiveSeatEligibleForTurnFlow',
-      'turnFlow.activeSeat.resolveCurrentCoupSeat',
+      'turnFlow.activeSeat.freeOperationGrantMatchEvaluation',
+      'turnFlow.activeSeat.freeOperationGrantApplication',
+      'turnFlow.activeSeat.pendingFreeOperationVariantApplication',
+      'turnFlow.activeSeat.postMoveEligibilityApplication',
+      'turnFlow.activeSeat.windowFilterApplication',
+      'turnFlow.activeSeat.freeOperationGrantConsumption',
+      'turnFlow.activeSeat.eligibilityCheck',
+      'turnFlow.activeSeat.coupSeatResolution',
     ] as const satisfies readonly TurnFlowActiveSeatInvariantSurface[];
 
     assert.deepEqual(TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES, expectedSurfaces);
+    assert.equal(
+      new Set(TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES).size,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES.length,
+      'active-seat invariant surfaces must be unique',
+    );
+  });
+
+  it('active-seat invariant surfaces do not drift back to function-derived identifiers', () => {
+    const functionNameFragments = [
+      'analyzeFreeOperationGrantMatch',
+      'applyGrantFreeOperation',
+      'applyPendingFreeOperationVariants',
+      'applyTurnFlowEligibilityAfterMove',
+      'applyTurnFlowWindowFilters',
+      'consumeTurnFlowFreeOperationGrant',
+      'isActiveSeatEligibleForTurnFlow',
+      'resolveCurrentCoupSeat',
+    ];
+
+    for (const surface of TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACES) {
+      for (const fragment of functionNameFragments) {
+        assert.equal(
+          surface.includes(fragment),
+          false,
+          `surface ${surface} must not include function-derived fragment ${fragment}`,
+        );
+      }
+    }
   });
 
   it('kernelRuntimeError enforces per-code context contract for kernel-emitted codes', () => {

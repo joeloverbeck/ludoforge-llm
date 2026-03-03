@@ -350,7 +350,7 @@ phase: [asPhaseId('main')],
       assert.equal(details.context?.invariant, 'turnFlow.activeSeat.unresolvable');
       assert.equal(
         details.context?.surface,
-        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
       );
       assert.equal(details.context?.activePlayer, 0);
       assert.deepEqual(details.context?.seatOrder, ['0', '1']);

@@ -110,7 +110,7 @@ export const applyGrantFreeOperation = (
   );
   if (activeSeat === null) {
     const activeSeatInvariant = makeActiveSeatUnresolvableInvariantContext(
-      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_GRANT_FREE_OPERATION,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_APPLICATION,
       Number(ctx.activePlayer),
       runtime.seatOrder,
     );

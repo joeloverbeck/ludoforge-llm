@@ -86,7 +86,7 @@ const resolveCurrentCoupSeat = (
   return requireCardDrivenActiveSeat(
     def,
     state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.RESOLVE_CURRENT_COUP_SEAT,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.COUP_SEAT_RESOLUTION,
     seatResolution,
   );
 };

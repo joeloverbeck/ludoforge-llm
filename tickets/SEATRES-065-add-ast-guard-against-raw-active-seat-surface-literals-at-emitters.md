@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — source guard coverage for invariant emitter call contracts
-**Deps**: archive/tickets/SEATRES/SEATRES-051-replace-function-name-surface-literals-with-stable-semantic-ids.md, tickets/SEATRES-063-replace-function-derived-active-seat-surface-ids-with-domain-semantics.md
+**Deps**: archive/tickets/SEATRES/SEATRES-051-replace-function-name-surface-literals-with-stable-semantic-ids.md, archive/tickets/SEATRES/SEATRES-063-replace-function-derived-active-seat-surface-ids-with-domain-semantics.md
 
 ## Problem
 

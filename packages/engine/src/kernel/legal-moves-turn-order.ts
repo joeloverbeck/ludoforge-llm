@@ -240,7 +240,7 @@ export function applyTurnFlowWindowFilters(
     ? requireCardDrivenActiveSeat(
       def,
       state,
-      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_TURN_FLOW_WINDOW_FILTERS,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
       seatResolution,
     )
     : String(state.activePlayer);
@@ -348,7 +348,7 @@ export function applyPendingFreeOperationVariants(
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_PENDING_FREE_OPERATION_VARIANTS,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.PENDING_FREE_OPERATION_VARIANT_APPLICATION,
     seatResolution,
   );
   if (!pendingGrants.some((grant) => grant.seat === activeSeat)) {

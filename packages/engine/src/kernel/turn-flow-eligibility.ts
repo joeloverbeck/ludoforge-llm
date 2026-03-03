@@ -736,7 +736,7 @@ export const isActiveSeatEligibleForTurnFlow = (
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.IS_ACTIVE_SEAT_ELIGIBLE_FOR_TURN_FLOW,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
     seatResolution,
   );
 
@@ -774,7 +774,7 @@ const analyzeFreeOperationGrantMatch = (
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ANALYZE_FREE_OPERATION_GRANT_MATCH,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
     seatResolution,
   );
   const actionClass = moveOperationClass(def, move);
@@ -1006,7 +1006,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.APPLY_TURN_FLOW_ELIGIBILITY_AFTER_MOVE,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.POST_MOVE_ELIGIBILITY_APPLICATION,
     seatResolution,
   );
 
@@ -1248,7 +1248,7 @@ export const consumeTurnFlowFreeOperationGrant = (
   const activeSeat = requireCardDrivenActiveSeat(
     def,
     state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.CONSUME_TURN_FLOW_FREE_OPERATION_GRANT,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
     seatResolution,
   );
   const pending = runtime.pendingFreeOperationGrants ?? [];

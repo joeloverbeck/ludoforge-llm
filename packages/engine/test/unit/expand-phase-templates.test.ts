@@ -607,6 +607,72 @@ describe('expandPhaseTemplates', () => {
     assert.equal(onEnter[0]!.flag, false);
   });
 
+  // Test 24: Duplicate-ID diagnostic path uses input index when earlier entries are skipped
+  it('uses input index (not output index) in duplicate-ID path when earlier entries are skipped', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          // Entry 0: will be skipped (extra param causes validation error)
+          { fromTemplate: 'tmpl', args: { pid: 'ok', extra: 'bad' } },
+          // Entry 1: expands to id "dup"
+          { fromTemplate: 'tmpl', args: { pid: 'dup' } },
+          // Entry 2: also expands to id "dup" — duplicate
+          { fromTemplate: 'tmpl', args: { pid: 'dup' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    // The path must reference the INPUT index (2), not the output index (1)
+    assert.equal(dups[0]!.path, 'turnStructure.phases[2]');
+  });
+
+  // Test 25: Duplicate-ID path uses input index for interrupts when earlier entries are skipped
+  it('uses input index in duplicate-ID path for interrupts when earlier entries are skipped', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'tmpl',
+      params: [{ name: 'iid' }],
+      phase: { id: '{iid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [{ id: 'main' }],
+        interrupts: [
+          // Entry 0: skipped (missing param)
+          { fromTemplate: 'tmpl', args: {} } as unknown as GameSpecPhaseFromTemplate,
+          // Entry 1: expands to id "int_dup"
+          { fromTemplate: 'tmpl', args: { iid: 'int_dup' } },
+          // Entry 2: duplicate
+          { fromTemplate: 'tmpl', args: { iid: 'int_dup' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.equal(dups[0]!.path, 'turnStructure.interrupts[2]');
+  });
+
   // Test 23: Duplicate-ID diagnostic distinguishes literal vs template origin
   it('distinguishes literal vs template origin in duplicate-ID diagnostic', () => {
     const template: GameSpecPhaseTemplateDef = {

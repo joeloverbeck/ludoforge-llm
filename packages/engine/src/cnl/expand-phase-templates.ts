@@ -73,6 +73,7 @@ function substituteParams(
 interface ExpandedPhaseEntry {
   readonly phase: GameSpecPhaseDef;
   readonly fromTemplate?: string;
+  readonly inputIndex: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +90,7 @@ function expandPhaseArray(
 
   for (const [entryIdx, entry] of entries.entries()) {
     if (!isFromTemplateEntry(entry)) {
-      expanded.push({ phase: entry });
+      expanded.push({ phase: entry, inputIndex: entryIdx });
       continue;
     }
 
@@ -163,6 +164,7 @@ function expandPhaseArray(
     expanded.push({
       phase: substituted as unknown as GameSpecPhaseDef,
       fromTemplate: entry.fromTemplate,
+      inputIndex: entryIdx,
     });
   }
 
@@ -256,8 +258,8 @@ export function expandPhaseTemplates(doc: GameSpecDoc): {
   // seenIds maps phase ID → template name of first occurrence (undefined = literal).
   const seenIds = new Map<string, string | undefined>();
   const allEntries = [
-    ...expandedPhases.map((e, i) => ({ ...e, path: `turnStructure.phases[${i}]` })),
-    ...(expandedInterrupts ?? []).map((e, i) => ({ ...e, path: `turnStructure.interrupts[${i}]` })),
+    ...expandedPhases.map((e) => ({ ...e, path: `turnStructure.phases[${e.inputIndex}]` })),
+    ...(expandedInterrupts ?? []).map((e) => ({ ...e, path: `turnStructure.interrupts[${e.inputIndex}]` })),
   ];
 
   for (const { phase, fromTemplate, path } of allEntries) {

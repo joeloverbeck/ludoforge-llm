@@ -1,6 +1,6 @@
 # CROGAMPRIELE-028: Duplicate-ID diagnostic path index drifts when earlier entries are skipped
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — cnl expand-phase-templates
@@ -95,3 +95,13 @@ const allEntries = [
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "expandPhaseTemplates"`
 2. `pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+**What changed vs originally planned**: Implemented exactly as planned — no deviations.
+
+- Added `inputIndex: number` to `ExpandedPhaseEntry` interface
+- Wired `inputIndex: entryIdx` through both `expanded.push()` calls in `expandPhaseArray`
+- Changed `allEntries` mapping to use `e.inputIndex` instead of the output-array positional index `i`
+- Added 2 new tests (phases + interrupts) covering the skipped-entry scenario
+- All 3456 tests pass, typecheck and lint clean

@@ -5,6 +5,42 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 import { findEnginePackageJson } from '../../helpers/lint-policy-helpers.js';
 
+function splitAndChainSteps(script: string): readonly string[] {
+  return script
+    .split('&&')
+    .map((step) => step.trim())
+    .filter((step) => step.length > 0);
+}
+
+function isCleanStep(step: string): boolean {
+  return (
+    /^(?:pnpm|npm)\s+run\s+clean(?:\s|$)/u.test(step) ||
+    /^yarn\s+clean(?:\s|$)/u.test(step) ||
+    /^(?:rm\s+-rf|rimraf)\s+dist(?:\s|$)/u.test(step)
+  );
+}
+
+function isTypeScriptCompileStep(step: string): boolean {
+  return /(?:^|\s)(?:tsc)(?:\s|$)/u.test(step);
+}
+
+function assertCleanBeforeCompileInvariant(buildScript: string): void {
+  const steps = splitAndChainSteps(buildScript);
+  const cleanIndex = steps.findIndex((step) => isCleanStep(step));
+  const compileIndex = steps.findIndex((step) => isTypeScriptCompileStep(step));
+
+  assert.notEqual(
+    compileIndex,
+    -1,
+    'packages/engine build script must include a TypeScript compilation step',
+  );
+  assert.notEqual(cleanIndex, -1, 'packages/engine build script must include a clean step');
+  assert.ok(
+    cleanIndex < compileIndex,
+    'packages/engine build script must clean dist before compiling',
+  );
+}
+
 describe('engine build script clean policy', () => {
   it('cleans dist before TypeScript compilation to avoid stale test artifacts', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
@@ -15,10 +51,24 @@ describe('engine build script clean policy', () => {
     const buildScript = packageJson.scripts?.build;
 
     assert.equal(typeof buildScript, 'string');
-    assert.match(
-      buildScript ?? '',
-      /^pnpm run clean && /u,
-      'packages/engine build script must clean dist before compiling',
+    assertCleanBeforeCompileInvariant(buildScript ?? '');
+  });
+
+  it('accepts equivalent clean-before-compile script shapes', () => {
+    assertCleanBeforeCompileInvariant('rimraf dist && pnpm exec tsc -p tsconfig.json');
+  });
+
+  it('rejects build scripts that compile without cleaning first', () => {
+    assert.throws(
+      () => assertCleanBeforeCompileInvariant('pnpm run lint && tsc'),
+      /must include a clean step/u,
+    );
+  });
+
+  it('rejects build scripts where clean runs after compile', () => {
+    assert.throws(
+      () => assertCleanBeforeCompileInvariant('pnpm exec tsc && pnpm run clean'),
+      /must clean dist before compiling/u,
     );
   });
 });

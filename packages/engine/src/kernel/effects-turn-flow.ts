@@ -4,6 +4,7 @@ import {
 } from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
+import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { isTurnFlowActionClass } from '../contracts/index.js';
@@ -271,14 +272,17 @@ const resolvePhaseId = (
   effectType: string,
   field: 'phase' | 'resumePhase',
 ): GameState['currentPhase'] => {
-  const phaseDefs = [...ctx.def.turnStructure.phases, ...(ctx.def.turnStructure.interrupts ?? [])];
-  const candidate = phaseDefs.find((entry) => entry.id === phase)?.id;
+  const candidate = findPhaseDef(ctx.def, phase)?.id;
   if (candidate === undefined) {
+    const phaseCandidates = [
+      ...ctx.def.turnStructure.phases.map((entry) => entry.id),
+      ...(ctx.def.turnStructure.interrupts ?? []).map((entry) => entry.id),
+    ];
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `${effectType}.${field} is unknown: ${phase}`, {
       effectType,
       field,
       phase,
-      phaseCandidates: phaseDefs.map((entry) => entry.id),
+      phaseCandidates,
     });
   }
   return candidate;

@@ -1,6 +1,6 @@
 # CROGAMPRIELE-015: Extract reusable findPhaseDef utility
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel utility + callers in legal-moves.ts and apply-move.ts
@@ -12,8 +12,8 @@ The pattern `def.turnStructure.phases.find(p => p.id === phaseId) ?? (def.turnSt
 
 ## Assumption Reassessment (2026-03-02)
 
-1. `legal-moves.ts:221-223` — confirmed: `find()` on phases + interrupts inside the `paramIndex >= action.params.length` leaf of `enumerateParams`.
-2. `apply-move.ts:797-799` — confirmed: identical `find()` pattern before action effect execution.
+1. `legal-moves.ts:222-224` — confirmed: `find()` on phases + interrupts inside the `paramIndex >= action.params.length` leaf of `enumerateParams`.
+2. `apply-move.ts:808-810` — confirmed: identical `find()` pattern before action effect execution (named `originatingPhaseDef`).
 3. No existing `findPhaseDef` or `phaseById` utility exists anywhere in `packages/engine/src/kernel/` (grep confirmed zero matches).
 4. `currentPhase` does not change during a single `legalMoves()` call, so the lookup can be hoisted above the per-action loop.
 
@@ -78,3 +78,15 @@ Replace lines 797-799 with `findPhaseDef(def, effectState.currentPhase)`.
 
 1. `node --test packages/engine/dist/test/unit/phase-lookup.test.js`
 2. `pnpm turbo build && pnpm turbo test --force && pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+All deliverables implemented as planned, with one enhancement beyond the ticket:
+
+- **`phase-lookup.ts`** (new, 16 lines): Pure `findPhaseDef(def, phaseId)` utility encapsulating the two-step phases+interrupts lookup.
+- **`legal-moves.ts`** (modified): Replaced inline lookup with `findPhaseDef`. **Hoisted** the lookup above the per-action loop in `enumerateLegalMoves` (from inside `enumerateParams` leaf). The resolved `PhaseDef | undefined` is now passed as a parameter through `enumerateParams`, avoiding redundant linear scans per parameter combination. This was listed as optional in the ticket but is a clear performance win.
+- **`apply-move.ts`** (modified): Replaced inline lookup with `findPhaseDef`. Removed unused `PhaseDef` type import (now inferred from utility return type).
+- **`kernel/index.ts`** (modified): Added barrel export for `phase-lookup.js`.
+- **`test/unit/kernel/phase-lookup.test.ts`** (new, 6 tests): Covers find in phases, find in interrupts, unknown id, undefined interrupts, id collision (phases wins), empty phases array.
+
+Verification: build passes, 3397 tests pass (0 failures, +6 new), typecheck clean, lint clean.

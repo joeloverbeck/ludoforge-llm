@@ -58,6 +58,17 @@
   color: var(--text-secondary);
 }
 
+.eligibility {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.eligibilitySeparator {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
 .counts {
   display: flex;
   gap: var(--space-sm);

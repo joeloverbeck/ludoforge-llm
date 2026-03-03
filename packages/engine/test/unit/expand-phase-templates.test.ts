@@ -472,4 +472,94 @@ describe('expandPhaseTemplates', () => {
     // Input doc must be unchanged
     assert.equal(JSON.stringify(doc), originalJson);
   });
+
+  // Test 19: Duplicate-ID diagnostic includes template name (same template)
+  it('includes template name in duplicate-ID diagnostic for same-template collision', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'betting',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.ok(dups[0]!.message.includes('"betting"'));
+    assert.ok(dups[0]!.message.includes('from template'));
+  });
+
+  // Test 20: Duplicate-ID diagnostic names both templates (cross-template collision)
+  it('names both templates in duplicate-ID diagnostic for cross-template collision', () => {
+    const tmplA: GameSpecPhaseTemplateDef = {
+      id: 'betting',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+    const tmplB: GameSpecPhaseTemplateDef = {
+      id: 'rounds',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [tmplA, tmplB],
+      turnStructure: {
+        phases: [
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+          { fromTemplate: 'rounds', args: { pid: 'preflop' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.ok(dups[0]!.message.includes('"betting"'));
+    assert.ok(dups[0]!.message.includes('"rounds"'));
+    assert.ok(dups[0]!.message.includes('templates'));
+  });
+
+  // Test 21: Duplicate-ID diagnostic distinguishes literal vs template origin
+  it('distinguishes literal vs template origin in duplicate-ID diagnostic', () => {
+    const template: GameSpecPhaseTemplateDef = {
+      id: 'betting',
+      params: [{ name: 'pid' }],
+      phase: { id: '{pid}' },
+    };
+
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      phaseTemplates: [template],
+      turnStructure: {
+        phases: [
+          { id: 'preflop' } as GameSpecPhaseDef,
+          { fromTemplate: 'betting', args: { pid: 'preflop' } },
+        ],
+      },
+    };
+
+    const result = expandPhaseTemplates(doc);
+    const dups = result.diagnostics.filter(
+      (d) => d.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
+    );
+    assert.equal(dups.length, 1);
+    assert.ok(dups[0]!.message.includes('"betting"'));
+    assert.ok(dups[0]!.message.includes('literal phase'));
+  });
 });

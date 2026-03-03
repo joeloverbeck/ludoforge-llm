@@ -57,6 +57,15 @@ function substituteParams(
 }
 
 // ---------------------------------------------------------------------------
+// Provenance tuple — compiler-internal, never surfaces in GameDef
+// ---------------------------------------------------------------------------
+
+interface ExpandedPhaseEntry {
+  readonly phase: GameSpecPhaseDef;
+  readonly fromTemplate?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Shared expansion helper
 // ---------------------------------------------------------------------------
 
@@ -65,12 +74,12 @@ function expandPhaseArray(
   templateMap: ReadonlyMap<string, GameSpecPhaseTemplateDef>,
   pathPrefix: string,
   diagnostics: Diagnostic[],
-): readonly GameSpecPhaseDef[] {
-  const expanded: GameSpecPhaseDef[] = [];
+): readonly ExpandedPhaseEntry[] {
+  const expanded: ExpandedPhaseEntry[] = [];
 
   for (const [entryIdx, entry] of entries.entries()) {
     if (!isFromTemplateEntry(entry)) {
-      expanded.push(entry);
+      expanded.push({ phase: entry });
       continue;
     }
 
@@ -122,10 +131,42 @@ function expandPhaseArray(
 
     // Perform substitution
     const substituted = substituteParams(template.phase, entry.args) as Record<string, unknown>;
-    expanded.push(substituted as unknown as GameSpecPhaseDef);
+    expanded.push({
+      phase: substituted as unknown as GameSpecPhaseDef,
+      fromTemplate: entry.fromTemplate,
+    });
   }
 
   return expanded;
+}
+
+// ---------------------------------------------------------------------------
+// Diagnostic message helper
+// ---------------------------------------------------------------------------
+
+function formatDuplicateIdMessage(
+  phaseId: string,
+  firstTemplate: string | undefined,
+  currentTemplate: string | undefined,
+): string {
+  const base = `Duplicate phase id "${phaseId}" after template expansion`;
+
+  if (firstTemplate !== undefined && currentTemplate !== undefined) {
+    if (firstTemplate === currentTemplate) {
+      return `${base} (from template "${currentTemplate}").`;
+    }
+    return `${base} (templates "${firstTemplate}" and "${currentTemplate}").`;
+  }
+
+  if (currentTemplate !== undefined) {
+    return `${base} (conflicts with template "${currentTemplate}"; first occurrence is a literal phase).`;
+  }
+
+  if (firstTemplate !== undefined) {
+    return `${base} (conflicts with template "${firstTemplate}"; duplicate is a literal phase).`;
+  }
+
+  return `${base}.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,24 +223,26 @@ export function expandPhaseTemplates(doc: GameSpecDoc): {
         )
       : undefined;
 
-  // Check for duplicate IDs across all expanded phases
-  const seenIds = new Set<string>();
-  const allPhases = [
-    ...expandedPhases.map((p, i) => ({ phase: p, path: `turnStructure.phases[${i}]` })),
-    ...(expandedInterrupts ?? []).map((p, i) => ({ phase: p, path: `turnStructure.interrupts[${i}]` })),
+  // Check for duplicate IDs across all expanded phases.
+  // seenIds maps phase ID → template name of first occurrence (undefined = literal).
+  const seenIds = new Map<string, string | undefined>();
+  const allEntries = [
+    ...expandedPhases.map((e, i) => ({ ...e, path: `turnStructure.phases[${i}]` })),
+    ...(expandedInterrupts ?? []).map((e, i) => ({ ...e, path: `turnStructure.interrupts[${i}]` })),
   ];
 
-  for (const { phase, path } of allPhases) {
+  for (const { phase, fromTemplate, path } of allEntries) {
     if (phase.id !== undefined && seenIds.has(phase.id)) {
+      const firstTemplate = seenIds.get(phase.id);
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_PHASE_TEMPLATE_DUPLICATE_ID,
         path,
         severity: 'error',
-        message: `Duplicate phase id "${phase.id}" after template expansion.`,
+        message: formatDuplicateIdMessage(phase.id, firstTemplate, fromTemplate),
       });
     }
     if (phase.id !== undefined) {
-      seenIds.add(phase.id);
+      seenIds.set(phase.id, fromTemplate);
     }
   }
 
@@ -207,8 +250,10 @@ export function expandPhaseTemplates(doc: GameSpecDoc): {
     doc: {
       ...doc,
       turnStructure: {
-        phases: expandedPhases,
-        ...(expandedInterrupts !== undefined ? { interrupts: expandedInterrupts } : {}),
+        phases: expandedPhases.map((e) => e.phase),
+        ...(expandedInterrupts !== undefined
+          ? { interrupts: expandedInterrupts.map((e) => e.phase) }
+          : {}),
       },
       phaseTemplates: null,
     },

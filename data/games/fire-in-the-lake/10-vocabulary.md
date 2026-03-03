@@ -137,14 +137,6 @@ globalVars:
       max: 20
   - batch:
       names:
-        - usOpCount
-        - arvnOpCount
-      type: int
-      init: 0
-      min: 0
-      max: 50
-  - batch:
-      names:
         - mom_wildWeasels
         - mom_adsid
         - mom_rollingThunder

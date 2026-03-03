@@ -5,6 +5,7 @@ import {
   applyMove,
   asActionId,
   initialState,
+  legalMoves,
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
@@ -49,15 +50,16 @@ describe('FITL production pass rewards', () => {
         '1': { ...base.perPlayerVars['1'], resources: 21 },
       },
     };
-    const startArvn = Number(start.globalVars.arvnResources);
-    const startNva = Number(start.globalVars.nvaResources);
-    const startVc = Number(start.globalVars.vcResources);
-    const usOpMove: Move = { actionId: asActionId('usOp'), params: {} };
+    const eventMove: Move = { actionId: asActionId('event'), params: {} };
+    const legal = legalMoves(def, start);
+    assert.ok(
+      legal.some((m) => String(m.actionId) === 'event'),
+      'Expected event to be a legal move for US',
+    );
 
-    const afterUsOp = applyMove(def, start, usOpMove).state;
+    const afterEvent = applyMove(def, start, eventMove).state;
 
-    assert.equal(Number(afterUsOp.globalVars.arvnResources), startArvn);
-    assert.equal(Number(afterUsOp.globalVars.nvaResources), startNva);
-    assert.equal(Number(afterUsOp.globalVars.vcResources), startVc);
+    assert.ok(!requireCardDrivenRuntime(afterEvent).currentCard.passedSeats.includes('0'),
+      'Active player seat should not appear in passedSeats after an event action');
   });
 });

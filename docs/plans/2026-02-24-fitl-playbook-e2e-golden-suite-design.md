@@ -93,7 +93,7 @@ Assertions:
 
 ### Move 3: ARVN Op & Special Activity (Train + Govern)
 
-Compound move: `arvnOp` with `operationPlusSpecialActivity` action class.
+Compound move: `train` with `operationPlusSpecialActivity` action class.
 
 **Train in Saigon:**
 - Target: `saigon:none`

@@ -591,7 +591,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.throws(
       () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
-        actionId: asActionId('usOp'),
+        actionId: asActionId('assault'),
         params: {},
         compound: {
           specialActivity: {

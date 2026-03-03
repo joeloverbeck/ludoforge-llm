@@ -1,4 +1,4 @@
-# Spec 54 — Remove Phantom Joint Operation Stubs (`usOp`/`arvnOp`)
+# Spec 54 — Remove Phantom Joint Operation Stubs (`usOp`/`arvnOp`) [COMPLETED]
 
 ## Context
 
@@ -27,12 +27,11 @@ The real cross-faction resource spending (US spending ARVN Resources above Total
 Remove from `data/games/fire-in-the-lake/30-rules-actions.md`:
 - `usOp: operation` and `arvnOp: operation` entries in `actionClassByActionId` (lines 44-45)
 - `usOp` and `arvnOp` action definitions (line 1121-1122)
-- `us-op-profile` pipeline block with its OPCLASS-007 comment (lines 4969-5003)
-- `arvn-op-profile` pipeline block (lines 5004-5031)
+- The phantom pipeline comment and `us-op-profile` pipeline block (lines 4969-4998)
+- `arvn-op-profile` pipeline block (lines 4999-5026)
 
 Remove from `data/games/fire-in-the-lake/10-vocabulary.md`:
-- `usOpCount` global variable declaration (lines 293-297)
-- `arvnOpCount` global variable declaration (lines 298-302)
+- The `usOpCount`/`arvnOpCount` batch variable declaration (lines 138-145). This is a single `batch:` block containing both names.
 
 **Verification**: `compileProductionSpec()` succeeds. Compile the spec and confirm `usOp`, `arvnOp`, `usOpCount`, `arvnOpCount`, `us-op-profile`, `arvn-op-profile` do not appear in the compiled `GameDef`.
 
@@ -50,7 +49,9 @@ Remove from `data/games/fire-in-the-lake/10-vocabulary.md`:
   - Update the comment on line 23 to remove "joint ops".
 
 - `packages/engine/test/integration/fitl-pass-rewards-production.test.ts`:
-  - Replace `usOp` move (line 55-57) with a real operation (e.g., `train`). The test verifies pass rewards are not granted after a non-pass action, so any valid operation works.
+  - Replace the `usOp` move construction (lines 55-57) with a `legalMoves`-based approach: call `legalMoves(def, start)`, find the first move whose `actionId` is not `'pass'`, and apply that. This avoids hardcoding any specific operation's params and is immune to future action-contract changes.
+  - Add `legalMoves` to the import from `../../src/kernel/index.js`.
+  - Keep the three resource-global assertions (`arvnResources`, `nvaResources`, `vcResources`). If the chosen operation's own effects happen to modify one of these globals, adjust the assertion to verify the change differs from the pass-reward amount, or switch to asserting that the active player's seat does not appear in `passedSeats`.
 
 - `packages/engine/test/integration/fitl-us-arvn-resource-spend-constraint.test.ts`:
   - Remove the test `'routes us-op-profile costValidation through shared condition macro'` (lines 14-23) — tests the phantom profile.
@@ -58,7 +59,7 @@ Remove from `data/games/fire-in-the-lake/10-vocabulary.md`:
   - Keep all other tests (macro existence, Train ARVN-cubes guard, Assault follow-up guard, Pacification guards) — these test real operation profiles.
 
 - `packages/engine/test/integration/fitl-us-arvn-special-activities.test.ts`:
-  - Update the test `'rejects advise when accompanied by an operation outside accompanyingOps'` (line 585-609) to use a real operation that is not in advise's `accompanyingOps` list (e.g., `assault` — advise only accompanies Train or Patrol per Section 4.2.1).
+  - Update the test `'rejects advise when accompanied by an operation outside accompanyingOps'` (lines 585-626) to use `assault` instead of `usOp` at line 594. Advise only accompanies Train or Patrol per Section 4.2.1, so `assault` triggers the same rejection. The `params: {}` is acceptable because the compound-move validation rejects the move at the `accompanyingOps` check (code `SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED`) before pipeline stage execution.
 
 **Verification**: `pnpm -F @ludoforge/engine test` — all tests pass with 0 failures.
 
@@ -98,3 +99,25 @@ After all tickets:
 2. `pnpm turbo test` — all tests pass
 3. `pnpm turbo schema:artifacts:check` — schemas in sync
 4. `grep -r 'usOp\|arvnOp\|usOpCount\|arvnOpCount\|us-op-profile\|arvn-op-profile' data/ packages/` — only hits should be in `archive/` directories
+
+## Outcome
+
+All four RMJOINT tickets implemented as planned. Key deviations from original spec:
+
+- **RMJOINT-002 (pass-rewards test)**: The spec proposed using `legalMoves` to find any non-pass move, but real FITL operations require decision parameters (targetSpaces, etc.) that make template moves from `legalMoves` non-applicable directly. Instead, used `event` as the non-pass action (which has no params) and asserted `passedSeats` exclusion rather than resource-global equality. This is more robust.
+- **RMJOINT-002 (production-data-compilation test)**: The spec did not list `fitl-production-data-compilation.test.ts`, but it contained assertions for `usOpCount`/`arvnOpCount` in compiled globalVars. These were removed.
+
+Files changed:
+- `data/games/fire-in-the-lake/30-rules-actions.md` — removed phantom actions, pipelines, actionClassByActionId entries
+- `data/games/fire-in-the-lake/10-vocabulary.md` — removed usOpCount/arvnOpCount batch variable
+- `packages/engine/test/integration/fitl-joint-operations.test.ts` — deleted entirely
+- `packages/engine/test/integration/fitl-faction-action-filtering.test.ts` — removed usOp/arvnOp from exclusive arrays
+- `packages/engine/test/integration/fitl-pass-rewards-production.test.ts` — replaced usOp with event-based non-pass test
+- `packages/engine/test/integration/fitl-us-arvn-resource-spend-constraint.test.ts` — removed 2 phantom profile tests
+- `packages/engine/test/integration/fitl-us-arvn-special-activities.test.ts` — replaced usOp with assault in accompanyingOps rejection test
+- `packages/engine/test/integration/fitl-production-data-compilation.test.ts` — removed usOpCount/arvnOpCount assertions
+- `packages/runner/src/bootstrap/fitl-game-def.json` — regenerated from clean spec
+- `docs/plans/2026-02-24-fitl-playbook-e2e-golden-suite-design.md` — replaced arvnOp with train
+- `docs/plans/2026-02-24-fitl-playbook-e2e-golden-suite-plan.md` — replaced all arvnOp references with train
+
+Final verification: `pnpm turbo build` clean, `pnpm turbo test --force` passes 3460 engine + 1365 runner tests, zero residual phantom references outside archive/.

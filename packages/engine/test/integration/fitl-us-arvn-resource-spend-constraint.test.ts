@@ -11,26 +11,6 @@ describe('FITL US ARVN resource spend constraint wiring', () => {
     assert.ok(macro, 'Expected us-joint-op-arvn-spend-eligible condition macro');
   });
 
-  it('routes us-op-profile costValidation through shared condition macro', () => {
-    const { parsed } = compileProductionSpec();
-    const usOp = parsed.doc.actionPipelines?.find((profile) => profile.id === 'us-op-profile');
-    assert.ok(usOp, 'Expected us-op-profile');
-    const costValidation = usOp.costValidation as
-      | { conditionMacro?: string; args?: Record<string, unknown> }
-      | null
-      | undefined;
-    assert.equal(costValidation?.conditionMacro, 'us-joint-op-arvn-spend-eligible');
-  });
-
-  it('keeps arvn-op-profile independent from totalEcon joint-operations constraint', () => {
-    const { parsed } = compileProductionSpec();
-    const arvnOp = parsed.doc.actionPipelines?.find((profile) => profile.id === 'arvn-op-profile');
-    assert.ok(arvnOp, 'Expected arvn-op-profile');
-
-    const econRefs = findDeep(arvnOp.costValidation, (node) => node?.ref === 'gvar' && node?.var === 'totalEcon');
-    assert.equal(econRefs.length, 0, 'ARVN operation should not reference totalEcon for spend legality');
-  });
-
   it('guards US Train ARVN-cubes branch with strict joint-operations predicate or free operation', () => {
     const { parsed } = compileProductionSpec();
     const trainUs = parsed.doc.actionPipelines?.find((profile) => profile.id === 'train-us-profile');

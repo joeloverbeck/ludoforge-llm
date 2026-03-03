@@ -20,9 +20,9 @@ describe('FITL faction-action filtering', () => {
   const NVA_SEAT = 2;
   const VC_SEAT = 3;
 
-  // Actions exclusive to each faction (specials + joint ops + transfers)
-  const US_EXCLUSIVE = ['advise', 'airLift', 'airStrike', 'usOp'];
-  const ARVN_EXCLUSIVE = ['govern', 'transport', 'raid', 'arvnOp'];
+  // Actions exclusive to each faction (specials + transfers)
+  const US_EXCLUSIVE = ['advise', 'airLift', 'airStrike'];
+  const ARVN_EXCLUSIVE = ['govern', 'transport', 'raid'];
   const NVA_EXCLUSIVE = ['infiltrate', 'bombard', 'ambushNva', 'nvaTransferResources'];
   const VC_EXCLUSIVE = ['tax', 'subvert', 'ambushVc', 'vcTransferResources'];
 

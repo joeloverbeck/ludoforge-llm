@@ -340,8 +340,6 @@ describe('FITL production data integration compilation', () => {
     for (const name of expectedOpCounters) {
       assert.equal(compiledGlobalVarNames.has(name), true, `Expected batch-expanded operation counter "${name}" in compiled globalVars`);
     }
-    assert.equal(compiledGlobalVarNames.has('usOpCount'), true, 'Expected batch-expanded usOpCount in compiled globalVars');
-    assert.equal(compiledGlobalVarNames.has('arvnOpCount'), true, 'Expected batch-expanded arvnOpCount in compiled globalVars');
 
     // Batch-expanded momentum flags must all exist as compiled globalVars
     const expectedMomentumFlags = [

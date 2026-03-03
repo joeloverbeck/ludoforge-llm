@@ -22,6 +22,30 @@ effectMacros:
                 then: -4
                 else: -3
 
+  # ── rvn-leader-coup-pacification-cost ──────────────────────────────────────
+  # Coup support pacification cost helper.
+  # Blowtorch Komer momentum overrides per-step/per-terror cost to 1 during Coup Support.
+  - id: rvn-leader-coup-pacification-cost
+    params:
+      - { name: stepCountExpr, type: value }
+    exports: []
+    effects:
+      - addVar:
+          scope: global
+          var: arvnResources
+          delta:
+            op: '*'
+            left: { param: stepCountExpr }
+            right:
+              if:
+                when: { op: '==', left: { ref: gvar, var: mom_blowtorchKomer }, right: true }
+                then: -1
+                else:
+                  if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+                    then: -4
+                    else: -3
+
   # ── rvn-leader-failed-attempt-desertion ────────────────────────────────────
   # Deferred-use helper for cards 129-130 (Spec 29 wiring):
   # remove floor(ARVN cubes / 3) in each map space.

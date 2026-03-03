@@ -263,9 +263,13 @@ actions:
             resourceExpr: { ref: gvar, var: arvnResources }
             costExpr:
               if:
-                when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
-                then: 4
-                else: 3
+                when: { op: '==', left: { ref: gvar, var: mom_blowtorchKomer }, right: true }
+                then: 1
+                else:
+                  if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+                    then: 4
+                    else: 3
         - op: or
           args:
             - conditionMacro: fitl-coup-support-remove-terror-action-allowed
@@ -280,7 +284,7 @@ actions:
                 blockedSupportStateExpr: activeSupport
     cost: []
     effects:
-      - macro: rvn-leader-pacification-cost
+      - macro: rvn-leader-coup-pacification-cost
         args:
           stepCountExpr: 1
       - if:
@@ -372,9 +376,13 @@ actions:
           left: { ref: gvar, var: arvnResources }
           right:
             if:
-              when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
-              then: 4
-              else: 3
+              when: { op: '==', left: { ref: gvar, var: mom_blowtorchKomer }, right: true }
+              then: 1
+              else:
+                if:
+                  when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+                  then: 4
+                  else: 3
         - op: or
           args:
             - conditionMacro: fitl-coup-support-remove-terror-action-allowed
@@ -389,7 +397,7 @@ actions:
                 blockedSupportStateExpr: activeSupport
     cost: []
     effects:
-      - macro: rvn-leader-pacification-cost
+      - macro: rvn-leader-coup-pacification-cost
         args:
           stepCountExpr: 1
       - if:

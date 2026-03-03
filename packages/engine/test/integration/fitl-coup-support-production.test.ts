@@ -132,6 +132,51 @@ describe('FITL coup support phase production actions', () => {
     assert.equal(result.state.markers[target]?.coupPacifySpaceUsage, 'used');
   });
 
+  it('applies Blowtorch Komer reduced Coup pacification cost (1) for US terror removal', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8711, 4).state);
+    const target = 'quang-nam:none';
+
+    const state = withCoupSupportPhase(base, {
+      activePlayer: 0 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 16,
+        totalEcon: 15,
+        mom_blowtorchKomer: true,
+      },
+      zones: {
+        [target]: [piece('us-t-bk', 'US', 'troops'), piece('arvn-p-bk', 'ARVN', 'police')],
+      },
+      markers: {
+        ...base.markers,
+        [target]: {
+          ...(base.markers[target] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [target]: {
+          ...(base.zoneVars[target] ?? {}),
+          terrorCount: 1,
+        },
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    });
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('coupPacifyUS'),
+      params: { targetSpace: target, action: 'removeTerror' },
+    });
+
+    assert.equal(result.state.globalVars.arvnResources, 15);
+    assert.equal(result.state.zoneVars[target]?.terrorCount ?? 0, 0);
+  });
+
   it('blocks US pacification if it would drop ARVN resources below totalEcon', () => {
     const def = compileProductionDef();
     const base = withClearedZones(initialState(def, 8702, 4).state);
@@ -388,6 +433,43 @@ describe('FITL coup support phase production actions', () => {
     }).state;
 
     assert.equal(shifted.markers[target]?.supportOpposition, 'passiveSupport');
+  });
+
+  it('applies Blowtorch Komer reduced Coup pacification cost (1) for ARVN shift support, overriding Ky rate', () => {
+    const def = compileProductionDef();
+    const base = withClearedZones(initialState(def, 8712, 4).state);
+    const target = 'quang-nam:none';
+
+    const state = withCoupSupportPhase(base, {
+      activePlayer: 1 as GameState['activePlayer'],
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 1,
+        mom_blowtorchKomer: true,
+      },
+      zones: {
+        [target]: [piece('arvn-t-bk', 'ARVN', 'troops'), piece('arvn-p-bk', 'ARVN', 'police')],
+      },
+      markers: {
+        ...base.markers,
+        [target]: {
+          ...(base.markers[target] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      globalMarkers: {
+        ...(base.globalMarkers ?? {}),
+        activeLeader: 'ky',
+      },
+    });
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('coupPacifyARVN'),
+      params: { targetSpace: target, action: 'shiftSupport' },
+    });
+
+    assert.equal(result.state.globalVars.arvnResources, 0);
+    assert.equal(result.state.markers[target]?.supportOpposition, 'passiveSupport');
   });
 
   it('requires terror removal before VC can shift opposition in a space', () => {

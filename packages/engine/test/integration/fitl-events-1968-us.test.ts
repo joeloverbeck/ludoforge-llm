@@ -320,6 +320,19 @@ describe('FITL 1968 US-first event-card production spec', () => {
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-16');
     assert.notEqual(card, undefined);
     assert.equal(card?.tags?.includes('momentum'), true);
+    assert.equal(card?.unshaded?.text, 'Aid +10. This Support phase, Pacify costs 1 Resource per step or Terror. MOMENTUM');
+    assert.equal(card?.shaded?.text, 'Aid -10. Shift a space with Troops and Police 1 level toward Active Opposition.');
+    assert.deepEqual((card?.unshaded?.effects?.[0] as { addVar?: unknown })?.addVar, {
+      scope: 'global',
+      var: 'aid',
+      delta: 10,
+    });
+    assert.deepEqual((card?.shaded?.effects?.[0] as { addVar?: unknown })?.addVar, {
+      scope: 'global',
+      var: 'aid',
+      delta: -10,
+    });
+    assert.equal((card?.shaded?.effects?.[1] as { if?: unknown })?.if !== undefined, true);
 
     const momentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-blowtorch-komer');
     assert.notEqual(momentum, undefined);

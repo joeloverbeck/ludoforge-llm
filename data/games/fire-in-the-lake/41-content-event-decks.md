@@ -1430,7 +1430,10 @@ eventDecks:
           seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Pacification drive intensifies political pressure."
         unshaded:
-          text: "Through Coup, Pacification shifts 1 additional level toward Support. MOMENTUM"
+          text: "Aid +10. This Support phase, Pacify costs 1 Resource per step or Terror. MOMENTUM"
+          effects:
+            - macro: add-global-var-delta
+              args: { varName: aid, deltaExpr: 10 }
           lastingEffects:
             - id: mom-blowtorch-komer
               duration: round
@@ -1441,7 +1444,71 @@ eventDecks:
                 - macro: set-global-flag-false
                   args: { varName: mom_blowtorchKomer }
         shaded:
-          text: "Pacification backlash: rural coercion increases opposition pressure."
+          text: "Aid -10. Shift a space with Troops and Police 1 level toward Active Opposition."
+          effects:
+            - macro: add-global-var-delta
+              args: { varName: aid, deltaExpr: -10 }
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: type, eq: troops }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: type, eq: police }
+                              right: 0
+                  right: 0
+                then:
+                  - chooseOne:
+                      bind: $targetSpace
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: type, eq: troops }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: type, eq: police }
+                              right: 0
+                  - shiftMarker: { space: { zoneExpr: { ref: binding, name: $targetSpace } }, marker: supportOpposition, delta: -1 }
       - id: card-18
         title: Combined Action Platoons
         sideMode: dual

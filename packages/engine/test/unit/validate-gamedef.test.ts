@@ -174,6 +174,25 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('errors when card metadata seat-order distinct raw values collapse to duplicate mapped seats', () => {
+    const base = createValidGameDef();
+    const def = withCardDrivenTurnFlow(
+      base,
+      { US: '0', UNITED_STATES: '0', NVA: '1' },
+      ['US', 'UNITED_STATES', 'NVA'],
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_ENTRY_DUPLICATE_SEAT'
+          && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder[1]'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
   it('errors when card metadata seat-order has fewer than policy distinct seats', () => {
     const base = createValidGameDef();
     const def = withCardDrivenTurnFlow(base, { US: '0' }, ['US']);

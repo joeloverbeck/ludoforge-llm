@@ -27,6 +27,11 @@ import {
 } from '../../../src/kernel/index.js';
 import { initializeTurnFlowEligibilityState } from '../../../src/kernel/turn-flow-eligibility.js';
 import { isMoveAllowedByTurnFlowOptionMatrix } from '../../../src/kernel/legal-moves-turn-order.js';
+import {
+  makeCardSeatOrderEventDeck,
+  makeCardSeatOrderRuntimeZones,
+  makeCardSeatOrderTurnOrder,
+} from '../../helpers/card-seat-order-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -383,47 +388,15 @@ phase: [asPhaseId('main')],
     const def = {
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
-      eventDecks: [
-        {
-          id: 'deck',
-          drawZone: 'draw:none',
-          discardZone: 'discard:none',
-          cards: [
-            {
-              id: 'card-1',
-              title: 'Card 1',
-              metadata: {
-                seatOrder: ['US', 'NVA'],
-              },
-            },
-          ],
-        },
-      ],
-      turnOrder: {
-        type: 'cardDriven',
-        config: {
-          turnFlow: {
-            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            cardSeatOrderMetadataKey: 'seatOrder',
-            cardSeatOrderMapping: {
-              US: 'us',
-              NVA: 'nva',
-            },
-            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
-            optionMatrix: [],
-            passRewards: [],
-            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
-          },
-        },
-      },
+      eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'NVA'] }])],
+      turnOrder: makeCardSeatOrderTurnOrder({
+        mapping: { US: 'us', NVA: 'nva' },
+        eligibilitySeats: ['nva', 'us'],
+      }),
     } as unknown as GameDef;
 
     const state = makeBaseState({
-      zones: {
-        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'card-1' } }],
-        'lookahead:none': [],
-        'leader:none': [],
-      },
+      zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
     });
 
     const nextState = initializeTurnFlowEligibilityState(def, state);
@@ -438,47 +411,15 @@ phase: [asPhaseId('main')],
     const def = {
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
-      eventDecks: [
-        {
-          id: 'deck',
-          drawZone: 'draw:none',
-          discardZone: 'discard:none',
-          cards: [
-            {
-              id: 'card-1',
-              title: 'Card 1',
-              metadata: {
-                seatOrder: ['US', 'NVA'],
-              },
-            },
-          ],
-        },
-      ],
-      turnOrder: {
-        type: 'cardDriven',
-        config: {
-          turnFlow: {
-            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            cardSeatOrderMetadataKey: 'seatOrder',
-            cardSeatOrderMapping: {
-              US: 'us',
-              NVA: 'nva',
-            },
-            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
-            optionMatrix: [],
-            passRewards: [],
-            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
-          },
-        },
-      },
+      eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'NVA'] }])],
+      turnOrder: makeCardSeatOrderTurnOrder({
+        mapping: { US: 'us', NVA: 'nva' },
+        eligibilitySeats: ['nva', 'us'],
+      }),
     } as unknown as GameDef;
 
     const state = makeBaseState({
-      zones: {
-        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'missing-card' } }],
-        'lookahead:none': [],
-        'leader:none': [],
-      },
+      zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'missing-card' }),
     });
 
     assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
@@ -495,46 +436,51 @@ phase: [asPhaseId('main')],
     const def = {
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
-      eventDecks: [
-        {
-          id: 'deck',
-          drawZone: 'draw:none',
-          discardZone: 'discard:none',
-          cards: [
-            {
-              id: 'card-1',
-              title: 'Card 1',
-              metadata: {
-                seatOrder: ['US', 'US'],
-              },
-            },
-          ],
-        },
-      ],
-      turnOrder: {
-        type: 'cardDriven',
-        config: {
-          turnFlow: {
-            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            cardSeatOrderMetadataKey: 'seatOrder',
-            cardSeatOrderMapping: {
-              US: 'us',
-            },
-            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
-            optionMatrix: [],
-            passRewards: [],
-            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
-          },
-        },
-      },
+      eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'US'] }])],
+      turnOrder: makeCardSeatOrderTurnOrder({
+        mapping: { US: 'us' },
+        eligibilitySeats: ['nva', 'us'],
+      }),
     } as unknown as GameDef;
 
     const state = makeBaseState({
-      zones: {
-        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'card-1' } }],
-        'lookahead:none': [],
-        'leader:none': [],
-      },
+      zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
+    });
+
+    assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; message?: string; context?: Record<string, unknown> };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.invariant, 'turnFlow.cardMetadataSeatOrder.shapeInvalid');
+      assert.equal(details.context?.cardId, 'card-1');
+      assert.equal(details.context?.metadataKey, 'seatOrder');
+      assert.equal(details.context?.minDistinctSeatCount, CARD_SEAT_ORDER_MIN_DISTINCT_SEATS);
+      assert.equal(details.context?.distinctSeatCount, 1);
+      assert.deepEqual(details.context?.duplicates, ['us']);
+      assert.match(String(details.message), /card metadata seat order shape invalid/i);
+      assert.match(
+        String(details.message),
+        new RegExp(`minDistinctSeatCount=${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS}`),
+      );
+      assert.match(String(details.message), /distinctSeatCount=1/i);
+      assert.match(String(details.message), /duplicates=\[us\]/i);
+      return true;
+    });
+  });
+
+  it('throws when card metadata seat-order distinct raw values collapse to duplicate mapped seats at runtime', () => {
+    const def = {
+      ...makeBaseDef(),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'UNITED_STATES'] }])],
+      turnOrder: makeCardSeatOrderTurnOrder({
+        mapping: { US: 'us', UNITED_STATES: 'us' },
+        eligibilitySeats: ['nva', 'us'],
+      }),
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
     });
 
     assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {
@@ -562,46 +508,15 @@ phase: [asPhaseId('main')],
     const def = {
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
-      eventDecks: [
-        {
-          id: 'deck',
-          drawZone: 'draw:none',
-          discardZone: 'discard:none',
-          cards: [
-            {
-              id: 'card-1',
-              title: 'Card 1',
-              metadata: {
-                seatOrder: ['US'],
-              },
-            },
-          ],
-        },
-      ],
-      turnOrder: {
-        type: 'cardDriven',
-        config: {
-          turnFlow: {
-            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-            cardSeatOrderMetadataKey: 'seatOrder',
-            cardSeatOrderMapping: {
-              US: 'us',
-            },
-            eligibility: { seats: ['nva', 'us'], overrideWindows: [] },
-            optionMatrix: [],
-            passRewards: [],
-            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
-          },
-        },
-      },
+      eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US'] }])],
+      turnOrder: makeCardSeatOrderTurnOrder({
+        mapping: { US: 'us' },
+        eligibilitySeats: ['nva', 'us'],
+      }),
     } as unknown as GameDef;
 
     const state = makeBaseState({
-      zones: {
-        'played:none': [{ id: asTokenId('played-card-1'), type: 'card', props: { cardId: 'card-1' } }],
-        'lookahead:none': [],
-        'leader:none': [],
-      },
+      zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
     });
 
     assert.throws(() => initializeTurnFlowEligibilityState(def, state), (error: unknown) => {

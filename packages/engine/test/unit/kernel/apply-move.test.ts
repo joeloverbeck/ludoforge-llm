@@ -9,6 +9,7 @@ import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 import {
   applyMove,
+  CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
   ILLEGAL_MOVE_REASONS,
   asActionId,
   asPhaseId,
@@ -25,6 +26,12 @@ import {
   type OperationCompoundStagesReplacedTraceEntry,
   type VariableDef,
 } from '../../../src/kernel/index.js';
+import {
+  cardSeatOrderLifecycleZones,
+  makeCardSeatOrderEventDeck,
+  makeCardSeatOrderRuntimeZones,
+  makeCardSeatOrderTurnOrder,
+} from '../../helpers/card-seat-order-fixtures.js';
 
 const resourcesVar: VariableDef = { name: 'resources', type: 'int', init: 10, min: 0, max: 100 };
 
@@ -1063,6 +1070,87 @@ phase: [asPhaseId('main')],
         assert.equal(details.context?.actionId, 'operation');
         assert.equal(details.context?.candidateZone, 'board:cambodia');
         assert.deepEqual(details.context?.candidateZones, ['board:cambodia']);
+        return true;
+      },
+    );
+  });
+});
+
+describe('applyMove() card seat-order boundary invariants', () => {
+  it('throws when boundary-promoted card seat-order distinct raw values collapse to duplicate mapped seats', () => {
+    const operationAction: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [operationAction],
+        globalVars: [],
+        zones: cardSeatOrderLifecycleZones,
+      }),
+      seats: [{ id: 'us' }, { id: 'nva' }],
+      eventDecks: [
+        makeCardSeatOrderEventDeck([
+          { id: 'card-1', seatOrder: ['US', 'NVA'] },
+          { id: 'card-2', seatOrder: ['US', 'UNITED_STATES'] },
+        ]),
+      ],
+      turnOrder: makeCardSeatOrderTurnOrder({
+        mapping: { US: 'us', UNITED_STATES: 'us', NVA: 'nva' },
+        eligibilitySeats: ['us', 'nva'],
+        actionClassByActionId: { operation: 'operation' },
+      }),
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      activePlayer: asPlayerId(0),
+      zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1', lookaheadCardId: 'card-2' }),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['us', 'nva'],
+          eligibility: { us: true, nva: true },
+          currentCard: {
+            firstEligible: 'us',
+            secondEligible: 'nva',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'operation',
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+      globalVars: {},
+    });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('operation'), params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown>; message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.equal(details.context?.invariant, 'turnFlow.cardMetadataSeatOrder.shapeInvalid');
+        assert.equal(details.context?.cardId, 'card-2');
+        assert.equal(details.context?.metadataKey, 'seatOrder');
+        assert.equal(details.context?.minDistinctSeatCount, CARD_SEAT_ORDER_MIN_DISTINCT_SEATS);
+        assert.equal(details.context?.distinctSeatCount, 1);
+        assert.deepEqual(details.context?.duplicates, ['us']);
+        assert.match(String(details.message), /card metadata seat order shape invalid/i);
+        assert.match(
+          String(details.message),
+          new RegExp(`minDistinctSeatCount=${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS}`),
+        );
+        assert.match(String(details.message), /distinctSeatCount=1/i);
+        assert.match(String(details.message), /duplicates=\[us\]/i);
         return true;
       },
     );

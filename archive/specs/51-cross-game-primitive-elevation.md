@@ -1,6 +1,6 @@
 # Spec 51 — Cross-Game Primitive Elevation
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1 (architecture quality, spec authoring ergonomics, correctness)
 **Complexity**: XL
 **Dependencies**: None (all changes extend existing compiler/kernel)

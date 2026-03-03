@@ -6,6 +6,9 @@ zones:
     owner: none
     visibility: hidden
     ordering: stack
+    behavior:
+      type: deck
+      drawFrom: top
   - id: available-US
     owner: none
     visibility: public
@@ -47,120 +50,32 @@ zones:
     visibility: public
     ordering: stack
 globalMarkerLattices:
-  - id: cap_topGun
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_arcLight
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_abrams
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_cobras
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_m48Patton
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_caps
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_cords
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_lgbs
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_searchAndDestroy
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_aaa
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_longRangeGuns
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_migs
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_sa2s
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_pt76
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_armoredCavalry
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_mandateOfHeaven
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_boobyTraps
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_mainForceBns
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
-  - id: cap_cadres
-    states:
-      - inactive
-      - unshaded
-      - shaded
-    defaultState: inactive
+  - batch:
+      ids:
+        - cap_topGun
+        - cap_arcLight
+        - cap_abrams
+        - cap_cobras
+        - cap_m48Patton
+        - cap_caps
+        - cap_cords
+        - cap_lgbs
+        - cap_searchAndDestroy
+        - cap_aaa
+        - cap_longRangeGuns
+        - cap_migs
+        - cap_sa2s
+        - cap_pt76
+        - cap_armoredCavalry
+        - cap_mandateOfHeaven
+        - cap_boobyTraps
+        - cap_mainForceBns
+        - cap_cadres
+      states:
+        - inactive
+        - unshaded
+        - shaded
+      defaultState: inactive
   - id: activeLeader
     states:
       - minh
@@ -180,61 +95,11 @@ globalVars:
     init: 10
     min: 0
     max: 50
-  - name: trainCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: patrolCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: sweepCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: assaultCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: rallyCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: marchCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: attackCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
   - name: usResources
     type: int
     init: 7
     min: 0
     max: 50
-  - name: adviseCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: airLiftCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: airStrikeCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
   - name: airLiftRemaining
     type: int
     init: 0
@@ -245,106 +110,58 @@ globalVars:
     init: 0
     min: 0
     max: 6
-  - name: governCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: transportCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: raidCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: infiltrateCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: bombardCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: nvaAmbushCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: taxCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: subvertCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: vcAmbushCount
-    type: int
-    init: 0
-    min: 0
-    max: 20
-  - name: usOpCount
-    type: int
-    init: 0
-    min: 0
-    max: 50
-  - name: arvnOpCount
-    type: int
-    init: 0
-    min: 0
-    max: 50
-  - name: mom_wildWeasels
-    type: boolean
-    init: false
-  - name: mom_adsid
-    type: boolean
-    init: false
-  - name: mom_rollingThunder
-    type: boolean
-    init: false
-  - name: mom_medevacUnshaded
-    type: boolean
-    init: false
-  - name: mom_medevacShaded
-    type: boolean
-    init: false
-  - name: mom_blowtorchKomer
-    type: boolean
-    init: false
-  - name: mom_claymores
-    type: boolean
-    init: false
-  - name: mom_daNang
-    type: boolean
-    init: false
-  - name: mom_mcnamaraLine
-    type: boolean
-    init: false
-  - name: mom_oriskany
-    type: boolean
-    init: false
-  - name: mom_bombingPause
-    type: boolean
-    init: false
-  - name: mom_559thTransportGrp
-    type: boolean
-    init: false
-  - name: mom_bodyCount
-    type: boolean
-    init: false
-  - name: mom_generalLansdale
-    type: boolean
-    init: false
-  - name: mom_typhoonKate
-    type: boolean
-    init: false
+  - batch:
+      names:
+        - trainCount
+        - patrolCount
+        - sweepCount
+        - assaultCount
+        - rallyCount
+        - marchCount
+        - attackCount
+        - adviseCount
+        - airLiftCount
+        - airStrikeCount
+        - governCount
+        - transportCount
+        - raidCount
+        - infiltrateCount
+        - bombardCount
+        - nvaAmbushCount
+        - taxCount
+        - subvertCount
+        - vcAmbushCount
+      type: int
+      init: 0
+      min: 0
+      max: 20
+  - batch:
+      names:
+        - usOpCount
+        - arvnOpCount
+      type: int
+      init: 0
+      min: 0
+      max: 50
+  - batch:
+      names:
+        - mom_wildWeasels
+        - mom_adsid
+        - mom_rollingThunder
+        - mom_medevacUnshaded
+        - mom_medevacShaded
+        - mom_blowtorchKomer
+        - mom_claymores
+        - mom_daNang
+        - mom_mcnamaraLine
+        - mom_oriskany
+        - mom_bombingPause
+        - mom_559thTransportGrp
+        - mom_bodyCount
+        - mom_generalLansdale
+        - mom_typhoonKate
+      type: boolean
+      init: false
   - name: fitl_acesAirStrikeWindow
     type: boolean
     init: false

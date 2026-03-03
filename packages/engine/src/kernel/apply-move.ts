@@ -895,7 +895,7 @@ const executeMoveAction = (
         state: effectState,
         rng: effectRng,
         traceContext: {
-          eventContext: 'actionEffect',
+          eventContext: 'phaseAfterEffect',
           actionId: String(action.id),
           effectPathRoot: `action:${String(action.id)}.afterEffects`,
         },

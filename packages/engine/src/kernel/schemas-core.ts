@@ -484,6 +484,7 @@ export const EffectTraceProvenanceSchema = z
     eventContext: z.union([
       z.literal('actionCost'),
       z.literal('actionEffect'),
+      z.literal('phaseAfterEffect'),
       z.literal('lifecycleEffect'),
       z.literal('triggerEffect'),
       z.literal('lifecycleEvent'),

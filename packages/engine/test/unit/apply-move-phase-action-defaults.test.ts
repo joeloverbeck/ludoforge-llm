@@ -196,4 +196,56 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
     assert.deepEqual(result1.state.globalVars, result2.state.globalVars, 'results must be identical');
     assert.deepEqual(result1.state.rng, result2.state.rng, 'RNG state must be identical');
   });
+
+  it('afterEffects trace entries use phaseAfterEffect eventContext', () => {
+    const def = makeBaseDef({
+      actions: [simpleAction],
+      phases: [{
+        id: asPhaseId('main'),
+        actionDefaults: { afterEffects: [incrementAfterCounter] },
+      }],
+    });
+    const state = makeBaseState();
+    const move: Move = { actionId: asActionId('doThing'), params: {} };
+    const result = applyMove(def, state, move, { trace: true });
+    const trace = result.effectTrace ?? [];
+    const afterEntries = trace.filter(
+      (entry) => entry.provenance.eventContext === 'phaseAfterEffect',
+    );
+    assert.ok(afterEntries.length > 0, 'should have at least one phaseAfterEffect trace entry');
+    for (const entry of afterEntries) {
+      assert.equal(entry.provenance.actionId, 'doThing', 'actionId should match');
+      assert.ok(
+        entry.provenance.effectPath.includes('afterEffects'),
+        'effectPath should contain afterEffects',
+      );
+    }
+  });
+
+  it('action effects use actionEffect eventContext distinct from afterEffects', () => {
+    const def = makeBaseDef({
+      actions: [simpleAction],
+      phases: [{
+        id: asPhaseId('main'),
+        actionDefaults: { afterEffects: [incrementAfterCounter] },
+      }],
+    });
+    const state = makeBaseState();
+    const move: Move = { actionId: asActionId('doThing'), params: {} };
+    const result = applyMove(def, state, move, { trace: true });
+    const trace = result.effectTrace ?? [];
+    const actionEntries = trace.filter(
+      (entry) => entry.provenance.eventContext === 'actionEffect',
+    );
+    const afterEntries = trace.filter(
+      (entry) => entry.provenance.eventContext === 'phaseAfterEffect',
+    );
+    assert.ok(actionEntries.length > 0, 'should have actionEffect trace entries');
+    assert.ok(afterEntries.length > 0, 'should have phaseAfterEffect trace entries');
+    assert.notEqual(
+      actionEntries[0]?.provenance.eventContext,
+      afterEntries[0]?.provenance.eventContext,
+      'action effects and afterEffects should have distinct eventContext values',
+    );
+  });
 });

@@ -808,6 +808,7 @@ export interface EffectTraceDestroyToken {
 export type EffectTraceEventContext =
   | 'actionCost'
   | 'actionEffect'
+  | 'phaseAfterEffect'
   | 'lifecycleEffect'
   | 'triggerEffect'
   | 'lifecycleEvent';

@@ -1236,6 +1236,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1363,6 +1367,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1435,6 +1443,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1501,6 +1513,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",
@@ -1588,6 +1604,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",
@@ -1681,6 +1701,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -1767,6 +1791,10 @@
                                 {
                                   "type": "string",
                                   "const": "actionEffect"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "phaseAfterEffect"
                                 },
                                 {
                                   "type": "string",
@@ -1864,6 +1892,10 @@
                                 },
                                 {
                                   "type": "string",
+                                  "const": "phaseAfterEffect"
+                                },
+                                {
+                                  "type": "string",
                                   "const": "lifecycleEffect"
                                 },
                                 {
@@ -1954,6 +1986,10 @@
                                 {
                                   "type": "string",
                                   "const": "actionEffect"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "phaseAfterEffect"
                                 },
                                 {
                                   "type": "string",
@@ -2182,6 +2218,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -2269,6 +2309,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "phaseAfterEffect"
+                            },
+                            {
+                              "type": "string",
                               "const": "lifecycleEffect"
                             },
                             {
@@ -2334,6 +2378,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",
@@ -2404,6 +2452,10 @@
                             {
                               "type": "string",
                               "const": "actionEffect"
+                            },
+                            {
+                              "type": "string",
+                              "const": "phaseAfterEffect"
                             },
                             {
                               "type": "string",

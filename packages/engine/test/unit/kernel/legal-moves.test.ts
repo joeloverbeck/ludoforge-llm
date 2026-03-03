@@ -9,6 +9,7 @@ import {
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 import {
+  CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -541,13 +542,17 @@ phase: [asPhaseId('main')],
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
       assert.match(String(details.message), /card metadata seat order shape invalid/i);
+      assert.match(
+        String(details.message),
+        new RegExp(`minDistinctSeatCount=${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS}`),
+      );
       assert.match(String(details.message), /distinctSeatCount=1/i);
       assert.match(String(details.message), /duplicates=\[us\]/i);
       return true;
     });
   });
 
-  it('throws when card metadata seat-order resolves fewer than two distinct seats at runtime', () => {
+  it('throws when card metadata seat-order resolves fewer than policy distinct seats at runtime', () => {
     const def = {
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
@@ -598,6 +603,10 @@ phase: [asPhaseId('main')],
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
       assert.match(String(details.message), /card metadata seat order shape invalid/i);
+      assert.match(
+        String(details.message),
+        new RegExp(`minDistinctSeatCount=${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS}`),
+      );
       assert.match(String(details.message), /distinctSeatCount=1/i);
       assert.match(String(details.message), /duplicates=\[\]/i);
       return true;

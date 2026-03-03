@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
   type GameDef,
   type ScenarioPiecePlacement,
   type StackingConstraint,
@@ -173,18 +174,22 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('errors when card metadata seat-order has fewer than two distinct seats', () => {
+  it('errors when card metadata seat-order has fewer than policy distinct seats', () => {
     const base = createValidGameDef();
     const def = withCardDrivenTurnFlow(base, { US: '0' }, ['US']);
 
     const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_INSUFFICIENT_DISTINCT_SEATS'
-          && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder'
-          && diag.severity === 'error',
-      ),
+    const insufficientSeatOrder = diagnostics.find(
+      (diag) =>
+        diag.code === 'TURN_FLOW_CARD_SEAT_ORDER_INSUFFICIENT_DISTINCT_SEATS'
+        && diag.path === 'eventDecks[0].cards[0].metadata.seatOrder'
+        && diag.severity === 'error',
+    );
+    assert.ok(insufficientSeatOrder);
+    assert.match(insufficientSeatOrder.message, new RegExp(`at least ${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS} are required`));
+    assert.match(
+      String(insufficientSeatOrder.suggestion),
+      new RegExp(`at least ${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS} distinct seats`),
     );
   });
 

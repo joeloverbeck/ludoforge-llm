@@ -5,6 +5,10 @@ import {
   normalizeSeatKey,
   resolvePlayerIndexForTurnFlowSeat,
 } from './seat-resolution.js';
+import {
+  CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
+  isCardSeatOrderDistinctSeatCountValid,
+} from './turn-flow-seat-order-policy.js';
 import type { ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
@@ -234,13 +238,13 @@ export const validateCardSeatOrderMapping = (diagnostics: Diagnostic[], def: Gam
           });
         }
       }
-      if (shape.distinctSeatCount < 2) {
+      if (!isCardSeatOrderDistinctSeatCountValid(shape)) {
         diagnostics.push({
           code: 'TURN_FLOW_CARD_SEAT_ORDER_INSUFFICIENT_DISTINCT_SEATS',
           path: `eventDecks[${deckIndex}].cards[${cardIndex}].metadata.${metadataKey}`,
           severity: 'error',
-          message: `Card seat-order resolves to ${shape.distinctSeatCount} distinct seat(s); at least 2 are required.`,
-          suggestion: 'Provide a card seat-order with at least two distinct seats.',
+          message: `Card seat-order resolves to ${shape.distinctSeatCount} distinct seat(s); at least ${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS} are required.`,
+          suggestion: `Provide a card seat-order with at least ${CARD_SEAT_ORDER_MIN_DISTINCT_SEATS} distinct seats.`,
         });
       }
     }

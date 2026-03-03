@@ -39,8 +39,8 @@ describe('scenario-linked asset selection policy', () => {
         message: diagnostics[0]?.message,
       },
       {
-      code: 'MISSING',
-      message: 'scenario-missing:scenario-a',
+        code: 'MISSING',
+        message: 'scenario-missing:scenario-a',
       },
     );
   });
@@ -71,8 +71,44 @@ describe('scenario-linked asset selection policy', () => {
         message: diagnostics[0]?.message,
       },
       {
-      code: 'AMBIGUOUS',
-      message: 'map:2',
+        code: 'AMBIGUOUS',
+        message: 'map:2',
+      },
+    );
+  });
+
+  it('passes deduplicated normalized alternatives into linked-asset ambiguity diagnostics', () => {
+    const diagnostics: Diagnostic[] = [];
+
+    const result = selectScenarioLinkedAsset(
+      [{ id: ' map-a ' }, { id: 'map-a' }, { id: 'ma\u0301p-b' }, { id: 'máp-b' }],
+      undefined,
+    );
+    emitScenarioLinkedAssetSelectionDiagnostics(result, undefined, diagnostics, {
+      kind: 'map',
+      selectedPath: 'doc.dataAssets.0.payload',
+      dialect: {
+        onAmbiguousSelection: ({ kind, alternatives }) => ({
+          code: 'AMBIGUOUS',
+          path: 'doc.dataAssets',
+          severity: 'error',
+          message: `${kind}:${alternatives.join(',')}`,
+        }),
+      },
+    });
+
+    assert.equal(result.selected, undefined);
+    assert.equal(result.failureReason, 'ambiguous-selection');
+    assert.deepEqual(result.alternatives, ['map-a', 'máp-b']);
+    assert.equal(diagnostics.length, 1);
+    assert.deepEqual(
+      {
+        code: diagnostics[0]?.code,
+        message: diagnostics[0]?.message,
+      },
+      {
+        code: 'AMBIGUOUS',
+        message: 'map:map-a,máp-b',
       },
     );
   });

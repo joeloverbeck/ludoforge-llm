@@ -51,6 +51,21 @@ describe('selectDataAssetById', () => {
     assert.deepEqual(result.alternatives, ['seat-a', 'seat-b']);
   });
 
+  it('deduplicates normalized alternatives when selector is omitted and selection is ambiguous', () => {
+    const result = selectDataAssetById(
+      [
+        { id: ' seat-a ' },
+        { id: 'seat-a' },
+        { id: 'se\u0301at-b' },
+        { id: 'séat-b' },
+      ],
+      undefined,
+    );
+    assert.equal(result.selected, undefined);
+    assert.equal(result.failureReason, 'ambiguous-selection');
+    assert.deepEqual(result.alternatives, ['seat-a', 'séat-b']);
+  });
+
   it('supports custom id getter', () => {
     const result = selectDataAssetById(
       [{ entityId: 'scenario-a' }, { entityId: 'scenario-b' }],

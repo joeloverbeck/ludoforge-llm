@@ -1,19 +1,19 @@
 # SEATRES-055: Add ambiguous-selection alternatives dedupe regression coverage
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
-**Engine Changes**: Yes — CNL selection contract test coverage
+**Engine Changes**: Tests only — CNL selection contract coverage (no production behavior change)
 **Deps**: archive/tickets/SEATRES/SEATRES-039-unify-cnl-identifier-normalization-and-selection-alternatives.md
 
 ## Problem
 
-`selectDataAssetById()` now deduplicates alternatives by normalized identity, but current regression coverage only asserts this in explicit selector missing-reference flow. The ambiguous-selection path (`selectedId === undefined` with multiple assets) does not yet lock the same alternatives contract.
+`selectDataAssetById()` now deduplicates alternatives by normalized identity, but regression coverage only asserts normalized-collision dedupe in explicit selector missing-reference flow. Ambiguous-selection coverage exists, but it does not yet lock the same normalized-collision alternatives contract (`selectedId === undefined` with multiple assets).
 
 ## Assumption Reassessment (2026-03-03)
 
 1. `selectDataAssetById()` now builds alternatives from normalized ids via dedupe + stable sort. **Verified.**
-2. `data-asset-selection.test.ts` currently covers normalized dedupe under explicit missing-reference, not ambiguous-selection. **Verified.**
+2. `data-asset-selection.test.ts` already covers ambiguous-selection in the general case, but normalized-collision dedupe is currently only asserted under explicit missing-reference. **Verified.**
 3. No active ticket in `tickets/*` currently scopes this missing ambiguity-path regression coverage specifically. **Verified.**
 
 ## Architecture Check
@@ -30,7 +30,7 @@ Add a unit test where `selectedId` is omitted, multiple assets collide after nor
 
 ### 2. Add policy pass-through coverage
 
-Add/adjust a policy-layer test so `selectScenarioLinkedAssetWithPolicy()` ambiguity diagnostics observe the same deduplicated alternatives contract from `selectDataAssetById()`.
+Add/adjust a policy-layer test so `selectScenarioLinkedAsset()` + `emitScenarioLinkedAssetSelectionDiagnostics()` ambiguity diagnostics observe the same deduplicated alternatives contract from `selectDataAssetById()`.
 
 ## Files to Touch
 
@@ -40,6 +40,7 @@ Add/adjust a policy-layer test so `selectScenarioLinkedAssetWithPolicy()` ambigu
 ## Out of Scope
 
 - Changing selection algorithm semantics
+- Changing production source under `packages/engine/src/**`
 - Changing diagnostic code taxonomy/messages
 - Runtime/kernel simulation behavior
 
@@ -70,3 +71,20 @@ Add/adjust a policy-layer test so `selectScenarioLinkedAssetWithPolicy()` ambigu
 3. `node --test packages/engine/dist/test/unit/data-asset-selection-policy.test.js`
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Updated ticket assumptions/scope to reflect existing generic ambiguous-selection coverage and clarify the true gap: normalized-collision dedupe assertions for ambiguity paths.
+  - Added ambiguity-path normalized-collision dedupe regression test in `packages/engine/test/unit/data-asset-selection.test.ts`.
+  - Added policy-layer ambiguity pass-through regression test in `packages/engine/test/unit/data-asset-selection-policy.test.ts` that asserts deduplicated normalized alternatives are propagated to diagnostics.
+- **Deviation from Original Plan**:
+  - No production code changes were needed; this remained a tests-only contract-hardening ticket.
+  - Clarified policy API naming in ticket scope (`selectScenarioLinkedAsset()` + `emitScenarioLinkedAssetSelectionDiagnostics()`).
+- **Verification Results**:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/data-asset-selection.test.js` passed.
+  - `node --test packages/engine/dist/test/unit/data-asset-selection-policy.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (358/358).
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

@@ -39,7 +39,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 3
                     groups:
-                      - bind: usOutOfPlay
+                      - bind: $usOutOfPlay
                         over:
                           query: tokensInZone
                           zone: out-of-play-US:none
@@ -50,7 +50,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 6
                     groups:
-                      - bind: arvnOutOfPlay
+                      - bind: $arvnOutOfPlay
                         over:
                           query: tokensInZone
                           zone: out-of-play-ARVN:none
@@ -186,7 +186,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: usAvailablePiece
+                  - bind: $usAvailablePiece
                     over:
                       query: tokensInZone
                       zone: available-US:none
@@ -261,7 +261,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: irregular
+                  - bind: $irregular
                     over:
                       query: tokensInZone
                       zone: available-US:none
@@ -281,7 +281,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: irregular
+                  - bind: $irregular
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -293,7 +293,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -415,7 +415,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: arvnTroop
+                  - bind: $arvnTroop
                     over:
                       query: tokensInZone
                       zone: available-ARVN:none
@@ -441,7 +441,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -453,7 +453,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: nvaGuerrilla
+                  - bind: $nvaGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-NVA:none
@@ -511,7 +511,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: coinPiece
+                  - bind: $coinPiece
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -530,7 +530,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: coinPiece
+                  - bind: $coinPiece
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -582,7 +582,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 3
                     groups:
-                      - bind: irregular
+                      - bind: $irregular
                         over:
                           query: tokensInZone
                           zone: available-US:none
@@ -627,7 +627,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 3
                     groups:
-                      - bind: ranger
+                      - bind: $ranger
                         over:
                           query: tokensInZone
                           zone: available-ARVN:none
@@ -1005,7 +1005,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: usTroop
+                  - bind: $usTroop
                     over:
                       query: tokensInZone
                       zone: available-US:none
@@ -1594,7 +1594,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: usTroopOutOfPlay
+                  - bind: $usTroopOutOfPlay
                     over:
                       query: tokensInZone
                       zone: out-of-play-US:none
@@ -1606,7 +1606,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: usTroopAvailable
+                  - bind: $usTroopAvailable
                     over:
                       query: tokensInZone
                       zone: available-US:none
@@ -1672,7 +1672,7 @@ eventDecks:
             - removeByPriority:
                 budget: 99
                 groups:
-                  - bind: vcPiece
+                  - bind: $vcPiece
                     over:
                       query: tokensInZone
                       zone: $targetProvince
@@ -1734,7 +1734,7 @@ eventDecks:
             - removeByPriority:
                 budget: 99
                 groups:
-                  - bind: insurgentPiece
+                  - bind: $insurgentPiece
                     over:
                       query: tokensInZone
                       zone: $targetLoc
@@ -1757,7 +1757,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -1836,7 +1836,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 2
                     groups:
-                      - bind: usBaseOutOfPlay
+                      - bind: $usBaseOutOfPlay
                         over:
                           query: tokensInZone
                           zone: out-of-play-US:none
@@ -1857,7 +1857,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 2
                     groups:
-                      - bind: arvnBaseOutOfPlay
+                      - bind: $arvnBaseOutOfPlay
                         over:
                           query: tokensInZone
                           zone: out-of-play-ARVN:none
@@ -1969,7 +1969,7 @@ eventDecks:
                       budget: { ref: binding, name: $iaDrangLossRoll }
                       remainingBind: $remainingLosses
                       groups:
-                        - bind: usTroopInProvince
+                        - bind: $usTroopInProvince
                           over:
                             query: tokensInZone
                             zone: $targetProvince
@@ -1992,7 +1992,7 @@ eventDecks:
                                         budget: { ref: binding, name: $remainingLosses }
                                         remainingBind: $remainingLosses
                                         groups:
-                                          - bind: usTroopAdjacent
+                                          - bind: $usTroopAdjacent
                                             over:
                                               query: tokensInZone
                                               zone: $adjacentSpace
@@ -2094,7 +2094,7 @@ eventDecks:
             - removeByPriority:
                 budget: 6
                 groups:
-                  - bind: police
+                  - bind: $police
                     over:
                       query: tokensInZone
                       zone: available-ARVN:none
@@ -2118,7 +2118,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: guerrilla
+                  - bind: $guerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -2355,7 +2355,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 2
                     groups:
-                      - bind: usTroop
+                      - bind: $usTroop
                         over:
                           query: tokensInZone
                           zone: out-of-play-US:none
@@ -2390,7 +2390,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 99
                     groups:
-                      - bind: insurgentGuerrilla
+                      - bind: $insurgentGuerrilla
                         over:
                           query: tokensInZone
                           zone: $targetJungle
@@ -2425,7 +2425,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: usBase
+                  - bind: $usBase
                     over:
                       query: tokensInZone
                       zone: $targetJungle
@@ -2434,7 +2434,7 @@ eventDecks:
                         - { prop: type, eq: base }
                     to:
                       zoneExpr: casualties-US:none
-                  - bind: usTroop
+                  - bind: $usTroop
                     over:
                       query: tokensInZone
                       zone: $targetJungle
@@ -2513,7 +2513,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 99
                     groups:
-                      - bind: vcPiece
+                      - bind: $vcPiece
                         over:
                           query: tokensInZone
                           zone: $targetLowland
@@ -2547,7 +2547,7 @@ eventDecks:
                 - removeByPriority:
                     budget: 99
                     groups:
-                      - bind: nvaPiece
+                      - bind: $nvaPiece
                         over:
                           query: tokensInZone
                           zone: $targetLowland
@@ -2586,7 +2586,7 @@ eventDecks:
                   - removeByPriority:
                       budget: { ref: binding, name: $dieRoll }
                       groups:
-                        - bind: usCube
+                        - bind: $usCube
                           over:
                             query: tokensInZone
                             zone: $targetLowland
@@ -2595,7 +2595,7 @@ eventDecks:
                               - { prop: type, op: in, value: [troops, police] }
                           to:
                             zoneExpr: casualties-US:none
-                        - bind: arvnCube
+                        - bind: $arvnCube
                           over:
                             query: tokensInZone
                             zone: $targetLowland
@@ -2607,7 +2607,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: vcPiece
+                  - bind: $vcPiece
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -2636,7 +2636,7 @@ eventDecks:
             - removeByPriority:
                 budget: 99
                 groups:
-                  - bind: insurgentGuerrilla
+                  - bind: $insurgentGuerrilla
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -2670,7 +2670,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: nvaGuerrilla
+                  - bind: $nvaGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-NVA:none
@@ -2682,7 +2682,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -2807,7 +2807,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -2842,7 +2842,7 @@ eventDecks:
                   - removeByPriority:
                       budget: 3
                       groups:
-                        - bind: usTroop
+                        - bind: $usTroop
                           over:
                             query: tokensInZone
                             zone: out-of-play-US:none
@@ -2875,7 +2875,7 @@ eventDecks:
                         - removeByPriority:
                             budget: { ref: binding, name: $maxTroopsMoved }
                             groups:
-                              - bind: usTroop
+                              - bind: $usTroop
                                 over:
                                   query: tokensInZone
                                   zone: available-US:none
@@ -2936,7 +2936,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: vcPiece
+                  - bind: $vcPiece
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -3017,7 +3017,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: nvaTroops
+                  - bind: $nvaTroops
                     over:
                       query: tokensInZone
                       zone: $outsideSouthSpace
@@ -3026,7 +3026,7 @@ eventDecks:
                         - { prop: type, eq: troops }
                     to:
                       zoneExpr: available-NVA:none
-                  - bind: nvaGuerrilla
+                  - bind: $nvaGuerrilla
                     over:
                       query: tokensInZone
                       zone: $outsideSouthSpace
@@ -3035,7 +3035,7 @@ eventDecks:
                         - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: available-NVA:none
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: $outsideSouthSpace
@@ -3135,47 +3135,35 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: targetCoinBaseUs
+                  - bind: $targetCoinBase
                     over:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, eq: US }
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
                         - { prop: type, eq: base }
                     to:
-                      zoneExpr: casualties-US:none
-                  - bind: targetCoinBaseArvn
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: base }
-                    to:
-                      zoneExpr: available-ARVN:none
+                      zoneExpr:
+                        if:
+                          when:
+                            op: '=='
+                            left: { ref: tokenProp, token: $targetCoinBase, prop: faction }
+                            right: US
+                          then: casualties-US:none
+                          else: available-ARVN:none
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: targetInsurgentVc
+                  - bind: $targetInsurgent
                     over:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, eq: VC }
+                        - { prop: faction, op: in, value: ['VC', 'NVA'] }
                         - { prop: type, eq: guerrilla }
                         - { prop: activity, eq: underground }
                     to:
-                      zoneExpr: available-VC:none
-                  - bind: targetInsurgentNva
-                    over:
-                      query: tokensInZone
-                      zone: $targetSpace
-                      filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
-                        - { prop: activity, eq: underground }
-                    to:
-                      zoneExpr: available-NVA:none
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
       - id: card-15
         title: Medevac
         sideMode: dual
@@ -3229,7 +3217,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: irregular
+                  - bind: $irregular
                     over:
                       query: tokensInZone
                       zone: available-US:none
@@ -3254,7 +3242,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: irregular
+                  - bind: $irregular
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -3283,7 +3271,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: insurgentGuerrilla
+                  - bind: $insurgentGuerrilla
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -3295,7 +3283,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: irregular
+                  - bind: $irregular
                     over:
                       query: tokensInZone
                       zone: available-US:none
@@ -3315,7 +3303,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: irregular
+                  - bind: $irregular
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -3327,7 +3315,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: nvaGuerrilla
+                  - bind: $nvaGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-NVA:none
@@ -4111,7 +4099,7 @@ eventDecks:
                       budget: { ref: binding, name: $lossRoll }
                       remainingBind: $remainingLosses
                       groups:
-                        - bind: arvnPieceInAnchor
+                        - bind: $arvnPieceInAnchor
                           over:
                             query: tokensInZone
                             zone: $anchorSpace
@@ -4133,7 +4121,7 @@ eventDecks:
                                         budget: { ref: binding, name: $remainingLosses }
                                         remainingBind: $remainingLosses
                                         groups:
-                                          - bind: arvnPieceInAdjacent
+                                          - bind: $arvnPieceInAdjacent
                                             over:
                                               query: tokensInZone
                                               zone: $adjSpace
@@ -4285,7 +4273,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: nvaTroop
+                  - bind: $nvaTroop
                     over:
                       query: tokensInZone
                       zone: available-NVA:none
@@ -4316,7 +4304,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -4345,7 +4333,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: coinBase
+                  - bind: $coinBase
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4354,7 +4342,7 @@ eventDecks:
                         - { prop: type, eq: base }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
-                  - bind: coinTroop
+                  - bind: $coinTroop
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4374,7 +4362,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: insurgentGuerrilla
+                  - bind: $insurgentGuerrilla
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4448,7 +4436,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: insurgentGuerrilla
+                  - bind: $insurgentGuerrilla
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4460,7 +4448,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: coinBase
+                  - bind: $coinBase
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4480,7 +4468,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: coinBase
+                  - bind: $coinBase
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4562,7 +4550,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: usOutOfPlay
+                  - bind: $usOutOfPlay
                     over:
                       query: tokensInZone
                       zone: out-of-play-US:none
@@ -4573,7 +4561,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: arvnOutOfPlay
+                  - bind: $arvnOutOfPlay
                     over:
                       query: tokensInZone
                       zone: out-of-play-ARVN:none
@@ -4672,7 +4660,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: usTroop
+                  - bind: $usTroop
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -4681,7 +4669,7 @@ eventDecks:
                         - { prop: type, eq: troops }
                     to:
                       zoneExpr: available-US:none
-                  - bind: usIrregular
+                  - bind: $usIrregular
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -4690,7 +4678,7 @@ eventDecks:
                         - { prop: type, eq: irregular }
                     to:
                       zoneExpr: available-US:none
-                  - bind: usBase
+                  - bind: $usBase
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -4711,7 +4699,7 @@ eventDecks:
             - removeByPriority:
                 budget: 6
                 groups:
-                  - bind: usTroop
+                  - bind: $usTroop
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -4720,7 +4708,7 @@ eventDecks:
                         - { prop: type, eq: troops }
                     to:
                       zoneExpr: available-US:none
-                  - bind: usIrregular
+                  - bind: $usIrregular
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -4729,7 +4717,7 @@ eventDecks:
                         - { prop: type, eq: irregular }
                     to:
                       zoneExpr: available-US:none
-                  - bind: usBase
+                  - bind: $usBase
                     over:
                       query: tokensInZone
                       zone: $sourceSpace
@@ -4759,7 +4747,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: usCasualty
+                  - bind: $usCasualty
                     over:
                       query: tokensInZone
                       zone: casualties-US:none
@@ -4802,7 +4790,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: usTroop
+                  - bind: $usTroop
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4831,7 +4819,7 @@ eventDecks:
             - removeByPriority:
                 budget: 3
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: $targetSpace
@@ -4843,7 +4831,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -4863,7 +4851,7 @@ eventDecks:
             - removeByPriority:
                 budget: 2
                 groups:
-                  - bind: vcGuerrilla
+                  - bind: $vcGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-VC:none
@@ -4875,7 +4863,7 @@ eventDecks:
             - removeByPriority:
                 budget: 1
                 groups:
-                  - bind: nvaGuerrilla
+                  - bind: $nvaGuerrilla
                     over:
                       query: tokensInZone
                       zone: available-NVA:none

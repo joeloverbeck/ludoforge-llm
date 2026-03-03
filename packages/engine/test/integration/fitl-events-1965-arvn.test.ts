@@ -131,7 +131,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
           budget: 3,
           groups: [
             {
-              bind: 'usAvailablePiece',
+              bind: '$usAvailablePiece',
               over: {
                   query: 'tokensInZone',
                   zone: 'available-US:none',

@@ -115,6 +115,25 @@ function validateMapSpacePropertyReference(
   });
 }
 
+const validateCanonicalBinding = (
+  diagnostics: Diagnostic[],
+  binding: string,
+  path: string,
+  code: string,
+  messagePrefix: string,
+): void => {
+  if (isCanonicalBindingIdentifier(binding)) {
+    return;
+  }
+  diagnostics.push({
+    code,
+    path,
+    severity: 'error',
+    message: `${messagePrefix} "${binding}" must be a canonical "$name" token.`,
+    suggestion: 'Use a canonical binding token like "$candidate".',
+  });
+};
+
 const validateReference = (
   diagnostics: Diagnostic[],
   reference: Reference,
@@ -794,15 +813,13 @@ export const validateOptionsQuery = (
           }
         }
       }
-      if (!isCanonicalBindingIdentifier(query.bind)) {
-        diagnostics.push({
-          code: 'DOMAIN_NEXT_IN_ORDER_BIND_INVALID',
-          path: `${path}.bind`,
-          severity: 'error',
-          message: `nextInOrderByCondition.bind "${query.bind}" must be a canonical "$name" token.`,
-          suggestion: 'Use a canonical binding token like "$seatCandidate".',
-        });
-      }
+      validateCanonicalBinding(
+        diagnostics,
+        query.bind,
+        `${path}.bind`,
+        'DOMAIN_NEXT_IN_ORDER_BIND_INVALID',
+        'nextInOrderByCondition.bind',
+      );
       validateConditionAst(diagnostics, query.where, `${path}.where`, context);
       return;
     }
@@ -1367,9 +1384,34 @@ export const validateEffectAst = (
 
   if ('removeByPriority' in effect) {
     validateNumericValueExpr(diagnostics, effect.removeByPriority.budget, `${path}.removeByPriority.budget`, context);
+    if (effect.removeByPriority.remainingBind !== undefined) {
+      validateCanonicalBinding(
+        diagnostics,
+        effect.removeByPriority.remainingBind,
+        `${path}.removeByPriority.remainingBind`,
+        'EFFECT_REMOVE_BY_PRIORITY_REMAINING_BIND_INVALID',
+        'removeByPriority.remainingBind',
+      );
+    }
 
     effect.removeByPriority.groups.forEach((group, index) => {
       const groupPath = `${path}.removeByPriority.groups[${index}]`;
+      validateCanonicalBinding(
+        diagnostics,
+        group.bind,
+        `${groupPath}.bind`,
+        'EFFECT_REMOVE_BY_PRIORITY_BIND_INVALID',
+        'removeByPriority.groups[].bind',
+      );
+      if (group.countBind !== undefined) {
+        validateCanonicalBinding(
+          diagnostics,
+          group.countBind,
+          `${groupPath}.countBind`,
+          'EFFECT_REMOVE_BY_PRIORITY_COUNT_BIND_INVALID',
+          'removeByPriority.groups[].countBind',
+        );
+      }
       validateOptionsQuery(diagnostics, group.over, `${groupPath}.over`, context);
       validateZoneRef(diagnostics, group.to, `${groupPath}.to`, context);
       if (group.from !== undefined) {

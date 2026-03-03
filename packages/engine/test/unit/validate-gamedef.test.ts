@@ -2374,6 +2374,60 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports non-canonical removeByPriority bind fields', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              removeByPriority: {
+                budget: 1,
+                groups: [
+                  {
+                    bind: 'candidate',
+                    over: { query: 'tokensInZone', zone: 'deck:none' },
+                    to: 'market:none',
+                    countBind: 'removedCount',
+                  },
+                ],
+                remainingBind: 'remainingBudget',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_REMOVE_BY_PRIORITY_BIND_INVALID'
+          && diag.path === 'actions[0].effects[0].removeByPriority.groups[0].bind'
+          && diag.severity === 'error',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_REMOVE_BY_PRIORITY_COUNT_BIND_INVALID'
+          && diag.path === 'actions[0].effects[0].removeByPriority.groups[0].countBind'
+          && diag.severity === 'error',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_REMOVE_BY_PRIORITY_REMAINING_BIND_INVALID'
+          && diag.path === 'actions[0].effects[0].removeByPriority.remainingBind'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
   it('reports missing intsInVarRange source variable', () => {
     const base = createValidGameDef();
     const def = {

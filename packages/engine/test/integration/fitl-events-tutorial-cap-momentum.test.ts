@@ -67,11 +67,11 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
     const second = shadedRemovals[1];
     if (first !== undefined && 'removeByPriority' in first) {
       assert.equal(first.removeByPriority.budget, 1);
-      assert.equal(first.removeByPriority.groups.length, 2);
+      assert.equal(first.removeByPriority.groups.length, 1);
     }
     if (second !== undefined && 'removeByPriority' in second) {
       assert.equal(second.removeByPriority.budget, 1);
-      assert.equal(second.removeByPriority.groups.length, 2);
+      assert.equal(second.removeByPriority.groups.length, 1);
     }
   });
 });

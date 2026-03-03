@@ -1,6 +1,6 @@
 # SEATRES-070: Generalize canonical-symbol-owner lint policy for CNL
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL lint policy architecture
@@ -15,6 +15,7 @@ Canonical-owner lint checks are currently implemented as one-off tests with dupl
 1. Repository already uses dedicated lint policy tests for canonical ownership boundaries (for example identifier normalization, seat suggestion policy). **Verified.**
 2. Current tests repeat regex scanning and per-symbol conventions inline rather than using a generic canonical-symbol policy helper. **Verified.**
 3. No active ticket currently scopes a reusable canonical-symbol-owner lint harness for CNL policy modules. **Verified.**
+4. Existing import-boundary checks currently allow `import { symbol as alias }` for canonical symbols, which conflicts with strict no-alias policy intent. **Discrepancy confirmed; ticket scope updated below.**
 
 ## Architecture Check
 
@@ -39,7 +40,10 @@ Refactor existing CNL canonical-boundary lint tests (at least identifier normali
 
 ### 3. Preserve strict no-alias expectations
 
-Ensure migrated tests still enforce no alias/re-export paths and fail with actionable messages.
+Ensure migrated tests enforce:
+- no alias import specifiers for canonical symbols (`{ symbol as alias }` is forbidden)
+- no non-canonical re-export paths (named or wildcard) for canonical symbols
+- actionable failure messages for violations
 
 ## Files to Touch
 
@@ -72,7 +76,7 @@ Ensure migrated tests still enforce no alias/re-export paths and fail with actio
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/lint/cnl-identifier-normalization-single-source-policy.test.ts` — migrate to helper-backed assertions. Rationale: keeps existing guard coverage while reducing duplication.
-2. `packages/engine/test/unit/lint/cnl-seat-reference-diagnostic-suggestion-policy.test.ts` — migrate/strengthen with helper for no-alias ownership. Rationale: hardens new policy boundary and standardizes approach.
+2. `packages/engine/test/unit/lint/cnl-seat-reference-diagnostic-suggestion-policy.test.ts` — migrate/strengthen with helper for strict no-alias ownership. Rationale: hardens policy boundary and standardizes approach.
 
 ### Commands
 
@@ -80,3 +84,19 @@ Ensure migrated tests still enforce no alias/re-export paths and fail with actio
 2. `node --test packages/engine/dist/test/unit/lint/cnl-identifier-normalization-single-source-policy.test.js packages/engine/dist/test/unit/lint/cnl-seat-reference-diagnostic-suggestion-policy.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-03
+- **What Changed**:
+  - Added reusable canonical-owner lint analysis helper in `packages/engine/test/helpers/lint-policy-helpers.ts` (`analyzeCanonicalSymbolOwnerPolicy`) covering canonical module ownership, import-source enforcement, alias-import rejection, duplicate literal checks, local-definition checks, and non-canonical re-export/wildcard-export checks.
+  - Migrated `cnl-identifier-normalization-single-source-policy` to helper-backed assertions and strengthened it to reject alias import paths and non-canonical re-export/export paths.
+  - Migrated `cnl-seat-reference-diagnostic-suggestion-policy` to helper-backed assertions while preserving literal ownership checks and strengthening no-alias/no-re-export enforcement.
+- **Deviations From Original Plan**:
+  - No scope expansion to additional lint suites; implementation stayed on the two targeted canonical-boundary tests while still making the helper reusable for future suites.
+  - Strengthening alias restrictions was applied explicitly because initial ticket reassessment identified a real discrepancy in prior assumptions.
+- **Verification Results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/lint/cnl-identifier-normalization-single-source-policy.test.js packages/engine/dist/test/unit/lint/cnl-seat-reference-diagnostic-suggestion-policy.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo lint` ✅

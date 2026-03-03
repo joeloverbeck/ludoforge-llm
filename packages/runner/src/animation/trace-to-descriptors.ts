@@ -143,6 +143,8 @@ function mapEntry(
         preset: resolvePreset(entry.kind, 'resourceTransfer', options, presetRegistry),
         isTriggered: triggered,
       };
+    case 'shuffle':
+      return null;
     case 'lifecycleEvent':
       if (entry.eventType !== 'phaseEnter') {
         return null;

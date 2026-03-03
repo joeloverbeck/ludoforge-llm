@@ -13,6 +13,7 @@ export const TRACE_KIND_DEFAULT_PRESET_IDS: Readonly<Record<EffectTraceKind, str
   varChange: 'counter-tick',
   resourceTransfer: 'counter-tick',
   lifecycleEvent: 'banner-overlay',
+  shuffle: 'shuffle',
   forEach: null,
   reduce: null,
   reveal: null,

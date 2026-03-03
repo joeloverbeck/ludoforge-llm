@@ -144,6 +144,13 @@ function translateEffectEntry(
           `${formatConcealScope(entry.from, visualConfig, lookup)}${formatOptionalFilter(entry.filter)}.`,
       };
 
+    case 'shuffle':
+      return {
+        ...base,
+        kind: 'token',
+        message: `Shuffled ${resolveZoneName(entry.zone, visualConfig)}.`,
+      };
+
     case 'lifecycleEvent':
       return {
         ...base,

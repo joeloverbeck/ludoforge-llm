@@ -634,6 +634,13 @@ export const EffectTraceEntrySchema = z.union([
       provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal('shuffle'),
+      zone: StringSchema,
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
 ]);
 
 export const TriggerFiringSchema = z

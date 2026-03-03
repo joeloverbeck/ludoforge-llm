@@ -805,6 +805,12 @@ export interface EffectTraceDestroyToken {
   readonly provenance: EffectTraceProvenance;
 }
 
+export interface EffectTraceShuffle {
+  readonly kind: 'shuffle';
+  readonly zone: string;
+  readonly provenance: EffectTraceProvenance;
+}
+
 export type EffectTraceEventContext =
   | 'actionCost'
   | 'actionEffect'
@@ -831,6 +837,7 @@ export type EffectTraceEntry =
   | EffectTraceResourceTransfer
   | EffectTraceCreateToken
   | EffectTraceDestroyToken
+  | EffectTraceShuffle
   | EffectTraceLifecycleEvent;
 
 // ── Execution Options & Collector ─────────────────────────

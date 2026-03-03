@@ -592,6 +592,20 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
         },
       };
       sourceTokens = shuffled.tokens;
+      for (const reshuffledToken of reshuffleTokens) {
+        emitTrace(ctx.collector, {
+          kind: 'moveToken',
+          tokenId: String(reshuffledToken.id),
+          from: reshuffleZoneId,
+          to: fromZoneId,
+          provenance: resolveTraceProvenance(ctx),
+        });
+      }
+      emitTrace(ctx.collector, {
+        kind: 'shuffle',
+        zone: fromZoneId,
+        provenance: resolveTraceProvenance(ctx),
+      });
     }
   }
 
@@ -792,6 +806,12 @@ export const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unkn
   }
 
   const result = shuffleTokenArray(zoneTokens, ctx.rng);
+
+  emitTrace(ctx.collector, {
+    kind: 'shuffle',
+    zone: zoneId,
+    provenance: resolveTraceProvenance(ctx),
+  });
 
   return {
     state: {

@@ -14,7 +14,6 @@ export type {
   CardMetadataSeatOrderShapeInvariantContext,
   TurnFlowActiveSeatInvariantContext,
 } from './turn-flow-invariant-contract-types.js';
-export type { TurnFlowActiveSeatInvariantSurface } from './turn-flow-active-seat-invariant-surfaces.js';
 
 export const makeActiveSeatUnresolvableInvariantContext = (
   surface: TurnFlowActiveSeatInvariantSurface,

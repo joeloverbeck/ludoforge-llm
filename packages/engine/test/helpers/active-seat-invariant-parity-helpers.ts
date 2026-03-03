@@ -6,8 +6,8 @@ import {
   makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
   runtimeContractInvalidError,
   type KernelRuntimeErrorContext,
-  type TurnFlowActiveSeatInvariantSurface,
 } from '../../src/kernel/index.js';
+import type { TurnFlowActiveSeatInvariantSurface } from '../../src/kernel/turn-flow-active-seat-invariant-surfaces.js';
 import {
   activeSeatUnresolvableInvariantMessage,
   makeActiveSeatUnresolvableInvariantContext,

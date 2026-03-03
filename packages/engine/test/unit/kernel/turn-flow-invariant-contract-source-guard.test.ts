@@ -15,6 +15,44 @@ const collectImportSpecifiers = (sourceFile: ts.SourceFile): readonly string[] =
   return imports;
 };
 
+const collectNamedImportsByModule = (sourceFile: ts.SourceFile): ReadonlyMap<string, readonly string[]> => {
+  const imports = new Map<string, string[]>();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+      continue;
+    }
+    if (statement.importClause?.namedBindings === undefined || !ts.isNamedImports(statement.importClause.namedBindings)) {
+      continue;
+    }
+    imports.set(
+      statement.moduleSpecifier.text,
+      statement.importClause.namedBindings.elements.map((element) => element.name.text),
+    );
+  }
+  return imports;
+};
+
+const collectNamedReExportsByModule = (sourceFile: ts.SourceFile): ReadonlyMap<string, readonly string[]> => {
+  const exports = new Map<string, string[]>();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExportDeclaration(statement)) {
+      continue;
+    }
+    const moduleSpecifier = statement.moduleSpecifier;
+    if (moduleSpecifier === undefined || !ts.isStringLiteral(moduleSpecifier)) {
+      continue;
+    }
+    if (statement.exportClause === undefined || !ts.isNamedExports(statement.exportClause)) {
+      continue;
+    }
+    exports.set(
+      moduleSpecifier.text,
+      statement.exportClause.elements.map((element) => element.name.text),
+    );
+  }
+  return exports;
+};
+
 describe('turn-flow invariant contract source guard', () => {
   it('keeps runtime invariant emitters wired to the canonical invariant-contract module', () => {
     const runtimeInvariantSource = readKernelSource('src/kernel/turn-flow-runtime-invariants.ts');
@@ -65,5 +103,32 @@ describe('turn-flow invariant contract source guard', () => {
         'emitters must not inline card seat-order invariant message text',
       );
     }
+  });
+
+  it('enforces canonical module ownership for active-seat invariant surface types', () => {
+    const invariantContractsSource = readKernelSource('src/kernel/turn-flow-invariant-contracts.ts');
+    const helperSource = readKernelSource('test/helpers/active-seat-invariant-parity-helpers.ts');
+
+    const invariantContractsExports = collectNamedReExportsByModule(
+      parseTypeScriptSource(invariantContractsSource, 'turn-flow-invariant-contracts.ts'),
+    );
+    const helperImports = collectNamedImportsByModule(
+      parseTypeScriptSource(helperSource, 'active-seat-invariant-parity-helpers.ts'),
+    );
+
+    assert.equal(
+      invariantContractsExports
+        .get('./turn-flow-active-seat-invariant-surfaces.js')
+        ?.includes('TurnFlowActiveSeatInvariantSurface') ?? false,
+      false,
+      'turn-flow-invariant-contracts.ts must not re-export TurnFlowActiveSeatInvariantSurface',
+    );
+    assert.equal(
+      helperImports
+        .get('../../src/kernel/turn-flow-active-seat-invariant-surfaces.js')
+        ?.includes('TurnFlowActiveSeatInvariantSurface') ?? false,
+      true,
+      'active-seat-invariant-parity-helpers.ts must import TurnFlowActiveSeatInvariantSurface from owner module',
+    );
   });
 });

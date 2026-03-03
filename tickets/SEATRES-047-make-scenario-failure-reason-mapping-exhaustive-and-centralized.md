@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — compiler derivation-reason mapping hardening
-**Deps**: tickets/SEATRES-044-split-scenario-linked-selection-core-from-diagnostic-adapters.md
+**Deps**: archive/tickets/SEATRES/SEATRES-044-split-scenario-linked-selection-core-from-diagnostic-adapters.md
 
 ## Problem
 

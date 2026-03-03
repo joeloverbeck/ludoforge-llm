@@ -1,6 +1,5 @@
-import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
-import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
+import { selectScenarioLinkedAsset, selectScenarioRef } from './scenario-linked-asset-selection-policy.js';
 
 export type TokenTraitVocabulary = Readonly<Record<string, readonly string[]>>;
 
@@ -34,12 +33,11 @@ export function deriveTokenTraitVocabularyFromGameSpecDoc(doc: GameSpecDoc): Tok
       payload: asset.payload,
     }));
 
-  const diagnostics: Diagnostic[] = [];
   const selectedScenarioAssetId =
     typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
       ? doc.metadata.defaultScenarioAssetId
       : undefined;
-  const selectedScenarioResult = selectScenarioRefWithPolicy(scenarioAssets, selectedScenarioAssetId, diagnostics, {});
+  const selectedScenarioResult = selectScenarioRef(scenarioAssets, selectedScenarioAssetId);
   if (selectedScenarioAssetId !== undefined && selectedScenarioResult.failureReason === 'missing-reference') {
     return null;
   }
@@ -51,16 +49,7 @@ export function deriveTokenTraitVocabularyFromGameSpecDoc(doc: GameSpecDoc): Tok
     && selectedScenario.payload.pieceCatalogAssetId.trim() !== ''
       ? selectedScenario.payload.pieceCatalogAssetId
       : undefined;
-  const selectedPieceCatalog = selectScenarioLinkedAssetWithPolicy(
-    pieceCatalogAssets,
-    selectedPieceCatalogAssetId,
-    diagnostics,
-    {
-      kind: 'pieceCatalog',
-      selectedPath: 'doc.dataAssets',
-      dialect: {},
-    },
-  ).selected;
+  const selectedPieceCatalog = selectScenarioLinkedAsset(pieceCatalogAssets, selectedPieceCatalogAssetId).selected;
   if (selectedPieceCatalog === undefined) {
     return null;
   }

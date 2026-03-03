@@ -1,6 +1,6 @@
 # SEATRES-044: Split scenario-linked selection core from diagnostic adapters
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL shared selection policy API layering + compiler/validator call-site migration
@@ -10,11 +10,15 @@
 
 The current shared selection policy helper requires a diagnostics array and diagnostic dialect callbacks even for non-diagnostic consumers. This leaks validator/compiler diagnostic concerns into pure selection flows (for example token-trait vocabulary derivation), weakening separation of concerns and making generic policy usage noisier.
 
-## Assumption Reassessment (2026-03-02)
+## Assumption Reassessment (2026-03-03)
 
-1. `scenario-linked-asset-selection-policy.ts` centralizes selection semantics, but currently couples selection and diagnostic emission in the same API surface.
-2. `token-trait-vocabulary.ts` must allocate a throwaway diagnostics array solely to satisfy policy helper signatures.
-3. No active ticket in `tickets/*` currently scopes splitting this API into pure selection core + optional diagnostic adapters.
+1. `scenario-linked-asset-selection-policy.ts` still centralizes scenario + scenario-linked asset selection semantics, but both exported helpers (`selectScenarioRefWithPolicy`, `selectScenarioLinkedAssetWithPolicy`) are currently diagnostic-coupled.
+2. `token-trait-vocabulary.ts` still allocates a throwaway `Diagnostic[]` only to satisfy those helper signatures; it does not consume emitted diagnostics.
+3. Active production call sites of the coupled helpers are currently limited to:
+   - `compile-data-assets.ts`
+   - `validate-extensions.ts`
+   - `token-trait-vocabulary.ts`
+4. No other active ticket in `tickets/*` scopes this API split directly; however, `SEATRES-047` depends on this ticket and assumes a clean failure-reason boundary after this refactor.
 
 ## Architecture Check
 
@@ -35,7 +39,7 @@ The current shared selection policy helper requires a diagnostics array and diag
 
 1. Update compiler and validator to call pure selection + explicit diagnostic adapter handling.
 2. Update token-trait vocabulary to call pure selection only (no diagnostics array allocation).
-3. Remove deprecated coupled helper signatures after migration.
+3. Remove deprecated coupled helper signatures after migration (no backwards-compat aliases/shims).
 
 ### 3. Expand contract tests
 
@@ -91,3 +95,23 @@ The current shared selection policy helper requires a diagnostics array and diag
 5. `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js`
 6. `pnpm -F @ludoforge/engine test`
 7. `pnpm turbo typecheck && pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-03
+- **What changed**:
+  - Split `scenario-linked-asset-selection-policy.ts` into a pure selection core (`selectScenarioRef`, `selectScenarioLinkedAsset`) and explicit diagnostic adapters (`emitScenarioSelectionDiagnostics`, `emitScenarioLinkedAssetSelectionDiagnostics`).
+  - Migrated compiler and validator call sites to pure selection + explicit adapter emission.
+  - Migrated token-trait vocabulary derivation to pure selection only, removing throwaway diagnostic array plumbing.
+  - Updated policy-layer unit tests to validate pure-selection usage and adapter parity behavior.
+- **Deviations from original plan**:
+  - `compiler-structured-results.test.ts` and `validate-spec-scenario.test.ts` did not require content changes because existing parity assertions already covered compiler/validator behavior after migration.
+- **Verification results**:
+  - `pnpm turbo build` passed.
+  - Targeted unit tests passed:
+    - `node --test packages/engine/dist/test/unit/data-asset-selection-policy.test.js`
+    - `node --test packages/engine/dist/test/unit/token-trait-vocabulary.test.js`
+    - `node --test packages/engine/dist/test/unit/compiler-structured-results.test.js`
+    - `node --test packages/engine/dist/test/unit/validate-spec-scenario.test.js`
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo typecheck && pnpm turbo lint` passed.

@@ -3,27 +3,32 @@ import { describe, it } from 'node:test';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import {
-  selectScenarioLinkedAssetWithPolicy,
-  selectScenarioRefWithPolicy,
+  emitScenarioLinkedAssetSelectionDiagnostics,
+  emitScenarioSelectionDiagnostics,
+  selectScenarioLinkedAsset,
+  selectScenarioRef,
 } from '../../src/cnl/scenario-linked-asset-selection-policy.js';
 
 describe('scenario-linked asset selection policy', () => {
-  it('emits scenario missing-reference diagnostics through the configured dialect', () => {
-    const diagnostics: Diagnostic[] = [];
+  it('selects scenario refs without requiring diagnostics arrays', () => {
+    const result = selectScenarioRef([{ entityId: 'scenario-a' }], 'scenario-a');
 
-    const result = selectScenarioRefWithPolicy(
-      [{ entityId: 'scenario-a' }],
-      'scenario-missing',
-      diagnostics,
-      {
-        onMissingReference: ({ selectedScenarioAssetId, alternatives }) => ({
-          code: 'MISSING',
-          path: 'doc.metadata.defaultScenarioAssetId',
-          severity: 'error',
-          message: `${selectedScenarioAssetId}:${alternatives.join(',')}`,
-        }),
-      },
-    );
+    assert.equal(result.selected?.entityId, 'scenario-a');
+    assert.equal(result.failureReason, undefined);
+    assert.deepEqual(result.alternatives, ['scenario-a']);
+  });
+
+  it('emits scenario missing-reference diagnostics through the configured dialect adapter', () => {
+    const diagnostics: Diagnostic[] = [];
+    const result = selectScenarioRef([{ entityId: 'scenario-a' }], 'scenario-missing');
+    emitScenarioSelectionDiagnostics(result, 'scenario-missing', diagnostics, {
+      onMissingReference: ({ selectedScenarioAssetId, alternatives }) => ({
+        code: 'MISSING',
+        path: 'doc.metadata.defaultScenarioAssetId',
+        severity: 'error',
+        message: `${selectedScenarioAssetId}:${alternatives.join(',')}`,
+      }),
+    });
 
     assert.equal(result.selected, undefined);
     assert.equal(result.failureReason, 'missing-reference');
@@ -40,26 +45,22 @@ describe('scenario-linked asset selection policy', () => {
     );
   });
 
-  it('emits linked-asset ambiguity diagnostics through the configured dialect', () => {
+  it('emits linked-asset ambiguity diagnostics through the configured dialect adapter', () => {
     const diagnostics: Diagnostic[] = [];
 
-    const result = selectScenarioLinkedAssetWithPolicy(
-      [{ id: 'map-a' }, { id: 'map-b' }],
-      undefined,
-      diagnostics,
-      {
-        kind: 'map',
-        selectedPath: 'doc.dataAssets.0.payload',
-        dialect: {
-          onAmbiguousSelection: ({ kind, alternatives }) => ({
-            code: 'AMBIGUOUS',
-            path: 'doc.dataAssets',
-            severity: 'error',
-            message: `${kind}:${alternatives.length}`,
-          }),
-        },
+    const result = selectScenarioLinkedAsset([{ id: 'map-a' }, { id: 'map-b' }], undefined);
+    emitScenarioLinkedAssetSelectionDiagnostics(result, undefined, diagnostics, {
+      kind: 'map',
+      selectedPath: 'doc.dataAssets.0.payload',
+      dialect: {
+        onAmbiguousSelection: ({ kind, alternatives }) => ({
+          code: 'AMBIGUOUS',
+          path: 'doc.dataAssets',
+          severity: 'error',
+          message: `${kind}:${alternatives.length}`,
+        }),
       },
-    );
+    });
 
     assert.equal(result.selected, undefined);
     assert.equal(result.failureReason, 'ambiguous-selection');
@@ -79,16 +80,12 @@ describe('scenario-linked asset selection policy', () => {
   it('supports optional missing-reference emission for linked assets', () => {
     const diagnostics: Diagnostic[] = [];
 
-    const result = selectScenarioLinkedAssetWithPolicy(
-      [{ id: 'seat-a' }],
-      'seat-missing',
-      diagnostics,
-      {
-        kind: 'seatCatalog',
-        selectedPath: 'doc.dataAssets.0.payload',
-        dialect: {},
-      },
-    );
+    const result = selectScenarioLinkedAsset([{ id: 'seat-a' }], 'seat-missing');
+    emitScenarioLinkedAssetSelectionDiagnostics(result, 'seat-missing', diagnostics, {
+      kind: 'seatCatalog',
+      selectedPath: 'doc.dataAssets.0.payload',
+      dialect: {},
+    });
 
     assert.equal(result.selected, undefined);
     assert.equal(result.failureReason, 'missing-reference');

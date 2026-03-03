@@ -29,7 +29,13 @@ import {
 import { normalizeIdentifier } from './identifier-utils.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { validateScenarioCrossReferences } from './validate-zones.js';
-import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
+import {
+  emitScenarioLinkedAssetSelectionDiagnostics,
+  emitScenarioSelectionDiagnostics,
+  selectScenarioLinkedAsset,
+  selectScenarioRef,
+  type ScenarioLinkedAssetSelectionDialect,
+} from './scenario-linked-asset-selection-policy.js';
 import type { DataAssetSelectionFailureReason } from './data-asset-selection.js';
 
 interface DataAssetValidationContext {
@@ -51,28 +57,12 @@ const DERIVED_METRIC_REQUIREMENT_KEYS = ['key', 'expectedType'] as const;
 const DERIVED_METRIC_COMPUTATION_VALUES = ['markerTotal', 'controlledPopulation', 'totalEcon'] as const;
 const DERIVED_METRIC_ZONE_KIND_VALUES = ['board', 'aux'] as const;
 
-interface CanonicalScenarioLinkedAssetSelectionMissingReferenceContext {
-  readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
-  readonly selectedId: string;
-  readonly selectedPath: string;
-  readonly alternatives: readonly string[];
-  readonly entityId?: string;
-}
-
-interface CanonicalScenarioLinkedAssetSelectionAmbiguousContext {
-  readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
-  readonly alternatives: readonly string[];
-}
-
 interface CanonicalScenarioLinkedAssetSelectionOptions {
   readonly kind: 'map' | 'pieceCatalog' | 'seatCatalog';
   readonly selectedPath: string;
   readonly entityId?: string;
   readonly suppressKnownMissingReference?: boolean;
-  readonly dialect: {
-    readonly onMissingReference?: (context: CanonicalScenarioLinkedAssetSelectionMissingReferenceContext) => Diagnostic;
-    readonly onAmbiguousSelection?: (context: CanonicalScenarioLinkedAssetSelectionAmbiguousContext) => Diagnostic;
-  };
+  readonly dialect: ScenarioLinkedAssetSelectionDialect;
 }
 
 function selectCanonicalScenarioLinkedAsset<TAsset extends { readonly id: string }>(
@@ -89,12 +79,14 @@ function selectCanonicalScenarioLinkedAsset<TAsset extends { readonly id: string
     return { selected: undefined, failureReason: 'missing-reference' };
   }
 
-  return selectScenarioLinkedAssetWithPolicy(assets, selectedId, diagnostics, {
+  const selection = selectScenarioLinkedAsset(assets, selectedId);
+  emitScenarioLinkedAssetSelectionDiagnostics(selection, selectedId, diagnostics, {
     kind: options.kind,
     selectedPath: options.selectedPath,
     ...(options.entityId === undefined ? {} : { entityId: options.entityId }),
     dialect: options.dialect,
   });
+  return selection;
 }
 
 export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]): DataAssetValidationContext {
@@ -264,7 +256,8 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     typeof doc.metadata?.defaultScenarioAssetId === 'string' && doc.metadata.defaultScenarioAssetId.trim() !== ''
       ? doc.metadata.defaultScenarioAssetId.trim()
       : undefined;
-  const selectedScenarioResult = selectScenarioRefWithPolicy(scenarioRefs, selectedScenarioAssetId, diagnostics, {
+  const selectedScenarioResult = selectScenarioRef(scenarioRefs, selectedScenarioAssetId);
+  emitScenarioSelectionDiagnostics(selectedScenarioResult, selectedScenarioAssetId, diagnostics, {
     onMissingReference: ({ selectedScenarioAssetId: missingId, alternatives }) => {
       const diagnostic: Diagnostic = {
         code: 'CNL_VALIDATOR_REFERENCE_MISSING',

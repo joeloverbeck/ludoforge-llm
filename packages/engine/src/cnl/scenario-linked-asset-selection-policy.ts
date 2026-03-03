@@ -4,21 +4,21 @@ import { selectDataAssetById } from './data-asset-selection.js';
 
 export type ScenarioLinkedAssetKind = 'map' | 'pieceCatalog' | 'seatCatalog';
 
-interface ScenarioSelectionMissingReferenceContext {
+export interface ScenarioSelectionMissingReferenceContext {
   readonly selectedScenarioAssetId: string;
   readonly alternatives: readonly string[];
 }
 
-interface ScenarioSelectionAmbiguousContext {
+export interface ScenarioSelectionAmbiguousContext {
   readonly alternatives: readonly string[];
 }
 
-interface ScenarioSelectionDialect {
+export interface ScenarioSelectionDialect {
   readonly onMissingReference?: (context: ScenarioSelectionMissingReferenceContext) => Diagnostic;
   readonly onAmbiguousSelection?: (context: ScenarioSelectionAmbiguousContext) => Diagnostic;
 }
 
-interface ScenarioLinkedAssetMissingReferenceContext {
+export interface ScenarioLinkedAssetMissingReferenceContext {
   readonly kind: ScenarioLinkedAssetKind;
   readonly selectedId: string;
   readonly selectedPath: string;
@@ -26,36 +26,50 @@ interface ScenarioLinkedAssetMissingReferenceContext {
   readonly entityId?: string;
 }
 
-interface ScenarioLinkedAssetAmbiguousContext {
+export interface ScenarioLinkedAssetAmbiguousContext {
   readonly kind: ScenarioLinkedAssetKind;
   readonly alternatives: readonly string[];
 }
 
-interface ScenarioLinkedAssetSelectionDialect {
+export interface ScenarioLinkedAssetSelectionDialect {
   readonly onMissingReference?: (context: ScenarioLinkedAssetMissingReferenceContext) => Diagnostic;
   readonly onAmbiguousSelection?: (context: ScenarioLinkedAssetAmbiguousContext) => Diagnostic;
 }
 
-interface ScenarioLinkedAssetSelectionOptions {
+export interface ScenarioLinkedAssetSelectionDiagnosticOptions {
   readonly kind: ScenarioLinkedAssetKind;
   readonly selectedPath: string;
   readonly entityId?: string;
   readonly dialect: ScenarioLinkedAssetSelectionDialect;
 }
 
-export function selectScenarioRefWithPolicy<TScenario extends { readonly entityId: string }>(
+export interface ScenarioSelectionResult<TAsset> {
+  readonly selected: TAsset | undefined;
+  readonly failureReason: DataAssetSelectionFailureReason | undefined;
+  readonly alternatives: readonly string[];
+}
+
+export function selectScenarioRef<TScenario extends { readonly entityId: string }>(
   scenarios: ReadonlyArray<TScenario>,
   selectedScenarioAssetId: string | undefined,
-  diagnostics: Diagnostic[],
-  dialect: ScenarioSelectionDialect,
-): {
-  readonly selected: TScenario | undefined;
-  readonly failureReason: DataAssetSelectionFailureReason | undefined;
-} {
+): ScenarioSelectionResult<TScenario> {
   const selection = selectDataAssetById(scenarios, selectedScenarioAssetId, {
     getId: (scenario) => scenario.entityId,
   });
 
+  return {
+    selected: selection.selected,
+    failureReason: selection.failureReason,
+    alternatives: selection.alternatives,
+  };
+}
+
+export function emitScenarioSelectionDiagnostics(
+  selection: ScenarioSelectionResult<unknown>,
+  selectedScenarioAssetId: string | undefined,
+  diagnostics: Diagnostic[],
+  dialect: ScenarioSelectionDialect,
+): void {
   if (
     selection.failureReason === 'missing-reference'
     && selectedScenarioAssetId !== undefined
@@ -76,24 +90,27 @@ export function selectScenarioRefWithPolicy<TScenario extends { readonly entityI
       }),
     );
   }
+}
+
+export function selectScenarioLinkedAsset<TAsset extends { readonly id: string }>(
+  assets: ReadonlyArray<TAsset>,
+  selectedId: string | undefined,
+): ScenarioSelectionResult<TAsset> {
+  const selection = selectDataAssetById(assets, selectedId);
 
   return {
     selected: selection.selected,
     failureReason: selection.failureReason,
+    alternatives: selection.alternatives,
   };
 }
 
-export function selectScenarioLinkedAssetWithPolicy<TAsset extends { readonly id: string }>(
-  assets: ReadonlyArray<TAsset>,
+export function emitScenarioLinkedAssetSelectionDiagnostics(
+  selection: ScenarioSelectionResult<unknown>,
   selectedId: string | undefined,
   diagnostics: Diagnostic[],
-  options: ScenarioLinkedAssetSelectionOptions,
-): {
-  readonly selected: TAsset | undefined;
-  readonly failureReason: DataAssetSelectionFailureReason | undefined;
-} {
-  const selection = selectDataAssetById(assets, selectedId);
-
+  options: ScenarioLinkedAssetSelectionDiagnosticOptions,
+): void {
   if (
     selection.failureReason === 'missing-reference'
     && selectedId !== undefined
@@ -118,9 +135,4 @@ export function selectScenarioLinkedAssetWithPolicy<TAsset extends { readonly id
       }),
     );
   }
-
-  return {
-    selected: selection.selected,
-    failureReason: selection.failureReason,
-  };
 }

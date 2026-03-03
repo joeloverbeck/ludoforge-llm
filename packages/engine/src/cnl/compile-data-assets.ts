@@ -24,7 +24,12 @@ import {
   SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION,
   pushMissingReferenceDiagnostic,
 } from './validate-spec-shared.js';
-import { selectScenarioLinkedAssetWithPolicy, selectScenarioRefWithPolicy } from './scenario-linked-asset-selection-policy.js';
+import {
+  emitScenarioLinkedAssetSelectionDiagnostics,
+  emitScenarioSelectionDiagnostics,
+  selectScenarioLinkedAsset,
+  selectScenarioRef,
+} from './scenario-linked-asset-selection-policy.js';
 import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {
   collectScenarioProjectionEntries,
@@ -243,7 +248,8 @@ export function deriveSectionsFromDataAssets(
 
   }
 
-  const scenarioSelection = selectScenarioRefWithPolicy(scenarioRefs, options.defaultScenarioAssetId, diagnostics, {
+  const scenarioSelection = selectScenarioRef(scenarioRefs, options.defaultScenarioAssetId);
+  emitScenarioSelectionDiagnostics(scenarioSelection, options.defaultScenarioAssetId, diagnostics, {
     onMissingReference: ({ selectedScenarioAssetId, alternatives }) => ({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING,
       path: 'doc.metadata.defaultScenarioAssetId',
@@ -302,18 +308,14 @@ export function deriveSectionsFromDataAssets(
   const shouldResolveMap =
     !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length > 0);
   const selectedMapResult = shouldResolveMap
-    ? selectScenarioLinkedAssetWithPolicy(
-        mapAssets,
-        selectedScenario?.mapAssetId,
-        diagnostics,
-        {
-          kind: 'map',
-          selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
-          ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
-          dialect: compilerScenarioLinkedAssetDialect,
-        },
-      )
-    : { selected: undefined, failureReason: undefined };
+    ? selectScenarioLinkedAsset(mapAssets, selectedScenario?.mapAssetId)
+    : { selected: undefined, failureReason: undefined, alternatives: [] };
+  emitScenarioLinkedAssetSelectionDiagnostics(selectedMapResult, selectedScenario?.mapAssetId, diagnostics, {
+    kind: 'map',
+    selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
+    ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
+    dialect: compilerScenarioLinkedAssetDialect,
+  });
   if (selectedMapResult.failureReason !== undefined) {
     derivationFailures.map.add(selectedMapResult.failureReason);
   }
@@ -321,18 +323,19 @@ export function deriveSectionsFromDataAssets(
   const shouldResolvePieceCatalog =
     !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length > 0);
   const selectedPieceCatalogResult = shouldResolvePieceCatalog
-    ? selectScenarioLinkedAssetWithPolicy(
-        pieceCatalogAssets,
-        selectedScenario?.pieceCatalogAssetId,
-        diagnostics,
-        {
-          kind: 'pieceCatalog',
-          selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
-          ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
-          dialect: compilerScenarioLinkedAssetDialect,
-        },
-      )
-    : { selected: undefined, failureReason: undefined };
+    ? selectScenarioLinkedAsset(pieceCatalogAssets, selectedScenario?.pieceCatalogAssetId)
+    : { selected: undefined, failureReason: undefined, alternatives: [] };
+  emitScenarioLinkedAssetSelectionDiagnostics(
+    selectedPieceCatalogResult,
+    selectedScenario?.pieceCatalogAssetId,
+    diagnostics,
+    {
+      kind: 'pieceCatalog',
+      selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
+      ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
+      dialect: compilerScenarioLinkedAssetDialect,
+    },
+  );
   if (selectedPieceCatalogResult.failureReason !== undefined) {
     derivationFailures.pieceCatalog.add(selectedPieceCatalogResult.failureReason);
   }
@@ -340,18 +343,14 @@ export function deriveSectionsFromDataAssets(
   const shouldResolveSeatCatalog =
     !skipAssetInference && (selectedScenario?.seatCatalogAssetId !== undefined || seatCatalogAssets.length > 0);
   const selectedSeatCatalogResult = shouldResolveSeatCatalog
-    ? selectScenarioLinkedAssetWithPolicy(
-        seatCatalogAssets,
-        selectedScenario?.seatCatalogAssetId,
-        diagnostics,
-        {
-          kind: 'seatCatalog',
-          selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
-          ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
-          dialect: compilerScenarioLinkedAssetDialect,
-        },
-      )
-    : { selected: undefined, failureReason: undefined };
+    ? selectScenarioLinkedAsset(seatCatalogAssets, selectedScenario?.seatCatalogAssetId)
+    : { selected: undefined, failureReason: undefined, alternatives: [] };
+  emitScenarioLinkedAssetSelectionDiagnostics(selectedSeatCatalogResult, selectedScenario?.seatCatalogAssetId, diagnostics, {
+    kind: 'seatCatalog',
+    selectedPath: selectedScenario?.path ?? 'doc.dataAssets',
+    ...(selectedScenario?.entityId === undefined ? {} : { entityId: selectedScenario.entityId }),
+    dialect: compilerScenarioLinkedAssetDialect,
+  });
   if (selectedSeatCatalogResult.failureReason !== undefined) {
     derivationFailures.seatCatalog.add(selectedSeatCatalogResult.failureReason);
   }

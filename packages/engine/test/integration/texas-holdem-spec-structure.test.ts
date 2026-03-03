@@ -110,8 +110,20 @@ describe('texas hold\'em spec structure', () => {
     assert.equal((parsed.doc.setup ?? []).length > 0, true);
 
     assert.deepEqual(
-      parsed.doc.turnStructure?.phases.map((phase) => 'id' in phase ? phase.id : phase.fromTemplate),
-      ['hand-setup', 'preflop', 'flop', 'turn', 'river', 'showdown', 'hand-cleanup'],
+      parsed.doc.turnStructure?.phases.map((phase) =>
+        'id' in phase
+          ? phase.id
+          : { fromTemplate: phase.fromTemplate, phaseId: (phase.args as Record<string, unknown>).phaseId },
+      ),
+      [
+        'hand-setup',
+        'preflop',
+        { fromTemplate: 'bettingStreet', phaseId: 'flop' },
+        { fromTemplate: 'bettingStreet', phaseId: 'turn' },
+        { fromTemplate: 'bettingStreet', phaseId: 'river' },
+        'showdown',
+        'hand-cleanup',
+      ],
     );
     assert.deepEqual(
       parsed.doc.actions?.map((action) => action.id),
@@ -343,6 +355,81 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(/"var":"smallBlind","value":\d+/.test(serialized), false);
     assert.equal(/"var":"bigBlind","value":\d+/.test(serialized), false);
     assert.equal(/"var":"ante","value":\d+/.test(serialized), false);
+  });
+
+  it('compiles generate: block into exactly 52 token types with derived props', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const tokenTypes = compiled.gameDef!.tokenTypes;
+    assert.equal(tokenTypes.length, 52);
+
+    // Verify specific token type has expected prop schema
+    const aceOfSpades = tokenTypes.find((tt) => tt.id === 'card-AS');
+    assert.ok(aceOfSpades);
+    assert.equal(aceOfSpades.props.rank, 'int');
+    assert.equal(aceOfSpades.props.suit, 'int');
+    assert.equal(aceOfSpades.props.rankName, 'string');
+    assert.equal(aceOfSpades.props.suitName, 'string');
+    assert.equal(aceOfSpades.props.rankAbbrev, 'string');
+    assert.equal(aceOfSpades.props.suitAbbrev, 'string');
+
+    // No generate: or fromTemplate artifacts remain in the compiled GameDef
+    const serialized = JSON.stringify(compiled.gameDef);
+    assert.equal(serialized.includes('"generate"'), false, 'generate: block should not appear in compiled GameDef');
+    assert.equal(serialized.includes('"fromTemplate"'), false, 'fromTemplate should not appear in compiled GameDef');
+    assert.equal(serialized.includes('"phaseTemplates"'), false, 'phaseTemplates should not appear in compiled GameDef');
+  });
+
+  it('emits actionDefaults on all four betting phases in compiled GameDef', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const bettingPhaseIds = ['preflop', 'flop', 'turn', 'river'];
+    for (const phaseId of bettingPhaseIds) {
+      const phase = compiled.gameDef!.turnStructure.phases.find((p) => p.id === phaseId);
+      assert.ok(phase, `phase "${phaseId}" should exist in compiled GameDef`);
+      assert.ok(phase.actionDefaults, `phase "${phaseId}" should have actionDefaults`);
+      assert.ok(phase.actionDefaults.pre, `phase "${phaseId}" actionDefaults should have pre condition`);
+      assert.ok(
+        phase.actionDefaults.afterEffects && phase.actionDefaults.afterEffects.length > 0,
+        `phase "${phaseId}" actionDefaults should have afterEffects`,
+      );
+    }
+
+    // Non-betting phases should NOT have actionDefaults
+    const nonBettingPhaseIds = ['hand-setup', 'showdown', 'hand-cleanup'];
+    for (const phaseId of nonBettingPhaseIds) {
+      const phase = compiled.gameDef!.turnStructure.phases.find((p) => p.id === phaseId);
+      assert.ok(phase, `phase "${phaseId}" should exist`);
+      assert.equal(phase.actionDefaults, undefined, `phase "${phaseId}" should NOT have actionDefaults`);
+    }
+  });
+
+  it('emits deck behavior on the deck zone in compiled GameDef', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const deckZone = compiled.gameDef!.zones.find((z) => z.id === 'deck:none');
+    assert.ok(deckZone);
+    assert.ok(deckZone.behavior);
+    assert.equal(deckZone.behavior!.type, 'deck');
+    assert.equal(deckZone.behavior!.drawFrom, 'top');
+    assert.equal(deckZone.behavior!.reshuffleFrom, 'muck:none');
+
+    // Other zones should NOT have behavior
+    const burnZone = compiled.gameDef!.zones.find((z) => z.id === 'burn:none');
+    assert.ok(burnZone);
+    assert.equal(burnZone.behavior, undefined);
   });
 
   it('derives blind schedule runtime table unique keys for strict exactlyOne validation', () => {

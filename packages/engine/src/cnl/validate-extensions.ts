@@ -106,9 +106,16 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
     } else if (asset.kind === 'pieceCatalog') {
       const normalizedPcId = normalizeIdentifier(asset.id);
       pieceCatalogAssetIds.add(normalizedPcId);
+      // Filter out generate: blocks — they are pre-expansion templates, not concrete entries.
+      // Downstream cross-reference checks expect PieceCatalogPayload with concrete pieceTypes.
+      const rawPayload = asset.payload as Record<string, unknown>;
+      const rawPieceTypes = Array.isArray(rawPayload.pieceTypes) ? rawPayload.pieceTypes : [];
+      const concretePieceTypes = rawPieceTypes.filter(
+        (entry: unknown) => typeof entry === 'object' && entry !== null && 'id' in entry,
+      );
       resolvedPieceCatalogPayloads.set(normalizedPcId, {
         path: `${path}.payload`,
-        payload: asset.payload as PieceCatalogPayload,
+        payload: { pieceTypes: concretePieceTypes, inventory: rawPayload.inventory ?? [] } as unknown as PieceCatalogPayload,
       });
     } else if (asset.kind === 'seatCatalog') {
       const normalizedSeatCatalogId = normalizeIdentifier(asset.id);

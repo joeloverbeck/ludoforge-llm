@@ -36,6 +36,37 @@ export const PieceInventoryEntrySchema = z
   })
   .strict();
 
+export const PieceGenerateDimensionSchema = z
+  .object({
+    name: StringSchema.min(1),
+    values: z.array(z.union([StringSchema, NumberSchema])).min(1),
+  })
+  .strict();
+
+export const PieceGenerateDerivedPropSchema = z
+  .object({
+    from: StringSchema.min(1),
+    map: z.record(StringSchema, z.union([StringSchema, NumberSchema])),
+    default: StringSchema.optional(),
+  })
+  .strict();
+
+export const PieceGenerateBlockSchema = z
+  .object({
+    generate: z
+      .object({
+        idPattern: StringSchema.min(1),
+        seat: StringSchema.min(1),
+        statusDimensions: z.array(z.union([PieceStatusDimensionSchema, StringSchema])),
+        transitions: z.array(z.unknown()),
+        dimensions: z.array(PieceGenerateDimensionSchema).min(1),
+        derivedProps: z.record(StringSchema, PieceGenerateDerivedPropSchema).optional(),
+        inventoryPerCombination: IntegerSchema.min(1),
+      })
+      .strict(),
+  })
+  .strict();
+
 export const SeatDefSchema = z
   .object({
     id: StringSchema.min(1),
@@ -44,7 +75,7 @@ export const SeatDefSchema = z
 
 export const PieceCatalogPayloadSchema = z
   .object({
-    pieceTypes: z.array(PieceTypeCatalogEntrySchema),
+    pieceTypes: z.array(z.union([PieceTypeCatalogEntrySchema, PieceGenerateBlockSchema])),
     inventory: z.array(PieceInventoryEntrySchema),
   })
   .strict();

@@ -31,7 +31,7 @@ function parseDepsLine(content) {
 
   const deps = raw
     .split(',')
-    .map((dep) => dep.trim())
+    .map((dep) => dep.trim().replace(/^`|`$/g, ''))
     .filter((dep) => dep.length > 0);
 
   return { missing: false, deps };
@@ -46,7 +46,52 @@ function isExistingFile(rootDir, relativePath) {
   }
 }
 
-function validateTicket(rootDir, ticketPath) {
+/**
+ * Recursively collect all .md file basenames under a directory,
+ * mapped to their relative paths from rootDir.
+ */
+function collectTicketIndex(rootDir, dir) {
+  const index = new Map();
+  const absoluteDir = resolve(rootDir, dir);
+  let entries;
+  try {
+    entries = readdirSync(absoluteDir, { withFileTypes: true });
+  } catch {
+    return index;
+  }
+  for (const entry of entries) {
+    const relativePath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      for (const [key, value] of collectTicketIndex(rootDir, relativePath)) {
+        index.set(key, value);
+      }
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      index.set(entry.name, relativePath);
+    }
+  }
+  return index;
+}
+
+/** Test whether a dep string looks like a bare ticket ID (e.g. "CROGAMPRIELE-002"). */
+const BARE_ID_RE = /^[A-Z][\w-]+-\d{3,}$/;
+
+function resolveDep(rootDir, dep, ticketIndex) {
+  // Already a valid file path
+  if (isExistingFile(rootDir, dep)) {
+    return true;
+  }
+  // Bare ticket ID — search for a matching file in tickets/ or archive/tickets/
+  if (BARE_ID_RE.test(dep)) {
+    for (const [filename] of ticketIndex) {
+      if (filename.startsWith(`${dep}-`) || filename === `${dep}.md`) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function validateTicket(rootDir, ticketPath, ticketIndex) {
   const absolutePath = resolve(rootDir, ticketPath);
   const content = readFileSync(absolutePath, 'utf8');
   const { missing, deps } = parseDepsLine(content);
@@ -58,7 +103,7 @@ function validateTicket(rootDir, ticketPath) {
   }
 
   for (const dep of deps) {
-    if (!isExistingFile(rootDir, dep)) {
+    if (!resolveDep(rootDir, dep, ticketIndex)) {
       errors.push(`${ticketPath}: unresolved dependency path "${dep}"`);
     }
   }
@@ -68,10 +113,14 @@ function validateTicket(rootDir, ticketPath) {
 
 function main() {
   const rootDir = process.cwd();
+  const ticketIndex = new Map([
+    ...collectTicketIndex(rootDir, 'tickets'),
+    ...collectTicketIndex(rootDir, join('archive', 'tickets')),
+  ]);
   const errors = [];
 
   for (const ticketPath of ticketFiles(rootDir)) {
-    errors.push(...validateTicket(rootDir, ticketPath));
+    errors.push(...validateTicket(rootDir, ticketPath, ticketIndex));
   }
 
   if (errors.length > 0) {

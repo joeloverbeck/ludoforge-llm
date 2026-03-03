@@ -22,7 +22,7 @@ export const METADATA_KEYS = ['id', 'name', 'description', 'players', 'maxTrigge
 export const PLAYERS_KEYS = ['min', 'max'] as const;
 export const DATA_ASSET_KEYS = ['id', 'kind', 'payload', 'tableContracts'] as const;
 export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
-export const ZONE_KEYS = ['id', 'zoneKind', 'isInternal', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
+export const ZONE_KEYS = ['id', 'zoneKind', 'isInternal', 'owner', 'visibility', 'ordering', 'adjacentTo', 'behavior'] as const;
 export const ACTION_KEYS = ['id', 'actor', 'executor', 'phase', 'capabilities', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
 export const TURN_STRUCTURE_KEYS = ['phases', 'interrupts'] as const;
 export const TURN_ORDER_KEYS = ['type', 'order', 'config'] as const;
@@ -47,7 +47,8 @@ export const ACTION_PIPELINE_KEYS = [
   'linkedWindows',
 ] as const;
 export const ACTION_PIPELINE_ATOMICITY_VALUES: readonly string[] = ['atomic', 'partial'];
-export const PHASE_KEYS = ['id', 'onEnter', 'onExit'] as const;
+export const PHASE_KEYS = ['id', 'onEnter', 'onExit', 'actionDefaults'] as const;
+export const FROM_TEMPLATE_PHASE_KEYS = ['fromTemplate', 'args'] as const;
 export const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
 export const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone', 'scope', 'var', 'player'] as const;
 export const END_CONDITION_KEYS = ['when', 'result'] as const;

@@ -514,7 +514,12 @@ function resolveTopCardId(state: GameState, zoneId: string | null): string | nul
   if (zoneId === null) {
     return null;
   }
-  return state.zones[zoneId]?.[0]?.id ?? null;
+  const token = state.zones[zoneId]?.[0];
+  if (token === undefined) {
+    return null;
+  }
+  const cardId = token.props.cardId;
+  return typeof cardId === 'string' && cardId.length > 0 ? cardId : String(token.id);
 }
 
 function resolveEventCard(

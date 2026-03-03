@@ -52452,7 +52452,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "usTroop",
+                      "bind": "$usTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
@@ -54019,15 +54019,18 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "targetCoinBaseUs",
+                      "bind": "$targetCoinBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
                         "filter": [
                           {
                             "prop": "faction",
-                            "op": "eq",
-                            "value": "US"
+                            "op": "in",
+                            "value": [
+                              "US",
+                              "ARVN"
+                            ]
                           },
                           {
                             "prop": "type",
@@ -54037,29 +54040,21 @@
                         ]
                       },
                       "to": {
-                        "zoneExpr": "casualties-US:none"
-                      }
-                    },
-                    {
-                      "bind": "targetCoinBaseArvn",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$targetSpace",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "ARVN"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "eq",
-                            "value": "base"
+                        "zoneExpr": {
+                          "if": {
+                            "when": {
+                              "op": "==",
+                              "left": {
+                                "ref": "tokenProp",
+                                "token": "$targetCoinBase",
+                                "prop": "faction"
+                              },
+                              "right": "US"
+                            },
+                            "then": "casualties-US:none",
+                            "else": "available-ARVN:none"
                           }
-                        ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-ARVN:none"
+                        }
                       }
                     }
                   ]
@@ -54070,15 +54065,18 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "targetInsurgentVc",
+                      "bind": "$targetInsurgent",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
                         "filter": [
                           {
                             "prop": "faction",
-                            "op": "eq",
-                            "value": "VC"
+                            "op": "in",
+                            "value": [
+                              "VC",
+                              "NVA"
+                            ]
                           },
                           {
                             "prop": "type",
@@ -54093,34 +54091,17 @@
                         ]
                       },
                       "to": {
-                        "zoneExpr": "available-VC:none"
-                      }
-                    },
-                    {
-                      "bind": "targetInsurgentNva",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$targetSpace",
-                        "filter": [
-                          {
-                            "prop": "faction",
-                            "op": "eq",
-                            "value": "NVA"
-                          },
-                          {
-                            "prop": "type",
-                            "op": "eq",
-                            "value": "guerrilla"
-                          },
-                          {
-                            "prop": "activity",
-                            "op": "eq",
-                            "value": "underground"
-                          }
-                        ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-NVA:none"
+                        "zoneExpr": {
+                          "concat": [
+                            "available-",
+                            {
+                              "ref": "tokenProp",
+                              "token": "$targetInsurgent",
+                              "prop": "faction"
+                            },
+                            ":none"
+                          ]
+                        }
                       }
                     }
                   ]
@@ -54304,7 +54285,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "usTroopOutOfPlay",
+                      "bind": "$usTroopOutOfPlay",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "out-of-play-US:none",
@@ -54333,7 +54314,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "usTroopAvailable",
+                      "bind": "$usTroopAvailable",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
@@ -54480,7 +54461,7 @@
                   "budget": 99,
                   "groups": [
                     {
-                      "bind": "vcPiece",
+                      "bind": "$vcPiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetProvince",
@@ -54634,7 +54615,7 @@
                   "budget": 99,
                   "groups": [
                     {
-                      "bind": "insurgentPiece",
+                      "bind": "$insurgentPiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetLoc",
@@ -54698,7 +54679,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -54760,7 +54741,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "irregular",
+                      "bind": "$irregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
@@ -54818,7 +54799,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "irregular",
+                      "bind": "$irregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -54992,7 +54973,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "insurgentGuerrilla",
+                      "bind": "$insurgentGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -55034,7 +55015,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "irregular",
+                      "bind": "$irregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
@@ -55079,7 +55060,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "irregular",
+                      "bind": "$irregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -55108,7 +55089,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "nvaGuerrilla",
+                      "bind": "$nvaGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-NVA:none",
@@ -55646,7 +55627,7 @@
                       "budget": 2,
                       "groups": [
                         {
-                          "bind": "usBaseOutOfPlay",
+                          "bind": "$usBaseOutOfPlay",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "out-of-play-US:none",
@@ -55699,7 +55680,7 @@
                       "budget": 2,
                       "groups": [
                         {
-                          "bind": "arvnBaseOutOfPlay",
+                          "bind": "$arvnBaseOutOfPlay",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "out-of-play-ARVN:none",
@@ -55963,7 +55944,7 @@
                         },
                         "groups": [
                           {
-                            "bind": "usTroopInProvince",
+                            "bind": "$usTroopInProvince",
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$targetProvince",
@@ -56014,7 +55995,7 @@
                                           },
                                           "groups": [
                                             {
-                                              "bind": "usTroopAdjacent",
+                                              "bind": "$usTroopAdjacent",
                                               "over": {
                                                 "query": "tokensInZone",
                                                 "zone": "$adjacentSpace",
@@ -56219,7 +56200,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "nvaTroop",
+                      "bind": "$nvaTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-NVA:none",
@@ -56286,7 +56267,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -56348,7 +56329,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "insurgentGuerrilla",
+                      "bind": "$insurgentGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -56390,7 +56371,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "coinBase",
+                      "bind": "$coinBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -56448,7 +56429,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "coinBase",
+                      "bind": "$coinBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -56695,7 +56676,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "nvaTroops",
+                      "bind": "$nvaTroops",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$outsideSouthSpace",
@@ -56717,7 +56698,7 @@
                       }
                     },
                     {
-                      "bind": "nvaGuerrilla",
+                      "bind": "$nvaGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$outsideSouthSpace",
@@ -56739,7 +56720,7 @@
                       }
                     },
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$outsideSouthSpace",
@@ -56905,7 +56886,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "coinBase",
+                      "bind": "$coinBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -56940,7 +56921,7 @@
                       }
                     },
                     {
-                      "bind": "coinTroop",
+                      "bind": "$coinTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -56998,7 +56979,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "insurgentGuerrilla",
+                      "bind": "$insurgentGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -57595,7 +57576,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "usOutOfPlay",
+                      "bind": "$usOutOfPlay",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "out-of-play-US:none",
@@ -57619,7 +57600,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "arvnOutOfPlay",
+                      "bind": "$arvnOutOfPlay",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "out-of-play-ARVN:none",
@@ -57996,7 +57977,7 @@
                       "budget": 3,
                       "groups": [
                         {
-                          "bind": "irregular",
+                          "bind": "$irregular",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "available-US:none",
@@ -58104,7 +58085,7 @@
                       "budget": 3,
                       "groups": [
                         {
-                          "bind": "ranger",
+                          "bind": "$ranger",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "available-ARVN:none",
@@ -58467,7 +58448,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "usAvailablePiece",
+                      "bind": "$usAvailablePiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
@@ -58957,7 +58938,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "irregular",
+                      "bind": "$irregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
@@ -59002,7 +58983,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "irregular",
+                      "bind": "$irregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -59031,7 +59012,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -59106,7 +59087,7 @@
                       "budget": 3,
                       "groups": [
                         {
-                          "bind": "usOutOfPlay",
+                          "bind": "$usOutOfPlay",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "out-of-play-US:none",
@@ -59130,7 +59111,7 @@
                       "budget": 6,
                       "groups": [
                         {
-                          "bind": "arvnOutOfPlay",
+                          "bind": "$arvnOutOfPlay",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "out-of-play-ARVN:none",
@@ -59498,7 +59479,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "arvnTroop",
+                      "bind": "$arvnTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-ARVN:none",
@@ -59561,7 +59542,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -59590,7 +59571,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "nvaGuerrilla",
+                      "bind": "$nvaGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-NVA:none",
@@ -59746,7 +59727,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "coinPiece",
+                      "bind": "$coinPiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -59789,7 +59770,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "coinPiece",
+                      "bind": "$coinPiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -59905,7 +59886,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "usTroop",
+                      "bind": "$usTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -59927,7 +59908,7 @@
                       }
                     },
                     {
-                      "bind": "usIrregular",
+                      "bind": "$usIrregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -59949,7 +59930,7 @@
                       }
                     },
                     {
-                      "bind": "usBase",
+                      "bind": "$usBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -60001,7 +59982,7 @@
                   "budget": 6,
                   "groups": [
                     {
-                      "bind": "usTroop",
+                      "bind": "$usTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -60023,7 +60004,7 @@
                       }
                     },
                     {
-                      "bind": "usIrregular",
+                      "bind": "$usIrregular",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -60045,7 +60026,7 @@
                       }
                     },
                     {
-                      "bind": "usBase",
+                      "bind": "$usBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$sourceSpace",
@@ -60501,7 +60482,7 @@
                       "budget": 2,
                       "groups": [
                         {
-                          "bind": "usTroop",
+                          "bind": "$usTroop",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "out-of-play-US:none",
@@ -60585,7 +60566,7 @@
                       "budget": 99,
                       "groups": [
                         {
-                          "bind": "insurgentGuerrilla",
+                          "bind": "$insurgentGuerrilla",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "$targetJungle",
@@ -60683,7 +60664,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "usBase",
+                      "bind": "$usBase",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetJungle",
@@ -60705,7 +60686,7 @@
                       }
                     },
                     {
-                      "bind": "usTroop",
+                      "bind": "$usTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetJungle",
@@ -60880,7 +60861,7 @@
                       "budget": 99,
                       "groups": [
                         {
-                          "bind": "vcPiece",
+                          "bind": "$vcPiece",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "$targetLowland",
@@ -60959,7 +60940,7 @@
                       "budget": 99,
                       "groups": [
                         {
-                          "bind": "nvaPiece",
+                          "bind": "$nvaPiece",
                           "over": {
                             "query": "tokensInZone",
                             "zone": "$targetLowland",
@@ -61051,7 +61032,7 @@
                         },
                         "groups": [
                           {
-                            "bind": "usCube",
+                            "bind": "$usCube",
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$targetLowland",
@@ -61076,7 +61057,7 @@
                             }
                           },
                           {
-                            "bind": "arvnCube",
+                            "bind": "$arvnCube",
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$targetLowland",
@@ -61111,7 +61092,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "vcPiece",
+                      "bind": "$vcPiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -61218,7 +61199,7 @@
                   "budget": 99,
                   "groups": [
                     {
-                      "bind": "insurgentGuerrilla",
+                      "bind": "$insurgentGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -61320,7 +61301,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "nvaGuerrilla",
+                      "bind": "$nvaGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-NVA:none",
@@ -61349,7 +61330,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -61677,7 +61658,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -61816,7 +61797,7 @@
                         "budget": 3,
                         "groups": [
                           {
-                            "bind": "usTroop",
+                            "bind": "$usTroop",
                             "over": {
                               "query": "tokensInZone",
                               "zone": "out-of-play-US:none",
@@ -61891,7 +61872,7 @@
                               },
                               "groups": [
                                 {
-                                  "bind": "usTroop",
+                                  "bind": "$usTroop",
                                   "over": {
                                     "query": "tokensInZone",
                                     "zone": "available-US:none",
@@ -61991,7 +61972,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "usCasualty",
+                      "bind": "$usCasualty",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "casualties-US:none",
@@ -62109,7 +62090,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "usTroop",
+                      "bind": "$usTroop",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -62194,7 +62175,7 @@
                   "budget": 6,
                   "groups": [
                     {
-                      "bind": "police",
+                      "bind": "$police",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-ARVN:none",
@@ -62246,7 +62227,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "guerrilla",
+                      "bind": "$guerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -62375,7 +62356,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "vcPiece",
+                      "bind": "$vcPiece",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -62943,7 +62924,7 @@
                         },
                         "groups": [
                           {
-                            "bind": "arvnPieceInAnchor",
+                            "bind": "$arvnPieceInAnchor",
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$anchorSpace",
@@ -62989,7 +62970,7 @@
                                           },
                                           "groups": [
                                             {
-                                              "bind": "arvnPieceInAdjacent",
+                                              "bind": "$arvnPieceInAdjacent",
                                               "over": {
                                                 "query": "tokensInZone",
                                                 "zone": "$adjSpace",
@@ -63060,7 +63041,7 @@
                   "budget": 3,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$targetSpace",
@@ -63089,7 +63070,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -63134,7 +63115,7 @@
                   "budget": 2,
                   "groups": [
                     {
-                      "bind": "vcGuerrilla",
+                      "bind": "$vcGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-VC:none",
@@ -63163,7 +63144,7 @@
                   "budget": 1,
                   "groups": [
                     {
-                      "bind": "nvaGuerrilla",
+                      "bind": "$nvaGuerrilla",
                       "over": {
                         "query": "tokensInZone",
                         "zone": "available-NVA:none",

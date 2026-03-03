@@ -298,9 +298,16 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
     zones: {
       ...baseState.zones,
       'table:none': [],
-      'draw:none': [token('card-b', 'event-card'), token('card-c', 'event-card')],
-      'discard:none': [token('card-z', 'event-card')],
-      'played:none': [token('card-a', 'event-card')],
+      'draw:none': [
+        token('tok-201', 'event-card', { cardId: 'card-b', eventDeckId: 'strategy', isCoup: false }),
+        token('tok-202', 'event-card', { cardId: 'card-c', eventDeckId: 'strategy', isCoup: false }),
+      ],
+      'discard:none': [
+        token('tok-203', 'event-card', { cardId: 'card-z', eventDeckId: 'strategy', isCoup: false }),
+      ],
+      'played:none': [
+        token('tok-200', 'event-card', { cardId: 'card-a', eventDeckId: 'strategy', isCoup: false }),
+      ],
     },
   };
 
@@ -458,6 +465,42 @@ describe('deriveRenderModel state metadata', () => {
         discardSize: 1,
       },
     ]);
+  });
+
+  it('resolves event deck cards from token props.cardId, not token.id', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 5, 2).state;
+    const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
+    // Override zones with realistic token shapes: numeric ordinal IDs + cardId in props
+    const state: GameState = {
+      ...stateWithMetadata,
+      zones: {
+        ...stateWithMetadata.zones,
+        'draw:none': [
+          token('tok-201', 'event-card', { cardId: 'card-b', eventDeckId: 'strategy', isCoup: false }),
+          token('tok-202', 'event-card', { cardId: 'card-c', eventDeckId: 'strategy', isCoup: false }),
+        ],
+        'discard:none': [
+          token('tok-203', 'event-card', { cardId: 'card-z', eventDeckId: 'strategy', isCoup: false }),
+        ],
+        'played:none': [
+          token('tok-200', 'event-card', { cardId: 'card-a', eventDeckId: 'strategy', isCoup: false }),
+        ],
+      },
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.eventDecks[0]?.playedCard).toEqual({
+      id: 'card-a',
+      title: 'Card A',
+      orderNumber: null,
+    });
+    expect(model.eventDecks[0]?.lookaheadCard).toEqual({
+      id: 'card-b',
+      title: 'Card B',
+      orderNumber: null,
+    });
   });
 
   it('projects lasting effect attributes deterministically and excludes non-display payloads', () => {

@@ -123,7 +123,7 @@ describe('FITL cross-system modifier smoke', () => {
     assert.equal(enemyCount(configured, space) - enemyCount(result, space), 4, 'LGBs shaded should cap removals at exactly 4');
   });
 
-  it('stacks Minh and CAPs unshaded effects on ARVN Train', () => {
+  it('keeps Minh Train bonus independent from CAPs unshaded on ARVN Train', () => {
     const { def } = compileDef();
     const space = 'qui-nhon:none';
     const arvnAvailable = 'available-ARVN:none';
@@ -161,8 +161,8 @@ describe('FITL cross-system modifier smoke', () => {
     assert.equal(unshaded.globalVars.aid, 25, 'Minh bonus should still apply with CAPs active');
     assert.equal(
       arvnPoliceCount(unshaded, space),
-      arvnPoliceCount(inactive, space) + 1,
-      'CAPs unshaded should add one extra ARVN Police on top of baseline Train placement',
+      arvnPoliceCount(inactive, space),
+      'CAPs unshaded should not add ARVN Train police bonus (card text scopes to US Training)',
     );
   });
 

@@ -1928,21 +1928,155 @@ effectMacros:
                       forceUntunneledBaseFirst: false
 
   # ── cap-train-caps-unshaded-bonus-police ─────────────────────────────────
-  # CAPs unshaded: each Train space places +1 ARVN Police.
+  # CAPs unshaded: once per US Train operation, place/relocate +1 ARVN Police
+  # into any 1 map space containing US Troops.
   - id: cap-train-caps-unshaded-bonus-police
-    params:
-      - { name: space, type: zoneSelector }
+    params: []
     exports: []
     effects:
       - if:
           when: { op: '==', left: { ref: globalMarkerState, marker: cap_caps }, right: unshaded }
           then:
-            - macro: place-from-available-or-map
-              args:
-                pieceType: police
-                faction: 'ARVN'
-                targetSpace: { param: space }
-                maxPieces: 1
+            - let:
+                bind: $capCapsTroopSpaces
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: mapSpaces
+                      filter:
+                        op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, eq: US }
+                                - { prop: type, eq: troops }
+                        right: 0
+                in:
+                  - if:
+                      when: { op: '>', left: { ref: binding, name: $capCapsTroopSpaces }, right: 0 }
+                      then:
+                        - let:
+                            bind: $capCapsAvailablePolice
+                            value:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: available-ARVN:none
+                                  filter:
+                                    - { prop: faction, eq: ARVN }
+                                    - { prop: type, eq: police }
+                            in:
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $capCapsAvailablePolice }, right: 0 }
+                                  then:
+                                    - chooseOne:
+                                        bind: $capCapsBonusSpace
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: '>'
+                                            left:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, eq: US }
+                                                    - { prop: type, eq: troops }
+                                            right: 0
+                                    - forEach:
+                                        bind: $capCapsPolice
+                                        over:
+                                          query: tokensInZone
+                                          zone: available-ARVN:none
+                                          filter:
+                                            - { prop: faction, eq: ARVN }
+                                            - { prop: type, eq: police }
+                                        limit: 1
+                                        effects:
+                                          - moveToken:
+                                              token: $capCapsPolice
+                                              from: available-ARVN:none
+                                              to: { zoneExpr: { ref: binding, name: $capCapsBonusSpace } }
+                                  else:
+                                    - let:
+                                        bind: $capCapsMapPolice
+                                        value:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInMapSpaces
+                                              filter:
+                                                - { prop: faction, eq: ARVN }
+                                                - { prop: type, eq: police }
+                                        in:
+                                          - if:
+                                              when: { op: '>', left: { ref: binding, name: $capCapsMapPolice }, right: 0 }
+                                              then:
+                                                - chooseOne:
+                                                    bind: $capCapsBonusSpace
+                                                    options:
+                                                      query: mapSpaces
+                                                      filter:
+                                                        op: '>'
+                                                        left:
+                                                          aggregate:
+                                                            op: count
+                                                            query:
+                                                              query: tokensInZone
+                                                              zone: $zone
+                                                              filter:
+                                                                - { prop: faction, eq: US }
+                                                                - { prop: type, eq: troops }
+                                                        right: 0
+                                                - chooseN:
+                                                    bind: $capCapsRelocateSources
+                                                    options:
+                                                      query: mapSpaces
+                                                      filter:
+                                                        op: and
+                                                        args:
+                                                          - op: '!='
+                                                            left: { ref: zoneProp, zone: $zone, prop: id }
+                                                            right: { ref: binding, name: $capCapsBonusSpace }
+                                                          - op: '>'
+                                                            left:
+                                                              aggregate:
+                                                                op: count
+                                                                query:
+                                                                  query: tokensInZone
+                                                                  zone: $zone
+                                                                  filter:
+                                                                    - { prop: faction, eq: ARVN }
+                                                                    - { prop: type, eq: police }
+                                                            right: 0
+                                                    min: 0
+                                                    max: 1
+                                                - forEach:
+                                                    bind: $capCapsRelocateSource
+                                                    over: { query: binding, name: $capCapsRelocateSources }
+                                                    effects:
+                                                      - forEach:
+                                                          bind: $capCapsPolice
+                                                          over:
+                                                            query: tokensInZone
+                                                            zone: { zoneExpr: { ref: binding, name: $capCapsRelocateSource } }
+                                                            filter:
+                                                              - { prop: faction, eq: ARVN }
+                                                              - { prop: type, eq: police }
+                                                          limit: 1
+                                                          effects:
+                                                            - moveToken:
+                                                                token: $capCapsPolice
+                                                                from: { zoneExpr: { ref: binding, name: $capCapsRelocateSource } }
+                                                                to: { zoneExpr: { ref: binding, name: $capCapsBonusSpace } }
 
   # ── cap-patrol-m48-shaded-moved-cube-penalty ─────────────────────────────
   # M48 Patton shaded: after US/ARVN Patrol, remove up to 2 moved cubes

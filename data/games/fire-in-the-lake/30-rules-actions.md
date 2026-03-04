@@ -1217,9 +1217,6 @@ actionPipelines:
                           faction: 'US'
                           targetSpace: $space
                           maxPieces: 2
-                      - macro: cap-train-caps-unshaded-bonus-police
-                        args:
-                          space: $space
 
                 - if:
                     when:
@@ -1242,9 +1239,6 @@ actionPipelines:
                                 faction: 'ARVN'
                                 targetSpace: $space
                                 maxPieces: 2
-                            - macro: cap-train-caps-unshaded-bonus-police
-                              args:
-                                space: $space
                       - if:
                           when:
                             op: and
@@ -1279,9 +1273,10 @@ actionPipelines:
                                       faction: 'ARVN'
                                       targetSpace: $space
                                       maxPieces: 1
-                            - macro: cap-train-caps-unshaded-bonus-police
-                              args:
-                                space: $space
+      - stage: cap-caps-bonus-police
+        effects:
+          - macro: cap-train-caps-unshaded-bonus-police
+            args: {}
 
       - stage: sub-action
         effects:
@@ -1509,9 +1504,6 @@ actionPipelines:
                           faction: 'ARVN'
                           targetSpace: $space
                           maxPieces: 2
-                      - macro: cap-train-caps-unshaded-bonus-police
-                        args:
-                          space: $space
 
                 - if:
                     when:
@@ -1538,9 +1530,6 @@ actionPipelines:
                           faction: 'ARVN'
                           targetSpace: $space
                           maxPieces: 6
-                      - macro: cap-train-caps-unshaded-bonus-police
-                        args:
-                          space: $space
 
       - stage: sub-action
         effects:

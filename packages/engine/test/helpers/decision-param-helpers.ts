@@ -22,13 +22,38 @@ export interface ResolveDecisionParamsOptions {
   readonly maxDecisionProbeSteps?: number;
 }
 
+interface DecisionResolutionContext {
+  readonly byDecisionId: Map<string, number>;
+  readonly byName: Map<string, number>;
+}
+
 const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue | undefined => {
   return pickDeterministicChoiceValue(request);
+};
+
+const nextOccurrence = (map: Map<string, number>, key: string): number => {
+  const next = (map.get(key) ?? 0) + 1;
+  map.set(key, next);
+  return next;
+};
+
+const deriveCanonicalBindingAlias = (name: string): string | null => {
+  if (!name.startsWith('$__')) {
+    return null;
+  }
+  const lastSeparator = name.lastIndexOf('__');
+  if (lastSeparator < 0 || lastSeparator + 2 >= name.length) {
+    return null;
+  }
+  const tail = name.slice(lastSeparator + 2);
+  const sanitized = tail.startsWith('$') ? tail.slice(1) : tail;
+  return sanitized.length > 0 ? `$${sanitized}` : null;
 };
 
 const resolveDecisionValue = (
   request: ChoicePendingRequest,
   move: Move,
+  context: DecisionResolutionContext,
   options?: ResolveDecisionParamsOptions,
 ): MoveParamValue | undefined => {
   if (Object.prototype.hasOwnProperty.call(move.params, request.decisionId)) {
@@ -37,6 +62,29 @@ const resolveDecisionValue = (
 
   if (Object.prototype.hasOwnProperty.call(move.params, request.name)) {
     return move.params[request.name];
+  }
+  const canonicalAlias = deriveCanonicalBindingAlias(request.name);
+  if (canonicalAlias !== null && Object.prototype.hasOwnProperty.call(move.params, canonicalAlias)) {
+    return move.params[canonicalAlias];
+  }
+
+  const decisionOrdinal = nextOccurrence(context.byDecisionId, request.decisionId);
+  const indexedDecisionIdKey = `${request.decisionId}#${decisionOrdinal}`;
+  if (Object.prototype.hasOwnProperty.call(move.params, indexedDecisionIdKey)) {
+    return move.params[indexedDecisionIdKey];
+  }
+
+  const nameOrdinal = nextOccurrence(context.byName, request.name);
+  const indexedNameKey = `${request.name}#${nameOrdinal}`;
+  if (Object.prototype.hasOwnProperty.call(move.params, indexedNameKey)) {
+    return move.params[indexedNameKey];
+  }
+  if (canonicalAlias !== null) {
+    const canonicalOrdinal = nextOccurrence(context.byName, canonicalAlias);
+    const indexedCanonicalNameKey = `${canonicalAlias}#${canonicalOrdinal}`;
+    if (Object.prototype.hasOwnProperty.call(move.params, indexedCanonicalNameKey)) {
+      return move.params[indexedCanonicalNameKey];
+    }
   }
 
   for (const rule of options?.overrides ?? []) {
@@ -70,11 +118,15 @@ const normalizeDecisionParamsForMoveInternal = (
   preserveIncomplete: boolean,
   options?: ResolveDecisionParamsOptions,
 ): Move => {
+  const resolutionContext: DecisionResolutionContext = {
+    byDecisionId: new Map<string, number>(),
+    byName: new Map<string, number>(),
+  };
   const result = resolveMoveDecisionSequence(def, state, move, {
     budgets: {
       maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
     },
-    choose: (request) => resolveDecisionValue(request, move, options),
+    choose: (request) => resolveDecisionValue(request, move, resolutionContext, options),
   });
   if (result.complete) {
     return result.move;

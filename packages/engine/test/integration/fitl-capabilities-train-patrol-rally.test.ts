@@ -92,7 +92,6 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
       { profileId: 'train-us-profile', marker: 'cap_caps', expectedSide: 'unshaded', forbiddenSide: 'shaded' },
       { profileId: 'train-us-profile', marker: 'cap_cords', expectedSide: 'unshaded' },
       { profileId: 'train-us-profile', marker: 'cap_cords', expectedSide: 'shaded' },
-      { profileId: 'train-arvn-profile', marker: 'cap_caps', expectedSide: 'unshaded', forbiddenSide: 'shaded' },
       { profileId: 'train-arvn-profile', marker: 'cap_cords', expectedSide: 'unshaded' },
       { profileId: 'train-arvn-profile', marker: 'cap_cords', expectedSide: 'shaded' },
       { profileId: 'patrol-us-profile', marker: 'cap_m48Patton', expectedSide: 'shaded', forbiddenSide: 'unshaded' },
@@ -116,6 +115,13 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
         );
       }
     }
+
+    const arvnCapCapsSides = collectMarkerSides('train-arvn-profile', 'cap_caps');
+    assert.equal(
+      arvnCapCapsSides.size,
+      0,
+      `Expected train-arvn-profile to ignore cap_caps, found sides: ${[...arvnCapCapsSides].join(', ') || '(none)'}`,
+    );
   });
 
   it('declares m48PatrolMoved as a boolean runtime prop on Patrol-moved cube types', () => {

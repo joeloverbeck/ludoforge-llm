@@ -103,6 +103,56 @@ phase: [asPhaseId('main')],
   return makeBaseDef({ actions: [action], actionPipelines: [profile] });
 };
 
+const makeDefWithRepeatedNamedChoices = (
+  decisionIdPrefix = 'decision',
+  bindName = '$mode',
+): GameDef => {
+  const action: ActionDef = {
+    id: asActionId('nested-choice-op'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+
+  const profile: ActionPipelineDef = {
+    id: 'repeated-name-choice-profile',
+    actionId: asActionId('nested-choice-op'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        effects: [
+          {
+            forEach: {
+              over: { query: 'enums', values: ['north', 'south'] },
+              bind: '$region',
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: `${decisionIdPrefix}:${bindName}`,
+                    bind: bindName,
+                    options: { query: 'enums', values: ['advance', 'hold'] },
+                  },
+                },
+              ],
+            },
+          } as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    ],
+    atomicity: 'partial',
+  };
+
+  return makeBaseDef({ actions: [action], actionPipelines: [profile] });
+};
+
 const makeDefWithCompoundAccompanyingConstraintAndUnresolvedSa = (): GameDef => {
   const operation: ActionDef = {
     id: asActionId('operate'),
@@ -240,6 +290,61 @@ describe('decision param helper', () => {
 
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@north'], 'hold');
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@south'], 'hold');
+  });
+
+  it('supports indexed decision-name params for repeated nested choices', () => {
+    const resolved = normalizeDecisionParamsForMove(
+      makeDefWithRepeatedNamedChoices(),
+      makeBaseState(),
+      makeMove({
+        '$mode#1': 'hold',
+        '$mode#2': 'advance',
+      }),
+    );
+
+    const repeatedChoices = Object.entries(resolved.params)
+      .filter(([decisionId]) => decisionId.includes('decision:$mode'))
+      .map((entry) => String(entry[1]));
+    assert.deepEqual(repeatedChoices, ['hold', 'advance']);
+  });
+
+  it('supports indexed decision-id params for repeated nested choices', () => {
+    const baseline = normalizeDecisionParamsForMove(
+      makeDefWithRepeatedNamedChoices(),
+      makeBaseState(),
+      makeMove(),
+    );
+    const repeatedDecisionIds = Object.keys(baseline.params)
+      .filter((decisionId) => decisionId.includes('decision:$mode'));
+    assert.equal(repeatedDecisionIds.length, 2);
+
+    const resolved = normalizeDecisionParamsForMove(
+      makeDefWithRepeatedNamedChoices(),
+      makeBaseState(),
+      makeMove({
+        [`${repeatedDecisionIds[0]}#1`]: 'hold',
+        [`${repeatedDecisionIds[1]}#1`]: 'advance',
+      }),
+    );
+
+    assert.equal(resolved.params[repeatedDecisionIds[0]!], 'hold');
+    assert.equal(resolved.params[repeatedDecisionIds[1]!], 'advance');
+  });
+
+  it('supports canonical alias indexed params for macro-expanded decision names', () => {
+    const resolved = normalizeDecisionParamsForMove(
+      makeDefWithRepeatedNamedChoices('decision', '$__macro_caps__bonusSpace'),
+      makeBaseState(),
+      makeMove({
+        '$bonusSpace#1': 'hold',
+        '$bonusSpace#2': 'advance',
+      }),
+    );
+
+    const repeatedChoices = Object.entries(resolved.params)
+      .filter(([decisionId]) => decisionId.includes('$__macro_caps__bonusSpace'))
+      .map((entry) => String(entry[1]));
+    assert.deepEqual(repeatedChoices, ['hold', 'advance']);
   });
 
   it('fails with diagnostics when canonical selection cannot resolve a pending decision', () => {

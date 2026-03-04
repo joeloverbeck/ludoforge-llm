@@ -32,6 +32,7 @@ import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFil
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'empty' | 'mixed';
+const tokenZoneIndexByState = new WeakMap<EvalContext['state'], ReadonlyMap<string, string>>();
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
   let value: number | boolean | string;
@@ -493,6 +494,30 @@ function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[
   return unique;
 }
 
+function buildTokenZoneIndex(state: EvalContext['state']): ReadonlyMap<string, string> {
+  const tokenZoneById = new Map<string, string>();
+  for (const [zoneId, tokens] of Object.entries(state.zones)) {
+    for (const token of tokens) {
+      const tokenId = String(token.id);
+      // Preserve legacy first-match semantics for duplicate token ids.
+      if (!tokenZoneById.has(tokenId)) {
+        tokenZoneById.set(tokenId, zoneId);
+      }
+    }
+  }
+  return tokenZoneById;
+}
+
+function getTokenZoneIndex(ctx: EvalContext): ReadonlyMap<string, string> {
+  const cached = tokenZoneIndexByState.get(ctx.state);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const built = buildTokenZoneIndex(ctx.state);
+  tokenZoneIndexByState.set(ctx.state, built);
+  return built;
+}
+
 function isTokenShape(value: unknown): value is Token {
   return (
     typeof value === 'object' &&
@@ -652,12 +677,8 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     }
     case 'tokenZones': {
       const sourceItems = evalQuery(query.source, ctx);
-      const knownTokenIds = new Set<string>();
-      for (const tokens of Object.values(ctx.state.zones)) {
-        for (const token of tokens) {
-          knownTokenIds.add(String(token.id));
-        }
-      }
+      const tokenZoneById = getTokenZoneIndex(ctx);
+      const knownTokenIds = new Set(tokenZoneById.keys());
 
       const zones = sourceItems.map((item) => {
         const tokenId =
@@ -674,10 +695,9 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
             itemType: typeof item,
           });
         }
-        for (const [zoneId, tokens] of Object.entries(ctx.state.zones)) {
-          if (tokens.some((zoneToken) => zoneToken.id === tokenId)) {
-            return zoneId;
-          }
+        const zoneId = tokenZoneById.get(tokenId);
+        if (zoneId !== undefined) {
+          return zoneId;
         }
         throw missingVarError(`Token ${tokenId} not found in any zone`, {
           query,

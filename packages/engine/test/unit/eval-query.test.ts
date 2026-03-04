@@ -1291,6 +1291,83 @@ describe('evalQuery', () => {
     assert.deepEqual(zones, ['hand:0', 'hand:0']);
   });
 
+  it('builds token zone lookup once per tokenZones evaluation', () => {
+    let tokenIdReads = 0;
+    const trackedToken = (id: string): Token => ({
+      get id() {
+        tokenIdReads += 1;
+        return asTokenId(id);
+      },
+      type: 'piece',
+      props: { faction: 'US' },
+    });
+
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'deck:none': [],
+          'hand:0': [trackedToken('hand-0')],
+          'hand:1': [trackedToken('hand-1')],
+          'bench:1': [],
+          'tableau:2': [],
+          'battlefield:none': [],
+        },
+      },
+    });
+
+    const result = evalQuery(
+      {
+        query: 'tokenZones',
+        source: {
+          query: 'concat',
+          sources: [
+            { query: 'tokensInZone', zone: 'hand:0' },
+            ...Array.from({ length: 29 }, () => ({ query: 'tokensInZone', zone: 'hand:0' } as const)),
+          ],
+        },
+        dedupe: false,
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, Array.from({ length: 30 }, () => 'hand:0'));
+    assert.ok(tokenIdReads <= 40, `Expected <= 40 token id reads, received ${String(tokenIdReads)}`);
+  });
+
+  it('reuses token zone lookup across tokenZones evaluations for the same state', () => {
+    let tokenIdReads = 0;
+    const trackedToken = (id: string): Token => ({
+      get id() {
+        tokenIdReads += 1;
+        return asTokenId(id);
+      },
+      type: 'piece',
+      props: { faction: 'US' },
+    });
+
+    const deckTokens = Array.from({ length: 80 }, (_unused, index) => trackedToken(`deck-${String(index)}`));
+    const handToken = trackedToken('hand-shared');
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'deck:none': deckTokens,
+          'hand:0': [handToken],
+          'hand:1': [],
+          'bench:1': [],
+          'tableau:2': [],
+          'battlefield:none': [],
+        },
+      },
+    });
+
+    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
+    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
+    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
+    assert.ok(tokenIdReads <= 120, `Expected <= 120 token id reads, received ${String(tokenIdReads)}`);
+  });
+
   it('rejects tokenZones when source query does not produce tokens', () => {
     const ctx = makeCtx();
 

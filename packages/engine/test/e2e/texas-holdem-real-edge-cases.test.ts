@@ -7,10 +7,10 @@ import {
   asPlayerId,
   assertValidatedGameDef,
   areMovesEquivalent,
+  createEvalRuntimeResources,
   initialState,
   legalMoves,
   type EffectTraceEntry,
-  type ExecutionCollector,
   type GameState,
   type Move,
   type Token,
@@ -524,10 +524,10 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.globalVars.pot), 0);
     assert.equal(state.perPlayerVars['5']?.allIn, true);
 
-    const lifecycleCollector: ExecutionCollector = { warnings: [], trace: [] };
+    const lifecycleResources = createEvalRuntimeResources({ collector: { warnings: [], trace: [] } });
     let guard = 0;
     while (state.currentPhase !== 'showdown' && guard < 24) {
-      state = advancePhase(def, state, undefined, undefined, lifecycleCollector);
+      state = advancePhase(def, state, undefined, undefined, lifecycleResources);
       guard += 1;
     }
     assert.equal(state.currentPhase, 'showdown');
@@ -547,7 +547,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.perPlayerVars['7']?.chipStack ?? -1), 51100);
     assert.equal(Number(state.perPlayerVars['8']?.chipStack ?? -1), 0);
 
-    const combinedTrace = [...tracedAllInCall.effectTrace, ...(lifecycleCollector.trace ?? [])];
+    const combinedTrace = [...tracedAllInCall.effectTrace, ...(lifecycleResources.collector.trace ?? [])];
     const showdownStart = combinedTrace.findIndex(
       (entry) => entry.kind === 'lifecycleEvent' && entry.eventType === 'phaseEnter' && entry.phase === 'showdown',
     );

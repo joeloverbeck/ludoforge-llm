@@ -13,10 +13,13 @@ import {
   asTokenId,
   asTriggerId,
   asZoneId,
+  createCollector,
+  createEvalRuntimeResources,
   terminalResult,
   type TriggerLogEntry,
   type GameDef,
   type GameState,
+  type QueryRuntimeCache,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -86,6 +89,72 @@ describe('phase advancement', () => {
     assert.equal(next.currentPhase, asPhaseId('p1'));
     assert.equal(next.turnCount, 5);
     assert.equal(next.activePlayer, asPlayerId(1));
+  });
+
+  it('uses provided runtime resources when advancing lifecycle events', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      zones: [{ id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      tokenTypes: [{ id: 'card', props: {} }],
+      turnStructure: { phases: [{ id: asPhaseId('p1') }] },
+      triggers: [{
+        id: asTriggerId('onTurnStartProbe'),
+        event: { type: 'turnStart' },
+        when: {
+          op: '>=',
+          left: {
+            aggregate: {
+              op: 'count',
+              query: {
+                query: 'tokenZones',
+                source: { query: 'tokensInZone', zone: 'deck:none' },
+              },
+            },
+          },
+          right: 1,
+        },
+        effects: [],
+      }],
+    };
+    const state = createState({
+      currentPhase: asPhaseId('p1'),
+      zones: { 'deck:none': [{ id: asTokenId('t1'), type: 'card', props: {} }] },
+      nextTokenOrdinal: 1,
+    });
+    let getCalls = 0;
+    let setCalls = 0;
+    const indexesByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
+    const queryRuntimeCache: QueryRuntimeCache = {
+      getIndex: (cacheState, key) => {
+        getCalls += 1;
+        if (key !== 'tokenZoneByTokenId') {
+          return undefined;
+        }
+        return indexesByState.get(cacheState);
+      },
+      setIndex: (cacheState, key, value) => {
+        if (key !== 'tokenZoneByTokenId') {
+          return;
+        }
+        setCalls += 1;
+        indexesByState.set(cacheState, value);
+      },
+    };
+
+    const next = advancePhase(
+      def,
+      state,
+      undefined,
+      undefined,
+      createEvalRuntimeResources({
+        collector: createCollector(),
+        queryRuntimeCache,
+      }),
+    );
+
+    assert.equal(next.turnCount, 1);
+    assert.ok(getCalls > 0);
+    assert.ok(setCalls > 0);
   });
 
   it('cycles roundRobin order across players and wraps to player 0', () => {

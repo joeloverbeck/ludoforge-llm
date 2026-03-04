@@ -9,6 +9,7 @@ import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { isTurnFlowActionClass } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { createEvalRuntimeResources } from './eval-context.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
@@ -233,12 +234,16 @@ export const applyGotoPhaseExact = (
   if (!consumePhaseTransitionBudget(ctx, 'gotoPhaseExact')) {
     return { state: ctx.state, rng: ctx.rng };
   }
+  const lifecycleResources = createEvalRuntimeResources({
+    collector: ctx.collector,
+    queryRuntimeCache: ctx.queryRuntimeCache,
+  });
   const targetPhaseId = phaseIds[targetPhaseIndex]!;
 
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
   const enteredState = resetPhaseUsage({
     ...exitedState,
     currentPhase: targetPhaseId,
@@ -246,7 +251,7 @@ export const applyGotoPhaseExact = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -260,7 +265,16 @@ export const applyAdvancePhase = (
   if (!consumePhaseTransitionBudget(ctx, 'advancePhase')) {
     return { state: ctx.state, rng: ctx.rng };
   }
-  const nextState = advancePhase(ctx.def, ctx.state, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  const nextState = advancePhase(
+    ctx.def,
+    ctx.state,
+    undefined,
+    lifecycleBudgetOptions(ctx),
+    createEvalRuntimeResources({
+      collector: ctx.collector,
+      queryRuntimeCache: ctx.queryRuntimeCache,
+    }),
+  );
   return {
     state: nextState,
     rng: { state: nextState.rng },
@@ -296,12 +310,16 @@ export const applyPushInterruptPhase = (
   if (!consumePhaseTransitionBudget(ctx, 'pushInterruptPhase')) {
     return { state: ctx.state, rng: ctx.rng };
   }
+  const lifecycleResources = createEvalRuntimeResources({
+    collector: ctx.collector,
+    queryRuntimeCache: ctx.queryRuntimeCache,
+  });
   const targetPhase = resolvePhaseId(ctx, effect.pushInterruptPhase.phase, 'pushInterruptPhase', 'phase');
   const resumePhase = resolvePhaseId(ctx, effect.pushInterruptPhase.resumePhase, 'pushInterruptPhase', 'resumePhase');
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
@@ -314,7 +332,7 @@ export const applyPushInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -328,6 +346,10 @@ export const applyPopInterruptPhase = (
   if (!consumePhaseTransitionBudget(ctx, 'popInterruptPhase')) {
     return { state: ctx.state, rng: ctx.rng };
   }
+  const lifecycleResources = createEvalRuntimeResources({
+    collector: ctx.collector,
+    queryRuntimeCache: ctx.queryRuntimeCache,
+  });
   const activeStack = ctx.state.interruptPhaseStack ?? [];
   if (activeStack.length === 0) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'popInterruptPhase requires a non-empty interruptPhaseStack', {
@@ -338,7 +360,7 @@ export const applyPopInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -365,7 +387,7 @@ export const applyPopInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
   return {
     state: finalState,
     rng: { state: finalState.rng },

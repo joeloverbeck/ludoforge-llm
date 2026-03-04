@@ -84,8 +84,8 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
     ...lifecycleResult.state,
     rng: setupResult.rng.state,
-  }, { type: 'turnStart' }, undefined, undefined, collector);
-  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, undefined, undefined, collector);
+  }, { type: 'turnStart' }, undefined, undefined, runtimeResources);
+  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, undefined, undefined, runtimeResources);
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
   const table = createZobristTable(validatedDef);
 

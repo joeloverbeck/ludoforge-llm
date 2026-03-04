@@ -179,6 +179,30 @@ describe('initialState', () => {
     assert.equal(state.globalVars.coins, 12);
   });
 
+  it('captures setup and bootstrap lifecycle traces in one stream when trace is enabled', () => {
+    const result = initialState(createDef(), 3, 2, { trace: true });
+    const lifecycleEvents = result.setupTrace.filter((entry) => entry.kind === 'lifecycleEvent');
+    assert.deepEqual(
+      lifecycleEvents.map((entry) => entry.eventType),
+      ['turnStart', 'phaseEnter'],
+    );
+    assert.ok(
+      result.setupTrace.some(
+        (entry) => entry.kind === 'varChange' && entry.provenance.effectPath.startsWith('initialState.setup'),
+      ),
+    );
+    assert.ok(
+      result.setupTrace.some(
+        (entry) => entry.kind === 'varChange' && entry.provenance.effectPath.includes('trigger:onTurnStart'),
+      ),
+    );
+    assert.ok(
+      result.setupTrace.some(
+        (entry) => entry.kind === 'varChange' && entry.provenance.effectPath.includes('trigger:onMainEnter'),
+      ),
+    );
+  });
+
   it('applies first-phase onEnter effects during initial state construction', () => {
     const def: GameDef = {
       ...createDef(),

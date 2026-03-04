@@ -1097,7 +1097,7 @@ const applyMoveCore = (
     turnFlowResult.boundaryDurations,
     undefined,
     shared.executionPolicy,
-    shared.evalRuntimeResources.collector,
+    shared.evalRuntimeResources,
   );
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const shouldAdvanceToDecisionPoint =
@@ -1109,7 +1109,7 @@ const applyMoveCore = (
       boundaryExpiryResult.state,
       lifecycleAndAdvanceLog,
       runtime.executionPolicy,
-      runtime.collector,
+      shared.evalRuntimeResources,
       cachedRuntime,
     )
     : boundaryExpiryResult.state;
@@ -1294,7 +1294,14 @@ const applySimultaneousSubmission = (
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = options?.advanceToDecisionPoint === false
     ? resetState
-    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog, commitRuntime.executionPolicy, commitRuntime.collector, cachedRuntime);
+    : advanceToDecisionPoint(
+      def,
+      resetState,
+      lifecycleAndAdvanceLog,
+      commitRuntime.executionPolicy,
+      createEvalRuntimeResources({ collector: commitRuntime.collector }),
+      cachedRuntime,
+    );
   const finalState = {
     ...progressedState,
     stateHash: computeFullHash(table, progressedState),

@@ -1,7 +1,7 @@
 import { expireLastingEffectsAtBoundaries } from './event-execution.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
+import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import type {
-  ExecutionCollector,
   GameDef,
   GameState,
   TriggerLogEntry,
@@ -20,9 +20,10 @@ export const applyBoundaryExpiry = (
   boundaryDurations: readonly TurnFlowDuration[] | undefined,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
-  collector?: ExecutionCollector,
+  evalRuntimeResources?: EvalRuntimeResources,
   effectPathRoot = 'boundaryExpiry',
 ): BoundaryExpiryResult => {
+  const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources();
   if (boundaryDurations === undefined || boundaryDurations.length === 0) {
     return { state, traceEntries: [] };
   }
@@ -32,7 +33,7 @@ export const applyBoundaryExpiry = (
     { state: state.rng },
     boundaryDurations,
     policy,
-    collector,
+    runtimeResources.collector,
   );
   let nextState: GameState = {
     ...expiry.state,
@@ -46,7 +47,7 @@ export const applyBoundaryExpiry = (
       emittedEvent,
       traceEntries,
       policy,
-      collector,
+      runtimeResources,
       effectPathRoot,
     );
   }

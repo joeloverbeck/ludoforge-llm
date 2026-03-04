@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   asPhaseId,
   asPlayerId,
+  createCollector,
+  createEvalRuntimeResources,
   type GameDef,
   type GameState,
   type TriggerLogEntry,
@@ -84,11 +86,12 @@ describe('applyBoundaryExpiry', () => {
     assert.ok(result.state !== undefined);
   });
 
-  it('passes collector when provided without error', () => {
+  it('passes runtime resources when provided without error', () => {
     const def = makeDef();
     const state = makeState();
     const collector: TriggerLogEntry[] = [];
-    const result = applyBoundaryExpiry(def, state, ['turn'], collector);
+    const resources = createEvalRuntimeResources({ collector: createCollector() });
+    const result = applyBoundaryExpiry(def, state, ['turn'], collector, undefined, resources);
     assert.ok(result.state !== undefined);
   });
 });

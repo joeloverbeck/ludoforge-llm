@@ -4,10 +4,10 @@ import type { GameDefRuntime } from './gamedef-runtime.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { createCollector, emitTrace } from './execution-collector.js';
-import { createEvalRuntimeResources } from './eval-context.js';
+import { emitTrace } from './execution-collector.js';
+import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
-import type { EffectAST, ExecutionCollector, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
+import type { EffectAST, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -18,16 +18,14 @@ export const dispatchLifecycleEvent = (
   event: TriggerEvent,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
-  collector?: ExecutionCollector,
+  evalRuntimeResources?: EvalRuntimeResources,
   effectPathRoot = 'lifecycle',
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const runtimeCollector = collector ?? createCollector();
-  const runtimeResources = createEvalRuntimeResources({
-    collector: runtimeCollector,
-  });
+  const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources();
+  const runtimeCollector = runtimeResources.collector;
   if (event.type === 'phaseEnter' || event.type === 'phaseExit' || event.type === 'turnStart' || event.type === 'turnEnd') {
     emitTrace(runtimeCollector, {
       kind: 'lifecycleEvent',
@@ -101,6 +99,10 @@ export const dispatchLifecycleEvent = (
 
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...result.triggerLog);
+  }
+
+  if (result.state.rng === result.rng.state) {
+    return result.state;
   }
 
   return {

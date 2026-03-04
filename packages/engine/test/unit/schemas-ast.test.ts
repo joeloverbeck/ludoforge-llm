@@ -658,6 +658,21 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses tokenZones query with source and optional dedupe flag', () => {
+    const withDefaultDedupe: OptionsQuery = {
+      query: 'tokenZones',
+      source: { query: 'tokensInMapSpaces' },
+    };
+    const withExplicitNoDedupe: OptionsQuery = {
+      query: 'tokenZones',
+      source: { query: 'tokensInMapSpaces' },
+      dedupe: false,
+    };
+
+    assert.deepEqual(OptionsQuerySchema.parse(withDefaultDedupe), withDefaultDedupe);
+    assert.deepEqual(OptionsQuerySchema.parse(withExplicitNoDedupe), withExplicitNoDedupe);
+  });
+
   it('parses intsInRange query with dynamic ValueExpr bounds', () => {
     const query: OptionsQuery = {
       query: 'intsInRange',

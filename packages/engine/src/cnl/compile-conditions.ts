@@ -45,6 +45,7 @@ export interface ConditionLoweringResult<TValue> {
 const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
+  'tokenZones',
   'tokensInZone',
   'assetRows',
   'tokensInMapSpaces',
@@ -602,6 +603,24 @@ export function lowerQueryNode(
         value: {
           query: 'concat',
           sources: loweredSources as [OptionsQuery, ...OptionsQuery[]],
+        },
+        diagnostics,
+      };
+    }
+    case 'tokenZones': {
+      const sourceQuery = lowerQueryNode(source.source, context, `${path}.source`);
+      const diagnostics = [...sourceQuery.diagnostics];
+      if (sourceQuery.value === null) {
+        return { value: null, diagnostics };
+      }
+      if (source.dedupe !== undefined && typeof source.dedupe !== 'boolean') {
+        return missingCapability(`${path}.dedupe`, 'tokenZones dedupe', source.dedupe, ['true', 'false']);
+      }
+      return {
+        value: {
+          query: 'tokenZones',
+          source: sourceQuery.value,
+          ...(source.dedupe === undefined ? {} : { dedupe: source.dedupe }),
         },
         diagnostics,
       };

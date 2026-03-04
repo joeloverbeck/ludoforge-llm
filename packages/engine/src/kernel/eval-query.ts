@@ -650,6 +650,46 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       assertWithinBounds(combined.length, query, maxQueryResults);
       return combined;
     }
+    case 'tokenZones': {
+      const sourceItems = evalQuery(query.source, ctx);
+      const knownTokenIds = new Set<string>();
+      for (const tokens of Object.values(ctx.state.zones)) {
+        for (const token of tokens) {
+          knownTokenIds.add(String(token.id));
+        }
+      }
+
+      const zones = sourceItems.map((item) => {
+        const tokenId =
+          isTokenShape(item)
+            ? String(item.id)
+            : typeof item === 'string' && knownTokenIds.has(item)
+              ? item
+              : null;
+        if (tokenId === null) {
+          throw typeMismatchError('tokenZones source must produce tokens or token ids that exist in state', {
+            query,
+            source: query.source,
+            item,
+            itemType: typeof item,
+          });
+        }
+        for (const [zoneId, tokens] of Object.entries(ctx.state.zones)) {
+          if (tokens.some((zoneToken) => zoneToken.id === tokenId)) {
+            return zoneId;
+          }
+        }
+        throw missingVarError(`Token ${tokenId} not found in any zone`, {
+          query,
+          tokenId,
+          availableZoneIds: Object.keys(ctx.state.zones).sort(),
+        });
+      });
+      const dedupe = query.dedupe ?? true;
+      const normalized = dedupe ? dedupeStringsPreserveOrder(zones) : zones;
+      assertWithinBounds(normalized.length, query, maxQueryResults);
+      return normalized;
+    }
     case 'tokensInZone': {
       const zoneId = resolveZoneRef(query.zone, ctx);
       const zoneTokens = ctx.state.zones[String(zoneId)];

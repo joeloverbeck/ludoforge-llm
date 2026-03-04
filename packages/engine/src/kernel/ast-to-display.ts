@@ -201,6 +201,8 @@ const numericValueExprToInlineNodes = (expr: NumericValueExpr): DisplayInlineNod
 
 export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNode[] => {
   switch (query.query) {
+    case 'tokenZones':
+      return spaced(kw('tokenZones'), kw('of'), ...optionsQueryToInlineNodes(query.source));
     case 'tokensInZone':
       return spaced(kw('tokens'), kw('in'), ...zoneRefToInlineNodes(query.zone));
     case 'assetRows':

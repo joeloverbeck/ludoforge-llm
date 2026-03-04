@@ -111,4 +111,22 @@ describe('query walk', () => {
     assert.equal(visited.includes('concat'), false);
     assert.equal(visited.includes('nextInOrderByCondition'), false);
   });
+
+  it('walks tokenZones as a recursive query and visits only its source leaves', () => {
+    const query = {
+      query: 'tokenZones',
+      source: {
+        query: 'concat',
+        sources: [{ query: 'tokensInMapSpaces' }, { query: 'tokensInZone', zone: 'deck:none' }],
+      },
+    } as const satisfies OptionsQuery;
+    const visited: string[] = [];
+
+    forEachOptionsQueryLeaf(query, (leaf) => {
+      visited.push(leaf.query);
+    });
+
+    assert.deepEqual(visited, ['tokensInMapSpaces', 'tokensInZone']);
+    assert.equal(visited.includes('tokenZones'), false);
+  });
 });

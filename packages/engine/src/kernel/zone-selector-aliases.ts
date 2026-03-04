@@ -34,6 +34,9 @@ const collectZoneSelectorAliasesFromQuery = (query: OptionsQuery, aliases: Set<s
         collectZoneSelectorAliasesFromQuery(source, aliases);
       }
       return;
+    case 'tokenZones':
+      collectZoneSelectorAliasesFromQuery(query.source, aliases);
+      return;
     case 'tokensInZone':
       collectZoneRefAliases(query.zone, aliases);
       collectTokenFilterAliases(query.filter);

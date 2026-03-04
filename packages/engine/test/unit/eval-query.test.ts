@@ -1262,6 +1262,51 @@ describe('evalQuery', () => {
     );
   });
 
+  it('resolves tokenZones from token query sources with default dedupe', () => {
+    const ctx = makeCtx();
+
+    const zones = evalQuery(
+      {
+        query: 'tokenZones',
+        source: { query: 'tokensInZone', zone: 'hand:0' },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(zones, ['hand:0']);
+  });
+
+  it('supports tokenZones without dedupe when requested', () => {
+    const ctx = makeCtx();
+
+    const zones = evalQuery(
+      {
+        query: 'tokenZones',
+        source: { query: 'tokensInZone', zone: 'hand:0' },
+        dedupe: false,
+      },
+      ctx,
+    );
+
+    assert.deepEqual(zones, ['hand:0', 'hand:0']);
+  });
+
+  it('rejects tokenZones when source query does not produce tokens', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokenZones',
+            source: { query: 'zones' },
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('concatenates query sources left-to-right and preserves duplicates', () => {
     const ctx = makeCtx();
 

@@ -35,6 +35,7 @@ describe('query kind contract', () => {
     const expectLeafOnly = (_query: LeafOptionsQuery): void => undefined;
     const recursiveCases: readonly RecursiveOptionsQuery[] = [
       { query: 'concat', sources: [{ query: 'players' }, { query: 'zones' }] },
+      { query: 'tokenZones', source: { query: 'tokensInMapSpaces' } },
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },

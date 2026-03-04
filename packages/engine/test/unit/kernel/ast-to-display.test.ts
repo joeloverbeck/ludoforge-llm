@@ -283,6 +283,12 @@ describe('optionsQueryToInlineNodes', () => {
     assert.deepEqual(texts(nodes), ['zones']);
   });
 
+  it('renders tokenZones', () => {
+    const query: OptionsQuery = { query: 'tokenZones', source: { query: 'tokensInMapSpaces' } };
+    const nodes = optionsQueryToInlineNodes(query);
+    assert.ok(texts(nodes).includes('tokenZones'));
+  });
+
   it('renders binding', () => {
     const query: OptionsQuery = { query: 'binding', name: 'selected' };
     const nodes = optionsQueryToInlineNodes(query);

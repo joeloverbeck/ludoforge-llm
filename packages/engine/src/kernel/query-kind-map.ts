@@ -30,6 +30,7 @@ type LeafQueryKindContractView<Contracts extends OptionsQueryKindContractMap> = 
 
 export const OPTIONS_QUERY_KIND_CONTRACT_MAP = {
   concat: { partition: 'recursive' },
+  tokenZones: { partition: 'recursive' },
   tokensInZone: { partition: 'leaf', domain: 'token', runtimeShape: 'token' },
   assetRows: { partition: 'leaf', domain: 'other', runtimeShape: 'object' },
   tokensInMapSpaces: { partition: 'leaf', domain: 'token', runtimeShape: 'token' },

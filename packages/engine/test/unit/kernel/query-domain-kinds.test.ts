@@ -44,9 +44,14 @@ describe('query domain kinds', () => {
       query: 'concat',
       sources: [{ query: 'zones' }, { query: 'assetRows', tableId: 'scores' }, { query: 'tokensInZone', zone: 'deck:none' }],
     } as const satisfies OptionsQuery;
+    const tokenZones = {
+      query: 'tokenZones',
+      source: { query: 'tokensInMapSpaces' },
+    } as const satisfies OptionsQuery;
 
     assert.deepEqual(sortedDomains(nextInOrderByCondition), ['token']);
     assert.deepEqual(sortedDomains(concat), ['other', 'token', 'zone']);
+    assert.deepEqual(sortedDomains(tokenZones), ['token']);
   });
 
   it('keeps recursive domain inference deterministic across deeply nested recursion', () => {

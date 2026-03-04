@@ -158,6 +158,13 @@ optionsQuerySchemaInternal = z.union([
     .strict(),
   z
     .object({
+      query: z.literal('tokenZones'),
+      source: OptionsQuerySchema,
+      dedupe: BooleanSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
       query: z.literal('tokensInZone'),
       zone: ZoneRefSchema,
       filter: z.array(TokenFilterPredicateSchema).optional(),

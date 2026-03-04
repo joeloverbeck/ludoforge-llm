@@ -83,6 +83,21 @@ describe('query shape inference', () => {
     assert.deepEqual(inferQueryRuntimeShapes(query), ['string', 'token', 'number']);
   });
 
+  it('infers tokenZones recursive runtime shape from its source query', () => {
+    const query = {
+      query: 'tokenZones',
+      source: {
+        query: 'concat',
+        sources: [
+          { query: 'tokensInMapSpaces' },
+          { query: 'tokensInAdjacentZones', zone: 'deck:none' },
+        ],
+      },
+    } as const satisfies OptionsQuery;
+
+    assert.deepEqual(inferQueryRuntimeShapes(query), ['token']);
+  });
+
   it('infers value runtime shapes for refs and conditional expressions', () => {
     const shapes = inferValueRuntimeShapes(
       {

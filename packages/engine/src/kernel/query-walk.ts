@@ -17,6 +17,9 @@ const recursiveOptionsQueryDispatch: RecursiveOptionsQueryDispatchMap = {
   concat: (query, visitLeaf) => {
     query.sources.forEach((source) => forEachOptionsQueryLeaf(source, visitLeaf));
   },
+  tokenZones: (query, visitLeaf) => {
+    forEachOptionsQueryLeaf(query.source, visitLeaf);
+  },
   nextInOrderByCondition: (query, visitLeaf) => {
     forEachOptionsQueryLeaf(query.source, visitLeaf);
   },

@@ -668,6 +668,10 @@ export const validateOptionsQuery = (
       }
       return;
     }
+    case 'tokenZones': {
+      validateOptionsQuery(diagnostics, query.source, `${path}.source`, context);
+      return;
+    }
     case 'tokensInZone': {
       validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       if (query.filter) {

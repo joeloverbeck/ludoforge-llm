@@ -3792,52 +3792,140 @@ eventDecks:
         metadata:
           period: "1964"
           seatOrder: ["US", "VC", "ARVN", "NVA"]
-          flavorText: "Long-range reconnaissance patrols probe deep."
+          flavorText: "Long Range Recon Patrol."
         unshaded:
-          text: "Place up to 2 Irregulars, then US executes free Air Strike."
-          targets:
-            - id: $targetSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
+          text: "US places 3 Irregulars outside the South then free Air Strikes."
           effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $irregular
-                    over:
+            - let:
+                bind: $availableIrregulars
+                value:
+                  aggregate:
+                    op: count
+                    query:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
                         - { prop: faction, eq: US }
                         - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: $targetSpace
+                in:
+                  - let:
+                      bind: $irregularsToPlaceCount
+                      value:
+                        if:
+                          when:
+                            op: '>'
+                            left: { ref: binding, name: $availableIrregulars }
+                            right: 3
+                          then: 3
+                          else: { ref: binding, name: $availableIrregulars }
+                      in:
+                        - if:
+                            when:
+                              op: '>'
+                              left: { ref: binding, name: $irregularsToPlaceCount }
+                              right: 0
+                            then:
+                              - chooseN:
+                                  bind: $irregularsToPlace
+                                  options:
+                                    query: tokensInZone
+                                    zone: available-US:none
+                                    filter:
+                                      - { prop: faction, eq: US }
+                                      - { prop: type, eq: irregular }
+                                  min: { ref: binding, name: $irregularsToPlaceCount }
+                                  max: { ref: binding, name: $irregularsToPlaceCount }
+                              - forEach:
+                                  bind: $irregular
+                                  over: { query: binding, name: $irregularsToPlace }
+                                  effects:
+                                    - chooseOne:
+                                        bind: $lrrpPlacement
+                                        options:
+                                          query: mapSpaces
+                                          filter:
+                                            op: and
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                              - op: or
+                                                args:
+                                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                    - moveToken:
+                                        token: $irregular
+                                        from: { zoneExpr: { ref: tokenZone, token: $irregular } }
+                                        to: { zoneExpr: { ref: binding, name: $lrrpPlacement } }
+                            else: []
           freeOperationGrants:
             - seat: "us"
               sequence: { chain: lrrp-us-airstrike, step: 0 }
               operationClass: operation
               actionIds: [airStrike]
         shaded:
-          text: "Counterintelligence sweep: remove up to 2 Irregulars to Available."
-          targets:
-            - id: $sourceSpace
-              selector:
-                query: mapSpaces
-              cardinality: { max: 1 }
+          text: "Patrols ambushed: 3 Irregulars map to Casualties. Shift each space they were in 1 level toward Active Opposition."
           effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $irregular
-                    over:
-                      query: tokensInZone
-                      zone: $sourceSpace
+            - let:
+                bind: $availableIrregularsOnMap
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInMapSpaces
                       filter:
                         - { prop: faction, eq: US }
                         - { prop: type, eq: irregular }
-                    to:
-                      zoneExpr: available-US:none
+                in:
+                  - let:
+                      bind: $irregularsToCasualtiesCount
+                      value:
+                        if:
+                          when:
+                            op: '>'
+                            left: { ref: binding, name: $availableIrregularsOnMap }
+                            right: 3
+                          then: 3
+                          else: { ref: binding, name: $availableIrregularsOnMap }
+                      in:
+                        - if:
+                            when:
+                              op: '>'
+                              left: { ref: binding, name: $irregularsToCasualtiesCount }
+                              right: 0
+                            then:
+                              - chooseN:
+                                  bind: $irregularsToCasualties
+                                  options:
+                                    query: tokensInMapSpaces
+                                    filter:
+                                      - { prop: faction, eq: US }
+                                      - { prop: type, eq: irregular }
+                                  min: { ref: binding, name: $irregularsToCasualtiesCount }
+                                  max: { ref: binding, name: $irregularsToCasualtiesCount }
+                              - forEach:
+                                  bind: $sourceSpace
+                                  over:
+                                    query: tokenZones
+                                    source: { query: binding, name: $irregularsToCasualties }
+                                  effects:
+                                    - if:
+                                        when:
+                                          op: or
+                                          args:
+                                            - { op: '==', left: { ref: zoneProp, zone: $sourceSpace, prop: category }, right: city }
+                                            - { op: '==', left: { ref: zoneProp, zone: $sourceSpace, prop: category }, right: province }
+                                        then:
+                                          - macro: shift-support-opposition
+                                            args: { space: $sourceSpace, deltaExpr: -1 }
+                                        else: []
+                              - forEach:
+                                  bind: $irregular
+                                  over: { query: binding, name: $irregularsToCasualties }
+                                  effects:
+                                    - moveToken:
+                                        token: $irregular
+                                        from: { zoneExpr: { ref: tokenZone, token: $irregular } }
+                                        to: { zoneExpr: casualties-US:none }
+                            else: []
       - id: card-29
         title: Tribesmen
         sideMode: dual

@@ -113,6 +113,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
 const exhaustOptionsQuery = (query: OptionsQuery): string => {
   switch (query.query) {
     case 'concat':
+    case 'tokenZones':
     case 'tokensInZone':
     case 'assetRows':
     case 'tokensInMapSpaces':
@@ -161,15 +162,15 @@ describe('exhaustive kernel unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
     const effectVariants: UnionSize<EffectAST> = 34;
-    const queryVariants: UnionSize<OptionsQuery> = 16;
-    const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 2;
+    const queryVariants: UnionSize<OptionsQuery> = 17;
+    const recursiveQueryVariants: UnionSize<RecursiveOptionsQuery> = 3;
     const leafQueryVariants: UnionSize<LeafOptionsQuery> = 14;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
     assert.equal(effectVariants, 34);
-    assert.equal(queryVariants, 16);
-    assert.equal(recursiveQueryVariants, 2);
+    assert.equal(queryVariants, 17);
+    assert.equal(recursiveQueryVariants, 3);
     assert.equal(leafQueryVariants, 14);
   });
 
@@ -186,7 +187,7 @@ describe('exhaustive kernel unions', () => {
     ] extends [never, never]
       ? true
       : false;
-    const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
+    const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 3;
     const leafKinds: UnionSize<LeafOptionsQueryKind> = 14;
     const leafContractKinds: UnionSize<LeafOptionsQueryKindFromContractMap> = 14;
     const contractMapCoverage: ContractMapCoverage = true;
@@ -197,7 +198,7 @@ describe('exhaustive kernel unions', () => {
     type Overlap = Extract<LeafOptionsQuery, RecursiveOptionsQuery>;
     const overlapVariants: UnionSize<Overlap> = 0;
 
-    assert.equal(recursiveKinds, 2);
+    assert.equal(recursiveKinds, 3);
     assert.equal(leafKinds, 14);
     assert.equal(leafContractKinds, 14);
     assert.equal(contractMapCoverage, true);

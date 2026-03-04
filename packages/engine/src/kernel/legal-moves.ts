@@ -494,11 +494,11 @@ export const enumerateLegalMoves = (
     }
   }
 
-  const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);
-  const finalMoves = applyPendingFreeOperationVariants(def, state, windowFilteredMoves, seatResolution, {
+  const variantExpandedMoves = applyPendingFreeOperationVariants(def, state, enumeration.moves, seatResolution, {
     budgets: enumeration.budgets,
     onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
   });
+  const finalMoves = applyTurnFlowWindowFilters(def, state, variantExpandedMoves, seatResolution);
   return { moves: finalMoves, warnings };
 };
 

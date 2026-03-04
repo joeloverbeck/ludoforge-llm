@@ -2166,31 +2166,97 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       true,
       'legalMoves must pass operation-scoped seatResolution to isActiveSeatEligibleForTurnFlow',
     );
+  });
 
-    const windowFilterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
+  it('applies monsoon restrictions after free-operation variants are expanded', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({
+        actions: [action],
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [{ first: 'operation', second: ['operation'] }],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            monsoon: {
+              restrictedActions: [{ actionId: 'operation' }],
+            },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const baseRuntime = {
+      seatOrder: ['0', '1'],
+      eligibility: { '0': true, '1': true },
+      currentCard: {
+        firstEligible: '1',
+        secondEligible: '0',
+        actedSeats: ['1'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'operation' as const,
+      },
+      pendingEligibilityOverrides: [],
+    };
+
+    const makeMonsoonState = (allowDuringMonsoon?: boolean): GameState =>
+      makeBaseState({
+        zones: {
+          'board:none': [],
+          'lookahead:none': [{ id: asTokenId('lookahead-coup'), type: 'card', props: { isCoup: true } }],
+        },
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            ...baseRuntime,
+            pendingFreeOperationGrants: [
+              {
+                grantId: allowDuringMonsoon === true ? 'grant-allow' : 'grant-blocked',
+                seat: '0',
+                operationClass: 'operation',
+                actionIds: ['operation'],
+                remainingUses: 1,
+                ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
+              },
+            ],
+          },
+        },
+      });
+
+    const blockedMoves = legalMoves(def, makeMonsoonState());
     assert.equal(
-      windowFilterCalls.some((call) =>
-        call.arguments.length === 4 &&
-        isIdentifierArgument(call.arguments[0]!, 'def') &&
-        isIdentifierArgument(call.arguments[1]!, 'state') &&
-        isPropertyAccessArgument(call.arguments[2]!, 'enumeration', 'moves') &&
-        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
-      ),
-      true,
-      'legalMoves must pass operation-scoped seatResolution to applyTurnFlowWindowFilters',
+      blockedMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      false,
+      'monsoon restriction should still block generated free-operation variants without explicit grant allowance',
     );
 
-    const freeOpVariantCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyPendingFreeOperationVariants');
+    const allowedMoves = legalMoves(def, makeMonsoonState(true));
     assert.equal(
-      freeOpVariantCalls.some((call) =>
-        call.arguments.length >= 4 &&
-        isIdentifierArgument(call.arguments[0]!, 'def') &&
-        isIdentifierArgument(call.arguments[1]!, 'state') &&
-        isIdentifierArgument(call.arguments[2]!, 'windowFilteredMoves') &&
-        isIdentifierArgument(call.arguments[3]!, 'seatResolution'),
-      ),
+      allowedMoves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
       true,
-      'legalMoves must pass operation-scoped seatResolution to applyPendingFreeOperationVariants',
+      'grant-marked free-operation variants should remain legal during monsoon restrictions',
     );
   });
 

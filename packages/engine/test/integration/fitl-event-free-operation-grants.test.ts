@@ -608,8 +608,13 @@ const createMonsoonGrantBypassDef = (): GameDef => {
 
   const eventAction = def.actions.find((action) => String(action.id) === 'event');
   const eventCardParam = eventAction?.params.find((param) => param.name === 'eventCardId');
-  if (eventCardParam?.domain?.values !== undefined && !eventCardParam.domain.values.includes('card-11')) {
-    eventCardParam.domain.values.push('card-11');
+  if (eventCardParam?.domain?.values !== undefined) {
+    if (!eventCardParam.domain.values.includes('card-11')) {
+      eventCardParam.domain.values.push('card-11');
+    }
+    if (!eventCardParam.domain.values.includes('card-12')) {
+      eventCardParam.domain.values.push('card-12');
+    }
   }
 
   const primaryDeck = def.eventDecks[0];
@@ -631,7 +636,23 @@ const createMonsoonGrantBypassDef = (): GameDef => {
         ],
       },
     };
-    def.eventDecks[0] = { ...primaryDeck, cards: [...primaryDeck.cards, card11] };
+    const card12: EventCardDef = {
+      id: 'card-12',
+      title: 'Monsoon Restricted Grant',
+      sideMode: 'single',
+      unshaded: {
+        text: 'Grant VC a free operation without monsoon bypass.',
+        freeOperationGrants: [
+          {
+            seat: 'VC',
+            sequence: { chain: 'vc-monsoon-blocked-op', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['operation'],
+          },
+        ],
+      },
+    };
+    def.eventDecks[0] = { ...primaryDeck, cards: [...primaryDeck.cards, card11, card12] };
   }
 
   return def as unknown as GameDef;
@@ -972,40 +993,67 @@ describe('event free-operation grants integration', () => {
     const def = createMonsoonGrantBypassDef();
     const start = initialState(def, 77, 4).state;
 
-    const afterEvent = applyMove(def, start, {
+    const afterAllowedEvent = applyMove(def, start, {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-11', side: 'unshaded', branch: 'none' },
     }).state;
-    const runtime = requireCardDrivenRuntime(afterEvent);
-
-    const monsoonState = {
-      ...afterEvent,
+    const allowedRuntime = requireCardDrivenRuntime(afterAllowedEvent);
+    const allowedMonsoonState = {
+      ...afterAllowedEvent,
       activePlayer: asPlayerId(3),
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
-          ...runtime,
+          ...allowedRuntime,
           currentCard: {
-            ...runtime.currentCard,
+            ...allowedRuntime.currentCard,
             firstEligible: 'VC',
             secondEligible: null,
           },
         },
       },
       zones: {
-        ...afterEvent.zones,
+        ...afterAllowedEvent.zones,
         'lookahead:none': [{ id: asTokenId('monsoon-lookahead'), type: 'card', props: { isCoup: true } }],
       },
     } as GameState;
 
-    const blockedNormal = legalMoves(def, monsoonState).filter(
+    const blockedNormal = legalMoves(def, allowedMonsoonState).filter(
       (move) => String(move.actionId) === 'operation' && move.freeOperation !== true,
     );
-    const allowedFree = legalMoves(def, monsoonState).filter(
+    const allowedFree = legalMoves(def, allowedMonsoonState).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+    const afterBlockedEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-12', side: 'unshaded', branch: 'none' },
+    }).state;
+    const blockedRuntime = requireCardDrivenRuntime(afterBlockedEvent);
+    const blockedMonsoonState = {
+      ...afterBlockedEvent,
+      activePlayer: asPlayerId(3),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...blockedRuntime,
+          currentCard: {
+            ...blockedRuntime.currentCard,
+            firstEligible: 'VC',
+            secondEligible: null,
+          },
+        },
+      },
+      zones: {
+        ...afterBlockedEvent.zones,
+        'lookahead:none': [{ id: asTokenId('monsoon-lookahead'), type: 'card', props: { isCoup: true } }],
+      },
+    } as GameState;
+    const blockedFree = legalMoves(def, blockedMonsoonState).filter(
       (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
     );
 
     assert.equal(blockedNormal.length, 0, 'Monsoon restriction should block regular operation moves');
     assert.equal(allowedFree.length > 0, true, 'Grant-marked free operation should bypass monsoon restriction');
+    assert.equal(blockedFree.length, 0, 'Free operation should be blocked when grant lacks monsoon allowance');
   });
 });

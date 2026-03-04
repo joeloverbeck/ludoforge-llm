@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — integration test coverage only
-**Deps**: tickets/ENGINEARCH-161-monsoon-window-filter-after-free-op-variants.md
+**Deps**: archive/tickets/ENGINEARCH/ENGINEARCH-161-monsoon-window-filter-after-free-op-variants.md
 
 ## Problem
 

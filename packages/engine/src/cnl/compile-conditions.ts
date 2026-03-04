@@ -1235,7 +1235,7 @@ function lowerAggregate(
     return {
       value: null,
       diagnostics: [{
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_DECLARATION_NON_CANONICAL,
         path: `${path}.bind`,
         severity: 'error',
         message: `aggregate.bind "${source.bind}" must be a canonical "$name" token.`,

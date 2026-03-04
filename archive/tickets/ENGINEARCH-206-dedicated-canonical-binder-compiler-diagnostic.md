@@ -1,6 +1,6 @@
 # ENGINEARCH-206: Introduce Dedicated Compiler Diagnostic for Canonical Binder Declarations
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — compiler diagnostics contract and tests
@@ -10,11 +10,12 @@
 
 Canonical binder declaration failures in compiler lowering currently use generic `CNL_COMPILER_MISSING_CAPABILITY`. This weakens diagnostic precision and makes policy-oriented filtering/reporting harder.
 
-## Assumption Reassessment (2026-03-03)
+## Assumption Reassessment (2026-03-04)
 
 1. Compiler now checks canonical declared binder surfaces early in effect lowering.
 2. Aggregate bind checks in condition lowering also enforce canonical `$name`.
-3. Mismatch: both surfaces report generic missing-capability code instead of a dedicated canonical-binding contract code. Scope is corrected to introduce and adopt a dedicated diagnostic code.
+3. Confirmed mismatch: both surfaces reported generic missing-capability code instead of a dedicated canonical-binding contract code.
+4. Scope remains correct and unchanged: add one dedicated canonical binder declaration code and adopt it at the two enforcement points.
 
 ## Architecture Check
 
@@ -75,3 +76,17 @@ Adjust unit tests to assert the dedicated code and preserve current path/message
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-04
+- **What Changed**:
+  - Added `CNL_COMPILER_BINDING_DECLARATION_NON_CANONICAL` to compiler diagnostic codes.
+  - Updated canonical binder declaration enforcement in `compile-effects` and aggregate bind canonical enforcement in `compile-conditions` to emit the new dedicated code.
+  - Updated unit coverage in `compile-effects.test.ts` and `compile-conditions.test.ts` to assert the dedicated code while preserving path/message expectations.
+- **Deviations from Original Plan**:
+  - None; implementation matched planned scope.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo lint` passed.

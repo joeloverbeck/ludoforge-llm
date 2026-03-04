@@ -92,7 +92,7 @@ describe('compile-conditions lowering', () => {
     );
 
     assert.equal(result.value, null);
-    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_BINDING_DECLARATION_NON_CANONICAL');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.setVar.value.aggregate.bind');
     assert.equal(
       result.diagnostics[0]?.message,

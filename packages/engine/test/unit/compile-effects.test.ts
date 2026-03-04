@@ -305,6 +305,9 @@ describe('compile-effects lowering', () => {
         `missing diagnostic at ${expectedPath}`,
       );
     }
+    for (const diagnostic of result.diagnostics) {
+      assert.equal(diagnostic.code, 'CNL_COMPILER_BINDING_DECLARATION_NON_CANONICAL');
+    }
   });
 
   it('preserves trusted compiler macroOrigin on control-flow binders during lowering', () => {

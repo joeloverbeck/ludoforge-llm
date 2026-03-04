@@ -2323,7 +2323,7 @@ function collectDeclaredBindingDeclarationDiagnostics(
       continue;
     }
     diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_MISSING_CAPABILITY,
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_BINDING_DECLARATION_NON_CANONICAL,
       path: `${path}.${normalizeDeclaredBinderDiagnosticPath(candidate.path)}`,
       severity: 'error',
       message: `${normalizeDeclaredBinderSurface(candidate.pattern)} "${candidate.value}" must be a canonical "$name" token.`,

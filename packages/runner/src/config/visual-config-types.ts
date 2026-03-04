@@ -281,6 +281,20 @@ const PhaseBannersSchema = z.object({
   phases: z.array(z.string()).min(1),
 });
 
+const VictoryTooltipComponentSchema = z.object({
+  label: z.string(),
+  description: z.string().optional(),
+});
+
+const VictoryTooltipBreakdownSchema = z.object({
+  seat: z.string(),
+  components: z.array(VictoryTooltipComponentSchema),
+});
+
+const VictoryStandingsVisualSchema = z.object({
+  tooltipBreakdowns: z.array(VictoryTooltipBreakdownSchema),
+});
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -295,6 +309,7 @@ export const VisualConfigSchema = z.object({
   variables: VariablesConfigSchema.optional(),
   tableOverlays: TableOverlaysSchema.optional(),
   phaseBanners: PhaseBannersSchema.optional(),
+  victoryStandings: VictoryStandingsVisualSchema.optional(),
 });
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
@@ -337,4 +352,7 @@ export type VariablesConfig = z.infer<typeof VariablesConfigSchema>;
 export type TableOverlayItemConfig = z.infer<typeof TableOverlayItemSchema>;
 export type TableOverlaysConfig = z.infer<typeof TableOverlaysSchema>;
 export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
+export type VictoryTooltipComponent = z.infer<typeof VictoryTooltipComponentSchema>;
+export type VictoryTooltipBreakdown = z.infer<typeof VictoryTooltipBreakdownSchema>;
+export type VictoryStandingsVisualConfig = z.infer<typeof VictoryStandingsVisualSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

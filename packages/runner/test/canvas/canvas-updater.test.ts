@@ -83,6 +83,8 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     choiceBreadcrumb: [],
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
+    runtimeEligible: [],
+    victoryStandings: null,
     terminal: null,
     ...overrides,
   };

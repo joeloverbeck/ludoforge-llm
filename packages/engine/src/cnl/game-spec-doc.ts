@@ -4,6 +4,7 @@ import type {
   EventDeckDef,
   ValueExpr,
 } from '../kernel/types.js';
+import type { VictoryStandingsDef } from '../kernel/types-core.js';
 import type { TurnFlowActionClass } from '../contracts/index.js';
 
 export interface GameSpecMetadata {
@@ -454,6 +455,7 @@ export interface GameSpecDoc {
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
   readonly conditionMacros: readonly ConditionMacroDef[] | null;
+  readonly victoryStandings: VictoryStandingsDef | null;
 }
 
 export interface GameSpecPieceGenerateDimension {
@@ -503,5 +505,6 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     triggers: null,
     effectMacros: null,
     conditionMacros: null,
+    victoryStandings: null,
   };
 }

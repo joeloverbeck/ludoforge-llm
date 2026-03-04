@@ -30,6 +30,7 @@ describe('parseGameSpec API shape', () => {
       triggers: null,
       effectMacros: null,
       conditionMacros: null,
+      victoryStandings: null,
     });
     assert.deepEqual(result.sourceMap.byPath, {});
   });

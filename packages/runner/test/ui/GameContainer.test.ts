@@ -244,6 +244,8 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     choiceBreadcrumb: [],
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
+    runtimeEligible: [],
+    victoryStandings: null,
     terminal: null,
     ...overrides,
   };

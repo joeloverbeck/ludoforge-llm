@@ -146,6 +146,8 @@ describe('render-model types', () => {
         max: 2,
       },
       moveEnumerationWarnings: [{ code: 'WARN', message: 'warning message' }],
+      runtimeEligible: [],
+      victoryStandings: null,
       terminal: {
         type: 'win',
         player: playerZero,

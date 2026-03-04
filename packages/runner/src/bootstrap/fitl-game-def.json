@@ -65336,5 +65336,91 @@
         }
       ]
     }
-  ]
+  ],
+  "victoryStandings": {
+    "seatGroupConfig": {
+      "coinSeats": [
+        "US",
+        "ARVN"
+      ],
+      "insurgentSeats": [
+        "NVA",
+        "VC"
+      ],
+      "soloSeat": "NVA",
+      "seatProp": "faction"
+    },
+    "markerConfigs": {
+      "support": {
+        "activeState": "activeSupport",
+        "passiveState": "passiveSupport"
+      },
+      "opposition": {
+        "activeState": "activeOpposition",
+        "passiveState": "passiveOpposition"
+      }
+    },
+    "markerName": "supportOpposition",
+    "defaultMarkerState": "neutral",
+    "entries": [
+      {
+        "seat": "us",
+        "threshold": 50,
+        "formula": {
+          "type": "markerTotalPlusZoneCount",
+          "markerConfig": {
+            "activeState": "activeSupport",
+            "passiveState": "passiveSupport"
+          },
+          "countZone": "available-US:none",
+          "countTokenTypes": [
+            "us-troops",
+            "us-bases"
+          ]
+        }
+      },
+      {
+        "seat": "arvn",
+        "threshold": 50,
+        "formula": {
+          "type": "controlledPopulationPlusGlobalVar",
+          "controlFn": "coin",
+          "varName": "patronage"
+        }
+      },
+      {
+        "seat": "nva",
+        "threshold": 18,
+        "formula": {
+          "type": "controlledPopulationPlusMapBases",
+          "controlFn": "solo",
+          "baseSeat": "NVA",
+          "basePieceTypes": [
+            "nva-bases"
+          ]
+        }
+      },
+      {
+        "seat": "vc",
+        "threshold": 35,
+        "formula": {
+          "type": "markerTotalPlusMapBases",
+          "markerConfig": {
+            "activeState": "activeOpposition",
+            "passiveState": "passiveOpposition"
+          },
+          "baseSeat": "VC",
+          "basePieceTypes": [
+            "vc-bases"
+          ]
+        }
+      }
+    ],
+    "tieBreakOrder": [
+      "vc",
+      "arvn",
+      "nva",
+      "us"
+    ]
+  }
 }

@@ -34,7 +34,7 @@ export type KernelRuntimeErrorCode =
   | 'TERMINAL_CHECKPOINT_SEAT_UNMAPPED'
   | 'TERMINAL_WINNER_SEAT_UNMAPPED'
   | 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR'
-  | 'DERIVED_VALUE_CONTRACT_MISSING'
+| 'DERIVED_VALUE_CONTRACT_MISSING'
   | 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID';
 
 export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves';

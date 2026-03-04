@@ -39,6 +39,7 @@ import type {
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, serializeChoiceValueIdentity } from './choice-value-utils.js';
+import { deriveVictoryStandings } from './derive-victory-standings.js';
 
 const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 
@@ -136,6 +137,7 @@ export function deriveRenderModel(
       message: warning.message,
     })),
     runtimeEligible: deriveRuntimeEligible(state),
+    victoryStandings: deriveVictoryStandings(def, state),
     terminal: deriveTerminal(context.terminal),
   };
 
@@ -853,6 +855,9 @@ function deriveRuntimeEligible(state: GameState): readonly RenderRuntimeEligible
   const eligible: RenderRuntimeEligibleFaction[] = [];
   for (let i = 0; i < seatOrder.length; i++) {
     const seat = seatOrder[i];
+    if (seat === undefined) {
+      continue;
+    }
     if (eligibility[seat] === true) {
       eligible.push({
         seatId: seat,

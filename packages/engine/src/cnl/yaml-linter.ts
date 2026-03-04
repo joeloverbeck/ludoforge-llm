@@ -34,6 +34,7 @@ const CANONICAL_SECTION_KEYS = new Set<string>([
   'actions',
   'triggers',
   'phaseTemplates',
+  'victoryStandings',
 ]);
 
 const BOOLEAN_LIKE = new Set(['yes', 'no', 'true', 'false', 'on', 'off']);

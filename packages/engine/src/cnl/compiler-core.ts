@@ -31,7 +31,7 @@ import {
 } from './compile-lowering.js';
 import { lowerTurnOrder } from './compile-turn-flow.js';
 import { lowerActionPipelines } from './compile-operations.js';
-import { lowerVictory } from './compile-victory.js';
+import { lowerVictory, lowerVictoryStandings } from './compile-victory.js';
 import {
   deriveSectionsFromDataAssets,
   type DataAssetDerivationFailureReason,
@@ -75,6 +75,7 @@ export interface CompileSectionResults {
   readonly actions: GameDef['actions'] | null;
   readonly triggers: GameDef['triggers'] | null;
   readonly eventDecks: Exclude<GameDef['eventDecks'], undefined> | null;
+  readonly victoryStandings: Exclude<GameDef['victoryStandings'], undefined> | null;
 }
 
 export interface CompileResult {
@@ -291,6 +292,7 @@ function compileExpandedDoc(
     actions: null,
     triggers: null,
     eventDecks: null,
+    victoryStandings: null,
   };
 
   const metadata = resolvedTableRefDoc.metadata;
@@ -567,6 +569,14 @@ function compileExpandedDoc(
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
   }
 
+  const rawVictoryStandings = resolvedTableRefDoc.victoryStandings;
+  if (rawVictoryStandings !== null) {
+    const victoryStandingsSection = compileSection(diagnostics, () =>
+      lowerVictoryStandings(rawVictoryStandings, diagnostics),
+    );
+    sections.victoryStandings = victoryStandingsSection.failed ? null : (victoryStandingsSection.value ?? null);
+  }
+
   const scenarioDeckSetup = compileSection(diagnostics, () =>
     buildScenarioDeckSetupEffects({
       selectedScenarioDeckComposition: derivedFromAssets.selectedScenarioDeckComposition,
@@ -635,6 +645,7 @@ function compileExpandedDoc(
     triggers: triggers.value,
     terminal,
     ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),
+    ...(sections.victoryStandings === null ? {} : { victoryStandings: sections.victoryStandings }),
   };
 
   return { gameDef, sections };

@@ -47,6 +47,7 @@ export function makeRenderModelFixture(
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
+    victoryStandings: null,
     terminal: null,
     ...overrides,
   };

@@ -1648,7 +1648,8 @@ describe('compiler structured section results', () => {
       | 'terminal'
       | 'actions'
       | 'triggers'
-      | 'eventDecks';
+      | 'eventDecks'
+      | 'victoryStandings';
 
     type Missing = Exclude<ExpectedKeys, keyof CompileSectionResults>;
     type Extra = Exclude<keyof CompileSectionResults, ExpectedKeys>;

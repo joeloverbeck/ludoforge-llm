@@ -253,6 +253,10 @@ describe('FITL 1968 US-first event-card production spec', () => {
       assert.equal(card?.tags?.includes('US'), true, `${expected.id} must include US tag`);
       assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]);
       assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]);
+      if (expected.id === 'card-19') {
+        assert.equal(card?.unshaded?.text, 'US Training may Pacify in 2 selected spaces. US CAPABILITY.');
+        assert.equal(card?.shaded?.text, 'US Training may Pacify only to Passive Support.');
+      }
     }
   });
 

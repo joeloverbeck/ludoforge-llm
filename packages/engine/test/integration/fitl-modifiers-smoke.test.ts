@@ -228,6 +228,162 @@ describe('FITL cross-system modifier smoke', () => {
     assert.equal(thieuResources - kyResources, 1, 'Ky should still increase per-level pacification cost by 1 with CORDS active');
   });
 
+  it('caps CORDS shaded US Train pacification at Passive Support from Neutral with one-level cost', () => {
+    const { def } = compileDef();
+    const space = 'can-tho:none';
+
+    const base = withActivePlayer(clearAllZones(initialState(def, 11007, 4).state), 0);
+    const setup: GameState = {
+      ...base,
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 20,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        activeLeader: 'thieu',
+        cap_cords: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [makeToken('cords-shaded-us', 'troops', 'US', { type: 'troops' })],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers[space] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [space]: {
+          ...(base.zoneVars[space] ?? {}),
+          terrorCount: 0,
+        },
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('train'),
+      params: {
+        $targetSpaces: [space],
+        $trainChoice: 'place-irregulars',
+        $subActionSpaces: [space],
+        $subAction: 'pacify',
+      },
+    }).state;
+
+    assert.equal(final.markers[space]?.supportOpposition, 'passiveSupport');
+    assert.equal(
+      Number(final.globalVars.arvnResources ?? 0),
+      17,
+      'Shaded CORDS from neutral should spend exactly one pacification level (3 under Thieu)',
+    );
+  });
+
+  it('keeps CORDS shaded pacification costs per Terror marker and per level (US Train)', () => {
+    const { def } = compileDef();
+    const space = 'qui-nhon:none';
+
+    const base = withActivePlayer(clearAllZones(initialState(def, 11008, 4).state), 0);
+    const setup: GameState = {
+      ...base,
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 30,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        activeLeader: 'ky',
+        cap_cords: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [makeToken('cords-shaded-ky-us', 'troops', 'US', { type: 'troops' })],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers[space] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [space]: {
+          ...(base.zoneVars[space] ?? {}),
+          terrorCount: 1,
+        },
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('train'),
+      params: {
+        $targetSpaces: [space],
+        $trainChoice: 'place-irregulars',
+        $subActionSpaces: [space],
+        $subAction: 'pacify',
+      },
+    }).state;
+
+    assert.equal(Number(final.globalVars.arvnResources ?? 0), 22, 'Ky should still charge 4 per Terror and 4 per level under shaded CORDS');
+    assert.equal(Number(final.zoneVars[space]?.terrorCount ?? 0), 0, 'Shaded CORDS pacify should still remove Terror before support shift');
+    assert.equal(final.markers[space]?.supportOpposition, 'passiveSupport');
+  });
+
+  it('allows CORDS shaded to shift opposition by up to 2 levels without hard-setting support', () => {
+    const { def } = compileDef();
+    const space = 'hue:none';
+
+    const base = withActivePlayer(clearAllZones(initialState(def, 11009, 4).state), 0);
+    const setup: GameState = {
+      ...base,
+      globalVars: {
+        ...base.globalVars,
+        arvnResources: 30,
+      },
+      globalMarkers: {
+        ...base.globalMarkers,
+        activeLeader: 'thieu',
+        cap_cords: 'shaded',
+      },
+      zones: {
+        ...base.zones,
+        [space]: [makeToken('cords-shaded-us-opp', 'troops', 'US', { type: 'troops' })],
+      },
+      markers: {
+        ...base.markers,
+        [space]: {
+          ...(base.markers[space] ?? {}),
+          supportOpposition: 'passiveOpposition',
+        },
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        [space]: {
+          ...(base.zoneVars[space] ?? {}),
+          terrorCount: 0,
+        },
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('train'),
+      params: {
+        $targetSpaces: [space],
+        $trainChoice: 'place-irregulars',
+        $subActionSpaces: [space],
+        $subAction: 'pacify',
+        $pacLevels: 2,
+      },
+    }).state;
+
+    assert.equal(final.markers[space]?.supportOpposition, 'passiveSupport');
+    assert.equal(Number(final.globalVars.arvnResources ?? 0), 24, 'Two shaded CORDS pacification levels should cost 6 under Thieu');
+  });
+
   it('keeps Air Lift prohibited when multiple Air Lift blockers are active together', () => {
     const { def } = compileDef();
 

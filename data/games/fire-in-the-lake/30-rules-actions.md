@@ -1344,11 +1344,7 @@ actionPipelines:
                                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
                                 then:
                                   - if:
-                                      when:
-                                        op: and
-                                        args:
-                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
-                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                      when: { op: '==', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: neutral }
                                       then:
                                         - if:
                                             when:
@@ -1360,7 +1356,32 @@ actionPipelines:
                                               - macro: rvn-leader-pacification-cost
                                                 args:
                                                   stepCountExpr: 1
-                                              - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
+                                              - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: 1 }
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
+                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: neutral }
+                                      then:
+                                        - chooseOne:
+                                            bind: $pacLevels
+                                            options: { query: intsInRange, min: 1, max: 2 }
+                                        - if:
+                                            when:
+                                              conditionMacro: us-joint-op-arvn-spend-eligible
+                                              args:
+                                                resourceExpr: { ref: gvar, var: arvnResources }
+                                                costExpr:
+                                                  op: '*'
+                                                  left: { ref: binding, name: $pacLevels }
+                                                  right: { ref: binding, name: $usPacPerStepCost }
+                                            then:
+                                              - macro: rvn-leader-pacification-cost
+                                                args:
+                                                  stepCountExpr: { ref: binding, name: $pacLevels }
+                                              - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
                                 else:
                                   # Shift up to 2 levels toward Active Support
                                   - chooseOne:
@@ -1582,16 +1603,27 @@ actionPipelines:
                           when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
                           then:
                             - if:
+                                when: { op: '==', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: neutral }
+                                then:
+                                  - macro: rvn-leader-pacification-cost
+                                    args:
+                                      stepCountExpr: 1
+                                  - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: 1 }
+                            - if:
                                 when:
                                   op: and
                                   args:
                                     - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
                                     - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: neutral }
                                 then:
+                                  - chooseOne:
+                                      bind: $pacLevels
+                                      options: { query: intsInRange, min: 1, max: 2 }
                                   - macro: rvn-leader-pacification-cost
                                     args:
-                                      stepCountExpr: 1
-                                  - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
+                                      stepCountExpr: { ref: binding, name: $pacLevels }
+                                  - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
                           else:
                             - chooseOne:
                                 bind: $pacLevels

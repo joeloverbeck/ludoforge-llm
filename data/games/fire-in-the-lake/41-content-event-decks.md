@@ -1538,12 +1538,12 @@ eventDecks:
           seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Civil-military integration accelerates local governance."
         unshaded:
-          text: "US capability: US/ARVN Train may execute sub-activity in up to 2 spaces."
+          text: "US Training may Pacify in 2 selected spaces. US CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_cords, markerState: unshaded }
         shaded:
-          text: "US capability (shaded): Pacification in Train can only set to Passive Support."
+          text: "US Training may Pacify only to Passive Support."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_cords, markerState: shaded }

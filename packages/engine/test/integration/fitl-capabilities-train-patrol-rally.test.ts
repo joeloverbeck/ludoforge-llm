@@ -160,6 +160,41 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
     }
   });
 
+  it('encodes CORDS shaded as a passive-support ceiling with per-level shifts (no hard setMarker)', () => {
+    const trainUs = getParsedProfile('train-us-profile');
+    const trainArvn = getParsedProfile('train-arvn-profile');
+
+    for (const profile of [trainUs, trainArvn]) {
+      const cordsShadedBranch = findDeep(profile.stages, (node: any) =>
+        node?.if?.when?.left?.ref === 'globalMarkerState' &&
+        node?.if?.when?.left?.marker === 'cap_cords' &&
+        node?.if?.when?.right === 'shaded',
+      );
+      assert.ok(cordsShadedBranch.length >= 1, `Expected cap_cords shaded branch in ${profile.id}`);
+
+      const hasNeutralGuard = findDeep(cordsShadedBranch[0], (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'markerState' &&
+        node?.if?.when?.left?.marker === 'supportOpposition' &&
+        node?.if?.when?.right === 'neutral',
+      );
+      const hasShadedPacLevels = findDeep(cordsShadedBranch[0], (node: any) =>
+        node?.chooseOne?.bind === '$pacLevels' &&
+        node?.chooseOne?.options?.query === 'intsInRange' &&
+        node?.chooseOne?.options?.min === 1 &&
+        node?.chooseOne?.options?.max === 2,
+      );
+      const shadedSetMarker = findDeep(cordsShadedBranch[0], (node: any) =>
+        node?.setMarker?.marker === 'supportOpposition' &&
+        node?.setMarker?.state === 'passiveSupport',
+      );
+
+      assert.ok(hasNeutralGuard.length >= 1, `Expected shaded CORDS neutral guard in ${profile.id}`);
+      assert.ok(hasShadedPacLevels.length >= 1, `Expected shaded CORDS to retain per-level chooseOne in ${profile.id}`);
+      assert.equal(shadedSetMarker.length, 0, `Expected shaded CORDS in ${profile.id} to avoid hard setMarker passiveSupport`);
+    }
+  });
+
   it('applies Patrol M48 shaded penalty through a shared post-patrol up-to-2 moved-cube macro', () => {
     const { parsed } = compileProductionSpec();
     const macrosById = new Map((parsed.doc.effectMacros ?? []).map((macro: any) => [macro.id, macro]));

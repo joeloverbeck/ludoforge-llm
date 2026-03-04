@@ -30,6 +30,7 @@ import type {
   RenderLastingEffectAttribute,
   RenderMarker,
   RenderModel,
+  RenderRuntimeEligibleFaction,
   RenderToken,
   RenderTrack,
   RenderVariable,
@@ -134,6 +135,7 @@ export function deriveRenderModel(
       code: warning.code,
       message: warning.message,
     })),
+    runtimeEligible: deriveRuntimeEligible(state),
     terminal: deriveTerminal(context.terminal),
   };
 
@@ -840,6 +842,27 @@ function pushAdjacency(
 
 function toAdjacencyKey(from: string, to: string): string {
   return `${from}->${to}`;
+}
+
+function deriveRuntimeEligible(state: GameState): readonly RenderRuntimeEligibleFaction[] {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return [];
+  }
+
+  const { seatOrder, eligibility } = state.turnOrderState.runtime;
+  const eligible: RenderRuntimeEligibleFaction[] = [];
+  for (let i = 0; i < seatOrder.length; i++) {
+    const seat = seatOrder[i];
+    if (eligibility[seat] === true) {
+      eligible.push({
+        seatId: seat,
+        displayName: formatIdAsDisplayName(seat),
+        factionId: seat,
+        seatIndex: i,
+      });
+    }
+  }
+  return eligible;
 }
 
 function deriveSimultaneousSubmitted(state: GameState): readonly PlayerId[] {

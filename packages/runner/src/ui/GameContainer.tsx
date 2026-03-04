@@ -15,6 +15,7 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { VisualConfigContext } from '../config/visual-config-context.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
+import { EligiblePanel } from './EligiblePanel.js';
 import { ErrorState } from './ErrorState.js';
 import { EventDeckPanel } from './EventDeckPanel.js';
 import { LoadingState } from './LoadingState.js';
@@ -57,7 +58,7 @@ interface GameContainerProps {
   readonly onLoad?: () => void;
 }
 
-type OverlayRegion = 'top' | 'side' | 'floating';
+type OverlayRegion = 'top' | 'left' | 'side' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
   top: [
@@ -66,6 +67,9 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPane
     TurnOrderDisplay,
     EventDeckPanel,
     AnimationControls,
+  ],
+  left: [
+    EligiblePanel,
   ],
   side: [
     VariablesPanel,
@@ -276,6 +280,7 @@ export function GameContainer({
           />
         </div>
         <UIOverlay
+          leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
           topBarContent={(
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, overlayPanelProps)}

@@ -1407,4 +1407,46 @@ describe('deriveRenderModel state metadata', () => {
       { label: 'nva', factionId: 'nva' },
     ]);
   });
+
+  it('returns eligible factions in seat order for cardDriven game', () => {
+    const fixtureDef = compileFixture();
+    const fixtureState = initialState(fixtureDef, 5, 2).state;
+    const { def, state: metaState } = withStateMetadata(fixtureDef, fixtureState);
+    const model = deriveRenderModel(metaState, def, makeRenderContext(metaState.playerCount));
+
+    expect(model.runtimeEligible).toEqual([
+      { seatId: 'us', displayName: 'Us', factionId: 'us', seatIndex: 0 },
+      { seatId: 'nva', displayName: 'Nva', factionId: 'nva', seatIndex: 1 },
+    ]);
+  });
+
+  it('excludes ineligible factions from runtimeEligible', () => {
+    const fixtureDef = compileFixture();
+    const fixtureState = initialState(fixtureDef, 5, 2).state;
+    const { def, state: metaState } = withStateMetadata(fixtureDef, fixtureState);
+    const cardDrivenState = metaState.turnOrderState as Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>;
+    const stateWithIneligible: GameState = {
+      ...metaState,
+      turnOrderState: {
+        ...cardDrivenState,
+        runtime: {
+          ...cardDrivenState.runtime,
+          eligibility: { us: false, nva: true },
+        },
+      },
+    };
+    const model = deriveRenderModel(stateWithIneligible, def, makeRenderContext(stateWithIneligible.playerCount));
+
+    expect(model.runtimeEligible).toEqual([
+      { seatId: 'nva', displayName: 'Nva', factionId: 'nva', seatIndex: 1 },
+    ]);
+  });
+
+  it('returns empty runtimeEligible for roundRobin turn order', () => {
+    const fixtureDef = compileFixture();
+    const fixtureState = initialState(fixtureDef, 5, 2).state;
+    const model = deriveRenderModel(fixtureState, fixtureDef, makeRenderContext(fixtureState.playerCount));
+
+    expect(model.runtimeEligible).toEqual([]);
+  });
 });

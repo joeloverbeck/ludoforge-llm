@@ -4,6 +4,7 @@ import styles from './UIOverlay.module.css';
 
 interface UIOverlayProps {
   readonly topBarContent?: ReactNode;
+  readonly leftPanelContent?: ReactNode;
   readonly sidePanelContent?: ReactNode;
   readonly bottomBarContent?: ReactNode;
   readonly floatingContent?: ReactNode;
@@ -11,6 +12,7 @@ interface UIOverlayProps {
 
 export function UIOverlay({
   topBarContent,
+  leftPanelContent,
   sidePanelContent,
   bottomBarContent,
   floatingContent,
@@ -19,6 +21,9 @@ export function UIOverlay({
     <div className={styles.overlay} data-testid="ui-overlay">
       <div className={styles.topBar} data-testid="ui-overlay-top">
         {topBarContent}
+      </div>
+      <div className={styles.leftPanel} data-testid="ui-overlay-left">
+        {leftPanelContent}
       </div>
       <div className={styles.sidePanels} data-testid="ui-overlay-side">
         {sidePanelContent}

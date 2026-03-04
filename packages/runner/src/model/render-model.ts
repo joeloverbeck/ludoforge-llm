@@ -5,6 +5,13 @@ import type {
 } from '@ludoforge/engine/runtime';
 import type { ResolvedZoneVisual } from '../config/visual-config-provider.js';
 
+export interface RenderRuntimeEligibleFaction {
+  readonly seatId: string;
+  readonly displayName: string;
+  readonly factionId: string;
+  readonly seatIndex: number;
+}
+
 export interface RenderModel {
   readonly zones: readonly RenderZone[];
   readonly adjacencies: readonly RenderAdjacency[];
@@ -28,6 +35,7 @@ export interface RenderModel {
   readonly choiceBreadcrumb: readonly RenderChoiceStep[];
   readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];
+  readonly runtimeEligible: readonly RenderRuntimeEligibleFaction[];
   readonly terminal: RenderTerminal | null;
 }
 

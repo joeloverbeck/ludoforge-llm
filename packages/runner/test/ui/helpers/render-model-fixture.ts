@@ -46,15 +46,17 @@ export function makeRenderModelFixture(
     choiceBreadcrumb: [],
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
+    runtimeEligible: [],
     terminal: null,
     ...overrides,
   };
 }
 
 export function createRenderModelStore(renderModel: GameStore['renderModel']): StoreApi<GameStore> {
+  const snapshot = { renderModel };
   return {
-    getState: () => ({
-      renderModel,
-    }),
+    getState: () => snapshot,
+    getInitialState: () => snapshot,
+    subscribe: () => () => {},
   } as unknown as StoreApi<GameStore>;
 }

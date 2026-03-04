@@ -12,6 +12,7 @@ describe('UIOverlay', () => {
 
     expect(html).toContain('data-testid="ui-overlay"');
     expect(html).toContain('data-testid="ui-overlay-top"');
+    expect(html).toContain('data-testid="ui-overlay-left"');
     expect(html).toContain('data-testid="ui-overlay-side"');
     expect(html).toContain('data-testid="ui-overlay-bottom"');
     expect(html).toContain('data-testid="ui-overlay-floating"');
@@ -65,10 +66,23 @@ describe('UIOverlay', () => {
     expect(html).toContain('floating content');
   });
 
+  it('renders provided leftPanelContent in left region', () => {
+    const html = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        leftPanelContent: createElement('div', { 'data-testid': 'left-slot-content' }, 'left content'),
+      }),
+    );
+
+    expect(html).toContain('data-testid="ui-overlay-left"');
+    expect(html).toContain('data-testid="left-slot-content"');
+    expect(html).toContain('left content');
+  });
+
   it('exports expected CSS module classes', () => {
     expect(styles).toMatchObject({
       overlay: expect.any(String),
       topBar: expect.any(String),
+      leftPanel: expect.any(String),
       sidePanels: expect.any(String),
       bottomBar: expect.any(String),
       floating: expect.any(String),

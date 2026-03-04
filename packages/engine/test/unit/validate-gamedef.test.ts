@@ -2255,6 +2255,38 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports tokenZones dedupe when payload is not boolean', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$zone',
+              domain: {
+                query: 'tokenZones',
+                source: { query: 'tokensInZone', zone: 'hand:0' },
+                dedupe: 'yes',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_TOKEN_ZONES_DEDUPE_INVALID'
+          && diag.path === 'actions[0].params[0].domain.dedupe'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
   it('accepts tokenZones source shapes that are token, string, or unknown', () => {
     const base = createValidGameDef();
     const def = {

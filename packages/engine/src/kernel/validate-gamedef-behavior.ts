@@ -669,6 +669,16 @@ export const validateOptionsQuery = (
       return;
     }
     case 'tokenZones': {
+      const tokenZonesDedupe = (query as { readonly dedupe?: unknown }).dedupe;
+      if (tokenZonesDedupe !== undefined && typeof tokenZonesDedupe !== 'boolean') {
+        diagnostics.push({
+          code: 'DOMAIN_TOKEN_ZONES_DEDUPE_INVALID',
+          path: `${path}.dedupe`,
+          severity: 'error',
+          message: 'tokenZones.dedupe must be a boolean when provided.',
+          suggestion: 'Set tokenZones.dedupe to true or false.',
+        });
+      }
       validateOptionsQuery(diagnostics, query.source, `${path}.source`, context);
       const sourceShapes = inferQueryRuntimeShapes(query.source);
       const knownSourceShapes = sourceShapes.filter((shape) => shape !== 'unknown');

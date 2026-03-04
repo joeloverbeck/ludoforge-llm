@@ -33553,22 +33553,27 @@
                                   "right": "northVietnam"
                                 },
                                 {
-                                  "op": "==",
-                                  "left": {
-                                    "ref": "zoneProp",
-                                    "zone": "$zone",
-                                    "prop": "country"
-                                  },
-                                  "right": "laos"
-                                },
-                                {
-                                  "op": "==",
-                                  "left": {
-                                    "ref": "zoneProp",
-                                    "zone": "$zone",
-                                    "prop": "country"
-                                  },
-                                  "right": "cambodia"
+                                  "op": "or",
+                                  "args": [
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "laos"
+                                    },
+                                    {
+                                      "op": "==",
+                                      "left": {
+                                        "ref": "zoneProp",
+                                        "zone": "$zone",
+                                        "prop": "country"
+                                      },
+                                      "right": "cambodia"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -51559,7 +51564,7 @@
                                         "zone": "$zone",
                                         "prop": "country"
                                       },
-                                      "right": "cambodia"
+                                      "right": "laos"
                                     },
                                     {
                                       "op": "==",
@@ -51568,7 +51573,7 @@
                                         "zone": "$zone",
                                         "prop": "country"
                                       },
-                                      "right": "laos"
+                                      "right": "cambodia"
                                     }
                                   ]
                                 }
@@ -51605,7 +51610,7 @@
                                         "zone": "$zone",
                                         "prop": "country"
                                       },
-                                      "right": "cambodia"
+                                      "right": "laos"
                                     },
                                     {
                                       "op": "==",
@@ -51614,7 +51619,7 @@
                                         "zone": "$zone",
                                         "prop": "country"
                                       },
-                                      "right": "laos"
+                                      "right": "cambodia"
                                     }
                                   ]
                                 }
@@ -52869,22 +52874,27 @@
                             "right": "northVietnam"
                           },
                           {
-                            "op": "==",
-                            "left": {
-                              "ref": "zoneProp",
-                              "zone": "$zone",
-                              "prop": "country"
-                            },
-                            "right": "laos"
-                          },
-                          {
-                            "op": "==",
-                            "left": {
-                              "ref": "zoneProp",
-                              "zone": "$zone",
-                              "prop": "country"
-                            },
-                            "right": "cambodia"
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "laos"
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "cambodia"
+                              }
+                            ]
                           }
                         ]
                       }
@@ -52941,22 +52951,27 @@
                             "right": "northVietnam"
                           },
                           {
-                            "op": "==",
-                            "left": {
-                              "ref": "zoneProp",
-                              "zone": "$zone",
-                              "prop": "country"
-                            },
-                            "right": "laos"
-                          },
-                          {
-                            "op": "==",
-                            "left": {
-                              "ref": "zoneProp",
-                              "zone": "$zone",
-                              "prop": "country"
-                            },
-                            "right": "cambodia"
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "laos"
+                              },
+                              {
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "country"
+                                },
+                                "right": "cambodia"
+                              }
+                            ]
                           }
                         ]
                       }
@@ -53062,45 +53077,55 @@
                                   "op": "and",
                                   "args": [
                                     {
-                                      "op": "or",
+                                      "op": "and",
                                       "args": [
                                         {
                                           "op": "==",
                                           "left": {
                                             "ref": "zoneProp",
                                             "zone": "$zone",
-                                            "prop": "country"
+                                            "prop": "category"
                                           },
-                                          "right": "northVietnam"
+                                          "right": "province"
                                         },
                                         {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "country"
-                                          },
-                                          "right": "laos"
-                                        },
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "country"
-                                          },
-                                          "right": "cambodia"
+                                          "op": "or",
+                                          "args": [
+                                            {
+                                              "op": "==",
+                                              "left": {
+                                                "ref": "zoneProp",
+                                                "zone": "$zone",
+                                                "prop": "country"
+                                              },
+                                              "right": "northVietnam"
+                                            },
+                                            {
+                                              "op": "or",
+                                              "args": [
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "country"
+                                                  },
+                                                  "right": "laos"
+                                                },
+                                                {
+                                                  "op": "==",
+                                                  "left": {
+                                                    "ref": "zoneProp",
+                                                    "zone": "$zone",
+                                                    "prop": "country"
+                                                  },
+                                                  "right": "cambodia"
+                                                }
+                                              ]
+                                            }
+                                          ]
                                         }
                                       ]
-                                    },
-                                    {
-                                      "op": "==",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "category"
-                                      },
-                                      "right": "province"
                                     },
                                     {
                                       "op": ">",
@@ -53183,45 +53208,55 @@
                               "op": "and",
                               "args": [
                                 {
-                                  "op": "or",
+                                  "op": "and",
                                   "args": [
                                     {
                                       "op": "==",
                                       "left": {
                                         "ref": "zoneProp",
                                         "zone": "$zone",
-                                        "prop": "country"
+                                        "prop": "category"
                                       },
-                                      "right": "northVietnam"
+                                      "right": "province"
                                     },
                                     {
-                                      "op": "==",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "country"
-                                      },
-                                      "right": "laos"
-                                    },
-                                    {
-                                      "op": "==",
-                                      "left": {
-                                        "ref": "zoneProp",
-                                        "zone": "$zone",
-                                        "prop": "country"
-                                      },
-                                      "right": "cambodia"
+                                      "op": "or",
+                                      "args": [
+                                        {
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "zoneProp",
+                                            "zone": "$zone",
+                                            "prop": "country"
+                                          },
+                                          "right": "northVietnam"
+                                        },
+                                        {
+                                          "op": "or",
+                                          "args": [
+                                            {
+                                              "op": "==",
+                                              "left": {
+                                                "ref": "zoneProp",
+                                                "zone": "$zone",
+                                                "prop": "country"
+                                              },
+                                              "right": "laos"
+                                            },
+                                            {
+                                              "op": "==",
+                                              "left": {
+                                                "ref": "zoneProp",
+                                                "zone": "$zone",
+                                                "prop": "country"
+                                              },
+                                              "right": "cambodia"
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     }
                                   ]
-                                },
-                                {
-                                  "op": "==",
-                                  "left": {
-                                    "ref": "zoneProp",
-                                    "zone": "$zone",
-                                    "prop": "category"
-                                  },
-                                  "right": "province"
                                 },
                                 {
                                   "op": ">",
@@ -55852,31 +55887,34 @@
                     "query": "mapSpaces",
                     "filter": {
                       "condition": {
-                        "op": "and",
+                        "op": "or",
                         "args": [
                           {
                             "op": "==",
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$zone",
-                              "prop": "category"
+                              "prop": "id"
                             },
-                            "right": "loc"
+                            "right": "loc-can-tho-chau-doc:none"
                           },
                           {
-                            "op": "zonePropIncludes",
-                            "zone": "$zone",
-                            "prop": "terrainTags",
-                            "value": "mekong"
-                          },
-                          {
-                            "op": "<",
+                            "op": "==",
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$zone",
-                              "prop": "econ"
+                              "prop": "id"
                             },
-                            "right": 2
+                            "right": "loc-can-tho-bac-lieu:none"
+                          },
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "id"
+                            },
+                            "right": "loc-can-tho-long-phu:none"
                           }
                         ]
                       }
@@ -55935,31 +55973,34 @@
                     "query": "mapSpaces",
                     "filter": {
                       "condition": {
-                        "op": "and",
+                        "op": "or",
                         "args": [
                           {
                             "op": "==",
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$zone",
-                              "prop": "category"
+                              "prop": "id"
                             },
-                            "right": "loc"
+                            "right": "loc-can-tho-chau-doc:none"
                           },
                           {
-                            "op": "zonePropIncludes",
-                            "zone": "$zone",
-                            "prop": "terrainTags",
-                            "value": "mekong"
-                          },
-                          {
-                            "op": "<",
+                            "op": "==",
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$zone",
-                              "prop": "econ"
+                              "prop": "id"
                             },
-                            "right": 2
+                            "right": "loc-can-tho-bac-lieu:none"
+                          },
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "id"
+                            },
+                            "right": "loc-can-tho-long-phu:none"
                           }
                         ]
                       }
@@ -56005,31 +56046,34 @@
                     "query": "mapSpaces",
                     "filter": {
                       "condition": {
-                        "op": "and",
+                        "op": "or",
                         "args": [
                           {
                             "op": "==",
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$zone",
-                              "prop": "category"
+                              "prop": "id"
                             },
-                            "right": "loc"
+                            "right": "loc-can-tho-chau-doc:none"
                           },
                           {
-                            "op": "zonePropIncludes",
-                            "zone": "$zone",
-                            "prop": "terrainTags",
-                            "value": "mekong"
-                          },
-                          {
-                            "op": "<",
+                            "op": "==",
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$zone",
-                              "prop": "econ"
+                              "prop": "id"
                             },
-                            "right": 2
+                            "right": "loc-can-tho-bac-lieu:none"
+                          },
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "id"
+                            },
+                            "right": "loc-can-tho-long-phu:none"
                           }
                         ]
                       }
@@ -56142,29 +56186,18 @@
               "ARVN",
               "NVA"
             ],
-            "flavorText": "Long-range reconnaissance patrols probe deep."
+            "flavorText": "Long Range Recon Patrol."
           },
           "unshaded": {
-            "text": "Place up to 2 Irregulars, then US executes free Air Strike.",
-            "targets": [
-              {
-                "id": "$targetSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 1
-                }
-              }
-            ],
+            "text": "US places 3 Irregulars outside the South then free Air Strikes.",
             "effects": [
               {
-                "removeByPriority": {
-                  "budget": 2,
-                  "groups": [
-                    {
-                      "bind": "$irregular",
-                      "over": {
+                "let": {
+                  "bind": "$availableIrregulars",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
                         "query": "tokensInZone",
                         "zone": "available-US:none",
                         "filter": [
@@ -56179,9 +56212,153 @@
                             "value": "irregular"
                           }
                         ]
-                      },
-                      "to": {
-                        "zoneExpr": "$targetSpace"
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "let": {
+                        "bind": "$irregularsToPlaceCount",
+                        "value": {
+                          "if": {
+                            "when": {
+                              "op": ">",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$availableIrregulars"
+                              },
+                              "right": 3
+                            },
+                            "then": 3,
+                            "else": {
+                              "ref": "binding",
+                              "name": "$availableIrregulars"
+                            }
+                          }
+                        },
+                        "in": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": ">",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$irregularsToPlaceCount"
+                                },
+                                "right": 0
+                              },
+                              "then": [
+                                {
+                                  "chooseN": {
+                                    "internalDecisionId": "decision:doc.eventDecks.0.cards.66.unshaded.effects.0.let.in.0.let.in.0.if.then.0.chooseN",
+                                    "bind": "$irregularsToPlace",
+                                    "options": {
+                                      "query": "tokensInZone",
+                                      "zone": "available-US:none",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "US"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "irregular"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "ref": "binding",
+                                      "name": "$irregularsToPlaceCount"
+                                    },
+                                    "min": {
+                                      "ref": "binding",
+                                      "name": "$irregularsToPlaceCount"
+                                    }
+                                  }
+                                },
+                                {
+                                  "forEach": {
+                                    "bind": "$irregular",
+                                    "over": {
+                                      "query": "binding",
+                                      "name": "$irregularsToPlace"
+                                    },
+                                    "effects": [
+                                      {
+                                        "chooseOne": {
+                                          "internalDecisionId": "decision:doc.eventDecks.0.cards.66.unshaded.effects.0.let.in.0.let.in.0.if.then.1.forEach.effects.0.chooseOne",
+                                          "bind": "$laosCambodiaProvince",
+                                          "options": {
+                                            "query": "mapSpaces",
+                                            "filter": {
+                                              "condition": {
+                                                "op": "and",
+                                                "args": [
+                                                  {
+                                                    "op": "==",
+                                                    "left": {
+                                                      "ref": "zoneProp",
+                                                      "zone": "$zone",
+                                                      "prop": "category"
+                                                    },
+                                                    "right": "province"
+                                                  },
+                                                  {
+                                                    "op": "or",
+                                                    "args": [
+                                                      {
+                                                        "op": "==",
+                                                        "left": {
+                                                          "ref": "zoneProp",
+                                                          "zone": "$zone",
+                                                          "prop": "country"
+                                                        },
+                                                        "right": "laos"
+                                                      },
+                                                      {
+                                                        "op": "==",
+                                                        "left": {
+                                                          "ref": "zoneProp",
+                                                          "zone": "$zone",
+                                                          "prop": "country"
+                                                        },
+                                                        "right": "cambodia"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "moveToken": {
+                                          "token": "$irregular",
+                                          "from": {
+                                            "zoneExpr": {
+                                              "ref": "tokenZone",
+                                              "token": "$irregular"
+                                            }
+                                          },
+                                          "to": {
+                                            "zoneExpr": {
+                                              "ref": "binding",
+                                              "name": "$laosCambodiaProvince"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
                       }
                     }
                   ]
@@ -56203,28 +56380,16 @@
             ]
           },
           "shaded": {
-            "text": "Counterintelligence sweep: remove up to 2 Irregulars to Available.",
-            "targets": [
-              {
-                "id": "$sourceSpace",
-                "selector": {
-                  "query": "mapSpaces"
-                },
-                "cardinality": {
-                  "max": 1
-                }
-              }
-            ],
+            "text": "Patrols ambushed: 3 Irregulars map to Casualties. Shift each space they were in 1 level toward Active Opposition.",
             "effects": [
               {
-                "removeByPriority": {
-                  "budget": 2,
-                  "groups": [
-                    {
-                      "bind": "$irregular",
-                      "over": {
-                        "query": "tokensInZone",
-                        "zone": "$sourceSpace",
+                "let": {
+                  "bind": "$availableIrregularsOnMap",
+                  "value": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInMapSpaces",
                         "filter": [
                           {
                             "prop": "faction",
@@ -56237,9 +56402,152 @@
                             "value": "irregular"
                           }
                         ]
-                      },
-                      "to": {
-                        "zoneExpr": "available-US:none"
+                      }
+                    }
+                  },
+                  "in": [
+                    {
+                      "let": {
+                        "bind": "$irregularsToCasualtiesCount",
+                        "value": {
+                          "if": {
+                            "when": {
+                              "op": ">",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$availableIrregularsOnMap"
+                              },
+                              "right": 3
+                            },
+                            "then": 3,
+                            "else": {
+                              "ref": "binding",
+                              "name": "$availableIrregularsOnMap"
+                            }
+                          }
+                        },
+                        "in": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": ">",
+                                "left": {
+                                  "ref": "binding",
+                                  "name": "$irregularsToCasualtiesCount"
+                                },
+                                "right": 0
+                              },
+                              "then": [
+                                {
+                                  "chooseN": {
+                                    "internalDecisionId": "decision:doc.eventDecks.0.cards.66.shaded.effects.0.let.in.0.let.in.0.if.then.0.chooseN",
+                                    "bind": "$irregularsToCasualties",
+                                    "options": {
+                                      "query": "tokensInMapSpaces",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "US"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "irregular"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "ref": "binding",
+                                      "name": "$irregularsToCasualtiesCount"
+                                    },
+                                    "min": {
+                                      "ref": "binding",
+                                      "name": "$irregularsToCasualtiesCount"
+                                    }
+                                  }
+                                },
+                                {
+                                  "forEach": {
+                                    "bind": "$sourceSpace",
+                                    "over": {
+                                      "query": "tokenZones",
+                                      "source": {
+                                        "query": "binding",
+                                        "name": "$irregularsToCasualties"
+                                      }
+                                    },
+                                    "effects": [
+                                      {
+                                        "if": {
+                                          "when": {
+                                            "op": "or",
+                                            "args": [
+                                              {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "zoneProp",
+                                                  "zone": "$sourceSpace",
+                                                  "prop": "category"
+                                                },
+                                                "right": "city"
+                                              },
+                                              {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "zoneProp",
+                                                  "zone": "$sourceSpace",
+                                                  "prop": "category"
+                                                },
+                                                "right": "province"
+                                              }
+                                            ]
+                                          },
+                                          "then": [
+                                            {
+                                              "shiftMarker": {
+                                                "space": "$sourceSpace",
+                                                "marker": "supportOpposition",
+                                                "delta": -1
+                                              }
+                                            }
+                                          ],
+                                          "else": []
+                                        }
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "forEach": {
+                                    "bind": "$irregular",
+                                    "over": {
+                                      "query": "binding",
+                                      "name": "$irregularsToCasualties"
+                                    },
+                                    "effects": [
+                                      {
+                                        "moveToken": {
+                                          "token": "$irregular",
+                                          "from": {
+                                            "zoneExpr": {
+                                              "ref": "tokenZone",
+                                              "token": "$irregular"
+                                            }
+                                          },
+                                          "to": {
+                                            "zoneExpr": "casualties-US:none"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
                       }
                     }
                   ]

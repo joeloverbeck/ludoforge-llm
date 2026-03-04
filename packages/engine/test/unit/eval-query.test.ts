@@ -1307,6 +1307,30 @@ describe('evalQuery', () => {
     );
   });
 
+  it('includes tokenZones source query and offending item details in type mismatch context', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokenZones',
+            source: { query: 'zones' },
+          },
+          ctx,
+        ),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        assert.deepEqual(error.context?.source, { query: 'zones' });
+        assert.equal(error.context?.item, 'battlefield:none');
+        assert.equal(error.context?.itemType, 'string');
+        return true;
+      },
+    );
+  });
+
   it('concatenates query sources left-to-right and preserves duplicates', () => {
     const ctx = makeCtx();
 

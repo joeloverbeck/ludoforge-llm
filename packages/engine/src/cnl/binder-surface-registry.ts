@@ -103,6 +103,26 @@ interface SurfaceTarget {
   readonly path: string;
 }
 
+type BinderSurfacePathGroupKind = 'declared' | 'bindingName' | 'bindingTemplate' | 'zoneSelector';
+
+function forEachBinderSurfacePathGroup(
+  surface: BinderSurfacePaths,
+  visit: (pathGroupKind: BinderSurfacePathGroupKind, binderPath: readonly (string | '*')[]) => void,
+): void {
+  for (const binderPath of surface.declaredBinderPaths) {
+    visit('declared', binderPath);
+  }
+  for (const binderPath of surface.bindingNameReferencerPaths) {
+    visit('bindingName', binderPath);
+  }
+  for (const binderPath of surface.bindingTemplateReferencerPaths) {
+    visit('bindingTemplate', binderPath);
+  }
+  for (const binderPath of surface.zoneSelectorReferencerPaths) {
+    visit('zoneSelector', binderPath);
+  }
+}
+
 function forEachSurfaceTarget(
   node: Record<string, unknown>,
   path: string,
@@ -161,27 +181,30 @@ interface BinderSurfaceRewriters {
   readonly rewriteZoneSelector: (value: string) => string;
 }
 
+function binderSurfacePathGroupRewriters(
+  rewriters: BinderSurfaceRewriters,
+): Readonly<Record<BinderSurfacePathGroupKind, (value: string) => string>> {
+  return {
+    declared: rewriters.rewriteDeclaredBinder,
+    bindingName: rewriters.rewriteBindingName,
+    bindingTemplate: rewriters.rewriteBindingTemplate,
+    zoneSelector: rewriters.rewriteZoneSelector,
+  };
+}
+
 export function rewriteBinderSurfaceStringsInNode(
   node: Record<string, unknown>,
   rewriters: BinderSurfaceRewriters,
 ): Record<string, unknown> {
   let changed = false;
   const rewritten = cloneDeep(node) as Record<string, unknown>;
+  const rewriterByPathGroup = binderSurfacePathGroupRewriters(rewriters);
 
   walkRecordTree(rewritten, '', (currentNode, currentPath) => {
     forEachSurfaceTarget(currentNode, currentPath, (target) => {
-      for (const binderPath of target.surface.declaredBinderPaths) {
-        changed = rewriteStringLeavesAtBinderPath(target.node, binderPath, rewriters.rewriteDeclaredBinder) || changed;
-      }
-      for (const referencerPath of target.surface.bindingNameReferencerPaths) {
-        changed = rewriteStringLeavesAtBinderPath(target.node, referencerPath, rewriters.rewriteBindingName) || changed;
-      }
-      for (const referencerPath of target.surface.bindingTemplateReferencerPaths) {
-        changed = rewriteStringLeavesAtBinderPath(target.node, referencerPath, rewriters.rewriteBindingTemplate) || changed;
-      }
-      for (const referencerPath of target.surface.zoneSelectorReferencerPaths) {
-        changed = rewriteStringLeavesAtBinderPath(target.node, referencerPath, rewriters.rewriteZoneSelector) || changed;
-      }
+      forEachBinderSurfacePathGroup(target.surface, (pathGroupKind, binderPath) => {
+        changed = rewriteStringLeavesAtBinderPath(target.node, binderPath, rewriterByPathGroup[pathGroupKind]) || changed;
+      });
     });
   });
 
@@ -195,18 +218,9 @@ export function collectBinderSurfaceStringSites(
 ): void {
   walkRecordTree(node, path, (currentNode, currentPath) => {
     forEachSurfaceTarget(currentNode, currentPath, (target) => {
-      for (const declaredPath of target.surface.declaredBinderPaths) {
-        collectStringSitesAtBinderPath(target.node, declaredPath, target.path, into);
-      }
-      for (const referencerPath of target.surface.bindingNameReferencerPaths) {
-        collectStringSitesAtBinderPath(target.node, referencerPath, target.path, into);
-      }
-      for (const referencerPath of target.surface.bindingTemplateReferencerPaths) {
-        collectStringSitesAtBinderPath(target.node, referencerPath, target.path, into);
-      }
-      for (const referencerPath of target.surface.zoneSelectorReferencerPaths) {
-        collectStringSitesAtBinderPath(target.node, referencerPath, target.path, into);
-      }
+      forEachBinderSurfacePathGroup(target.surface, (_pathGroupKind, binderPath) => {
+        collectStringSitesAtBinderPath(target.node, binderPath, target.path, into);
+      });
     });
   });
 }

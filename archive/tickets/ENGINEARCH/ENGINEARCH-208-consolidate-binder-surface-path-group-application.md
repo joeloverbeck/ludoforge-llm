@@ -1,6 +1,6 @@
 # ENGINEARCH-208: Consolidate Binder Surface Path-Group Application
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL binder-surface registry traversal helper refactor
@@ -14,7 +14,8 @@ Even after traversal unification, `binder-surface-registry` still repeats four n
 
 1. Shared contract helpers now centralize path-level collect/rewrite behavior.
 2. Registry now centralizes deep-tree walking.
-3. Mismatch: path-group application logic is still duplicated in two places with four repeated loops each.
+3. Existing registry tests already lock deterministic nested path outputs and collect/rewrite parity for selected fixtures.
+4. Mismatch: path-group application logic is still duplicated in two places with four repeated loops each, and tests do not yet assert explicit four-path-group coverage in one focused case.
 
 ## Architecture Check
 
@@ -34,7 +35,7 @@ Replace duplicated loops in `collectBinderSurfaceStringSites` and `rewriteBinder
 
 ### 3. Lock deterministic order and coverage
 
-Add/extend tests that ensure all four path groups are still applied and that deterministic behavior/path outputs remain unchanged.
+Add/extend tests that ensure all four path groups are still applied in both collect and rewrite flows, and that deterministic behavior/path outputs remain unchanged.
 
 ## Files to Touch
 
@@ -51,7 +52,7 @@ Add/extend tests that ensure all four path groups are still applied and that det
 
 ### Tests That Must Pass
 
-1. Collect and rewrite still apply all four binder-surface path groups with parity to current behavior.
+1. Collect and rewrite still apply all four binder-surface path groups with parity to current behavior, verified by an explicit focused test.
 2. Deterministic path/value outputs remain unchanged for existing fixtures.
 3. Existing suite: `pnpm -F @ludoforge/engine test`.
 
@@ -64,10 +65,29 @@ Add/extend tests that ensure all four path groups are still applied and that det
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/binder-surface-registry.test.ts` — add assertions that all path groups remain applied and deterministic after helper consolidation.
+1. `packages/engine/test/unit/binder-surface-registry.test.ts` — add focused assertions that all four path groups remain applied in both collect and rewrite, and that deterministic outputs remain unchanged after helper consolidation.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine test -- packages/engine/test/unit/binder-surface-registry.test.ts`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-04
+- **What actually changed**:
+  - Added a single internal path-group iterator in `binder-surface-registry` that applies path groups in deterministic order: `declared`, `bindingName`, `bindingTemplate`, `zoneSelector`.
+  - Refactored both `rewriteBinderSurfaceStringsInNode` and `collectBinderSurfaceStringSites` to consume the helper and removed duplicated four-loop application blocks.
+  - Added focused unit coverage proving all four path groups are applied in both collect and rewrite flows, with deterministic path/value outputs.
+  - Post-archive refinement: replaced inline conditional rewrite dispatch with a typed path-group-to-rewriter map so path-group registration and rewrite dispatch stay single-source and extension-safe.
+- **Deviations from original plan**:
+  - No functional deviations; implementation remained structural and behavior-preserving.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine test -- packages/engine/test/unit/binder-surface-registry.test.ts` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo lint` ✅
+  - Post-archive refinement verification:
+    - `pnpm -F @ludoforge/engine test -- packages/engine/test/unit/binder-surface-registry.test.ts` ✅
+    - `pnpm -F @ludoforge/engine test` ✅
+    - `pnpm turbo lint` ✅

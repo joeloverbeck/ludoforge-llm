@@ -397,6 +397,77 @@ describe('binder-surface-registry', () => {
     );
   });
 
+  it('applies all binder-surface path groups in collect and rewrite flows', () => {
+    const input = {
+      wrapper: {
+        items: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$picked',
+              bind: '$declared',
+            },
+          },
+          {
+            ref: 'binding',
+            name: '$name',
+          },
+          {
+            query: 'tokensInMapSpaces',
+            spaceFilter: { owner: { chosen: '$template' } },
+          },
+          {
+            setVar: {
+              scope: 'global',
+              var: 'owner',
+              value: 1,
+              zone: 'bench:$zone',
+            },
+          },
+        ],
+      },
+    };
+
+    const originalSites: Array<{ path: string; value: string }> = [];
+    collectBinderSurfaceStringSites(input, 'root', originalSites);
+    assert.deepEqual(originalSites, [
+      { path: 'root.wrapper.items[0].chooseOne.bind', value: '$declared' },
+      { path: 'root.wrapper.items[1].name', value: '$name' },
+      { path: 'root.wrapper.items[2].spaceFilter.owner.chosen', value: '$template' },
+      { path: 'root.wrapper.items[3].setVar.zone', value: 'bench:$zone' },
+    ]);
+
+    const rewriteCalls: string[] = [];
+    const rewritten = rewriteBinderSurfaceStringsInNode(input, {
+      rewriteDeclaredBinder: (value) => {
+        rewriteCalls.push('declared');
+        return `${value}:declared`;
+      },
+      rewriteBindingName: (value) => {
+        rewriteCalls.push('bindingName');
+        return `${value}:bindingName`;
+      },
+      rewriteBindingTemplate: (value) => {
+        rewriteCalls.push('bindingTemplate');
+        return `${value}:bindingTemplate`;
+      },
+      rewriteZoneSelector: (value) => {
+        rewriteCalls.push('zoneSelector');
+        return `${value}:zoneSelector`;
+      },
+    });
+
+    assert.deepEqual(rewriteCalls, ['declared', 'bindingName', 'bindingTemplate', 'zoneSelector']);
+
+    const rewrittenSites: Array<{ path: string; value: string }> = [];
+    collectBinderSurfaceStringSites(rewritten, 'root', rewrittenSites);
+    assert.deepEqual(rewrittenSites, [
+      { path: 'root.wrapper.items[0].chooseOne.bind', value: '$declared:declared' },
+      { path: 'root.wrapper.items[1].name', value: '$name:bindingName' },
+      { path: 'root.wrapper.items[2].spaceFilter.owner.chosen', value: '$template:bindingTemplate' },
+      { path: 'root.wrapper.items[3].setVar.zone', value: 'bench:$zone:zoneSelector' },
+    ]);
+  });
+
   it('rewrites and collects non-effect binder referencers via canonical registry helpers', () => {
     const node = {
       ref: 'binding',

@@ -344,6 +344,59 @@ describe('binder-surface-registry', () => {
     });
   });
 
+  it('collects deterministic nested binder-surface paths and preserves collect/rewrite parity', () => {
+    const input = {
+      wrapper: {
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$picked',
+              bind: '$picked',
+            },
+          },
+          {
+            ref: 'binding',
+            name: '$picked',
+          },
+          {
+            if: {
+              when: true,
+              then: [{ ref: 'binding', name: '$picked' }],
+              else: [],
+            },
+          },
+          {
+            query: 'tokensInMapSpaces',
+            spaceFilter: { owner: { chosen: '$picked' } },
+          },
+        ],
+      },
+    };
+
+    const originalSites: Array<{ path: string; value: string }> = [];
+    collectBinderSurfaceStringSites(input, 'root', originalSites);
+    assert.deepEqual(originalSites, [
+      { path: 'root.wrapper.effects[0].chooseOne.bind', value: '$picked' },
+      { path: 'root.wrapper.effects[1].name', value: '$picked' },
+      { path: 'root.wrapper.effects[2].if.then[0].name', value: '$picked' },
+      { path: 'root.wrapper.effects[3].spaceFilter.owner.chosen', value: '$picked' },
+    ]);
+
+    const rewritten = rewriteBinderSurfaceStringsInNode(input, {
+      rewriteDeclaredBinder: (value) => (value === '$picked' ? '$picked_renamed' : value),
+      rewriteBindingName: (value) => (value === '$picked' ? '$picked_renamed' : value),
+      rewriteBindingTemplate: (value) => (value === '$picked' ? '$picked_renamed' : value),
+      rewriteZoneSelector: (value) => value,
+    });
+    const rewrittenSites: Array<{ path: string; value: string }> = [];
+    collectBinderSurfaceStringSites(rewritten, 'root', rewrittenSites);
+
+    assert.deepEqual(
+      rewrittenSites,
+      originalSites.map((site) => ({ path: site.path, value: '$picked_renamed' })),
+    );
+  });
+
   it('rewrites and collects non-effect binder referencers via canonical registry helpers', () => {
     const node = {
       ref: 'binding',

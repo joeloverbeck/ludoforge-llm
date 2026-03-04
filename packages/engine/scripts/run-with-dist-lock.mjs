@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -6,8 +6,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const lockName = process.env.ENGINE_DIST_LOCK_NAME || '.dist-lock';
 const defaultLockRoot = join('/tmp', 'ludoforge-engine-dist-locks', process.cwd().replaceAll('/', '_'));
 const lockRoot = process.env.ENGINE_DIST_LOCK_DIR || defaultLockRoot;
-const lockDir = join(lockRoot, lockName);
-const lockMetaFile = join(lockDir, 'owner.json');
+const lockPath = join(lockRoot, lockName);
 const pollMs = 200;
 const staleMs = 30 * 60 * 1000;
 const maxWaitMs = Number.parseInt(process.env.ENGINE_DIST_LOCK_MAX_WAIT_MS ?? '', 10) || 5 * 60 * 1000;
@@ -48,7 +47,28 @@ const isProcessAlive = (pid) => {
   }
 };
 
-const isExpectedLockOwnerProcess = (pid) => {
+const getLinuxProcessStartTicks = (pid) => {
+  if (process.platform !== 'linux') {
+    return null;
+  }
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    const closeParen = stat.lastIndexOf(')');
+    if (closeParen === -1) {
+      return null;
+    }
+    const after = stat.slice(closeParen + 2).trim();
+    const fields = after.split(/\s+/u);
+    const startTicks = Number.parseInt(fields[19] ?? '', 10);
+    return Number.isFinite(startTicks) ? startTicks : null;
+  } catch {
+    return null;
+  }
+};
+
+const selfStartTicks = getLinuxProcessStartTicks(process.pid);
+
+const isExpectedLockOwnerProcess = (pid, startedAtTicks) => {
   if (!isProcessAlive(pid)) {
     return false;
   }
@@ -58,6 +78,12 @@ const isExpectedLockOwnerProcess = (pid) => {
   }
 
   try {
+    if (typeof startedAtTicks === 'number') {
+      const currentStartTicks = getLinuxProcessStartTicks(pid);
+      if (currentStartTicks === null || currentStartTicks !== startedAtTicks) {
+        return false;
+      }
+    }
     const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf8');
     return cmdline.includes('run-with-dist-lock.mjs');
   } catch {
@@ -70,56 +96,75 @@ const isStale = (metadataRaw) => {
   try {
     const metadata = JSON.parse(metadataRaw);
     const staleByAge = typeof metadata?.createdAt === 'number' && (Date.now() - metadata.createdAt) > staleMs;
-    const staleByPid = typeof metadata?.pid === 'number' && !isExpectedLockOwnerProcess(metadata.pid);
+    const staleByPid = typeof metadata?.pid === 'number'
+      && !isExpectedLockOwnerProcess(metadata.pid, metadata.startedAtTicks);
     return staleByAge || staleByPid;
   } catch {
-    return false;
+    return true;
+  }
+};
+
+const readLockMetadata = () => {
+  try {
+    return readFileSync(lockPath, 'utf8');
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'EISDIR') {
+        try {
+          return readFileSync(join(lockPath, 'owner.json'), 'utf8');
+        } catch {
+          return null;
+        }
+      }
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+    }
+    return null;
   }
 };
 
 const tryAcquire = () => {
   try {
-    mkdirSync(lockDir);
-    writeFileSync(
-      lockMetaFile,
-      JSON.stringify({
-        pid: process.pid,
-        command,
-        createdAt: Date.now(),
-      }),
-      'utf8',
-    );
+    const fd = openSync(lockPath, 'wx');
+    try {
+      writeFileSync(
+        fd,
+        JSON.stringify({
+          pid: process.pid,
+          command,
+          createdAt: Date.now(),
+          startedAtTicks: selfStartTicks,
+        }),
+        'utf8',
+      );
+    } finally {
+      closeSync(fd);
+    }
     return true;
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
-      try {
-        const metadataRaw = readFileSync(lockMetaFile, 'utf8');
-        if (isStale(metadataRaw)) {
-          rmSync(lockDir, { recursive: true, force: true });
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'EEXIST' || error.code === 'EISDIR') {
+        const metadataRaw = readLockMetadata();
+        if (metadataRaw === null || isStale(metadataRaw)) {
+          rmSync(lockPath, { recursive: true, force: true });
         }
-      } catch {
-        // If metadata cannot be read (or lock dir is partially created), keep waiting.
+        return false;
       }
-      return false;
     }
     throw error;
   }
 };
 
 const release = () => {
-  rmSync(lockDir, { recursive: true, force: true });
+  rmSync(lockPath, { recursive: true, force: true });
 };
 
 const acquire = async () => {
   const startedAt = Date.now();
   while (!tryAcquire()) {
     if (Date.now() - startedAt > maxWaitMs) {
-      let owner = 'unreadable';
-      try {
-        owner = readFileSync(lockMetaFile, 'utf8');
-      } catch {
-        // Keep fallback owner string.
-      }
+      const owner = readLockMetadata() ?? 'unreadable';
       throw new Error(`Timed out waiting for dist lock "${lockName}" after ${maxWaitMs}ms. Current owner: ${owner}`);
     }
     await sleep(pollMs);
@@ -155,7 +200,7 @@ try {
     throw result.error;
   }
 
-  process.exit(result.status ?? 1);
+  process.exitCode = result.status ?? 1;
 } finally {
   cleanup();
 }

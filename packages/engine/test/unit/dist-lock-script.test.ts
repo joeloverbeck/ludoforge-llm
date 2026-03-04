@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import { spawn } from 'node:child_process';
@@ -73,6 +73,17 @@ describe('run-with-dist-lock script', () => {
     assert.equal(readFileSync(outputFile, 'utf8'), 'first\nsecond\n');
   });
 
+  it('releases lock metadata after successful command completion', async () => {
+    mkdirSync(tmpDir, { recursive: true });
+    const lockName = `.dist-lock-test-${randomUUID()}`;
+    const lockPath = join(lockRoot, lockName);
+    cleanupPaths.push(lockPath);
+
+    await runWithLock('node -e "process.exit(0)"', lockName);
+
+    assert.equal(existsSync(lockPath), false, 'lock path should not exist after successful completion');
+  });
+
   it('reclaims stale lock metadata when pid points to an unrelated alive process', async () => {
     mkdirSync(tmpDir, { recursive: true });
     const outputFile = join(tmpDir, `dist-lock-stale-reclaim-${randomUUID()}.txt`);
@@ -87,6 +98,44 @@ describe('run-with-dist-lock script', () => {
       JSON.stringify({
         pid: process.pid,
         command: 'not run-with-dist-lock',
+        createdAt: Date.now(),
+      }),
+      'utf8',
+    );
+
+    await runWithLock(`node -e "const fs=require('node:fs'); fs.writeFileSync('${outputFile}', 'ok\\n');"`, lockName);
+
+    assert.equal(readFileSync(outputFile, 'utf8'), 'ok\n');
+  });
+
+  it('reclaims legacy lock directory when owner metadata is missing', async () => {
+    mkdirSync(tmpDir, { recursive: true });
+    const outputFile = join(tmpDir, `dist-lock-missing-owner-${randomUUID()}.txt`);
+    const lockName = `.dist-lock-test-${randomUUID()}`;
+    const lockPath = join(lockRoot, lockName);
+    cleanupPaths.push(outputFile);
+    cleanupPaths.push(lockPath);
+
+    mkdirSync(lockPath, { recursive: true });
+
+    await runWithLock(`node -e "const fs=require('node:fs'); fs.writeFileSync('${outputFile}', 'ok\\n');"`, lockName);
+
+    assert.equal(readFileSync(outputFile, 'utf8'), 'ok\n');
+  });
+
+  it('reclaims stale lock metadata when pid is no longer alive', async () => {
+    mkdirSync(tmpDir, { recursive: true });
+    const outputFile = join(tmpDir, `dist-lock-dead-pid-reclaim-${randomUUID()}.txt`);
+    const lockName = `.dist-lock-test-${randomUUID()}`;
+    const lockPath = join(lockRoot, lockName);
+    cleanupPaths.push(outputFile);
+    cleanupPaths.push(lockPath);
+
+    writeFileSync(
+      lockPath,
+      JSON.stringify({
+        pid: 999_999_999,
+        command: 'stale',
         createdAt: Date.now(),
       }),
       'utf8',

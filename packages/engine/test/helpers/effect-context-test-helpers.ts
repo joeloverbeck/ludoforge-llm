@@ -9,11 +9,10 @@ import {
 } from '../../src/kernel/effect-context.js';
 import {
   createEvalRuntimeResources,
-  createQueryRuntimeCache,
-  type QueryRuntimeCache,
 } from '../../src/kernel/eval-context.js';
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import { createRng } from '../../src/kernel/prng.js';
+import { createQueryRuntimeCache, type QueryRuntimeCache } from '../../src/kernel/query-runtime-cache.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
 import type { FreeOperationZoneFilterDiagnostics } from '../../src/kernel/eval-context.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';

@@ -25,6 +25,7 @@ import {
   runtimeTableRowsUnavailableEvalError,
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
+import type { QueryRuntimeCacheIndexKey } from './query-runtime-cache.js';
 import { filterTokensByPredicates } from './token-filter.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
@@ -32,6 +33,7 @@ import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFil
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'empty' | 'mixed';
+const TOKEN_ZONE_BY_TOKEN_ID_INDEX: QueryRuntimeCacheIndexKey = 'tokenZoneByTokenId';
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
   let value: number | boolean | string;
@@ -508,12 +510,12 @@ function buildTokenZoneIndex(state: EvalContext['state']): ReadonlyMap<string, s
 }
 
 function getTokenZoneIndex(ctx: EvalContext): ReadonlyMap<string, string> {
-  const cached = ctx.queryRuntimeCache.tokenZoneIndexByState.get(ctx.state);
+  const cached = ctx.queryRuntimeCache.getIndex(ctx.state, TOKEN_ZONE_BY_TOKEN_ID_INDEX);
   if (cached !== undefined) {
     return cached;
   }
   const built = buildTokenZoneIndex(ctx.state);
-  ctx.queryRuntimeCache.tokenZoneIndexByState.set(ctx.state, built);
+  ctx.queryRuntimeCache.setIndex(ctx.state, TOKEN_ZONE_BY_TOKEN_ID_INDEX, built);
   return built;
 }
 

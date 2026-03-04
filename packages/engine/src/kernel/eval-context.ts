@@ -1,6 +1,7 @@
 import type { PlayerId } from './branded.js';
 import { createCollector } from './execution-collector.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
+import { createQueryRuntimeCache, type QueryRuntimeCache } from './query-runtime-cache.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ConditionAST, ExecutionCollector, GameDef, GameState } from './types.js';
@@ -11,16 +12,6 @@ export interface FreeOperationZoneFilterDiagnostics {
   readonly source: FreeOperationZoneFilterSurface;
   readonly actionId: string;
   readonly moveParams: Readonly<Record<string, unknown>>;
-}
-
-export interface QueryRuntimeCache {
-  readonly tokenZoneIndexByState: WeakMap<GameState, ReadonlyMap<string, string>>;
-}
-
-export function createQueryRuntimeCache(): QueryRuntimeCache {
-  return {
-    tokenZoneIndexByState: new WeakMap<GameState, ReadonlyMap<string, string>>(),
-  };
 }
 
 export interface EvalRuntimeResources {

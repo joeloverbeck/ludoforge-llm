@@ -8,7 +8,8 @@ import {
   createExecutionEffectContext,
 } from '../../../src/kernel/effect-context.js';
 import * as effectContextModule from '../../../src/kernel/effect-context.js';
-import { createEvalRuntimeResources, createQueryRuntimeCache } from '../../../src/kernel/eval-context.js';
+import { createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
+import { createQueryRuntimeCache } from '../../../src/kernel/query-runtime-cache.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';

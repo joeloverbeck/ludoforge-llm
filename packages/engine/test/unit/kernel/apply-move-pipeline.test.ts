@@ -14,7 +14,8 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
-import { createQueryRuntimeCache, type EvalContext } from '../../../src/kernel/eval-context.js';
+import type { EvalContext } from '../../../src/kernel/eval-context.js';
+import { createQueryRuntimeCache } from '../../../src/kernel/query-runtime-cache.js';
 
 const makeDef = (overrides?: {
   readonly actionPipelines?: readonly ActionPipelineDef[];

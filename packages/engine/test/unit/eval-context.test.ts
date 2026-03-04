@@ -9,6 +9,7 @@ import {
   createEvalContext,
   createEvalRuntimeResources,
   createQueryRuntimeCache,
+  asZoneId,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
@@ -58,7 +59,9 @@ describe('createEvalContext', () => {
 
     assert.deepEqual(ctx.collector.warnings, []);
     assert.equal(ctx.collector.trace, null);
-    assert.ok(ctx.queryRuntimeCache.tokenZoneIndexByState instanceof WeakMap);
+    assert.equal(typeof ctx.queryRuntimeCache.getIndex, 'function');
+    assert.equal(typeof ctx.queryRuntimeCache.setIndex, 'function');
+    assert.equal('tokenZoneIndexByState' in ctx.queryRuntimeCache, false);
   });
 
   it('preserves provided collector and query runtime cache instances', () => {
@@ -136,5 +139,24 @@ describe('createEvalContext', () => {
 
     assert.notEqual(first.collector, second.collector);
     assert.notEqual(first.queryRuntimeCache, second.queryRuntimeCache);
+  });
+});
+
+describe('createQueryRuntimeCache', () => {
+  it('stores and retrieves indexes per state through API methods only', () => {
+    const cache = createQueryRuntimeCache();
+    const firstState = makeState();
+    const secondState = makeState();
+    const firstIndex = new Map<string, string>([['a', asZoneId('hand:0')]]);
+    const secondIndex = new Map<string, string>([['b', asZoneId('bench:1')]]);
+
+    assert.equal(cache.getIndex(firstState, 'tokenZoneByTokenId'), undefined);
+    assert.equal(cache.getIndex(secondState, 'tokenZoneByTokenId'), undefined);
+
+    cache.setIndex(firstState, 'tokenZoneByTokenId', firstIndex);
+    cache.setIndex(secondState, 'tokenZoneByTokenId', secondIndex);
+
+    assert.equal(cache.getIndex(firstState, 'tokenZoneByTokenId'), firstIndex);
+    assert.equal(cache.getIndex(secondState, 'tokenZoneByTokenId'), secondIndex);
   });
 });

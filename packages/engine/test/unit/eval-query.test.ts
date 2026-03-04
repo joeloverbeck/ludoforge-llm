@@ -15,6 +15,7 @@ import {
   type EvalContext,
   type GameDef,
   type GameState,
+  type QueryRuntimeCache,
   type Token,
 } from '../../src/kernel/index.js';
 
@@ -1336,6 +1337,34 @@ describe('evalQuery', () => {
 
     assert.deepEqual(result, Array.from({ length: 30 }, () => 'hand:0'));
     assert.ok(tokenIdReads <= 40, `Expected <= 40 token id reads, received ${String(tokenIdReads)}`);
+  });
+
+  it('uses QueryRuntimeCache API methods for token zone lookup caching', () => {
+    const indexByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
+    let getCalls = 0;
+    let setCalls = 0;
+    const queryRuntimeCache: QueryRuntimeCache = {
+      getIndex: (state, key) => {
+        getCalls += 1;
+        assert.equal(key, 'tokenZoneByTokenId');
+        return indexByState.get(state);
+      },
+      setIndex: (state, key, index) => {
+        setCalls += 1;
+        assert.equal(key, 'tokenZoneByTokenId');
+        indexByState.set(state, index);
+      },
+    };
+    const ctx = makeCtx({ queryRuntimeCache });
+    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
+
+    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
+    assert.equal(getCalls, 1);
+    assert.equal(setCalls, 1);
+
+    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
+    assert.equal(getCalls, 2);
+    assert.equal(setCalls, 1);
   });
 
   it('reuses token zone lookup across tokenZones evaluations for the same state', () => {

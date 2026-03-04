@@ -1,6 +1,6 @@
 # KERQUERY-009: Encapsulate query runtime cache API and harden cache contract tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — query cache abstraction boundary and query/runtime contract tests
@@ -14,8 +14,8 @@
 
 1. Query cache ownership is now explicit in `EvalContext` and no longer module-global.
 2. Operation-scoped runtime resources now thread through both eval and effect context construction paths, eliminating mixed ownership patterns between preflight/discovery/execution surfaces.
-3. Cache internals are still publicly reachable through structural types, so encapsulation is incomplete.
-4. Existing tests cover tokenZones semantics and reuse/isolation behavior, but cache API boundary constraints are not comprehensively locked.
+3. Cache internals are still publicly reachable through structural types (`QueryRuntimeCache.tokenZoneIndexByState`), and `eval-query` reads/writes that field directly.
+4. Existing tests cover tokenZones semantics and reuse/isolation behavior, but one unit test currently asserts internal storage shape (`instanceof WeakMap`), which couples tests to internals and blocks encapsulation.
 
 ## Architecture Check
 
@@ -27,13 +27,15 @@
 
 ### 1. Replace public mutable cache internals with explicit API
 
-1. Refactor `QueryRuntimeCache` into an opaque/cache-object style surface with explicit methods (for example get/set helpers for token-zone index).
+1. Refactor `QueryRuntimeCache` into an opaque/cache-object style surface with explicit methods (for example, `getTokenZoneIndex(state)` and `setTokenZoneIndex(state, index)`).
 2. Update `eval-query` and related runtime code to use the API exclusively.
+3. Keep cache implementation details private to `eval-context.ts` (or equivalent runtime cache module) so call sites cannot depend on concrete storage structures.
 
 ### 2. Harden cache-boundary and behavior tests
 
-1. Add tests that prevent direct structural dependence on internal storage shape.
+1. Remove/replace tests that assert concrete internal storage shape (for example `instanceof WeakMap`).
 2. Add regression tests for cache API behavior under expected runtime usage patterns.
+3. Ensure tests assert behavior (cache reuse/isolation and state-keyed invalidation), not storage implementation.
 
 ### 3. Prepare for future query indexes
 
@@ -57,7 +59,7 @@
 
 ### Tests That Must Pass
 
-1. No kernel call site reads/writes raw cache internals directly.
+1. No kernel call site reads/writes raw cache internals directly; cache access occurs through `QueryRuntimeCache` API methods only.
 2. Cache API preserves current tokenZones semantics and deterministic behavior.
 3. Existing suite: `pnpm -F @ludoforge/engine test`.
 
@@ -79,3 +81,23 @@
 2. `node --test packages/engine/dist/test/unit/eval-context.test.js packages/engine/dist/test/unit/eval-query.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-04
+- **What Changed**:
+  - `QueryRuntimeCache` no longer exposes `tokenZoneIndexByState`; cache internals are encapsulated.
+  - Query runtime cache ownership was further refined into dedicated module `packages/engine/src/kernel/query-runtime-cache.ts` with an index-keyed API (`getIndex` / `setIndex`) to support future query indexes without leaking storage shape.
+  - `eval-query` token-zone lookup now uses the query cache API methods exclusively through the index key `tokenZoneByTokenId`.
+  - Import ownership was normalized so query cache types/factory come from `query-runtime-cache.ts` rather than `eval-context.ts`.
+  - Cache contract tests were hardened:
+    - Replaced direct internal-shape assertion (`instanceof WeakMap`) with API-boundary assertions.
+    - Added a `createQueryRuntimeCache` behavior test for state-keyed, index-keyed get/set semantics.
+    - Added a `tokenZones` query test that injects a custom cache and verifies index-keyed API call behavior.
+- **Deviations From Original Plan**:
+  - None in architectural intent; scope was clarified before implementation to explicitly remove internal-shape-coupled testing.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/eval-context.test.js packages/engine/dist/test/unit/eval-query.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

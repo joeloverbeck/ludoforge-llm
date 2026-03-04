@@ -31,6 +31,7 @@ export * from './runtime-error.js';
 export * from './runtime-reasons.js';
 export * from './execution-collector.js';
 export * from './execution-policy.js';
+export * from './query-runtime-cache.js';
 export * from './effects.js';
 export * from './event-execution.js';
 export * from './eval-condition.js';

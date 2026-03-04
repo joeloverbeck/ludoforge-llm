@@ -7,8 +7,8 @@ import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
 import {
   createEvalRuntimeResources,
   type EvalRuntimeResources,
-  type QueryRuntimeCache,
 } from './eval-context.js';
+import type { QueryRuntimeCache } from './query-runtime-cache.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type {

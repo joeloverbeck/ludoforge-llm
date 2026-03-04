@@ -3462,7 +3462,7 @@ actionPipelines:
                   else:
                     if:
                       when: { op: '==', left: { ref: globalMarkerState, marker: cap_lgbs }, right: shaded }
-                      then: 4
+                      then: 2
                       else: 6
           - forEach:
               bind: $space

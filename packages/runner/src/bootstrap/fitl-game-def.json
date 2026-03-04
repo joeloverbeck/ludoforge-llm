@@ -12261,206 +12261,6 @@
                               }
                             ]
                           }
-                        },
-                        {
-                          "if": {
-                            "when": {
-                              "op": "==",
-                              "left": {
-                                "ref": "globalMarkerState",
-                                "marker": "cap_caps"
-                              },
-                              "right": "unshaded"
-                            },
-                            "then": [
-                              {
-                                "forEach": {
-                                  "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                  "macroOrigin": {
-                                    "macroId": "place-from-available-or-map",
-                                    "stem": "piece"
-                                  },
-                                  "over": {
-                                    "query": "tokensInZone",
-                                    "zone": {
-                                      "zoneExpr": {
-                                        "concat": [
-                                          "available-",
-                                          "ARVN",
-                                          ":none"
-                                        ]
-                                      }
-                                    },
-                                    "filter": [
-                                      {
-                                        "prop": "type",
-                                        "op": "eq",
-                                        "value": "police"
-                                      }
-                                    ]
-                                  },
-                                  "effects": [
-                                    {
-                                      "moveToken": {
-                                        "token": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                        "from": {
-                                          "zoneExpr": {
-                                            "concat": [
-                                              "available-",
-                                              "ARVN",
-                                              ":none"
-                                            ]
-                                          }
-                                        },
-                                        "to": "$space"
-                                      }
-                                    }
-                                  ],
-                                  "limit": 1,
-                                  "countBind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed",
-                                  "in": [
-                                    {
-                                      "let": {
-                                        "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining",
-                                        "value": {
-                                          "op": "-",
-                                          "left": 1,
-                                          "right": {
-                                            "ref": "binding",
-                                            "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed"
-                                          }
-                                        },
-                                        "in": [
-                                          {
-                                            "if": {
-                                              "when": {
-                                                "op": "and",
-                                                "args": [
-                                                  {
-                                                    "op": "or",
-                                                    "args": [
-                                                      {
-                                                        "op": "!=",
-                                                        "left": "ARVN",
-                                                        "right": "US"
-                                                      },
-                                                      {
-                                                        "op": "==",
-                                                        "left": "police",
-                                                        "right": "irregular"
-                                                      }
-                                                    ]
-                                                  },
-                                                  {
-                                                    "op": ">",
-                                                    "left": {
-                                                      "ref": "binding",
-                                                      "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining"
-                                                    },
-                                                    "right": 0
-                                                  }
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "chooseN": {
-                                                    "internalDecisionId": "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.1.if.then.1.if.then.0.forEach.in.0.let.in.0.if.then.0.chooseN",
-                                                    "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces",
-                                                    "options": {
-                                                      "query": "mapSpaces",
-                                                      "filter": {
-                                                        "condition": {
-                                                          "op": ">",
-                                                          "left": {
-                                                            "aggregate": {
-                                                              "op": "count",
-                                                              "query": {
-                                                                "query": "tokensInZone",
-                                                                "zone": "$zone",
-                                                                "filter": [
-                                                                  {
-                                                                    "prop": "type",
-                                                                    "op": "eq",
-                                                                    "value": "police"
-                                                                  },
-                                                                  {
-                                                                    "prop": "faction",
-                                                                    "op": "eq",
-                                                                    "value": "ARVN"
-                                                                  }
-                                                                ]
-                                                              }
-                                                            }
-                                                          },
-                                                          "right": 0
-                                                        }
-                                                      }
-                                                    },
-                                                    "max": 99,
-                                                    "min": 0
-                                                  }
-                                                },
-                                                {
-                                                  "forEach": {
-                                                    "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                    "macroOrigin": {
-                                                      "macroId": "place-from-available-or-map",
-                                                      "stem": "srcSpace"
-                                                    },
-                                                    "over": {
-                                                      "query": "binding",
-                                                      "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
-                                                    },
-                                                    "effects": [
-                                                      {
-                                                        "forEach": {
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                          "macroOrigin": {
-                                                            "macroId": "place-from-available-or-map",
-                                                            "stem": "mapPiece"
-                                                          },
-                                                          "over": {
-                                                            "query": "tokensInZone",
-                                                            "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                            "filter": [
-                                                              {
-                                                                "prop": "type",
-                                                                "op": "eq",
-                                                                "value": "police"
-                                                              },
-                                                              {
-                                                                "prop": "faction",
-                                                                "op": "eq",
-                                                                "value": "ARVN"
-                                                              }
-                                                            ]
-                                                          },
-                                                          "effects": [
-                                                            {
-                                                              "moveToken": {
-                                                                "token": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                                "from": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                                "to": "$space"
-                                                              }
-                                                            }
-                                                          ],
-                                                          "limit": 1
-                                                        }
-                                                      }
-                                                    ]
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              }
-                            ]
-                          }
                         }
                       ]
                     }
@@ -12702,206 +12502,6 @@
                                                             }
                                                           ],
                                                           "limit": 1
-                                                        }
-                                                      }
-                                                    ]
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "if": {
-                                  "when": {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "globalMarkerState",
-                                      "marker": "cap_caps"
-                                    },
-                                    "right": "unshaded"
-                                  },
-                                  "then": [
-                                    {
-                                      "forEach": {
-                                        "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                        "macroOrigin": {
-                                          "macroId": "place-from-available-or-map",
-                                          "stem": "piece"
-                                        },
-                                        "over": {
-                                          "query": "tokensInZone",
-                                          "zone": {
-                                            "zoneExpr": {
-                                              "concat": [
-                                                "available-",
-                                                "ARVN",
-                                                ":none"
-                                              ]
-                                            }
-                                          },
-                                          "filter": [
-                                            {
-                                              "prop": "type",
-                                              "op": "eq",
-                                              "value": "police"
-                                            }
-                                          ]
-                                        },
-                                        "effects": [
-                                          {
-                                            "moveToken": {
-                                              "token": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                              "from": {
-                                                "zoneExpr": {
-                                                  "concat": [
-                                                    "available-",
-                                                    "ARVN",
-                                                    ":none"
-                                                  ]
-                                                }
-                                              },
-                                              "to": "$space"
-                                            }
-                                          }
-                                        ],
-                                        "limit": 1,
-                                        "countBind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed",
-                                        "in": [
-                                          {
-                                            "let": {
-                                              "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining",
-                                              "value": {
-                                                "op": "-",
-                                                "left": 1,
-                                                "right": {
-                                                  "ref": "binding",
-                                                  "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed"
-                                                }
-                                              },
-                                              "in": [
-                                                {
-                                                  "if": {
-                                                    "when": {
-                                                      "op": "and",
-                                                      "args": [
-                                                        {
-                                                          "op": "or",
-                                                          "args": [
-                                                            {
-                                                              "op": "!=",
-                                                              "left": "ARVN",
-                                                              "right": "US"
-                                                            },
-                                                            {
-                                                              "op": "==",
-                                                              "left": "police",
-                                                              "right": "irregular"
-                                                            }
-                                                          ]
-                                                        },
-                                                        {
-                                                          "op": ">",
-                                                          "left": {
-                                                            "ref": "binding",
-                                                            "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining"
-                                                          },
-                                                          "right": 0
-                                                        }
-                                                      ]
-                                                    },
-                                                    "then": [
-                                                      {
-                                                        "chooseN": {
-                                                          "internalDecisionId": "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.2.if.then.1.if.then.1.if.then.0.forEach.in.0.let.in.0.if.then.0.chooseN",
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces",
-                                                          "options": {
-                                                            "query": "mapSpaces",
-                                                            "filter": {
-                                                              "condition": {
-                                                                "op": ">",
-                                                                "left": {
-                                                                  "aggregate": {
-                                                                    "op": "count",
-                                                                    "query": {
-                                                                      "query": "tokensInZone",
-                                                                      "zone": "$zone",
-                                                                      "filter": [
-                                                                        {
-                                                                          "prop": "type",
-                                                                          "op": "eq",
-                                                                          "value": "police"
-                                                                        },
-                                                                        {
-                                                                          "prop": "faction",
-                                                                          "op": "eq",
-                                                                          "value": "ARVN"
-                                                                        }
-                                                                      ]
-                                                                    }
-                                                                  }
-                                                                },
-                                                                "right": 0
-                                                              }
-                                                            }
-                                                          },
-                                                          "max": 99,
-                                                          "min": 0
-                                                        }
-                                                      },
-                                                      {
-                                                        "forEach": {
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                          "macroOrigin": {
-                                                            "macroId": "place-from-available-or-map",
-                                                            "stem": "srcSpace"
-                                                          },
-                                                          "over": {
-                                                            "query": "binding",
-                                                            "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
-                                                          },
-                                                          "effects": [
-                                                            {
-                                                              "forEach": {
-                                                                "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                                "macroOrigin": {
-                                                                  "macroId": "place-from-available-or-map",
-                                                                  "stem": "mapPiece"
-                                                                },
-                                                                "over": {
-                                                                  "query": "tokensInZone",
-                                                                  "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                                  "filter": [
-                                                                    {
-                                                                      "prop": "type",
-                                                                      "op": "eq",
-                                                                      "value": "police"
-                                                                    },
-                                                                    {
-                                                                      "prop": "faction",
-                                                                      "op": "eq",
-                                                                      "value": "ARVN"
-                                                                    }
-                                                                  ]
-                                                                },
-                                                                "effects": [
-                                                                  {
-                                                                    "moveToken": {
-                                                                      "token": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                                      "from": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                                      "to": "$space"
-                                                                    }
-                                                                  }
-                                                                ],
-                                                                "limit": 1
-                                                              }
-                                                            }
-                                                          ]
                                                         }
                                                       }
                                                     ]
@@ -13207,111 +12807,235 @@
                                     }
                                   ]
                                 }
-                              },
-                              {
-                                "if": {
-                                  "when": {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "globalMarkerState",
-                                      "marker": "cap_caps"
-                                    },
-                                    "right": "unshaded"
-                                  },
-                                  "then": [
-                                    {
-                                      "forEach": {
-                                        "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                        "macroOrigin": {
-                                          "macroId": "place-from-available-or-map",
-                                          "stem": "piece"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "stage": "cap-caps-bonus-police",
+          "effects": [
+            {
+              "if": {
+                "when": {
+                  "op": "==",
+                  "left": {
+                    "ref": "globalMarkerState",
+                    "marker": "cap_caps"
+                  },
+                  "right": "unshaded"
+                },
+                "then": [
+                  {
+                    "let": {
+                      "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsTroopSpaces",
+                      "value": {
+                        "aggregate": {
+                          "op": "count",
+                          "query": {
+                            "query": "mapSpaces",
+                            "filter": {
+                              "condition": {
+                                "op": ">",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "US"
                                         },
-                                        "over": {
-                                          "query": "tokensInZone",
-                                          "zone": {
-                                            "zoneExpr": {
-                                              "concat": [
-                                                "available-",
-                                                "ARVN",
-                                                ":none"
-                                              ]
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "troops"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "in": [
+                        {
+                          "if": {
+                            "when": {
+                              "op": ">",
+                              "left": {
+                                "ref": "binding",
+                                "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsTroopSpaces"
+                              },
+                              "right": 0
+                            },
+                            "then": [
+                              {
+                                "let": {
+                                  "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsAvailablePolice",
+                                  "value": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "available-ARVN:none",
+                                        "filter": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "ARVN"
+                                          },
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "police"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "in": [
+                                    {
+                                      "if": {
+                                        "when": {
+                                          "op": ">",
+                                          "left": {
+                                            "ref": "binding",
+                                            "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsAvailablePolice"
+                                          },
+                                          "right": 0
+                                        },
+                                        "then": [
+                                          {
+                                            "chooseOne": {
+                                              "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.0.if.then.0.let.in.0.if.then.0.let.in.0.if.then.0.chooseOne",
+                                              "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsBonusSpace",
+                                              "options": {
+                                                "query": "mapSpaces",
+                                                "filter": {
+                                                  "condition": {
+                                                    "op": ">",
+                                                    "left": {
+                                                      "aggregate": {
+                                                        "op": "count",
+                                                        "query": {
+                                                          "query": "tokensInZone",
+                                                          "zone": "$zone",
+                                                          "filter": [
+                                                            {
+                                                              "prop": "faction",
+                                                              "op": "eq",
+                                                              "value": "US"
+                                                            },
+                                                            {
+                                                              "prop": "type",
+                                                              "op": "eq",
+                                                              "value": "troops"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    },
+                                                    "right": 0
+                                                  }
+                                                }
+                                              }
                                             }
                                           },
-                                          "filter": [
-                                            {
-                                              "prop": "type",
-                                              "op": "eq",
-                                              "value": "police"
-                                            }
-                                          ]
-                                        },
-                                        "effects": [
                                           {
-                                            "moveToken": {
-                                              "token": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                              "from": {
-                                                "zoneExpr": {
-                                                  "concat": [
-                                                    "available-",
-                                                    "ARVN",
-                                                    ":none"
-                                                  ]
-                                                }
+                                            "forEach": {
+                                              "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsPolice",
+                                              "macroOrigin": {
+                                                "macroId": "cap-train-caps-unshaded-bonus-police",
+                                                "stem": "capCapsPolice"
                                               },
-                                              "to": "$space"
+                                              "over": {
+                                                "query": "tokensInZone",
+                                                "zone": "available-ARVN:none",
+                                                "filter": [
+                                                  {
+                                                    "prop": "faction",
+                                                    "op": "eq",
+                                                    "value": "ARVN"
+                                                  },
+                                                  {
+                                                    "prop": "type",
+                                                    "op": "eq",
+                                                    "value": "police"
+                                                  }
+                                                ]
+                                              },
+                                              "effects": [
+                                                {
+                                                  "moveToken": {
+                                                    "token": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsPolice",
+                                                    "from": "available-ARVN:none",
+                                                    "to": {
+                                                      "zoneExpr": {
+                                                        "ref": "binding",
+                                                        "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsBonusSpace"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "limit": 1
                                             }
                                           }
                                         ],
-                                        "limit": 1,
-                                        "countBind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed",
-                                        "in": [
+                                        "else": [
                                           {
                                             "let": {
-                                              "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining",
+                                              "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsMapPolice",
                                               "value": {
-                                                "op": "-",
-                                                "left": 1,
-                                                "right": {
-                                                  "ref": "binding",
-                                                  "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed"
+                                                "aggregate": {
+                                                  "op": "count",
+                                                  "query": {
+                                                    "query": "tokensInMapSpaces",
+                                                    "filter": [
+                                                      {
+                                                        "prop": "faction",
+                                                        "op": "eq",
+                                                        "value": "ARVN"
+                                                      },
+                                                      {
+                                                        "prop": "type",
+                                                        "op": "eq",
+                                                        "value": "police"
+                                                      }
+                                                    ]
+                                                  }
                                                 }
                                               },
                                               "in": [
                                                 {
                                                   "if": {
                                                     "when": {
-                                                      "op": "and",
-                                                      "args": [
-                                                        {
-                                                          "op": "or",
-                                                          "args": [
-                                                            {
-                                                              "op": "!=",
-                                                              "left": "ARVN",
-                                                              "right": "US"
-                                                            },
-                                                            {
-                                                              "op": "==",
-                                                              "left": "police",
-                                                              "right": "irregular"
-                                                            }
-                                                          ]
-                                                        },
-                                                        {
-                                                          "op": ">",
-                                                          "left": {
-                                                            "ref": "binding",
-                                                            "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining"
-                                                          },
-                                                          "right": 0
-                                                        }
-                                                      ]
+                                                      "op": ">",
+                                                      "left": {
+                                                        "ref": "binding",
+                                                        "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsMapPolice"
+                                                      },
+                                                      "right": 0
                                                     },
                                                     "then": [
                                                       {
-                                                        "chooseN": {
-                                                          "internalDecisionId": "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.2.if.then.2.if.then.3.if.then.0.forEach.in.0.let.in.0.if.then.0.chooseN",
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces",
+                                                        "chooseOne": {
+                                                          "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.0.if.then.0.let.in.0.if.then.0.let.in.0.if.else.0.let.in.0.if.then.0.chooseOne",
+                                                          "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsBonusSpace",
                                                           "options": {
                                                             "query": "mapSpaces",
                                                             "filter": {
@@ -13325,14 +13049,14 @@
                                                                       "zone": "$zone",
                                                                       "filter": [
                                                                         {
-                                                                          "prop": "type",
-                                                                          "op": "eq",
-                                                                          "value": "police"
-                                                                        },
-                                                                        {
                                                                           "prop": "faction",
                                                                           "op": "eq",
-                                                                          "value": "ARVN"
+                                                                          "value": "US"
+                                                                        },
+                                                                        {
+                                                                          "prop": "type",
+                                                                          "op": "eq",
+                                                                          "value": "troops"
                                                                         }
                                                                       ]
                                                                     }
@@ -13341,52 +13065,120 @@
                                                                 "right": 0
                                                               }
                                                             }
+                                                          }
+                                                        }
+                                                      },
+                                                      {
+                                                        "chooseN": {
+                                                          "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.0.if.then.0.let.in.0.if.then.0.let.in.0.if.else.0.let.in.0.if.then.1.chooseN",
+                                                          "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsRelocateSources",
+                                                          "options": {
+                                                            "query": "mapSpaces",
+                                                            "filter": {
+                                                              "condition": {
+                                                                "op": "and",
+                                                                "args": [
+                                                                  {
+                                                                    "op": "!=",
+                                                                    "left": {
+                                                                      "ref": "zoneProp",
+                                                                      "zone": "$zone",
+                                                                      "prop": "id"
+                                                                    },
+                                                                    "right": {
+                                                                      "ref": "binding",
+                                                                      "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsBonusSpace"
+                                                                    }
+                                                                  },
+                                                                  {
+                                                                    "op": ">",
+                                                                    "left": {
+                                                                      "aggregate": {
+                                                                        "op": "count",
+                                                                        "query": {
+                                                                          "query": "tokensInZone",
+                                                                          "zone": "$zone",
+                                                                          "filter": [
+                                                                            {
+                                                                              "prop": "faction",
+                                                                              "op": "eq",
+                                                                              "value": "ARVN"
+                                                                            },
+                                                                            {
+                                                                              "prop": "type",
+                                                                              "op": "eq",
+                                                                              "value": "police"
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "right": 0
+                                                                  }
+                                                                ]
+                                                              }
+                                                            }
                                                           },
-                                                          "max": 99,
+                                                          "max": 1,
                                                           "min": 0
                                                         }
                                                       },
                                                       {
                                                         "forEach": {
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                          "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsRelocateSource",
                                                           "macroOrigin": {
-                                                            "macroId": "place-from-available-or-map",
-                                                            "stem": "srcSpace"
+                                                            "macroId": "cap-train-caps-unshaded-bonus-police",
+                                                            "stem": "capCapsRelocateSource"
                                                           },
                                                           "over": {
                                                             "query": "binding",
-                                                            "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
+                                                            "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsRelocateSources"
                                                           },
                                                           "effects": [
                                                             {
                                                               "forEach": {
-                                                                "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
+                                                                "bind": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsPolice",
                                                                 "macroOrigin": {
-                                                                  "macroId": "place-from-available-or-map",
-                                                                  "stem": "mapPiece"
+                                                                  "macroId": "cap-train-caps-unshaded-bonus-police",
+                                                                  "stem": "capCapsPolice"
                                                                 },
                                                                 "over": {
                                                                   "query": "tokensInZone",
-                                                                  "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                                  "zone": {
+                                                                    "zoneExpr": {
+                                                                      "ref": "binding",
+                                                                      "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsRelocateSource"
+                                                                    }
+                                                                  },
                                                                   "filter": [
-                                                                    {
-                                                                      "prop": "type",
-                                                                      "op": "eq",
-                                                                      "value": "police"
-                                                                    },
                                                                     {
                                                                       "prop": "faction",
                                                                       "op": "eq",
                                                                       "value": "ARVN"
+                                                                    },
+                                                                    {
+                                                                      "prop": "type",
+                                                                      "op": "eq",
+                                                                      "value": "police"
                                                                     }
                                                                   ]
                                                                 },
                                                                 "effects": [
                                                                   {
                                                                     "moveToken": {
-                                                                      "token": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                                      "from": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                                      "to": "$space"
+                                                                      "token": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsPolice",
+                                                                      "from": {
+                                                                        "zoneExpr": {
+                                                                          "ref": "binding",
+                                                                          "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsRelocateSource"
+                                                                        }
+                                                                      },
+                                                                      "to": {
+                                                                        "zoneExpr": {
+                                                                          "ref": "binding",
+                                                                          "name": "$__macro_cap_train_caps_unshaded_bonus_police_actionPipelines_0__stages_2__effects_0__capCapsBonusSpace"
+                                                                        }
+                                                                      }
                                                                     }
                                                                   }
                                                                 ],
@@ -13435,7 +13227,7 @@
                 "then": [
                   {
                     "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.0.if.then.0.chooseN",
+                      "internalDecisionId": "decision:doc.actionPipelines.0.stages[3].effects.0.if.then.0.chooseN",
                       "bind": "$subActionSpaces",
                       "options": {
                         "query": "binding",
@@ -13449,7 +13241,7 @@
                 "else": [
                   {
                     "chooseN": {
-                      "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.0.if.else.0.chooseN",
+                      "internalDecisionId": "decision:doc.actionPipelines.0.stages[3].effects.0.if.else.0.chooseN",
                       "bind": "$subActionSpaces",
                       "options": {
                         "query": "binding",
@@ -13472,7 +13264,7 @@
                 "effects": [
                   {
                     "chooseOne": {
-                      "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.1.forEach.effects.0.chooseOne",
+                      "internalDecisionId": "decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.0.chooseOne",
                       "bind": "$subAction",
                       "options": {
                         "query": "enums",
@@ -13623,27 +13415,13 @@
                                     {
                                       "if": {
                                         "when": {
-                                          "op": "and",
-                                          "args": [
-                                            {
-                                              "op": "!=",
-                                              "left": {
-                                                "ref": "markerState",
-                                                "space": "$subSpace",
-                                                "marker": "supportOpposition"
-                                              },
-                                              "right": "passiveSupport"
-                                            },
-                                            {
-                                              "op": "!=",
-                                              "left": {
-                                                "ref": "markerState",
-                                                "space": "$subSpace",
-                                                "marker": "supportOpposition"
-                                              },
-                                              "right": "activeSupport"
-                                            }
-                                          ]
+                                          "op": "==",
+                                          "left": {
+                                            "ref": "markerState",
+                                            "space": "$subSpace",
+                                            "marker": "supportOpposition"
+                                          },
+                                          "right": "neutral"
                                         },
                                         "then": [
                                           {
@@ -13692,10 +13470,127 @@
                                                   }
                                                 },
                                                 {
-                                                  "setMarker": {
+                                                  "shiftMarker": {
                                                     "space": "$subSpace",
                                                     "marker": "supportOpposition",
-                                                    "state": "passiveSupport"
+                                                    "delta": 1
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "if": {
+                                        "when": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "!=",
+                                              "left": {
+                                                "ref": "markerState",
+                                                "space": "$subSpace",
+                                                "marker": "supportOpposition"
+                                              },
+                                              "right": "passiveSupport"
+                                            },
+                                            {
+                                              "op": "!=",
+                                              "left": {
+                                                "ref": "markerState",
+                                                "space": "$subSpace",
+                                                "marker": "supportOpposition"
+                                              },
+                                              "right": "activeSupport"
+                                            },
+                                            {
+                                              "op": "!=",
+                                              "left": {
+                                                "ref": "markerState",
+                                                "space": "$subSpace",
+                                                "marker": "supportOpposition"
+                                              },
+                                              "right": "neutral"
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "chooseOne": {
+                                              "internalDecisionId": "decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.1.if.then.0.let.in.1.if.then.1.if.then.0.chooseOne",
+                                              "bind": "$pacLevels",
+                                              "options": {
+                                                "query": "intsInRange",
+                                                "min": 1,
+                                                "max": 2
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "if": {
+                                              "when": {
+                                                "op": ">=",
+                                                "left": {
+                                                  "ref": "gvar",
+                                                  "var": "arvnResources"
+                                                },
+                                                "right": {
+                                                  "op": "+",
+                                                  "left": {
+                                                    "ref": "gvar",
+                                                    "var": "totalEcon"
+                                                  },
+                                                  "right": {
+                                                    "op": "*",
+                                                    "left": {
+                                                      "ref": "binding",
+                                                      "name": "$pacLevels"
+                                                    },
+                                                    "right": {
+                                                      "ref": "binding",
+                                                      "name": "$usPacPerStepCost"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "then": [
+                                                {
+                                                  "addVar": {
+                                                    "scope": "global",
+                                                    "var": "arvnResources",
+                                                    "delta": {
+                                                      "op": "*",
+                                                      "left": {
+                                                        "ref": "binding",
+                                                        "name": "$pacLevels"
+                                                      },
+                                                      "right": {
+                                                        "if": {
+                                                          "when": {
+                                                            "op": "==",
+                                                            "left": {
+                                                              "ref": "globalMarkerState",
+                                                              "marker": "activeLeader"
+                                                            },
+                                                            "right": "ky"
+                                                          },
+                                                          "then": -4,
+                                                          "else": -3
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "shiftMarker": {
+                                                    "space": "$subSpace",
+                                                    "marker": "supportOpposition",
+                                                    "delta": {
+                                                      "ref": "binding",
+                                                      "name": "$pacLevels"
+                                                    }
                                                   }
                                                 }
                                               ]
@@ -13708,7 +13603,7 @@
                                   "else": [
                                     {
                                       "chooseOne": {
-                                        "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.1.forEach.effects.1.if.then.0.let.in.1.if.else.0.chooseOne",
+                                        "internalDecisionId": "decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.1.if.then.0.let.in.1.if.else.0.chooseOne",
                                         "bind": "$pacLevels",
                                         "options": {
                                           "query": "intsInRange",
@@ -13821,7 +13716,7 @@
                       "then": [
                         {
                           "chooseOne": {
-                            "internalDecisionId": "decision:doc.actionPipelines.0.stages[2].effects.1.forEach.effects.2.if.then.0.chooseOne",
+                            "internalDecisionId": "decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.2.if.then.0.chooseOne",
                             "bind": "$transferAmount",
                             "options": {
                               "query": "intsInRange",
@@ -14302,206 +14197,6 @@
                               }
                             ]
                           }
-                        },
-                        {
-                          "if": {
-                            "when": {
-                              "op": "==",
-                              "left": {
-                                "ref": "globalMarkerState",
-                                "marker": "cap_caps"
-                              },
-                              "right": "unshaded"
-                            },
-                            "then": [
-                              {
-                                "forEach": {
-                                  "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                  "macroOrigin": {
-                                    "macroId": "place-from-available-or-map",
-                                    "stem": "piece"
-                                  },
-                                  "over": {
-                                    "query": "tokensInZone",
-                                    "zone": {
-                                      "zoneExpr": {
-                                        "concat": [
-                                          "available-",
-                                          "ARVN",
-                                          ":none"
-                                        ]
-                                      }
-                                    },
-                                    "filter": [
-                                      {
-                                        "prop": "type",
-                                        "op": "eq",
-                                        "value": "police"
-                                      }
-                                    ]
-                                  },
-                                  "effects": [
-                                    {
-                                      "moveToken": {
-                                        "token": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                        "from": {
-                                          "zoneExpr": {
-                                            "concat": [
-                                              "available-",
-                                              "ARVN",
-                                              ":none"
-                                            ]
-                                          }
-                                        },
-                                        "to": "$space"
-                                      }
-                                    }
-                                  ],
-                                  "limit": 1,
-                                  "countBind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed",
-                                  "in": [
-                                    {
-                                      "let": {
-                                        "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining",
-                                        "value": {
-                                          "op": "-",
-                                          "left": 1,
-                                          "right": {
-                                            "ref": "binding",
-                                            "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed"
-                                          }
-                                        },
-                                        "in": [
-                                          {
-                                            "if": {
-                                              "when": {
-                                                "op": "and",
-                                                "args": [
-                                                  {
-                                                    "op": "or",
-                                                    "args": [
-                                                      {
-                                                        "op": "!=",
-                                                        "left": "ARVN",
-                                                        "right": "US"
-                                                      },
-                                                      {
-                                                        "op": "==",
-                                                        "left": "police",
-                                                        "right": "irregular"
-                                                      }
-                                                    ]
-                                                  },
-                                                  {
-                                                    "op": ">",
-                                                    "left": {
-                                                      "ref": "binding",
-                                                      "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining"
-                                                    },
-                                                    "right": 0
-                                                  }
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "chooseN": {
-                                                    "internalDecisionId": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.2.if.then.0.forEach.in.0.let.in.0.if.then.0.chooseN",
-                                                    "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces",
-                                                    "options": {
-                                                      "query": "mapSpaces",
-                                                      "filter": {
-                                                        "condition": {
-                                                          "op": ">",
-                                                          "left": {
-                                                            "aggregate": {
-                                                              "op": "count",
-                                                              "query": {
-                                                                "query": "tokensInZone",
-                                                                "zone": "$zone",
-                                                                "filter": [
-                                                                  {
-                                                                    "prop": "type",
-                                                                    "op": "eq",
-                                                                    "value": "police"
-                                                                  },
-                                                                  {
-                                                                    "prop": "faction",
-                                                                    "op": "eq",
-                                                                    "value": "ARVN"
-                                                                  }
-                                                                ]
-                                                              }
-                                                            }
-                                                          },
-                                                          "right": 0
-                                                        }
-                                                      }
-                                                    },
-                                                    "max": 99,
-                                                    "min": 0
-                                                  }
-                                                },
-                                                {
-                                                  "forEach": {
-                                                    "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                    "macroOrigin": {
-                                                      "macroId": "place-from-available-or-map",
-                                                      "stem": "srcSpace"
-                                                    },
-                                                    "over": {
-                                                      "query": "binding",
-                                                      "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
-                                                    },
-                                                    "effects": [
-                                                      {
-                                                        "forEach": {
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                          "macroOrigin": {
-                                                            "macroId": "place-from-available-or-map",
-                                                            "stem": "mapPiece"
-                                                          },
-                                                          "over": {
-                                                            "query": "tokensInZone",
-                                                            "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                            "filter": [
-                                                              {
-                                                                "prop": "type",
-                                                                "op": "eq",
-                                                                "value": "police"
-                                                              },
-                                                              {
-                                                                "prop": "faction",
-                                                                "op": "eq",
-                                                                "value": "ARVN"
-                                                              }
-                                                            ]
-                                                          },
-                                                          "effects": [
-                                                            {
-                                                              "moveToken": {
-                                                                "token": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                                "from": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                                "to": "$space"
-                                                              }
-                                                            }
-                                                          ],
-                                                          "limit": 1
-                                                        }
-                                                      }
-                                                    ]
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              }
-                            ]
-                          }
                         }
                       ]
                     }
@@ -14770,206 +14465,6 @@
                               }
                             ]
                           }
-                        },
-                        {
-                          "if": {
-                            "when": {
-                              "op": "==",
-                              "left": {
-                                "ref": "globalMarkerState",
-                                "marker": "cap_caps"
-                              },
-                              "right": "unshaded"
-                            },
-                            "then": [
-                              {
-                                "forEach": {
-                                  "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                  "macroOrigin": {
-                                    "macroId": "place-from-available-or-map",
-                                    "stem": "piece"
-                                  },
-                                  "over": {
-                                    "query": "tokensInZone",
-                                    "zone": {
-                                      "zoneExpr": {
-                                        "concat": [
-                                          "available-",
-                                          "ARVN",
-                                          ":none"
-                                        ]
-                                      }
-                                    },
-                                    "filter": [
-                                      {
-                                        "prop": "type",
-                                        "op": "eq",
-                                        "value": "police"
-                                      }
-                                    ]
-                                  },
-                                  "effects": [
-                                    {
-                                      "moveToken": {
-                                        "token": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
-                                        "from": {
-                                          "zoneExpr": {
-                                            "concat": [
-                                              "available-",
-                                              "ARVN",
-                                              ":none"
-                                            ]
-                                          }
-                                        },
-                                        "to": "$space"
-                                      }
-                                    }
-                                  ],
-                                  "limit": 1,
-                                  "countBind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed",
-                                  "in": [
-                                    {
-                                      "let": {
-                                        "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining",
-                                        "value": {
-                                          "op": "-",
-                                          "left": 1,
-                                          "right": {
-                                            "ref": "binding",
-                                            "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__placed"
-                                          }
-                                        },
-                                        "in": [
-                                          {
-                                            "if": {
-                                              "when": {
-                                                "op": "and",
-                                                "args": [
-                                                  {
-                                                    "op": "or",
-                                                    "args": [
-                                                      {
-                                                        "op": "!=",
-                                                        "left": "ARVN",
-                                                        "right": "US"
-                                                      },
-                                                      {
-                                                        "op": "==",
-                                                        "left": "police",
-                                                        "right": "irregular"
-                                                      }
-                                                    ]
-                                                  },
-                                                  {
-                                                    "op": ">",
-                                                    "left": {
-                                                      "ref": "binding",
-                                                      "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__remaining"
-                                                    },
-                                                    "right": 0
-                                                  }
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "chooseN": {
-                                                    "internalDecisionId": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.2.if.then.2.if.then.0.forEach.in.0.let.in.0.if.then.0.chooseN",
-                                                    "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces",
-                                                    "options": {
-                                                      "query": "mapSpaces",
-                                                      "filter": {
-                                                        "condition": {
-                                                          "op": ">",
-                                                          "left": {
-                                                            "aggregate": {
-                                                              "op": "count",
-                                                              "query": {
-                                                                "query": "tokensInZone",
-                                                                "zone": "$zone",
-                                                                "filter": [
-                                                                  {
-                                                                    "prop": "type",
-                                                                    "op": "eq",
-                                                                    "value": "police"
-                                                                  },
-                                                                  {
-                                                                    "prop": "faction",
-                                                                    "op": "eq",
-                                                                    "value": "ARVN"
-                                                                  }
-                                                                ]
-                                                              }
-                                                            }
-                                                          },
-                                                          "right": 0
-                                                        }
-                                                      }
-                                                    },
-                                                    "max": 99,
-                                                    "min": 0
-                                                  }
-                                                },
-                                                {
-                                                  "forEach": {
-                                                    "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                    "macroOrigin": {
-                                                      "macroId": "place-from-available-or-map",
-                                                      "stem": "srcSpace"
-                                                    },
-                                                    "over": {
-                                                      "query": "binding",
-                                                      "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
-                                                    },
-                                                    "effects": [
-                                                      {
-                                                        "forEach": {
-                                                          "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                          "macroOrigin": {
-                                                            "macroId": "place-from-available-or-map",
-                                                            "stem": "mapPiece"
-                                                          },
-                                                          "over": {
-                                                            "query": "tokensInZone",
-                                                            "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                            "filter": [
-                                                              {
-                                                                "prop": "type",
-                                                                "op": "eq",
-                                                                "value": "police"
-                                                              },
-                                                              {
-                                                                "prop": "faction",
-                                                                "op": "eq",
-                                                                "value": "ARVN"
-                                                              }
-                                                            ]
-                                                          },
-                                                          "effects": [
-                                                            {
-                                                              "moveToken": {
-                                                                "token": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
-                                                                "from": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
-                                                                "to": "$space"
-                                                              }
-                                                            }
-                                                          ],
-                                                          "limit": 1
-                                                        }
-                                                      }
-                                                    ]
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              }
-                            ]
-                          }
                         }
                       ]
                     }
@@ -15171,27 +14666,13 @@
                               {
                                 "if": {
                                   "when": {
-                                    "op": "and",
-                                    "args": [
-                                      {
-                                        "op": "!=",
-                                        "left": {
-                                          "ref": "markerState",
-                                          "space": "$subSpace",
-                                          "marker": "supportOpposition"
-                                        },
-                                        "right": "passiveSupport"
-                                      },
-                                      {
-                                        "op": "!=",
-                                        "left": {
-                                          "ref": "markerState",
-                                          "space": "$subSpace",
-                                          "marker": "supportOpposition"
-                                        },
-                                        "right": "activeSupport"
-                                      }
-                                    ]
+                                    "op": "==",
+                                    "left": {
+                                      "ref": "markerState",
+                                      "space": "$subSpace",
+                                      "marker": "supportOpposition"
+                                    },
+                                    "right": "neutral"
                                   },
                                   "then": [
                                     {
@@ -15219,10 +14700,96 @@
                                       }
                                     },
                                     {
-                                      "setMarker": {
+                                      "shiftMarker": {
                                         "space": "$subSpace",
                                         "marker": "supportOpposition",
-                                        "state": "passiveSupport"
+                                        "delta": 1
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "if": {
+                                  "when": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "op": "!=",
+                                        "left": {
+                                          "ref": "markerState",
+                                          "space": "$subSpace",
+                                          "marker": "supportOpposition"
+                                        },
+                                        "right": "passiveSupport"
+                                      },
+                                      {
+                                        "op": "!=",
+                                        "left": {
+                                          "ref": "markerState",
+                                          "space": "$subSpace",
+                                          "marker": "supportOpposition"
+                                        },
+                                        "right": "activeSupport"
+                                      },
+                                      {
+                                        "op": "!=",
+                                        "left": {
+                                          "ref": "markerState",
+                                          "space": "$subSpace",
+                                          "marker": "supportOpposition"
+                                        },
+                                        "right": "neutral"
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "chooseOne": {
+                                        "internalDecisionId": "decision:doc.actionPipelines.1.stages[2].effects.1.forEach.effects.1.if.then.1.if.then.1.if.then.0.chooseOne",
+                                        "bind": "$pacLevels",
+                                        "options": {
+                                          "query": "intsInRange",
+                                          "min": 1,
+                                          "max": 2
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "addVar": {
+                                        "scope": "global",
+                                        "var": "arvnResources",
+                                        "delta": {
+                                          "op": "*",
+                                          "left": {
+                                            "ref": "binding",
+                                            "name": "$pacLevels"
+                                          },
+                                          "right": {
+                                            "if": {
+                                              "when": {
+                                                "op": "==",
+                                                "left": {
+                                                  "ref": "globalMarkerState",
+                                                  "marker": "activeLeader"
+                                                },
+                                                "right": "ky"
+                                              },
+                                              "then": -4,
+                                              "else": -3
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "shiftMarker": {
+                                        "space": "$subSpace",
+                                        "marker": "supportOpposition",
+                                        "delta": {
+                                          "ref": "binding",
+                                          "name": "$pacLevels"
+                                        }
                                       }
                                     }
                                   ]
@@ -54172,7 +53739,7 @@
             "flavorText": "Civil-military integration accelerates local governance."
           },
           "unshaded": {
-            "text": "US capability: US/ARVN Train may execute sub-activity in up to 2 spaces.",
+            "text": "US Training may Pacify in 2 selected spaces. US CAPABILITY.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -54183,7 +53750,7 @@
             ]
           },
           "shaded": {
-            "text": "US capability (shaded): Pacification in Train can only set to Passive Support.",
+            "text": "US Training may Pacify only to Passive Support.",
             "effects": [
               {
                 "setGlobalMarker": {

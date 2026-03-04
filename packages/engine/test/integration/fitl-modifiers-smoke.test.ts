@@ -120,7 +120,7 @@ describe('FITL cross-system modifier smoke', () => {
     }).state;
 
     assert.equal(result.globalVars.trail, 1, 'Top Gun unshaded should degrade Trail by 2');
-    assert.equal(enemyCount(configured, space) - enemyCount(result, space), 4, 'LGBs shaded should cap removals at exactly 4');
+    assert.equal(enemyCount(configured, space) - enemyCount(result, space), 2, 'LGBs shaded should cap removals at exactly 2');
   });
 
   it('keeps Minh Train bonus independent from CAPs unshaded on ARVN Train', () => {

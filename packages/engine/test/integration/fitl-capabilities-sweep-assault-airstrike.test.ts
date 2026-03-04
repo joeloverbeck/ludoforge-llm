@@ -545,7 +545,7 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.ok(shadedShiftTrigger.length >= 1, 'Expected Arc Light shaded shift trigger to key off removed-in-space count');
   });
 
-  it('Air Strike cap_lgbs shaded reduces removal budget to 4 at runtime', () => {
+  it('Air Strike cap_lgbs shaded reduces removal budget to 2 at runtime', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -584,9 +584,106 @@ describe('FITL capability branches (Sweep/Assault/Air Strike)', () => {
     assert.equal(final.globalVars.airStrikeCount, 1);
     assert.equal(
       countTokens(final, space, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
-      1,
-      'With 5 enemies initially and cap_lgbs shaded, Air Strike should remove 4 max',
+      3,
+      'With 5 enemies initially and cap_lgbs shaded, Air Strike should remove 2 max',
     );
+  });
+
+  it('Air Strike cap_lgbs shaded counts Bases as pieces toward the 2-piece cap', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const baseSpace = 'quang-nam:none';
+    const secondSpace = 'saigon:none';
+    const start = clearAllZones(initialState(def, 1009, 4).state);
+    const modifiedStart: GameState = {
+      ...start,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...start.globalMarkers,
+        cap_lgbs: 'shaded',
+      },
+      zones: {
+        ...start.zones,
+        [baseSpace]: [
+          makeToken('lgbs-base-us-t', 'troops', 'US', { type: 'troops' }),
+          makeToken('lgbs-base-nva-t', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('lgbs-base-nva-b', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' }),
+        ],
+        [secondSpace]: [
+          makeToken('lgbs-base-us-t2', 'troops', 'US', { type: 'troops' }),
+          makeToken('lgbs-base-vc-g', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [baseSpace, secondSpace],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(countTokens(final, baseSpace, (token) => token.props.faction === 'NVA'), 0, 'Expected both NVA pieces removed from first space');
+    assert.equal(
+      countTokens(final, secondSpace, (token) => token.props.faction === 'VC' || token.props.faction === 'NVA'),
+      1,
+      'After removing troop + base (2 pieces), cap_lgbs shaded should leave enemy in second space',
+    );
+  });
+
+  it('Air Strike cap_lgbs unshaded suppresses support/opposition shift only in spaces removing exactly 1 piece', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const oneHitSpace = 'saigon:none';
+    const twoHitSpace = 'quang-nam:none';
+    const base = clearAllZones(initialState(def, 1010, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      globalMarkers: {
+        ...base.globalMarkers,
+        cap_lgbs: 'unshaded',
+      },
+      markers: {
+        ...base.markers,
+        [oneHitSpace]: {
+          ...(base.markers[oneHitSpace] ?? {}),
+          supportOpposition: 'neutral',
+        },
+        [twoHitSpace]: {
+          ...(base.markers[twoHitSpace] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+      zones: {
+        ...base.zones,
+        [oneHitSpace]: [
+          makeToken('lgbs-unshaded-us-a', 'troops', 'US', { type: 'troops' }),
+          makeToken('lgbs-unshaded-vc-a', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [twoHitSpace]: [
+          makeToken('lgbs-unshaded-us-b', 'troops', 'US', { type: 'troops' }),
+          makeToken('lgbs-unshaded-vc-b1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('lgbs-unshaded-nva-b2', 'troops', 'NVA', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, {
+      actionId: asActionId('airStrike'),
+      params: {
+        $spaces: [oneHitSpace, twoHitSpace],
+        $degradeTrail: 'no',
+      },
+    }).state;
+
+    assert.equal(final.markers[oneHitSpace]?.supportOpposition, 'neutral', 'Space removing exactly 1 piece should not shift under cap_lgbs unshaded');
+    assert.equal(final.markers[twoHitSpace]?.supportOpposition, 'passiveOpposition', 'Space removing 2 pieces should still shift by 1');
   });
 
   it('Air Strike cap_topGun unshaded degrades Trail by 2 and suppresses cap_migs shaded troop loss', () => {

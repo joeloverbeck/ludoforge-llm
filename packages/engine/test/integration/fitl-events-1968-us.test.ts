@@ -257,6 +257,10 @@ describe('FITL 1968 US-first event-card production spec', () => {
         assert.equal(card?.unshaded?.text, 'US Training may Pacify in 2 selected spaces. US CAPABILITY.');
         assert.equal(card?.shaded?.text, 'US Training may Pacify only to Passive Support.');
       }
+      if (expected.id === 'card-20') {
+        assert.equal(card?.unshaded?.text, 'Air Strike does not shift Support/Opposition in spaces where only 1 piece removed. US CAPABILITY.');
+        assert.equal(card?.shaded?.text, 'Air Strike removes no more than 2 pieces.');
+      }
     }
   });
 

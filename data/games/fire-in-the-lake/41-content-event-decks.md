@@ -1557,12 +1557,12 @@ eventDecks:
           seatOrder: ["US", "ARVN", "VC", "NVA"]
           flavorText: "Precision strike doctrine changes target priorities."
         unshaded:
-          text: "US capability: Air Strike may spare one selected space from casualties."
+          text: "Air Strike does not shift Support/Opposition in spaces where only 1 piece removed. US CAPABILITY."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_lgbs, markerState: unshaded }
         shaded:
-          text: "US capability (shaded): Air Strike may remove at most 4 pieces total."
+          text: "Air Strike removes no more than 2 pieces."
           effects:
             - macro: set-global-marker
               args: { markerId: cap_lgbs, markerState: shaded }

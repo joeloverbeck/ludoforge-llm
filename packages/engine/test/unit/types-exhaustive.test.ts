@@ -11,8 +11,12 @@ import type {
   ScenarioPayload,
   ScenarioPiecePlacement,
 } from '../../src/kernel/index.js';
-import { OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
-import type { LeafOptionsQueryKindFromContractMap } from '../../src/kernel/query-kind-map.js';
+import { LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP, OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
+import type {
+  LeafOptionsQueryKindFromContractMap,
+  LeafOptionsQueryTransformKind,
+  QueryTransformBooleanOptionPolicy,
+} from '../../src/kernel/query-kind-map.js';
 import type {
   LeafOptionsQuery,
   LeafOptionsQueryKind,
@@ -187,11 +191,33 @@ describe('exhaustive kernel unions', () => {
     ] extends [never, never]
       ? true
       : false;
+    type TransformContractCoverage = [
+      Exclude<keyof typeof LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP, LeafOptionsQueryTransformKind>,
+      Exclude<LeafOptionsQueryTransformKind, keyof typeof LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP>,
+    ] extends [never, never]
+      ? true
+      : false;
+    type TransformKindsAreLeafKinds = Exclude<LeafOptionsQueryTransformKind, LeafOptionsQueryKind> extends never
+      ? true
+      : false;
+    type TransformBooleanOptionFieldCoverage = {
+      readonly [Kind in LeafOptionsQueryTransformKind]: (
+        typeof LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP
+      )[Kind]['optionalBooleanOptions'] extends readonly QueryTransformBooleanOptionPolicy<Kind>[]
+        ? true
+        : false;
+    }[LeafOptionsQueryTransformKind] extends true
+      ? true
+      : false;
     const recursiveKinds: UnionSize<RecursiveOptionsQueryKind> = 2;
     const leafKinds: UnionSize<LeafOptionsQueryKind> = 15;
     const leafContractKinds: UnionSize<LeafOptionsQueryKindFromContractMap> = 15;
+    const transformKinds: UnionSize<LeafOptionsQueryTransformKind> = 1;
     const contractMapCoverage: ContractMapCoverage = true;
     const leafContractViewCoverage: LeafContractViewCoverage = true;
+    const transformContractCoverage: TransformContractCoverage = true;
+    const transformKindsAreLeafKinds: TransformKindsAreLeafKinds = true;
+    const transformBooleanOptionFieldCoverage: TransformBooleanOptionFieldCoverage = true;
     const partitionCoverage: OptionsQueryKindPartitionCoverage = true;
     const recursiveCoverage: RecursiveOptionsQueryKindCoverage = true;
     const recursiveDispatchCoverage: RecursiveOptionsQueryDispatchCoverage = true;
@@ -201,8 +227,12 @@ describe('exhaustive kernel unions', () => {
     assert.equal(recursiveKinds, 2);
     assert.equal(leafKinds, 15);
     assert.equal(leafContractKinds, 15);
+    assert.equal(transformKinds, 1);
     assert.equal(contractMapCoverage, true);
     assert.equal(leafContractViewCoverage, true);
+    assert.equal(transformContractCoverage, true);
+    assert.equal(transformKindsAreLeafKinds, true);
+    assert.equal(transformBooleanOptionFieldCoverage, true);
     assert.equal(partitionCoverage, true);
     assert.equal(recursiveCoverage, true);
     assert.equal(recursiveDispatchCoverage, true);

@@ -3,8 +3,11 @@ import { describe, it } from 'node:test';
 
 import {
   inferLeafOptionsQueryContract,
+  inferTransformSourceIncompatibleRuntimeShapes,
   type LeafOptionsQueryContract,
 } from '../../../src/kernel/query-kind-contract.js';
+import { getLeafOptionsQueryTransformContract } from '../../../src/kernel/query-kind-map.js';
+import type { QueryRuntimeShape } from '../../../src/kernel/query-kind-contract.js';
 import type { LeafOptionsQuery, RecursiveOptionsQuery } from '../../../src/kernel/query-partition-types.js';
 
 describe('query kind contract', () => {
@@ -49,5 +52,32 @@ describe('query kind contract', () => {
       // @ts-expect-error Recursive query variants are not leaf variants.
       expectLeafOnly(recursiveQuery);
     }
+  });
+
+  it('declares tokenZones source policy with output semantics in one transform contract', () => {
+    const contract = getLeafOptionsQueryTransformContract('tokenZones');
+    assert.equal(contract.partition, 'leaf');
+    assert.equal(contract.domain, 'zone');
+    assert.equal(contract.runtimeShape, 'string');
+    assert.deepEqual(contract.sourceShapePolicy.allowedSourceShapes, ['token', 'string']);
+    assert.equal(contract.sourceShapePolicy.allowUnknownSourceShape, true);
+    assert.equal(contract.sourceShapePolicy.mismatchDiagnosticCode, 'DOMAIN_TOKEN_ZONES_SOURCE_SHAPE_MISMATCH');
+    assert.equal(
+      contract.sourceShapePolicy.mismatchSuggestion,
+      'Use a token-producing query (or a string-token-id source) before tokenZones.',
+    );
+    assert.deepEqual(contract.optionalBooleanOptions, [
+      {
+        field: 'dedupe',
+        diagnosticCode: 'DOMAIN_TOKEN_ZONES_DEDUPE_INVALID',
+        message: 'tokenZones.dedupe must be a boolean when provided.',
+        suggestion: 'Set tokenZones.dedupe to true or false.',
+      },
+    ]);
+  });
+
+  it('derives incompatible transform source shapes from the transform contract policy', () => {
+    const sourceShapes: readonly QueryRuntimeShape[] = ['string', 'token', 'unknown', 'number', 'object', 'number'];
+    assert.deepEqual(inferTransformSourceIncompatibleRuntimeShapes('tokenZones', sourceShapes), ['number', 'object']);
   });
 });

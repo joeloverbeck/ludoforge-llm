@@ -2321,6 +2321,43 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('ignores unknown source shape but still reports incompatible known tokenZones source shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$zone',
+              domain: {
+                query: 'tokenZones',
+                source: {
+                  query: 'concat',
+                  sources: [
+                    { query: 'binding', name: '$runtimeSource' },
+                    { query: 'assetRows', tableId: 'table' },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_TOKEN_ZONES_SOURCE_SHAPE_MISMATCH'
+          && diag.path === 'actions[0].params[0].domain.source'
+          && diag.message.includes('[object]'),
+      ),
+    );
+  });
+
   it('reports nextInOrderByCondition source/anchor mismatch for string source and numeric anchor', () => {
     const base = createValidGameDef();
     const def = {

@@ -8,6 +8,7 @@ import {
   type QueryRuntimeShape,
   inferValueRuntimeShapes,
 } from '../../src/kernel/query-shape-inference.js';
+import { getLeafOptionsQueryTransformContract } from '../../src/kernel/query-kind-map.js';
 
 describe('query shape inference', () => {
   it('classifies every leaf OptionsQuery variant runtime shape', () => {
@@ -96,6 +97,17 @@ describe('query shape inference', () => {
     } as const satisfies OptionsQuery;
 
     assert.deepEqual(inferQueryRuntimeShapes(query), ['string']);
+  });
+
+  it('keeps tokenZones output shape aligned with transform contract runtime shape', () => {
+    const query = {
+      query: 'tokenZones',
+      source: { query: 'tokensInZone', zone: 'deck:none' },
+    } as const satisfies OptionsQuery;
+    const runtimeShapes = inferQueryRuntimeShapes(query);
+    const contract = getLeafOptionsQueryTransformContract('tokenZones');
+
+    assert.deepEqual(runtimeShapes, [contract.runtimeShape]);
   });
 
   it('infers value runtime shapes for refs and conditional expressions', () => {

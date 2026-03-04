@@ -37,6 +37,8 @@ import {
   inferQueryRuntimeShapes,
   inferValueRuntimeShapes,
 } from './query-shape-inference.js';
+import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-contract.js';
+import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -636,6 +638,48 @@ export const validateOptionsQuery = (
   path: string,
   context: ValidationContext,
 ): void => {
+  const validateLeafTransformSourceAndOptions = <Kind extends LeafOptionsQueryTransformKind>(
+    kind: Kind,
+    transformQuery: Extract<OptionsQuery, { readonly query: Kind }>,
+  ): void => {
+    const transformContract = getLeafOptionsQueryTransformContract(kind);
+    const transformQueryRecord = transformQuery as Record<string, unknown>;
+    const sourceQuery = (transformQuery as { readonly source: OptionsQuery }).source;
+    for (const optionPolicy of transformContract.optionalBooleanOptions ?? []) {
+      const optionValue = transformQueryRecord[optionPolicy.field];
+      if (optionValue !== undefined && typeof optionValue !== 'boolean') {
+        diagnostics.push({
+          code: optionPolicy.diagnosticCode,
+          path: `${path}.${optionPolicy.field}`,
+          severity: 'error',
+          message: optionPolicy.message,
+          suggestion: optionPolicy.suggestion,
+        });
+      }
+    }
+
+    validateOptionsQuery(diagnostics, sourceQuery, `${path}.source`, context);
+    const sourceShapes = inferQueryRuntimeShapes(sourceQuery);
+    const uniqueSourceShapes = dedupeQueryRuntimeShapes(sourceShapes);
+    const incompatibleShapes = inferTransformSourceIncompatibleRuntimeShapes(kind, uniqueSourceShapes);
+    if (incompatibleShapes.length > 0) {
+      diagnostics.push({
+        code: transformContract.sourceShapePolicy.mismatchDiagnosticCode,
+        path: `${path}.source`,
+        severity: 'error',
+        message: `${kind} source must produce ${transformContract.sourceShapePolicy.allowedSourceShapes.join(' or ')} items; found [${incompatibleShapes.join(', ')}].`,
+        suggestion: transformContract.sourceShapePolicy.mismatchSuggestion,
+      });
+    }
+  };
+  const validateLeafTransformQueryByKind: {
+    readonly [Kind in LeafOptionsQueryTransformKind]: (
+      transformQuery: Extract<OptionsQuery, { readonly query: Kind }>,
+    ) => void;
+  } = {
+    tokenZones: (transformQuery) => validateLeafTransformSourceAndOptions('tokenZones', transformQuery),
+  };
+
   switch (query.query) {
     case 'concat': {
       if (query.sources.length === 0) {
@@ -669,30 +713,7 @@ export const validateOptionsQuery = (
       return;
     }
     case 'tokenZones': {
-      const tokenZonesDedupe = (query as { readonly dedupe?: unknown }).dedupe;
-      if (tokenZonesDedupe !== undefined && typeof tokenZonesDedupe !== 'boolean') {
-        diagnostics.push({
-          code: 'DOMAIN_TOKEN_ZONES_DEDUPE_INVALID',
-          path: `${path}.dedupe`,
-          severity: 'error',
-          message: 'tokenZones.dedupe must be a boolean when provided.',
-          suggestion: 'Set tokenZones.dedupe to true or false.',
-        });
-      }
-      validateOptionsQuery(diagnostics, query.source, `${path}.source`, context);
-      const sourceShapes = inferQueryRuntimeShapes(query.source);
-      const knownSourceShapes = sourceShapes.filter((shape) => shape !== 'unknown');
-      const uniqueKnownShapes = dedupeQueryRuntimeShapes(knownSourceShapes);
-      const incompatibleShapes = uniqueKnownShapes.filter((shape) => shape !== 'token' && shape !== 'string');
-      if (incompatibleShapes.length > 0) {
-        diagnostics.push({
-          code: 'DOMAIN_TOKEN_ZONES_SOURCE_SHAPE_MISMATCH',
-          path: `${path}.source`,
-          severity: 'error',
-          message: `tokenZones source must produce token or string items; found [${incompatibleShapes.join(', ')}].`,
-          suggestion: 'Use a token-producing query (or a string-token-id source) before tokenZones.',
-        });
-      }
+      validateLeafTransformQueryByKind.tokenZones(query);
       return;
     }
     case 'tokensInZone': {

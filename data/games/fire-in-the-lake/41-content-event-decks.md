@@ -1919,21 +1919,131 @@ eventDecks:
           flavorText: "Stab at Iron Triangle."
         unshaded:
           text: "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel."
+          effectTiming: afterGrants
           freeOperationGrants:
             - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 0 }
               operationClass: operation
               actionIds: [airLift]
+              zoneFilter:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $zone
+                      filter:
+                        - { prop: type, eq: base }
+                        - { prop: faction, op: in, value: [NVA, VC] }
+                        - { prop: tunnel, eq: tunneled }
+                right: 0
             - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 1 }
               operationClass: operation
               actionIds: [sweep]
+              zoneFilter:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $zone
+                      filter:
+                        - { prop: type, eq: base }
+                        - { prop: faction, op: in, value: [NVA, VC] }
+                        - { prop: tunnel, eq: tunneled }
+                right: 0
             - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 2 }
               operationClass: operation
               actionIds: [assault]
+              zoneFilter:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $zone
+                      filter:
+                        - { prop: type, eq: base }
+                        - { prop: faction, op: in, value: [NVA, VC] }
+                        - { prop: tunnel, eq: tunneled }
+                right: 0
+          lastingEffects:
+            - id: evt-operation-attleboro-tunnel-window
+              duration: turn
+              setupEffects:
+                - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: true }
+              teardownEffects:
+                - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
+          effects:
+            - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
         shaded:
           text: "Heavy casualties, few results: Select a Tunnel space: remove a die roll of US Troops within 1 space of it to Casualties."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: type, eq: base }
+                          - { prop: faction, op: in, value: [NVA, VC] }
+                          - { prop: tunnel, eq: tunneled }
+                  right: 0
+              cardinality: { max: 1 }
+          effects:
+            - rollRandom:
+                bind: $attleboroLossRoll
+                min: 1
+                max: 6
+                in:
+                  - removeByPriority:
+                      budget: { ref: binding, name: $attleboroLossRoll }
+                      remainingBind: $remainingLosses
+                      groups:
+                        - bind: $usTroopInTarget
+                          over:
+                            query: tokensInZone
+                            zone: $targetSpace
+                            filter:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: troops }
+                          to:
+                            zoneExpr: casualties-US:none
+                      in:
+                        - forEach:
+                            bind: $adjacentSpace
+                            over:
+                              query: adjacentZones
+                              zone: $targetSpace
+                            effects:
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $remainingLosses }, right: 0 }
+                                  then:
+                                    - removeByPriority:
+                                        budget: { ref: binding, name: $remainingLosses }
+                                        remainingBind: $remainingLosses
+                                        groups:
+                                          - bind: $usTroopAdjacent
+                                            over:
+                                              query: tokensInZone
+                                              zone: $adjacentSpace
+                                              filter:
+                                                - { prop: faction, eq: US }
+                                                - { prop: type, eq: troops }
+                                            to:
+                                              zoneExpr: casualties-US:none
+                                  else: []
       - id: card-24
         title: Operation Starlite
         sideMode: dual

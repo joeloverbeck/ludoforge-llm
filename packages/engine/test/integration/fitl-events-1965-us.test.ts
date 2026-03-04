@@ -123,4 +123,35 @@ describe('FITL 1965 US-first event-card production spec', () => {
     assert.deepEqual(momentum?.setupEffects, [{ setVar: { scope: 'global', var: 'mom_daNang', value: true } }]);
     assert.deepEqual(momentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_daNang', value: false } }]);
   });
+
+  it('encodes card-23 with tunnel-space chained grants, temporary tunnel override window, and shaded tunnel-space casualty roll', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-23');
+    assert.notEqual(card, undefined);
+
+    assert.equal(card?.unshaded?.effectTiming, 'afterGrants');
+    assert.equal(card?.unshaded?.freeOperationGrants?.length, 3);
+    assert.deepEqual(card?.unshaded?.freeOperationGrants?.map((grant) => grant.actionIds?.[0]), ['airLift', 'sweep', 'assault']);
+    assert.equal(card?.unshaded?.freeOperationGrants?.every((grant) => grant.zoneFilter !== undefined), true);
+
+    const tunnelWindow = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'evt-operation-attleboro-tunnel-window');
+    assert.notEqual(tunnelWindow, undefined);
+    assert.equal(tunnelWindow?.duration, 'turn');
+    assert.deepEqual(tunnelWindow?.setupEffects, [
+      { setVar: { scope: 'global', var: 'fitl_operationAttleboroTunnelOverride', value: true } },
+    ]);
+    assert.deepEqual(tunnelWindow?.teardownEffects, [
+      { setVar: { scope: 'global', var: 'fitl_operationAttleboroTunnelOverride', value: false } },
+    ]);
+    assert.deepEqual(card?.unshaded?.effects, [
+      { setVar: { scope: 'global', var: 'fitl_operationAttleboroTunnelOverride', value: false } },
+    ]);
+
+    assert.deepEqual(card?.shaded?.targets?.[0]?.cardinality, { max: 1 });
+    assert.equal(typeof (card?.shaded?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
+  });
 });

@@ -157,6 +157,9 @@ globalVars:
   - name: fitl_acesAirStrikeWindow
     type: boolean
     init: false
+  - name: fitl_operationAttleboroTunnelOverride
+    type: boolean
+    init: false
   - name: linebacker11Allowed
     type: boolean
     init: false

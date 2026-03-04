@@ -36,13 +36,17 @@ describe('FITL US ARVN resource spend constraint wiring', () => {
     assert.ok(strictGuards.length >= 1, 'Expected strict US Train ARVN-cubes spend guard');
   });
 
-  it('guards US Assault ARVN follow-up with strict joint-operations predicate', () => {
+  it('guards US Assault ARVN follow-up with free-operation/body-count/strict-spend predicate', () => {
     const { parsed } = compileProductionSpec();
     const assaultUs = parsed.doc.actionPipelines?.find((profile) => profile.id === 'assault-us-profile');
     assert.ok(assaultUs, 'Expected assault-us-profile');
 
     const followupStrictGuard = findDeep(assaultUs.stages, (node) =>
       node?.if?.when?.op === 'or' &&
+      findDeep(
+        node.if.when.args,
+        (inner) => inner?.op === '==' && inner?.left?.name === '__freeOperation' && inner?.right === true,
+      ).length > 0 &&
       findDeep(node.if.when.args, (inner) => inner?.op === '==' && inner?.left?.var === 'mom_bodyCount' && inner?.right === true).length > 0 &&
       findDeep(node.if.when.args, (inner) =>
         inner?.conditionMacro === 'us-joint-op-arvn-spend-eligible' &&
@@ -52,7 +56,10 @@ describe('FITL US ARVN resource spend constraint wiring', () => {
       ).length > 0,
     );
 
-    assert.ok(followupStrictGuard.length >= 1, 'Expected strict US Assault ARVN follow-up spend guard');
+    assert.ok(
+      followupStrictGuard.length >= 1,
+      'Expected US Assault ARVN follow-up guard to include free-op, Body Count, and strict-spend branches',
+    );
   });
 
   it('guards US Pacification spends with strict joint-operations predicates tied to cost amount', () => {

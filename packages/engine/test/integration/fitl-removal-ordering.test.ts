@@ -98,13 +98,13 @@ describe('FITL removal ordering macros', () => {
 
       assert.deepEqual(
         pieceRemovalOrdering.params.map((param) => param.name),
-        ['space', 'damageExpr', 'bodyCountEligible'],
-        'Expected piece-removal-ordering params to expose explicit Body Count eligibility input',
+        ['space', 'damageExpr', 'bodyCountEligible', 'treatTunneledBasesAsUntunneled'],
+        'Expected piece-removal-ordering params to expose explicit Body Count and tunneled-base override inputs',
       );
       assert.deepEqual(
         coinAssaultRemoval.params.map((param) => param.name),
-        ['space', 'damageExpr', 'bodyCountEligible', 'forceUntunneledBaseFirst'],
-        'Expected coin-assault-removal-order to keep explicit bodyCount/base-first control inputs without actorFaction threading',
+        ['space', 'damageExpr', 'bodyCountEligible', 'forceUntunneledBaseFirst', 'treatTunneledBasesAsUntunneled'],
+        'Expected coin-assault-removal-order to keep explicit bodyCount/base-first/tunnel-override controls without actorFaction threading',
       );
       assert.deepEqual(
         insurgentAttackRemoval.params.map((param) => param.name),

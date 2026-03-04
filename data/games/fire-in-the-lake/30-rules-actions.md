@@ -1823,6 +1823,7 @@ actionPipelines:
                                       damageExpr: { ref: binding, name: $patrolDmg }
                                       bodyCountEligible: true
                                       forceUntunneledBaseFirst: false
+                                      treatTunneledBasesAsUntunneled: false
       - stage: cap-m48-patrol-penalty
         effects:
           - macro: cap-patrol-m48-shaded-moved-cube-penalty
@@ -1979,6 +1980,7 @@ actionPipelines:
                                 damageExpr: { ref: binding, name: $patrolDmg }
                                 bodyCountEligible: true
                                 forceUntunneledBaseFirst: false
+                                treatTunneledBasesAsUntunneled: false
       - stage: cap-m48-patrol-penalty
         effects:
           - macro: cap-patrol-m48-shaded-moved-cube-penalty
@@ -2344,6 +2346,15 @@ actionPipelines:
                                             set: { ref: binding, name: $abramsSpace }
                                           then: true
                                           else: false
+                                      treatTunneledBasesAsUntunneled:
+                                        if:
+                                          when:
+                                            op: and
+                                            args:
+                                              - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                              - { op: '==', left: { ref: gvar, var: fitl_operationAttleboroTunnelOverride }, right: true }
+                                          then: true
+                                          else: false
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
@@ -2358,6 +2369,7 @@ actionPipelines:
               when:
                 op: or
                 args:
+                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
                   - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
                   - conditionMacro: us-joint-op-arvn-spend-eligible
                     args:
@@ -2376,7 +2388,10 @@ actionPipelines:
                       - if:
                           when: { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
                           then:
-                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            - if:
+                                when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                                then:
+                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
                       - let:
                           bind: $arvnCubes
                           value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
@@ -2395,6 +2410,7 @@ actionPipelines:
                                       damageExpr: { ref: binding, name: $arvnDamage }
                                       bodyCountEligible: true
                                       forceUntunneledBaseFirst: false
+                                      treatTunneledBasesAsUntunneled: false
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault
@@ -2499,6 +2515,7 @@ actionPipelines:
                                       damageExpr: { ref: binding, name: $damage }
                                       bodyCountEligible: true
                                       forceUntunneledBaseFirst: false
+                                      treatTunneledBasesAsUntunneled: false
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
@@ -3206,6 +3223,7 @@ actionPipelines:
                                             damageExpr: { ref: binding, name: $damage }
                                             bodyCountEligible: false
                                             forceUntunneledBaseFirst: false
+                                            treatTunneledBasesAsUntunneled: false
                 - if:
                     when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: activate-remove }
                     then:

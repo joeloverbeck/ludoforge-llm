@@ -183,6 +183,7 @@ effectMacros:
       - { name: space, type: zoneSelector }
       - { name: damageExpr, type: value }
       - { name: bodyCountEligible, type: value }
+      - { name: treatTunneledBasesAsUntunneled, type: value }
     exports: [$damage, $targetFactionFirst]
     effects:
       - let:
@@ -255,15 +256,20 @@ effectMacros:
                                                       - if:
                                                           when: { op: '==', left: { ref: tokenProp, token: $baseTarget, prop: tunnel }, right: 'tunneled' }
                                                           then:
-                                                            - rollRandom:
-                                                                bind: $dieRoll
-                                                                min: 1
-                                                                max: 6
-                                                                in:
-                                                                  - if:
-                                                                      when: { op: '>=', left: { ref: binding, name: $dieRoll }, right: 4 }
-                                                                      then:
-                                                                        - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
+                                                            - if:
+                                                                when: { op: '==', left: { param: treatTunneledBasesAsUntunneled }, right: true }
+                                                                then:
+                                                                  - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
+                                                                else:
+                                                                  - rollRandom:
+                                                                      bind: $dieRoll
+                                                                      min: 1
+                                                                      max: 6
+                                                                      in:
+                                                                        - if:
+                                                                            when: { op: '>=', left: { ref: binding, name: $dieRoll }, right: 4 }
+                                                                            then:
+                                                                              - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
                                                           else:
                                                             - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
 
@@ -276,6 +282,7 @@ effectMacros:
       - { name: damageExpr, type: value }
       - { name: bodyCountEligible, type: value }
       - { name: forceUntunneledBaseFirst, type: value }
+      - { name: treatTunneledBasesAsUntunneled, type: value }
     exports: []
     effects:
       - let:
@@ -335,6 +342,7 @@ effectMacros:
                         left: { param: damageExpr }
                         right: { ref: binding, name: $forcedBaseRemoved }
                       bodyCountEligible: { param: bodyCountEligible }
+                      treatTunneledBasesAsUntunneled: { param: treatTunneledBasesAsUntunneled }
             - let:
                 bind: $basesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
@@ -1951,6 +1959,7 @@ effectMacros:
                       damageExpr: 2
                       bodyCountEligible: false
                       forceUntunneledBaseFirst: false
+                      treatTunneledBasesAsUntunneled: false
 
   # ── cap-train-caps-unshaded-bonus-police ─────────────────────────────────
   # CAPs unshaded: once per US Train operation, place/relocate +1 ARVN Police
@@ -2989,6 +2998,7 @@ effectMacros:
       - setVar: { scope: global, var: mom_generalLansdale, value: false }
       - setVar: { scope: global, var: mom_typhoonKate, value: false }
       - setVar: { scope: global, var: fitl_acesAirStrikeWindow, value: false }
+      - setVar: { scope: global, var: fitl_operationAttleboroTunnelOverride, value: false }
       - setGlobalMarker: { marker: leaderFlipped, state: normal }
 
 conditionMacros:

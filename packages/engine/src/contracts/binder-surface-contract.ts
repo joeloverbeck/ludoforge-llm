@@ -425,6 +425,11 @@ export interface BinderDeclarationCandidate {
   readonly value: unknown;
 }
 
+export interface BinderPathStringSite {
+  readonly path: string;
+  readonly value: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -467,6 +472,90 @@ function collectPathValues(
 
 function splitPathSegments(path: string): readonly string[] {
   return path.length === 0 ? [] : path.split('.');
+}
+
+export function collectStringSitesAtBinderPath(
+  node: unknown,
+  segments: readonly BinderPathSegment[],
+  path: string,
+  into: BinderPathStringSite[],
+): void {
+  if (segments.length === 0) {
+    if (typeof node === 'string') {
+      into.push({ path, value: node });
+    }
+    return;
+  }
+
+  const segment = segments[0]!;
+  const rest = segments.slice(1);
+  if (segment === '*') {
+    if (!Array.isArray(node)) {
+      return;
+    }
+    for (let index = 0; index < node.length; index += 1) {
+      collectStringSitesAtBinderPath(node[index], rest, `${path}.${index}`, into);
+    }
+    return;
+  }
+
+  if (!isRecord(node) || !(segment in node)) {
+    return;
+  }
+  collectStringSitesAtBinderPath(node[segment], rest, `${path}.${segment}`, into);
+}
+
+export function rewriteStringLeavesAtBinderPath(
+  node: unknown,
+  segments: readonly BinderPathSegment[],
+  rewrite: (binding: string) => string,
+): boolean {
+  if (segments.length === 0) {
+    return false;
+  }
+
+  const segment = segments[0]!;
+  const rest = segments.slice(1);
+  if (segment === '*') {
+    if (!Array.isArray(node)) {
+      return false;
+    }
+    let changed = false;
+    for (let index = 0; index < node.length; index += 1) {
+      const child = node[index];
+      if (rest.length === 0) {
+        if (typeof child === 'string') {
+          const next = rewrite(child);
+          if (next !== child) {
+            node[index] = next;
+            changed = true;
+          }
+        }
+      } else {
+        changed = rewriteStringLeavesAtBinderPath(child, rest, rewrite) || changed;
+      }
+    }
+    return changed;
+  }
+
+  if (!isRecord(node) || !(segment in node)) {
+    return false;
+  }
+
+  if (rest.length === 0) {
+    const current = node[segment];
+    if (typeof current !== 'string') {
+      return false;
+    }
+    const next = rewrite(current);
+    if (next !== current) {
+      node[segment] = next;
+      return true;
+    }
+    return false;
+  }
+
+  return rewriteStringLeavesAtBinderPath(node[segment], rest, rewrite);
 }
 
 export function collectBinderPathCandidates(

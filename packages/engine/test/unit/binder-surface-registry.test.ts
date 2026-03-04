@@ -280,6 +280,70 @@ describe('binder-surface-registry', () => {
     });
   });
 
+  it('returns original node identity when all binder-surface rewrites are no-ops', () => {
+    const input = {
+      removeByPriority: {
+        groups: [
+          { bind: '$first', countBind: '$count' },
+          { bind: '$second' },
+        ],
+        remainingBind: '$remaining',
+      },
+    };
+
+    const rewritten = rewriteBinderSurfaceStringsInNode(input, {
+      rewriteDeclaredBinder: (value) => value,
+      rewriteBindingName: (value) => value,
+      rewriteBindingTemplate: (value) => value,
+      rewriteZoneSelector: (value) => value,
+    });
+
+    assert.equal(rewritten, input);
+  });
+
+  it('rewrites binder-surface strings in nested record/array trees', () => {
+    const input = {
+      wrapper: {
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$picked',
+              bind: '$picked',
+            },
+          },
+          {
+            ref: 'binding',
+            name: '$picked',
+          },
+        ],
+      },
+    };
+
+    const rewritten = rewriteBinderSurfaceStringsInNode(input, {
+      rewriteDeclaredBinder: (value) => (value === '$picked' ? '$picked_renamed' : value),
+      rewriteBindingName: (value) => (value === '$picked' ? '$picked_renamed' : value),
+      rewriteBindingTemplate: (value) => value,
+      rewriteZoneSelector: (value) => value,
+    });
+
+    assert.deepEqual(rewritten, {
+      wrapper: {
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$picked',
+              bind: '$picked_renamed',
+            },
+          },
+          {
+            ref: 'binding',
+            name: '$picked_renamed',
+          },
+        ],
+      },
+    });
+  });
+
   it('rewrites and collects non-effect binder referencers via canonical registry helpers', () => {
     const node = {
       ref: 'binding',

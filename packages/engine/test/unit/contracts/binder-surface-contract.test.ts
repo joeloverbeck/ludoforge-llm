@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   collectBinderPathCandidates,
   collectDeclaredBinderCandidatesFromEffectNode,
+  collectStringSitesAtBinderPath,
+  rewriteStringLeavesAtBinderPath,
 } from '../../../src/contracts/index.js';
 
 describe('binder surface contract collector', () => {
@@ -73,5 +75,58 @@ describe('binder surface contract collector', () => {
         value: '$x',
       },
     ]);
+  });
+
+  it('collects string sites at wildcard and nested array paths', () => {
+    const sites: Array<{ path: string; value: string }> = [];
+    collectStringSitesAtBinderPath(
+      {
+        groups: [
+          { bind: '$first', nested: [{ bind: '$firstNested' }] },
+          { bind: '$second', nested: [{ bind: '$secondNested' }, { bind: 1 }] },
+        ],
+      },
+      ['groups', '*', 'nested', '*', 'bind'],
+      'removeByPriority',
+      sites,
+    );
+
+    assert.deepEqual(sites, [
+      { path: 'removeByPriority.groups.0.nested.0.bind', value: '$firstNested' },
+      { path: 'removeByPriority.groups.1.nested.0.bind', value: '$secondNested' },
+    ]);
+  });
+
+  it('rewrites string leaves at wildcard paths and reports change status', () => {
+    const input = {
+      groups: [
+        { bind: '$first' },
+        { bind: '$second' },
+        { bind: 7 },
+      ],
+    };
+
+    const changed = rewriteStringLeavesAtBinderPath(input, ['groups', '*', 'bind'], (value) => `${value}_renamed`);
+
+    assert.equal(changed, true);
+    assert.deepEqual(input, {
+      groups: [
+        { bind: '$first_renamed' },
+        { bind: '$second_renamed' },
+        { bind: 7 },
+      ],
+    });
+  });
+
+  it('does not mutate nodes when a rewrite is a no-op', () => {
+    const input = {
+      groups: [{ bind: '$first' }],
+    };
+    const snapshot = structuredClone(input);
+
+    const changed = rewriteStringLeavesAtBinderPath(input, ['groups', '*', 'bind'], (value) => value);
+
+    assert.equal(changed, false);
+    assert.deepEqual(input, snapshot);
   });
 });

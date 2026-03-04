@@ -17,6 +17,7 @@ describe('query kind contract', () => {
       [{ query: 'mapSpaces' }, { domain: 'zone', runtimeShape: 'string' }],
       [{ query: 'adjacentZones', zone: 'deck:none' }, { domain: 'zone', runtimeShape: 'string' }],
       [{ query: 'connectedZones', zone: 'deck:none' }, { domain: 'zone', runtimeShape: 'string' }],
+      [{ query: 'tokenZones', source: { query: 'tokensInMapSpaces' } }, { domain: 'zone', runtimeShape: 'string' }],
       [{ query: 'assetRows', tableId: 'table' }, { domain: 'other', runtimeShape: 'object' }],
       [{ query: 'intsInRange', min: 1, max: 3 }, { domain: 'other', runtimeShape: 'number' }],
       [{ query: 'intsInVarRange', var: 'v' }, { domain: 'other', runtimeShape: 'number' }],
@@ -35,7 +36,6 @@ describe('query kind contract', () => {
     const expectLeafOnly = (_query: LeafOptionsQuery): void => undefined;
     const recursiveCases: readonly RecursiveOptionsQuery[] = [
       { query: 'concat', sources: [{ query: 'players' }, { query: 'zones' }] },
-      { query: 'tokenZones', source: { query: 'tokensInMapSpaces' } },
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },

@@ -670,6 +670,19 @@ export const validateOptionsQuery = (
     }
     case 'tokenZones': {
       validateOptionsQuery(diagnostics, query.source, `${path}.source`, context);
+      const sourceShapes = inferQueryRuntimeShapes(query.source);
+      const knownSourceShapes = sourceShapes.filter((shape) => shape !== 'unknown');
+      const uniqueKnownShapes = dedupeQueryRuntimeShapes(knownSourceShapes);
+      const incompatibleShapes = uniqueKnownShapes.filter((shape) => shape !== 'token' && shape !== 'string');
+      if (incompatibleShapes.length > 0) {
+        diagnostics.push({
+          code: 'DOMAIN_TOKEN_ZONES_SOURCE_SHAPE_MISMATCH',
+          path: `${path}.source`,
+          severity: 'error',
+          message: `tokenZones source must produce token or string items; found [${incompatibleShapes.join(', ')}].`,
+          suggestion: 'Use a token-producing query (or a string-token-id source) before tokenZones.',
+        });
+      }
       return;
     }
     case 'tokensInZone': {

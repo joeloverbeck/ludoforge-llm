@@ -2224,6 +2224,71 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports tokenZones source shape mismatches for incompatible known source shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$zone',
+              domain: {
+                query: 'tokenZones',
+                source: { query: 'players' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_TOKEN_ZONES_SOURCE_SHAPE_MISMATCH'
+          && diag.path === 'actions[0].params[0].domain.source'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('accepts tokenZones source shapes that are token, string, or unknown', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$zoneFromStrings',
+              domain: {
+                query: 'tokenZones',
+                source: { query: 'enums', values: ['token-1', 'token-2'] },
+              },
+            },
+            {
+              name: '$zoneFromUnknown',
+              domain: {
+                query: 'tokenZones',
+                source: { query: 'binding', name: '$runtimeTokens' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'DOMAIN_TOKEN_ZONES_SOURCE_SHAPE_MISMATCH'),
+      false,
+    );
+  });
+
   it('reports nextInOrderByCondition source/anchor mismatch for string source and numeric anchor', () => {
     const base = createValidGameDef();
     const def = {

@@ -112,7 +112,7 @@ describe('query walk', () => {
     assert.equal(visited.includes('nextInOrderByCondition'), false);
   });
 
-  it('walks tokenZones as a recursive query and visits only its source leaves', () => {
+  it('dispatches tokenZones directly as a leaf query', () => {
     const query = {
       query: 'tokenZones',
       source: {
@@ -126,7 +126,6 @@ describe('query walk', () => {
       visited.push(leaf.query);
     });
 
-    assert.deepEqual(visited, ['tokensInMapSpaces', 'tokensInZone']);
-    assert.equal(visited.includes('tokenZones'), false);
+    assert.deepEqual(visited, ['tokenZones']);
   });
 });

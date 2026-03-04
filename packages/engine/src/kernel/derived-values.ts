@@ -1,4 +1,4 @@
-import type { DerivedMetricDef, GameDef, GameState, ZoneDef, Token } from './types.js';
+import type { DerivedMetricDef, GameDef, GameState, VictoryStandingsDef, ZoneDef, Token } from './types.js';
 import { attributeValueEquals } from './attribute-value-equals.js';
 import { kernelRuntimeError } from './runtime-error.js';
 
@@ -419,3 +419,114 @@ export function computeVictoryMarker(
     }
   }
 }
+
+// ─── Victory Components (for tooltip breakdown) ──────────────────────────────
+
+export interface VictoryComponents {
+  readonly values: readonly number[];
+}
+
+/**
+ * Decompose a victory formula into its component values (for tooltip breakdown).
+ * Returns one number per formula component in a fixed order matching the formula type.
+ */
+export function computeVictoryComponents(
+  gameDef: DerivedMetricsContext,
+  state: GameState,
+  spaces: readonly ZoneDef[],
+  markerStates: Readonly<Record<string, string>>,
+  seatGroupConfig: SeatGroupConfig,
+  formula: VictoryFormula,
+): VictoryComponents {
+  switch (formula.type) {
+    case 'markerTotalPlusZoneCount': {
+      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
+      const zoneCount = countTokensInZone(
+        state,
+        formula.countZone,
+        formula.countTokenTypes !== undefined
+          ? { kind: 'byTokenType', tokenTypes: formula.countTokenTypes }
+          : undefined,
+      );
+      return { values: [markerTotal, zoneCount] };
+    }
+    case 'markerTotalPlusMapBases': {
+      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
+      const bases = countBasesOnMap(state, spaces, formula.baseSeat, formula.basePieceTypes, seatGroupConfig.seatProp);
+      return { values: [markerTotal, bases] };
+    }
+    case 'controlledPopulationPlusMapBases': {
+      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
+      const bases = countBasesOnMap(state, spaces, formula.baseSeat, formula.basePieceTypes, seatGroupConfig.seatProp);
+      return { values: [pop, bases] };
+    }
+    case 'controlledPopulationPlusGlobalVar': {
+      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
+      const varValue = state.globalVars[formula.varName];
+      return { values: [pop, typeof varValue === 'number' ? varValue : 0] };
+    }
+  }
+}
+
+// ─── Victory Standings Aggregate ─────────────────────────────────────────────
+
+export interface VictoryStandingResult {
+  readonly seat: string;
+  readonly score: number;
+  readonly threshold: number;
+  readonly margin: number;
+  readonly components: VictoryComponents;
+}
+
+/**
+ * Compute victory standings for all entries in a VictoryStandingsDef.
+ * Returns entries sorted by margin descending, with tie-break order applied.
+ */
+export function computeAllVictoryStandings(
+  gameDef: GameDef,
+  state: GameState,
+  standings: VictoryStandingsDef,
+): readonly VictoryStandingResult[] {
+  const spaces = gameDef.zones.filter((z) => z.zoneKind === 'board');
+  const markerStates = state.markers[standings.markerName] ?? {};
+
+  const results: VictoryStandingResult[] = standings.entries.map((entry) => {
+    const score = computeVictoryMarker(
+      gameDef,
+      state,
+      spaces,
+      markerStates,
+      standings.seatGroupConfig,
+      entry.formula,
+    );
+    const components = computeVictoryComponents(
+      gameDef,
+      state,
+      spaces,
+      markerStates,
+      standings.seatGroupConfig,
+      entry.formula,
+    );
+    return {
+      seat: entry.seat,
+      score,
+      threshold: entry.threshold,
+      margin: score - entry.threshold,
+      components,
+    };
+  });
+
+  const tieBreakIndex = new Map(standings.tieBreakOrder.map((seat, i) => [seat, i]));
+  results.sort((a, b) => {
+    const marginDiff = b.margin - a.margin;
+    if (marginDiff !== 0) return marginDiff;
+    const aTieBreak = tieBreakIndex.get(a.seat) ?? Infinity;
+    const bTieBreak = tieBreakIndex.get(b.seat) ?? Infinity;
+    return aTieBreak - bTieBreak;
+  });
+
+  return results;
+}
+

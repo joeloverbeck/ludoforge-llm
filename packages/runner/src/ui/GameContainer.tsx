@@ -38,6 +38,7 @@ import { PhaseBannerOverlay } from './PhaseBannerOverlay.js';
 import { ShowdownOverlay } from './ShowdownOverlay.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
 import { AnimationControls } from './AnimationControls.js';
+import { VictoryStandingsBar } from './VictoryStandingsBar.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { EventLogPanel } from './EventLogPanel.js';
@@ -62,6 +63,7 @@ type OverlayRegion = 'top' | 'left' | 'side' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
   top: [
+    VictoryStandingsBar,
     InterruptBanner,
     PhaseIndicator,
     TurnOrderDisplay,

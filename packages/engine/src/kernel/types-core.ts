@@ -41,6 +41,7 @@ import type {
   VictoryRankingDef,
   VictoryTerminalMetadata,
 } from './types-victory.js';
+import type { SeatGroupConfig, MarkerWeightConfig, VictoryFormula } from './derived-values.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 
 export interface RngState {
@@ -233,6 +234,21 @@ export interface DerivedMetricDef {
   readonly requirements: readonly DerivedMetricRequirement[];
 }
 
+export interface VictoryStandingEntry {
+  readonly seat: string;
+  readonly formula: VictoryFormula;
+  readonly threshold: number;
+}
+
+export interface VictoryStandingsDef {
+  readonly seatGroupConfig: SeatGroupConfig;
+  readonly markerConfigs: Readonly<Record<string, MarkerWeightConfig>>;
+  readonly markerName: string;
+  readonly defaultMarkerState: string;
+  readonly entries: readonly VictoryStandingEntry[];
+  readonly tieBreakOrder: readonly string[];
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -264,6 +280,7 @@ export interface GameDef {
   readonly zoneVars?: readonly IntVariableDef[];
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
   readonly tableContracts?: readonly RuntimeTableContract[];
+  readonly victoryStandings?: VictoryStandingsDef;
 }
 
 export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog'] as const;

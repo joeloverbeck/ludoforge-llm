@@ -29,6 +29,7 @@ import type {
   LayoutMode,
   LayoutRole,
   VariablesConfig,
+  VictoryTooltipBreakdown,
   VisualConfig,
 } from './visual-config-types.js';
 
@@ -296,6 +297,14 @@ export class VisualConfigProvider {
       return EMPTY_STRING_SET;
     }
     return new Set(phases);
+  }
+
+  getVictoryTooltipBreakdown(seat: string): VictoryTooltipBreakdown | null {
+    const breakdowns = this.config?.victoryStandings?.tooltipBreakdowns;
+    if (breakdowns === undefined) {
+      return null;
+    }
+    return breakdowns.find((b) => b.seat === seat) ?? null;
   }
 
   getHiddenZones(): ReadonlySet<string> {

@@ -21,6 +21,7 @@ export const CANONICAL_SECTION_KEYS = [
   'effectMacros',
   'conditionMacros',
   'phaseTemplates',
+  'victoryStandings',
 ] as const;
 
 export type CanonicalSectionKey = (typeof CANONICAL_SECTION_KEYS)[number];
@@ -183,6 +184,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isPhaseTemplatesShape(value)) {
     matches.push('phaseTemplates');
   }
+  if (isVictoryStandingsShape(value)) {
+    matches.push('victoryStandings');
+  }
 
   return matches;
 }
@@ -287,6 +291,14 @@ function isPhaseTemplatesShape(value: Record<string, unknown>): boolean {
     value.phaseTemplates.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && Array.isArray(entry.params),
     )
+  );
+}
+
+function isVictoryStandingsShape(value: Record<string, unknown>): boolean {
+  return (
+    isRecord(value.seatGroupConfig) &&
+    Array.isArray(value.entries) &&
+    typeof value.markerName === 'string'
   );
 }
 

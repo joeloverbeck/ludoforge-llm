@@ -3806,6 +3806,257 @@
         ],
         "additionalProperties": false
       }
+    },
+    "victoryStandings": {
+      "type": "object",
+      "properties": {
+        "seatGroupConfig": {
+          "type": "object",
+          "properties": {
+            "coinSeats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "insurgentSeats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "soloSeat": {
+              "type": "string"
+            },
+            "seatProp": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "coinSeats",
+            "insurgentSeats",
+            "soloSeat",
+            "seatProp"
+          ],
+          "additionalProperties": false
+        },
+        "markerConfigs": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "activeState": {
+                "type": "string"
+              },
+              "passiveState": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "activeState",
+              "passiveState"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "markerName": {
+          "type": "string"
+        },
+        "defaultMarkerState": {
+          "type": "string"
+        },
+        "entries": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "seat": {
+                "type": "string"
+              },
+              "formula": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "markerTotalPlusZoneCount"
+                      },
+                      "markerConfig": {
+                        "type": "object",
+                        "properties": {
+                          "activeState": {
+                            "type": "string"
+                          },
+                          "passiveState": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "activeState",
+                          "passiveState"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "countZone": {
+                        "type": "string"
+                      },
+                      "countTokenTypes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "markerConfig",
+                      "countZone"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "markerTotalPlusMapBases"
+                      },
+                      "markerConfig": {
+                        "type": "object",
+                        "properties": {
+                          "activeState": {
+                            "type": "string"
+                          },
+                          "passiveState": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "activeState",
+                          "passiveState"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "baseSeat": {
+                        "type": "string"
+                      },
+                      "basePieceTypes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "markerConfig",
+                      "baseSeat",
+                      "basePieceTypes"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "controlledPopulationPlusMapBases"
+                      },
+                      "controlFn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "coin"
+                          },
+                          {
+                            "type": "string",
+                            "const": "solo"
+                          }
+                        ]
+                      },
+                      "baseSeat": {
+                        "type": "string"
+                      },
+                      "basePieceTypes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "controlFn",
+                      "baseSeat",
+                      "basePieceTypes"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "controlledPopulationPlusGlobalVar"
+                      },
+                      "controlFn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "coin"
+                          },
+                          {
+                            "type": "string",
+                            "const": "solo"
+                          }
+                        ]
+                      },
+                      "varName": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "controlFn",
+                      "varName"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "threshold": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "seat",
+              "formula",
+              "threshold"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "tieBreakOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "seatGroupConfig",
+        "markerConfigs",
+        "markerName",
+        "defaultMarkerState",
+        "entries",
+        "tieBreakOrder"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

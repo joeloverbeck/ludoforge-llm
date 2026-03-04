@@ -1,0 +1,101 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  font-family: var(--font-mono, monospace);
+}
+
+.entry {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: default;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.entry:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.factionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.score {
+  font-weight: 600;
+}
+
+.threshold {
+  opacity: 0.6;
+}
+
+.winning {
+  box-shadow: 0 0 6px 1px currentColor;
+  font-weight: 700;
+}
+
+.separator {
+  opacity: 0.3;
+  user-select: none;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 9999;
+  padding: 8px 12px;
+  background: rgba(20, 20, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #e0e0e0;
+  pointer-events: none;
+  max-width: 280px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.tooltipTitle {
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+}
+
+.tooltipLabel {
+  opacity: 0.8;
+}
+
+.tooltipValue {
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+}
+
+.tooltipDescription {
+  font-size: 0.65rem;
+  opacity: 0.5;
+  margin-top: -1px;
+  margin-bottom: 2px;
+}
+
+.tooltipTotal {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 4px;
+  padding-top: 4px;
+  font-weight: 700;
+}

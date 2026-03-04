@@ -1,5 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { CoupPlanDef, TerminalEvaluationDef } from '../kernel/types.js';
+import type { VictoryStandingsDef, VictoryStandingEntry } from '../kernel/types-core.js';
+import type { VictoryFormula, MarkerWeightConfig } from '../kernel/derived-values.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
@@ -335,4 +337,320 @@ export function lowerVictory(
   }
 
   return rawVictory as Pick<TerminalEvaluationDef, 'checkpoints' | 'margins' | 'ranking'>;
+}
+
+const VALID_FORMULA_TYPES = new Set([
+  'markerTotalPlusZoneCount',
+  'markerTotalPlusMapBases',
+  'controlledPopulationPlusMapBases',
+  'controlledPopulationPlusGlobalVar',
+]);
+
+export function lowerVictoryStandings(
+  raw: unknown,
+  diagnostics: Diagnostic[],
+  pathPrefix = 'doc.victoryStandings',
+): VictoryStandingsDef | undefined {
+  if (raw === null || raw === undefined) {
+    return undefined;
+  }
+
+  if (!isRecord(raw)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_INVALID,
+      path: pathPrefix,
+      severity: 'error',
+      message: 'victoryStandings must be an object.',
+      suggestion: 'Provide seatGroupConfig, markerConfigs, markerName, defaultMarkerState, entries, and tieBreakOrder.',
+    });
+    return undefined;
+  }
+
+  if (!isRecord(raw.seatGroupConfig)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_SEAT_GROUP_INVALID,
+      path: `${pathPrefix}.seatGroupConfig`,
+      severity: 'error',
+      message: 'victoryStandings.seatGroupConfig must be an object.',
+      suggestion: 'Provide coinSeats, insurgentSeats, soloSeat, and seatProp.',
+    });
+    return undefined;
+  }
+
+  if (!isRecord(raw.markerConfigs)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_MARKER_CONFIG_INVALID,
+      path: `${pathPrefix}.markerConfigs`,
+      severity: 'error',
+      message: 'victoryStandings.markerConfigs must be an object mapping config names to MarkerWeightConfig.',
+      suggestion: 'Provide named marker configs with activeState and passiveState.',
+    });
+    return undefined;
+  }
+
+  if (typeof raw.markerName !== 'string' || raw.markerName.trim() === '') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_INVALID,
+      path: `${pathPrefix}.markerName`,
+      severity: 'error',
+      message: 'victoryStandings.markerName must be a non-empty string.',
+    });
+    return undefined;
+  }
+
+  if (typeof raw.defaultMarkerState !== 'string' || raw.defaultMarkerState.trim() === '') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_INVALID,
+      path: `${pathPrefix}.defaultMarkerState`,
+      severity: 'error',
+      message: 'victoryStandings.defaultMarkerState must be a non-empty string.',
+    });
+    return undefined;
+  }
+
+  if (!Array.isArray(raw.entries) || raw.entries.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_INVALID,
+      path: `${pathPrefix}.entries`,
+      severity: 'error',
+      message: 'victoryStandings.entries must be a non-empty array.',
+    });
+    return undefined;
+  }
+
+  if (
+    !Array.isArray(raw.tieBreakOrder) ||
+    !raw.tieBreakOrder.every((v: unknown) => typeof v === 'string' && v.trim() !== '')
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_INVALID,
+      path: `${pathPrefix}.tieBreakOrder`,
+      severity: 'error',
+      message: 'victoryStandings.tieBreakOrder must be an array of non-empty strings.',
+    });
+    return undefined;
+  }
+
+  const markerConfigs: Record<string, MarkerWeightConfig> = {};
+  for (const [configName, configValue] of Object.entries(raw.markerConfigs)) {
+    if (!isRecord(configValue) || typeof configValue.activeState !== 'string' || typeof configValue.passiveState !== 'string') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_MARKER_CONFIG_INVALID,
+        path: `${pathPrefix}.markerConfigs.${configName}`,
+        severity: 'error',
+        message: `Marker config "${configName}" must have activeState and passiveState strings.`,
+      });
+      return undefined;
+    }
+    markerConfigs[configName] = {
+      activeState: configValue.activeState,
+      passiveState: configValue.passiveState,
+    };
+  }
+
+  const entries: VictoryStandingEntry[] = [];
+  for (const [index, rawEntry] of (raw.entries as unknown[]).entries()) {
+    const entryPath = `${pathPrefix}.entries.${index}`;
+    if (!isRecord(rawEntry)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_ENTRY_INVALID,
+        path: entryPath,
+        severity: 'error',
+        message: 'Victory standings entry must be an object with seat, threshold, and formula.',
+      });
+      continue;
+    }
+
+    if (typeof rawEntry.seat !== 'string' || rawEntry.seat.trim() === '') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_ENTRY_INVALID,
+        path: `${entryPath}.seat`,
+        severity: 'error',
+        message: 'Victory standings entry seat must be a non-empty string.',
+      });
+      continue;
+    }
+
+    if (typeof rawEntry.threshold !== 'number') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_ENTRY_INVALID,
+        path: `${entryPath}.threshold`,
+        severity: 'error',
+        message: 'Victory standings entry threshold must be a number.',
+      });
+      continue;
+    }
+
+    const formula = lowerVictoryFormula(rawEntry.formula, markerConfigs, diagnostics, `${entryPath}.formula`);
+    if (formula === undefined) {
+      continue;
+    }
+
+    entries.push({
+      seat: rawEntry.seat,
+      threshold: rawEntry.threshold,
+      formula,
+    });
+  }
+
+  if (entries.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_INVALID,
+      path: `${pathPrefix}.entries`,
+      severity: 'error',
+      message: 'victoryStandings must have at least one valid entry after lowering.',
+    });
+    return undefined;
+  }
+
+  return {
+    seatGroupConfig: raw.seatGroupConfig as unknown as VictoryStandingsDef['seatGroupConfig'],
+    markerConfigs,
+    markerName: raw.markerName as string,
+    defaultMarkerState: raw.defaultMarkerState as string,
+    entries,
+    tieBreakOrder: raw.tieBreakOrder as readonly string[],
+  };
+}
+
+function lowerVictoryFormula(
+  raw: unknown,
+  markerConfigs: Readonly<Record<string, MarkerWeightConfig>>,
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): VictoryFormula | undefined {
+  if (!isRecord(raw)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_FORMULA_INVALID,
+      path: pathPrefix,
+      severity: 'error',
+      message: 'Victory formula must be an object with a type field.',
+    });
+    return undefined;
+  }
+
+  if (typeof raw.type !== 'string' || !VALID_FORMULA_TYPES.has(raw.type)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_FORMULA_INVALID,
+      path: `${pathPrefix}.type`,
+      severity: 'error',
+      message: `Victory formula type must be one of: ${[...VALID_FORMULA_TYPES].join(', ')}.`,
+    });
+    return undefined;
+  }
+
+  switch (raw.type) {
+    case 'markerTotalPlusZoneCount':
+    case 'markerTotalPlusMapBases': {
+      const resolvedMarkerConfig = resolveMarkerConfigRef(raw.markerConfig, markerConfigs, diagnostics, pathPrefix);
+      if (resolvedMarkerConfig === undefined) {
+        return undefined;
+      }
+
+      if (raw.type === 'markerTotalPlusZoneCount') {
+        if (typeof raw.countZone !== 'string') {
+          diagnostics.push({
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_FORMULA_INVALID,
+            path: `${pathPrefix}.countZone`,
+            severity: 'error',
+            message: 'markerTotalPlusZoneCount formula requires a countZone string.',
+          });
+          return undefined;
+        }
+        return {
+          type: 'markerTotalPlusZoneCount',
+          markerConfig: resolvedMarkerConfig,
+          countZone: raw.countZone,
+          ...(Array.isArray(raw.countTokenTypes) ? { countTokenTypes: raw.countTokenTypes as string[] } : {}),
+        };
+      }
+
+      if (!Array.isArray(raw.basePieceTypes) || typeof raw.baseSeat !== 'string') {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_FORMULA_INVALID,
+          path: pathPrefix,
+          severity: 'error',
+          message: 'markerTotalPlusMapBases formula requires baseSeat and basePieceTypes.',
+        });
+        return undefined;
+      }
+      return {
+        type: 'markerTotalPlusMapBases',
+        markerConfig: resolvedMarkerConfig,
+        baseSeat: raw.baseSeat,
+        basePieceTypes: raw.basePieceTypes as string[],
+      };
+    }
+
+    case 'controlledPopulationPlusMapBases': {
+      if ((raw.controlFn !== 'coin' && raw.controlFn !== 'solo') || typeof raw.baseSeat !== 'string' || !Array.isArray(raw.basePieceTypes)) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_FORMULA_INVALID,
+          path: pathPrefix,
+          severity: 'error',
+          message: 'controlledPopulationPlusMapBases formula requires controlFn (coin|solo), baseSeat, and basePieceTypes.',
+        });
+        return undefined;
+      }
+      return {
+        type: 'controlledPopulationPlusMapBases',
+        controlFn: raw.controlFn,
+        baseSeat: raw.baseSeat,
+        basePieceTypes: raw.basePieceTypes as string[],
+      };
+    }
+
+    case 'controlledPopulationPlusGlobalVar': {
+      if ((raw.controlFn !== 'coin' && raw.controlFn !== 'solo') || typeof raw.varName !== 'string') {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_FORMULA_INVALID,
+          path: pathPrefix,
+          severity: 'error',
+          message: 'controlledPopulationPlusGlobalVar formula requires controlFn (coin|solo) and varName.',
+        });
+        return undefined;
+      }
+      return {
+        type: 'controlledPopulationPlusGlobalVar',
+        controlFn: raw.controlFn,
+        varName: raw.varName,
+      };
+    }
+
+    default:
+      return undefined;
+  }
+}
+
+function resolveMarkerConfigRef(
+  ref: unknown,
+  markerConfigs: Readonly<Record<string, MarkerWeightConfig>>,
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): MarkerWeightConfig | undefined {
+  if (typeof ref === 'string') {
+    const resolved = markerConfigs[ref];
+    if (resolved === undefined) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_MARKER_CONFIG_INVALID,
+        path: `${pathPrefix}.markerConfig`,
+        severity: 'error',
+        message: `Unknown marker config reference "${ref}". Available: ${Object.keys(markerConfigs).join(', ')}.`,
+      });
+      return undefined;
+    }
+    return resolved;
+  }
+
+  if (isRecord(ref) && typeof ref.activeState === 'string' && typeof ref.passiveState === 'string') {
+    return { activeState: ref.activeState, passiveState: ref.passiveState };
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_STANDINGS_MARKER_CONFIG_INVALID,
+    path: `${pathPrefix}.markerConfig`,
+    severity: 'error',
+    message: 'markerConfig must be a string reference or an object with activeState and passiveState.',
+  });
+  return undefined;
 }

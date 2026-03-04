@@ -5,6 +5,14 @@ import type {
 } from '@ludoforge/engine/runtime';
 import type { ResolvedZoneVisual } from '../config/visual-config-provider.js';
 
+export interface RenderVictoryStandingEntry {
+  readonly seat: string;
+  readonly score: number;
+  readonly threshold: number;
+  readonly rank: number;
+  readonly components: readonly number[];
+}
+
 export interface RenderRuntimeEligibleFaction {
   readonly seatId: string;
   readonly displayName: string;
@@ -36,6 +44,7 @@ export interface RenderModel {
   readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];
   readonly runtimeEligible: readonly RenderRuntimeEligibleFaction[];
+  readonly victoryStandings: readonly RenderVictoryStandingEntry[] | null;
   readonly terminal: RenderTerminal | null;
 }
 

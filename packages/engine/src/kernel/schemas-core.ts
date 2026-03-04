@@ -328,6 +328,75 @@ export const DerivedMetricDefSchema = z
   })
   .strict();
 
+export const MarkerWeightConfigSchema = z
+  .object({
+    activeState: StringSchema,
+    passiveState: StringSchema,
+  })
+  .strict();
+
+export const SeatGroupConfigSchema = z
+  .object({
+    coinSeats: z.array(StringSchema),
+    insurgentSeats: z.array(StringSchema),
+    soloSeat: StringSchema,
+    seatProp: StringSchema,
+  })
+  .strict();
+
+export const VictoryFormulaSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('markerTotalPlusZoneCount'),
+      markerConfig: MarkerWeightConfigSchema,
+      countZone: StringSchema,
+      countTokenTypes: z.array(StringSchema).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('markerTotalPlusMapBases'),
+      markerConfig: MarkerWeightConfigSchema,
+      baseSeat: StringSchema,
+      basePieceTypes: z.array(StringSchema),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('controlledPopulationPlusMapBases'),
+      controlFn: z.union([z.literal('coin'), z.literal('solo')]),
+      baseSeat: StringSchema,
+      basePieceTypes: z.array(StringSchema),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('controlledPopulationPlusGlobalVar'),
+      controlFn: z.union([z.literal('coin'), z.literal('solo')]),
+      varName: StringSchema,
+    })
+    .strict(),
+]);
+
+export const VictoryStandingEntrySchema = z
+  .object({
+    seat: StringSchema,
+    formula: VictoryFormulaSchema,
+    threshold: NumberSchema,
+  })
+  .strict();
+
+export const VictoryStandingsDefSchema = z
+  .object({
+    seatGroupConfig: SeatGroupConfigSchema,
+    markerConfigs: z.record(StringSchema, MarkerWeightConfigSchema),
+    markerName: StringSchema,
+    defaultMarkerState: StringSchema,
+    entries: z.array(VictoryStandingEntrySchema).min(1),
+    tieBreakOrder: z.array(StringSchema),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -362,6 +431,7 @@ export const GameDefSchema = z
     zoneVars: z.array(IntVariableDefSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
+    victoryStandings: VictoryStandingsDefSchema.optional(),
   })
   .strict();
 

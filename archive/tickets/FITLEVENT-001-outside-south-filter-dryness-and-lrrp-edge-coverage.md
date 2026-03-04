@@ -1,6 +1,6 @@
 # FITLEVENT-001: DRY outside-South province targeting and expand LRRP edge coverage
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — GameSpecDoc content/tests only
@@ -8,26 +8,26 @@
 
 ## Problem
 
-The LRRP unshaded implementation duplicates an inline Laos/Cambodia province filter and currently lacks explicit integration coverage for the `<3 available Irregulars` placement edge. This increases maintenance burden for future outside-South event cards and leaves a behavior edge under-tested.
+The LRRP unshaded implementation embeds a Laos/Cambodia province selector inline in event content and currently lacks explicit integration coverage for the `<3 available Irregulars` placement edge (0/1/2). This increases maintenance burden for future outside-South event cards and leaves behavior edges under-tested.
 
 ## Assumption Reassessment (2026-03-04)
 
-1. LRRP unshaded filter logic is currently inline in event content and not reused via macro/query helper.
-2. LRRP integration tests cover standard 3-piece placement and shaded edge cases, but do not explicitly assert unshaded behavior when fewer than 3 Irregulars are available.
+1. LRRP unshaded filter logic is currently inline in event content and not reused through an `effectMacro` export helper.
+2. LRRP integration tests cover standard 3-piece unshaded placement and shaded edge cases, but do not explicitly assert unshaded behavior when fewer than 3 Irregulars are available (0/1/2).
 3. This change belongs in GameSpecDoc/macros and tests, not kernel logic.
 
 ## Architecture Check
 
-1. Reusing a macro/filter helper is cleaner and reduces repeated event-card logic.
+1. Reusing a macro export helper for Laos/Cambodia province selection is cleaner and reduces repeated event-card logic.
 2. Keeps FITL-specific targeting rules in GameSpecDoc data layer, preserving agnostic GameDef/runtime.
 3. No compatibility shim is needed; this is data-level cleanup plus additional coverage.
 
 ## What to Change
 
-### 1. Extract reusable outside-South province filter helper
+### 1. Extract reusable Laos/Cambodia province selector helper
 
-1. Add a macro/query helper in `20-macros.md` for Laos/Cambodia province targeting.
-2. Replace LRRP inline filter usage with that helper.
+1. Add an `effectMacro` in `20-macros.md` that chooses one Laos/Cambodia province and exports the binding.
+2. Replace LRRP inline `chooseOne` filter usage with that helper.
 
 ### 2. Add missing LRRP unshaded edge-case test
 
@@ -69,3 +69,9 @@ The LRRP unshaded implementation duplicates an inline Laos/Cambodia province fil
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/integration/fitl-events-lrrp.test.js`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+1. Added reusable macro `select-laos-cambodia-province` in `20-macros.md` and replaced LRRP unshaded inline destination selection with this macro export helper.
+2. Expanded `fitl-events-lrrp.test.ts` with explicit unshaded limited-availability coverage for 0/1/2 Available US Irregulars while preserving free Air Strike grant assertions.
+3. Regenerated engine schema artifacts (`GameDef`, `Trace`, `EvalReport`) because the engine test command enforces schema sync before running tests.

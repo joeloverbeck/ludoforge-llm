@@ -47,6 +47,19 @@ const compileDef = (): GameDef => {
 const countZoneTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
   (state.zones[zone] ?? []).filter((token) => predicate(token as Token)).length;
 
+const mapUsIrregularPlacementZones = (def: GameDef, state: GameState): string[] => {
+  const mapZoneIds = new Set(
+    def.zones.filter((zone) => zone.zoneKind === 'board').map((zone) => String(zone.id)),
+  );
+  return Object.entries(state.zones).flatMap(([zone, tokens]) =>
+    !mapZoneIds.has(zone)
+      ? []
+      : (tokens as Token[])
+        .filter((token) => token.type === 'irregular' && token.props.faction === 'US')
+        .map(() => zone),
+  );
+};
+
 const findCard26Move = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded'): Move | undefined =>
   legalMoves(def, state).find(
     (move) =>
@@ -124,16 +137,7 @@ describe('FITL card-26 LRRP', () => {
 
     const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, unshadedMove!).state;
 
-    const mapZoneIds = new Set(
-      def.zones.filter((zone) => zone.zoneKind === 'board').map((zone) => String(zone.id)),
-    );
-    const mapIrregularPlacements = Object.entries(afterEvent.zones).flatMap(([zone, tokens]) =>
-      !mapZoneIds.has(zone)
-        ? []
-        : (tokens as Token[])
-          .filter((token) => token.type === 'irregular' && token.props.faction === 'US')
-          .map(() => zone),
-    );
+    const mapIrregularPlacements = mapUsIrregularPlacementZones(def, afterEvent);
     const remainingAvailableIrregulars = countZoneTokens(
       afterEvent,
       'available-US:none',
@@ -191,6 +195,78 @@ describe('FITL card-26 LRRP', () => {
       0,
       'LRRP free Air Strike should allow normal in-South target resolution when legal under 4.2.3',
     );
+  });
+
+  it('unshaded places all available US Irregulars when fewer than 3 are available (0/1/2) and still grants free Air Strike', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected event deck');
+
+    for (const availableCount of [0, 1, 2]) {
+      const base = clearAllZones(initialState(def, 2610 + availableCount, 4).state);
+      const availableIrregulars = Array.from({ length: availableCount }, (_, index) =>
+        makeToken(`lrrp-limited-irregular-${availableCount}-${index + 1}`, 'irregular', 'US'),
+      );
+      const setup: GameState = {
+        ...base,
+        activePlayer: asPlayerId(0),
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            ...requireCardDrivenRuntime(base),
+            currentCard: {
+              ...requireCardDrivenRuntime(base).currentCard,
+              firstEligible: 'us',
+              secondEligible: 'vc',
+              actedSeats: [],
+              passedSeats: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+          },
+        },
+        zones: {
+          ...base.zones,
+          [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
+          'available-US:none': availableIrregulars,
+        },
+      };
+
+      const unshadedMove = findCard26Move(def, setup, 'unshaded');
+      assert.notEqual(unshadedMove, undefined, `Expected card-26 unshaded event move for available count ${availableCount}`);
+
+      const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, unshadedMove!).state;
+      const placedZones = mapUsIrregularPlacementZones(def, afterEvent);
+      const remainingAvailableIrregulars = countZoneTokens(
+        afterEvent,
+        'available-US:none',
+        (token) => token.type === 'irregular' && token.props.faction === 'US',
+      );
+
+      assert.equal(
+        placedZones.length,
+        availableCount,
+        `Expected LRRP to place exactly ${availableCount} US Irregulars when only ${availableCount} are available`,
+      );
+      assert.equal(
+        remainingAvailableIrregulars,
+        0,
+        `Expected no US Irregulars to remain Available after LRRP with ${availableCount} available`,
+      );
+      for (const zoneId of placedZones) {
+        const zone = def.zones.find((entry) => String(entry.id) === String(zoneId));
+        assert.notEqual(zone, undefined, `Expected placed Irregular zone ${zoneId} to exist in GameDef`);
+        assert.equal(zone?.category, 'province', `Expected LRRP placement destination ${zoneId} to be a Province`);
+        assert.ok(
+          zone?.attributes?.country === 'laos' || zone?.attributes?.country === 'cambodia',
+          `Expected LRRP placement destination ${zoneId} to be in Laos or Cambodia`,
+        );
+      }
+
+      const pendingAfterEvent = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+      assert.equal(pendingAfterEvent.length, 1, `Expected one pending free operation grant for available count ${availableCount}`);
+      assert.deepEqual(pendingAfterEvent[0]?.actionIds, ['airStrike']);
+    }
   });
 
   it('shaded maps exactly 3 US Irregulars to Casualties and shifts each affected source space once', () => {

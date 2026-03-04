@@ -150,6 +150,25 @@ effectMacros:
           marker: supportOpposition
           delta: { param: deltaExpr }
 
+  # ── select-laos-cambodia-province ─────────────────────────────────────────
+  # Shared selector for one province in Laos/Cambodia.
+  - id: select-laos-cambodia-province
+    params: []
+    exports: [$laosCambodiaProvince]
+    effects:
+      - chooseOne:
+          bind: $laosCambodiaProvince
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                - op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+
   # ── remove-support-from-space ─────────────────────────────────────────────
   # Shared helper for effects that remove Support from a specific space
   # by moving Active Support two levels and Passive Support one level.
@@ -1115,10 +1134,9 @@ effectMacros:
                         args:
                           - { op: '==', left: { param: allowTrailCountryFreeCost }, right: true }
                           - { op: '==', left: { ref: gvar, var: trail }, right: 4 }
-                          - op: or
+                          - conditionMacro: fitl-space-in-laos-cambodia
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: country }, right: 'laos' }
-                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: country }, right: 'cambodia' }
+                              spaceExpr: { param: destSpace }
                       then: []
                       else:
                         - macro: per-province-city-cost
@@ -2478,10 +2496,8 @@ effectMacros:
           over:
             query: mapSpaces
             filter:
-              op: or
-              args:
-                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+              conditionMacro: fitl-space-in-laos-cambodia
+              args: { spaceExpr: $zone }
           effects:
             - moveAll:
                 from: $space
@@ -2752,10 +2768,8 @@ effectMacros:
                   filter:
                     op: and
                     args:
-                      - op: or
-                        args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                      - conditionMacro: fitl-space-in-laos-cambodia
+                        args: { spaceExpr: $zone }
                       - op: '>'
                         left:
                           aggregate:
@@ -2837,10 +2851,8 @@ effectMacros:
                 query:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: or
-                    args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                    conditionMacro: fitl-space-in-laos-cambodia
+                    args: { spaceExpr: $zone }
                   filter:
                     - { prop: faction, eq: NVA }
                     - { prop: type, eq: base }
@@ -3002,6 +3014,36 @@ effectMacros:
       - setGlobalMarker: { marker: leaderFlipped, state: normal }
 
 conditionMacros:
+  # Shared geography predicate: Laos or Cambodia map space.
+  - id: fitl-space-in-laos-cambodia
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: or
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: country }, right: laos }
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: country }, right: cambodia }
+
+  # Shared geography predicate: any map space outside South Vietnam.
+  - id: fitl-space-outside-south
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: or
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: country }, right: northVietnam }
+        - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: { param: spaceExpr } } }
+
+  # Shared geography predicate: outside-South province.
+  - id: fitl-space-outside-south-province
+    params:
+      - { name: spaceExpr, type: value }
+    condition:
+      op: and
+      args:
+        - { op: '==', left: { ref: zoneProp, zone: { param: spaceExpr }, prop: category }, right: province }
+        - { conditionMacro: fitl-space-outside-south, args: { spaceExpr: { param: spaceExpr } } }
+
   # Shared Rule 1.8.1 predicate:
   # US may spend ARVN Resources only if post-spend resource does not drop below totalEcon.
   - id: us-joint-op-arvn-spend-eligible

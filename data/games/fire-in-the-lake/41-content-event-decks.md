@@ -773,19 +773,15 @@ eventDecks:
                         sources:
                           - query: tokensInMapSpaces
                             spaceFilter:
-                              op: or
-                              args:
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                              conditionMacro: fitl-space-in-laos-cambodia
+                              args: { spaceExpr: $zone }
                             filter:
                               - { prop: faction, op: in, value: ['NVA', 'VC'] }
                               - { prop: type, op: in, value: [troops, guerrilla] }
                           - query: tokensInMapSpaces
                             spaceFilter:
-                              op: or
-                              args:
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                              conditionMacro: fitl-space-in-laos-cambodia
+                              args: { spaceExpr: $zone }
                             filter:
                               - { prop: faction, op: in, value: ['NVA', 'VC'] }
                               - { prop: type, eq: base }
@@ -1211,11 +1207,8 @@ eventDecks:
                 over:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: or
-                    args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                    conditionMacro: fitl-space-outside-south
+                    args: { spaceExpr: $zone }
                   filter:
                     - { prop: faction, op: in, value: ['NVA', 'VC'] }
                     - { prop: type, eq: guerrilla }
@@ -1227,11 +1220,8 @@ eventDecks:
                 options:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: or
-                    args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                    conditionMacro: fitl-space-outside-south
+                    args: { spaceExpr: $zone }
                   filter:
                     - { prop: faction, eq: NVA }
                     - { prop: type, eq: base }
@@ -1279,14 +1269,8 @@ eventDecks:
                             filter:
                               op: and
                               args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-                                - op: '=='
-                                  left: { ref: zoneProp, zone: $zone, prop: category }
-                                  right: province
+                                - conditionMacro: fitl-space-outside-south-province
+                                  args: { spaceExpr: $zone }
                                 - op: '>'
                                   left:
                                     aggregate:
@@ -1323,14 +1307,8 @@ eventDecks:
                         filter:
                           op: and
                           args:
-                            - op: or
-                              args:
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
-                            - op: '=='
-                              left: { ref: zoneProp, zone: $zone, prop: category }
-                              right: province
+                            - conditionMacro: fitl-space-outside-south-province
+                              args: { spaceExpr: $zone }
                             - op: '>'
                               left:
                                 aggregate:
@@ -2786,10 +2764,8 @@ eventDecks:
                 over:
                   query: tokensInMapSpaces
                   spaceFilter:
-                    op: or
-                    args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                    conditionMacro: fitl-space-in-laos-cambodia
+                    args: { spaceExpr: $zone }
                   filter:
                     - { prop: faction, eq: NVA }
                     - { prop: type, eq: base }
@@ -2800,10 +2776,8 @@ eventDecks:
                       options:
                         query: mapSpaces
                         filter:
-                          op: or
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                          conditionMacro: fitl-space-in-laos-cambodia
+                          args: { spaceExpr: $zone }
                   - moveToken:
                       token: $nvaBase
                       from: { zoneExpr: { ref: tokenZone, token: $nvaBase } }
@@ -3839,22 +3813,12 @@ eventDecks:
                                   bind: $irregular
                                   over: { query: binding, name: $irregularsToPlace }
                                   effects:
-                                    - chooseOne:
-                                        bind: $lrrpPlacement
-                                        options:
-                                          query: mapSpaces
-                                          filter:
-                                            op: and
-                                            args:
-                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                                              - op: or
-                                                args:
-                                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                    - macro: select-laos-cambodia-province
+                                      args: {}
                                     - moveToken:
                                         token: $irregular
                                         from: { zoneExpr: { ref: tokenZone, token: $irregular } }
-                                        to: { zoneExpr: { ref: binding, name: $lrrpPlacement } }
+                                        to: { zoneExpr: { ref: binding, name: $laosCambodiaProvince } }
                             else: []
           freeOperationGrants:
             - seat: "us"

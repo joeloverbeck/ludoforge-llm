@@ -2633,10 +2633,8 @@ actionPipelines:
                                 options:
                                   query: mapSpaces
                                   filter:
-                                    op: or
-                                    args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                    conditionMacro: fitl-space-in-laos-cambodia
+                                    args: { spaceExpr: $zone }
                                 min: 1
                                 max: 1
                           else:
@@ -2645,10 +2643,8 @@ actionPipelines:
                                 options:
                                   query: mapSpaces
                                   filter:
-                                    op: or
-                                    args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                    conditionMacro: fitl-space-in-laos-cambodia
+                                    args: { spaceExpr: $zone }
                                 min: 1
                                 max: 99
                       - forEach:
@@ -2861,10 +2857,8 @@ actionPipelines:
                     options:
                       query: mapSpaces
                       filter:
-                        op: or
-                        args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'laos' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'cambodia' }
+                        conditionMacro: fitl-space-in-laos-cambodia
+                        args: { spaceExpr: $zone }
                     min: 0
                     max: 99
       - stage: resolve-trail-chain-destinations
@@ -3437,8 +3431,7 @@ actionPipelines:
                         - op: or
                           args:
                             - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                            - { conditionMacro: fitl-space-in-laos-cambodia, args: { spaceExpr: $zone } }
                     - op: and
                       args:
                         - { op: '!=', left: { ref: gvar, var: fitl_acesAirStrikeWindow }, right: true }

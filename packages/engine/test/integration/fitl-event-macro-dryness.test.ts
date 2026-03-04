@@ -50,4 +50,40 @@ describe('FITL event macro DRYness integration', () => {
     assert.ok(onCalls.length >= 1, 'Expected set-global-flag-true macro calls in event momentum setup');
     assert.ok(offCalls.length >= 1, 'Expected set-global-flag-false macro calls in event momentum teardown');
   });
+
+  it('centralizes repeated FITL geography predicates through shared condition macros', () => {
+    const { parsed } = compileProductionSpec();
+    assertNoErrors(parsed);
+
+    const conditionMacros = parsed.doc.conditionMacros ?? [];
+    for (const macroId of ['fitl-space-in-laos-cambodia', 'fitl-space-outside-south', 'fitl-space-outside-south-province']) {
+      assert.ok(conditionMacros.some((macro) => macro.id === macroId), `Expected condition macro ${macroId}`);
+    }
+
+    const cards = parsed.doc.eventDecks?.[0]?.cards ?? [];
+    const card2 = cards.find((card) => card.id === 'card-2');
+    const card12 = cards.find((card) => card.id === 'card-12');
+    const card55 = cards.find((card) => card.id === 'card-55');
+    assert.ok(card2, 'Expected card-2');
+    assert.ok(card12, 'Expected card-12');
+    assert.ok(card55, 'Expected card-55');
+
+    const card2LaosCambodiaRefs = findDeep(card2, (node) => node?.spaceFilter?.conditionMacro === 'fitl-space-in-laos-cambodia');
+    assert.ok(card2LaosCambodiaRefs.length >= 2, 'Expected card-2 to reuse fitl-space-in-laos-cambodia for both source groups');
+
+    const card12OutsideSouthRefs = findDeep(card12, (node) => node?.spaceFilter?.conditionMacro === 'fitl-space-outside-south');
+    const card12OutsideSouthProvinceRefs = findDeep(card12, (node) => node?.conditionMacro === 'fitl-space-outside-south-province');
+    assert.ok(card12OutsideSouthRefs.length >= 2, 'Expected card-12 to reuse fitl-space-outside-south in unshaded selectors');
+    assert.ok(
+      card12OutsideSouthProvinceRefs.length >= 2,
+      'Expected card-12 shaded base placement checks to reuse fitl-space-outside-south-province',
+    );
+
+    const card55LaosCambodiaRefs = findDeep(card55, (node) => node?.spaceFilter?.conditionMacro === 'fitl-space-in-laos-cambodia');
+    assert.ok(card55LaosCambodiaRefs.length >= 1, 'Expected card-55 to reuse fitl-space-in-laos-cambodia in shaded base repositioning');
+
+    const actionPipelines = parsed.doc.actionPipelines ?? [];
+    const actionGeoMacroRefs = findDeep(actionPipelines, (node) => node?.conditionMacro === 'fitl-space-in-laos-cambodia');
+    assert.ok(actionGeoMacroRefs.length >= 3, 'Expected FITL action pipelines to reuse shared Laos/Cambodia geography predicate');
+  });
 });

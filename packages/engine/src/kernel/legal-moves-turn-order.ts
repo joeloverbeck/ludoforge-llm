@@ -2,6 +2,7 @@ import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from '
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   isFreeOperationApplicableForMove,
+  isFreeOperationAllowedDuringMonsoonForMove,
   isFreeOperationGrantedForMove,
   resolveTurnFlowActionClass,
 } from './turn-flow-eligibility.js';
@@ -273,6 +274,9 @@ export function applyTurnFlowWindowFilters(
     }
     const restriction = turnFlow.monsoon?.restrictedActions.find((candidate) => candidate.actionId === actionId);
     if (restriction === undefined) {
+      return true;
+    }
+    if (isFreeOperationAllowedDuringMonsoonForMove(def, state, move, seatResolution)) {
       return true;
     }
     if (hasOverrideToken(move, restriction.overrideToken)) {

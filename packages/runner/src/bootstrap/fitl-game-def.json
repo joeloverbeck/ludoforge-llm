@@ -252,6 +252,11 @@
       "init": false
     },
     {
+      "name": "fitl_operationAttleboroTunnelOverride",
+      "type": "boolean",
+      "init": false
+    },
+    {
       "name": "linebacker11Allowed",
       "type": "boolean",
       "init": false
@@ -16134,27 +16139,59 @@
                                                                                                     },
                                                                                                     "then": [
                                                                                                       {
-                                                                                                        "rollRandom": {
-                                                                                                          "bind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                                          "min": 1,
-                                                                                                          "max": 6,
-                                                                                                          "in": [
+                                                                                                        "if": {
+                                                                                                          "when": {
+                                                                                                            "op": "==",
+                                                                                                            "left": false,
+                                                                                                            "right": true
+                                                                                                          },
+                                                                                                          "then": [
                                                                                                             {
-                                                                                                              "if": {
-                                                                                                                "when": {
-                                                                                                                  "op": ">=",
-                                                                                                                  "left": {
-                                                                                                                    "ref": "binding",
-                                                                                                                    "name": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                                  },
-                                                                                                                  "right": 4
-                                                                                                                },
-                                                                                                                "then": [
+                                                                                                              "moveToken": {
+                                                                                                                "token": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                "from": "$assaultLoC",
+                                                                                                                "to": {
+                                                                                                                  "zoneExpr": {
+                                                                                                                    "concat": [
+                                                                                                                      "available-",
+                                                                                                                      {
+                                                                                                                        "ref": "tokenProp",
+                                                                                                                        "token": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                        "prop": "faction"
+                                                                                                                      },
+                                                                                                                      ":none"
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ],
+                                                                                                          "else": [
+                                                                                                            {
+                                                                                                              "rollRandom": {
+                                                                                                                "bind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                                "min": 1,
+                                                                                                                "max": 6,
+                                                                                                                "in": [
                                                                                                                   {
-                                                                                                                    "setTokenProp": {
-                                                                                                                      "token": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                                      "prop": "tunnel",
-                                                                                                                      "value": "untunneled"
+                                                                                                                    "if": {
+                                                                                                                      "when": {
+                                                                                                                        "op": ">=",
+                                                                                                                        "left": {
+                                                                                                                          "ref": "binding",
+                                                                                                                          "name": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                                        },
+                                                                                                                        "right": 4
+                                                                                                                      },
+                                                                                                                      "then": [
+                                                                                                                        {
+                                                                                                                          "setTokenProp": {
+                                                                                                                            "token": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                            "prop": "tunnel",
+                                                                                                                            "value": "untunneled"
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      ]
                                                                                                                     }
                                                                                                                   }
                                                                                                                 ]
@@ -17458,27 +17495,59 @@
                                                                                               },
                                                                                               "then": [
                                                                                                 {
-                                                                                                  "rollRandom": {
-                                                                                                    "bind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                                    "min": 1,
-                                                                                                    "max": 6,
-                                                                                                    "in": [
+                                                                                                  "if": {
+                                                                                                    "when": {
+                                                                                                      "op": "==",
+                                                                                                      "left": false,
+                                                                                                      "right": true
+                                                                                                    },
+                                                                                                    "then": [
                                                                                                       {
-                                                                                                        "if": {
-                                                                                                          "when": {
-                                                                                                            "op": ">=",
-                                                                                                            "left": {
-                                                                                                              "ref": "binding",
-                                                                                                              "name": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                            },
-                                                                                                            "right": 4
-                                                                                                          },
-                                                                                                          "then": [
+                                                                                                        "moveToken": {
+                                                                                                          "token": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                          "from": "$assaultLoC",
+                                                                                                          "to": {
+                                                                                                            "zoneExpr": {
+                                                                                                              "concat": [
+                                                                                                                "available-",
+                                                                                                                {
+                                                                                                                  "ref": "tokenProp",
+                                                                                                                  "token": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                  "prop": "faction"
+                                                                                                                },
+                                                                                                                ":none"
+                                                                                                              ]
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    ],
+                                                                                                    "else": [
+                                                                                                      {
+                                                                                                        "rollRandom": {
+                                                                                                          "bind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                          "min": 1,
+                                                                                                          "max": 6,
+                                                                                                          "in": [
                                                                                                             {
-                                                                                                              "setTokenProp": {
-                                                                                                                "token": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                                "prop": "tunnel",
-                                                                                                                "value": "untunneled"
+                                                                                                              "if": {
+                                                                                                                "when": {
+                                                                                                                  "op": ">=",
+                                                                                                                  "left": {
+                                                                                                                    "ref": "binding",
+                                                                                                                    "name": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                                  },
+                                                                                                                  "right": 4
+                                                                                                                },
+                                                                                                                "then": [
+                                                                                                                  {
+                                                                                                                    "setTokenProp": {
+                                                                                                                      "token": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                      "prop": "tunnel",
+                                                                                                                      "value": "untunneled"
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                ]
                                                                                                               }
                                                                                                             }
                                                                                                           ]
@@ -20585,27 +20654,85 @@
                                                                                                     },
                                                                                                     "then": [
                                                                                                       {
-                                                                                                        "rollRandom": {
-                                                                                                          "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                                          "min": 1,
-                                                                                                          "max": 6,
-                                                                                                          "in": [
-                                                                                                            {
+                                                                                                        "if": {
+                                                                                                          "when": {
+                                                                                                            "op": "==",
+                                                                                                            "left": {
                                                                                                               "if": {
                                                                                                                 "when": {
-                                                                                                                  "op": ">=",
-                                                                                                                  "left": {
-                                                                                                                    "ref": "binding",
-                                                                                                                    "name": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                                  },
-                                                                                                                  "right": 4
+                                                                                                                  "op": "and",
+                                                                                                                  "args": [
+                                                                                                                    {
+                                                                                                                      "op": "==",
+                                                                                                                      "left": {
+                                                                                                                        "ref": "binding",
+                                                                                                                        "name": "__freeOperation"
+                                                                                                                      },
+                                                                                                                      "right": true
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                      "op": "==",
+                                                                                                                      "left": {
+                                                                                                                        "ref": "gvar",
+                                                                                                                        "var": "fitl_operationAttleboroTunnelOverride"
+                                                                                                                      },
+                                                                                                                      "right": true
+                                                                                                                    }
+                                                                                                                  ]
                                                                                                                 },
-                                                                                                                "then": [
+                                                                                                                "then": true,
+                                                                                                                "else": false
+                                                                                                              }
+                                                                                                            },
+                                                                                                            "right": true
+                                                                                                          },
+                                                                                                          "then": [
+                                                                                                            {
+                                                                                                              "moveToken": {
+                                                                                                                "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                "from": "$space",
+                                                                                                                "to": {
+                                                                                                                  "zoneExpr": {
+                                                                                                                    "concat": [
+                                                                                                                      "available-",
+                                                                                                                      {
+                                                                                                                        "ref": "tokenProp",
+                                                                                                                        "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                        "prop": "faction"
+                                                                                                                      },
+                                                                                                                      ":none"
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ],
+                                                                                                          "else": [
+                                                                                                            {
+                                                                                                              "rollRandom": {
+                                                                                                                "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                                "min": 1,
+                                                                                                                "max": 6,
+                                                                                                                "in": [
                                                                                                                   {
-                                                                                                                    "setTokenProp": {
-                                                                                                                      "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                                      "prop": "tunnel",
-                                                                                                                      "value": "untunneled"
+                                                                                                                    "if": {
+                                                                                                                      "when": {
+                                                                                                                        "op": ">=",
+                                                                                                                        "left": {
+                                                                                                                          "ref": "binding",
+                                                                                                                          "name": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                                        },
+                                                                                                                        "right": 4
+                                                                                                                      },
+                                                                                                                      "then": [
+                                                                                                                        {
+                                                                                                                          "setTokenProp": {
+                                                                                                                            "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_2__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                            "prop": "tunnel",
+                                                                                                                            "value": "untunneled"
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      ]
                                                                                                                     }
                                                                                                                   }
                                                                                                                 ]
@@ -21471,27 +21598,59 @@
                                                                                         },
                                                                                         "then": [
                                                                                           {
-                                                                                            "rollRandom": {
-                                                                                              "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                              "min": 1,
-                                                                                              "max": 6,
-                                                                                              "in": [
+                                                                                            "if": {
+                                                                                              "when": {
+                                                                                                "op": "==",
+                                                                                                "left": false,
+                                                                                                "right": true
+                                                                                              },
+                                                                                              "then": [
                                                                                                 {
-                                                                                                  "if": {
-                                                                                                    "when": {
-                                                                                                      "op": ">=",
-                                                                                                      "left": {
-                                                                                                        "ref": "binding",
-                                                                                                        "name": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                      },
-                                                                                                      "right": 4
-                                                                                                    },
-                                                                                                    "then": [
+                                                                                                  "moveToken": {
+                                                                                                    "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                    "from": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_6__stages_3__effects_0__m48Space",
+                                                                                                    "to": {
+                                                                                                      "zoneExpr": {
+                                                                                                        "concat": [
+                                                                                                          "available-",
+                                                                                                          {
+                                                                                                            "ref": "tokenProp",
+                                                                                                            "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                            "prop": "faction"
+                                                                                                          },
+                                                                                                          ":none"
+                                                                                                        ]
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              ],
+                                                                                              "else": [
+                                                                                                {
+                                                                                                  "rollRandom": {
+                                                                                                    "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                    "min": 1,
+                                                                                                    "max": 6,
+                                                                                                    "in": [
                                                                                                       {
-                                                                                                        "setTokenProp": {
-                                                                                                          "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                          "prop": "tunnel",
-                                                                                                          "value": "untunneled"
+                                                                                                        "if": {
+                                                                                                          "when": {
+                                                                                                            "op": ">=",
+                                                                                                            "left": {
+                                                                                                              "ref": "binding",
+                                                                                                              "name": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                            },
+                                                                                                            "right": 4
+                                                                                                          },
+                                                                                                          "then": [
+                                                                                                            {
+                                                                                                              "setTokenProp": {
+                                                                                                                "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                "prop": "tunnel",
+                                                                                                                "value": "untunneled"
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ]
                                                                                                         }
                                                                                                       }
                                                                                                     ]
@@ -21658,6 +21817,14 @@
                     {
                       "op": "==",
                       "left": {
+                        "ref": "binding",
+                        "name": "__freeOperation"
+                      },
+                      "right": true
+                    },
+                    {
+                      "op": "==",
+                      "left": {
                         "ref": "gvar",
                         "var": "mom_bodyCount"
                       },
@@ -21713,10 +21880,24 @@
                             },
                             "then": [
                               {
-                                "addVar": {
-                                  "scope": "global",
-                                  "var": "arvnResources",
-                                  "delta": -3
+                                "if": {
+                                  "when": {
+                                    "op": "!=",
+                                    "left": {
+                                      "ref": "binding",
+                                      "name": "__freeOperation"
+                                    },
+                                    "right": true
+                                  },
+                                  "then": [
+                                    {
+                                      "addVar": {
+                                        "scope": "global",
+                                        "var": "arvnResources",
+                                        "delta": -3
+                                      }
+                                    }
+                                  ]
                                 }
                               }
                             ]
@@ -22289,27 +22470,59 @@
                                                                                                     },
                                                                                                     "then": [
                                                                                                       {
-                                                                                                        "rollRandom": {
-                                                                                                          "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                                          "min": 1,
-                                                                                                          "max": 6,
-                                                                                                          "in": [
+                                                                                                        "if": {
+                                                                                                          "when": {
+                                                                                                            "op": "==",
+                                                                                                            "left": false,
+                                                                                                            "right": true
+                                                                                                          },
+                                                                                                          "then": [
                                                                                                             {
-                                                                                                              "if": {
-                                                                                                                "when": {
-                                                                                                                  "op": ">=",
-                                                                                                                  "left": {
-                                                                                                                    "ref": "binding",
-                                                                                                                    "name": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                                  },
-                                                                                                                  "right": 4
-                                                                                                                },
-                                                                                                                "then": [
+                                                                                                              "moveToken": {
+                                                                                                                "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                "from": "$arvnSpace",
+                                                                                                                "to": {
+                                                                                                                  "zoneExpr": {
+                                                                                                                    "concat": [
+                                                                                                                      "available-",
+                                                                                                                      {
+                                                                                                                        "ref": "tokenProp",
+                                                                                                                        "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                        "prop": "faction"
+                                                                                                                      },
+                                                                                                                      ":none"
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ],
+                                                                                                          "else": [
+                                                                                                            {
+                                                                                                              "rollRandom": {
+                                                                                                                "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                                "min": 1,
+                                                                                                                "max": 6,
+                                                                                                                "in": [
                                                                                                                   {
-                                                                                                                    "setTokenProp": {
-                                                                                                                      "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                                      "prop": "tunnel",
-                                                                                                                      "value": "untunneled"
+                                                                                                                    "if": {
+                                                                                                                      "when": {
+                                                                                                                        "op": ">=",
+                                                                                                                        "left": {
+                                                                                                                          "ref": "binding",
+                                                                                                                          "name": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                                        },
+                                                                                                                        "right": 4
+                                                                                                                      },
+                                                                                                                      "then": [
+                                                                                                                        {
+                                                                                                                          "setTokenProp": {
+                                                                                                                            "token": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                            "prop": "tunnel",
+                                                                                                                            "value": "untunneled"
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      ]
                                                                                                                     }
                                                                                                                   }
                                                                                                                 ]
@@ -23372,27 +23585,59 @@
                                                                                                     },
                                                                                                     "then": [
                                                                                                       {
-                                                                                                        "rollRandom": {
-                                                                                                          "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                                          "min": 1,
-                                                                                                          "max": 6,
-                                                                                                          "in": [
+                                                                                                        "if": {
+                                                                                                          "when": {
+                                                                                                            "op": "==",
+                                                                                                            "left": false,
+                                                                                                            "right": true
+                                                                                                          },
+                                                                                                          "then": [
                                                                                                             {
-                                                                                                              "if": {
-                                                                                                                "when": {
-                                                                                                                  "op": ">=",
-                                                                                                                  "left": {
-                                                                                                                    "ref": "binding",
-                                                                                                                    "name": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                                  },
-                                                                                                                  "right": 4
-                                                                                                                },
-                                                                                                                "then": [
+                                                                                                              "moveToken": {
+                                                                                                                "token": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                "from": "$space",
+                                                                                                                "to": {
+                                                                                                                  "zoneExpr": {
+                                                                                                                    "concat": [
+                                                                                                                      "available-",
+                                                                                                                      {
+                                                                                                                        "ref": "tokenProp",
+                                                                                                                        "token": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                        "prop": "faction"
+                                                                                                                      },
+                                                                                                                      ":none"
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ],
+                                                                                                          "else": [
+                                                                                                            {
+                                                                                                              "rollRandom": {
+                                                                                                                "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                                "min": 1,
+                                                                                                                "max": 6,
+                                                                                                                "in": [
                                                                                                                   {
-                                                                                                                    "setTokenProp": {
-                                                                                                                      "token": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                                      "prop": "tunnel",
-                                                                                                                      "value": "untunneled"
+                                                                                                                    "if": {
+                                                                                                                      "when": {
+                                                                                                                        "op": ">=",
+                                                                                                                        "left": {
+                                                                                                                          "ref": "binding",
+                                                                                                                          "name": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                                        },
+                                                                                                                        "right": 4
+                                                                                                                      },
+                                                                                                                      "then": [
+                                                                                                                        {
+                                                                                                                          "setTokenProp": {
+                                                                                                                            "token": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                            "prop": "tunnel",
+                                                                                                                            "value": "untunneled"
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      ]
                                                                                                                     }
                                                                                                                   }
                                                                                                                 ]
@@ -32028,27 +32273,59 @@
                                                                                                           },
                                                                                                           "then": [
                                                                                                             {
-                                                                                                              "rollRandom": {
-                                                                                                                "bind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
-                                                                                                                "min": 1,
-                                                                                                                "max": 6,
-                                                                                                                "in": [
+                                                                                                              "if": {
+                                                                                                                "when": {
+                                                                                                                  "op": "==",
+                                                                                                                  "left": false,
+                                                                                                                  "right": true
+                                                                                                                },
+                                                                                                                "then": [
                                                                                                                   {
-                                                                                                                    "if": {
-                                                                                                                      "when": {
-                                                                                                                        "op": ">=",
-                                                                                                                        "left": {
-                                                                                                                          "ref": "binding",
-                                                                                                                          "name": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
-                                                                                                                        },
-                                                                                                                        "right": 4
-                                                                                                                      },
-                                                                                                                      "then": [
+                                                                                                                    "moveToken": {
+                                                                                                                      "token": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                      "from": "$space",
+                                                                                                                      "to": {
+                                                                                                                        "zoneExpr": {
+                                                                                                                          "concat": [
+                                                                                                                            "available-",
+                                                                                                                            {
+                                                                                                                              "ref": "tokenProp",
+                                                                                                                              "token": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                              "prop": "faction"
+                                                                                                                            },
+                                                                                                                            ":none"
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                ],
+                                                                                                                "else": [
+                                                                                                                  {
+                                                                                                                    "rollRandom": {
+                                                                                                                      "bind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll",
+                                                                                                                      "min": 1,
+                                                                                                                      "max": 6,
+                                                                                                                      "in": [
                                                                                                                         {
-                                                                                                                          "setTokenProp": {
-                                                                                                                            "token": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
-                                                                                                                            "prop": "tunnel",
-                                                                                                                            "value": "untunneled"
+                                                                                                                          "if": {
+                                                                                                                            "when": {
+                                                                                                                              "op": ">=",
+                                                                                                                              "left": {
+                                                                                                                                "ref": "binding",
+                                                                                                                                "name": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__dieRoll"
+                                                                                                                              },
+                                                                                                                              "right": 4
+                                                                                                                            },
+                                                                                                                            "then": [
+                                                                                                                              {
+                                                                                                                                "setTokenProp": {
+                                                                                                                                  "token": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__let_in_1__baseTarget",
+                                                                                                                                  "prop": "tunnel",
+                                                                                                                                  "value": "untunneled"
+                                                                                                                                }
+                                                                                                                              }
+                                                                                                                            ]
                                                                                                                           }
                                                                                                                         }
                                                                                                                       ]
@@ -33418,7 +33695,7 @@
                           },
                           "right": "shaded"
                         },
-                        "then": 4,
+                        "then": 2,
                         "else": 6
                       }
                     }
@@ -50058,6 +50335,13 @@
           }
         },
         {
+          "setVar": {
+            "scope": "global",
+            "var": "fitl_operationAttleboroTunnelOverride",
+            "value": false
+          }
+        },
+        {
           "setGlobalMarker": {
             "marker": "leaderFlipped",
             "state": "normal"
@@ -53781,7 +54065,7 @@
             "flavorText": "Precision strike doctrine changes target priorities."
           },
           "unshaded": {
-            "text": "US capability: Air Strike may spare one selected space from casualties.",
+            "text": "Air Strike does not shift Support/Opposition in spaces where only 1 piece removed. US CAPABILITY.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -53792,7 +54076,7 @@
             ]
           },
           "shaded": {
-            "text": "US capability (shaded): Air Strike may remove at most 4 pieces total.",
+            "text": "Air Strike removes no more than 2 pieces.",
             "effects": [
               {
                 "setGlobalMarker": {
@@ -53820,10 +54104,734 @@
             "flavorText": "Rapid redeployment reshapes local balance."
           },
           "unshaded": {
-            "text": "US Troops reposition to pressure insurgent strongholds."
+            "text": "US moves up to 2 US Troops each from the map and out of play to any 1 space or Available.",
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.35.unshaded.effects.0.chooseN",
+                  "bind": "$usMapTroops",
+                  "options": {
+                    "query": "tokensInMapSpaces",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "US"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "troops"
+                      }
+                    ]
+                  },
+                  "max": 2,
+                  "min": 0
+                }
+              },
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.35.unshaded.effects.1.chooseN",
+                  "bind": "$usOutOfPlayTroops",
+                  "options": {
+                    "query": "tokensInZone",
+                    "zone": "out-of-play-US:none",
+                    "filter": [
+                      {
+                        "prop": "faction",
+                        "op": "eq",
+                        "value": "US"
+                      },
+                      {
+                        "prop": "type",
+                        "op": "eq",
+                        "value": "troops"
+                      }
+                    ]
+                  },
+                  "max": 2,
+                  "min": 0
+                }
+              },
+              {
+                "chooseOne": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.35.unshaded.effects.2.chooseOne",
+                  "bind": "$americalDestinationType",
+                  "options": {
+                    "query": "enums",
+                    "values": [
+                      "available-US:none",
+                      "map-space"
+                    ]
+                  }
+                }
+              },
+              {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "binding",
+                      "name": "$americalDestinationType"
+                    },
+                    "right": "map-space"
+                  },
+                  "then": [
+                    {
+                      "chooseOne": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.35.unshaded.effects.3.if.then.0.chooseOne",
+                        "bind": "$americalDestinationSpace",
+                        "options": {
+                          "query": "mapSpaces"
+                        }
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$usMapTroop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$usMapTroops"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$usMapTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$usMapTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": {
+                                  "ref": "binding",
+                                  "name": "$americalDestinationSpace"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$usOutOfPlayTroop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$usOutOfPlayTroops"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$usOutOfPlayTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$usOutOfPlayTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": {
+                                  "ref": "binding",
+                                  "name": "$americalDestinationSpace"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "else": [
+                    {
+                      "forEach": {
+                        "bind": "$usMapTroop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$usMapTroops"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$usMapTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$usMapTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-US:none"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$usOutOfPlayTroop",
+                        "over": {
+                          "query": "binding",
+                          "name": "$usOutOfPlayTroops"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$usOutOfPlayTroop",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$usOutOfPlayTroop"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-US:none"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           "shaded": {
-            "text": "Escalation costs: local backlash shifts spaces toward Opposition."
+            "text": "In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition.",
+            "effects": [
+              {
+                "chooseN": {
+                  "internalDecisionId": "decision:doc.eventDecks.0.cards.35.shaded.effects.0.chooseN",
+                  "bind": "$targetProvince",
+                  "options": {
+                    "query": "mapSpaces",
+                    "filter": {
+                      "condition": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "==",
+                            "left": {
+                              "ref": "zoneProp",
+                              "zone": "$zone",
+                              "prop": "category"
+                            },
+                            "right": "province"
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": [
+                                    {
+                                      "prop": "faction",
+                                      "op": "eq",
+                                      "value": "US"
+                                    },
+                                    {
+                                      "prop": "type",
+                                      "op": "eq",
+                                      "value": "troops"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "right": 0
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "concat",
+                                  "sources": [
+                                    {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "VC"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "guerrilla"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "query": "tokensInZone",
+                                      "zone": "$zone",
+                                      "filter": [
+                                        {
+                                          "prop": "faction",
+                                          "op": "eq",
+                                          "value": "VC"
+                                        },
+                                        {
+                                          "prop": "type",
+                                          "op": "eq",
+                                          "value": "base"
+                                        },
+                                        {
+                                          "prop": "tunnel",
+                                          "op": "eq",
+                                          "value": "untunneled"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "right": 0
+                          },
+                          {
+                            "op": "or",
+                            "args": [
+                              {
+                                "op": "==",
+                                "left": {
+                                  "aggregate": {
+                                    "op": "count",
+                                    "query": {
+                                      "query": "mapSpaces",
+                                      "filter": {
+                                        "condition": {
+                                          "op": "and",
+                                          "args": [
+                                            {
+                                              "op": "==",
+                                              "left": {
+                                                "ref": "zoneProp",
+                                                "zone": "$zone",
+                                                "prop": "category"
+                                              },
+                                              "right": "province"
+                                            },
+                                            {
+                                              "op": ">",
+                                              "left": {
+                                                "aggregate": {
+                                                  "op": "count",
+                                                  "query": {
+                                                    "query": "tokensInZone",
+                                                    "zone": "$zone",
+                                                    "filter": [
+                                                      {
+                                                        "prop": "faction",
+                                                        "op": "eq",
+                                                        "value": "US"
+                                                      },
+                                                      {
+                                                        "prop": "type",
+                                                        "op": "eq",
+                                                        "value": "troops"
+                                                      }
+                                                    ]
+                                                  }
+                                                }
+                                              },
+                                              "right": 0
+                                            },
+                                            {
+                                              "op": ">",
+                                              "left": {
+                                                "aggregate": {
+                                                  "op": "count",
+                                                  "query": {
+                                                    "query": "concat",
+                                                    "sources": [
+                                                      {
+                                                        "query": "tokensInZone",
+                                                        "zone": "$zone",
+                                                        "filter": [
+                                                          {
+                                                            "prop": "faction",
+                                                            "op": "eq",
+                                                            "value": "VC"
+                                                          },
+                                                          {
+                                                            "prop": "type",
+                                                            "op": "eq",
+                                                            "value": "guerrilla"
+                                                          }
+                                                        ]
+                                                      },
+                                                      {
+                                                        "query": "tokensInZone",
+                                                        "zone": "$zone",
+                                                        "filter": [
+                                                          {
+                                                            "prop": "faction",
+                                                            "op": "eq",
+                                                            "value": "VC"
+                                                          },
+                                                          {
+                                                            "prop": "type",
+                                                            "op": "eq",
+                                                            "value": "base"
+                                                          },
+                                                          {
+                                                            "prop": "tunnel",
+                                                            "op": "eq",
+                                                            "value": "untunneled"
+                                                          }
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                }
+                                              },
+                                              "right": 0
+                                            },
+                                            {
+                                              "op": "!=",
+                                              "left": {
+                                                "ref": "markerState",
+                                                "space": "$zone",
+                                                "marker": "supportOpposition"
+                                              },
+                                              "right": "activeOpposition"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "right": 0
+                              },
+                              {
+                                "op": "!=",
+                                "left": {
+                                  "ref": "markerState",
+                                  "space": "$zone",
+                                  "marker": "supportOpposition"
+                                },
+                                "right": "activeOpposition"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "max": {
+                    "op": "min",
+                    "left": 2,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "province"
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "US"
+                                          },
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "troops"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "concat",
+                                        "sources": [
+                                          {
+                                            "query": "tokensInZone",
+                                            "zone": "$zone",
+                                            "filter": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "VC"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "guerrilla"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "query": "tokensInZone",
+                                            "zone": "$zone",
+                                            "filter": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "VC"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "base"
+                                              },
+                                              {
+                                                "prop": "tunnel",
+                                                "op": "eq",
+                                                "value": "untunneled"
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "op": "min",
+                    "left": 1,
+                    "right": {
+                      "aggregate": {
+                        "op": "count",
+                        "query": {
+                          "query": "mapSpaces",
+                          "filter": {
+                            "condition": {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "op": "==",
+                                  "left": {
+                                    "ref": "zoneProp",
+                                    "zone": "$zone",
+                                    "prop": "category"
+                                  },
+                                  "right": "province"
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "tokensInZone",
+                                        "zone": "$zone",
+                                        "filter": [
+                                          {
+                                            "prop": "faction",
+                                            "op": "eq",
+                                            "value": "US"
+                                          },
+                                          {
+                                            "prop": "type",
+                                            "op": "eq",
+                                            "value": "troops"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                },
+                                {
+                                  "op": ">",
+                                  "left": {
+                                    "aggregate": {
+                                      "op": "count",
+                                      "query": {
+                                        "query": "concat",
+                                        "sources": [
+                                          {
+                                            "query": "tokensInZone",
+                                            "zone": "$zone",
+                                            "filter": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "VC"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "guerrilla"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "query": "tokensInZone",
+                                            "zone": "$zone",
+                                            "filter": [
+                                              {
+                                                "prop": "faction",
+                                                "op": "eq",
+                                                "value": "VC"
+                                              },
+                                              {
+                                                "prop": "type",
+                                                "op": "eq",
+                                                "value": "base"
+                                              },
+                                              {
+                                                "prop": "tunnel",
+                                                "op": "eq",
+                                                "value": "untunneled"
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "right": 0
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$province",
+                  "over": {
+                    "query": "binding",
+                    "name": "$targetProvince"
+                  },
+                  "effects": [
+                    {
+                      "chooseN": {
+                        "internalDecisionId": "decision:doc.eventDecks.0.cards.35.shaded.effects.1.forEach.effects.0.chooseN",
+                        "bind": "$vcPieceToRemove@{$province}",
+                        "options": {
+                          "query": "concat",
+                          "sources": [
+                            {
+                              "query": "tokensInZone",
+                              "zone": "$province",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "VC"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "guerrilla"
+                                }
+                              ]
+                            },
+                            {
+                              "query": "tokensInZone",
+                              "zone": "$province",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "VC"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "base"
+                                },
+                                {
+                                  "prop": "tunnel",
+                                  "op": "eq",
+                                  "value": "untunneled"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "max": 1,
+                        "min": 1
+                      }
+                    },
+                    {
+                      "forEach": {
+                        "bind": "$vcPiece",
+                        "over": {
+                          "query": "binding",
+                          "name": "$vcPieceToRemove@{$province}"
+                        },
+                        "effects": [
+                          {
+                            "moveToken": {
+                              "token": "$vcPiece",
+                              "from": {
+                                "zoneExpr": {
+                                  "ref": "tokenZone",
+                                  "token": "$vcPiece"
+                                }
+                              },
+                              "to": {
+                                "zoneExpr": "available-VC:none"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "setMarker": {
+                        "space": "$province",
+                        "marker": "supportOpposition",
+                        "state": "activeOpposition"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -53909,6 +54917,113 @@
           },
           "shaded": {
             "text": "VC fire closes air base: Remove all Support within 1 space of Da Nang. No Air Strike until Coup. MOMENTUM",
+            "effects": [
+              {
+                "if": {
+                  "when": {
+                    "op": "==",
+                    "left": {
+                      "ref": "markerState",
+                      "space": "da-nang:none",
+                      "marker": "supportOpposition"
+                    },
+                    "right": "activeSupport"
+                  },
+                  "then": [
+                    {
+                      "shiftMarker": {
+                        "space": "da-nang:none",
+                        "marker": "supportOpposition",
+                        "delta": -2
+                      }
+                    }
+                  ],
+                  "else": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "da-nang:none",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "passiveSupport"
+                        },
+                        "then": [
+                          {
+                            "shiftMarker": {
+                              "space": "da-nang:none",
+                              "marker": "supportOpposition",
+                              "delta": -1
+                            }
+                          }
+                        ],
+                        "else": []
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "forEach": {
+                  "bind": "$adjacentToDaNang",
+                  "over": {
+                    "query": "adjacentZones",
+                    "zone": "da-nang:none"
+                  },
+                  "effects": [
+                    {
+                      "if": {
+                        "when": {
+                          "op": "==",
+                          "left": {
+                            "ref": "markerState",
+                            "space": "$adjacentToDaNang",
+                            "marker": "supportOpposition"
+                          },
+                          "right": "activeSupport"
+                        },
+                        "then": [
+                          {
+                            "shiftMarker": {
+                              "space": "$adjacentToDaNang",
+                              "marker": "supportOpposition",
+                              "delta": -2
+                            }
+                          }
+                        ],
+                        "else": [
+                          {
+                            "if": {
+                              "when": {
+                                "op": "==",
+                                "left": {
+                                  "ref": "markerState",
+                                  "space": "$adjacentToDaNang",
+                                  "marker": "supportOpposition"
+                                },
+                                "right": "passiveSupport"
+                              },
+                              "then": [
+                                {
+                                  "shiftMarker": {
+                                    "space": "$adjacentToDaNang",
+                                    "marker": "supportOpposition",
+                                    "delta": -1
+                                  }
+                                }
+                              ],
+                              "else": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
             "lastingEffects": [
               {
                 "id": "mom-da-nang",
@@ -53953,6 +55068,7 @@
           },
           "unshaded": {
             "text": "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel.",
+            "effectTiming": "afterGrants",
             "freeOperationGrants": [
               {
                 "seat": "us",
@@ -53963,7 +55079,40 @@
                 "operationClass": "operation",
                 "actionIds": [
                   "airLift"
-                ]
+                ],
+                "zoneFilter": {
+                  "op": ">",
+                  "left": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInZone",
+                        "zone": "$zone",
+                        "filter": [
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "base"
+                          },
+                          {
+                            "prop": "faction",
+                            "op": "in",
+                            "value": [
+                              "NVA",
+                              "VC"
+                            ]
+                          },
+                          {
+                            "prop": "tunnel",
+                            "op": "eq",
+                            "value": "tunneled"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "right": 0
+                }
               },
               {
                 "seat": "us",
@@ -53974,7 +55123,40 @@
                 "operationClass": "operation",
                 "actionIds": [
                   "sweep"
-                ]
+                ],
+                "zoneFilter": {
+                  "op": ">",
+                  "left": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInZone",
+                        "zone": "$zone",
+                        "filter": [
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "base"
+                          },
+                          {
+                            "prop": "faction",
+                            "op": "in",
+                            "value": [
+                              "NVA",
+                              "VC"
+                            ]
+                          },
+                          {
+                            "prop": "tunnel",
+                            "op": "eq",
+                            "value": "tunneled"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "right": 0
+                }
               },
               {
                 "seat": "us",
@@ -53985,12 +55167,229 @@
                 "operationClass": "operation",
                 "actionIds": [
                   "assault"
+                ],
+                "zoneFilter": {
+                  "op": ">",
+                  "left": {
+                    "aggregate": {
+                      "op": "count",
+                      "query": {
+                        "query": "tokensInZone",
+                        "zone": "$zone",
+                        "filter": [
+                          {
+                            "prop": "type",
+                            "op": "eq",
+                            "value": "base"
+                          },
+                          {
+                            "prop": "faction",
+                            "op": "in",
+                            "value": [
+                              "NVA",
+                              "VC"
+                            ]
+                          },
+                          {
+                            "prop": "tunnel",
+                            "op": "eq",
+                            "value": "tunneled"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "right": 0
+                }
+              }
+            ],
+            "lastingEffects": [
+              {
+                "id": "evt-operation-attleboro-tunnel-window",
+                "duration": "turn",
+                "setupEffects": [
+                  {
+                    "setVar": {
+                      "scope": "global",
+                      "var": "fitl_operationAttleboroTunnelOverride",
+                      "value": true
+                    }
+                  }
+                ],
+                "teardownEffects": [
+                  {
+                    "setVar": {
+                      "scope": "global",
+                      "var": "fitl_operationAttleboroTunnelOverride",
+                      "value": false
+                    }
+                  }
                 ]
+              }
+            ],
+            "effects": [
+              {
+                "setVar": {
+                  "scope": "global",
+                  "var": "fitl_operationAttleboroTunnelOverride",
+                  "value": false
+                }
               }
             ]
           },
           "shaded": {
-            "text": "Heavy casualties, few results: Select a Tunnel space: remove a die roll of US Troops within 1 space of it to Casualties."
+            "text": "Heavy casualties, few results: Select a Tunnel space: remove a die roll of US Troops within 1 space of it to Casualties.",
+            "targets": [
+              {
+                "id": "$targetSpace",
+                "selector": {
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": ">",
+                      "left": {
+                        "aggregate": {
+                          "op": "count",
+                          "query": {
+                            "query": "tokensInZone",
+                            "zone": "$zone",
+                            "filter": [
+                              {
+                                "prop": "type",
+                                "op": "eq",
+                                "value": "base"
+                              },
+                              {
+                                "prop": "faction",
+                                "op": "in",
+                                "value": [
+                                  "NVA",
+                                  "VC"
+                                ]
+                              },
+                              {
+                                "prop": "tunnel",
+                                "op": "eq",
+                                "value": "tunneled"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "right": 0
+                    }
+                  }
+                },
+                "cardinality": {
+                  "max": 1
+                }
+              }
+            ],
+            "effects": [
+              {
+                "rollRandom": {
+                  "bind": "$attleboroLossRoll",
+                  "min": 1,
+                  "max": 6,
+                  "in": [
+                    {
+                      "removeByPriority": {
+                        "budget": {
+                          "ref": "binding",
+                          "name": "$attleboroLossRoll"
+                        },
+                        "groups": [
+                          {
+                            "bind": "$usTroopInTarget",
+                            "over": {
+                              "query": "tokensInZone",
+                              "zone": "$targetSpace",
+                              "filter": [
+                                {
+                                  "prop": "faction",
+                                  "op": "eq",
+                                  "value": "US"
+                                },
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "troops"
+                                }
+                              ]
+                            },
+                            "to": {
+                              "zoneExpr": "casualties-US:none"
+                            }
+                          }
+                        ],
+                        "remainingBind": "$remainingLosses",
+                        "in": [
+                          {
+                            "forEach": {
+                              "bind": "$adjacentSpace",
+                              "over": {
+                                "query": "adjacentZones",
+                                "zone": "$targetSpace"
+                              },
+                              "effects": [
+                                {
+                                  "if": {
+                                    "when": {
+                                      "op": ">",
+                                      "left": {
+                                        "ref": "binding",
+                                        "name": "$remainingLosses"
+                                      },
+                                      "right": 0
+                                    },
+                                    "then": [
+                                      {
+                                        "removeByPriority": {
+                                          "budget": {
+                                            "ref": "binding",
+                                            "name": "$remainingLosses"
+                                          },
+                                          "groups": [
+                                            {
+                                              "bind": "$usTroopAdjacent",
+                                              "over": {
+                                                "query": "tokensInZone",
+                                                "zone": "$adjacentSpace",
+                                                "filter": [
+                                                  {
+                                                    "prop": "faction",
+                                                    "op": "eq",
+                                                    "value": "US"
+                                                  },
+                                                  {
+                                                    "prop": "type",
+                                                    "op": "eq",
+                                                    "value": "troops"
+                                                  }
+                                                ]
+                                              },
+                                              "to": {
+                                                "zoneExpr": "casualties-US:none"
+                                              }
+                                            }
+                                          ],
+                                          "remainingBind": "$remainingLosses"
+                                        }
+                                      }
+                                    ],
+                                    "else": []
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         {
@@ -54015,7 +55414,107 @@
               {
                 "id": "$targetProvince",
                 "selector": {
-                  "query": "mapSpaces"
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "category"
+                          },
+                          "right": "province"
+                        },
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "coastal"
+                          },
+                          "right": true
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": 0
+                        },
+                        {
+                          "op": "or",
+                          "args": [
+                            {
+                              "op": ">",
+                              "left": {
+                                "aggregate": {
+                                  "op": "count",
+                                  "query": {
+                                    "query": "tokensInZone",
+                                    "zone": "$zone",
+                                    "filter": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "US"
+                                      },
+                                      {
+                                        "prop": "type",
+                                        "op": "eq",
+                                        "value": "troops"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "right": 0
+                            },
+                            {
+                              "op": ">",
+                              "left": {
+                                "aggregate": {
+                                  "op": "count",
+                                  "query": {
+                                    "query": "tokensInAdjacentZones",
+                                    "zone": "$zone",
+                                    "filter": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "eq",
+                                        "value": "US"
+                                      },
+                                      {
+                                        "prop": "type",
+                                        "op": "eq",
+                                        "value": "troops"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "right": 0
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
                 },
                 "cardinality": {
                   "max": 1
@@ -54055,7 +55554,53 @@
               {
                 "id": "$targetProvince",
                 "selector": {
-                  "query": "mapSpaces"
+                  "query": "mapSpaces",
+                  "filter": {
+                    "condition": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "==",
+                          "left": {
+                            "ref": "zoneProp",
+                            "zone": "$zone",
+                            "prop": "category"
+                          },
+                          "right": "province"
+                        },
+                        {
+                          "op": ">",
+                          "left": {
+                            "aggregate": {
+                              "op": "count",
+                              "query": {
+                                "query": "tokensInZone",
+                                "zone": "$zone",
+                                "filter": [
+                                  {
+                                    "prop": "faction",
+                                    "op": "eq",
+                                    "value": "VC"
+                                  },
+                                  {
+                                    "prop": "type",
+                                    "op": "eq",
+                                    "value": "guerrilla"
+                                  },
+                                  {
+                                    "prop": "activity",
+                                    "op": "eq",
+                                    "value": "active"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "right": 0
+                        }
+                      ]
+                    }
+                  }
                 },
                 "cardinality": {
                   "max": 3
@@ -54074,34 +55619,45 @@
             "effects": [
               {
                 "forEach": {
-                  "bind": "$vcGuerrilla",
+                  "bind": "$province",
                   "over": {
-                    "query": "tokensInZone",
-                    "zone": "$targetProvince",
-                    "filter": [
-                      {
-                        "prop": "faction",
-                        "op": "eq",
-                        "value": "VC"
-                      },
-                      {
-                        "prop": "type",
-                        "op": "eq",
-                        "value": "guerrilla"
-                      },
-                      {
-                        "prop": "activity",
-                        "op": "eq",
-                        "value": "active"
-                      }
-                    ]
+                    "query": "binding",
+                    "name": "$targetProvince"
                   },
                   "effects": [
                     {
-                      "setTokenProp": {
-                        "token": "$vcGuerrilla",
-                        "prop": "activity",
-                        "value": "underground"
+                      "forEach": {
+                        "bind": "$vcGuerrilla",
+                        "over": {
+                          "query": "tokensInZone",
+                          "zone": "$province",
+                          "filter": [
+                            {
+                              "prop": "faction",
+                              "op": "eq",
+                              "value": "VC"
+                            },
+                            {
+                              "prop": "type",
+                              "op": "eq",
+                              "value": "guerrilla"
+                            },
+                            {
+                              "prop": "activity",
+                              "op": "eq",
+                              "value": "active"
+                            }
+                          ]
+                        },
+                        "effects": [
+                          {
+                            "setTokenProp": {
+                              "token": "$vcGuerrilla",
+                              "prop": "activity",
+                              "value": "underground"
+                            }
+                          }
+                        ]
                       }
                     }
                   ]

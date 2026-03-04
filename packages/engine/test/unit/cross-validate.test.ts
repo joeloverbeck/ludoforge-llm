@@ -916,6 +916,42 @@ describe('crossValidateSpec', () => {
     assert.deepEqual(grantDiagnostics, []);
   });
 
+  it('eventDeck freeOperationGrants allow seat "self" without seat-missing diagnostics', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                freeOperationGrants: [
+                  {
+                    seat: 'self',
+                    executeAsSeat: 'us',
+                    sequence: { chain: 'self-grant', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['act'],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING'),
+      false,
+    );
+  });
+
   it('eventDeck eligibilityOverrides with unknown faction emits CNL_XREF_EVENT_DECK_OVERRIDE_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);

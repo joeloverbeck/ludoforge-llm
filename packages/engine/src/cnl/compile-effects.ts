@@ -1636,7 +1636,7 @@ function lowerGrantFreeOperationEffect(
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.seat !== 'string') {
     return missingCapability(path, 'grantFreeOperation effect', source, [
-      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, uses?, id?, sequence? } }',
+      '{ grantFreeOperation: { seat, operationClass, actionIds?, executeAsSeat?, zoneFilter?, allowDuringMonsoon?, uses?, id?, sequence? } }',
     ]);
   }
   if (typeof source.operationClass !== 'string' || !isTurnFlowActionClass(source.operationClass)) {
@@ -1690,6 +1690,18 @@ function lowerGrantFreeOperationEffect(
     loweredZoneFilter = lowered.value;
   }
 
+  let allowDuringMonsoon: boolean | undefined;
+  if (source.allowDuringMonsoon !== undefined && typeof source.allowDuringMonsoon !== 'boolean') {
+    diagnostics.push(...missingCapability(
+      `${path}.allowDuringMonsoon`,
+      'grantFreeOperation allowDuringMonsoon',
+      source.allowDuringMonsoon,
+      ['boolean'],
+    ).diagnostics);
+  } else if (typeof source.allowDuringMonsoon === 'boolean') {
+    allowDuringMonsoon = source.allowDuringMonsoon;
+  }
+
   let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
   if (source.sequence !== undefined) {
     if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
@@ -1719,6 +1731,7 @@ function lowerGrantFreeOperationEffect(
         ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
         ...(actionIds === undefined ? {} : { actionIds }),
         ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
+        ...(allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon }),
         ...(uses === undefined ? {} : { uses }),
         ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
       },

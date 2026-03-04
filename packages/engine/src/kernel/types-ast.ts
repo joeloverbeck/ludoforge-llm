@@ -473,6 +473,7 @@ export type EffectAST =
         readonly operationClass: TurnFlowActionClass;
         readonly actionIds?: readonly string[];
         readonly zoneFilter?: ConditionAST;
+        readonly allowDuringMonsoon?: boolean;
         readonly uses?: number;
         readonly sequence?: {
           readonly chain: string;

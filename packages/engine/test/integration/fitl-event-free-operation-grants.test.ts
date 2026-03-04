@@ -6,12 +6,14 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   ILLEGAL_MOVE_REASONS,
   initialState,
   legalMoves,
   type EventCardDef,
   type EventDeckDef,
   type GameDef,
+  type GameState,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
@@ -583,6 +585,58 @@ phase: [asPhaseId('main')],
     ],
   }) as unknown as GameDef;
 
+const createMonsoonGrantBypassDef = (): GameDef => {
+  const def = createDef() as unknown as {
+    turnOrder: {
+      type: 'cardDriven';
+      config: {
+        turnFlow: {
+          monsoon?: { restrictedActions: Array<{ actionId: string }> };
+        };
+      };
+    };
+    actions: Array<{
+      id: ReturnType<typeof asActionId>;
+      params: Array<{ name: string; domain?: { query: string; values?: string[] } }>;
+    }>;
+    eventDecks: EventDeckDef[];
+  };
+
+  def.turnOrder.config.turnFlow.monsoon = {
+    restrictedActions: [{ actionId: 'operation' }],
+  };
+
+  const eventAction = def.actions.find((action) => String(action.id) === 'event');
+  const eventCardParam = eventAction?.params.find((param) => param.name === 'eventCardId');
+  if (eventCardParam?.domain?.values !== undefined && !eventCardParam.domain.values.includes('card-11')) {
+    eventCardParam.domain.values.push('card-11');
+  }
+
+  const primaryDeck = def.eventDecks[0];
+  if (primaryDeck !== undefined) {
+    const card11: EventCardDef = {
+      id: 'card-11',
+      title: 'Monsoon Override Grant',
+      sideMode: 'single',
+      unshaded: {
+        text: 'Grant VC a free operation that is still legal during monsoon restrictions.',
+        freeOperationGrants: [
+          {
+            seat: 'VC',
+            sequence: { chain: 'vc-monsoon-op', step: 0 },
+            operationClass: 'operation',
+            actionIds: ['operation'],
+            allowDuringMonsoon: true,
+          },
+        ],
+      },
+    };
+    def.eventDecks[0] = { ...primaryDeck, cards: [...primaryDeck.cards, card11] };
+  }
+
+  return def as unknown as GameDef;
+};
+
 describe('event free-operation grants integration', () => {
   it('creates pending free-operation grants from event side declarations', () => {
     const def = createDef();
@@ -912,5 +966,46 @@ describe('event free-operation grants integration', () => {
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
     assert.equal(second.globalVars.executeAsMarker, 100);
     assert.deepEqual(requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('allows monsoon-restricted free operations only when the applicable grant explicitly allows monsoon execution', () => {
+    const def = createMonsoonGrantBypassDef();
+    const start = initialState(def, 77, 4).state;
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-11', side: 'unshaded', branch: 'none' },
+    }).state;
+    const runtime = requireCardDrivenRuntime(afterEvent);
+
+    const monsoonState = {
+      ...afterEvent,
+      activePlayer: asPlayerId(3),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...runtime,
+          currentCard: {
+            ...runtime.currentCard,
+            firstEligible: 'VC',
+            secondEligible: null,
+          },
+        },
+      },
+      zones: {
+        ...afterEvent.zones,
+        'lookahead:none': [{ id: asTokenId('monsoon-lookahead'), type: 'card', props: { isCoup: true } }],
+      },
+    } as GameState;
+
+    const blockedNormal = legalMoves(def, monsoonState).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation !== true,
+    );
+    const allowedFree = legalMoves(def, monsoonState).filter(
+      (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+    );
+
+    assert.equal(blockedNormal.length, 0, 'Monsoon restriction should block regular operation moves');
+    assert.equal(allowedFree.length > 0, true, 'Grant-marked free operation should bypass monsoon restriction');
   });
 });

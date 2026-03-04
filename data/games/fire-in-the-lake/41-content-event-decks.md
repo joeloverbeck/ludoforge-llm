@@ -2163,60 +2163,196 @@ eventDecks:
           flavorText: "Delta boats."
         unshaded:
           text: "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong."
-          freeOperationGrants:
-            - seat: "us"
-              sequence: { chain: tf116-us, step: 0 }
-              operationClass: operation
-              actionIds: [sweep, assault]
-            - seat: "arvn"
-              sequence: { chain: tf116-arvn, step: 0 }
-              operationClass: operation
-              actionIds: [sweep, assault]
-          targets:
-            - id: $targetLoc
-              selector:
-                query: mapSpaces
-                filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
-                  right: loc
-              cardinality: { max: 1 }
+          branches:
+            - id: tf116-execute-as-us
+              order: 1
+              freeOperationGrants:
+                - seat: self
+                  executeAsSeat: "us"
+                  sequence: { chain: tf116-us, step: 0 }
+                  operationClass: operation
+                  actionIds: [sweep]
+                  allowDuringMonsoon: true
+                  zoneFilter:
+                    op: and
+                    args:
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: adjacentZones
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                        right: 0
+                - seat: self
+                  executeAsSeat: "us"
+                  sequence: { chain: tf116-us, step: 1 }
+                  operationClass: operation
+                  actionIds: [assault]
+                  zoneFilter:
+                    op: and
+                    args:
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: adjacentZones
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                        right: 0
+            - id: tf116-execute-as-arvn
+              order: 2
+              freeOperationGrants:
+                - seat: self
+                  executeAsSeat: "arvn"
+                  sequence: { chain: tf116-arvn, step: 0 }
+                  operationClass: operation
+                  actionIds: [sweep]
+                  allowDuringMonsoon: true
+                  zoneFilter:
+                    op: and
+                    args:
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: adjacentZones
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                        right: 0
+                - seat: self
+                  executeAsSeat: "arvn"
+                  sequence: { chain: tf116-arvn, step: 1 }
+                  operationClass: operation
+                  actionIds: [assault]
+                  zoneFilter:
+                    op: and
+                    args:
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: adjacentZones
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                        right: 0
           effects:
-            - removeByPriority:
-                budget: 99
-                groups:
-                  - bind: $insurgentPiece
-                    over:
-                      query: tokensInZone
-                      zone: $targetLoc
-                      filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                    to:
-                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
+            - forEach:
+                bind: $mekongLoc
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                      - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                effects:
+                  - removeByPriority:
+                      budget: 99
+                      groups:
+                        - bind: $insurgentPiece
+                          over:
+                            query: tokensInZone
+                            zone: $mekongLoc
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          to:
+                            zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
         shaded:
           text: "VC river fortifications: Place 2 VC Guerrillas per Mekong LoC space, then Sabotage each that has more VC than COIN."
-          targets:
-            - id: $targetLoc
-              selector:
-                query: mapSpaces
-                filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: category }
-                  right: loc
-              cardinality: { max: 1 }
           effects:
-            - removeByPriority:
-                budget: 2
-                groups:
-                  - bind: $vcGuerrilla
-                    over:
-                      query: tokensInZone
-                      zone: available-VC:none
-                      filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
-                    to:
-                      zoneExpr: $targetLoc
+            - forEach:
+                bind: $mekongLoc
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                      - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                effects:
+                  - removeByPriority:
+                      budget: 2
+                      groups:
+                        - bind: $vcGuerrilla
+                          over:
+                            query: tokensInZone
+                            zone: available-VC:none
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: guerrilla }
+                          to:
+                            zoneExpr: $mekongLoc
+            - forEach:
+                bind: $mekongLoc
+                over:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
+                      - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                effects:
+                  - if:
+                      when:
+                        op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $mekongLoc
+                              filter:
+                                - { prop: faction, eq: VC }
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $mekongLoc
+                              filter:
+                                - { prop: faction, op: in, value: [US, ARVN] }
+                      then:
+                        - if:
+                            when:
+                              op: and
+                              args:
+                                - { op: '!=', left: { ref: markerState, space: $mekongLoc, marker: sabotage }, right: sabotage }
+                                - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                            then:
+                              - setMarker: { space: $mekongLoc, marker: sabotage, state: sabotage }
+                              - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
       - id: card-28
         title: Search and Destroy
         sideMode: dual

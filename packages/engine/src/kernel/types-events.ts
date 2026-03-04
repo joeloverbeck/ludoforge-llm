@@ -36,6 +36,7 @@ export interface EventFreeOperationGrantDef {
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: ConditionAST;
+  readonly allowDuringMonsoon?: boolean;
   readonly uses?: number;
 }
 

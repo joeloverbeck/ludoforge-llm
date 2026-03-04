@@ -1,0 +1,231 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  applyMove,
+  asPlayerId,
+  asTokenId,
+  initialState,
+  legalMoves,
+  type GameDef,
+  type GameState,
+  type Move,
+  type Token,
+} from '../../src/kernel/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+
+const CARD_ID = 'card-25';
+const MEKONG_CHAU_DOC = 'loc-can-tho-chau-doc:none';
+const MEKONG_BAC_LIEU = 'loc-can-tho-bac-lieu:none';
+const MEKONG_LONG_PHU = 'loc-can-tho-long-phu:none';
+const MEKONG_SAIGON_CAN_THO = 'loc-saigon-can-tho:none';
+
+const mekongLocs = [MEKONG_CHAU_DOC, MEKONG_BAC_LIEU, MEKONG_LONG_PHU] as const;
+
+const makeToken = (
+  id: string,
+  type: string,
+  faction: string,
+  extraProps?: Readonly<Record<string, string | number | boolean>>,
+): Token => ({
+  id: asTokenId(id),
+  type,
+  props: {
+    faction,
+    type,
+    ...(extraProps ?? {}),
+  },
+});
+
+const compileDef = (): GameDef => {
+  const { parsed, compiled } = compileProductionSpec();
+  assertNoErrors(parsed);
+  assert.notEqual(compiled.gameDef, null);
+  return compiled.gameDef!;
+};
+
+const findCard25Move = (
+  def: GameDef,
+  state: GameState,
+  side: 'unshaded' | 'shaded',
+  branch?: string,
+): Move | undefined =>
+  legalMoves(def, state).find(
+    (move) =>
+      String(move.actionId) === 'event'
+      && (move.params.eventCardId === undefined || move.params.eventCardId === CARD_ID)
+      && move.params.side === side
+      && (branch === undefined || move.params.branch === branch),
+  );
+
+const countZoneTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
+  (state.zones[zone] ?? []).filter((token) => predicate(token as Token)).length;
+
+describe('FITL card-25 TF-116 Riverines', () => {
+  it('encodes unshaded as execute-as branch choice with Mekong-Lowland filtered sweep/assault grants and monsoon sweep allowance', () => {
+    const def = compileDef();
+    const card = def.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
+    assert.notEqual(card, undefined);
+
+    const branches = card?.unshaded?.branches ?? [];
+    assert.deepEqual(branches.map((branch) => branch.id), ['tf116-execute-as-us', 'tf116-execute-as-arvn']);
+
+    const usGrants = branches[0]?.freeOperationGrants ?? [];
+    const arvnGrants = branches[1]?.freeOperationGrants ?? [];
+
+    assert.equal(usGrants.length, 2);
+    assert.equal(arvnGrants.length, 2);
+
+    assert.equal(usGrants[0]?.seat, 'self');
+    assert.equal(usGrants[0]?.executeAsSeat, 'us');
+    assert.equal(usGrants[0]?.allowDuringMonsoon, true);
+    assert.deepEqual(usGrants.map((grant) => grant.actionIds?.[0]), ['sweep', 'assault']);
+    assert.equal(usGrants.every((grant) => grant.zoneFilter !== undefined), true);
+
+    assert.equal(arvnGrants[0]?.seat, 'self');
+    assert.equal(arvnGrants[0]?.executeAsSeat, 'arvn');
+    assert.equal(arvnGrants[0]?.allowDuringMonsoon, true);
+    assert.deepEqual(arvnGrants.map((grant) => grant.actionIds?.[0]), ['sweep', 'assault']);
+    assert.equal(arvnGrants.every((grant) => grant.zoneFilter !== undefined), true);
+  });
+
+  it('unshaded removes all NVA/VC from the 3 Mekong river LoCs touching Can Tho but not from non-river Mekong LoCs', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected event deck');
+
+    const base = clearAllZones(initialState(def, 25001, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      zones: {
+        ...base.zones,
+        [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
+        [MEKONG_CHAU_DOC]: [
+          makeToken('tf116-nva-troop-1', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('tf116-vc-guerrilla-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('tf116-us-troop-stays', 'troops', 'US', { type: 'troops' }),
+        ],
+        [MEKONG_BAC_LIEU]: [
+          makeToken('tf116-vc-base-1', 'base', 'VC', { type: 'base' }),
+          makeToken('tf116-arvn-troop-stays', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+        [MEKONG_LONG_PHU]: [
+          makeToken('tf116-nva-base-1', 'base', 'NVA', { type: 'base', tunnel: 'tunneled' }),
+        ],
+        [MEKONG_SAIGON_CAN_THO]: [
+          makeToken('tf116-vc-non-river-loc-stays', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const move = findCard25Move(def, setup, 'unshaded', 'tf116-execute-as-us');
+    assert.notEqual(move, undefined, 'Expected card-25 unshaded event move');
+
+    const final = applyMove(def, setup, move!).state;
+
+    for (const loc of mekongLocs) {
+      assert.equal(
+        countZoneTokens(final, loc, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
+        0,
+        `Expected all NVA/VC removed from ${loc}`,
+      );
+    }
+
+    assert.equal(
+      countZoneTokens(final, MEKONG_CHAU_DOC, (token) => token.id === asTokenId('tf116-us-troop-stays')),
+      1,
+      'US pieces in Mekong river LoCs should remain',
+    );
+    assert.equal(
+      countZoneTokens(final, MEKONG_BAC_LIEU, (token) => token.id === asTokenId('tf116-arvn-troop-stays')),
+      1,
+      'ARVN pieces in Mekong river LoCs should remain',
+    );
+
+    assert.equal(
+      countZoneTokens(final, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-vc-non-river-loc-stays')),
+      1,
+      'Non-river Mekong LoC should not be affected by card-25 removal',
+    );
+
+    assert.equal(
+      countZoneTokens(final, 'available-NVA:none', (token) => token.id === asTokenId('tf116-nva-troop-1') || token.id === asTokenId('tf116-nva-base-1')),
+      2,
+      'NVA pieces removed from river LoCs should move to available-NVA:none',
+    );
+    assert.equal(
+      countZoneTokens(final, 'available-VC:none', (token) => token.id === asTokenId('tf116-vc-guerrilla-1') || token.id === asTokenId('tf116-vc-base-1')),
+      2,
+      'VC pieces removed from river LoCs should move to available-VC:none',
+    );
+  });
+
+  it('shaded places up to 2 VC guerrillas in each Mekong river LoC then sabotages each LoC with VC > COIN while respecting cap/idempotency', () => {
+    const def = compileDef();
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected event deck');
+
+    const base = clearAllZones(initialState(def, 25002, 4).state);
+    const setup: GameState = {
+      ...base,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      globalVars: {
+        ...base.globalVars,
+        terrorSabotageMarkersPlaced: 14,
+      },
+      markers: {
+        ...base.markers,
+        [MEKONG_LONG_PHU]: { ...(base.markers[MEKONG_LONG_PHU] ?? {}), sabotage: 'sabotage' },
+      },
+      zones: {
+        ...base.zones,
+        [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
+        'available-VC:none': [
+          makeToken('tf116-vc-available-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-vc-available-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-vc-available-3', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-vc-available-4', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-vc-available-5', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-vc-available-6', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+        [MEKONG_BAC_LIEU]: [
+          makeToken('tf116-coin-us-bac-lieu', 'troops', 'US', { type: 'troops' }),
+          makeToken('tf116-coin-arvn-bac-lieu', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+        [MEKONG_LONG_PHU]: [
+          makeToken('tf116-vc-base-long-phu', 'base', 'VC', { type: 'base' }),
+          makeToken('tf116-coin-arvn-long-phu', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const move = findCard25Move(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected card-25 shaded event move');
+
+    const final = applyMove(def, setup, move!).state;
+
+    for (const loc of mekongLocs) {
+      assert.equal(
+        countZoneTokens(final, loc, (token) => token.props.faction === 'VC' && token.props.type === 'guerrilla'),
+        2,
+        `Expected exactly 2 placed VC guerrillas in ${loc}`,
+      );
+    }
+
+    assert.equal(final.markers[MEKONG_CHAU_DOC]?.sabotage, 'sabotage', 'Chau Doc river LoC should sabotage when VC > COIN');
+    assert.notEqual(final.markers[MEKONG_BAC_LIEU]?.sabotage, 'sabotage', 'Bac Lieu river LoC should not sabotage when VC is not greater than COIN');
+    assert.equal(final.markers[MEKONG_LONG_PHU]?.sabotage, 'sabotage', 'Pre-existing sabotage should remain in place');
+
+    assert.equal(final.globalVars.terrorSabotageMarkersPlaced, 15, 'Only one new sabotage marker should be consumed at cap 15');
+    assert.equal(
+      countZoneTokens(final, 'available-VC:none', (token) => token.props.faction === 'VC' && token.props.type === 'guerrilla'),
+      0,
+      'All 6 available VC guerrillas should be placed onto Mekong river LoCs',
+    );
+  });
+});

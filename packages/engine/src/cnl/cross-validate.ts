@@ -932,15 +932,17 @@ function validateEventFreeOperationGrants(
 
   for (const [grantIndex, grant] of grants.entries()) {
     if (validateSeats) {
-      pushMissingIdentifierDiagnostic(
-        diagnostics,
-        CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING,
-        `${pathPrefix}.${grantIndex}.seat`,
-        grant.seat,
-        seatTargets,
-        `Event card "${cardId}" freeOperationGrant references unknown seat "${grant.seat}".`,
-        SEAT_REFERENCE_FALLBACK_SUGGESTION,
-      );
+      if (grant.seat !== 'self') {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_GRANT_SEAT_MISSING,
+          `${pathPrefix}.${grantIndex}.seat`,
+          grant.seat,
+          seatTargets,
+          `Event card "${cardId}" freeOperationGrant references unknown seat "${grant.seat}".`,
+          SEAT_REFERENCE_FALLBACK_SUGGESTION,
+        );
+      }
       if (grant.executeAsSeat !== undefined && grant.executeAsSeat !== 'self') {
         pushMissingIdentifierDiagnostic(
           diagnostics,

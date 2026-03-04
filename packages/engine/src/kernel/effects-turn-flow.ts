@@ -169,6 +169,7 @@ export const applyGrantFreeOperation = (
     operationClass: grant.operationClass,
     ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant.zoneFilter === undefined ? {} : { zoneFilter: resolveTemplateTree(grant.zoneFilter, ctx.bindings) }),
+    ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),

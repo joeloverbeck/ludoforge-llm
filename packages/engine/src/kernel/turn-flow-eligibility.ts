@@ -234,6 +234,7 @@ const toPendingFreeOperationGrant = (
   operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+  ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
   remainingUses: grant.uses ?? 1,
   sequenceBatchId,
   sequenceIndex: grant.sequence.step,
@@ -973,6 +974,22 @@ export const isFreeOperationApplicableForMove = (
     return true;
   }
   return (analyzeFreeOperationGrantMatch(def, state, move, seatResolution)?.actionMatchedGrants.length ?? 0) > 0;
+};
+
+export const isFreeOperationAllowedDuringMonsoonForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  if (move.freeOperation !== true) {
+    return false;
+  }
+  const analysis = analyzeFreeOperationGrantMatch(def, state, move, seatResolution, { evaluateZoneFilters: true });
+  if (analysis === null) {
+    return false;
+  }
+  return analysis.zoneMatchedGrants.some((grant) => grant.allowDuringMonsoon === true);
 };
 
 export const isFreeOperationGrantedForMove = (

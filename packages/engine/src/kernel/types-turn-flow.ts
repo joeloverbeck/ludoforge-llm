@@ -136,6 +136,7 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+  readonly allowDuringMonsoon?: boolean;
   readonly remainingUses: number;
   readonly sequenceBatchId?: string;
   readonly sequenceIndex?: number;

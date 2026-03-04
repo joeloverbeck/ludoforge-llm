@@ -72,6 +72,7 @@ export const EventCardFreeOperationGrantSchema = z
     operationClass: z.enum(TURN_FLOW_ACTION_CLASS_VALUES),
     actionIds: z.array(StringSchema.min(1)).min(1).optional(),
     zoneFilter: ConditionASTSchema.optional(),
+    allowDuringMonsoon: z.boolean().optional(),
     uses: IntegerSchema.min(1).optional(),
   })
   .strict();

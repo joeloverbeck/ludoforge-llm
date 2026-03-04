@@ -1576,9 +1576,280 @@ eventDecks:
           seatOrder: ["US", "VC", "NVA", "ARVN"]
           flavorText: "Rapid redeployment reshapes local balance."
         unshaded:
-          text: "US Troops reposition to pressure insurgent strongholds."
+          text: "US moves up to 2 US Troops each from the map and out of play to any 1 space or Available."
+          effects:
+            - chooseN:
+                bind: $usMapTroops
+                options:
+                  query: tokensInMapSpaces
+                  filter:
+                    - { prop: faction, eq: US }
+                    - { prop: type, eq: troops }
+                min: 0
+                max: 2
+            - chooseN:
+                bind: $usOutOfPlayTroops
+                options:
+                  query: tokensInZone
+                  zone: out-of-play-US:none
+                  filter:
+                    - { prop: faction, eq: US }
+                    - { prop: type, eq: troops }
+                min: 0
+                max: 2
+            - chooseOne:
+                bind: $americalDestinationType
+                options:
+                  query: enums
+                  values: ['available-US:none', 'map-space']
+            - if:
+                when: { op: '==', left: { ref: binding, name: $americalDestinationType }, right: 'map-space' }
+                then:
+                  - chooseOne:
+                      bind: $americalDestinationSpace
+                      options:
+                        query: mapSpaces
+                  - forEach:
+                      bind: $usMapTroop
+                      over: { query: binding, name: $usMapTroops }
+                      effects:
+                        - moveToken:
+                            token: $usMapTroop
+                            from: { zoneExpr: { ref: tokenZone, token: $usMapTroop } }
+                            to: { zoneExpr: { ref: binding, name: $americalDestinationSpace } }
+                  - forEach:
+                      bind: $usOutOfPlayTroop
+                      over: { query: binding, name: $usOutOfPlayTroops }
+                      effects:
+                        - moveToken:
+                            token: $usOutOfPlayTroop
+                            from: { zoneExpr: { ref: tokenZone, token: $usOutOfPlayTroop } }
+                            to: { zoneExpr: { ref: binding, name: $americalDestinationSpace } }
+                else:
+                  - forEach:
+                      bind: $usMapTroop
+                      over: { query: binding, name: $usMapTroops }
+                      effects:
+                        - moveToken:
+                            token: $usMapTroop
+                            from: { zoneExpr: { ref: tokenZone, token: $usMapTroop } }
+                            to: { zoneExpr: available-US:none }
+                  - forEach:
+                      bind: $usOutOfPlayTroop
+                      over: { query: binding, name: $usOutOfPlayTroops }
+                      effects:
+                        - moveToken:
+                            token: $usOutOfPlayTroop
+                            from: { zoneExpr: { ref: tokenZone, token: $usOutOfPlayTroop } }
+                            to: { zoneExpr: available-US:none }
         shaded:
-          text: "Escalation costs: local backlash shifts spaces toward Opposition."
+          text: "In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition."
+          effects:
+            - chooseN:
+                bind: $targetProvince
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, eq: US }
+                                - { prop: type, eq: troops }
+                        right: 0
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, eq: VC }
+                                    - { prop: type, eq: guerrilla }
+                                - query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, eq: VC }
+                                    - { prop: type, eq: base }
+                                    - { prop: tunnel, eq: untunneled }
+                        right: 0
+                      - op: or
+                        args:
+                          - op: '=='
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: mapSpaces
+                                  filter:
+                                    op: and
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                      - op: '>'
+                                        left:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInZone
+                                              zone: $zone
+                                              filter:
+                                                - { prop: faction, eq: US }
+                                                - { prop: type, eq: troops }
+                                        right: 0
+                                      - op: '>'
+                                        left:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: concat
+                                              sources:
+                                                - query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, eq: VC }
+                                                    - { prop: type, eq: guerrilla }
+                                                - query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, eq: VC }
+                                                    - { prop: type, eq: base }
+                                                    - { prop: tunnel, eq: untunneled }
+                                        right: 0
+                                      - op: '!='
+                                        left: { ref: markerState, space: $zone, marker: supportOpposition }
+                                        right: activeOpposition
+                            right: 0
+                          - op: '!='
+                            left: { ref: markerState, space: $zone, marker: supportOpposition }
+                            right: activeOpposition
+                min:
+                  op: min
+                  left: 1
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, eq: US }
+                                      - { prop: type, eq: troops }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: concat
+                                    sources:
+                                      - query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, eq: VC }
+                                          - { prop: type, eq: guerrilla }
+                                      - query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, eq: VC }
+                                          - { prop: type, eq: base }
+                                          - { prop: tunnel, eq: untunneled }
+                              right: 0
+                max:
+                  op: min
+                  left: 2
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, eq: US }
+                                      - { prop: type, eq: troops }
+                              right: 0
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: concat
+                                    sources:
+                                      - query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, eq: VC }
+                                          - { prop: type, eq: guerrilla }
+                                      - query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, eq: VC }
+                                          - { prop: type, eq: base }
+                                          - { prop: tunnel, eq: untunneled }
+                              right: 0
+            - forEach:
+                bind: $province
+                over: { query: binding, name: $targetProvince }
+                effects:
+                  - chooseN:
+                      bind: '$vcPieceToRemove@{$province}'
+                      options:
+                        query: concat
+                        sources:
+                          - query: tokensInZone
+                            zone: $province
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: guerrilla }
+                          - query: tokensInZone
+                            zone: $province
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: base }
+                              - { prop: tunnel, eq: untunneled }
+                      min: 1
+                      max: 1
+                  - forEach:
+                      bind: $vcPiece
+                      over: { query: binding, name: '$vcPieceToRemove@{$province}' }
+                      effects:
+                        - moveToken:
+                            token: $vcPiece
+                            from: { zoneExpr: { ref: tokenZone, token: $vcPiece } }
+                            to: { zoneExpr: available-VC:none }
+                  - setMarker:
+                      space: $province
+                      marker: supportOpposition
+                      state: activeOpposition
       - id: card-22
         title: Da Nang
         sideMode: dual

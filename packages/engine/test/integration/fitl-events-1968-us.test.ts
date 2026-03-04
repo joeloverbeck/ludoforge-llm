@@ -53,6 +53,12 @@ const makeGuerrilla = (id: string, faction: 'NVA' | 'VC', activity: 'active' | '
   props: { faction, type: 'guerrilla', activity },
 });
 
+const makeVcBase = (id: string, tunnel: 'tunneled' | 'untunneled'): Token => ({
+  id: asTokenId(id),
+  type: 'base',
+  props: { faction: 'VC', type: 'base', tunnel },
+});
+
 const withNeutralSupportMarkers = (state: GameState): GameState['markers'] =>
   Object.fromEntries(
     Object.entries(state.markers).map(([zoneId, zoneMarkers]) => [
@@ -179,6 +185,14 @@ const findBuckAdamsMove = (def: GameDef, state: GameState, side: 'unshaded' | 's
       (move.params.eventCardId === undefined || move.params.eventCardId === 'card-12'),
   );
 
+const findAmericalMove = (def: GameDef, state: GameState, side: 'unshaded' | 'shaded') =>
+  legalMoves(def, state).find(
+    (move) =>
+      String(move.actionId) === 'event' &&
+      move.params.side === side &&
+      (move.params.eventCardId === undefined || move.params.eventCardId === 'card-21'),
+  );
+
 const countTokens = (
   state: GameState,
   zoneId: string,
@@ -207,6 +221,30 @@ const setupBuckAdamsState = (
     zones: {
       ...baseState.zones,
       [eventDeck!.discardZone]: [makeToken('card-12', 'card', 'none')],
+      ...overrides.zoneTokens,
+    },
+  };
+};
+
+const setupAmericalState = (
+  def: GameDef,
+  overrides: {
+    readonly zoneTokens?: Readonly<Record<string, readonly Token[]>>;
+    readonly activePlayer?: number;
+  },
+): GameState => {
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+  const baseState = clearAllZones(initialState(def, 196821, 4).state);
+  return {
+    ...baseState,
+    activePlayer: asPlayerId(overrides.activePlayer ?? 0),
+    turnOrderState: { type: 'roundRobin' },
+    markers: withNeutralSupportMarkers(baseState),
+    zones: {
+      ...baseState.zones,
+      [eventDeck!.discardZone]: [makeToken('card-21', 'card', 'none')],
       ...overrides.zoneTokens,
     },
   };
@@ -684,6 +722,328 @@ describe('FITL 1968 US-first event-card production spec', () => {
     const afterShaded = applyMoveWithResolvedDecisionIds(def, setup, shaded!).state;
     assert.deepEqual(afterUnshaded.zones, setup.zones, 'Unshaded should be a no-op when no US troops are eligible');
     assert.deepEqual(afterShaded.zones, setup.zones, 'Shaded should be a no-op when no US troops are eligible');
+  });
+
+  it('encodes card-21 (Americal) with dual-source troop movement and per-province VC removal effects', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-21');
+    assert.notEqual(card, undefined);
+    assert.equal(
+      card?.unshaded?.text,
+      'US moves up to 2 US Troops each from the map and out of play to any 1 space or Available.',
+    );
+    assert.equal(
+      card?.shaded?.text,
+      'In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition.',
+    );
+
+    const unshadedEffects = card?.unshaded?.effects ?? [];
+    assert.equal(unshadedEffects.length, 4, 'card-21 unshaded should define map-select, oop-select, destination-select, and routing');
+    assert.notEqual((unshadedEffects[0] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((unshadedEffects[1] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((unshadedEffects[2] as { chooseOne?: unknown }).chooseOne, undefined);
+    assert.notEqual((unshadedEffects[3] as { if?: unknown }).if, undefined);
+
+    const shadedEffects = card?.shaded?.effects ?? [];
+    assert.equal(shadedEffects.length, 2, 'card-21 shaded should define province selection and per-province resolution');
+    assert.notEqual((shadedEffects[0] as { chooseN?: unknown }).chooseN, undefined);
+    assert.notEqual((shadedEffects[1] as { forEach?: unknown }).forEach, undefined);
+  });
+
+  it('applies card-21 unshaded by moving up to 2 map troops and up to 2 out-of-play troops into one selected map space', () => {
+    const def = compileDef();
+    const setup = setupAmericalState(def, {
+      zoneTokens: {
+        'out-of-play-US:none': [
+          makeToken('us-oop-1', 'troops', 'US'),
+          makeToken('us-oop-2', 'troops', 'US'),
+          makeToken('us-oop-3', 'troops', 'US'),
+        ],
+        'hue:none': [makeToken('us-map-hue-1', 'troops', 'US'), makeToken('us-map-hue-2', 'troops', 'US')],
+        'saigon:none': [makeToken('us-map-sai-1', 'troops', 'US')],
+      },
+    });
+    const move = findAmericalMove(def, setup, 'unshaded');
+    assert.notEqual(move, undefined, 'Expected unshaded Americal event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$usMapTroops' || request.decisionId.includes('usMapTroops'),
+        value: [asTokenId('us-map-hue-1'), asTokenId('us-map-sai-1')],
+      },
+      {
+        when: (request) => request.name === '$usOutOfPlayTroops' || request.decisionId.includes('usOutOfPlayTroops'),
+        value: [asTokenId('us-oop-1'), asTokenId('us-oop-2')],
+      },
+      {
+        when: (request) => request.name === '$americalDestinationType' || request.decisionId.includes('americalDestinationType'),
+        value: 'map-space',
+      },
+      {
+        when: (request) => request.name === '$americalDestinationSpace' || request.decisionId.includes('americalDestinationSpace'),
+        value: 'da-nang:none',
+      },
+    ];
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    assert.equal(
+      countTokens(final, 'da-nang:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      4,
+      'Destination map space should receive all selected troops from both sources',
+    );
+    assert.equal(
+      countTokens(final, 'out-of-play-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      1,
+      'Out-of-play source should lose exactly the selected two troops',
+    );
+    assert.equal(
+      countTokens(final, 'hue:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      1,
+      'Only one unselected Hue troop should remain',
+    );
+    assert.equal(
+      countTokens(final, 'saigon:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected Saigon troop should be moved',
+    );
+  });
+
+  it('applies card-21 unshaded with Available destination and gracefully no-ops when no eligible troops exist', () => {
+    const def = compileDef();
+    const setup = setupAmericalState(def, {
+      zoneTokens: {
+        'out-of-play-US:none': [makeToken('us-oop-a', 'troops', 'US')],
+        'hue:none': [makeToken('us-map-a', 'troops', 'US')],
+      },
+    });
+    const move = findAmericalMove(def, setup, 'unshaded');
+    assert.notEqual(move, undefined, 'Expected unshaded Americal event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$usMapTroops' || request.decisionId.includes('usMapTroops'),
+        value: [asTokenId('us-map-a')],
+      },
+      {
+        when: (request) => request.name === '$usOutOfPlayTroops' || request.decisionId.includes('usOutOfPlayTroops'),
+        value: [asTokenId('us-oop-a')],
+      },
+      {
+        when: (request) => request.name === '$americalDestinationType' || request.decisionId.includes('americalDestinationType'),
+        value: 'available-US:none',
+      },
+    ];
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    assert.equal(
+      countTokens(final, 'available-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      2,
+      'Available should receive selected map and out-of-play troops',
+    );
+    assert.equal(
+      countTokens(final, 'out-of-play-US:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected out-of-play troops should leave out-of-play',
+    );
+    assert.equal(
+      countTokens(final, 'hue:none', (token) => token.props.faction === 'US' && token.type === 'troops'),
+      0,
+      'Selected map troops should leave their map spaces',
+    );
+
+    const emptySetup = setupAmericalState(def, { zoneTokens: {} });
+    const emptyMove = findAmericalMove(def, emptySetup, 'unshaded');
+    assert.notEqual(emptyMove, undefined, 'Expected unshaded Americal move even when no US troops are available');
+    const emptyFinal = applyMoveWithResolvedDecisionIds(def, emptySetup, emptyMove!).state;
+    assert.deepEqual(emptyFinal.zones, emptySetup.zones, 'Unshaded Americal should be a no-op when no troops are eligible');
+  });
+
+  it('applies card-21 shaded in up to two eligible provinces only, removing one VC piece each and setting Active Opposition', () => {
+    const def = compileDef();
+    const setup = setupAmericalState(def, {
+      zoneTokens: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-qt-1', 'troops', 'US'),
+          makeGuerrilla('vc-qt-g', 'VC', 'active'),
+        ],
+        'quang-nam:none': [
+          makeToken('us-qn-1', 'troops', 'US'),
+          makeGuerrilla('vc-qn-g', 'VC', 'active'),
+        ],
+        'saigon:none': [
+          makeToken('us-sai-1', 'troops', 'US'),
+          makeGuerrilla('vc-sai-g', 'VC', 'active'),
+        ],
+      },
+    });
+    const move = findAmericalMove(def, setup, 'shaded');
+    assert.notEqual(move, undefined, 'Expected shaded Americal event move');
+
+    const overrides: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        value: ['quang-tri-thua-thien:none', 'quang-nam:none'],
+      },
+      {
+        when: (request) => request.name.includes('vcPieceToRemove') && request.decisionId.includes('quang-tri-thua-thien:none'),
+        value: [asTokenId('vc-qt-g')],
+      },
+      {
+        when: (request) => request.name.includes('vcPieceToRemove') && request.decisionId.includes('quang-nam:none'),
+        value: [asTokenId('vc-qn-g')],
+      },
+    ];
+
+    const final = applyMoveWithResolvedDecisionIds(def, setup, move!, { overrides }).state;
+
+    assert.equal(
+      countTokens(final, 'available-VC:none', (token) => token.props.faction === 'VC'),
+      2,
+      'Exactly one VC piece per selected province should be removed to Available',
+    );
+    assert.equal(
+      countTokens(final, 'quang-tri-thua-thien:none', (token) => token.props.faction === 'VC'),
+      0,
+      'Selected province with one VC piece should lose that VC piece',
+    );
+    assert.equal(
+      countTokens(final, 'quang-nam:none', (token) => token.props.faction === 'VC'),
+      0,
+      'Second selected province with one VC piece should lose that VC piece',
+    );
+    assert.equal(
+      countTokens(final, 'saigon:none', (token) => token.props.faction === 'VC'),
+      1,
+      'Cities are not valid province targets and should remain unchanged',
+    );
+    assert.equal(final.markers['quang-tri-thua-thien:none']?.supportOpposition, 'activeOpposition');
+    assert.equal(final.markers['quang-nam:none']?.supportOpposition, 'activeOpposition');
+    assert.equal(final.markers['saigon:none']?.supportOpposition, 'neutral', 'City marker should remain unchanged');
+  });
+
+  it('resolves card-21 shaded edge cases when fewer than two eligible provinces exist', () => {
+    const def = compileDef();
+    const oneProvinceSetup = setupAmericalState(def, {
+      zoneTokens: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-qt-only', 'troops', 'US'),
+          makeGuerrilla('vc-qt-only', 'VC', 'active'),
+        ],
+      },
+    });
+    const oneProvinceMove = findAmericalMove(def, oneProvinceSetup, 'shaded');
+    assert.notEqual(oneProvinceMove, undefined, 'Expected shaded Americal move');
+    const oneProvinceFinal = applyMoveWithResolvedDecisionIds(def, oneProvinceSetup, oneProvinceMove!).state;
+    assert.equal(
+      countTokens(oneProvinceFinal, 'available-VC:none', (token) => token.props.faction === 'VC'),
+      1,
+      'Single eligible province should still execute one-piece removal',
+    );
+    assert.equal(oneProvinceFinal.markers['quang-tri-thua-thien:none']?.supportOpposition, 'activeOpposition');
+
+    const noProvinceSetup = setupAmericalState(def, {
+      zoneTokens: {
+        'hue:none': [makeToken('us-hue-none', 'troops', 'US')],
+        'da-nang:none': [makeGuerrilla('vc-da-nang-none', 'VC', 'active')],
+      },
+    });
+    const noProvinceMove = findAmericalMove(def, noProvinceSetup, 'shaded');
+    assert.notEqual(noProvinceMove, undefined, 'Expected shaded Americal move even when no province satisfies both troop and VC criteria');
+    const noProvinceFinal = applyMoveWithResolvedDecisionIds(def, noProvinceSetup, noProvinceMove!).state;
+    assert.deepEqual(
+      noProvinceFinal.zones,
+      noProvinceSetup.zones,
+      'Shaded Americal should be a no-op when no eligible province exists',
+    );
+    assert.deepEqual(
+      noProvinceFinal.markers,
+      noProvinceSetup.markers,
+      'Markers should remain unchanged when shaded Americal has no legal province target',
+    );
+  });
+
+  it('applies card-21 shaded piece-type constraints and province-priority selection rules', () => {
+    const def = compileDef();
+
+    const untunneledSetup = setupAmericalState(def, {
+      zoneTokens: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-qt-u', 'troops', 'US'),
+          makeVcBase('vc-base-u', 'untunneled'),
+        ],
+      },
+    });
+    const untunneledMove = findAmericalMove(def, untunneledSetup, 'shaded');
+    assert.notEqual(untunneledMove, undefined, 'Expected shaded Americal move for untunneled-base test');
+    const untunneledFinal = applyMoveWithResolvedDecisionIds(def, untunneledSetup, untunneledMove!).state;
+    assert.equal(
+      countTokens(untunneledFinal, 'available-VC:none', (token) => token.id === asTokenId('vc-base-u')),
+      1,
+      'Untunneled VC base should be removable as a VC piece',
+    );
+    assert.equal(untunneledFinal.markers['quang-tri-thua-thien:none']?.supportOpposition, 'activeOpposition');
+
+    const tunneledOnlySetup = setupAmericalState(def, {
+      zoneTokens: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-qt-t', 'troops', 'US'),
+          makeVcBase('vc-base-t', 'tunneled'),
+        ],
+      },
+    });
+    const tunneledOnlyMove = findAmericalMove(def, tunneledOnlySetup, 'shaded');
+    assert.notEqual(tunneledOnlyMove, undefined, 'Expected shaded Americal move for tunneled-base test');
+    const tunneledOnlyFinal = applyMoveWithResolvedDecisionIds(def, tunneledOnlySetup, tunneledOnlyMove!).state;
+    assert.deepEqual(
+      tunneledOnlyFinal.zones,
+      tunneledOnlySetup.zones,
+      'Tunneled VC base should not count as removable VC piece',
+    );
+
+    const prioritySetup = setupAmericalState(def, {
+      zoneTokens: {
+        'quang-tri-thua-thien:none': [
+          makeToken('us-pri-qt', 'troops', 'US'),
+          makeGuerrilla('vc-pri-qt', 'VC', 'active'),
+        ],
+        'quang-nam:none': [
+          makeToken('us-pri-qn', 'troops', 'US'),
+          makeGuerrilla('vc-pri-qn', 'VC', 'active'),
+        ],
+      },
+      activePlayer: 1,
+    });
+    const priorityMarkers = {
+      ...prioritySetup.markers,
+      'quang-tri-thua-thien:none': {
+        ...prioritySetup.markers['quang-tri-thua-thien:none'],
+        supportOpposition: 'activeOpposition',
+      },
+      'quang-nam:none': {
+        ...prioritySetup.markers['quang-nam:none'],
+        supportOpposition: 'neutral',
+      },
+    } as GameState['markers'];
+    const priorityState: GameState = { ...prioritySetup, markers: priorityMarkers };
+    const priorityMove = findAmericalMove(def, priorityState, 'shaded');
+    assert.notEqual(priorityMove, undefined, 'Expected shaded Americal move for priority test');
+
+    const illegalPriorityOverride: DecisionOverrideRule[] = [
+      {
+        when: (request) => request.name === '$targetProvince' || request.decisionId.includes('targetProvince'),
+        value: ['quang-tri-thua-thien:none'],
+      },
+    ];
+    assert.throws(
+      () => applyMoveWithResolvedDecisionIds(def, priorityState, priorityMove!, { overrides: illegalPriorityOverride }),
+      /outside options domain|selection cardinality mismatch/i,
+      'When a changeable province exists, already-Active Opposition provinces must not be selectable first',
+    );
   });
 
   it('encodes card-12 (Capt Buck Adams) with outside-South insurgent flipping and constrained NVA base placement', () => {

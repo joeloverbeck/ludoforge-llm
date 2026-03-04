@@ -46,6 +46,23 @@ const compileDef = (): GameDef => {
   return compiled.gameDef!;
 };
 
+const withEconOverrides = (def: GameDef, overrides: Readonly<Record<string, number>>): GameDef => ({
+  ...def,
+  zones: def.zones.map((zone) => {
+    const econOverride = overrides[String(zone.id)];
+    if (econOverride === undefined) {
+      return zone;
+    }
+    return {
+      ...zone,
+      attributes: {
+        ...(zone.attributes ?? {}),
+        econ: econOverride,
+      },
+    };
+  }),
+});
+
 const findCard25Move = (
   def: GameDef,
   state: GameState,
@@ -161,6 +178,86 @@ describe('FITL card-25 TF-116 Riverines', () => {
       countZoneTokens(final, 'available-VC:none', (token) => token.id === asTokenId('tf116-vc-guerrilla-1') || token.id === asTokenId('tf116-vc-base-1')),
       2,
       'VC pieces removed from river LoCs should move to available-VC:none',
+    );
+  });
+
+  it('unshaded and shaded target sets are invariant to Mekong LoC econ changes', () => {
+    const def = withEconOverrides(compileDef(), {
+      [MEKONG_CHAU_DOC]: 4,
+      [MEKONG_BAC_LIEU]: 5,
+      [MEKONG_LONG_PHU]: 6,
+      [MEKONG_SAIGON_CAN_THO]: 0,
+    });
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected event deck');
+
+    const unshadedBase = clearAllZones(initialState(def, 25003, 4).state);
+    const unshadedSetup: GameState = {
+      ...unshadedBase,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      zones: {
+        ...unshadedBase.zones,
+        [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
+        [MEKONG_CHAU_DOC]: [makeToken('tf116-econ-nva-target-1', 'troops', 'NVA', { type: 'troops' })],
+        [MEKONG_BAC_LIEU]: [makeToken('tf116-econ-vc-target-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+        [MEKONG_LONG_PHU]: [makeToken('tf116-econ-vc-target-2', 'base', 'VC', { type: 'base' })],
+        [MEKONG_SAIGON_CAN_THO]: [makeToken('tf116-econ-vc-nontarget', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+      },
+    };
+
+    const unshadedMove = findCard25Move(def, unshadedSetup, 'unshaded', 'tf116-execute-as-us');
+    assert.notEqual(unshadedMove, undefined, 'Expected card-25 unshaded event move');
+    const unshadedFinal = applyMove(def, unshadedSetup, unshadedMove!).state;
+
+    for (const loc of mekongLocs) {
+      assert.equal(
+        countZoneTokens(unshadedFinal, loc, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
+        0,
+        `Expected all insurgents removed from ${loc} despite econ overrides`,
+      );
+    }
+    assert.equal(
+      countZoneTokens(unshadedFinal, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-econ-vc-nontarget')),
+      1,
+      'Saigon-Can Tho LoC must remain out-of-scope even when econ is reduced',
+    );
+
+    const shadedBase = clearAllZones(initialState(def, 25004, 4).state);
+    const shadedSetup: GameState = {
+      ...shadedBase,
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+      zones: {
+        ...shadedBase.zones,
+        [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
+        'available-VC:none': [
+          makeToken('tf116-econ-vc-available-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-econ-vc-available-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-econ-vc-available-3', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-econ-vc-available-4', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-econ-vc-available-5', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tf116-econ-vc-available-6', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+        [MEKONG_SAIGON_CAN_THO]: [makeToken('tf116-econ-vc-scope-guard', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+      },
+    };
+
+    const shadedMove = findCard25Move(def, shadedSetup, 'shaded');
+    assert.notEqual(shadedMove, undefined, 'Expected card-25 shaded event move');
+    const shadedFinal = applyMove(def, shadedSetup, shadedMove!).state;
+
+    for (const loc of mekongLocs) {
+      assert.equal(
+        countZoneTokens(shadedFinal, loc, (token) => token.props.faction === 'VC' && token.props.type === 'guerrilla'),
+        2,
+        `Expected shaded placement to remain at 2 VC guerrillas in ${loc} despite econ overrides`,
+      );
+    }
+    assert.equal(
+      countZoneTokens(shadedFinal, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-econ-vc-scope-guard')),
+      1,
+      'Saigon-Can Tho LoC must not receive shaded placements when econ is reduced',
     );
   });
 

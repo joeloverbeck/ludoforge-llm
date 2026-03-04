@@ -2185,11 +2185,11 @@ eventDecks:
                               query: adjacentZones
                               zone: $zone
                               filter:
-                                op: and
+                                op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                         right: 0
                 - seat: self
                   executeAsSeat: "us"
@@ -2208,11 +2208,11 @@ eventDecks:
                               query: adjacentZones
                               zone: $zone
                               filter:
-                                op: and
+                                op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                         right: 0
             - id: tf116-execute-as-arvn
               order: 2
@@ -2235,11 +2235,11 @@ eventDecks:
                               query: adjacentZones
                               zone: $zone
                               filter:
-                                op: and
+                                op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                         right: 0
                 - seat: self
                   executeAsSeat: "arvn"
@@ -2258,11 +2258,11 @@ eventDecks:
                               query: adjacentZones
                               zone: $zone
                               filter:
-                                op: and
+                                op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                                  - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                                  - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                         right: 0
           effects:
             - forEach:
@@ -2270,11 +2270,11 @@ eventDecks:
                 over:
                   query: mapSpaces
                   filter:
-                    op: and
+                    op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                      - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                 effects:
                   - removeByPriority:
                       budget: 99
@@ -2295,11 +2295,11 @@ eventDecks:
                 over:
                   query: mapSpaces
                   filter:
-                    op: and
+                    op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                      - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                 effects:
                   - removeByPriority:
                       budget: 2
@@ -2318,11 +2318,11 @@ eventDecks:
                 over:
                   query: mapSpaces
                   filter:
-                    op: and
+                    op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-                      - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: mekong }
-                      - { op: '<', left: { ref: zoneProp, zone: $zone, prop: econ }, right: 2 }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-chau-doc:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-bac-lieu:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: loc-can-tho-long-phu:none }
                 effects:
                   - if:
                       when:

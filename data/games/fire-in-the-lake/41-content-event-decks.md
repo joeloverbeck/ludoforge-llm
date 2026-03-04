@@ -2059,6 +2059,45 @@ eventDecks:
             - id: $targetProvince
               selector:
                 query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: coastal }, right: true }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: VC }
+                      right: 0
+                    - op: or
+                      args:
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                          right: 0
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInAdjacentZones
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                          right: 0
               cardinality: { max: 1 }
           effects:
             - removeByPriority:
@@ -2078,21 +2117,41 @@ eventDecks:
             - id: $targetProvince
               selector:
                 query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: guerrilla }
+                              - { prop: activity, eq: active }
+                      right: 0
               cardinality: { max: 3 }
           eligibilityOverrides:
             - { target: { kind: active }, eligible: true, windowId: remain-eligible }
           effects:
             - forEach:
-                bind: $vcGuerrilla
-                over:
-                  query: tokensInZone
-                  zone: $targetProvince
-                  filter:
-                    - { prop: faction, eq: VC }
-                    - { prop: type, eq: guerrilla }
-                    - { prop: activity, eq: active }
+                bind: $province
+                over: { query: binding, name: $targetProvince }
                 effects:
-                  - setTokenProp: { token: $vcGuerrilla, prop: activity, value: underground }
+                  - forEach:
+                      bind: $vcGuerrilla
+                      over:
+                        query: tokensInZone
+                        zone: $province
+                        filter:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: active }
+                      effects:
+                        - setTokenProp: { token: $vcGuerrilla, prop: activity, value: underground }
       - id: card-25
         title: TF-116 Riverines
         sideMode: dual

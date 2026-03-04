@@ -1,10 +1,10 @@
 # KERQUERY-004: Add downstream consumer coverage for tokenZones contract reclassification
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — unit-test coverage for existing kernel consumers
-**Deps**: packages/engine/src/kernel/choice-target-kinds.ts, packages/engine/src/kernel/choice-options-runtime-shape-contract.ts, packages/engine/test/unit/kernel/query-domain-kinds.test.ts, packages/engine/test/unit/kernel/choice-options-runtime-shape-contract.test.ts
+**Deps**: packages/engine/test/unit/kernel/query-domain-kinds.test.ts, packages/engine/test/unit/kernel/choice-options-runtime-shape-contract.test.ts
 
 ## Problem
 
@@ -14,13 +14,17 @@
 
 1. `deriveChoiceTargetKinds` consumes `inferQueryDomainKinds` and should now yield `['zone']` for `tokenZones`.
 2. `getChoiceOptionsRuntimeShapeViolation` consumes `inferQueryRuntimeShapes` and should treat `tokenZones` as move-param-encodable (`string` shape), i.e., no violation.
-3. Existing tests cover core domain/shape inference and validation but do not directly lock these two downstream consumer behaviors for `tokenZones`.
+3. Existing tests already cover canonical `tokenZones` contract at inference level:
+   - `query-domain-kinds.test.ts` asserts `inferQueryDomainKinds(tokenZones(...)) => ['zone']`.
+   - `query-kind-contract.test.ts` asserts `{ domain: 'zone', runtimeShape: 'string' }`.
+4. Remaining gap is downstream-consumer lock-in only (target-kind derivation + choice-options runtime-shape violation checks for `tokenZones`).
 
 ## Architecture Check
 
 1. This is a contract-propagation coverage ticket only; no runtime behavior changes.
 2. It reinforces the game-agnostic query-contract architecture by testing shared kernel consumers, not game-specific content.
 3. No compatibility aliases/shims; tests encode the current canonical contract.
+4. Beneficial versus status quo: these assertions protect two consumer boundaries where contract drift would otherwise silently reappear despite upstream inference tests passing.
 
 ## What to Change
 
@@ -42,6 +46,7 @@
 
 - Additional `tokenZones` validation/runtimes changes (handled by KERQUERY-002/KERQUERY-003)
 - Query contract model redesign
+- Reworking shared kernel consumer architecture
 
 ## Acceptance Criteria
 
@@ -68,3 +73,20 @@
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/unit/kernel/query-domain-kinds.test.js packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-contract.test.js`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion Date**: 2026-03-04
+- **What Changed**:
+  - Updated this ticket's assumptions/scope to reflect that `tokenZones` inference-level contract coverage already existed, and narrowed implementation to downstream consumers only.
+  - Added explicit `deriveChoiceTargetKinds(tokenZones(...)) => ['zone']` coverage in `packages/engine/test/unit/kernel/query-domain-kinds.test.ts`.
+  - Added explicit `getChoiceOptionsRuntimeShapeViolation(tokenZones(...)) => null` coverage in `packages/engine/test/unit/kernel/choice-options-runtime-shape-contract.test.ts`.
+- **Deviation from Original Plan**:
+  - No engine source files required changes; only tests were modified after reassessment.
+  - Existing inference-level coverage was retained and not duplicated.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - Targeted tests passed:
+    - `node --test packages/engine/dist/test/unit/kernel/query-domain-kinds.test.js packages/engine/dist/test/unit/kernel/choice-options-runtime-shape-contract.test.js`
+  - Full engine suite passed: `pnpm -F @ludoforge/engine test` (377 passed, 0 failed).
+  - Lint passed: `pnpm -F @ludoforge/engine lint`.

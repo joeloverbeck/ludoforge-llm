@@ -81,6 +81,13 @@ describe('query domain kinds', () => {
 
   it('derives choice target kinds from domain inference and ignores other-domain queries', () => {
     assert.deepEqual(deriveChoiceTargetKinds({ query: 'mapSpaces' }), ['zone']);
+    assert.deepEqual(
+      deriveChoiceTargetKinds({
+        query: 'tokenZones',
+        source: { query: 'tokensInMapSpaces' },
+      }),
+      ['zone'],
+    );
     assert.deepEqual(deriveChoiceTargetKinds({ query: 'players' }), []);
     assert.deepEqual(
       deriveChoiceTargetKinds({

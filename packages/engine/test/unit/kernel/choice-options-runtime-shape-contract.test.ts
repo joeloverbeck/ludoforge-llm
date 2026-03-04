@@ -10,6 +10,13 @@ describe('choice options runtime-shape contract', () => {
   it('returns no violation for move-param-encodable option shapes', () => {
     assert.equal(getChoiceOptionsRuntimeShapeViolation({ query: 'players' }), null);
     assert.equal(getChoiceOptionsRuntimeShapeViolation({ query: 'tokensInZone', zone: 'deck:none' }), null);
+    assert.equal(
+      getChoiceOptionsRuntimeShapeViolation({
+        query: 'tokenZones',
+        source: { query: 'tokensInMapSpaces' },
+      }),
+      null,
+    );
   });
 
   it('returns deterministic violation details for non-encodable shapes', () => {

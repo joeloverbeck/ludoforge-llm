@@ -102,4 +102,25 @@ describe('FITL 1965 US-first event-card production spec', () => {
       assert.deepEqual(effect?.teardownEffects, [{ setVar: { scope: 'global', var: expected.varName, value: false } }]);
     }
   });
+
+  it('encodes card-22 shaded as immediate support removal plus round momentum Air Strike ban', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-22');
+    assert.notEqual(card, undefined);
+    const firstEffect = card?.shaded?.effects?.[0] as { if?: unknown } | undefined;
+    const secondEffect = card?.shaded?.effects?.[1] as { forEach?: { over?: { query?: string; zone?: string } } } | undefined;
+    assert.equal(typeof firstEffect?.if, 'object', 'Expected first shaded effect to remove Da Nang support');
+    assert.equal(secondEffect?.forEach?.over?.query, 'adjacentZones');
+    assert.equal(secondEffect?.forEach?.over?.zone, 'da-nang:none');
+
+    const momentum = card?.shaded?.lastingEffects?.find((entry) => entry.id === 'mom-da-nang');
+    assert.notEqual(momentum, undefined);
+    assert.equal(momentum?.duration, 'round');
+    assert.deepEqual(momentum?.setupEffects, [{ setVar: { scope: 'global', var: 'mom_daNang', value: true } }]);
+    assert.deepEqual(momentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_daNang', value: false } }]);
+  });
 });

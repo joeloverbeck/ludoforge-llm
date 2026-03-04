@@ -1888,6 +1888,17 @@ eventDecks:
                       zoneExpr: da-nang:none
         shaded:
           text: "VC fire closes air base: Remove all Support within 1 space of Da Nang. No Air Strike until Coup. MOMENTUM"
+          effects:
+            - macro: remove-support-from-space
+              args: { space: da-nang:none }
+            - forEach:
+                bind: $adjacentToDaNang
+                over:
+                  query: adjacentZones
+                  zone: da-nang:none
+                effects:
+                  - macro: remove-support-from-space
+                    args: { space: $adjacentToDaNang }
           lastingEffects:
             - id: mom-da-nang
               duration: round

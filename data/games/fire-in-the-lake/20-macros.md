@@ -150,6 +150,31 @@ effectMacros:
           marker: supportOpposition
           delta: { param: deltaExpr }
 
+  # ── remove-support-from-space ─────────────────────────────────────────────
+  # Shared helper for effects that remove Support from a specific space
+  # by moving Active Support two levels and Passive Support one level.
+  - id: remove-support-from-space
+    params:
+      - { name: space, type: zoneSelector }
+    exports: []
+    effects:
+      - if:
+          when:
+            op: '=='
+            left: { ref: markerState, space: { param: space }, marker: supportOpposition }
+            right: activeSupport
+          then:
+            - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -2 }
+          else:
+            - if:
+                when:
+                  op: '=='
+                  left: { ref: markerState, space: { param: space }, marker: supportOpposition }
+                  right: passiveSupport
+                then:
+                  - shiftMarker: { space: { param: space }, marker: supportOpposition, delta: -1 }
+                else: []
+
   # ── piece-removal-ordering ────────────────────────────────────────────────
   # Core removal-ordering macro shared by COIN Assault and Insurgent Attack.
   # Priority: enemy troops → active guerrillas (first-faction chosen, then other) → untunneled bases (tunneled roll ≥4 to flip).

@@ -159,6 +159,23 @@ describe('effects moveToken and draw', () => {
     assert.equal(totalAfter, totalBefore);
   });
 
+  it('moveToken transition returns new state and zones containers for token-placement updates', () => {
+    const ctx = makeCtx();
+    const movingToken = ctx.state.zones['deck:none']?.[0];
+    assert.ok(movingToken !== undefined);
+
+    const result = applyEffect(
+      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+      { ...ctx, bindings: { $token: movingToken } },
+    );
+
+    assert.notEqual(result.state, ctx.state);
+    assert.notEqual(result.state.zones, ctx.state.zones);
+    assert.notEqual(result.state.zones['deck:none'], ctx.state.zones['deck:none']);
+    assert.notEqual(result.state.zones['discard:none'], ctx.state.zones['discard:none']);
+    assert.equal(result.state.zones['hand:0'], ctx.state.zones['hand:0']);
+  });
+
   it('moveToken throws when token is not in resolved from zone', () => {
     const ctx = makeCtx();
     const tokenInDiscard = ctx.state.zones['discard:none']?.[0];
@@ -208,6 +225,18 @@ describe('effects moveToken and draw', () => {
     assert.equal(result.state.zones['discard:none']?.[0]?.id, asTokenId('d1'));
     assert.equal(result.state.zones['discard:none']?.[1]?.id, asTokenId('d2'));
     assert.equal(result.state.zones['discard:none']?.[2]?.id, asTokenId('d3'));
+  });
+
+  it('draw transition returns new state and zones containers when tokens move', () => {
+    const ctx = makeCtx();
+
+    const result = applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }, ctx);
+
+    assert.notEqual(result.state, ctx.state);
+    assert.notEqual(result.state.zones, ctx.state.zones);
+    assert.notEqual(result.state.zones['deck:none'], ctx.state.zones['deck:none']);
+    assert.notEqual(result.state.zones['discard:none'], ctx.state.zones['discard:none']);
+    assert.equal(result.state.zones['hand:1'], ctx.state.zones['hand:1']);
   });
 
   it('draw from empty source is a no-op', () => {

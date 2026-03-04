@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel runtime context construction, apply/legality/preflight query evaluation surfaces
-**Deps**: archive/tickets/KERQUERY/KERQUERY-006-query-runtime-cache-owned-by-evalcontext.md, tickets/KERQUERY-007-tokenzones-cache-validity-invariants-and-transition-coverage.md, packages/engine/src/kernel/eval-context.ts, packages/engine/src/kernel/eval-query.ts, packages/engine/src/kernel/apply-move.ts, packages/engine/src/kernel/action-applicability-preflight.ts, packages/engine/src/kernel/action-actor.ts, packages/engine/src/kernel/action-executor.ts, packages/engine/src/kernel/legal-moves.ts, packages/engine/src/kernel/trigger-dispatch.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-006-query-runtime-cache-owned-by-evalcontext.md, archive/tickets/KERQUERY/KERQUERY-007-tokenzones-cache-validity-invariants-and-transition-coverage.md, packages/engine/src/kernel/eval-context.ts, packages/engine/src/kernel/eval-query.ts, packages/engine/src/kernel/apply-move.ts, packages/engine/src/kernel/action-applicability-preflight.ts, packages/engine/src/kernel/action-actor.ts, packages/engine/src/kernel/action-executor.ts, packages/engine/src/kernel/legal-moves.ts, packages/engine/src/kernel/trigger-dispatch.ts
 
 ## Problem
 

@@ -1371,6 +1371,36 @@ describe('evalQuery', () => {
     assert.ok(tokenIdReads <= 120, `Expected <= 120 token id reads, received ${String(tokenIdReads)}`);
   });
 
+  it('does not reuse stale token zone mapping across state transitions when cache is shared', () => {
+    const queryRuntimeCache = createQueryRuntimeCache();
+    const initialState = makeState();
+    const movedToken = initialState.zones['hand:0']?.[0];
+    assert.ok(movedToken !== undefined);
+
+    const transitionedState: GameState = {
+      ...initialState,
+      zones: {
+        ...initialState.zones,
+        'hand:0': (initialState.zones['hand:0'] ?? []).filter((token) => token.id !== movedToken.id),
+        'bench:1': [movedToken, ...(initialState.zones['bench:1'] ?? [])],
+      },
+    };
+    const query = { query: 'tokenZones' as const, source: { query: 'binding' as const, name: '$tokenIds' as const } };
+    const firstCtx = makeCtx({
+      state: initialState,
+      bindings: { $tokenIds: [movedToken.id] },
+      queryRuntimeCache,
+    });
+    const secondCtx = makeCtx({
+      state: transitionedState,
+      bindings: { $tokenIds: [movedToken.id] },
+      queryRuntimeCache,
+    });
+
+    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQuery(query, secondCtx), ['bench:1']);
+  });
+
   it('does not reuse token zone lookup across different eval contexts', () => {
     let tokenIdReads = 0;
     const trackedToken = (id: string): Token => ({

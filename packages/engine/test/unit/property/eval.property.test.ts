@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -31,6 +32,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     bindings: {},
     collector: createCollector(),
     ...overrides,
+    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
   };
 };
 

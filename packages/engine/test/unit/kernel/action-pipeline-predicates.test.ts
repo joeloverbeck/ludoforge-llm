@@ -16,7 +16,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
-import type { EvalContext } from '../../../src/kernel/eval-context.js';
+import { createQueryRuntimeCache, type EvalContext } from '../../../src/kernel/eval-context.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'action-predicate-test', players: { min: 2, max: 2 } },
@@ -66,6 +66,7 @@ const makeCtx = (def: GameDef, state: GameState): EvalContext => ({
   activePlayer: state.activePlayer,
   actorPlayer: state.activePlayer,
   bindings: {},
+  queryRuntimeCache: createQueryRuntimeCache(),
   collector: createCollector(),
 });
 

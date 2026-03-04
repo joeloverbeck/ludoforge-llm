@@ -15,7 +15,7 @@ import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } fro
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
-import type { EvalContext } from './eval-context.js';
+import { createEvalContext, type EvalContext } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
   collectDecisionBindingsFromEffects,
@@ -143,7 +143,7 @@ const resolveMatchedPipelineForMove = (
     move,
     'turnFlowEligibility',
   );
-  const dispatch = resolveActionPipelineDispatch(def, action, {
+  const dispatch = resolveActionPipelineDispatch(def, action, createEvalContext({
     def,
     adjacencyGraph,
     runtimeTableIndex,
@@ -158,7 +158,7 @@ const resolveMatchedPipelineForMove = (
     ...(freeOperationPreflightOverlay.freeOperationZoneFilterDiagnostics === undefined
       ? {}
       : { freeOperationZoneFilterDiagnostics: freeOperationPreflightOverlay.freeOperationZoneFilterDiagnostics }),
-  });
+  }));
   if (dispatch.kind !== 'matched') {
     return undefined;
   }
@@ -524,7 +524,7 @@ const resolveMovePreflightContext = (
           }
           return resolution.executionPlayer;
         })();
-      const evalCtx = {
+      const evalCtx = createEvalContext({
         def,
         adjacencyGraph,
         runtimeTableIndex,
@@ -533,7 +533,7 @@ const resolveMovePreflightContext = (
         actorPlayer: executionPlayer,
         bindings: baseBindings,
         collector: createCollector(),
-      };
+      });
       const pipelineDispatch = resolveActionPipelineDispatch(def, action, evalCtx);
       if (pipelineDispatch.kind === 'configuredNoMatch') {
         throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);

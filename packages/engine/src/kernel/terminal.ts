@@ -3,10 +3,9 @@ import { evalCondition } from './eval-condition.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import type { EvalContext } from './eval-context.js';
+import { createEvalContext, type EvalContext } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { createCollector } from './execution-collector.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { GameDef, GameState, PlayerScore, TerminalResult, VictoryTerminalRankingEntry } from './types.js';
@@ -18,7 +17,7 @@ function buildEvalContext(
   state: GameState,
   actorPlayer = state.activePlayer,
 ): EvalContext {
-  return {
+  return createEvalContext({
     def,
     adjacencyGraph,
     state,
@@ -26,8 +25,7 @@ function buildEvalContext(
     actorPlayer,
     bindings: {},
     runtimeTableIndex,
-    collector: createCollector(),
-  };
+  });
 }
 
 function scoreRanking(

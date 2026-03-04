@@ -10,6 +10,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   evalCondition,
   evalQuery,
   initialState,
@@ -99,6 +100,7 @@ const makeEvalCtx = (): EvalContext => {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: { $reachable: [asZoneId('b:none')] },
+    queryRuntimeCache: createQueryRuntimeCache(),
     collector: createCollector(),
   };
 };

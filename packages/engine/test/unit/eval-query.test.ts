@@ -5,6 +5,7 @@ import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   createCollector,
+  createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -123,6 +124,7 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
   const def = makeDef();
+  const queryRuntimeCache = overrides?.queryRuntimeCache ?? createQueryRuntimeCache();
   return {
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -132,6 +134,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     bindings: {},
     collector: createCollector(),
     ...overrides,
+    queryRuntimeCache,
   };
 };
 
@@ -1366,6 +1369,37 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
     assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
     assert.ok(tokenIdReads <= 120, `Expected <= 120 token id reads, received ${String(tokenIdReads)}`);
+  });
+
+  it('does not reuse token zone lookup across different eval contexts', () => {
+    let tokenIdReads = 0;
+    const trackedToken = (id: string): Token => ({
+      get id() {
+        tokenIdReads += 1;
+        return asTokenId(id);
+      },
+      type: 'piece',
+      props: { faction: 'US' },
+    });
+
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        'deck:none': [],
+        'hand:0': [trackedToken('hand-0')],
+        'hand:1': [],
+        'bench:1': [],
+        'tableau:2': [],
+        'battlefield:none': [],
+      },
+    };
+    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
+    const firstCtx = makeCtx({ state });
+    const secondCtx = makeCtx({ state });
+
+    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
+    assert.equal(tokenIdReads, 4);
   });
 
   it('rejects tokenZones when source query does not produce tokens', () => {

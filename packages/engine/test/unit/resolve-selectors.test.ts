@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   asZoneId,
   asPhaseId,
   asPlayerId,
@@ -71,6 +72,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => ({
   bindings: { '$picked': asPlayerId(2) },
   collector: createCollector(),
   ...overrides,
+  queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
 });
 
 describe('resolvePlayerSel', () => {

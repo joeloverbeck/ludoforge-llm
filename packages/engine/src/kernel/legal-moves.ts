@@ -3,6 +3,7 @@ import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
+import { createEvalContext } from './eval-context.js';
 import { classifyMoveDecisionSequenceSatisfiability, isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
@@ -21,7 +22,6 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { isActiveSeatEligibleForTurnFlow } from './turn-flow-eligibility.js';
-import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
@@ -166,7 +166,7 @@ function makeEvalContext(
   executionPlayer: GameState['activePlayer'],
   bindings: Readonly<Record<string, unknown>>,
 ): EvalContext {
-  return {
+  return createEvalContext({
     def,
     adjacencyGraph,
     state,
@@ -174,8 +174,7 @@ function makeEvalContext(
     actorPlayer: executionPlayer,
     bindings,
     runtimeTableIndex,
-    collector: createCollector(),
-  };
+  });
 }
 
 function enumerateParams(

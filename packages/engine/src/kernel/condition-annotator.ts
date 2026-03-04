@@ -10,8 +10,7 @@ import type {
 import { actionDefToDisplayTree } from './ast-to-display.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
-import type { EvalContext } from './eval-context.js';
-import { createCollector } from './execution-collector.js';
+import { createEvalContext, type EvalContext } from './eval-context.js';
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 
@@ -220,7 +219,7 @@ export function describeAction(
   try {
     const sections = actionDefToDisplayTree(action);
 
-    const evalCtx: EvalContext = {
+    const evalCtx = createEvalContext({
       def: context.def,
       adjacencyGraph: context.runtime.adjacencyGraph,
       state: context.state,
@@ -228,8 +227,7 @@ export function describeAction(
       actorPlayer: context.actorPlayer,
       bindings: {},
       runtimeTableIndex: context.runtime.runtimeTableIndex,
-      collector: createCollector(),
-    };
+    });
 
     let limitUsage: readonly LimitUsageInfo[] = [];
 
@@ -252,4 +250,3 @@ export function describeAction(
     return { sections, limitUsage: [] };
   }
 }
-

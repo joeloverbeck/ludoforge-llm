@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector } from '../../src/kernel/index.js';
+import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createQueryRuntimeCache } from '../../src/kernel/index.js';
 import { effectRuntimeError, isEffectErrorCode } from '../../src/kernel/effect-error.js';
 import { isEvalErrorCode, missingBindingError } from '../../src/kernel/eval-error.js';
 import {
@@ -50,6 +50,7 @@ const makeEvalCtx = (): EvalContext => {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: {},
+    queryRuntimeCache: createQueryRuntimeCache(),
     collector: createCollector(),
   };
 };

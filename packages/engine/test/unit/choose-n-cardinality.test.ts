@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildAdjacencyGraph, createCollector, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
+import { buildAdjacencyGraph, createCollector, createQueryRuntimeCache, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
 
 const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): EvalContext => ({
   def: {
@@ -37,6 +37,7 @@ const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): Eva
   activePlayer: asPlayerId(0),
   actorPlayer: asPlayerId(0),
   bindings: {},
+  queryRuntimeCache: createQueryRuntimeCache(),
   collector: createCollector(),
 });
 

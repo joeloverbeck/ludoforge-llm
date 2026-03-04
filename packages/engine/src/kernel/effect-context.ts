@@ -4,6 +4,7 @@ import type {
   DecisionAuthorityStrictContext,
 } from './types-core.js';
 import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
+import { createQueryRuntimeCache, type QueryRuntimeCache } from './eval-context.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type {
@@ -38,6 +39,7 @@ interface EffectContextBase {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly queryRuntimeCache: QueryRuntimeCache;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
   readonly traceContext?: EffectTraceContext;
@@ -80,19 +82,22 @@ export interface EffectResult {
   readonly pendingChoice?: ChoicePendingRequest;
 }
 
-interface RuntimeEffectContextOptions extends EffectContextBase {
+interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'queryRuntimeCache'> {
+  readonly queryRuntimeCache?: QueryRuntimeCache;
   readonly decisionAuthorityPlayer?: PlayerId;
 }
 
 export const createExecutionEffectContext = (options: RuntimeEffectContextOptions): ExecutionEffectContext => {
   const {
     activePlayer,
+    queryRuntimeCache = createQueryRuntimeCache(),
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
+    queryRuntimeCache,
     decisionAuthority: {
       source: 'engineRuntime',
       player: decisionAuthorityPlayer,
@@ -105,12 +110,14 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
 export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContextOptions): DiscoveryStrictEffectContext => {
   const {
     activePlayer,
+    queryRuntimeCache = createQueryRuntimeCache(),
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
+    queryRuntimeCache,
     decisionAuthority: {
       source: 'engineRuntime',
       player: decisionAuthorityPlayer,
@@ -125,12 +132,14 @@ export const createDiscoveryProbeEffectContext = (
 ): DiscoveryProbeEffectContext => {
   const {
     activePlayer,
+    queryRuntimeCache = createQueryRuntimeCache(),
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
+    queryRuntimeCache,
     decisionAuthority: {
       source: 'engineRuntime',
       player: decisionAuthorityPlayer,

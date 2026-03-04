@@ -1,6 +1,7 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
+import { createEvalContext } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector } from './execution-collector.js';
@@ -46,7 +47,7 @@ export const dispatchTriggers = (
       continue;
     }
 
-    const evalCtx = {
+    const evalCtx = createEvalContext({
       def,
       adjacencyGraph,
       state: nextState,
@@ -55,7 +56,7 @@ export const dispatchTriggers = (
       bindings: createEventBindings(event),
       runtimeTableIndex,
       collector: runtimeCollector,
-    };
+    });
 
     if (trigger.match !== undefined && !evalCondition(trigger.match, evalCtx)) {
       continue;

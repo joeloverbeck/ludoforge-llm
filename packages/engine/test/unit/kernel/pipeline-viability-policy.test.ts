@@ -8,6 +8,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   decideApplyMovePipelineViability,
   decideLegalChoicesPipelineViability,
   decideLegalMovesPipelineViability,
@@ -79,6 +80,7 @@ const makeEvalCtx = (
   activePlayer: state.activePlayer,
   actorPlayer: state.activePlayer,
   bindings,
+  queryRuntimeCache: createQueryRuntimeCache(),
   collector: createCollector(),
 });
 

@@ -1,6 +1,5 @@
-import type { EvalContext } from './eval-context.js';
+import { createEvalContext } from './eval-context.js';
 import { isEvalErrorCode } from './eval-error.js';
-import { createCollector } from './execution-collector.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { ActionDef, GameDef, GameState } from './types.js';
@@ -39,7 +38,7 @@ export const resolveActionActor = ({
   runtimeTableIndex: providedRuntimeTableIndex,
 }: ResolveActionActorInput): ActionActorResolution => {
   const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
-  const selectorContext: EvalContext = {
+  const selectorContext = createEvalContext({
     def,
     adjacencyGraph,
     state,
@@ -47,8 +46,7 @@ export const resolveActionActor = ({
     actorPlayer: decisionPlayer,
     bindings,
     runtimeTableIndex,
-    collector: createCollector(),
-  };
+  });
   try {
     const resolvedActors = resolvePlayerSel(action.actor, selectorContext);
     if (!resolvedActors.includes(decisionPlayer)) {

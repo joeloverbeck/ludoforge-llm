@@ -5,8 +5,7 @@ import {
   evaluateActionSelectorContracts,
   type ActionSelectorContractViolation,
 } from '../contracts/index.js';
-import { createCollector } from './execution-collector.js';
-import type { EvalContext } from './eval-context.js';
+import { createEvalContext, type EvalContext } from './eval-context.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -149,7 +148,7 @@ export const resolveActionApplicabilityPreflight = ({
     return { kind: 'notApplicable', reason: 'actionLimitExceeded' };
   }
 
-  const evalCtx: EvalContext = {
+  const evalCtx = createEvalContext({
     def,
     adjacencyGraph,
     state,
@@ -160,8 +159,7 @@ export const resolveActionApplicabilityPreflight = ({
     ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
     ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
     ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
-    collector: createCollector(),
-  };
+  });
 
   const pipelineDispatch = skipPipelineDispatch
     ? { kind: 'noneConfigured' as const }

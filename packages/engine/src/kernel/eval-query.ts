@@ -32,7 +32,6 @@ import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFil
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'empty' | 'mixed';
-const tokenZoneIndexByState = new WeakMap<EvalContext['state'], ReadonlyMap<string, string>>();
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
   let value: number | boolean | string;
@@ -509,12 +508,12 @@ function buildTokenZoneIndex(state: EvalContext['state']): ReadonlyMap<string, s
 }
 
 function getTokenZoneIndex(ctx: EvalContext): ReadonlyMap<string, string> {
-  const cached = tokenZoneIndexByState.get(ctx.state);
+  const cached = ctx.queryRuntimeCache.tokenZoneIndexByState.get(ctx.state);
   if (cached !== undefined) {
     return cached;
   }
   const built = buildTokenZoneIndex(ctx.state);
-  tokenZoneIndexByState.set(ctx.state, built);
+  ctx.queryRuntimeCache.tokenZoneIndexByState.set(ctx.state, built);
   return built;
 }
 

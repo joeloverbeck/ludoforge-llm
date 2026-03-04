@@ -2,6 +2,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
+import { createEvalContext } from './eval-context.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
@@ -282,7 +283,7 @@ const isPlayableEventContext = (
   }
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
-  return evalCondition(context.card.playCondition, {
+  return evalCondition(context.card.playCondition, createEvalContext({
     def,
     adjacencyGraph,
     runtimeTableIndex,
@@ -291,7 +292,7 @@ const isPlayableEventContext = (
     actorPlayer: state.activePlayer,
     bindings: { ...move.params },
     collector: createCollector(),
-  });
+  }));
 };
 
 const resolvePlayableEventExecutionContext = (

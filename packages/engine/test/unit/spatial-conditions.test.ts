@@ -7,6 +7,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   evalCondition,
   type EvalContext,
   type GameDef,
@@ -69,6 +70,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     bindings: {},
     collector: createCollector(),
     ...overrides,
+    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
   };
 };
 

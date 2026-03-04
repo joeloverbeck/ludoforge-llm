@@ -14,7 +14,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
-import type { EvalContext } from '../../../src/kernel/eval-context.js';
+import { createQueryRuntimeCache, type EvalContext } from '../../../src/kernel/eval-context.js';
 
 const makeDef = (overrides?: {
   readonly actionPipelines?: readonly ActionPipelineDef[];
@@ -68,6 +68,7 @@ const makeCtx = (def: GameDef, state: GameState): EvalContext => ({
   activePlayer: state.activePlayer,
   actorPlayer: state.activePlayer,
   bindings: {},
+  queryRuntimeCache: createQueryRuntimeCache(),
   collector: createCollector(),
 });
 

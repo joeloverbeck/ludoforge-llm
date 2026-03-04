@@ -7,6 +7,7 @@ import {
   asPlayerId,
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   queryConnectedZones,
   type EvalContext,
   type GameDef,
@@ -37,6 +38,7 @@ const makeCtx = (def: GameDef): EvalContext => ({
   activePlayer: asPlayerId(0),
   actorPlayer: asPlayerId(0),
   bindings: {},
+  queryRuntimeCache: createQueryRuntimeCache(),
   collector: createCollector(),
 });
 

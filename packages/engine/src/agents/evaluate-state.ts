@@ -2,8 +2,7 @@ import { buildAdjacencyGraph } from '../kernel/spatial.js';
 import { evalValue } from '../kernel/eval-value.js';
 import { terminalResult } from '../kernel/terminal.js';
 import type { PlayerId } from '../kernel/branded.js';
-import type { EvalContext } from '../kernel/eval-context.js';
-import { createCollector } from '../kernel/execution-collector.js';
+import { createEvalContext } from '../kernel/eval-context.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import type { GameDef, GameState } from '../kernel/types.js';
 
@@ -21,7 +20,7 @@ const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): n
     return 0;
   }
 
-  const ctx: EvalContext = {
+  const ctx = createEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
@@ -29,8 +28,7 @@ const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): n
     actorPlayer: playerId,
     bindings: {},
     runtimeTableIndex: buildRuntimeTableIndex(def),
-    collector: createCollector(),
-  };
+  });
   const score = evalValue(def.terminal.scoring.value, ctx);
   if (typeof score !== 'number') {
     throw new Error('Greedy evaluator scoring expression must evaluate to a number');

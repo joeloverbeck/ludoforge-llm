@@ -12,6 +12,7 @@ import {
   evaluateFreeOperationZoneFilterProbe,
 } from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { createEvalContext } from './eval-context.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
   createSeatResolutionContext,
@@ -430,7 +431,7 @@ const evaluateZoneFilterForMove = (
   const zones = moveZoneCandidates(def, move);
   if (zones.length === 0) {
     try {
-      return evalCondition(zoneFilter, {
+      return evalCondition(zoneFilter, createEvalContext({
         def,
         adjacencyGraph,
         state,
@@ -438,7 +439,7 @@ const evaluateZoneFilterForMove = (
         actorPlayer: state.activePlayer,
         bindings: baseBindings,
         collector: createCollector(),
-      });
+      }));
     } catch (cause) {
       if (shouldDeferZoneFilterFailure(cause)) {
         // During discovery template probing, zone decisions may be unresolved.
@@ -461,7 +462,7 @@ const evaluateZoneFilterForMove = (
         zoneId: asZoneId(zone),
         baseBindings,
         rebindableAliases,
-        evaluateWithBindings: (bindings) => evalCondition(zoneFilter, {
+        evaluateWithBindings: (bindings) => evalCondition(zoneFilter, createEvalContext({
           def,
           adjacencyGraph,
           state,
@@ -469,7 +470,7 @@ const evaluateZoneFilterForMove = (
           actorPlayer: state.activePlayer,
           bindings,
           collector: createCollector(),
-        }),
+        })),
       })) {
         return true;
       }

@@ -8,6 +8,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createQueryRuntimeCache,
   queryAdjacentZones,
   queryConnectedZones,
   queryTokensInAdjacentZones,
@@ -77,6 +78,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     bindings: {},
     collector: createCollector(),
     ...overrides,
+    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
   };
 };
 

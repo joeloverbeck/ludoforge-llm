@@ -1401,6 +1401,38 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery(query, secondCtx), ['bench:1']);
   });
 
+  it('reuses token zone lookup across separate contexts when runtime cache is intentionally shared', () => {
+    let tokenIdReads = 0;
+    const trackedToken = (id: string): Token => ({
+      get id() {
+        tokenIdReads += 1;
+        return asTokenId(id);
+      },
+      type: 'piece',
+      props: { faction: 'US' },
+    });
+
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        'deck:none': [],
+        'hand:0': [trackedToken('hand-0')],
+        'hand:1': [],
+        'bench:1': [],
+        'tableau:2': [],
+        'battlefield:none': [],
+      },
+    };
+    const queryRuntimeCache = createQueryRuntimeCache();
+    const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
+    const firstCtx = makeCtx({ state, queryRuntimeCache });
+    const secondCtx = makeCtx({ state, queryRuntimeCache });
+
+    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
+    assert.equal(tokenIdReads, 3);
+  });
+
   it('does not reuse token zone lookup across different eval contexts', () => {
     let tokenIdReads = 0;
     const trackedToken = (id: string): Token => ({

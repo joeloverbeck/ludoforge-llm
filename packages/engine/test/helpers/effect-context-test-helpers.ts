@@ -7,6 +7,11 @@ import {
   type EffectTraceContext,
   type PhaseTransitionBudget,
 } from '../../src/kernel/effect-context.js';
+import {
+  createEvalRuntimeResources,
+  createQueryRuntimeCache,
+  type QueryRuntimeCache,
+} from '../../src/kernel/eval-context.js';
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import { createRng } from '../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
@@ -43,11 +48,16 @@ interface EffectContextTestOptions {
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
   readonly collector?: ExecutionCollector;
+  readonly queryRuntimeCache?: QueryRuntimeCache;
+  readonly resources?: RuntimeEffectContextOptions['resources'];
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly iterationPath?: string;
 }
 
-export type EffectContextTestOverrides = Partial<RuntimeEffectContextOptions>;
+export type EffectContextTestOverrides = Partial<RuntimeEffectContextOptions> & {
+  readonly collector?: ExecutionCollector;
+  readonly queryRuntimeCache?: QueryRuntimeCache;
+};
 
 const makeRuntimeEffectContextOptions = ({
   def,
@@ -60,6 +70,8 @@ const makeRuntimeEffectContextOptions = ({
   bindings = {},
   moveParams = {},
   collector = createCollector(),
+  queryRuntimeCache = createQueryRuntimeCache(),
+  resources,
   runtimeTableIndex,
   traceContext,
   effectPath,
@@ -88,7 +100,10 @@ const makeRuntimeEffectContextOptions = ({
   ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
   ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
-  collector,
+  resources: resources ?? createEvalRuntimeResources({
+    collector,
+    queryRuntimeCache,
+  }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
   ...(iterationPath === undefined ? {} : { iterationPath }),
 });

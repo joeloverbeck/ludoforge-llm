@@ -4,7 +4,11 @@ import type {
   DecisionAuthorityStrictContext,
 } from './types-core.js';
 import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
-import { createQueryRuntimeCache, type QueryRuntimeCache } from './eval-context.js';
+import {
+  createEvalRuntimeResources,
+  type EvalRuntimeResources,
+  type QueryRuntimeCache,
+} from './eval-context.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type {
@@ -82,22 +86,23 @@ export interface EffectResult {
   readonly pendingChoice?: ChoicePendingRequest;
 }
 
-interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'queryRuntimeCache'> {
-  readonly queryRuntimeCache?: QueryRuntimeCache;
+interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'queryRuntimeCache' | 'collector'> {
+  readonly resources?: EvalRuntimeResources;
   readonly decisionAuthorityPlayer?: PlayerId;
 }
 
 export const createExecutionEffectContext = (options: RuntimeEffectContextOptions): ExecutionEffectContext => {
   const {
     activePlayer,
-    queryRuntimeCache = createQueryRuntimeCache(),
+    resources = createEvalRuntimeResources(),
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
-    queryRuntimeCache,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
       player: decisionAuthorityPlayer,
@@ -110,14 +115,15 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
 export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContextOptions): DiscoveryStrictEffectContext => {
   const {
     activePlayer,
-    queryRuntimeCache = createQueryRuntimeCache(),
+    resources = createEvalRuntimeResources(),
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
-    queryRuntimeCache,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
       player: decisionAuthorityPlayer,
@@ -132,14 +138,15 @@ export const createDiscoveryProbeEffectContext = (
 ): DiscoveryProbeEffectContext => {
   const {
     activePlayer,
-    queryRuntimeCache = createQueryRuntimeCache(),
+    resources = createEvalRuntimeResources(),
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
-    queryRuntimeCache,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
       player: decisionAuthorityPlayer,

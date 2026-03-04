@@ -8,6 +8,7 @@ import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { createCollector } from './execution-collector.js';
+import { createEvalRuntimeResources } from './eval-context.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { assertValidatedGameDef } from './validate-gamedef.js';
 import type { EffectTraceEntry, ExecutionOptions, GameDef, GameState } from './types.js';
@@ -37,6 +38,9 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
   const initialMarkers = buildInitialMarkers(validatedDef.spaceMarkers);
   const initialGlobalMarkers = buildInitialGlobalMarkers(validatedDef.globalMarkerLattices);
   const collector = createCollector(options);
+  const runtimeResources = createEvalRuntimeResources({
+    collector,
+  });
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(validatedDef.globalVars.map((variable) => [variable.name, variable.init])),
@@ -72,7 +76,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
     bindings: {},
     runtimeTableIndex,
     moveParams: {},
-    collector,
+    resources: runtimeResources,
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
   }));

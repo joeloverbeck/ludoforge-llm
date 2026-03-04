@@ -15,7 +15,7 @@ import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } fro
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
-import { createEvalContext, type EvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
   collectDecisionBindingsFromEffects,
@@ -106,6 +106,7 @@ const resolveMatchedPipelineForMove = (
   state: GameState,
   move: Move,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
+  evalRuntimeResources: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): ActionPipelineDef | undefined => {
   const action = findAction(def, move.actionId);
@@ -126,6 +127,7 @@ const resolveMatchedPipelineForMove = (
         decisionPlayer: state.activePlayer,
         bindings: runtimeBindingsForMove(move, undefined),
         runtimeTableIndex,
+        evalRuntimeResources,
       });
       if (resolution.kind === 'notApplicable') {
         return null;
@@ -151,7 +153,7 @@ const resolveMatchedPipelineForMove = (
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings: runtimeBindingsForMove(move, undefined),
-    collector: createCollector(),
+    resources: evalRuntimeResources,
     ...(freeOperationPreflightOverlay.freeOperationZoneFilter === undefined
       ? {}
       : { freeOperationZoneFilter: freeOperationPreflightOverlay.freeOperationZoneFilter }),
@@ -389,13 +391,14 @@ const validateSpecialActivityCompoundConstraints = (
   move: Move,
   action: ActionDef,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
+  evalRuntimeResources: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): void => {
   if (move.compound === undefined) {
     return;
   }
   const saMove = move.compound.specialActivity;
-  const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, seatResolution, cachedRuntime);
+  const saPipeline = resolveMatchedPipelineForMove(def, state, saMove, seatResolution, evalRuntimeResources, cachedRuntime);
   if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
       operationActionId: action.id,
@@ -454,6 +457,7 @@ const resolveMovePreflightContext = (
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
   adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>,
   runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>,
+  evalRuntimeResources: EvalRuntimeResources,
   mode: 'validation' | 'execution',
   cachedRuntime?: GameDefRuntime,
   freeOperationAnalysis?: MoveFreeOperationAnalysis | null,
@@ -481,6 +485,7 @@ const resolveMovePreflightContext = (
         decisionPlayer: state.activePlayer,
         bindings: baseBindings,
         runtimeTableIndex,
+        evalRuntimeResources,
         ...freeOperationPreflightOverlay,
       });
       if (preflight.kind === 'invalidSpec') {
@@ -515,6 +520,7 @@ const resolveMovePreflightContext = (
             decisionPlayer: state.activePlayer,
             bindings: baseBindings,
             runtimeTableIndex,
+            evalRuntimeResources,
           });
           if (resolution.kind === 'notApplicable') {
             throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
@@ -532,7 +538,7 @@ const resolveMovePreflightContext = (
         activePlayer: executionPlayer,
         actorPlayer: executionPlayer,
         bindings: baseBindings,
-        collector: createCollector(),
+        resources: evalRuntimeResources,
       });
       const pipelineDispatch = resolveActionPipelineDispatch(def, action, evalCtx);
       if (pipelineDispatch.kind === 'configuredNoMatch') {
@@ -550,7 +556,7 @@ const resolveMovePreflightContext = (
     ? undefined
     : toExecutionPipeline(action, actionPipeline);
   validateCompoundTimingConfiguration(move, executionProfile, actionPipeline);
-  validateSpecialActivityCompoundConstraints(def, state, move, action, seatResolution, cachedRuntime);
+  validateSpecialActivityCompoundConstraints(def, state, move, action, seatResolution, evalRuntimeResources, cachedRuntime);
 
   const isFreeOperationPipeline = move.freeOperation === true && executionProfile !== undefined;
   const costValidationPassed = resolvePipelineCostValidationStatus(
@@ -578,6 +584,7 @@ const validateMove = (
   state: GameState,
   move: Move,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
+  evalRuntimeResources: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): ValidatedMoveContext => {
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
@@ -605,6 +612,7 @@ const validateMove = (
     seatResolution,
     adjacencyGraph,
     runtimeTableIndex,
+    evalRuntimeResources,
     'validation',
     cachedRuntime,
     freeOperationAnalysis,
@@ -636,7 +644,7 @@ interface ApplyMoveCoreOptions {
 interface SharedMoveExecutionContext {
   readonly adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
   readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
-  readonly collector: ReturnType<typeof createCollector>;
+  readonly evalRuntimeResources: EvalRuntimeResources;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly executionPolicy?: ReturnType<typeof toMoveExecutionPolicy>;
 }
@@ -701,7 +709,9 @@ const executeMoveAction = (
   shared: SharedMoveExecutionContext,
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
-  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move, seatResolution, cachedRuntime);
+  const validated = coreOptions?.skipValidation === true
+    ? null
+    : validateMove(def, state, move, seatResolution, shared.evalRuntimeResources, cachedRuntime);
   const freeOperationAnalysis = validated === null
     ? resolveMoveFreeOperationAnalysis(def, state, move, seatResolution)
     : null;
@@ -712,6 +722,7 @@ const executeMoveAction = (
     seatResolution,
     shared.adjacencyGraph,
     shared.runtimeTableIndex,
+    shared.evalRuntimeResources,
     'execution',
     cachedRuntime,
     freeOperationAnalysis,
@@ -734,7 +745,7 @@ const executeMoveAction = (
     actorPlayer: executionPlayer,
     bindings: baseBindings,
     moveParams: move.params,
-    collector: shared.collector,
+    resources: shared.evalRuntimeResources,
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
   } as const;
   const resolvedDecisionBindings = decisionBindingsForMove(executionProfile, move.params);
@@ -874,7 +885,7 @@ const executeMoveAction = (
     effectRng,
     move,
     shared.executionPolicy,
-    shared.collector,
+    shared.evalRuntimeResources.collector,
     String(action.id),
   );
   effectState = lastingActivation.state;
@@ -924,8 +935,9 @@ const executeMoveAction = (
       shared.adjacencyGraph,
       shared.runtimeTableIndex,
       shared.executionPolicy,
-      shared.collector,
+      shared.evalRuntimeResources.collector,
       `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
+      shared.evalRuntimeResources,
     );
     triggerState = emittedEventResult.state;
     triggerRng = emittedEventResult.rng;
@@ -943,8 +955,9 @@ const executeMoveAction = (
     shared.adjacencyGraph,
     shared.runtimeTableIndex,
     shared.executionPolicy,
-    shared.collector,
+    shared.evalRuntimeResources.collector,
     `action:${String(action.id)}.actionResolved`,
+    shared.evalRuntimeResources,
   );
 
   return {
@@ -991,7 +1004,7 @@ const applyReleasedDeferredEventEffects = (
       actorPlayer: effectPlayer,
       bindings: { ...deferredEventEffect.moveParams },
       moveParams: deferredEventEffect.moveParams,
-      collector: shared.collector,
+      resources: shared.evalRuntimeResources,
       traceContext: {
         eventContext: 'actionEffect',
         actionId: deferredEventEffect.actionId,
@@ -1014,8 +1027,9 @@ const applyReleasedDeferredEventEffects = (
         shared.adjacencyGraph,
         shared.runtimeTableIndex,
         shared.executionPolicy,
-        shared.collector,
+        shared.evalRuntimeResources.collector,
         `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
+        shared.evalRuntimeResources,
       );
       nextState = emittedEventResult.state;
       nextRng = emittedEventResult.rng;
@@ -1050,10 +1064,13 @@ const applyMoveCore = (
   if (coreOptions?.executionRuntime !== undefined) {
     validatedMaxPhaseTransitionsPerMove(options);
   }
+  const evalRuntimeResources = createEvalRuntimeResources({
+    collector: runtime.collector,
+  });
   const shared: SharedMoveExecutionContext = {
     adjacencyGraph,
     runtimeTableIndex,
-    collector: runtime.collector,
+    evalRuntimeResources,
     ...(runtime.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: runtime.phaseTransitionBudget }),
     ...(runtime.executionPolicy === undefined ? {} : { executionPolicy: runtime.executionPolicy }),
   };
@@ -1083,7 +1100,7 @@ const applyMoveCore = (
     turnFlowResult.boundaryDurations,
     undefined,
     shared.executionPolicy,
-    shared.collector,
+    shared.evalRuntimeResources.collector,
   );
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const shouldAdvanceToDecisionPoint =
@@ -1180,7 +1197,14 @@ const applySimultaneousSubmission = (
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
-  validateMove(def, state, move, createSeatResolutionContext(def, state.playerCount), cachedRuntime);
+  validateMove(
+    def,
+    state,
+    move,
+    createSeatResolutionContext(def, state.playerCount),
+    createEvalRuntimeResources(),
+    cachedRuntime,
+  );
 
   const currentPlayer = Number(state.activePlayer);
   const submittedBefore = state.turnOrderState.submitted;

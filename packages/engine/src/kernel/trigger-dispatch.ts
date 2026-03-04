@@ -1,10 +1,9 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
-import { createEvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { createCollector } from './execution-collector.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { ExecutionCollector, GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
@@ -28,6 +27,7 @@ export const dispatchTriggers = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
   effectPathRoot = `triggerEvent(${event.type})`,
+  evalRuntimeResources?: EvalRuntimeResources,
 ): DispatchTriggersResult => {
   if (depth > maxDepth) {
     return {
@@ -37,7 +37,10 @@ export const dispatchTriggers = (
     };
   }
 
-  const runtimeCollector = collector ?? createCollector();
+  const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources({
+    ...(collector === undefined ? {} : { collector }),
+  });
+  const runtimeCollector = runtimeResources.collector;
   let nextState = state;
   let nextRng = rng;
   let nextTriggerLog: TriggerLogEntry[] = [...triggerLog];
@@ -55,7 +58,7 @@ export const dispatchTriggers = (
       actorPlayer: nextState.activePlayer,
       bindings: createEventBindings(event),
       runtimeTableIndex,
-      collector: runtimeCollector,
+      resources: runtimeResources,
     });
 
     if (trigger.match !== undefined && !evalCondition(trigger.match, evalCtx)) {
@@ -68,6 +71,7 @@ export const dispatchTriggers = (
 
     const effectResult = applyEffects(trigger.effects, createExecutionEffectContext({
       ...evalCtx,
+      resources: runtimeResources,
       rng: nextRng,
       moveParams: {},
       traceContext: {
@@ -101,6 +105,7 @@ export const dispatchTriggers = (
         policy,
         runtimeCollector,
         `${effectPathRoot}.cascade(${emittedEvent.type})`,
+        runtimeResources,
       );
       nextState = cascadeResult.state;
       nextRng = cascadeResult.rng;

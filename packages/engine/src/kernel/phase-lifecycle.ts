@@ -5,6 +5,7 @@ import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector, emitTrace } from './execution-collector.js';
+import { createEvalRuntimeResources } from './eval-context.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { EffectAST, ExecutionCollector, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -24,6 +25,9 @@ export const dispatchLifecycleEvent = (
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtimeCollector = collector ?? createCollector();
+  const runtimeResources = createEvalRuntimeResources({
+    collector: runtimeCollector,
+  });
   if (event.type === 'phaseEnter' || event.type === 'phaseExit' || event.type === 'turnStart' || event.type === 'turnEnd') {
     emitTrace(runtimeCollector, {
       kind: 'lifecycleEvent',
@@ -50,7 +54,7 @@ export const dispatchLifecycleEvent = (
       actorPlayer: currentState.activePlayer,
       bindings: {},
       moveParams: {},
-      collector: runtimeCollector,
+      resources: runtimeResources,
       traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: `${effectPathRoot}.effects` },
       effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
@@ -71,6 +75,7 @@ export const dispatchLifecycleEvent = (
         policy,
         runtimeCollector,
         `${effectPathRoot}.triggeredEvent(${emittedEvent.type})`,
+        runtimeResources,
       );
       currentState = emittedResult.state;
       currentRng = emittedResult.rng;
@@ -93,6 +98,7 @@ export const dispatchLifecycleEvent = (
     policy,
     runtimeCollector,
     `${effectPathRoot}.eventDispatch`,
+    runtimeResources,
   );
 
   if (triggerLogCollector !== undefined) {

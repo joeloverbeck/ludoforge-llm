@@ -2,7 +2,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
-import { createEvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
@@ -291,7 +291,7 @@ const isPlayableEventContext = (
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     bindings: { ...move.params },
-    collector: createCollector(),
+    resources: createEvalRuntimeResources({ collector: createCollector() }),
   }));
 };
 
@@ -380,6 +380,9 @@ const applyEffectList = (
   policy?: MoveExecutionPolicy,
 ): LastingEffectApplyResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const runtimeResources = createEvalRuntimeResources({
+    ...(collector === undefined ? {} : { collector }),
+  });
   const result = applyEffects(effects, createExecutionEffectContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -390,7 +393,7 @@ const applyEffectList = (
     actorPlayer: activePlayer,
     bindings: { ...moveParams },
     moveParams,
-    collector: collector ?? createCollector(),
+    resources: runtimeResources,
     traceContext: {
       eventContext: 'actionEffect',
       actionId,

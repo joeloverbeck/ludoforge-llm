@@ -5,7 +5,7 @@ import {
   evaluateActionSelectorContracts,
   type ActionSelectorContractViolation,
 } from '../contracts/index.js';
-import { createEvalContext, type EvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -45,6 +45,7 @@ interface ActionApplicabilityPreflightInput {
   readonly freeOperationZoneFilter?: EvalContext['freeOperationZoneFilter'];
   readonly freeOperationZoneFilterDiagnostics?: EvalContext['freeOperationZoneFilterDiagnostics'];
   readonly maxQueryResults?: number;
+  readonly evalRuntimeResources?: EvalRuntimeResources;
 }
 
 export const isWithinActionLimits = (action: ActionDef, state: GameState): boolean => {
@@ -79,8 +80,10 @@ export const resolveActionApplicabilityPreflight = ({
   freeOperationZoneFilter,
   freeOperationZoneFilterDiagnostics,
   maxQueryResults,
+  evalRuntimeResources: providedEvalRuntimeResources,
 }: ActionApplicabilityPreflightInput): ActionApplicabilityPreflightResult => {
   const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
+  const evalRuntimeResources = providedEvalRuntimeResources ?? createEvalRuntimeResources();
   const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
   const selectorContractViolations = evaluateActionSelectorContracts({
     selectors: {
@@ -112,6 +115,7 @@ export const resolveActionApplicabilityPreflight = ({
     decisionPlayer,
     bindings,
     runtimeTableIndex,
+    evalRuntimeResources,
   });
   if (actorResolution.kind === 'notApplicable') {
     return { kind: 'notApplicable', reason: 'actorNotApplicable' };
@@ -130,6 +134,7 @@ export const resolveActionApplicabilityPreflight = ({
       decisionPlayer,
       bindings,
       runtimeTableIndex,
+      evalRuntimeResources,
     });
     if (executorResolution.kind === 'notApplicable') {
       return { kind: 'notApplicable', reason: 'executorNotApplicable' };
@@ -156,6 +161,7 @@ export const resolveActionApplicabilityPreflight = ({
     actorPlayer: executionPlayer,
     bindings,
     runtimeTableIndex,
+    resources: evalRuntimeResources,
     ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
     ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
     ...(maxQueryResults === undefined ? {} : { maxQueryResults }),

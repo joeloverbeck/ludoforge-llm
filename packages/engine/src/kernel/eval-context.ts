@@ -23,6 +23,27 @@ export function createQueryRuntimeCache(): QueryRuntimeCache {
   };
 }
 
+export interface EvalRuntimeResources {
+  readonly collector: ExecutionCollector;
+  readonly queryRuntimeCache: QueryRuntimeCache;
+}
+
+interface EvalRuntimeResourceInput {
+  readonly collector?: ExecutionCollector;
+  readonly queryRuntimeCache?: QueryRuntimeCache;
+}
+
+export function createEvalRuntimeResources(input?: EvalRuntimeResourceInput): EvalRuntimeResources {
+  const {
+    collector = createCollector(),
+    queryRuntimeCache = createQueryRuntimeCache(),
+  } = input ?? {};
+  return {
+    collector,
+    queryRuntimeCache,
+  };
+}
+
 export interface EvalContext {
   readonly def: GameDef;
   readonly adjacencyGraph: AdjacencyGraph;
@@ -39,20 +60,18 @@ export interface EvalContext {
 }
 
 export type EvalContextInput = Omit<EvalContext, 'collector' | 'queryRuntimeCache'> & {
-  readonly collector?: ExecutionCollector;
-  readonly queryRuntimeCache?: QueryRuntimeCache;
+  readonly resources?: EvalRuntimeResources;
 };
 
 export function createEvalContext(input: EvalContextInput): EvalContext {
   const {
-    collector = createCollector(),
-    queryRuntimeCache = createQueryRuntimeCache(),
+    resources = createEvalRuntimeResources(),
     ...ctx
   } = input;
   return {
     ...ctx,
-    queryRuntimeCache,
-    collector,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
   };
 }
 

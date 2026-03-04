@@ -7,6 +7,7 @@ import {
   buildAdjacencyGraph,
   createCollector,
   createEvalContext,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   type GameDef,
   type GameState,
@@ -64,6 +65,10 @@ describe('createEvalContext', () => {
     const def = makeDef();
     const collector = createCollector({ trace: true });
     const queryRuntimeCache = createQueryRuntimeCache();
+    const resources = createEvalRuntimeResources({
+      collector,
+      queryRuntimeCache,
+    });
     const ctx = createEvalContext({
       def,
       adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -71,11 +76,65 @@ describe('createEvalContext', () => {
       activePlayer: asPlayerId(0),
       actorPlayer: asPlayerId(0),
       bindings: {},
-      collector,
-      queryRuntimeCache,
+      resources,
     });
 
     assert.equal(ctx.collector, collector);
     assert.equal(ctx.queryRuntimeCache, queryRuntimeCache);
+  });
+
+  it('reuses one runtime resource object across multiple contexts', () => {
+    const def = makeDef();
+    const resources = createEvalRuntimeResources();
+    const state = makeState();
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+
+    const first = createEvalContext({
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      resources,
+    });
+    const second = createEvalContext({
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: asPlayerId(1),
+      actorPlayer: asPlayerId(1),
+      bindings: {},
+      resources,
+    });
+
+    assert.equal(first.collector, second.collector);
+    assert.equal(first.queryRuntimeCache, second.queryRuntimeCache);
+  });
+
+  it('isolates defaults across independent createEvalContext calls', () => {
+    const def = makeDef();
+    const state = makeState();
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+
+    const first = createEvalContext({
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+    });
+    const second = createEvalContext({
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+    });
+
+    assert.notEqual(first.collector, second.collector);
+    assert.notEqual(first.queryRuntimeCache, second.queryRuntimeCache);
   });
 });

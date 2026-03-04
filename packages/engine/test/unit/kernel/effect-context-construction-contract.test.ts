@@ -8,6 +8,7 @@ import {
   createExecutionEffectContext,
 } from '../../../src/kernel/effect-context.js';
 import * as effectContextModule from '../../../src/kernel/effect-context.js';
+import { createEvalRuntimeResources, createQueryRuntimeCache } from '../../../src/kernel/eval-context.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
@@ -54,6 +55,8 @@ const makeRuntimeEffectContextOptions = (
 ): RuntimeEffectContextOptions => {
   const def = overrides.def ?? makeDef();
   const activePlayer = overrides.activePlayer ?? asPlayerId(0);
+  const collector = createCollector();
+  const queryRuntimeCache = createQueryRuntimeCache();
   return {
     def,
     adjacencyGraph: overrides.adjacencyGraph ?? buildAdjacencyGraph(def.zones),
@@ -63,7 +66,10 @@ const makeRuntimeEffectContextOptions = (
     actorPlayer: overrides.actorPlayer ?? activePlayer,
     bindings: overrides.bindings ?? {},
     moveParams: overrides.moveParams ?? {},
-    collector: overrides.collector ?? createCollector(),
+    resources: overrides.resources ?? createEvalRuntimeResources({
+      collector,
+      queryRuntimeCache,
+    }),
     ...(overrides.decisionAuthorityPlayer === undefined
       ? {}
       : { decisionAuthorityPlayer: overrides.decisionAuthorityPlayer }),
@@ -109,7 +115,8 @@ describe('effect-context construction contract', () => {
       player: activePlayer,
       ownershipEnforcement: 'strict',
     });
-    assert.equal(context.collector, options.collector);
+    assert.ok(options.resources !== undefined);
+    assert.equal(context.collector, options.resources.collector);
   });
 
   it('honors execution decisionAuthorityPlayer override', () => {

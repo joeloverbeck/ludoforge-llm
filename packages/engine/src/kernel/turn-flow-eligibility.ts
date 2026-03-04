@@ -12,7 +12,7 @@ import {
   evaluateFreeOperationZoneFilterProbe,
 } from './free-operation-zone-filter-probe.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
-import { createEvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
   createSeatResolutionContext,
@@ -438,7 +438,7 @@ const evaluateZoneFilterForMove = (
         activePlayer: state.activePlayer,
         actorPlayer: state.activePlayer,
         bindings: baseBindings,
-        collector: createCollector(),
+        resources: createEvalRuntimeResources({ collector: createCollector() }),
       }));
     } catch (cause) {
       if (shouldDeferZoneFilterFailure(cause)) {
@@ -469,7 +469,7 @@ const evaluateZoneFilterForMove = (
           activePlayer: state.activePlayer,
           actorPlayer: state.activePlayer,
           bindings,
-          collector: createCollector(),
+          resources: createEvalRuntimeResources({ collector: createCollector() }),
         })),
       })) {
         return true;

@@ -8,6 +8,8 @@ import {
   asPlayerId,
   asZoneId,
   buildAdjacencyGraph,
+  createEvalRuntimeResources,
+  createQueryRuntimeCache,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
@@ -228,6 +230,31 @@ describe('resolveActionApplicabilityPreflight()', () => {
     if (result.kind === 'applicable') {
       assert.equal(result.executionPlayer, asPlayerId(0));
       assert.equal(result.pipelineDispatch.kind, 'matched');
+    }
+  });
+
+  it('threads provided eval runtime resources through preflight eval context', () => {
+    const def = makeDef();
+    const state = makeState({ activePlayer: asPlayerId(0) });
+    const action = def.actions[0]!;
+    const queryRuntimeCache = createQueryRuntimeCache();
+    const evalRuntimeResources = createEvalRuntimeResources({
+      queryRuntimeCache,
+    });
+    const result = resolveActionApplicabilityPreflight({
+      def,
+      state,
+      action,
+      adjacencyGraph: buildAdjacencyGraph(def.zones),
+      decisionPlayer: state.activePlayer,
+      bindings: {},
+      evalRuntimeResources,
+    });
+
+    assert.equal(result.kind, 'applicable');
+    if (result.kind === 'applicable') {
+      assert.equal(result.evalCtx.queryRuntimeCache, queryRuntimeCache);
+      assert.equal(result.evalCtx.collector, evalRuntimeResources.collector);
     }
   });
 

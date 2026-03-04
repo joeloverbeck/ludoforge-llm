@@ -2,8 +2,8 @@ import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
-import type { EvalContext } from './eval-context.js';
-import { createEvalContext } from './eval-context.js';
+import type { EvalContext, EvalRuntimeResources } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { classifyMoveDecisionSequenceSatisfiability, isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import {
   applyPendingFreeOperationVariants,
@@ -162,6 +162,7 @@ function makeEvalContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
+  evalRuntimeResources: EvalRuntimeResources,
   state: GameState,
   executionPlayer: GameState['activePlayer'],
   bindings: Readonly<Record<string, unknown>>,
@@ -174,6 +175,7 @@ function makeEvalContext(
     actorPlayer: executionPlayer,
     bindings,
     runtimeTableIndex,
+    resources: evalRuntimeResources,
   });
 }
 
@@ -182,6 +184,7 @@ function enumerateParams(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
+  evalRuntimeResources: EvalRuntimeResources,
   state: GameState,
   paramIndex: number,
   bindings: Readonly<Record<string, unknown>>,
@@ -201,6 +204,7 @@ function enumerateParams(
       decisionPlayer: state.activePlayer,
       bindings,
       runtimeTableIndex,
+      evalRuntimeResources,
     });
     if (resolution.kind === 'notApplicable') {
       return null;
@@ -219,7 +223,7 @@ function enumerateParams(
     if (executionPlayer === null) {
       return;
     }
-    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
+    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
       if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
@@ -249,7 +253,7 @@ function enumerateParams(
   if (executionPlayer === null) {
     return;
   }
-  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
+  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings);
   const resolution = resolveDeclaredActionParamDomainOptions(param, ctx);
   if (resolution.invalidOption !== undefined) {
     throw kernelRuntimeError(
@@ -271,6 +275,7 @@ function enumerateParams(
       def,
       adjacencyGraph,
       runtimeTableIndex,
+      evalRuntimeResources,
       state,
       paramIndex + 1,
       { ...bindings, [param.name]: value },
@@ -397,6 +402,7 @@ export const enumerateLegalMoves = (
   };
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
+  const evalRuntimeResources = createEvalRuntimeResources();
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
 
   for (const action of def.actions) {
@@ -412,6 +418,7 @@ export const enumerateLegalMoves = (
       decisionPlayer: state.activePlayer,
       bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
       runtimeTableIndex,
+      evalRuntimeResources,
       skipExecutorCheck: !hasActionPipeline,
       skipPipelineDispatch: !hasActionPipeline,
     });
@@ -453,7 +460,7 @@ export const enumerateLegalMoves = (
     }
 
     if (!hasActionPipeline) {
-      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, state, 0, {}, enumeration, currentPhaseDef);
+      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef);
       continue;
     }
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — query cache abstraction boundary and query/runtime contract tests
-**Deps**: tickets/KERQUERY-008-operation-scoped-eval-resources-and-query-cache-threading.md, packages/engine/src/kernel/eval-context.ts, packages/engine/src/kernel/eval-query.ts, packages/engine/test/unit/eval-context.test.ts, packages/engine/test/unit/eval-query.test.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-008-operation-scoped-eval-resources-and-query-cache-threading.md, packages/engine/src/kernel/eval-context.ts, packages/engine/src/kernel/eval-query.ts, packages/engine/test/unit/eval-context.test.ts, packages/engine/test/unit/eval-query.test.ts
 
 ## Problem
 
@@ -13,8 +13,9 @@
 ## Assumption Reassessment (2026-03-04)
 
 1. Query cache ownership is now explicit in `EvalContext` and no longer module-global.
-2. Cache internals are still publicly reachable through structural types, so encapsulation is incomplete.
-3. Existing tests cover tokenZones semantics and some reuse behavior, but cache API boundary constraints are not comprehensively locked.
+2. Operation-scoped runtime resources now thread through both eval and effect context construction paths, eliminating mixed ownership patterns between preflight/discovery/execution surfaces.
+3. Cache internals are still publicly reachable through structural types, so encapsulation is incomplete.
+4. Existing tests cover tokenZones semantics and reuse/isolation behavior, but cache API boundary constraints are not comprehensively locked.
 
 ## Architecture Check
 
@@ -27,7 +28,7 @@
 ### 1. Replace public mutable cache internals with explicit API
 
 1. Refactor `QueryRuntimeCache` into an opaque/cache-object style surface with explicit methods (for example get/set helpers for token-zone index).
-2. Update `eval-query` and related code to use the API exclusively.
+2. Update `eval-query` and related runtime code to use the API exclusively.
 
 ### 2. Harden cache-boundary and behavior tests
 
@@ -49,7 +50,7 @@
 ## Out of Scope
 
 - Runtime state-transition invalidation/immutability guards (`KERQUERY-007`)
-- Broad runtime pipeline redesign unrelated to cache abstraction
+- Runtime resource threading across eval/effect context constructors (already implemented)
 - Any game-specific content, rules, or visual-config behavior
 
 ## Acceptance Criteria

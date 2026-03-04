@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   asActionId,
+  createCollector,
+  createEvalRuntimeResources,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -62,6 +64,53 @@ describe('dispatchTriggers', () => {
 
     assert.equal(result.state, state);
     assert.deepEqual(result.triggerLog, []);
+  });
+
+  it('uses the provided eval runtime resources as the sole collector ownership path', () => {
+    const def: GameDef = {
+      metadata: { id: 'trigger-resource-ownership', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [
+        {
+          id: asTriggerId('onTurnStart'),
+          event: { type: 'turnStart' },
+          effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+        },
+      ],
+      terminal: { conditions: [] },
+    };
+
+    const state = createState({ globalVars: { enabled: 1, score: 0, enteredB: 0, enteredC: 0 } });
+    const collector = createCollector({ trace: true });
+    const resources = createEvalRuntimeResources({ collector });
+
+    const result = dispatchTriggers(
+      def,
+      state,
+      { state: state.rng },
+      { type: 'turnStart' },
+      0,
+      8,
+      [],
+      undefined,
+      undefined,
+      undefined,
+      'resourceContract',
+      resources,
+    );
+
+    assert.equal(result.state.globalVars.score, 1);
+    assert.ok(collector.trace !== null);
+    assert.equal(collector.trace.length, 1);
+    assert.equal(collector.trace[0]?.kind, 'varChange');
+    assert.match(collector.trace[0]?.provenance.effectPath ?? '', /^resourceContract\.trigger:onTurnStart\.effects/);
   });
 
   it('fires matching triggers in definition order and applies match/when filters', () => {

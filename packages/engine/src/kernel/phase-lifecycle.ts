@@ -73,7 +73,6 @@ export const dispatchLifecycleEvent = (
         adjacencyGraph,
         runtimeTableIndex,
         policy,
-        runtimeCollector,
         `${effectPathRoot}.triggeredEvent(${emittedEvent.type})`,
         runtimeResources,
       );
@@ -96,7 +95,6 @@ export const dispatchLifecycleEvent = (
     adjacencyGraph,
     runtimeTableIndex,
     policy,
-    runtimeCollector,
     `${effectPathRoot}.eventDispatch`,
     runtimeResources,
   );

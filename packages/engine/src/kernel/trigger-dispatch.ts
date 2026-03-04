@@ -6,7 +6,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
-import type { ExecutionCollector, GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
+import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 export interface DispatchTriggersResult {
   readonly state: GameState;
@@ -25,7 +25,6 @@ export const dispatchTriggers = (
   adjacencyGraph: AdjacencyGraph = buildAdjacencyGraph(def.zones),
   runtimeTableIndex: RuntimeTableIndex = buildRuntimeTableIndex(def),
   policy?: MoveExecutionPolicy,
-  collector?: ExecutionCollector,
   effectPathRoot = `triggerEvent(${event.type})`,
   evalRuntimeResources?: EvalRuntimeResources,
 ): DispatchTriggersResult => {
@@ -37,10 +36,7 @@ export const dispatchTriggers = (
     };
   }
 
-  const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources({
-    ...(collector === undefined ? {} : { collector }),
-  });
-  const runtimeCollector = runtimeResources.collector;
+  const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources();
   let nextState = state;
   let nextRng = rng;
   let nextTriggerLog: TriggerLogEntry[] = [...triggerLog];
@@ -103,7 +99,6 @@ export const dispatchTriggers = (
         adjacencyGraph,
         runtimeTableIndex,
         policy,
-        runtimeCollector,
         `${effectPathRoot}.cascade(${emittedEvent.type})`,
         runtimeResources,
       );

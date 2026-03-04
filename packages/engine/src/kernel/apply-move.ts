@@ -935,7 +935,6 @@ const executeMoveAction = (
       shared.adjacencyGraph,
       shared.runtimeTableIndex,
       shared.executionPolicy,
-      shared.evalRuntimeResources.collector,
       `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
       shared.evalRuntimeResources,
     );
@@ -955,7 +954,6 @@ const executeMoveAction = (
     shared.adjacencyGraph,
     shared.runtimeTableIndex,
     shared.executionPolicy,
-    shared.evalRuntimeResources.collector,
     `action:${String(action.id)}.actionResolved`,
     shared.evalRuntimeResources,
   );
@@ -1027,7 +1025,6 @@ const applyReleasedDeferredEventEffects = (
         shared.adjacencyGraph,
         shared.runtimeTableIndex,
         shared.executionPolicy,
-        shared.evalRuntimeResources.collector,
         `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
         shared.evalRuntimeResources,
       );

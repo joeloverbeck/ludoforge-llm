@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — initial-state and lifecycle runtime resource threading
-**Deps**: archive/tickets/KERQUERY/KERQUERY-008-operation-scoped-eval-resources-and-query-cache-threading.md, tickets/KERQUERY-010-eliminate-dual-resource-inputs-in-trigger-dispatch.md, packages/engine/src/kernel/initial-state.ts, packages/engine/src/kernel/phase-lifecycle.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-008-operation-scoped-eval-resources-and-query-cache-threading.md, archive/tickets/KERQUERY/KERQUERY-010-eliminate-dual-resource-inputs-in-trigger-dispatch.md, packages/engine/src/kernel/initial-state.ts, packages/engine/src/kernel/phase-lifecycle.ts
 
 ## Problem
 

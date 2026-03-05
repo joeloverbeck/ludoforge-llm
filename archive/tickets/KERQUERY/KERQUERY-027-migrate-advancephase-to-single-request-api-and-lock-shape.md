@@ -1,6 +1,6 @@
 # KERQUERY-027: Migrate advancePhase to single-request API and lock shape
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — phase-advance API shape hardening and call-site migration
@@ -14,15 +14,16 @@
 
 1. `dispatchTriggers` has already moved to a single request-object API and reduced signature drift risk.
 2. `advancePhase` remains positional and now includes a required resources argument plus optional trailing arguments.
-3. Existing tests validate behavior but do not lock `advancePhase` request-shape invariants at source level.
-4. Active tickets do not currently target `advancePhase` API-shape migration.
+3. Existing tests already include AST/source guards for `advancePhase` runtime-resource and operation-scope invariants (`packages/engine/test/unit/phase-advance.test.ts`), but there is still no dedicated API-shape policy guard that enforces a single request-object parameter.
+4. `tickets/KERQUERY-028-enforce-operation-scoped-resource-reuse-in-phase-advance-tests.md` is active and adjacent: it assumes this migration lands first, but does not implement API-shape migration itself.
 
 ## Architecture Check
 
 1. A single request-object API is cleaner and more extensible than positional parameters for lifecycle operations.
 2. It enables explicit boundary validation and future additions without ordering hazards.
 3. This remains game-agnostic runtime architecture; no game-specific branching or schema coupling is introduced.
-4. No backwards-compatibility alias/shim overloads: migrate directly to one canonical API.
+4. The change aligns `advancePhase` with existing kernel API direction (`dispatchTriggers`) and removes optional-tail ambiguity that can silently swap `triggerLogCollector`/`policy`/`cachedRuntime`.
+5. No backwards-compatibility alias/shim overloads: migrate directly to one canonical API.
 
 ## What to Change
 
@@ -34,8 +35,9 @@
 
 ### 2. Add API-shape source guard
 
-1. Add a source/lint contract test asserting `advancePhase` has one request parameter.
+1. Add a source/lint contract test asserting `advancePhase` has one request parameter typed as `AdvancePhaseRequest`.
 2. Fail if positional overloads/shims are reintroduced.
+3. Keep existing `phase-advance.test.ts` AST guards focused on runtime-resource/operation-scope invariants; avoid duplicating those assertions in the lint policy file.
 
 ## Files to Touch
 
@@ -44,7 +46,7 @@
 - `packages/engine/test/helpers/replay-harness.ts` (modify)
 - `packages/engine/test/unit/phase-advance.test.ts` (modify/add)
 - `packages/engine/test/unit/lint/phase-advance-api-shape-policy.test.ts` (new)
-- `packages/engine/test/integration/**` and `packages/engine/test/e2e/**` call sites (modify as needed)
+- direct `advancePhase(` call sites in `packages/engine/test/integration/**` and `packages/engine/test/e2e/**` (modify as needed)
 
 ## Out of Scope
 
@@ -79,3 +81,19 @@
 2. `node --test packages/engine/dist/test/unit/lint/phase-advance-api-shape-policy.test.js packages/engine/dist/test/unit/phase-advance.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-05
+- **What actually changed**:
+  - Migrated `advancePhase` to a single canonical request-object API via `AdvancePhaseRequest` in `packages/engine/src/kernel/phase-advance.ts`.
+  - Migrated kernel/runtime and test call sites to request-object invocation (including `effects-turn-flow`, replay harness, unit, integration, and e2e coverage).
+  - Added `packages/engine/test/unit/lint/phase-advance-api-shape-policy.test.ts` to prevent overload/positional API drift and enforce `advancePhase(request: AdvancePhaseRequest)`.
+  - Updated AST source-contract assertions in `packages/engine/test/unit/phase-advance.test.ts` so operation-scoped resource threading checks validate request-property wiring instead of positional index arguments.
+- **Deviations from original plan**:
+  - Kept existing runtime-resource/seat-resolution source guards in `phase-advance.test.ts` and added the new API-shape lock as a dedicated lint policy file (no duplication of existing guard scope).
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/lint/phase-advance-api-shape-policy.test.js packages/engine/dist/test/unit/phase-advance.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅

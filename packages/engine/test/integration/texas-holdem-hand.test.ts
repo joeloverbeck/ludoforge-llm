@@ -171,21 +171,21 @@ describe('texas hand mechanics integration', () => {
     assert.equal(state.perPlayerVars[dealerSeat]?.streetBet, state.globalVars.smallBlind);
     assert.equal(state.perPlayerVars[bbSeat]?.streetBet, state.globalVars.bigBlind);
 
-    state = advancePhase(def, state, createEvalRuntimeResources());
+    state = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
 
     assert.equal(state.currentPhase, 'flop');
     assert.equal(zoneCount(state, 'burn:none'), 1);
     assert.equal(zoneCount(state, 'community:none'), 3);
     assert.equal(zoneCount(state, 'deck:none'), 44);
 
-    state = advancePhase(def, state, createEvalRuntimeResources());
+    state = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
 
     assert.equal(state.currentPhase, 'turn');
     assert.equal(zoneCount(state, 'burn:none'), 2);
     assert.equal(zoneCount(state, 'community:none'), 4);
     assert.equal(zoneCount(state, 'deck:none'), 42);
 
-    state = advancePhase(def, state, createEvalRuntimeResources());
+    state = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
 
     assert.equal(state.currentPhase, 'river');
     assert.equal(zoneCount(state, 'burn:none'), 3);

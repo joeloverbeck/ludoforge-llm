@@ -75,7 +75,7 @@ const withCoupRound = (
 };
 
 const enterCoupResources = (def: GameDef, state: GameState): GameState => {
-  const atVictory = advancePhase(def, state, createEvalRuntimeResources());
+  const atVictory = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
   assert.equal(atVictory.currentPhase, asPhaseId('coupVictory'));
   const afterVictory = applyMove(def, atVictory, { actionId: asActionId('coupVictoryCheck'), params: {} }).state;
   assert.equal(afterVictory.currentPhase, asPhaseId('coupResources'));

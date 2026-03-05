@@ -42,7 +42,7 @@ A shared runtime-resource validator now exists, but there is no source-policy te
 ## Out of Scope
 
 - Runtime behavior changes in kernel execution paths
-- API signature redesign work (`tickets/KERQUERY-025-lock-dispatchtriggers-single-request-api-shape-with-source-guards.md`, `tickets/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md`)
+- API signature redesign work (`archive/tickets/KERQUERY/KERQUERY-025-lock-dispatchtriggers-single-request-api-shape-with-source-guards.md`, `archive/tickets/KERQUERY/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md`)
 - Query-cache ownership/public-surface tickets (`tickets/KERQUERY-029-derive-query-cache-key-literal-policy-from-canonical-owner.md`, `tickets/KERQUERY-030-harden-query-runtime-cache-ownership-policy-with-ast-signature-checks.md`, `tickets/KERQUERY-031-enforce-query-runtime-cache-index-immutability-at-write-boundary.md`)
 
 ## Acceptance Criteria

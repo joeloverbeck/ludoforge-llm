@@ -265,16 +265,16 @@ export const applyAdvancePhase = (
   if (!consumePhaseTransitionBudget(ctx, 'advancePhase')) {
     return { state: ctx.state, rng: ctx.rng };
   }
-  const nextState = advancePhase(
-    ctx.def,
-    ctx.state,
-    createEvalRuntimeResources({
+  const policy = lifecycleBudgetOptions(ctx);
+  const nextState = advancePhase({
+    def: ctx.def,
+    state: ctx.state,
+    evalRuntimeResources: createEvalRuntimeResources({
       collector: ctx.collector,
       queryRuntimeCache: ctx.queryRuntimeCache,
     }),
-    undefined,
-    lifecycleBudgetOptions(ctx),
-  );
+    ...(policy === undefined ? {} : { policy }),
+  });
   return {
     state: nextState,
     rng: { state: nextState.rng },

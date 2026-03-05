@@ -193,13 +193,13 @@ export const advancePhaseBounded = (config: BoundedAdvanceConfig): BoundedAdvanc
         `Bounded phase advance exhausted maxSteps=${config.maxSteps} phase=${String(state.currentPhase)} activePlayer=${String(state.activePlayer)} keyVars=${formatKeyVars(state, config.keyVars)}`,
       );
     }
-    state = advancePhase(
-      config.def,
+    state = advancePhase({
+      def: config.def,
       state,
-      operationResources,
-      config.triggerLogCollector,
-      config.executionPolicy,
-    );
+      evalRuntimeResources: operationResources,
+      ...(config.triggerLogCollector === undefined ? {} : { triggerLogCollector: config.triggerLogCollector }),
+      ...(config.executionPolicy === undefined ? {} : { policy: config.executionPolicy }),
+    });
     steps += 1;
   }
 

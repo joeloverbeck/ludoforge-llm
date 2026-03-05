@@ -99,7 +99,7 @@ describe('FITL coup redeploy phase (Rule 6.4)', () => {
       },
     });
 
-    const entered = advancePhase(def, state, createEvalRuntimeResources());
+    const entered = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
 
     assert.equal(entered.currentPhase, asPhaseId('coupRedeploy'));
     assert.equal(countFactionInZone(entered, 'central-laos:none', 'US'), 0);

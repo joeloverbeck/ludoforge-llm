@@ -259,14 +259,24 @@ const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'acti
   };
 };
 
-export const advancePhase = (
-  def: GameDef,
-  state: GameState,
-  evalRuntimeResources: EvalRuntimeResources,
-  triggerLogCollector?: TriggerLogEntry[],
-  policy?: MoveExecutionPolicy,
-  cachedRuntime?: GameDefRuntime,
-): GameState => {
+export interface AdvancePhaseRequest {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly evalRuntimeResources: EvalRuntimeResources;
+  readonly triggerLogCollector?: TriggerLogEntry[];
+  readonly policy?: MoveExecutionPolicy;
+  readonly cachedRuntime?: GameDefRuntime;
+}
+
+export const advancePhase = (request: AdvancePhaseRequest): GameState => {
+  const {
+    def,
+    state,
+    evalRuntimeResources,
+    triggerLogCollector,
+    policy,
+    cachedRuntime,
+  } = request;
   assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advancePhase evalRuntimeResources');
   const lifecycleResources = evalRuntimeResources;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
@@ -451,7 +461,14 @@ export const advanceToDecisionPoint = (
       }
     }
 
-    nextState = advancePhase(def, nextState, operationResources, triggerLogCollector, policy, cachedRuntime);
+    nextState = advancePhase({
+      def,
+      state: nextState,
+      evalRuntimeResources: operationResources,
+      ...(triggerLogCollector === undefined ? {} : { triggerLogCollector }),
+      ...(policy === undefined ? {} : { policy }),
+      ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
+    });
     advances += 1;
   }
 

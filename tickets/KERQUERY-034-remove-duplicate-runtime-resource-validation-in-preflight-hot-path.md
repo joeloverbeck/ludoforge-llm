@@ -46,7 +46,7 @@
 ## Out of Scope
 
 - Broader legal-moves enumeration algorithm changes
-- AdvancePhase API-shape/runtime boundary tickets (`tickets/KERQUERY-026-harden-advancephase-runtime-resource-contract-boundary.md`, `tickets/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md`)
+- AdvancePhase API-shape/runtime boundary tickets (`archive/tickets/KERQUERY/KERQUERY-026-harden-advancephase-runtime-resource-contract-boundary.md`, `archive/tickets/KERQUERY/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md`)
 - Query-runtime-cache API/policy tickets (`tickets/KERQUERY-029-derive-query-cache-key-literal-policy-from-canonical-owner.md`, `tickets/KERQUERY-030-harden-query-runtime-cache-ownership-policy-with-ast-signature-checks.md`, `tickets/KERQUERY-031-enforce-query-runtime-cache-index-immutability-at-write-boundary.md`)
 
 ## Acceptance Criteria

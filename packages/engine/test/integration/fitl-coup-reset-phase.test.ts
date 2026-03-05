@@ -125,7 +125,7 @@ describe('FITL coup reset phase (production data)', () => {
     const start = setupResetEntryState(def, 4);
 
     const resetEntryLog: TriggerLogEntry[] = [];
-    const atReset = advancePhase(def, start, createEvalRuntimeResources(), resetEntryLog);
+    const atReset = advancePhase({ def, state: start, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: resetEntryLog });
 
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.trail, 3);
@@ -167,7 +167,7 @@ describe('FITL coup reset phase (production data)', () => {
     const beforeBoundaryDeckTop = atReset.zones['deck:none']?.[0]?.id;
 
     const lifecycleLog: TriggerLogEntry[] = [];
-    const nextTurn = advancePhase(def, atReset, createEvalRuntimeResources(), lifecycleLog);
+    const nextTurn = advancePhase({ def, state: atReset, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: lifecycleLog });
 
     assert.equal(nextTurn.currentPhase, asPhaseId('main'));
     assert.equal(nextTurn.turnCount, atReset.turnCount + 1);
@@ -184,7 +184,7 @@ describe('FITL coup reset phase (production data)', () => {
   it('normalizes trail from 0 to 1 at reset entry', () => {
     const def = compileProductionDef();
     const start = setupResetEntryState(def, 0);
-    const atReset = advancePhase(def, start, createEvalRuntimeResources());
+    const atReset = advancePhase({ def, state: start, evalRuntimeResources: createEvalRuntimeResources() });
 
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.trail, 1);
@@ -193,7 +193,7 @@ describe('FITL coup reset phase (production data)', () => {
   it('leaves trail unchanged when already in 1..3', () => {
     const def = compileProductionDef();
     const start = setupResetEntryState(def, 2);
-    const atReset = advancePhase(def, start, createEvalRuntimeResources());
+    const atReset = advancePhase({ def, state: start, evalRuntimeResources: createEvalRuntimeResources() });
 
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.trail, 2);

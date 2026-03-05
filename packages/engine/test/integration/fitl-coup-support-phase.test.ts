@@ -188,7 +188,7 @@ describe('FITL coup support phase integration', () => {
     const start = initialState(def, 41, 2).state;
     const triggerLog: TriggerLogEntry[] = [];
 
-    const next = advancePhase(def, start, createEvalRuntimeResources(), triggerLog);
+    const next = advancePhase({ def, state: start, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: triggerLog });
 
     assert.equal(next.currentPhase, asPhaseId('support'));
 
@@ -236,7 +236,7 @@ describe('FITL coup support phase integration', () => {
     const runOnce = () => {
       const start = initialState(def, 41, 2).state;
       const triggerLog: TriggerLogEntry[] = [];
-      const end = advancePhase(def, start, createEvalRuntimeResources(), triggerLog);
+      const end = advancePhase({ def, state: start, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: triggerLog });
       return { end, triggerLog };
     };
 

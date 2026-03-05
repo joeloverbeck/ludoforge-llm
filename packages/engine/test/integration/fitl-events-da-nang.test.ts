@@ -185,11 +185,11 @@ describe('FITL card-22 Da Nang', () => {
       },
     };
 
-    const atReset = advancePhase(def, preparedForCoupReset, createEvalRuntimeResources());
+    const atReset = advancePhase({ def, state: preparedForCoupReset, evalRuntimeResources: createEvalRuntimeResources() });
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.mom_daNang, false, 'Coup reset must clear Da Nang momentum');
 
-    const afterReset = advancePhase(def, atReset, createEvalRuntimeResources());
+    const afterReset = advancePhase({ def, state: atReset, evalRuntimeResources: createEvalRuntimeResources() });
     assert.equal(afterReset.currentPhase, asPhaseId('main'));
     assert.doesNotThrow(() => runAirStrike(afterReset), 'Air Strike should be legal again after Coup reset');
   });

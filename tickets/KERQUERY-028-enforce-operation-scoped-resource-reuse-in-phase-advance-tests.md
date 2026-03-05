@@ -44,7 +44,7 @@ Recent call-site migration made `advancePhase` explicit about resources, but sev
 ## Out of Scope
 
 - Runtime behavior changes in kernel phase logic
-- `advancePhase` API-shape migration (`tickets/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md`)
+- `advancePhase` API-shape migration (`archive/tickets/KERQUERY/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md`)
 - Query runtime cache policy/public-surface tickets (`archive/tickets/KERQUERY/KERQUERY-021-enforce-query-cache-key-literal-ownership-policy.md`, `archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
 
 ## Acceptance Criteria

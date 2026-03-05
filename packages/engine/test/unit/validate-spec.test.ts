@@ -579,11 +579,53 @@ describe('validateGameSpec structural rules', () => {
     assert.equal(duplicateIdDiagnostics.length, 1);
     assert.deepEqual(duplicateIdDiagnostics[0], {
       code: 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
-      path: 'doc.metadata.namedSets.caf\u00e9',
+      path: 'doc.metadata.namedSets["caf\u00e9"]',
       severity: 'error',
       message: 'metadata.namedSets contains duplicate set ids after normalization: "caf\u00e9".',
       suggestion: 'Use unique named set ids after trim + NFC normalization.',
     });
+  });
+
+  it('encodes metadata.namedSets duplicate-id diagnostics when ids contain path metacharacters', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          ' insurgent.group[0] ': ['US'],
+          'insurgent.group[0]': ['ARVN'],
+        },
+      },
+    });
+
+    const duplicateIdDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
+    );
+    assert.equal(duplicateIdDiagnostics.length, 1);
+    assert.equal(duplicateIdDiagnostics[0]?.path, 'doc.metadata.namedSets["insurgent.group[0]"]');
+  });
+
+  it('encodes metadata.namedSets keyed diagnostics when ids contain path metacharacters', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          'broken.group[0]': [1, 'ARVN'],
+        },
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_VALUES_INVALID'
+          && diagnostic.path === 'doc.metadata.namedSets["broken.group[0]"]',
+      ),
+      true,
+    );
   });
 
   it('validates zone enums', () => {

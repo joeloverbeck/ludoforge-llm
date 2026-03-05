@@ -14,6 +14,7 @@ import {
 import { normalizeIdentifier } from './identifier-utils.js';
 import {
   canonicalizeNamedSetsWithCollisions,
+  toNamedSetDiagnosticPath,
   toNamedSetCanonicalIdCollisionDiagnostics,
 } from './named-set-utils.js';
 
@@ -118,7 +119,7 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
     }
 
     for (const [setName, rawValues] of Object.entries(namedSets)) {
-      const setPath = `doc.metadata.namedSets.${setName}`;
+      const setPath = toNamedSetDiagnosticPath('doc.metadata.namedSets', setName);
       if (!isNonEmptyString(setName)) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_METADATA_NAMED_SET_ID_INVALID',

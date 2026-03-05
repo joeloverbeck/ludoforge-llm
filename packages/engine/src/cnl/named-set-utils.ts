@@ -62,13 +62,17 @@ export function listCanonicalNamedSetAlternatives(namedSets: CanonicalNamedSets)
   return [...namedSets.keys()].map((id) => id as string).sort((left, right) => left.localeCompare(right));
 }
 
+export function toNamedSetDiagnosticPath(basePath: string, rawId: string): string {
+  return `${basePath}[${JSON.stringify(rawId)}]`;
+}
+
 export function toNamedSetCanonicalIdCollisionDiagnostics(
   options: NamedSetCollisionDiagnosticsOptions,
 ): readonly Diagnostic[] {
   return options.collisions.flatMap((collision) =>
     collision.rawIds.slice(1).map((rawId) => ({
       code: options.code,
-      path: `doc.metadata.namedSets.${rawId}`,
+      path: toNamedSetDiagnosticPath('doc.metadata.namedSets', rawId),
       severity: 'error' as const,
       message: `metadata.namedSets contains duplicate set ids after normalization: "${collision.canonicalId}".`,
       suggestion: 'Use unique named set ids after trim + NFC normalization.',

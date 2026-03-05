@@ -99,7 +99,7 @@ describe('compiler API foundation', () => {
     assert.equal(collisionDiagnostics.length, 1);
     assert.deepEqual(collisionDiagnostics[0], {
       code: 'CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID',
-      path: 'doc.metadata.namedSets.caf\u00e9',
+      path: 'doc.metadata.namedSets["caf\u00e9"]',
       severity: 'error',
       message: 'metadata.namedSets contains duplicate set ids after normalization: "caf\u00e9".',
       suggestion: 'Use unique named set ids after trim + NFC normalization.',
@@ -109,6 +109,27 @@ describe('compiler API foundation', () => {
       id: 'demo',
       players: { min: 2, max: 2 },
     });
+  });
+
+  it('encodes compile-only namedSets collision diagnostics when ids contain path metacharacters', () => {
+    const doc = createCompileReadyDoc();
+    const result = compileGameSpecToGameDef({
+      ...doc,
+      metadata: {
+        ...doc.metadata,
+        namedSets: {
+          ' insurgent.group[0] ': ['US'],
+          'insurgent.group[0]': ['ARVN'],
+        },
+      },
+    });
+
+    const collisionDiagnostics = result.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID',
+    );
+    assert.equal(collisionDiagnostics.length, 1);
+    assert.equal(collisionDiagnostics[0]?.path, 'doc.metadata.namedSets["insurgent.group[0]"]');
+    assert.equal(result.gameDef, null);
   });
 
   it('rejects invalid compile limit overrides', () => {

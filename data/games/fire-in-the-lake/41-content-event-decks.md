@@ -44,7 +44,9 @@ eventDecks:
                           query: tokensInZone
                           zone: out-of-play-US:none
                           filter:
-                            - { prop: faction, eq: US }
+                            op: and
+                            args:
+                              - { prop: faction, eq: US }
                         to:
                           zoneExpr: available-US:none
                 - removeByPriority:
@@ -55,7 +57,9 @@ eventDecks:
                           query: tokensInZone
                           zone: out-of-play-ARVN:none
                           filter:
-                            - { prop: faction, eq: ARVN }
+                            op: and
+                            args:
+                              - { prop: faction, eq: ARVN }
                         to:
                           zoneExpr: available-ARVN:none
                 - addVar: { scope: global, var: aid, delta: 1 }
@@ -191,7 +195,9 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
                     to:
                       zoneExpr: out-of-play-US:none
       - id: card-76
@@ -266,8 +272,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                     to:
                       zoneExpr: $targetSpace
         shaded:
@@ -286,8 +294,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                     to:
                       zoneExpr: available-US:none
             - removeByPriority:
@@ -298,8 +308,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
       - id: card-83
@@ -420,8 +432,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-ARVN:none
                       filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: ARVN }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: $targetCity
             - macro: shift-support-opposition
@@ -446,8 +460,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetCity
             - removeByPriority:
@@ -458,8 +474,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-NVA:none
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetCity
             - macro: shift-support-opposition
@@ -516,7 +534,9 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
                     to:
                       zoneExpr: $destSpace
         shaded:
@@ -535,7 +555,9 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinPiece, prop: faction }, ':none'] }
       - id: card-68
@@ -568,7 +590,9 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: 'NVA' }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: 'NVA' }
                           right:
                             aggregate:
                               op: count
@@ -576,7 +600,9 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                   cardinality: { max: 1 }
               effects:
                 - removeByPriority:
@@ -587,8 +613,10 @@ eventDecks:
                           query: tokensInZone
                           zone: available-US:none
                           filter:
-                            - { prop: faction, eq: US }
-                            - { prop: type, eq: irregular }
+                            op: and
+                            args:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: irregular }
                         to:
                           zoneExpr: $targetProvince
                 - setMarker:
@@ -613,7 +641,9 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: 'NVA' }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: 'NVA' }
                           right:
                             aggregate:
                               op: count
@@ -621,7 +651,9 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                   cardinality: { max: 1 }
               effects:
                 - removeByPriority:
@@ -632,8 +664,10 @@ eventDecks:
                           query: tokensInZone
                           zone: available-ARVN:none
                           filter:
-                            - { prop: faction, eq: ARVN }
-                            - { prop: type, eq: ranger }
+                            op: and
+                            args:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: ranger }
                         to:
                           zoneExpr: $targetProvince
                 - setMarker:
@@ -652,8 +686,10 @@ eventDecks:
                       query:
                         query: tokensInMapSpaces
                         filter:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
+                          op: and
+                          args:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: irregular }
                   right: 0
                 then:
                   - chooseN:
@@ -661,8 +697,10 @@ eventDecks:
                       options:
                         query: tokensInMapSpaces
                         filter:
-                          - { prop: faction, eq: US }
-                          - { prop: type, eq: irregular }
+                          op: and
+                          args:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: irregular }
                       min: 0
                       max: 3
                   - chooseOne:
@@ -681,8 +719,10 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, eq: US }
-                                      - { prop: type, eq: irregular }
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: irregular }
                               right: 0
                   - forEach:
                       bind: $irregular
@@ -721,7 +761,9 @@ eventDecks:
                   query: tokensInZone
                   zone: out-of-play-US:none
                   filter:
-                    - { prop: faction, eq: US }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
                 destinations:
                   query: mapSpaces
                   filter:
@@ -744,7 +786,9 @@ eventDecks:
                         query: tokensInZone
                         zone: casualties-US:none
                         filter:
-                          - { prop: faction, eq: US }
+                          op: and
+                          args:
+                            - { prop: faction, eq: US }
                   right: -1
             - moveAll:
                 from: casualties-US:none
@@ -776,16 +820,20 @@ eventDecks:
                               conditionMacro: fitl-space-in-laos-cambodia
                               args: { spaceExpr: $zone }
                             filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, op: in, value: [troops, guerrilla] }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                - { prop: type, op: in, value: [troops, guerrilla] }
                           - query: tokensInMapSpaces
                             spaceFilter:
                               conditionMacro: fitl-space-in-laos-cambodia
                               args: { spaceExpr: $zone }
                             filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, eq: base }
-                              - { prop: tunnel, eq: untunneled }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                - { prop: type, eq: base }
+                                - { prop: tunnel, eq: untunneled }
                       min: 0
                       max: { ref: binding, name: $dieRoll }
                   - forEach:
@@ -805,7 +853,9 @@ eventDecks:
                   query: tokensInZone
                   zone: available-NVA:none
                   filter:
-                    - { prop: faction, eq: NVA }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
                 destinations:
                   query: mapSpaces
                   filter:
@@ -822,18 +872,24 @@ eventDecks:
                   sources:
                     - query: tokensInMapSpaces
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     - query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     - query: tokensInZone
                       zone: casualties-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                 min: 0
                 max: 2
             - forEach:
@@ -885,8 +941,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
             - addVar:
                 scope: global
                 var: linebacker11SupportAvailable
@@ -897,8 +955,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: base }
             - if:
                 when: { op: '>', left: { ref: gvar, var: linebacker11SupportAvailable }, right: 25 }
                 then:
@@ -1006,8 +1066,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: casualties-US:none
             - addVar: { scope: global, var: trail, delta: 2 }
@@ -1079,12 +1141,16 @@ eventDecks:
                     - query: tokensInZone
                       zone: out-of-play-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     - query: tokensInMapSpaces
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                 min: 0
                 max: 3
             - forEach:
@@ -1130,8 +1196,10 @@ eventDecks:
                 options:
                   query: tokensInMapSpaces
                   filter:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: troops }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: troops }
                 min: 0
                 max: 3
             - forEach:
@@ -1210,9 +1278,11 @@ eventDecks:
                     conditionMacro: fitl-space-outside-south
                     args: { spaceExpr: $zone }
                   filter:
-                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                    - { prop: type, eq: guerrilla }
-                    - { prop: activity, eq: active }
+                    op: and
+                    args:
+                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - { prop: type, eq: guerrilla }
+                      - { prop: activity, eq: active }
                 effects:
                   - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: underground }
             - chooseN:
@@ -1223,8 +1293,10 @@ eventDecks:
                     conditionMacro: fitl-space-outside-south
                     args: { spaceExpr: $zone }
                   filter:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: base }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: base }
                 min: 0
                 max: 1
             - forEach:
@@ -1244,8 +1316,10 @@ eventDecks:
                   query: tokensInZone
                   zone: available-NVA:none
                   filter:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: base }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: base }
                 min: 0
                 max: 1
             - if:
@@ -1279,7 +1353,9 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, op: eq, value: NVA }
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: eq, value: NVA }
                                   right:
                                     aggregate:
                                       op: count
@@ -1287,7 +1363,9 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                                 - op: '<'
                                   left:
                                     aggregate:
@@ -1296,7 +1374,9 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: type, op: eq, value: base }
+                                          op: and
+                                          args:
+                                            - { prop: type, op: eq, value: base }
                                   right: 2
                       right: 0
                 then:
@@ -1317,7 +1397,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, op: eq, value: NVA }
+                                      op: and
+                                      args:
+                                        - { prop: faction, op: eq, value: NVA }
                               right:
                                 aggregate:
                                   op: count
@@ -1325,7 +1407,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
+                                      op: and
+                                      args:
+                                        - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                             - op: '<'
                               left:
                                 aggregate:
@@ -1334,7 +1418,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: type, op: eq, value: base }
+                                      op: and
+                                      args:
+                                        - { prop: type, op: eq, value: base }
                               right: 2
                   - forEach:
                       bind: $nvaBase
@@ -1350,9 +1436,11 @@ eventDecks:
                 options:
                   query: tokensInMapSpaces
                   filter:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: guerrilla }
-                    - { prop: activity, eq: active }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: guerrilla }
+                      - { prop: activity, eq: active }
                 min: 0
                 max: 3
             - forEach:
@@ -1445,7 +1533,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: type, eq: troops }
+                                      op: and
+                                      args:
+                                        - { prop: type, eq: troops }
                               right: 0
                             - op: '>'
                               left:
@@ -1455,7 +1545,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: type, eq: police }
+                                      op: and
+                                      args:
+                                        - { prop: type, eq: police }
                               right: 0
                   right: 0
                 then:
@@ -1474,7 +1566,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: type, eq: troops }
+                                      op: and
+                                      args:
+                                        - { prop: type, eq: troops }
                               right: 0
                             - op: '>'
                               left:
@@ -1484,7 +1578,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: type, eq: police }
+                                      op: and
+                                      args:
+                                        - { prop: type, eq: police }
                               right: 0
                   - shiftMarker: { space: { zoneExpr: { ref: binding, name: $targetSpace } }, marker: supportOpposition, delta: -1 }
       - id: card-18
@@ -1561,8 +1657,10 @@ eventDecks:
                 options:
                   query: tokensInMapSpaces
                   filter:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: troops }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: troops }
                 min: 0
                 max: 2
             - chooseN:
@@ -1571,8 +1669,10 @@ eventDecks:
                   query: tokensInZone
                   zone: out-of-play-US:none
                   filter:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: troops }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: troops }
                 min: 0
                 max: 2
             - chooseOne:
@@ -1639,8 +1739,10 @@ eventDecks:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, eq: US }
-                                - { prop: type, eq: troops }
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
                         right: 0
                       - op: '>'
                         left:
@@ -1652,14 +1754,18 @@ eventDecks:
                                 - query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, eq: VC }
-                                    - { prop: type, eq: guerrilla }
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: VC }
+                                      - { prop: type, eq: guerrilla }
                                 - query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, eq: VC }
-                                    - { prop: type, eq: base }
-                                    - { prop: tunnel, eq: untunneled }
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: VC }
+                                      - { prop: type, eq: base }
+                                      - { prop: tunnel, eq: untunneled }
                         right: 0
                       - op: or
                         args:
@@ -1681,8 +1787,10 @@ eventDecks:
                                               query: tokensInZone
                                               zone: $zone
                                               filter:
-                                                - { prop: faction, eq: US }
-                                                - { prop: type, eq: troops }
+                                                op: and
+                                                args:
+                                                  - { prop: faction, eq: US }
+                                                  - { prop: type, eq: troops }
                                         right: 0
                                       - op: '>'
                                         left:
@@ -1694,14 +1802,18 @@ eventDecks:
                                                 - query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, eq: VC }
-                                                    - { prop: type, eq: guerrilla }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, eq: VC }
+                                                      - { prop: type, eq: guerrilla }
                                                 - query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, eq: VC }
-                                                    - { prop: type, eq: base }
-                                                    - { prop: tunnel, eq: untunneled }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, eq: VC }
+                                                      - { prop: type, eq: base }
+                                                      - { prop: tunnel, eq: untunneled }
                                         right: 0
                                       - op: '!='
                                         left: { ref: markerState, space: $zone, marker: supportOpposition }
@@ -1730,8 +1842,10 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, eq: US }
-                                      - { prop: type, eq: troops }
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: troops }
                               right: 0
                             - op: '>'
                               left:
@@ -1743,14 +1857,18 @@ eventDecks:
                                       - query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, eq: VC }
-                                          - { prop: type, eq: guerrilla }
+                                          op: and
+                                          args:
+                                            - { prop: faction, eq: VC }
+                                            - { prop: type, eq: guerrilla }
                                       - query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, eq: VC }
-                                          - { prop: type, eq: base }
-                                          - { prop: tunnel, eq: untunneled }
+                                          op: and
+                                          args:
+                                            - { prop: faction, eq: VC }
+                                            - { prop: type, eq: base }
+                                            - { prop: tunnel, eq: untunneled }
                               right: 0
                 max:
                   op: min
@@ -1772,8 +1890,10 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, eq: US }
-                                      - { prop: type, eq: troops }
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: troops }
                               right: 0
                             - op: '>'
                               left:
@@ -1785,14 +1905,18 @@ eventDecks:
                                       - query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, eq: VC }
-                                          - { prop: type, eq: guerrilla }
+                                          op: and
+                                          args:
+                                            - { prop: faction, eq: VC }
+                                            - { prop: type, eq: guerrilla }
                                       - query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, eq: VC }
-                                          - { prop: type, eq: base }
-                                          - { prop: tunnel, eq: untunneled }
+                                          op: and
+                                          args:
+                                            - { prop: faction, eq: VC }
+                                            - { prop: type, eq: base }
+                                            - { prop: tunnel, eq: untunneled }
                               right: 0
             - forEach:
                 bind: $province
@@ -1806,14 +1930,18 @@ eventDecks:
                           - query: tokensInZone
                             zone: $province
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: guerrilla }
                           - query: tokensInZone
                             zone: $province
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: base }
-                              - { prop: tunnel, eq: untunneled }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: base }
+                                - { prop: tunnel, eq: untunneled }
                       min: 1
                       max: 1
                   - forEach:
@@ -1848,8 +1976,10 @@ eventDecks:
                       query: tokensInZone
                       zone: out-of-play-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: da-nang:none
             - removeByPriority:
@@ -1860,8 +1990,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: da-nang:none
         shaded:
@@ -1912,9 +2044,11 @@ eventDecks:
                       query: tokensInZone
                       zone: $zone
                       filter:
-                        - { prop: type, eq: base }
-                        - { prop: faction, op: in, value: [NVA, VC] }
-                        - { prop: tunnel, eq: tunneled }
+                        op: and
+                        args:
+                          - { prop: type, eq: base }
+                          - { prop: faction, op: in, value: [NVA, VC] }
+                          - { prop: tunnel, eq: tunneled }
                 right: 0
             - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 1 }
@@ -1929,9 +2063,11 @@ eventDecks:
                       query: tokensInZone
                       zone: $zone
                       filter:
-                        - { prop: type, eq: base }
-                        - { prop: faction, op: in, value: [NVA, VC] }
-                        - { prop: tunnel, eq: tunneled }
+                        op: and
+                        args:
+                          - { prop: type, eq: base }
+                          - { prop: faction, op: in, value: [NVA, VC] }
+                          - { prop: tunnel, eq: tunneled }
                 right: 0
             - seat: "us"
               sequence: { chain: operation-attleboro-us, step: 2 }
@@ -1946,9 +2082,11 @@ eventDecks:
                       query: tokensInZone
                       zone: $zone
                       filter:
-                        - { prop: type, eq: base }
-                        - { prop: faction, op: in, value: [NVA, VC] }
-                        - { prop: tunnel, eq: tunneled }
+                        op: and
+                        args:
+                          - { prop: type, eq: base }
+                          - { prop: faction, op: in, value: [NVA, VC] }
+                          - { prop: tunnel, eq: tunneled }
                 right: 0
           lastingEffects:
             - id: evt-operation-attleboro-tunnel-window
@@ -1974,9 +2112,11 @@ eventDecks:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: type, eq: base }
-                          - { prop: faction, op: in, value: [NVA, VC] }
-                          - { prop: tunnel, eq: tunneled }
+                          op: and
+                          args:
+                            - { prop: type, eq: base }
+                            - { prop: faction, op: in, value: [NVA, VC] }
+                            - { prop: tunnel, eq: tunneled }
                   right: 0
               cardinality: { max: 1 }
           effects:
@@ -1994,8 +2134,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $targetSpace
                             filter:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: US }
+                                - { prop: type, eq: troops }
                           to:
                             zoneExpr: casualties-US:none
                       in:
@@ -2017,8 +2159,10 @@ eventDecks:
                                               query: tokensInZone
                                               zone: $adjacentSpace
                                               filter:
-                                                - { prop: faction, eq: US }
-                                                - { prop: type, eq: troops }
+                                                op: and
+                                                args:
+                                                  - { prop: faction, eq: US }
+                                                  - { prop: type, eq: troops }
                                             to:
                                               zoneExpr: casualties-US:none
                                   else: []
@@ -2050,7 +2194,9 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: VC }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
                       right: 0
                     - op: or
                       args:
@@ -2062,8 +2208,10 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: troops }
                           right: 0
                         - op: '>'
                           left:
@@ -2073,8 +2221,10 @@ eventDecks:
                                 query: tokensInAdjacentZones
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: troops }
                           right: 0
               cardinality: { max: 1 }
           effects:
@@ -2086,7 +2236,9 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetProvince
                       filter:
-                        - { prop: faction, eq: VC }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
                     to:
                       zoneExpr: available-VC:none
         shaded:
@@ -2107,9 +2259,11 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
-                              - { prop: activity, eq: active }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: guerrilla }
+                                - { prop: activity, eq: active }
                       right: 0
               cardinality: { max: 3 }
           eligibilityOverrides:
@@ -2125,9 +2279,11 @@ eventDecks:
                         query: tokensInZone
                         zone: $province
                         filter:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: active }
+                          op: and
+                          args:
+                            - { prop: faction, eq: VC }
+                            - { prop: type, eq: guerrilla }
+                            - { prop: activity, eq: active }
                       effects:
                         - setTokenProp: { token: $vcGuerrilla, prop: activity, value: underground }
       - id: card-25
@@ -2262,7 +2418,9 @@ eventDecks:
                             query: tokensInZone
                             zone: $mekongLoc
                             filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
                           to:
                             zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
         shaded:
@@ -2287,8 +2445,10 @@ eventDecks:
                             query: tokensInZone
                             zone: available-VC:none
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: guerrilla }
                           to:
                             zoneExpr: $mekongLoc
             - forEach:
@@ -2312,7 +2472,9 @@ eventDecks:
                               query: tokensInZone
                               zone: $mekongLoc
                               filter:
-                                - { prop: faction, eq: VC }
+                                op: and
+                                args:
+                                  - { prop: faction, eq: VC }
                         right:
                           aggregate:
                             op: count
@@ -2320,7 +2482,9 @@ eventDecks:
                               query: tokensInZone
                               zone: $mekongLoc
                               filter:
-                                - { prop: faction, op: in, value: [US, ARVN] }
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: [US, ARVN] }
                       then:
                         - if:
                             when:
@@ -2383,7 +2547,9 @@ eventDecks:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
                             right:
                               aggregate:
                                 op: count
@@ -2391,10 +2557,14 @@ eventDecks:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     - query: tokensInMapSpaces
                       spaceFilter:
                         op: and
@@ -2411,7 +2581,9 @@ eventDecks:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
                             right:
                               aggregate:
                                 op: count
@@ -2419,11 +2591,15 @@ eventDecks:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: base }
-                        - { prop: tunnel, eq: untunneled }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: base }
+                          - { prop: tunnel, eq: untunneled }
                 min: 0
                 max:
                   op: min
@@ -2450,7 +2626,9 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                   right:
                                     aggregate:
                                       op: count
@@ -2458,10 +2636,14 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: guerrilla }
                           - query: tokensInMapSpaces
                             spaceFilter:
                               op: and
@@ -2478,7 +2660,9 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                   right:
                                     aggregate:
                                       op: count
@@ -2486,11 +2670,15 @@ eventDecks:
                                         query: tokensInZone
                                         zone: $zone
                                         filter:
-                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                          op: and
+                                          args:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: base }
-                              - { prop: tunnel, eq: untunneled }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: base }
+                                - { prop: tunnel, eq: untunneled }
             - forEach:
                 bind: $vcPiece
                 over: { query: binding, name: $vcPiecesToRemove }
@@ -2522,7 +2710,9 @@ eventDecks:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
                         right:
                           aggregate:
                             op: count
@@ -2530,7 +2720,9 @@ eventDecks:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
                       - op: '>'
                         left:
                           aggregate:
@@ -2539,7 +2731,9 @@ eventDecks:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, eq: VC }
+                                op: and
+                                args:
+                                  - { prop: faction, eq: VC }
                         right: 0
                 min: 0
                 max:
@@ -2566,7 +2760,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                      op: and
+                                      args:
+                                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
                               right:
                                 aggregate:
                                   op: count
@@ -2574,7 +2770,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      op: and
+                                      args:
+                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
                             - op: '>'
                               left:
                                 aggregate:
@@ -2583,7 +2781,9 @@ eventDecks:
                                     query: tokensInZone
                                     zone: $zone
                                     filter:
-                                      - { prop: faction, eq: VC }
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: VC }
                               right: 0
             - forEach:
                 bind: $targetSpace
@@ -2630,8 +2830,10 @@ eventDecks:
                           query: tokensInZone
                           zone: out-of-play-US:none
                           filter:
-                            - { prop: faction, eq: US }
-                            - { prop: type, eq: base }
+                            op: and
+                            args:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: base }
                         to:
                           zoneExpr: available-US:none
                 - addVar: { scope: global, var: aid, delta: 12 }
@@ -2651,8 +2853,10 @@ eventDecks:
                           query: tokensInZone
                           zone: out-of-play-ARVN:none
                           filter:
-                            - { prop: faction, eq: ARVN }
-                            - { prop: type, eq: base }
+                            op: and
+                            args:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: base }
                         to:
                           zoneExpr: available-ARVN:none
                 - addVar: { scope: global, var: arvnResources, delta: 6 }
@@ -2694,7 +2898,9 @@ eventDecks:
                       query: tokensInZone
                       zone: $zone
                       filter:
-                        - { prop: faction, eq: NVA }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
                 right: 0
             - seat: "us"
               sequence: { chain: ia-drang-us, step: 1 }
@@ -2709,7 +2915,9 @@ eventDecks:
                       query: tokensInZone
                       zone: $zone
                       filter:
-                        - { prop: faction, eq: NVA }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
                 right: 0
             - seat: "us"
               sequence: { chain: ia-drang-us, step: 2 }
@@ -2724,7 +2932,9 @@ eventDecks:
                       query: tokensInZone
                       zone: $zone
                       filter:
-                        - { prop: faction, eq: NVA }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
                 right: 0
         shaded:
           text: "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
@@ -2744,8 +2954,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: NVA }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: troops }
                       right: 0
               cardinality: { max: 1 }
           effects:
@@ -2763,8 +2975,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $targetProvince
                             filter:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: US }
+                                - { prop: type, eq: troops }
                           to:
                             zoneExpr: casualties-US:none
                       in:
@@ -2786,8 +3000,10 @@ eventDecks:
                                               query: tokensInZone
                                               zone: $adjacentSpace
                                               filter:
-                                                - { prop: faction, eq: US }
-                                                - { prop: type, eq: troops }
+                                                op: and
+                                                args:
+                                                  - { prop: faction, eq: US }
+                                                  - { prop: type, eq: troops }
                                             to:
                                               zoneExpr: casualties-US:none
                                   else: []
@@ -2814,7 +3030,9 @@ eventDecks:
                 options:
                   query: tokensInMapSpaces
                   filter:
-                    - { prop: faction, eq: ARVN }
+                    op: and
+                    args:
+                      - { prop: faction, eq: ARVN }
                 min: 0
                 max: 3
             - forEach:
@@ -2888,8 +3106,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-ARVN:none
                       filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: police }
+                        op: and
+                        args:
+                          - { prop: faction, eq: ARVN }
+                          - { prop: type, eq: police }
                     to:
                       zoneExpr: $targetProvince
         shaded:
@@ -2912,8 +3132,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetProvince
       - id: card-55
@@ -2940,7 +3162,9 @@ eventDecks:
                     left: { ref: zoneProp, zone: $zone, prop: country }
                     right: laos
                   filter:
-                    - { prop: faction, eq: NVA }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
                 min: 0
                 max: 4
             - forEach:
@@ -2961,7 +3185,9 @@ eventDecks:
                     left: { ref: zoneProp, zone: $zone, prop: country }
                     right: cambodia
                   filter:
-                    - { prop: faction, eq: NVA }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
                 min: 0
                 max: 4
             - forEach:
@@ -2991,9 +3217,11 @@ eventDecks:
                     conditionMacro: fitl-space-in-laos-cambodia
                     args: { spaceExpr: $zone }
                   filter:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: base }
-                    - { prop: tunnel, eq: untunneled }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: base }
+                      - { prop: tunnel, eq: untunneled }
                 effects:
                   - chooseOne:
                       bind: '$baseDestination@{$nvaBase}'
@@ -3077,7 +3305,7 @@ eventDecks:
                           query:
                             query: tokensInZone
                             zone: $zone
-                            filter: [{ prop: faction, eq: VC }]
+                            filter: { op: and, args: [{ prop: faction, eq: VC }] }
                       right: 0
               cardinality: { max: 1 }
           effects:
@@ -3145,8 +3373,10 @@ eventDecks:
                           query: tokensInZone
                           zone: out-of-play-US:none
                           filter:
-                            - { prop: faction, eq: US }
-                            - { prop: type, eq: troops }
+                            op: and
+                            args:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: troops }
                         to:
                           zoneExpr: $targetProvince
             - id: long-tan-clear-jungle-guerrillas
@@ -3167,8 +3397,10 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: troops }
                           right: 0
                   cardinality: { max: 1 }
               effects:
@@ -3180,8 +3412,10 @@ eventDecks:
                           query: tokensInZone
                           zone: $targetJungle
                           filter:
-                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                            - { prop: type, eq: guerrilla }
+                            op: and
+                            args:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: guerrilla }
                         to:
                           zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
         shaded:
@@ -3202,8 +3436,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
+                                - { prop: type, eq: guerrilla }
                       right: 2
               cardinality: { max: 1 }
           effects:
@@ -3215,8 +3451,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetJungle
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr: casualties-US:none
                   - bind: $usTroop
@@ -3224,8 +3462,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetJungle
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: casualties-US:none
       - id: card-99
@@ -3290,8 +3530,10 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: troops }
                           right: 0
                   cardinality: { max: 1 }
               effects:
@@ -3303,7 +3545,9 @@ eventDecks:
                           query: tokensInZone
                           zone: $targetLowland
                           filter:
-                            - { prop: faction, eq: VC }
+                            op: and
+                            args:
+                              - { prop: faction, eq: VC }
                         to:
                           zoneExpr: available-VC:none
             - id: rach-ba-rai-remove-nva-non-troops
@@ -3324,8 +3568,10 @@ eventDecks:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, eq: US }
-                                  - { prop: type, eq: troops }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: troops }
                           right: 0
                   cardinality: { max: 1 }
               effects:
@@ -3337,8 +3583,10 @@ eventDecks:
                           query: tokensInZone
                           zone: $targetLowland
                           filter:
-                            - { prop: faction, eq: NVA }
-                            - { prop: type, op: in, value: [base, guerrilla] }
+                            op: and
+                            args:
+                              - { prop: faction, eq: NVA }
+                              - { prop: type, op: in, value: [base, guerrilla] }
                         to:
                           zoneExpr: available-NVA:none
         shaded:
@@ -3359,7 +3607,9 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: VC }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
                       right: 0
               cardinality: { max: 1 }
           effects:
@@ -3376,8 +3626,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $targetLowland
                             filter:
-                              - { prop: faction, eq: US }
-                              - { prop: type, op: in, value: [troops, police] }
+                              op: and
+                              args:
+                                - { prop: faction, eq: US }
+                                - { prop: type, op: in, value: [troops, police] }
                           to:
                             zoneExpr: casualties-US:none
                         - bind: $arvnCube
@@ -3385,8 +3637,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $targetLowland
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, op: in, value: [troops, police] }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, op: in, value: [troops, police] }
                           to:
                             zoneExpr: available-ARVN:none
             - removeByPriority:
@@ -3397,8 +3651,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, op: in, value: [base, guerrilla] }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, op: in, value: [base, guerrilla] }
                     to:
                       zoneExpr: $targetLowland
       - id: card-102
@@ -3426,8 +3682,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
         shaded:
@@ -3448,8 +3706,10 @@ eventDecks:
                   query: tokensInZone
                   zone: $targetProvince
                   filter:
-                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                    - { prop: type, eq: base }
+                    op: and
+                    args:
+                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - { prop: type, eq: base }
                 effects:
                   - setTokenProp: { token: $insurgentBase, prop: tunnel, value: tunneled }
             - removeByPriority:
@@ -3460,8 +3720,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-NVA:none
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetProvince
             - removeByPriority:
@@ -3472,8 +3734,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetProvince
       - id: card-104
@@ -3522,7 +3786,9 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: VC }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
                       right: 0
               cardinality: { max: 4 }
           effects:
@@ -3546,8 +3812,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: police }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, eq: police }
                       right: 0
               cardinality: { max: 3 }
           branches:
@@ -3597,8 +3865,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetProvince
       - id: card-108
@@ -3632,8 +3902,10 @@ eventDecks:
                             query: tokensInZone
                             zone: out-of-play-US:none
                             filter:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: US }
+                                - { prop: type, eq: troops }
                           to:
                             zoneExpr: available-US:none
                 else: []
@@ -3665,8 +3937,10 @@ eventDecks:
                                   query: tokensInZone
                                   zone: available-US:none
                                   filter:
-                                    - { prop: faction, eq: US }
-                                    - { prop: type, eq: troops }
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: US }
+                                      - { prop: type, eq: troops }
                                 to:
                                   zoneExpr: out-of-play-US:none
       - id: card-109
@@ -3726,8 +4000,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, op: in, value: [base, guerrilla] }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, op: in, value: [base, guerrilla] }
                     to:
                       zoneExpr: saigon:none
       - id: card-116
@@ -3807,8 +4083,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $outsideSouthSpace
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: available-NVA:none
                   - bind: $nvaGuerrilla
@@ -3816,8 +4094,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $outsideSouthSpace
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: available-NVA:none
                   - bind: $vcGuerrilla
@@ -3825,8 +4105,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $outsideSouthSpace
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: available-VC:none
         shaded:
@@ -3900,8 +4182,10 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                              - { prop: type, eq: base }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                - { prop: type, eq: base }
                       right: 0
                     - op: '>'
                       left:
@@ -3911,9 +4195,11 @@ eventDecks:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                              - { prop: type, eq: guerrilla }
-                              - { prop: activity, eq: underground }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                - { prop: type, eq: guerrilla }
+                                - { prop: activity, eq: underground }
                       right: 0
               cardinality: { max: 1 }
           effects:
@@ -3925,8 +4211,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr:
                         if:
@@ -3944,9 +4232,11 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['VC', 'NVA'] }
-                        - { prop: type, eq: guerrilla }
-                        - { prop: activity, eq: underground }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['VC', 'NVA'] }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: underground }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
       - id: card-15
@@ -4003,8 +4293,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                 in:
                   - let:
                       bind: $irregularsToPlaceCount
@@ -4029,8 +4321,10 @@ eventDecks:
                                     query: tokensInZone
                                     zone: available-US:none
                                     filter:
-                                      - { prop: faction, eq: US }
-                                      - { prop: type, eq: irregular }
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: irregular }
                                   min: { ref: binding, name: $irregularsToPlaceCount }
                                   max: { ref: binding, name: $irregularsToPlaceCount }
                               - forEach:
@@ -4060,8 +4354,10 @@ eventDecks:
                     query:
                       query: tokensInMapSpaces
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                 in:
                   - let:
                       bind: $irregularsToCasualtiesCount
@@ -4085,8 +4381,10 @@ eventDecks:
                                   options:
                                     query: tokensInMapSpaces
                                     filter:
-                                      - { prop: faction, eq: US }
-                                      - { prop: type, eq: irregular }
+                                      op: and
+                                      args:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: irregular }
                                   min: { ref: binding, name: $irregularsToCasualtiesCount }
                                   max: { ref: binding, name: $irregularsToCasualtiesCount }
                               - forEach:
@@ -4139,8 +4437,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
             - removeByPriority:
@@ -4151,8 +4451,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                     to:
                       zoneExpr: $targetSpace
         shaded:
@@ -4171,8 +4473,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                     to:
                       zoneExpr: available-US:none
             - removeByPriority:
@@ -4183,8 +4487,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-NVA:none
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
       - id: card-30
@@ -4675,7 +4981,9 @@ eventDecks:
                         query: tokensInZone
                         zone: played:none
                         filter:
-                          - { prop: cardId, eq: card-124 }
+                          op: and
+                          args:
+                            - { prop: cardId, eq: card-124 }
                   right: 0
                 then:
                   - forEach:
@@ -4684,7 +4992,9 @@ eventDecks:
                         query: tokensInZone
                         zone: played:none
                         filter:
-                          - { prop: cardId, eq: card-124 }
+                          op: and
+                          args:
+                            - { prop: cardId, eq: card-124 }
                       limit: 1
                       effects:
                         - moveToken:
@@ -4793,13 +5103,17 @@ eventDecks:
                           - query: tokensInZone
                             zone: available-ARVN:none
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, eq: troops }
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, eq: troops }
                 max:
                   op: min
                   left: 3
@@ -4812,26 +5126,34 @@ eventDecks:
                           - query: tokensInZone
                             zone: available-ARVN:none
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, eq: troops }
                           - query: tokensInZone
                             zone: out-of-play-ARVN:none
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, eq: troops }
                 options:
                   query: concat
                   sources:
                     - query: tokensInZone
                       zone: available-ARVN:none
                       filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: ARVN }
+                          - { prop: type, eq: troops }
                     - query: tokensInZone
                       zone: out-of-play-ARVN:none
                       filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: ARVN }
+                          - { prop: type, eq: troops }
             - chooseN:
                 bind: $troopsToAnchor
                 max:
@@ -4967,7 +5289,9 @@ eventDecks:
                             query: tokensInZone
                             zone: $anchorSpace
                             filter:
-                              - { prop: faction, eq: ARVN }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
                           to:
                             zoneExpr: available-ARVN:none
                       in:
@@ -4989,7 +5313,9 @@ eventDecks:
                                               query: tokensInZone
                                               zone: $adjSpace
                                               filter:
-                                                - { prop: faction, eq: ARVN }
+                                                op: and
+                                                args:
+                                                  - { prop: faction, eq: ARVN }
                                             to:
                                               zoneExpr: available-ARVN:none
                                   else: []
@@ -5129,7 +5455,9 @@ eventDecks:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, eq: NVA }
+                          op: and
+                          args:
+                            - { prop: faction, eq: NVA }
                   right: 0
               cardinality: { max: 1 }
           effects:
@@ -5141,8 +5469,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-NVA:none
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: $targetSpace
         shaded:
@@ -5160,7 +5490,9 @@ eventDecks:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, eq: VC }
+                          op: and
+                          args:
+                            - { prop: faction, eq: VC }
                   right: 0
               cardinality: { max: 1 }
           effects:
@@ -5172,8 +5504,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
       - id: card-53
@@ -5201,8 +5535,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
                   - bind: $coinTroop
@@ -5210,8 +5546,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinTroop, prop: faction }, ':none'] }
         shaded:
@@ -5230,8 +5568,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
       - id: card-56
@@ -5304,8 +5644,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
             - removeByPriority:
@@ -5316,8 +5658,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
         shaded:
@@ -5336,8 +5680,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
             - addVar: { scope: global, var: nvaResources, delta: 3 }
@@ -5418,7 +5764,9 @@ eventDecks:
                       query: tokensInZone
                       zone: out-of-play-US:none
                       filter:
-                        - { prop: faction, eq: US }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
                     to:
                       zoneExpr: available-US:none
             - removeByPriority:
@@ -5429,7 +5777,9 @@ eventDecks:
                       query: tokensInZone
                       zone: out-of-play-ARVN:none
                       filter:
-                        - { prop: faction, eq: ARVN }
+                        op: and
+                        args:
+                          - { prop: faction, eq: ARVN }
                     to:
                       zoneExpr: available-ARVN:none
             - rollRandom:
@@ -5528,8 +5878,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: available-US:none
                   - bind: $usIrregular
@@ -5537,8 +5889,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                     to:
                       zoneExpr: available-US:none
                   - bind: $usBase
@@ -5546,8 +5900,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr: available-US:none
             - addVar: { scope: global, var: aid, delta: -6 }
@@ -5567,8 +5923,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: available-US:none
                   - bind: $usIrregular
@@ -5576,8 +5934,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: irregular }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: irregular }
                     to:
                       zoneExpr: available-US:none
                   - bind: $usBase
@@ -5585,8 +5945,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $sourceSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: base }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: base }
                     to:
                       zoneExpr: available-US:none
             - addVar: { scope: global, var: aid, delta: -12 }
@@ -5615,7 +5977,9 @@ eventDecks:
                       query: tokensInZone
                       zone: casualties-US:none
                       filter:
-                        - { prop: faction, eq: US }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
                     to:
                       zoneExpr: $targetSpace
             - forEach:
@@ -5624,9 +5988,11 @@ eventDecks:
                   query: tokensInZone
                   zone: $targetSpace
                   filter:
-                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                    - { prop: type, eq: guerrilla }
-                    - { prop: activity, eq: underground }
+                    op: and
+                    args:
+                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - { prop: type, eq: guerrilla }
+                      - { prop: activity, eq: underground }
                 limit: 2
                 effects:
                   - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: active }
@@ -5644,9 +6010,11 @@ eventDecks:
                   query: tokensInZone
                   zone: $targetSpace
                   filter:
-                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                    - { prop: type, eq: guerrilla }
-                    - { prop: activity, eq: active }
+                    op: and
+                    args:
+                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - { prop: type, eq: guerrilla }
+                      - { prop: activity, eq: active }
                 limit: 2
                 effects:
                   - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: underground }
@@ -5658,8 +6026,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                     to:
                       zoneExpr: casualties-US:none
       - id: card-118
@@ -5687,8 +6057,10 @@ eventDecks:
                       query: tokensInZone
                       zone: $targetSpace
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: available-VC:none
             - removeByPriority:
@@ -5699,8 +6071,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
         shaded:
@@ -5719,8 +6093,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-VC:none
                       filter:
-                        - { prop: faction, eq: VC }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
             - removeByPriority:
@@ -5731,8 +6107,10 @@ eventDecks:
                       query: tokensInZone
                       zone: available-NVA:none
                       filter:
-                        - { prop: faction, eq: NVA }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, eq: NVA }
+                          - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
       - id: card-121
@@ -5786,8 +6164,10 @@ eventDecks:
                           query: tokensInZone
                           zone: available-US:none
                           filter:
-                            - { prop: faction, eq: US }
-                            - { prop: type, op: in, value: [troops, base] }
+                            op: and
+                            args:
+                              - { prop: faction, eq: US }
+                              - { prop: type, op: in, value: [troops, base] }
                   right: 40
                 - { op: '==', left: { ref: gvar, var: linebacker11Allowed }, right: true }
         unshaded:
@@ -5811,16 +6191,20 @@ eventDecks:
                   query:
                     query: tokensInMapSpaces
                     filter:
-                      - { prop: faction, eq: NVA }
-                      - { prop: type, eq: troops }
+                      op: and
+                      args:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: troops }
               right:
                 aggregate:
                   op: count
                   query:
                     query: tokensInMapSpaces
                     filter:
-                      - { prop: faction, eq: US }
-                      - { prop: type, eq: troops }
+                      op: and
+                      args:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
         unshaded:
           text: "Invasion: NVA free Marches. Then NVA Troops on LoCs with no US/ARVN may move 1 space. Then all NVA Troops free Attack."
       - id: card-123
@@ -5842,8 +6226,10 @@ eventDecks:
                   query:
                     query: tokensInMapSpaces
                     filter:
-                      - { prop: faction, eq: US }
-                      - { prop: type, eq: troops }
+                      op: and
+                      args:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
               right: 20
         unshaded:
           text: "Mechanization: +12 ARVN Resources. +12 Aid. All out-of-play ARVN Available. Place 4 ARVN cubes anywhere."
@@ -5870,8 +6256,10 @@ eventDecks:
                       left: { ref: zoneProp, zone: $zone, prop: country }
                       right: southVietnam
                     filter:
-                      - { prop: faction, eq: VC }
-                      - { prop: type, eq: guerrilla }
+                      op: and
+                      args:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
               right: 20
         unshaded:
           text: "General uprising: Free Terror with 1 Underground VC per space. Place 6 VC pieces in any cities. VC + NVA Guerrillas free Attack where enemies (remove VC first)."

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel token-filter schema + behavior validation
-**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md
+**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, archive/tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md
 
 ## Problem
 

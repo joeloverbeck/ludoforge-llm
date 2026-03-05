@@ -2,7 +2,7 @@ import {
   type ActiveLastingEffect,
   asPlayerId,
   buildSeatResolutionIndex,
-  matchesAllTokenFilterPredicates,
+  matchesTokenFilterExpr,
   type GameDef,
   type GameState,
   type Move,
@@ -774,11 +774,11 @@ function grantAppliesToViewer(grant: RevealGrant, viewingPlayerID: PlayerId): bo
 }
 
 function grantRevealsToken(grant: RevealGrant, token: Token): boolean {
-  if (grant.filter === undefined || grant.filter.length === 0) {
+  if (grant.filter === undefined) {
     return true;
   }
 
-  return matchesAllTokenFilterPredicates(token, grant.filter);
+  return matchesTokenFilterExpr(token, grant.filter);
 }
 
 function deriveAdjacencies(

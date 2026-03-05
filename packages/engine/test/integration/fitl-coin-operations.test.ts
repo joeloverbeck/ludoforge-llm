@@ -305,9 +305,8 @@ describe('FITL COIN operations integration', () => {
       const directMoveQuery = findDeep(moveTroops.effects, (node: any) =>
         node?.query === 'tokensInAdjacentZones' &&
         node?.zone === '$space' &&
-        Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
-        node.filter.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+        queryFilterHas(node?.filter, (f) => f.prop === 'faction' && (f.eq === 'US' || (f.op === 'eq' && f.value === 'US'))) &&
+        queryFilterHas(node?.filter, (f) => f.prop === 'type' && (f.eq === 'troops' || (f.op === 'eq' && f.value === 'troops'))),
       );
       assert.ok(directMoveQuery.length >= 1, 'Expected direct adjacent US troop movement query');
 
@@ -441,9 +440,8 @@ describe('FITL COIN operations integration', () => {
       const adjacentMoveQuery = findDeep(resolvePerSpace.effects, (node: any) =>
         node?.query === 'tokensInAdjacentZones' &&
         node?.zone === '$space' &&
-        Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN') &&
-        node.filter.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+        queryFilterHas(node?.filter, (f) => f.prop === 'faction' && (f.eq === 'ARVN' || (f.op === 'eq' && f.value === 'ARVN'))) &&
+        queryFilterHas(node?.filter, (f) => f.prop === 'type' && (f.eq === 'troops' || (f.op === 'eq' && f.value === 'troops'))),
       );
       assert.ok(adjacentMoveQuery.length >= 1, 'Expected adjacent ARVN troop movement query');
     });
@@ -923,20 +921,16 @@ describe('FITL COIN operations integration', () => {
 
       const troopFilterCountChecks = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '>' &&
-        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
-        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+        queryFilterHas(node?.left?.aggregate?.query?.filter, (f) => f.prop === 'faction' && (f.eq === 'US' || (f.op === 'eq' && f.value === 'US'))) &&
+        queryFilterHas(node?.left?.aggregate?.query?.filter, (f) => f.prop === 'type' && (f.eq === 'troops' || (f.op === 'eq' && f.value === 'troops'))),
       );
       assert.ok(troopFilterCountChecks.length >= 2, 'Expected US Troops filter in both branches');
 
       const enemyFilterCountChecks = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '>' &&
-        node?.left?.aggregate?.query?.filter?.some(
-          (f: any) =>
-            f.prop === 'faction' &&
-            f.op === 'in' &&
-            Array.isArray(f.value) &&
-            f.value.includes('NVA') &&
-            f.value.includes('VC'),
+        queryFilterHas(
+          node?.left?.aggregate?.query?.filter,
+          (f) => f.prop === 'faction' && f.op === 'in' && Array.isArray(f.value) && f.value.includes('NVA') && f.value.includes('VC'),
         ),
       );
       assert.ok(enemyFilterCountChecks.length >= 2, 'Expected enemy (NVA/VC) filter in both branches');
@@ -1305,20 +1299,16 @@ describe('FITL COIN operations integration', () => {
 
       const arvnCubeFilter = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '>' &&
-        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN') &&
-        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.op === 'in'),
+        queryFilterHas(node?.left?.aggregate?.query?.filter, (f) => f.prop === 'faction' && (f.eq === 'ARVN' || (f.op === 'eq' && f.value === 'ARVN'))) &&
+        queryFilterHas(node?.left?.aggregate?.query?.filter, (f) => f.prop === 'type' && f.op === 'in'),
       );
       assert.ok(arvnCubeFilter.length >= 2, 'Expected ARVN cube filter in both selection branches');
 
       const enemyFilter = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '>' &&
-        node?.left?.aggregate?.query?.filter?.some(
-          (f: any) =>
-            f.prop === 'faction' &&
-            f.op === 'in' &&
-            Array.isArray(f.value) &&
-            f.value.includes('NVA') &&
-            f.value.includes('VC'),
+        queryFilterHas(
+          node?.left?.aggregate?.query?.filter,
+          (f) => f.prop === 'faction' && f.op === 'in' && Array.isArray(f.value) && f.value.includes('NVA') && f.value.includes('VC'),
         ),
       );
       assert.ok(enemyFilter.length >= 2, 'Expected enemy filter in both selection branches');
@@ -1329,12 +1319,12 @@ describe('FITL COIN operations integration', () => {
         node?.if?.when?.op === '==' &&
         node?.if?.when?.left?.ref === 'binding' &&
         node?.if?.when?.left?.name === '$isProvince' &&
-        node?.if?.then?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+        queryFilterHas(node?.if?.then?.aggregate?.query?.filter, (f) => f.prop === 'type' && (f.eq === 'troops' || (f.op === 'eq' && f.value === 'troops'))),
       );
       assert.ok(provinceTroopsOnly.length >= 1, 'Expected province branch to count ARVN troops only');
 
       const cityLocCubes = findDeep(resolvePerSpace.effects, (node: any) =>
-        node?.if?.else?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.op === 'in'),
+        queryFilterHas(node?.if?.else?.aggregate?.query?.filter, (f) => f.prop === 'type' && f.op === 'in'),
       );
       assert.ok(cityLocCubes.length >= 1, 'Expected city/LoC branch to count ARVN troops+police');
 
@@ -1592,8 +1582,7 @@ describe('FITL COIN operations integration', () => {
 
       const patrolSourceQueries = findDeep(moveCubes.effects, (node: any) =>
         node?.query === 'tokensInMapSpaces' &&
-        Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
+        queryFilterHas(node?.filter, (f) => f.prop === 'faction' && (f.eq === 'US' || (f.op === 'eq' && f.value === 'US'))) &&
         node?.spaceFilter?.op === 'or' &&
         node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'adjacent') &&
         node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'connected'),
@@ -1750,8 +1739,7 @@ describe('FITL COIN operations integration', () => {
 
       const patrolSourceQueries = findDeep(moveCubes.effects, (node: any) =>
         node?.query === 'tokensInMapSpaces' &&
-        Array.isArray(node?.filter) &&
-        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN') &&
+        queryFilterHas(node?.filter, (f) => f.prop === 'faction' && (f.eq === 'ARVN' || (f.op === 'eq' && f.value === 'ARVN'))) &&
         node?.spaceFilter?.op === 'or' &&
         node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'adjacent') &&
         node.spaceFilter.args?.some?.((arg: any) => arg?.op === 'connected'),

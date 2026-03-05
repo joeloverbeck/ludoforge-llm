@@ -783,7 +783,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
       reveals: {
         'deck:none': [
-          { observers: 'all', filter: [{ prop: 'suit', op: 'eq', value: 'hearts' }] },
+          { observers: 'all', filter: { prop: 'suit', op: 'eq', value: 'hearts' } },
         ],
       },
     };
@@ -820,7 +820,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       },
       reveals: {
         'hand:0': [
-          { observers: [asPlayerId(1)], filter: [{ prop: 'suit', op: 'eq', value: 'hearts' }] },
+          { observers: [asPlayerId(1)], filter: { prop: 'suit', op: 'eq', value: 'hearts' } },
         ],
       },
     };
@@ -862,7 +862,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         'deck:none': [
           {
             observers: 'all',
-            filter: [{ prop: 'rank', op: 'eq', value: { ref: 'gvar', var: 'tick' } }],
+            filter: { prop: 'rank', op: 'eq', value: { ref: 'gvar', var: 'tick' } },
           },
         ],
       },

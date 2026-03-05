@@ -67,7 +67,11 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
   return [
     {
       when: (request: ChoicePendingRequest) =>
-        request.type === 'chooseN' && request.name.includes('$selectedPieces'),
+        request.type === 'chooseN'
+        && (
+          request.name.includes('$selectedPieces')
+          || request.decisionId.includes('distributeTokens.selectTokens')
+        ),
       value: (request: ChoicePendingRequest) => {
         const allValues = request.options
           .map((option) => option.value)
@@ -79,7 +83,9 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
       },
     },
     {
-      when: (request: ChoicePendingRequest) => request.name.includes('$targetCity@'),
+      when: (request: ChoicePendingRequest) =>
+        request.name.includes('$targetCity@')
+        || request.decisionId.includes('distributeTokens.chooseDestination'),
       value: (request: ChoicePendingRequest) => {
         const saigon = request.options.find((option) => option.value === 'saigon:none')?.value;
         const hue = request.options.find((option) => option.value === 'hue:none')?.value;
@@ -97,7 +103,7 @@ const createTurn4EventDecisionOverrides = (): readonly DecisionOverrideRule[] =>
 const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrideRule[] => [
   {
     when: (request: ChoicePendingRequest) =>
-      request.name === 'targetSpaces'
+      request.name === '$targetSpaces'
       && request.decisionId.includes('doc.actionPipelines.10.stages[0].effects.0'),
     value: [
       'kien-phong:none',
@@ -159,7 +165,7 @@ const createTurn4NvaReportBranchDecisionOverrides = (): readonly DecisionOverrid
   },
   {
     when: (request: ChoicePendingRequest) =>
-      request.name === 'targetSpaces'
+      request.name === '$targetSpaces'
       && request.decisionId.includes('doc.actionPipelines.22.stages[0].effects.0'),
     value: ['southern-laos:none', 'kien-giang-an-xuyen:none'],
   },
@@ -492,7 +498,7 @@ const TURN_1: PlaybookTurn = {
         actionId: asActionId('train'),
         actionClass: 'operationPlusSpecialActivity',
         params: {
-          targetSpaces: ['saigon:none'],
+          $targetSpaces: ['saigon:none'],
           $trainChoice: 'arvn-cubes',
           $subActionSpaces: ['saigon:none'],
           $subAction: 'pacify',
@@ -503,7 +509,7 @@ const TURN_1: PlaybookTurn = {
             actionId: asActionId('govern'),
             actionClass: 'operationPlusSpecialActivity',
             params: {
-              targetSpaces: ['an-loc:none', 'can-tho:none'],
+              $targetSpaces: ['an-loc:none', 'can-tho:none'],
               '$governMode@an-loc:none': 'aid',
               '$governMode@can-tho:none': 'aid',
             },
@@ -542,14 +548,14 @@ const TURN_1: PlaybookTurn = {
       patronage: 15,
       trail: 1,
     },
-    eligibility: { '0': true, '1': false, '2': true, '3': false },
+    eligibility: { us: true, arvn: false, nva: true, vc: false },
     activePlayer: 2,
     currentCard: 'card-55',
     previewCard: 'card-68',
     deckSize: 10,
-    seatOrder: ['2', '3', '0', '1'],
-    firstEligible: '2',
-    secondEligible: '0',
+    seatOrder: ['nva', 'vc', 'us', 'arvn'],
+    firstEligible: 'nva',
+    secondEligible: 'us',
     nonPassCount: 0,
     zoneTokenCounts: [
       { zone: 'saigon:none', faction: 'ARVN', type: 'troops', count: 8 },
@@ -600,7 +606,7 @@ const TURN_2: PlaybookTurn = {
         actionId: asActionId('rally'),
         actionClass: 'operation',
         params: {
-          targetSpaces: [
+          $targetSpaces: [
             'north-vietnam:none',
             'the-parrots-beak:none',
             'kien-phong:none',
@@ -678,7 +684,7 @@ const TURN_2: PlaybookTurn = {
         actionId: asActionId('sweep'),
         actionClass: 'limitedOperation',
         params: {
-          targetSpaces: ['quang-tri-thua-thien:none'],
+          $targetSpaces: ['quang-tri-thua-thien:none'],
         },
       },
     },
@@ -692,14 +698,14 @@ const TURN_2: PlaybookTurn = {
       vcResources: 5,
       patronage: 15,
     },
-    eligibility: { '0': false, '1': true, '2': false, '3': true },
+    eligibility: { us: false, arvn: true, nva: false, vc: true },
     activePlayer: 1,
     currentCard: 'card-68',
     previewCard: 'card-1',
     deckSize: 9,
-    seatOrder: ['1', '0', '3', '2'],
-    firstEligible: '1',
-    secondEligible: '3',
+    seatOrder: ['arvn', 'us', 'vc', 'nva'],
+    firstEligible: 'arvn',
+    secondEligible: 'vc',
     nonPassCount: 0,
     zoneTokenCounts: [
       // NVA Rally placements (all guerrillas underground — Sweep only affects Quang Tri)
@@ -824,7 +830,7 @@ const TURN_3: PlaybookTurn = {
         actionId: asActionId('rally'),
         actionClass: 'operationPlusSpecialActivity',
         params: {
-          targetSpaces: ['pleiku-darlac:none', 'quang-tri-thua-thien:none', 'hue:none'],
+          $targetSpaces: ['pleiku-darlac:none', 'quang-tri-thua-thien:none', 'hue:none'],
           $withBaseChoice: 'place-guerrillas',
           $noBaseChoice: 'place-guerrilla',
         },
@@ -833,7 +839,7 @@ const TURN_3: PlaybookTurn = {
             actionId: asActionId('tax'),
             actionClass: 'operationPlusSpecialActivity',
             params: {
-              targetSpaces: [
+              $targetSpaces: [
                 'quang-tin-quang-ngai:none',
                 'quang-duc-long-khanh:none',
                 'binh-tuy-binh-thuan:none',
@@ -903,14 +909,14 @@ const TURN_3: PlaybookTurn = {
       aid: 14,
       patronage: 15,
     },
-    eligibility: { '0': true, '1': false, '2': true, '3': false },
+    eligibility: { us: true, arvn: false, nva: true, vc: false },
     activePlayer: 0,
     currentCard: 'card-1',
     previewCard: 'card-97',
     deckSize: 8,
-    seatOrder: ['0', '2', '1', '3'],
-    firstEligible: '0',
-    secondEligible: '2',
+    seatOrder: ['us', 'nva', 'arvn', 'vc'],
+    firstEligible: 'us',
+    secondEligible: 'nva',
     nonPassCount: 0,
     zoneTokenCounts: [
       // Green Berets event placements
@@ -1027,13 +1033,17 @@ const TURN_4: PlaybookTurn = {
       label: 'US free Air Strike in Quang Tri',
       move: {
         actionId: asActionId('airStrike'),
-        actionClass: 'operation',
+        actionClass: 'specialActivity',
         freeOperation: true,
         params: {
-          spaces: ['quang-tri-thua-thien:none'],
+          $arcLightNoCoinProvinces: [],
+          $spaces: ['quang-tri-thua-thien:none'],
           $degradeTrail: 'yes',
         },
       },
+      optionsFactory: () => ({
+        overrides: createTurn4EventDecisionOverrides(),
+      }),
       expectedState: {
         globalVars: {
           nvaResources: 5,
@@ -1070,6 +1080,14 @@ const TURN_4: PlaybookTurn = {
           { space: 'quang-tri-thua-thien:none', marker: 'supportOpposition', expected: 'passiveOpposition' },
         ],
         computedValues: [
+          { label: 'pending free-operation grants', expected: 0, compute: (_def, state) =>
+            state.turnOrderState.type === 'cardDriven'
+              ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
+              : 0 },
+          { label: 'pending deferred event effects', expected: 0, compute: (_def, state) =>
+            state.turnOrderState.type === 'cardDriven'
+              ? (state.turnOrderState.runtime.pendingDeferredEventEffects ?? []).length
+              : 0 },
           { label: 'VC victory marker', expected: 25, compute: computeVcVictory },
           { label: 'US victory marker unchanged', expected: 42, compute: computeUsVictory },
           { label: 'ARVN victory marker unchanged', expected: 37, compute: computeArvnVictory },
@@ -1190,14 +1208,14 @@ const TURN_4: PlaybookTurn = {
       aid: 14,
       patronage: 15,
     },
-    eligibility: { '0': false, '1': true, '2': false, '3': true },
+    eligibility: { us: false, arvn: true, nva: false, vc: true },
     activePlayer: 3,
     currentCard: 'card-97',
     previewCard: 'card-79',
     deckSize: 7,
-    seatOrder: ['3', '0', '1', '2'],
-    firstEligible: '3',
-    secondEligible: '1',
+    seatOrder: ['vc', 'us', 'arvn', 'nva'],
+    firstEligible: 'vc',
+    secondEligible: 'arvn',
     nonPassCount: 0,
     zoneTokenCounts: [
       { zone: 'available-VC:none', faction: 'VC', type: 'guerrilla', count: 11 },
@@ -1244,6 +1262,10 @@ const TURN_4: PlaybookTurn = {
       { label: 'pending free-operation grants', expected: 0, compute: (_def, state) =>
         state.turnOrderState.type === 'cardDriven'
           ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).length
+          : 0 },
+      { label: 'pending deferred event effects', expected: 0, compute: (_def, state) =>
+        state.turnOrderState.type === 'cardDriven'
+          ? (state.turnOrderState.runtime.pendingDeferredEventEffects ?? []).length
           : 0 },
       { label: 'VC victory marker', expected: 23, compute: computeVcVictory },
       { label: 'NVA victory marker', expected: 10, compute: computeNvaVictory },
@@ -1340,14 +1362,14 @@ const TURN_5: PlaybookTurn = {
       aid: 14,
       patronage: 15,
     },
-    eligibility: { '0': true, '1': true, '2': true, '3': false },
+    eligibility: { us: true, arvn: true, nva: true, vc: false },
     activePlayer: 1,
     currentCard: 'card-79',
     previewCard: 'card-101',
     deckSize: 6,
-    seatOrder: ['1', '2', '3', '0'],
-    firstEligible: '1',
-    secondEligible: '2',
+    seatOrder: ['arvn', 'nva', 'vc', 'us'],
+    firstEligible: 'arvn',
+    secondEligible: 'nva',
     nonPassCount: 0,
     zoneTokenCounts: [
       // Board persistence — Turn 5 moves no tokens
@@ -1489,14 +1511,14 @@ const TURN_6: PlaybookTurn = {
         actionId: asActionId('sweep'),
         actionClass: 'operationPlusSpecialActivity',
         params: {
-          targetSpaces: ['binh-dinh:none', 'pleiku-darlac:none'],
+          $targetSpaces: ['binh-dinh:none', 'pleiku-darlac:none'],
         },
         compound: {
           specialActivity: {
             actionId: asActionId('raid'),
             actionClass: 'operationPlusSpecialActivity',
             params: {
-              targetSpaces: ['quang-tri-thua-thien:none'],
+              $targetSpaces: ['quang-tri-thua-thien:none'],
               '$raidIncomingFrom@quang-tri-thua-thien:none': ['quang-nam:none'],
               '$raidRemove@quang-tri-thua-thien:none': 'yes',
             },
@@ -1589,7 +1611,7 @@ const TURN_6: PlaybookTurn = {
         actionId: asActionId('assault'),
         actionClass: 'limitedOperation',
         params: {
-          targetSpaces: ['pleiku-darlac:none'],
+          $targetSpaces: ['pleiku-darlac:none'],
           $arvnFollowupSpaces: ['pleiku-darlac:none'],
         },
       },
@@ -1635,14 +1657,14 @@ const TURN_6: PlaybookTurn = {
       // Persistence from Turn 5
       terrorSabotageMarkersPlaced: 1,
     },
-    eligibility: { '0': false, '1': false, '2': true, '3': true },
+    eligibility: { us: false, arvn: false, nva: true, vc: true },
     activePlayer: 3,
     currentCard: 'card-101',
     previewCard: 'card-125',
     deckSize: 5,
-    seatOrder: ['3', '2', '0', '1'],
-    firstEligible: '3',
-    secondEligible: '2',
+    seatOrder: ['vc', 'nva', 'us', 'arvn'],
+    firstEligible: 'vc',
+    secondEligible: 'nva',
     nonPassCount: 0,
     zoneTokenCounts: [
       // ── Available boxes ──
@@ -1799,14 +1821,14 @@ const TURN_7: PlaybookTurn = {
         actionId: asActionId('attack'),
         actionClass: 'operationPlusSpecialActivity',
         params: {
-          targetSpaces: ['quang-tri-thua-thien:none'],
+          $targetSpaces: ['quang-tri-thua-thien:none'],
         },
         compound: {
           specialActivity: {
             actionId: asActionId('ambushNva'),
             actionClass: 'operationPlusSpecialActivity',
             params: {
-              targetSpaces: ['quang-tri-thua-thien:none'],
+              $targetSpaces: ['quang-tri-thua-thien:none'],
             },
           },
           timing: 'during',
@@ -1879,7 +1901,7 @@ const TURN_7: PlaybookTurn = {
     // After the card boundary fires (coup card promoted to played),
     // advanceToDecisionPoint detects stale phase and transitions into
     // coupVictory where the coup entry reset makes all factions eligible.
-    eligibility: { '0': true, '1': true, '2': true, '3': true },
+    eligibility: { us: true, arvn: true, nva: true, vc: true },
     currentCard: 'card-125',
     previewCard: 'card-75',
     deckSize: 4,
@@ -2051,7 +2073,6 @@ const TURN_8: PlaybookTurn = {
       },
       expectedState: {
         globalVars: { arvnResources: 44 },
-        // Narrative: "spend 3 ARVN resources to remove that [Terror] marker"
         zoneVars: [
           { zone: 'hue:none', variable: 'terrorCount', expected: 0 },
         ],
@@ -2091,8 +2112,6 @@ const TURN_8: PlaybookTurn = {
         markers: [
           { space: 'hue:none', marker: 'supportOpposition', expected: 'neutral' },
         ],
-        // Narrative: "Lower the blue VC 'Oppose+Bases' VP token from 27 to 23"
-        // Narrative: "The US victory point token doesn't change because there is no Support in Hue"
         computedValues: [
           { label: 'VC VP after Hue neutralized', expected: 23, compute: computeVcVictory },
           { label: 'US VP unchanged (Hue neutral, no support)', expected: 42, compute: computeUsVictory },
@@ -2457,7 +2476,7 @@ const TURN_8: PlaybookTurn = {
       trail: 1,
     },
     // After reset (6.6): all factions eligible, new card = Sihanouk
-    eligibility: { '0': true, '1': true, '2': true, '3': true },
+    eligibility: { us: true, arvn: true, nva: true, vc: true },
     currentCard: 'card-75',  // Sihanouk
     previewCard: 'card-17',  // Claymores
     deckSize: 3,
@@ -2540,7 +2559,7 @@ describe('FITL playbook golden suite', () => {
         patronage: 15,
         trail: 1,
       },
-      eligibility: { '0': true, '1': true, '2': true, '3': true },
+      eligibility: { us: true, arvn: true, nva: true, vc: true },
       activePlayer: 3,
       currentCard: 'card-107',
       previewCard: 'card-55',

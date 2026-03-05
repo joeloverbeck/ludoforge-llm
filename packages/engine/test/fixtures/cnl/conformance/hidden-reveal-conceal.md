@@ -46,12 +46,14 @@ actions:
           to:
             id: 1
           filter:
-            - prop: faction
-              op: eq
-              value: US
-            - prop: rank
-              op: eq
-              value: 1
+            op: and
+            args:
+              - prop: faction
+                op: eq
+                value: US
+              - prop: rank
+                op: eq
+                value: 1
     limits: []
   - id: concealFilteredReordered
     actor: active
@@ -66,12 +68,14 @@ actions:
           from:
             id: 1
           filter:
-            - prop: rank
-              op: eq
-              value: 1
-            - prop: faction
-              op: eq
-              value: US
+            op: and
+            args:
+              - prop: rank
+                op: eq
+                value: 1
+              - prop: faction
+                op: eq
+                value: US
     limits: []
 terminal:
   conditions:
@@ -82,4 +86,3 @@ terminal:
       result:
         type: draw
 ```
-

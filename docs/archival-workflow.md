@@ -25,7 +25,9 @@ Use this as the canonical, single-source archival policy for tickets, specs, bra
    - The script also rewrites matching moved-path references across active `tickets/*.md` (including `**Deps**` and other markdown references) from old path to new path.
 6. If there is a filename collision, pass an explicit non-colliding destination filename.
 7. Confirm the original path no longer exists in its source folder (`tickets/`, `specs/`, `brainstorming/`, or `reports/`).
-8. Run `pnpm run check:ticket-deps` to verify active ticket dependency integrity remains valid.
+8. Run `pnpm run check:ticket-deps` to verify:
+   - active ticket dependency/reference integrity remains valid
+   - archived ticket `Outcome` sections have no explicit contradictory path claims (for example path marked unchanged and changed in the same Outcome)
 
 ## Examples
 

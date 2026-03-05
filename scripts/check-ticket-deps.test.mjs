@@ -152,3 +152,55 @@ test('passes when markdown links and inline ticket references resolve', () => {
     assert.equal(result.status, 0, result.stderr);
   });
 });
+
+test('fails when an archived Outcome contradicts changed path claims', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets'), { recursive: true });
+    writeFileSync(join(tempRoot, 'tickets', 'ENGINEARCH-400-active.md'), '# Active\n\n**Deps**: None\n', 'utf8');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-399-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs` with new integrity logic.',
+        '  - no `scripts/check-ticket-deps.mjs` changes were required.',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = runCheck(tempRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /contradictory Outcome claim/);
+    assert.match(result.stderr, /archive\/tickets\/ENGINEARCH-399-archived\.md:9/);
+  });
+});
+
+test('passes when archived Outcome unchanged path claims do not conflict', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets'), { recursive: true });
+    writeFileSync(join(tempRoot, 'tickets', 'ENGINEARCH-401-active.md'), '# Active\n\n**Deps**: None\n', 'utf8');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-398-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs` with new integrity logic.',
+        '  - `scripts/archive-ticket.mjs` remained unchanged.',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = runCheck(tempRoot);
+    assert.equal(result.status, 0, result.stderr);
+  });
+});

@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { writeSync } from 'node:fs';
 
 const TICKETS_DIR = 'tickets';
+const ARCHIVE_TICKETS_DIR = join('archive', 'tickets');
 const SKIP_FILES = new Set(['README.md', '_TEMPLATE.md']);
 
 function fail(message) {
@@ -17,6 +18,10 @@ function ticketFiles(rootDir) {
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md') && !SKIP_FILES.has(entry.name))
     .map((entry) => join(TICKETS_DIR, entry.name))
     .sort((a, b) => a.localeCompare(b));
+}
+
+function archivedTicketFiles(rootDir) {
+  return [...collectTicketIndex(rootDir, ARCHIVE_TICKETS_DIR).values()].sort((a, b) => a.localeCompare(b));
 }
 
 function parseDepsLine(content) {
@@ -147,23 +152,133 @@ function extractTicketPathReferences(content) {
   return references;
 }
 
+function parseOutcomeSection(content) {
+  const lines = content.split('\n');
+  const headerPattern = /^##\s+Outcome\b/i;
+  const nextSectionPattern = /^##\s+/;
+  const startIndex = lines.findIndex((line) => headerPattern.test(line));
+  if (startIndex === -1) {
+    return [];
+  }
+
+  const section = [];
+  for (let i = startIndex + 1; i < lines.length; i += 1) {
+    if (nextSectionPattern.test(lines[i])) {
+      break;
+    }
+    section.push({ line: i + 1, text: lines[i] });
+  }
+  return section;
+}
+
+const BACKTICK_RE = /`([^`\n]+)`/g;
+const POSITIVE_OUTCOME_PATH_HINTS = /\b(changed|change|modified|updated|added|removed|renamed|rewrote|touched|created)\b/i;
+
+function normalizePathToken(token) {
+  return token.trim().replace(/[),.;:]+$/g, '');
+}
+
+function isRepoPathToken(token) {
+  if (token.includes(' ')) {
+    return false;
+  }
+  if (token.startsWith('http://') || token.startsWith('https://')) {
+    return false;
+  }
+  return token.includes('/');
+}
+
+function isNegativePathClaim(line, path) {
+  const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const noChangesPattern = new RegExp(`\\bno\\b[^\\n]*\`${escapedPath}\`[^\\n]*\\bchange(?:s|d)?\\b`, 'i');
+  const unchangedPattern = new RegExp(`\`${escapedPath}\`[^\\n]*\\b(remain(?:ed)?|left|kept)\\b[^\\n]*\\bunchanged\\b`, 'i');
+  const unchangedPrefixPattern = new RegExp(`\\bunchanged\\b[^\\n]*\`${escapedPath}\``, 'i');
+  return noChangesPattern.test(line) || unchangedPattern.test(line) || unchangedPrefixPattern.test(line);
+}
+
+function extractOutcomePathClaims(content) {
+  const claims = {
+    positive: new Map(),
+    negative: new Map(),
+  };
+  const outcomeLines = parseOutcomeSection(content);
+  let inWhatChanged = false;
+
+  for (const entry of outcomeLines) {
+    const line = entry.text;
+    if (/^\s*-\s+\*\*What actually changed\*\*/i.test(line)) {
+      inWhatChanged = true;
+      continue;
+    }
+    if (/^\s*-\s+\*\*/.test(line) && !/^\s*-\s+\*\*What actually changed\*\*/i.test(line)) {
+      inWhatChanged = false;
+    }
+
+    let match;
+    while ((match = BACKTICK_RE.exec(line)) !== null) {
+      const path = normalizePathToken(match[1]);
+      if (!isRepoPathToken(path)) {
+        continue;
+      }
+
+      const isNegative = isNegativePathClaim(line, path);
+      if (isNegative) {
+        claims.negative.set(path, entry.line);
+      }
+      if (!isNegative && (inWhatChanged || POSITIVE_OUTCOME_PATH_HINTS.test(line))) {
+        claims.positive.set(path, entry.line);
+      }
+    }
+    BACKTICK_RE.lastIndex = 0;
+  }
+
+  return claims;
+}
+
+function validateArchivedOutcomeIntegrity(rootDir, archivedTicketPath) {
+  const absolutePath = resolve(rootDir, archivedTicketPath);
+  const content = readFileSync(absolutePath, 'utf8');
+  const errors = [];
+  const claims = extractOutcomePathClaims(content);
+
+  for (const [path, negativeLine] of claims.negative) {
+    const positiveLine = claims.positive.get(path);
+    if (!positiveLine) {
+      continue;
+    }
+    errors.push(
+      `${archivedTicketPath}:${negativeLine}: contradictory Outcome claim for "${path}" (conflicts with changed-path claim at line ${positiveLine})`,
+    );
+  }
+
+  return errors;
+}
+
 function main() {
   const rootDir = process.cwd();
   const ticketIndex = new Map([
     ...collectTicketIndex(rootDir, 'tickets'),
-    ...collectTicketIndex(rootDir, join('archive', 'tickets')),
+    ...collectTicketIndex(rootDir, ARCHIVE_TICKETS_DIR),
   ]);
   const errors = [];
+  const activeTicketPaths = ticketFiles(rootDir);
+  const archivedTicketPaths = archivedTicketFiles(rootDir);
 
-  for (const ticketPath of ticketFiles(rootDir)) {
+  for (const ticketPath of activeTicketPaths) {
     errors.push(...validateTicket(rootDir, ticketPath, ticketIndex));
+  }
+  for (const archivedTicketPath of archivedTicketPaths) {
+    errors.push(...validateArchivedOutcomeIntegrity(rootDir, archivedTicketPath));
   }
 
   if (errors.length > 0) {
     fail(['Ticket dependency integrity check failed:', ...errors].join('\n'));
   }
 
-  writeSync(1, `Ticket dependency integrity check passed for ${ticketFiles(rootDir).length} active tickets.\n`);
+  writeSync(
+    1,
+    `Ticket dependency integrity check passed for ${activeTicketPaths.length} active tickets and ${archivedTicketPaths.length} archived tickets.\n`,
+  );
 }
 
 main();

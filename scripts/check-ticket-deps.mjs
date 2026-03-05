@@ -1,10 +1,12 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
 
 const TICKETS_DIR = 'tickets';
 const ARCHIVE_TICKETS_DIR = join('archive', 'tickets');
 const SKIP_FILES = new Set(['README.md', '_TEMPLATE.md']);
+const OUTCOME_AMENDMENT_POLICY_EFFECTIVE_DATE = '2026-03-05';
 
 function fail(message) {
   writeSync(2, `${message}\n`);
@@ -171,6 +173,42 @@ function parseOutcomeSection(content) {
   return section;
 }
 
+function findOutcomeCompletionDate(outcomeSection) {
+  for (const entry of outcomeSection) {
+    const match = entry.text.match(/\*\*Completion date\*\*:\s*(\d{4}-\d{2}-\d{2})/i);
+    if (match) {
+      return { value: match[1], line: entry.line };
+    }
+  }
+  return null;
+}
+
+function findOutcomeAmendmentDate(outcomeSection) {
+  for (const entry of outcomeSection) {
+    const match = entry.text.match(/\bOutcome amended:\s*(\d{4}-\d{2}-\d{2})\b/i);
+    if (match) {
+      return { value: match[1], line: entry.line };
+    }
+  }
+  return null;
+}
+
+function gitCommitTouchCount(rootDir, relativePath) {
+  const result = spawnSync('git', ['rev-list', '--count', 'HEAD', '--', relativePath], {
+    cwd: rootDir,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    return null;
+  }
+
+  const count = Number.parseInt(result.stdout.trim(), 10);
+  if (!Number.isFinite(count)) {
+    return null;
+  }
+  return count;
+}
+
 const BACKTICK_RE = /`([^`\n]+)`/g;
 const POSITIVE_OUTCOME_PATH_HINTS = /\b(changed|change|modified|updated|added|removed|renamed|rewrote|touched|created)\b/i;
 
@@ -240,6 +278,7 @@ function validateArchivedOutcomeIntegrity(rootDir, archivedTicketPath) {
   const content = readFileSync(absolutePath, 'utf8');
   const errors = [];
   const claims = extractOutcomePathClaims(content);
+  const outcomeSection = parseOutcomeSection(content);
 
   for (const [path, negativeLine] of claims.negative) {
     const positiveLine = claims.positive.get(path);
@@ -248,6 +287,30 @@ function validateArchivedOutcomeIntegrity(rootDir, archivedTicketPath) {
     }
     errors.push(
       `${archivedTicketPath}:${negativeLine}: contradictory Outcome claim for "${path}" (conflicts with changed-path claim at line ${positiveLine})`,
+    );
+  }
+
+  const completionDate = findOutcomeCompletionDate(outcomeSection);
+  if (!completionDate || completionDate.value < OUTCOME_AMENDMENT_POLICY_EFFECTIVE_DATE) {
+    return errors;
+  }
+
+  const touchCount = gitCommitTouchCount(rootDir, archivedTicketPath);
+  if (touchCount === null || touchCount <= 1) {
+    return errors;
+  }
+
+  const amendmentDate = findOutcomeAmendmentDate(outcomeSection);
+  if (!amendmentDate) {
+    errors.push(
+      `${archivedTicketPath}:${completionDate.line}: missing required "Outcome amended: YYYY-MM-DD" marker for post-completion archived ticket edits (policy effective ${OUTCOME_AMENDMENT_POLICY_EFFECTIVE_DATE})`,
+    );
+    return errors;
+  }
+
+  if (amendmentDate.value < completionDate.value) {
+    errors.push(
+      `${archivedTicketPath}:${amendmentDate.line}: Outcome amendment date "${amendmentDate.value}" is earlier than completion date "${completionDate.value}"`,
     );
   }
 

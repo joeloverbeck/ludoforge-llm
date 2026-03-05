@@ -33,6 +33,7 @@ To keep architecture clean, robust, and extensible, every new ticket must be cre
 ## Dependency Integrity Command
 
 - Run `pnpm run check:ticket-deps` to validate all active ticket `**Deps**` paths.
+- The same check validates archived `Outcome` consistency and, for completion dates on/after `2026-03-05`, requires `Outcome amended: YYYY-MM-DD` when archived ticket files are edited post-completion.
 - Root `pnpm test` runs this check before workspace tests, so broken ticket dependencies fail the default quality gate.
 
 ## Archival Reminder

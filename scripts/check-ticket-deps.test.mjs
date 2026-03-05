@@ -27,6 +27,26 @@ function runCheck(cwd) {
   });
 }
 
+function runGit(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
+function initGitRepo(cwd) {
+  runGit(cwd, ['init']);
+  runGit(cwd, ['config', 'user.email', 'check-ticket-deps@test.local']);
+  runGit(cwd, ['config', 'user.name', 'check-ticket-deps']);
+}
+
+function commitAll(cwd, message) {
+  runGit(cwd, ['add', '.']);
+  runGit(cwd, ['commit', '-m', message, '--no-gpg-sign']);
+}
+
 test('passes when all ticket dependency paths exist', () => {
   withTempRepo((tempRoot) => {
     mkdirSync(join(tempRoot, 'specs'), { recursive: true });
@@ -202,5 +222,145 @@ test('passes when archived Outcome unchanged path claims do not conflict', () =>
 
     const result = runCheck(tempRoot);
     assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+test('fails when policy-window archived ticket has post-completion edits without Outcome amended marker', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets'), { recursive: true });
+    writeFileSync(join(tempRoot, 'tickets', 'ENGINEARCH-500-active.md'), '# Active\n\n**Deps**: None\n', 'utf8');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-499-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **Completion date**: 2026-03-05',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs`.',
+      ].join('\n'),
+      'utf8',
+    );
+
+    initGitRepo(tempRoot);
+    commitAll(tempRoot, 'initial archive');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-499-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **Completion date**: 2026-03-05',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs`.',
+        '- **Deviations from original plan**:',
+        '  - Clarified wording.',
+      ].join('\n'),
+      'utf8',
+    );
+    commitAll(tempRoot, 'post-completion refinement');
+
+    const result = runCheck(tempRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /missing required "Outcome amended: YYYY-MM-DD" marker/);
+  });
+});
+
+test('passes when policy-window archived ticket post-completion edits include Outcome amended marker', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets'), { recursive: true });
+    writeFileSync(join(tempRoot, 'tickets', 'ENGINEARCH-501-active.md'), '# Active\n\n**Deps**: None\n', 'utf8');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-498-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **Completion date**: 2026-03-05',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs`.',
+      ].join('\n'),
+      'utf8',
+    );
+
+    initGitRepo(tempRoot);
+    commitAll(tempRoot, 'initial archive');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-498-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **Completion date**: 2026-03-05',
+        '- Outcome amended: 2026-03-06',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs`.',
+        '- **Deviations from original plan**:',
+        '  - Clarified wording.',
+      ].join('\n'),
+      'utf8',
+    );
+    commitAll(tempRoot, 'post-completion refinement with amendment marker');
+
+    const result = runCheck(tempRoot);
+    assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+test('fails when Outcome amended marker date is earlier than completion date', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets'), { recursive: true });
+    writeFileSync(join(tempRoot, 'tickets', 'ENGINEARCH-502-active.md'), '# Active\n\n**Deps**: None\n', 'utf8');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-497-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **Completion date**: 2026-03-05',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs`.',
+      ].join('\n'),
+      'utf8',
+    );
+
+    initGitRepo(tempRoot);
+    commitAll(tempRoot, 'initial archive');
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'ENGINEARCH-497-archived.md'),
+      [
+        '# Archived',
+        '',
+        '**Status**: ✅ COMPLETED',
+        '',
+        '## Outcome',
+        '',
+        '- **Completion date**: 2026-03-05',
+        '- Outcome amended: 2026-03-04',
+        '- **What actually changed**:',
+        '  - Updated `scripts/check-ticket-deps.mjs`.',
+      ].join('\n'),
+      'utf8',
+    );
+    commitAll(tempRoot, 'post-completion refinement with invalid amendment date');
+
+    const result = runCheck(tempRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Outcome amendment date "2026-03-04" is earlier than completion date "2026-03-05"/);
   });
 });

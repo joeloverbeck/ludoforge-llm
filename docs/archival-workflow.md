@@ -15,6 +15,8 @@ Use this as the canonical, single-source archival policy for tickets, specs, bra
    - deviations from original plan
    - verification results
 3. If implementation is refined after archival and the archived `Outcome` becomes stale, amend the archived document before merge/finalization so ownership, behavior, and verification facts remain accurate.
+   - Add `Outcome amended: YYYY-MM-DD` inside `## Outcome` for each post-completion refinement update.
+   - Policy effective date: `2026-03-05` (forward-only enforcement; no mandatory historical backfill before this date).
 4. Ensure destination archive directory exists:
    - `archive/tickets/`
    - `archive/specs/`
@@ -28,6 +30,7 @@ Use this as the canonical, single-source archival policy for tickets, specs, bra
 8. Run `pnpm run check:ticket-deps` to verify:
    - active ticket dependency/reference integrity remains valid
    - archived ticket `Outcome` sections have no explicit contradictory path claims (for example path marked unchanged and changed in the same Outcome)
+   - archived tickets completed on/after `2026-03-05` include `Outcome amended: YYYY-MM-DD` when git history indicates post-completion edits to the archived ticket file
 
 ## Examples
 

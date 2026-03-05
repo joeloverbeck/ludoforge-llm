@@ -86,15 +86,15 @@ describe('game-loop API shape', () => {
     assert.deepEqual(legalMoves(gameDefStub, gameStateStub), []);
     assert.throws(() => applyMove(gameDefStub, gameStateStub, moveStub), /Illegal move/);
 
-    const dispatchResult = dispatchTriggers(
-      gameDefStub,
-      gameStateStub,
-      { state: gameStateStub.rng },
-      { type: 'turnStart' },
-      0,
-      8,
-      [],
-    );
+    const dispatchResult = dispatchTriggers({
+      def: gameDefStub,
+      state: gameStateStub,
+      rng: { state: gameStateStub.rng },
+      event: { type: 'turnStart' },
+      depth: 0,
+      maxDepth: 8,
+      triggerLog: [],
+    });
     assert.equal(dispatchResult.state, gameStateStub);
     assert.equal(dispatchResult.rng.state, gameStateStub.rng);
     assert.deepEqual(dispatchResult.triggerLog, []);

@@ -1,6 +1,6 @@
 # KERQUERY-015: Harden trigger-dispatch signature and runtime contracts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel trigger dispatch API shape and contract validation
@@ -15,6 +15,7 @@
 1. KERQUERY-010 correctly removed dual ownership ambiguity (`collector` vs `evalRuntimeResources`) and call sites now pass a single resource path.
 2. `dispatchTriggers` still accepts optional parameters positionally (`adjacencyGraph`, `runtimeTableIndex`, `policy`, `effectPathRoot`, `evalRuntimeResources`), which is easy to misuse when call sites evolve.
 3. Current tests validate behavior semantics (order/depth/resources usage) but do not explicitly fail-fast on malformed runtime argument shapes.
+4. `EvalRuntimeResources` is currently `{ collector, queryRuntimeCache }`; the old `queryCache` naming is stale and must not be reintroduced.
 
 ## Architecture Check
 
@@ -33,7 +34,7 @@
 ### 2. Add runtime contract guards for option shape
 
 1. Validate `effectPathRoot` is a string when provided.
-2. Validate `evalRuntimeResources` is structurally valid (collector + queryCache ownership container shape expected by kernel).
+2. Validate `evalRuntimeResources` is structurally valid (collector + queryRuntimeCache ownership container shape expected by kernel).
 3. Throw clear runtime contract errors on invalid shapes to fail fast and aid debugging.
 
 ### 3. Migrate all call sites and tests
@@ -49,6 +50,7 @@
 - `packages/engine/src/kernel/phase-lifecycle.ts` (modify)
 - `packages/engine/test/unit/trigger-dispatch.test.ts` (modify/add)
 - `packages/engine/test/unit/game-loop-api-shape.test.ts` (modify if needed)
+- `packages/engine/test/unit/phase-lifecycle-resources.test.ts` (modify if needed)
 
 ## Out of Scope
 
@@ -77,10 +79,28 @@
 1. `packages/engine/test/unit/trigger-dispatch.test.ts` — migrate to options object and add malformed-options contract tests.
 2. `packages/engine/test/unit/game-loop-api-shape.test.ts` — keep public API callable with updated signature shape.
 3. `packages/engine/test/unit/apply-move.test.ts` — ensure move-trigger integration remains behaviorally unchanged after call-site migration.
+4. `packages/engine/test/unit/phase-lifecycle-resources.test.ts` — ensure lifecycle dispatch still threads a single eval resource container identity.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/trigger-dispatch.test.js packages/engine/dist/test/unit/game-loop-api-shape.test.js packages/engine/dist/test/unit/apply-move.test.js`
+2. `node --test packages/engine/dist/test/unit/trigger-dispatch.test.js packages/engine/dist/test/unit/game-loop-api-shape.test.js packages/engine/dist/test/unit/apply-move.test.js packages/engine/dist/test/unit/phase-lifecycle-resources.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-05
+- **What Changed**:
+  - Replaced `dispatchTriggers` positional optional tail with canonical `DispatchTriggersOptions`.
+  - Added fail-fast runtime contract validation for `options.effectPathRoot` and `options.evalRuntimeResources` (must include `collector` and `queryRuntimeCache`).
+  - Migrated kernel call sites in `apply-move` and `phase-lifecycle` to named options (no compatibility alias path).
+  - Migrated/expanded trigger dispatch unit coverage for malformed option payloads.
+- **Deviations from Original Plan**:
+  - Added `phase-lifecycle-resources` to explicit verification scope (assumption correction), but no source changes were required in that test file after call-site migration.
+  - Error surface uses existing `KernelRuntimeError` (`RUNTIME_CONTRACT_INVALID`) for consistency with kernel runtime contract failures.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/trigger-dispatch.test.js packages/engine/dist/test/unit/game-loop-api-shape.test.js packages/engine/dist/test/unit/apply-move.test.js packages/engine/dist/test/unit/phase-lifecycle-resources.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅

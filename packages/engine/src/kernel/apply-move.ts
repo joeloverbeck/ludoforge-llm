@@ -924,39 +924,39 @@ const executeMoveAction = (
   let triggerLog = [] as ApplyMoveResult['triggerFirings'];
 
   for (const emittedEvent of emittedEvents) {
-    const emittedEventResult = dispatchTriggers(
+    const emittedEventResult = dispatchTriggers({
       def,
-      triggerState,
-      triggerRng,
-      emittedEvent,
-      0,
+      state: triggerState,
+      rng: triggerRng,
+      event: emittedEvent,
+      depth: 0,
       maxDepth,
       triggerLog,
-      shared.adjacencyGraph,
-      shared.runtimeTableIndex,
-      shared.executionPolicy,
-      `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
-      shared.evalRuntimeResources,
-    );
+      adjacencyGraph: shared.adjacencyGraph,
+      runtimeTableIndex: shared.runtimeTableIndex,
+      effectPathRoot: `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
+      evalRuntimeResources: shared.evalRuntimeResources,
+      ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
+    });
     triggerState = emittedEventResult.state;
     triggerRng = emittedEventResult.rng;
     triggerLog = emittedEventResult.triggerLog;
   }
 
-  const triggerResult = dispatchTriggers(
+  const triggerResult = dispatchTriggers({
     def,
-    triggerState,
-    triggerRng,
-    { type: 'actionResolved', action: move.actionId },
-    0,
+    state: triggerState,
+    rng: triggerRng,
+    event: { type: 'actionResolved', action: move.actionId },
+    depth: 0,
     maxDepth,
     triggerLog,
-    shared.adjacencyGraph,
-    shared.runtimeTableIndex,
-    shared.executionPolicy,
-    `action:${String(action.id)}.actionResolved`,
-    shared.evalRuntimeResources,
-  );
+    adjacencyGraph: shared.adjacencyGraph,
+    runtimeTableIndex: shared.runtimeTableIndex,
+    effectPathRoot: `action:${String(action.id)}.actionResolved`,
+    evalRuntimeResources: shared.evalRuntimeResources,
+    ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
+  });
 
   return {
     stateWithRng: {
@@ -1014,20 +1014,20 @@ const applyReleasedDeferredEventEffects = (
     nextState = effectResult.state;
     nextRng = effectResult.rng;
     for (const emittedEvent of effectResult.emittedEvents ?? []) {
-      const emittedEventResult = dispatchTriggers(
+      const emittedEventResult = dispatchTriggers({
         def,
-        nextState,
-        nextRng,
-        emittedEvent,
-        0,
+        state: nextState,
+        rng: nextRng,
+        event: emittedEvent,
+        depth: 0,
         maxDepth,
         triggerLog,
-        shared.adjacencyGraph,
-        shared.runtimeTableIndex,
-        shared.executionPolicy,
-        `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
-        shared.evalRuntimeResources,
-      );
+        adjacencyGraph: shared.adjacencyGraph,
+        runtimeTableIndex: shared.runtimeTableIndex,
+        effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
+        evalRuntimeResources: shared.evalRuntimeResources,
+        ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
+      });
       nextState = emittedEventResult.state;
       nextRng = emittedEventResult.rng;
       triggerLog = emittedEventResult.triggerLog;

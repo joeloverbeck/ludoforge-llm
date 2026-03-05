@@ -60,20 +60,20 @@ export const dispatchLifecycleEvent = (
     currentState = effectResult.state;
     currentRng = effectResult.rng;
     for (const emittedEvent of effectResult.emittedEvents ?? []) {
-      const emittedResult = dispatchTriggers(
+      const emittedResult = dispatchTriggers({
         def,
-        currentState,
-        currentRng,
-        emittedEvent,
-        0,
-        def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH,
-        [],
+        state: currentState,
+        rng: currentRng,
+        event: emittedEvent,
+        depth: 0,
+        maxDepth: def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH,
+        triggerLog: [],
         adjacencyGraph,
         runtimeTableIndex,
-        policy,
-        `${effectPathRoot}.triggeredEvent(${emittedEvent.type})`,
-        runtimeResources,
-      );
+        effectPathRoot: `${effectPathRoot}.triggeredEvent(${emittedEvent.type})`,
+        evalRuntimeResources: runtimeResources,
+        ...(policy === undefined ? {} : { policy }),
+      });
       currentState = emittedResult.state;
       currentRng = emittedResult.rng;
       if (triggerLogCollector !== undefined) {
@@ -82,20 +82,20 @@ export const dispatchLifecycleEvent = (
     }
   }
 
-  const result = dispatchTriggers(
+  const result = dispatchTriggers({
     def,
-    currentState,
-    currentRng,
+    state: currentState,
+    rng: currentRng,
     event,
-    0,
-    def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH,
-    [],
+    depth: 0,
+    maxDepth: def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH,
+    triggerLog: [],
     adjacencyGraph,
     runtimeTableIndex,
-    policy,
-    `${effectPathRoot}.eventDispatch`,
-    runtimeResources,
-  );
+    effectPathRoot: `${effectPathRoot}.eventDispatch`,
+    evalRuntimeResources: runtimeResources,
+    ...(policy === undefined ? {} : { policy }),
+  });
 
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...result.triggerLog);

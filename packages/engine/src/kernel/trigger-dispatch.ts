@@ -2,6 +2,7 @@ import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
@@ -14,20 +15,38 @@ export interface DispatchTriggersResult {
   readonly triggerLog: readonly TriggerLogEntry[];
 }
 
-export const dispatchTriggers = (
-  def: GameDef,
-  state: GameState,
-  rng: Rng,
-  event: TriggerEvent,
-  depth: number,
-  maxDepth: number,
-  triggerLog: readonly TriggerLogEntry[],
-  adjacencyGraph: AdjacencyGraph = buildAdjacencyGraph(def.zones),
-  runtimeTableIndex: RuntimeTableIndex = buildRuntimeTableIndex(def),
-  policy?: MoveExecutionPolicy,
-  effectPathRoot = `triggerEvent(${event.type})`,
-  evalRuntimeResources?: EvalRuntimeResources,
-): DispatchTriggersResult => {
+export interface DispatchTriggersRequest {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly event: TriggerEvent;
+  readonly depth: number;
+  readonly maxDepth: number;
+  readonly triggerLog: readonly TriggerLogEntry[];
+  readonly adjacencyGraph?: AdjacencyGraph;
+  readonly runtimeTableIndex?: RuntimeTableIndex;
+  readonly policy?: MoveExecutionPolicy;
+  readonly effectPathRoot?: string;
+  readonly evalRuntimeResources?: EvalRuntimeResources;
+}
+
+export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTriggersResult => {
+  const {
+    def,
+    state,
+    rng,
+    event,
+    depth,
+    maxDepth,
+    triggerLog,
+    policy,
+  } = request;
+  const adjacencyGraph = request.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = request.runtimeTableIndex ?? buildRuntimeTableIndex(def);
+  const effectPathRoot = request.effectPathRoot ?? `triggerEvent(${event.type})`;
+  const runtimeResources = request.evalRuntimeResources ?? createEvalRuntimeResources();
+  validateDispatchTriggerRequest(request);
+
   if (depth > maxDepth) {
     return {
       state,
@@ -36,7 +55,6 @@ export const dispatchTriggers = (
     };
   }
 
-  const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources();
   let nextState = state;
   let nextRng = rng;
   let nextTriggerLog: TriggerLogEntry[] = [...triggerLog];
@@ -88,20 +106,20 @@ export const dispatchTriggers = (
     });
 
     for (const emittedEvent of effectResult.emittedEvents ?? []) {
-      const cascadeResult = dispatchTriggers(
+      const cascadeResult = dispatchTriggers({
         def,
-        nextState,
-        nextRng,
-        emittedEvent,
-        depth + 1,
+        state: nextState,
+        rng: nextRng,
+        event: emittedEvent,
+        depth: depth + 1,
         maxDepth,
-        nextTriggerLog,
+        triggerLog: nextTriggerLog,
         adjacencyGraph,
         runtimeTableIndex,
-        policy,
-        `${effectPathRoot}.cascade(${emittedEvent.type})`,
-        runtimeResources,
-      );
+        effectPathRoot: `${effectPathRoot}.cascade(${emittedEvent.type})`,
+        evalRuntimeResources: runtimeResources,
+        ...(policy === undefined ? {} : { policy }),
+      });
       nextState = cascadeResult.state;
       nextRng = cascadeResult.rng;
       nextTriggerLog = [...cascadeResult.triggerLog];
@@ -141,6 +159,32 @@ const matchesEvent = (trigger: TriggerDef, event: TriggerEvent): boolean => {
         (triggerEvent.zone === undefined || triggerEvent.zone === event.zone)
       );
   }
+};
+
+const validateDispatchTriggerRequest = (request: DispatchTriggersRequest): void => {
+  if (request.effectPathRoot !== undefined && typeof request.effectPathRoot !== 'string') {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.effectPathRoot must be a string when provided; received ${typeof request.effectPathRoot}`,
+    );
+  }
+  if (request.evalRuntimeResources !== undefined && !isEvalRuntimeResources(request.evalRuntimeResources)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      'dispatchTriggers request.evalRuntimeResources must include collector and queryRuntimeCache ownership fields',
+    );
+  }
+};
+
+const isEvalRuntimeResources = (value: unknown): value is EvalRuntimeResources => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as { collector?: unknown; queryRuntimeCache?: unknown };
+  return typeof candidate.collector === 'object'
+    && candidate.collector !== null
+    && typeof candidate.queryRuntimeCache === 'object'
+    && candidate.queryRuntimeCache !== null;
 };
 
 const createEventBindings = (event: TriggerEvent): Readonly<Record<string, unknown>> => {

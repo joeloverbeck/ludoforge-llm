@@ -60,7 +60,16 @@ describe('dispatchTriggers', () => {
     });
     const adjacencyGraph = buildAdjacencyGraph(def.zones);
 
-    const result = dispatchTriggers(def, state, { state: state.rng }, { type: 'turnStart' }, 0, 8, [], adjacencyGraph);
+    const result = dispatchTriggers({
+      def,
+      state,
+      rng: { state: state.rng },
+      event: { type: 'turnStart' },
+      depth: 0,
+      maxDepth: 8,
+      triggerLog: [],
+      adjacencyGraph,
+    });
 
     assert.equal(result.state, state);
     assert.deepEqual(result.triggerLog, []);
@@ -91,26 +100,94 @@ describe('dispatchTriggers', () => {
     const collector = createCollector({ trace: true });
     const resources = createEvalRuntimeResources({ collector });
 
-    const result = dispatchTriggers(
+    const result = dispatchTriggers({
       def,
       state,
-      { state: state.rng },
-      { type: 'turnStart' },
-      0,
-      8,
-      [],
-      undefined,
-      undefined,
-      undefined,
-      'resourceContract',
-      resources,
-    );
+      rng: { state: state.rng },
+      event: { type: 'turnStart' },
+      depth: 0,
+      maxDepth: 8,
+      triggerLog: [],
+      effectPathRoot: 'resourceContract',
+      evalRuntimeResources: resources,
+    });
 
     assert.equal(result.state.globalVars.score, 1);
     assert.ok(collector.trace !== null);
     assert.equal(collector.trace.length, 1);
     assert.equal(collector.trace[0]?.kind, 'varChange');
     assert.match(collector.trace[0]?.provenance.effectPath ?? '', /^resourceContract\.trigger:onTurnStart\.effects/);
+  });
+
+  it('fails fast when request.effectPathRoot is not a string', () => {
+    const def: GameDef = {
+      metadata: { id: 'trigger-invalid-effect-root', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state = createState({ zones: {} });
+
+    assert.throws(
+      () => dispatchTriggers({
+        def,
+        state,
+        rng: { state: state.rng },
+        event: { type: 'turnStart' },
+        depth: 0,
+        maxDepth: 8,
+        triggerLog: [],
+        effectPathRoot: 7 as unknown as string,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /effectPathRoot must be a string/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.evalRuntimeResources misses required ownership fields', () => {
+    const def: GameDef = {
+      metadata: { id: 'trigger-invalid-resources', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state = createState({ zones: {} });
+    const invalidResources = { collector: createCollector({ trace: true }) };
+
+    assert.throws(
+      () => dispatchTriggers({
+        def,
+        state,
+        rng: { state: state.rng },
+        event: { type: 'turnStart' },
+        depth: 0,
+        maxDepth: 8,
+        triggerLog: [],
+        evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /collector and queryRuntimeCache ownership fields/);
+        return true;
+      },
+    );
   });
 
   it('fires matching triggers in definition order and applies match/when filters', () => {
@@ -149,15 +226,15 @@ describe('dispatchTriggers', () => {
       terminal: { conditions: [] },
     };
 
-    const result = dispatchTriggers(
+    const result = dispatchTriggers({
       def,
-      createState(),
-      { state: createState().rng },
-      { type: 'actionResolved', action: asActionId('play') },
-      0,
-      8,
-      [],
-    );
+      state: createState(),
+      rng: { state: createState().rng },
+      event: { type: 'actionResolved', action: asActionId('play') },
+      depth: 0,
+      maxDepth: 8,
+      triggerLog: [],
+    });
 
     assert.equal(result.state.globalVars.score, 3);
     assert.deepEqual(result.triggerLog, [
@@ -206,15 +283,15 @@ describe('dispatchTriggers', () => {
         capturedNew: 0,
       },
     });
-    const result = dispatchTriggers(
+    const result = dispatchTriggers({
       def,
       state,
-      { state: state.rng },
-      { type: 'varChanged', scope: 'global', var: 'trail', oldValue: 1, newValue: 3 },
-      0,
-      8,
-      [],
-    );
+      rng: { state: state.rng },
+      event: { type: 'varChanged', scope: 'global', var: 'trail', oldValue: 1, newValue: 3 },
+      depth: 0,
+      maxDepth: 8,
+      triggerLog: [],
+    });
 
     assert.equal(result.state.globalVars.score, 1);
     assert.equal(result.state.globalVars.capturedOld, 1);
@@ -281,7 +358,15 @@ describe('dispatchTriggers', () => {
       nextTokenOrdinal: 2,
     });
 
-    const result = dispatchTriggers(def, state, { state: state.rng }, { type: 'turnStart' }, 0, 8, []);
+    const result = dispatchTriggers({
+      def,
+      state,
+      rng: { state: state.rng },
+      event: { type: 'turnStart' },
+      depth: 0,
+      maxDepth: 8,
+      triggerLog: [],
+    });
     assert.equal(result.state.globalVars.enteredB, 1);
     assert.equal(result.state.globalVars.enteredC, 1);
     assert.deepEqual(result.triggerLog, [
@@ -343,7 +428,15 @@ describe('dispatchTriggers', () => {
       nextTokenOrdinal: 2,
     });
 
-    const result = dispatchTriggers(def, state, { state: state.rng }, { type: 'turnStart' }, 0, 1, []);
+    const result = dispatchTriggers({
+      def,
+      state,
+      rng: { state: state.rng },
+      event: { type: 'turnStart' },
+      depth: 0,
+      maxDepth: 1,
+      triggerLog: [],
+    });
 
     assert.equal(result.state.globalVars.enteredB, 1);
     assert.equal(result.state.globalVars.enteredC, 0);

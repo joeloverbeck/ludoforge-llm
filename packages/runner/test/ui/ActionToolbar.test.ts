@@ -188,7 +188,22 @@ describe('ActionToolbar', () => {
     expect(html).toContain('data-testid="action-group-Special"');
   });
 
-  it('renders number hints in flattened visual order', () => {
+  it('does not render hint spans inside action buttons', () => {
+    const html = renderToStaticMarkup(
+      createElement(ActionToolbar, {
+        store: createToolbarStore({
+          renderModel: makeToolbarRenderModel(),
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('class="hint"');
+    expect(html).toContain('Move');
+    expect(html).toContain('Pass');
+    expect(html).toContain('Trade');
+  });
+
+  it('each action button contains only a label span', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
@@ -196,16 +211,13 @@ describe('ActionToolbar', () => {
     });
 
     const buttons = findElementsByType(tree, 'button');
-    const hints = buttons.map((button) => {
-      const children = button.props.children;
-      if (!Array.isArray(children) || !isValidElement(children[0])) {
-        return null;
-      }
-      const hint = children[0] as ReactElement<{ children?: ReactNode }>;
-      return hint.props.children;
-    });
+    expect(buttons).toHaveLength(3);
 
-    expect(hints).toEqual([1, 2, 3]);
+    for (const button of buttons) {
+      const children = button.props.children;
+      const child = children as TraversableElement;
+      expect(child.type).toBe('span');
+    }
   });
 
   it('keeps interactive controls pointer-active via CSS contract', () => {

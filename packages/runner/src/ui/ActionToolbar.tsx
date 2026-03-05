@@ -29,8 +29,6 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
   }
   const toolbarModel = renderModel as NonNullable<GameStore['renderModel']>;
 
-  let hint = 1;
-
   return (
     <section className={styles.toolbar} aria-label="Available actions" data-testid="action-toolbar">
       {toolbarModel.actionGroups.map((group) => (
@@ -38,8 +36,6 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
           <p className={styles.groupLabel}>{group.groupName}</p>
           <div className={styles.groupActions}>
             {group.actions.map((action) => {
-              const displayHint = hint;
-              hint += 1;
               const actionId = action.actionId as SelectActionId;
 
               return (
@@ -59,7 +55,6 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
                   onPointerEnter={(e) => onActionHoverStart?.(action.actionId, e.currentTarget)}
                   onPointerLeave={() => onActionHoverEnd?.()}
                 >
-                  <span className={styles.hint}>{displayHint}</span>
                   <span className={styles.label}>{action.displayName}</span>
                 </button>
               );

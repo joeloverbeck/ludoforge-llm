@@ -58,14 +58,6 @@
   opacity: 0.65;
 }
 
-.hint {
-  min-width: 1.4em;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  text-align: center;
-}
-
 .label {
   color: inherit;
 }

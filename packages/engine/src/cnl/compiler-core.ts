@@ -46,7 +46,10 @@ import { crossValidateSpec } from './cross-validate.js';
 import { lowerEventDecks } from './compile-event-cards.js';
 import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
 import { buildSeatIdentityContract } from './seat-identity-contract.js';
-import { canonicalizeNamedSets } from './named-set-utils.js';
+import {
+  canonicalizeNamedSetsWithCollisions,
+  toNamedSetCanonicalIdCollisionDiagnostics,
+} from './named-set-utils.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -313,7 +316,19 @@ function compileExpandedDoc(
   } else {
     sections.metadata = runtimeMetadata;
   }
-  const namedSets = metadata?.namedSets === undefined ? undefined : canonicalizeNamedSets(metadata.namedSets);
+  const namedSetsResult =
+    metadata?.namedSets === undefined
+      ? undefined
+      : canonicalizeNamedSetsWithCollisions(metadata.namedSets);
+  if (namedSetsResult !== undefined) {
+    diagnostics.push(
+      ...toNamedSetCanonicalIdCollisionDiagnostics({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID,
+        collisions: namedSetsResult.collisions,
+      }),
+    );
+  }
+  const namedSets = namedSetsResult?.namedSets;
 
   const constants = compileSection(diagnostics, () => lowerConstants(resolvedTableRefDoc.constants, diagnostics));
   sections.constants = constants.failed ? null : constants.value;

@@ -573,10 +573,17 @@ describe('validateGameSpec structural rules', () => {
       },
     });
 
-    assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID'),
-      true,
+    const duplicateIdDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
     );
+    assert.equal(duplicateIdDiagnostics.length, 1);
+    assert.deepEqual(duplicateIdDiagnostics[0], {
+      code: 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
+      path: 'doc.metadata.namedSets.caf\u00e9',
+      severity: 'error',
+      message: 'metadata.namedSets contains duplicate set ids after normalization: "caf\u00e9".',
+      suggestion: 'Use unique named set ids after trim + NFC normalization.',
+    });
   });
 
   it('validates zone enums', () => {

@@ -10,6 +10,29 @@ import {
 } from '../../src/cnl/index.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
+function createCompileReadyDoc() {
+  return {
+    ...createEmptyGameSpecDoc(),
+    metadata: { id: 'demo', players: { min: 2, max: 2 } },
+    zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+    turnStructure: { phases: [{ id: 'main' }] },
+    actions: [
+      {
+        id: 'draw',
+        actor: { currentPlayer: true },
+        executor: 'actor',
+        phase: ['main'],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    terminal: { conditions: [{ when: { always: false }, result: { type: 'draw' } }] },
+  };
+}
+
 describe('compiler API foundation', () => {
   it('uses spec-aligned default compile limits', () => {
     assert.deepEqual(DEFAULT_COMPILE_LIMITS, {
@@ -55,6 +78,37 @@ describe('compiler API foundation', () => {
     assert.ok(diagnostic.path.length > 0);
     assert.ok(diagnostic.message.length > 0);
     assert.equal(diagnostic.severity, 'error');
+  });
+
+  it('reports canonical-equivalent metadata.namedSets id collisions in compile-only flow', () => {
+    const doc = createCompileReadyDoc();
+    const result = compileGameSpecToGameDef({
+      ...doc,
+      metadata: {
+        ...doc.metadata,
+        namedSets: {
+          ' cafe\u0301 ': ['US'],
+          caf\u00e9: ['ARVN'],
+        },
+      },
+    });
+
+    const collisionDiagnostics = result.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID',
+    );
+    assert.equal(collisionDiagnostics.length, 1);
+    assert.deepEqual(collisionDiagnostics[0], {
+      code: 'CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID',
+      path: 'doc.metadata.namedSets.caf\u00e9',
+      severity: 'error',
+      message: 'metadata.namedSets contains duplicate set ids after normalization: "caf\u00e9".',
+      suggestion: 'Use unique named set ids after trim + NFC normalization.',
+    });
+    assert.equal(result.gameDef, null);
+    assert.deepEqual(result.sections.metadata, {
+      id: 'demo',
+      players: { min: 2, max: 2 },
+    });
   });
 
   it('rejects invalid compile limit overrides', () => {

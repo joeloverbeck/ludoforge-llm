@@ -11,6 +11,7 @@ import {
   createEvalRuntimeResources,
   createQueryRuntimeCache,
   type ActionDef,
+  type EvalRuntimeResources,
   type ActionPipelineDef,
   type GameDef,
   type GameState,
@@ -463,5 +464,32 @@ describe('resolveActionApplicabilityPreflight()', () => {
         },
       ],
     });
+  });
+
+  it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {
+    const def = makeDef();
+    const state = makeState();
+    const action = def.actions[0]!;
+    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+
+    assert.throws(
+      () =>
+        resolveActionApplicabilityPreflight({
+          def,
+          state,
+          action,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          decisionPlayer: state.activePlayer,
+          bindings: {},
+          evalRuntimeResources: malformedResources as unknown as EvalRuntimeResources,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /resolveActionApplicabilityPreflight evalRuntimeResources/i);
+        return true;
+      },
+    );
   });
 });

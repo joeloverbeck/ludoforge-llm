@@ -1,6 +1,6 @@
 # KERQUERY-036: Generalize request-API shape policy guards
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — lint policy architecture for request-object API contracts
@@ -79,3 +79,19 @@ The codebase now has multiple request-object API shape guards (`dispatchTriggers
 2. `node --test packages/engine/dist/test/unit/lint/dispatch-triggers-api-shape-policy.test.js packages/engine/dist/test/unit/lint/phase-advance-api-shape-policy.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+**Changed vs planned:**
+
+All three planned deliverables were implemented as specified:
+
+1. **Shared helper added** — `assertRequestObjectApiShape()` + `RequestObjectApiShapeSpec` type in `kernel-source-ast-guard.ts`. Parameterized by source file path, function identifier, and request type name. Covers all 7 assertion checks (no overloads, single export, function value, 1 parameter, non-variadic, required, correctly typed).
+
+2. **Both policy tests migrated** — `dispatch-triggers-api-shape-policy.test.ts` and `phase-advance-api-shape-policy.test.ts` reduced from ~115 lines each to ~14 lines each. Duplicated `hasExportModifier` eliminated. Identical assertion strictness preserved.
+
+3. **Onboarding pattern established** — Adding a new request-object API guard is now a 3-line test body: read source, call `assertRequestObjectApiShape` with a spec object.
+
+**Skipped:** `request-api-shape-policy-helpers.test.ts` — the helper is a straight-line assertion wrapper with no branching; its behavior is fully exercised by the two policy tests that consume it. No independent test file warranted.
+
+**Verification:** 3660/3660 engine tests pass, lint clean.

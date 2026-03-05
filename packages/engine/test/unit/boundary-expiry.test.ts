@@ -6,6 +6,7 @@ import {
   asPlayerId,
   createCollector,
   createEvalRuntimeResources,
+  type EvalRuntimeResources,
   type GameDef,
   type GameState,
   type TriggerLogEntry,
@@ -93,5 +94,30 @@ describe('applyBoundaryExpiry', () => {
     const resources = createEvalRuntimeResources({ collector: createCollector() });
     const result = applyBoundaryExpiry(def, state, ['turn'], collector, undefined, resources);
     assert.ok(result.state !== undefined);
+  });
+
+  it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {
+    const def = makeDef();
+    const state = makeState();
+    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+
+    assert.throws(
+      () =>
+        applyBoundaryExpiry(
+          def,
+          state,
+          ['turn'],
+          undefined,
+          undefined,
+          malformedResources as unknown as EvalRuntimeResources,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /applyBoundaryExpiry evalRuntimeResources/i);
+        return true;
+      },
+    );
   });
 });

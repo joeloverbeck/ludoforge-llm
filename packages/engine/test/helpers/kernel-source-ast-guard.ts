@@ -614,6 +614,122 @@ const areStructurallyEquivalentExpressions = (left: ts.Expression, right: ts.Exp
   return false;
 };
 
+export type RequestObjectApiShapeSpec = Readonly<{
+  sourceFilePath: string;
+  functionIdentifier: string;
+  requestTypeName: string;
+}>;
+
+export const assertRequestObjectApiShape = (
+  source: string,
+  spec: RequestObjectApiShapeSpec,
+): void => {
+  const sourceFile = parseTypeScriptSource(source, spec.sourceFilePath);
+  const { functionIdentifier, requestTypeName } = spec;
+
+  const overloadDeclarations = sourceFile.statements.filter(
+    (statement): statement is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(statement)
+      && statement.name?.text === functionIdentifier,
+  );
+  assert.equal(
+    overloadDeclarations.length,
+    0,
+    [
+      `${functionIdentifier} must not be declared as function overload signatures.`,
+      `Expected canonical API: export const ${functionIdentifier} = (request: ${requestTypeName}) => ...`,
+      'Remediation: remove overload/positional forms and keep one request-object parameter.',
+    ].join('\n'),
+  );
+
+  const exportedVariableStatements = sourceFile.statements.filter(
+    (statement): statement is ts.VariableStatement =>
+      ts.isVariableStatement(statement)
+      && (statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false),
+  );
+  const variableDeclarations = exportedVariableStatements.flatMap((statement) =>
+    statement.declarationList.declarations.filter(
+      (declaration): declaration is ts.VariableDeclaration & { name: ts.Identifier } =>
+        ts.isIdentifier(declaration.name) && declaration.name.text === functionIdentifier,
+    ),
+  );
+
+  assert.equal(
+    variableDeclarations.length,
+    1,
+    [
+      `${functionIdentifier} must be exported exactly once as a variable declaration.`,
+      `Expected canonical API: export const ${functionIdentifier} = (request: ${requestTypeName}) => ...`,
+      'Remediation: keep a single exported declaration and remove aliases/shims.',
+    ].join('\n'),
+  );
+
+  const declaration = variableDeclarations[0];
+  assert.notEqual(declaration, undefined, `${functionIdentifier} declaration must exist for API-shape guard`);
+  if (declaration === undefined || declaration.initializer === undefined) {
+    return;
+  }
+
+  const initializer = unwrapTypeScriptExpression(declaration.initializer);
+  const callable =
+    ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer) ? initializer : undefined;
+  assert.notEqual(
+    callable,
+    undefined,
+    [
+      `${functionIdentifier} export must be a function value.`,
+      `Expected canonical API: export const ${functionIdentifier} = (request: ${requestTypeName}) => ...`,
+    ].join('\n'),
+  );
+  if (callable === undefined) {
+    return;
+  }
+
+  assert.equal(
+    callable.parameters.length,
+    1,
+    [
+      `${functionIdentifier} must accept exactly one parameter.`,
+      `Expected canonical API: ${functionIdentifier}(request: ${requestTypeName})`,
+      'Remediation: remove positional tails and overload-style parameter forms.',
+    ].join('\n'),
+  );
+
+  const [requestParameter] = callable.parameters;
+  assert.notEqual(requestParameter, undefined, `${functionIdentifier} must declare request parameter`);
+  if (requestParameter === undefined) {
+    return;
+  }
+
+  assert.equal(
+    requestParameter.dotDotDotToken === undefined,
+    true,
+    `${functionIdentifier} request parameter must not be variadic; use one explicit request object.`,
+  );
+  assert.equal(
+    requestParameter.questionToken === undefined,
+    true,
+    `${functionIdentifier} request parameter must be required; do not allow optional positional fallback.`,
+  );
+  assert.equal(
+    ts.isIdentifier(requestParameter.name) && requestParameter.name.text === 'request',
+    true,
+    `${functionIdentifier} first parameter should be named request to keep contract intent explicit.`,
+  );
+  assert.equal(
+    requestParameter.type !== undefined
+    && ts.isTypeReferenceNode(requestParameter.type)
+    && ts.isIdentifier(requestParameter.type.typeName)
+    && requestParameter.type.typeName.text === requestTypeName,
+    true,
+    [
+      `${functionIdentifier} parameter must be typed as ${requestTypeName}.`,
+      `Expected canonical API: ${functionIdentifier}(request: ${requestTypeName})`,
+      'Remediation: keep request-object contract type explicit and remove positional aliases.',
+    ].join('\n'),
+  );
+};
+
 export const collectRedundantEffectRuntimeReasonConjunctions = (
   source: string,
   fileName: string,

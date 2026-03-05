@@ -1,6 +1,6 @@
 # KERQUERY-033: Enforce eval-runtime-resource boundary guard policy
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — source-policy enforcement for runtime-resource guard coverage
@@ -50,8 +50,9 @@ A shared runtime-resource validator now exists, but there is no source-policy te
 ### Tests That Must Pass
 
 1. Policy test fails if a boundary accepting caller-provided `evalRuntimeResources` omits the contract guard.
-2. Policy test fails if a boundary introduces duplicate guard calls.
-3. Existing suite: `pnpm -F @ludoforge/engine test`.
+2. Policy test fails if a boundary module's guard call count does not match the declared boundary entry-point count (catches both omissions and unintended duplicates — e.g. `phase-advance.ts` legitimately has 2 guard calls for `advancePhase` and `advanceToDecisionPoint`).
+3. Policy test fails if a kernel module imports `assertEvalRuntimeResourcesContract` but is not in the declared boundary manifest (catches undeclared new boundaries).
+4. Existing suite: `pnpm -F @ludoforge/engine test`.
 
 ### Invariants
 
@@ -70,3 +71,17 @@ A shared runtime-resource validator now exists, but there is no source-policy te
 2. `node --test packages/engine/dist/test/unit/lint/eval-runtime-resources-boundary-guard-policy.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+### What changed vs originally planned
+
+- **Ticket correction**: Acceptance criterion #2 was updated. The original "no duplicate guard calls" was too coarse — `phase-advance.ts` legitimately has 2 guard calls for 2 distinct boundary functions (`advancePhase` and `advanceToDecisionPoint`). The policy now tracks expected call count per boundary module via a declared manifest.
+- **Added criterion #3**: The test also catches undeclared new boundaries — any kernel module that imports `assertEvalRuntimeResourcesContract` without being in the manifest fails the policy.
+- **No helper changes needed**: `kernel-source-guard.ts` was not modified — existing helpers in `kernel-source-ast-guard.ts` (`collectCallExpressionsByIdentifier`, `parseTypeScriptSource`) and `lint-policy-helpers.ts` (`findEnginePackageRoot`, `listTypeScriptFiles`) were sufficient.
+
+### New tests
+
+1. `packages/engine/test/unit/lint/eval-runtime-resources-boundary-guard-policy.test.ts` (new, 2 test cases):
+   - **"every declared boundary module imports and calls the guard the expected number of times"** — verifies all 7 boundary modules in the manifest import and call `assertEvalRuntimeResourcesContract` the declared number of times.
+   - **"no kernel module imports the guard without being declared in the boundary manifest"** — catches new boundary modules that import the guard but aren't tracked in the manifest.

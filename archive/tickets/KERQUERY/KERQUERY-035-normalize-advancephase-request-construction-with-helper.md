@@ -1,6 +1,6 @@
 # KERQUERY-035: Normalize advancePhase request construction with helper
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel request-construction ergonomics and call-site consistency
@@ -44,7 +44,7 @@
 ## Out of Scope
 
 - New lifecycle semantics or turn-flow behavior changes
-- Additional runtime-resource policy work already scoped in `tickets/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md` and `tickets/KERQUERY-033-enforce-eval-runtime-resource-boundary-guard-policy.md`
+- Additional runtime-resource policy work already scoped in `archive/tickets/KERQUERY/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md` and `tickets/KERQUERY-033-enforce-eval-runtime-resource-boundary-guard-policy.md`
 - Query-runtime-cache ownership and key-policy tickets (`archive/tickets/KERQUERY/KERQUERY-029-derive-query-cache-key-literal-policy-from-canonical-owner.md`, `archive/tickets/KERQUERY/KERQUERY-030-harden-query-runtime-cache-ownership-policy-with-ast-signature-checks.md`, `archive/tickets/KERQUERY/KERQUERY-031-enforce-query-runtime-cache-index-immutability-at-write-boundary.md`)
 
 ## Acceptance Criteria
@@ -74,3 +74,14 @@
 2. `node --test packages/engine/dist/test/unit/phase-advance.test.js packages/engine/dist/test/unit/effects-turn-flow.test.js packages/engine/dist/test/unit/replay-harness.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+Implemented as planned with two improvements beyond original scope:
+
+1. **Helper options made fully optional** (`?: T | undefined`) — callers only specify fields they use, avoiding explicit `undefined` for unused fields. Original ticket assumed required fields with `| undefined`; optional is cleaner under `exactOptionalPropertyTypes`.
+2. **4 unit tests added for `buildAdvancePhaseRequest`** — verifies undefined-field omission (critical for `exactOptionalPropertyTypes` compliance), no-options case, all-undefined case, and all-defined case.
+
+Source guard test in `phase-advance.test.ts` updated to check `buildAdvancePhaseRequest` call pattern (was checking inline object literal). Dead `hasIdentifierPropertyInObjectArgument` helper removed.
+
+All 3660 engine tests pass, lint clean.

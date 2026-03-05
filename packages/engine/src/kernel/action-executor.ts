@@ -6,13 +6,18 @@ import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-
 import type { ActionDef, GameDef, GameState } from './types.js';
 import type { AdjacencyGraph } from './spatial.js';
 
-interface ResolveActionExecutorPlayerInput {
+interface ResolveActionExecutorCoreInput {
   readonly def: GameDef;
   readonly state: GameState;
   readonly adjacencyGraph: AdjacencyGraph;
   readonly action: ActionDef;
   readonly decisionPlayer: GameState['activePlayer'];
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly runtimeTableIndex: RuntimeTableIndex;
+  readonly evalRuntimeResources: EvalRuntimeResources;
+}
+
+interface ResolveActionExecutorInput extends Omit<ResolveActionExecutorCoreInput, 'runtimeTableIndex' | 'evalRuntimeResources'> {
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly evalRuntimeResources?: EvalRuntimeResources;
 }
@@ -31,21 +36,16 @@ export type ActionExecutorResolution =
       readonly error: unknown;
     };
 
-export const resolveActionExecutor = ({
+export const resolveActionExecutorCore = ({
   def,
   state,
   adjacencyGraph,
   action,
   decisionPlayer,
   bindings,
-  runtimeTableIndex: providedRuntimeTableIndex,
-  evalRuntimeResources: providedEvalRuntimeResources,
-}: ResolveActionExecutorPlayerInput): ActionExecutorResolution => {
-  const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
-  if (providedEvalRuntimeResources !== undefined) {
-    assertEvalRuntimeResourcesContract(providedEvalRuntimeResources, 'resolveActionExecutor evalRuntimeResources');
-  }
-  const evalRuntimeResources = providedEvalRuntimeResources ?? createEvalRuntimeResources();
+  runtimeTableIndex,
+  evalRuntimeResources,
+}: ResolveActionExecutorCoreInput): ActionExecutorResolution => {
   const selectorContext = createEvalContext({
     def,
     adjacencyGraph,
@@ -67,4 +67,22 @@ export const resolveActionExecutor = ({
     }
     return { kind: 'invalidSpec', error };
   }
+};
+
+export const resolveActionExecutor = ({
+  def,
+  state,
+  adjacencyGraph,
+  action,
+  decisionPlayer,
+  bindings,
+  runtimeTableIndex: providedRuntimeTableIndex,
+  evalRuntimeResources: providedEvalRuntimeResources,
+}: ResolveActionExecutorInput): ActionExecutorResolution => {
+  const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
+  if (providedEvalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(providedEvalRuntimeResources, 'resolveActionExecutor evalRuntimeResources');
+  }
+  const evalRuntimeResources = providedEvalRuntimeResources ?? createEvalRuntimeResources();
+  return resolveActionExecutorCore({ def, state, adjacencyGraph, action, decisionPlayer, bindings, runtimeTableIndex, evalRuntimeResources });
 };

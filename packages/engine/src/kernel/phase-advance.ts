@@ -268,6 +268,24 @@ export interface AdvancePhaseRequest {
   readonly cachedRuntime?: GameDefRuntime;
 }
 
+export const buildAdvancePhaseRequest = (
+  def: GameDef,
+  state: GameState,
+  evalRuntimeResources: EvalRuntimeResources,
+  options?: {
+    readonly triggerLogCollector?: TriggerLogEntry[] | undefined;
+    readonly policy?: MoveExecutionPolicy | undefined;
+    readonly cachedRuntime?: GameDefRuntime | undefined;
+  },
+): AdvancePhaseRequest => ({
+  def,
+  state,
+  evalRuntimeResources,
+  ...(options?.triggerLogCollector === undefined ? {} : { triggerLogCollector: options.triggerLogCollector }),
+  ...(options?.policy === undefined ? {} : { policy: options.policy }),
+  ...(options?.cachedRuntime === undefined ? {} : { cachedRuntime: options.cachedRuntime }),
+});
+
 export const advancePhase = (request: AdvancePhaseRequest): GameState => {
   const {
     def,
@@ -461,14 +479,11 @@ export const advanceToDecisionPoint = (
       }
     }
 
-    nextState = advancePhase({
-      def,
-      state: nextState,
-      evalRuntimeResources: operationResources,
-      ...(triggerLogCollector === undefined ? {} : { triggerLogCollector }),
-      ...(policy === undefined ? {} : { policy }),
-      ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
-    });
+    nextState = advancePhase(buildAdvancePhaseRequest(def, nextState, operationResources, {
+      triggerLogCollector,
+      policy,
+      cachedRuntime,
+    }));
     advances += 1;
   }
 

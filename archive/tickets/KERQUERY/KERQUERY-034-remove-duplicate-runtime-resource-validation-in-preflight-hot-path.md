@@ -1,10 +1,10 @@
 # KERQUERY-034: Remove duplicate runtime-resource validation in preflight hot path
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel performance/clarity refinement for resource-contract validation flow
-**Deps**: tickets/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md, packages/engine/src/kernel/action-applicability-preflight.ts, packages/engine/src/kernel/action-actor.ts, packages/engine/src/kernel/action-executor.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md, packages/engine/src/kernel/action-applicability-preflight.ts, packages/engine/src/kernel/action-actor.ts, packages/engine/src/kernel/action-executor.ts
 
 ## Problem
 
@@ -77,3 +77,12 @@
 2. `node --test packages/engine/dist/test/unit/kernel/action-applicability-preflight.test.js packages/engine/dist/test/unit/kernel/action-actor.test.js packages/engine/dist/test/unit/kernel/action-executor.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+### What changed vs originally planned
+
+- **Approach matched ticket proposal exactly.** Extracted `resolveActionActorCore` and `resolveActionExecutorCore` as pre-validated internal functions with required `EvalRuntimeResources` and `RuntimeTableIndex` parameters. Public `resolveActionActor`/`resolveActionExecutor` wrap with the boundary guard and fallback creation, then delegate to the core.
+- **Preflight now calls cores directly**, eliminating 2 redundant `assertEvalRuntimeResourcesContract` validations per preflight invocation.
+- **No test modifications needed.** Existing tests for all three modules pass unchanged — public API behavior is preserved, boundary guard tests still validate direct-call safety, and the KERQUERY-033 boundary guard policy test confirms guard counts are correct.
+- **No helper changes needed.** `kernel-source-guard.ts` was not modified.

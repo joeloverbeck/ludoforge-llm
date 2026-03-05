@@ -1,7 +1,7 @@
 import {
-  normalizeArrayIndexSegmentsToBrackets,
   trimLastPathSegment,
 } from './path-utils.js';
+import { buildDiagnosticSourceLookupCandidates } from './diagnostic-path-codec.js';
 import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 
 export function resolveSpanForDiagnosticPath(path: string, sourceMap?: GameSpecSourceMap): SourceSpan | undefined {
@@ -9,7 +9,7 @@ export function resolveSpanForDiagnosticPath(path: string, sourceMap?: GameSpecS
     return undefined;
   }
 
-  const candidates = buildSourceLookupCandidates(path);
+  const candidates = buildDiagnosticSourceLookupCandidates(path);
   for (const candidate of candidates) {
     const direct = sourceMap.byPath[candidate];
     if (direct !== undefined) {
@@ -51,14 +51,6 @@ export function compareSourceSpans(left?: SourceSpan, right?: SourceSpan): numbe
     return left.markdownLineEnd - right.markdownLineEnd;
   }
   return left.markdownColEnd - right.markdownColEnd;
-}
-
-function buildSourceLookupCandidates(path: string): readonly string[] {
-  const withoutDocPrefix = path.startsWith('doc.') ? path.slice(4) : path;
-  const bracketPath = normalizeArrayIndexSegmentsToBrackets(withoutDocPrefix);
-  const withoutMacroSegments = bracketPath.replace(/\[macro:[^\]]+\](\[[0-9]+\])?/g, '');
-  const unique = new Set<string>([path, withoutDocPrefix, bracketPath, withoutMacroSegments]);
-  return [...unique];
 }
 
 function buildPathParents(path: string): readonly string[] {

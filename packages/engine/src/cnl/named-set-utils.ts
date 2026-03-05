@@ -1,6 +1,7 @@
 import { normalizeIdentifier } from './identifier-utils.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import { appendDiagnosticKeySegment } from './diagnostic-path-codec.js';
 
 declare const NAMED_SET_ID_BRAND: unique symbol;
 export type NamedSetId = string & { readonly [NAMED_SET_ID_BRAND]: 'NamedSetId' };
@@ -68,7 +69,7 @@ export function listCanonicalNamedSetAlternatives(namedSets: CanonicalNamedSets)
 }
 
 export function toNamedSetDiagnosticPath(basePath: string, rawId: string): string {
-  return `${basePath}[${JSON.stringify(rawId)}]`;
+  return appendDiagnosticKeySegment(basePath, rawId);
 }
 
 export function toNamedSetCanonicalIdCollisionDiagnostics(

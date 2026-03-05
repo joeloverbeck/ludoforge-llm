@@ -276,6 +276,30 @@ describe('compiler diagnostics helpers', () => {
     assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
   });
 
+  it('resolves source order for non-doc dot-index diagnostic paths via codec canonicalization', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'actions[0].effects[2]': {
+          blockIndex: 0,
+          markdownLineStart: 24,
+          markdownColStart: 1,
+          markdownLineEnd: 24,
+          markdownColEnd: 20,
+        },
+      },
+    };
+
+    const key = getDiagnosticSortKey(
+      diagnostic({
+        path: 'actions.0.effects.2',
+        code: 'CNL_TEST_DOT_INDEX_PATH',
+      }),
+      sourceMap,
+    );
+
+    assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
+  });
+
   it('falls back to encoded keyed parent path when keyed leaf span is missing', () => {
     const sourceMap: GameSpecSourceMap = {
       byPath: {

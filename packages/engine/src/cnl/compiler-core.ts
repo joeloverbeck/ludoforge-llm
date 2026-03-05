@@ -9,7 +9,7 @@ import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/valida
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc, GameSpecZoneDef } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
-import { normalizeArrayIndexSegmentsToDots } from './path-utils.js';
+import { canonicalizeDiagnosticPath } from './diagnostic-path-codec.js';
 import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
@@ -709,12 +709,12 @@ function suppressAliasedCompilerReferenceDiagnostics(diagnostics: readonly Diagn
   const crossRefPaths = new Set(
     diagnostics
       .filter((diagnostic) => isCnlXrefDiagnosticCode(diagnostic.code))
-      .map((diagnostic) => normalizeDiagnosticPath(diagnostic.path)),
+      .map((diagnostic) => canonicalizeDiagnosticPath(diagnostic.path)),
   );
 
   const filtered: Diagnostic[] = [];
   for (const diagnostic of diagnostics) {
-    const normalizedPath = normalizeDiagnosticPath(diagnostic.path);
+    const normalizedPath = canonicalizeDiagnosticPath(diagnostic.path);
     if (isKernelReferenceDiagnosticCode(diagnostic.code) && crossRefPaths.has(normalizedPath)) {
       continue;
     }
@@ -740,11 +740,6 @@ function suppressUnavailableSectionDiagnostics(
       diagnostic.code !== 'REF_ZONEVAR_MISSING'
       && diagnostic.code !== CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_ZONEVAR_MISSING,
   );
-}
-
-function normalizeDiagnosticPath(path: string): string {
-  const withDots = normalizeArrayIndexSegmentsToDots(path);
-  return withDots.startsWith('doc.') ? withDots : `doc.${withDots}`;
 }
 
 function requiredSectionDiagnostic(path: string, section: string): Diagnostic {

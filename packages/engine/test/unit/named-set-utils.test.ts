@@ -5,6 +5,7 @@ import {
   canonicalizeNamedSetsWithCollisions,
   normalizeNamedSetId,
   toNamedSetCanonicalIdCollisionDiagnostics,
+  toNamedSetDiagnosticPath,
 } from '../../src/cnl/named-set-utils.js';
 
 describe('named-set collision boundary invariants', () => {
@@ -64,5 +65,12 @@ describe('named-set collision boundary invariants', () => {
       ],
     );
     assert.equal(diagnostics.every((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID'), true);
+  });
+
+  it('encodes keyed named-set diagnostic paths with escaped characters', () => {
+    assert.equal(
+      toNamedSetDiagnosticPath('doc.metadata.namedSets', 'insurgent.group["0"]'),
+      'doc.metadata.namedSets["insurgent.group[\\"0\\"]"]',
+    );
   });
 });

@@ -1,6 +1,6 @@
 # PIPEVAL-013: Harden edit-distance contract source guard to AST policy
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — test policy hardening in contracts/lint guard
@@ -15,6 +15,7 @@ Current anti-drift guard for edit-distance ownership relies on raw string matchi
 1. `packages/engine/test/unit/lint/contracts-edit-distance-source-guard.test.ts` currently checks imports/call usage via `source.includes(...)`.
 2. The same policy uses a name-based regex for local `levenshteinDistance` definitions, but does not detect semantically duplicated local distance logic under alternate names.
 3. Existing repository lint policy patterns include AST-based ownership guards (for example linked-window guard), so this ticket should align to those stronger mechanisms.
+4. Current guard coverage is narrow: it validates only `missing-reference-diagnostic-contract.ts`, `binding-identifier-contract.ts`, and `edit-distance-contract.ts` directly; it does not scan all non-canonical files under `src/contracts/`.
 
 ## Architecture Check
 
@@ -30,7 +31,12 @@ Upgrade `contracts-edit-distance-source-guard.test.ts` to parse target files and
 
 ### 2. Enforce non-canonical module ownership at contracts scope
 
-Scan `src/contracts/*.ts` (excluding canonical `edit-distance-contract.ts`) and fail if local edit-distance implementations are present or if non-canonical modules bypass the shared utility.
+Scan `src/contracts/*.ts` (excluding canonical `edit-distance-contract.ts`) and fail if non-canonical modules:
+1. define canonical edit-distance symbol names locally, or
+2. import canonical symbols from non-canonical module specifiers / aliases, or
+3. contain AST-detected Levenshtein-like local implementations (nested loops + `Math.min` dynamic-programming shape heuristic) that bypass shared ownership.
+
+Note: this is an enforceable structural heuristic, not full semantic equivalence checking.
 
 ## Files to Touch
 
@@ -48,8 +54,8 @@ Scan `src/contracts/*.ts` (excluding canonical `edit-distance-contract.ts`) and 
 
 ### Tests That Must Pass
 
-1. Source guard fails when a non-canonical contract module introduces local edit-distance logic (even under non-`levenshteinDistance` names).
-2. Source guard fails when canonical consumer modules stop importing/using shared edit-distance utilities.
+1. Source guard fails when a non-canonical contract module introduces local canonical edit-distance symbols or Levenshtein-like local logic.
+2. Source guard fails when canonical consumer modules (`missing-reference-diagnostic-contract.ts`, `binding-identifier-contract.ts`) stop importing/using shared edit-distance utilities from `./edit-distance-contract.js`.
 3. Existing suite: `pnpm turbo test --force`
 
 ### Invariants
@@ -69,3 +75,20 @@ Scan `src/contracts/*.ts` (excluding canonical `edit-distance-contract.ts`) and 
 2. `node --test packages/engine/dist/test/unit/lint/contracts-edit-distance-source-guard.test.js`
 3. `pnpm turbo test --force`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-03-05
+- What changed:
+  - Replaced string/regex-only assertions in `contracts-edit-distance-source-guard.test.ts` with AST-backed enforcement.
+  - Expanded scan scope to all `src/contracts/*.ts` files (excluding canonical `edit-distance-contract.ts`) for ownership policy checks.
+  - Enforced canonical import/call constraints for `rankByEditDistance` consumers and canonical symbol ownership without aliasing.
+  - Added an AST structural heuristic guard that flags non-canonical Levenshtein-like local implementations (nested loops + `Math.min` DP shape).
+- Deviations from original plan:
+  - No helper-file extraction was necessary; the implementation stayed localized to the lint test file for minimal surface-area change.
+  - “Alternate-name duplication” detection is implemented as a structural AST heuristic (explicitly scoped), not semantic equivalence proof.
+- Verification results:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/lint/contracts-edit-distance-source-guard.test.js` passed.
+  - `pnpm turbo test --force` passed.
+  - `pnpm turbo lint` passed.

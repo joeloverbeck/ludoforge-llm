@@ -6,6 +6,34 @@ export function renderMacroPathSegment(macroId: string): string {
   return `[macro:${escapeMacroPathSegmentValue(macroId)}]`;
 }
 
+export function parseMacroPathSegment(segment: string): { macroId: string } | undefined {
+  if (!segment.startsWith('[macro:') || !segment.endsWith(']')) {
+    return undefined;
+  }
+
+  const encodedMacroId = segment.slice('[macro:'.length, -1);
+  let decodedMacroId = '';
+
+  for (let index = 0; index < encodedMacroId.length; index += 1) {
+    const ch = encodedMacroId[index];
+    if (ch !== '\\') {
+      decodedMacroId += ch;
+      continue;
+    }
+
+    const escaped = encodedMacroId[index + 1];
+    if (escaped === '\\' || escaped === ']') {
+      decodedMacroId += escaped;
+      index += 1;
+      continue;
+    }
+
+    return undefined;
+  }
+
+  return { macroId: decodedMacroId };
+}
+
 export function appendMacroPathSegment(basePath: string, macroId: string, expansionIndex?: number): string {
   const macroSegment = `${basePath}${renderMacroPathSegment(macroId)}`;
   return expansionIndex === undefined ? macroSegment : `${macroSegment}[${expansionIndex}]`;
@@ -155,7 +183,7 @@ export function stripMacroPathSegments(path: string): string {
   const stripped: string[] = [];
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index];
-    if (segment !== undefined && isMacroPathSegment(segment)) {
+    if (segment !== undefined && parseMacroPathSegment(segment) !== undefined) {
       if (/^\[[0-9]+\]$/.test(segments[index + 1] ?? '')) {
         index += 1;
       }
@@ -221,8 +249,4 @@ function readBracketSegmentEnd(path: string, start: number): number | undefined 
 
 function escapeMacroPathSegmentValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
-}
-
-function isMacroPathSegment(segment: string): boolean {
-  return segment.startsWith('[macro:') && segment.endsWith(']');
 }

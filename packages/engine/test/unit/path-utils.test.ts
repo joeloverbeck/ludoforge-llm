@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   appendMacroPathSegment,
+  parseMacroPathSegment,
   renderMacroPathSegment,
   stripMacroPathSegments,
   joinPathSegments,
@@ -49,10 +50,28 @@ describe('path-utils', () => {
     assert.equal(appendMacroPathSegment('setup[0]', 'outer]x\\y', 2), 'setup[0][macro:outer\\]x\\\\y][2]');
   });
 
+  it('parses valid macro segments and decodes escaped payload deterministically', () => {
+    assert.deepEqual(parseMacroPathSegment('[macro:outer\\]x\\\\y]'), { macroId: 'outer]x\\y' });
+    assert.deepEqual(parseMacroPathSegment(renderMacroPathSegment('')), { macroId: '' });
+    assert.deepEqual(parseMacroPathSegment(renderMacroPathSegment('outer]x\\y')), { macroId: 'outer]x\\y' });
+  });
+
+  it('rejects malformed macro segments that violate escape grammar', () => {
+    assert.equal(parseMacroPathSegment('setup[0]'), undefined);
+    assert.equal(parseMacroPathSegment('[macro:unterminated'), undefined);
+    assert.equal(parseMacroPathSegment('[macro:bad\\q]'), undefined);
+    assert.equal(parseMacroPathSegment('[macro:bad\\]'), undefined);
+  });
+
   it('strips macro segments (and their immediate expansion index) across nested macro paths', () => {
     const nestedPath = 'setup[0][macro:outer\\]x\\\\y][0][macro:inner][1].args.faction';
     assert.deepEqual(splitPathSegments(nestedPath), ['setup', '[0]', '[macro:outer\\]x\\\\y]', '[0]', '[macro:inner]', '[1]', 'args', 'faction']);
     assert.equal(stripMacroPathSegments(nestedPath), 'setup[0].args.faction');
     assert.equal(joinPathSegments(['setup', '[0]', 'args', 'faction']), 'setup[0].args.faction');
+  });
+
+  it('does not strip malformed macro-like segments', () => {
+    const malformedMacroPath = 'setup[0][macro:bad\\q][1].args.faction';
+    assert.equal(stripMacroPathSegments(malformedMacroPath), malformedMacroPath);
   });
 });

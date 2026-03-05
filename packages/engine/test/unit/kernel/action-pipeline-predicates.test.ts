@@ -18,6 +18,7 @@ import {
 } from '../../../src/kernel/index.js';
 import type { EvalContext } from '../../../src/kernel/eval-context.js';
 import { createQueryRuntimeCache } from '../../../src/kernel/query-runtime-cache.js';
+import { createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'action-predicate-test', players: { min: 2, max: 2 } },
@@ -60,16 +61,23 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (def: GameDef, state: GameState): EvalContext => ({
-  def,
-  adjacencyGraph: buildAdjacencyGraph(def.zones),
-  state,
-  activePlayer: state.activePlayer,
-  actorPlayer: state.activePlayer,
-  bindings: {},
-  queryRuntimeCache: createQueryRuntimeCache(),
-  collector: createCollector(),
-});
+const makeCtx = (def: GameDef, state: GameState): EvalContext => {
+  const resources = createEvalRuntimeResources({
+    collector: createCollector(),
+    queryRuntimeCache: createQueryRuntimeCache(),
+  });
+  return {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: {},
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
+  };
+};
 
 describe('evalActionPipelinePredicate()', () => {
   it('throws typed runtime error when missing binding is encountered outside discovery', () => {

@@ -1,10 +1,15 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildAdjacencyGraph, createCollector, createQueryRuntimeCache, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
+import { buildAdjacencyGraph, createCollector, createEvalRuntimeResources, createQueryRuntimeCache, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
 
-const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): EvalContext => ({
-  def: {
+const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): EvalContext => {
+  const resources = createEvalRuntimeResources({
+    collector: createCollector(),
+    queryRuntimeCache: createQueryRuntimeCache(),
+  });
+  return {
+    def: {
     metadata: { id: 'choose-n-cardinality-test', players: { min: 1, max: 2 } },
     constants: {},
     globalVars: [{ name: 'cap', type: 'int', init: 0, min: 0, max: 6 }],
@@ -34,12 +39,14 @@ const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): Eva
     turnOrderState: { type: 'roundRobin' },
     markers: {},
   },
-  activePlayer: asPlayerId(0),
-  actorPlayer: asPlayerId(0),
-  bindings: {},
-  queryRuntimeCache: createQueryRuntimeCache(),
-  collector: createCollector(),
-});
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
+  };
+};
 
 describe('resolveChooseNCardinality', () => {
   it('resolves exact n cardinality', () => {

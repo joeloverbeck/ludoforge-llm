@@ -46,8 +46,9 @@ const makeState = (): GameState => ({
 });
 
 describe('createEvalContext', () => {
-  it('provides default collector and query runtime cache', () => {
+  it('requires explicit runtime resources and uses them as the eval context carrier', () => {
     const def = makeDef();
+    const resources = createEvalRuntimeResources();
     const ctx = createEvalContext({
       def,
       adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -55,13 +56,12 @@ describe('createEvalContext', () => {
       activePlayer: asPlayerId(0),
       actorPlayer: asPlayerId(0),
       bindings: {},
+      resources,
     });
 
-    assert.deepEqual(ctx.collector.warnings, []);
-    assert.equal(ctx.collector.trace, null);
-    assert.equal(typeof ctx.queryRuntimeCache.getIndex, 'function');
-    assert.equal(typeof ctx.queryRuntimeCache.setIndex, 'function');
-    assert.equal('tokenZoneIndexByState' in ctx.queryRuntimeCache, false);
+    assert.equal(ctx.resources, resources);
+    assert.equal(ctx.collector, resources.collector);
+    assert.equal(ctx.queryRuntimeCache, resources.queryRuntimeCache);
   });
 
   it('preserves provided collector and query runtime cache instances', () => {
@@ -115,10 +115,12 @@ describe('createEvalContext', () => {
     assert.equal(first.queryRuntimeCache, second.queryRuntimeCache);
   });
 
-  it('isolates defaults across independent createEvalContext calls', () => {
+  it('keeps contexts isolated when created with different runtime resources', () => {
     const def = makeDef();
     const state = makeState();
     const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const firstResources = createEvalRuntimeResources();
+    const secondResources = createEvalRuntimeResources();
 
     const first = createEvalContext({
       def,
@@ -127,6 +129,7 @@ describe('createEvalContext', () => {
       activePlayer: asPlayerId(0),
       actorPlayer: asPlayerId(0),
       bindings: {},
+      resources: firstResources,
     });
     const second = createEvalContext({
       def,
@@ -135,6 +138,7 @@ describe('createEvalContext', () => {
       activePlayer: asPlayerId(0),
       actorPlayer: asPlayerId(0),
       bindings: {},
+      resources: secondResources,
     });
 
     assert.notEqual(first.collector, second.collector);

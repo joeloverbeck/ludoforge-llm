@@ -1,6 +1,6 @@
 # KERQUERY-012: Preserve resource identity across legal-choices discovery
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — legal-choices discovery context resource propagation
@@ -13,8 +13,9 @@
 ## Assumption Reassessment (2026-03-04)
 
 1. Eval/effect contexts now use operation resources as canonical ownership containers.
-2. `legal-choices` discovery still wraps collector/cache into a new resources object per discovery context build.
-3. No active ticket currently addresses identity continuity in this path.
+2. `legal-choices` discovery still wraps collector/cache into a new `EvalRuntimeResources` object per discovery context build instead of threading one canonical identity from preflight.
+3. Unit tests live under `packages/engine/test/unit/kernel/` (not `packages/engine/test/unit/`), and there is currently no identity-focused contract test for this discovery resources path.
+4. No active ticket currently addresses identity continuity in this path.
 
 ## Architecture Check
 
@@ -26,8 +27,8 @@
 
 ### 1. Thread stable resources identity through legal-choices discovery
 
-1. Extend eval-context surface to carry optional `resources` identity where needed.
-2. Update `legal-choices` discovery context builder to reuse provided identity rather than recreating wrappers.
+1. Extend eval-context surface to carry explicit runtime resources identity.
+2. Update `legal-choices` discovery context builder to reuse that identity rather than recreating wrappers.
 
 ### 2. Keep context construction deterministic
 
@@ -41,9 +42,9 @@
 
 ## Files to Touch
 
-- `packages/engine/src/kernel/eval-context.ts` (modify if needed)
+- `packages/engine/src/kernel/eval-context.ts` (modify)
 - `packages/engine/src/kernel/legal-choices.ts` (modify)
-- `packages/engine/test/unit/legal-choices.test.ts` (modify/add)
+- `packages/engine/test/unit/kernel/legal-choices.test.ts` (modify/add)
 
 ## Out of Scope
 
@@ -69,11 +70,29 @@
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/legal-choices.test.ts` — verify resources identity continuity and behavioral parity.
+1. `packages/engine/test/unit/kernel/legal-choices.test.ts` — verify resources identity continuity and behavioral parity.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/legal-choices.test.js`
+2. `node --test packages/engine/dist/test/unit/kernel/legal-choices.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-05
+- **What actually changed**:
+  - `EvalContext` now carries required `resources` identity (threaded by `createEvalContext`) so downstream consumers must reuse the canonical runtime resources container.
+  - `legal-choices` discovery now consumes `evalCtx.resources` directly when building strict/probe effect contexts.
+  - `EffectContext` constructors now require and carry runtime `resources` explicitly across execution/discovery modes.
+  - Added legal-choices source-contract guard coverage to lock this resource-threading behavior.
+  - Updated this ticket's assumptions and test-path references to match the current repository layout.
+- **Deviations from original plan**:
+  - Scope expanded from legal-choices-only threading to canonicalization at context boundaries: eval/effect context constructors now require explicit resources.
+  - Identity continuity validation is enforced via a source-contract test guard in the legal-choices suite, plus fixture-wide test updates to construct `EvalContext`/`EffectContext` with canonical resources.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/legal-choices.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (379/379).
+  - `pnpm -F @ludoforge/engine lint` passed.

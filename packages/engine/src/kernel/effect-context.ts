@@ -5,7 +5,6 @@ import type {
 } from './types-core.js';
 import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
 import {
-  createEvalRuntimeResources,
   type EvalRuntimeResources,
 } from './eval-context.js';
 import type { QueryRuntimeCache } from './query-runtime-cache.js';
@@ -43,6 +42,7 @@ interface EffectContextBase {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly resources: EvalRuntimeResources;
   readonly queryRuntimeCache: QueryRuntimeCache;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
@@ -86,21 +86,22 @@ export interface EffectResult {
   readonly pendingChoice?: ChoicePendingRequest;
 }
 
-interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'queryRuntimeCache' | 'collector'> {
-  readonly resources?: EvalRuntimeResources;
+interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'queryRuntimeCache' | 'collector' | 'resources'> {
+  readonly resources: EvalRuntimeResources;
   readonly decisionAuthorityPlayer?: PlayerId;
 }
 
 export const createExecutionEffectContext = (options: RuntimeEffectContextOptions): ExecutionEffectContext => {
   const {
     activePlayer,
-    resources = createEvalRuntimeResources(),
+    resources,
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
+    resources,
     queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
     decisionAuthority: {
@@ -115,13 +116,14 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
 export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContextOptions): DiscoveryStrictEffectContext => {
   const {
     activePlayer,
-    resources = createEvalRuntimeResources(),
+    resources,
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
+    resources,
     queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
     decisionAuthority: {
@@ -138,13 +140,14 @@ export const createDiscoveryProbeEffectContext = (
 ): DiscoveryProbeEffectContext => {
   const {
     activePlayer,
-    resources = createEvalRuntimeResources(),
+    resources,
     decisionAuthorityPlayer = activePlayer,
     ...ctx
   } = options;
   return {
     ...ctx,
     activePlayer,
+    resources,
     queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
     decisionAuthority: {

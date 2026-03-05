@@ -8,6 +8,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   queryAdjacentZones,
   queryConnectedZones,
@@ -69,6 +70,10 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
   const def = makeDef();
+  const resources = overrides?.resources ?? createEvalRuntimeResources({
+    collector: overrides?.collector ?? createCollector(),
+    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
+  });
   return {
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -76,9 +81,10 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: {},
-    collector: createCollector(),
     ...overrides,
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
   };
 };
 

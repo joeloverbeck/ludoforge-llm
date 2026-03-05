@@ -10,7 +10,7 @@ import type {
 import { actionDefToDisplayTree } from './ast-to-display.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
-import { createEvalContext, type EvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type EvalContext } from './eval-context.js';
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 
@@ -227,6 +227,7 @@ export function describeAction(
       actorPlayer: context.actorPlayer,
       bindings: {},
       runtimeTableIndex: context.runtime.runtimeTableIndex,
+      resources: createEvalRuntimeResources(),
     });
 
     let limitUsage: readonly LimitUsageInfo[] = [];

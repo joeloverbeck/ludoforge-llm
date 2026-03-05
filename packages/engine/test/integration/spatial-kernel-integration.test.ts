@@ -10,6 +10,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   evalCondition,
   evalQuery,
@@ -93,6 +94,10 @@ const makeRuntimeState = (): GameState => ({
 
 const makeEvalCtx = (): EvalContext => {
   const def = makeRuntimeDef();
+  const resources = createEvalRuntimeResources({
+    collector: createCollector(),
+    queryRuntimeCache: createQueryRuntimeCache(),
+  });
   return {
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -100,8 +105,9 @@ const makeEvalCtx = (): EvalContext => {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: { $reachable: [asZoneId('b:none')] },
-    queryRuntimeCache: createQueryRuntimeCache(),
-    collector: createCollector(),
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
   };
 };
 

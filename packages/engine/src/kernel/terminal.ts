@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { createEvalContext, type EvalContext } from './eval-context.js';
+import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
@@ -15,6 +15,7 @@ function buildEvalContext(
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
   state: GameState,
+  resources: EvalRuntimeResources,
   actorPlayer = state.activePlayer,
 ): EvalContext {
   return createEvalContext({
@@ -25,6 +26,7 @@ function buildEvalContext(
     actorPlayer,
     bindings: {},
     runtimeTableIndex,
+    resources,
   });
 }
 
@@ -33,6 +35,7 @@ function scoreRanking(
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
   state: GameState,
+  resources: EvalRuntimeResources,
 ): readonly PlayerScore[] {
   const scoring = def.terminal.scoring;
   if (!scoring) {
@@ -44,7 +47,7 @@ function scoreRanking(
 
   const ranking = Array.from({ length: state.playerCount }, (_, index) => {
     const player = asPlayerId(index);
-    const ctx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, player);
+    const ctx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources, player);
     const score = evalValue(scoring.value, ctx);
     if (typeof score !== 'number') {
       throw kernelRuntimeError(
@@ -86,13 +89,14 @@ function finalVictoryRanking(
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
   state: GameState,
+  resources: EvalRuntimeResources,
 ): readonly VictoryTerminalRankingEntry[] {
   const margins = def.terminal.margins ?? [];
   const order = def.terminal.ranking?.order ?? 'desc';
   const tieBreakOrder = def.terminal.ranking?.tieBreakOrder ?? [];
   const tieBreakIndex = new Map(tieBreakOrder.map((seat, index): readonly [string, number] => [seat, index]));
   const rows = margins.map((marginDef) => {
-    const margin = evalValue(marginDef.value, buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state));
+    const margin = evalValue(marginDef.value, buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources));
     if (typeof margin !== 'number') {
       throw kernelRuntimeError(
         'TERMINAL_MARGIN_NON_NUMERIC',
@@ -133,19 +137,20 @@ function evaluateVictory(
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
   state: GameState,
+  resources: EvalRuntimeResources,
 ): TerminalResult | null {
   const checkpoints = def.terminal.checkpoints;
   if (checkpoints === undefined) {
     return null;
   }
 
-  const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state);
+  const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources);
   const duringCheckpoint = checkpoints.find(
     (checkpoint) => checkpoint.timing === 'duringCoup' && evalCondition(checkpoint.when, baseCtx),
   );
   if (duringCheckpoint !== undefined) {
     const hasMargins = (def.terminal.margins?.length ?? 0) > 0;
-    const ranking = hasMargins ? finalVictoryRanking(def, adjacencyGraph, runtimeTableIndex, state) : [];
+    const ranking = hasMargins ? finalVictoryRanking(def, adjacencyGraph, runtimeTableIndex, state, resources) : [];
     const winnerSeat = ranking[0]?.seat ?? duringCheckpoint.seat;
     const player = resolveSeatPlayer(state, winnerSeat);
     if (player === null) {
@@ -175,7 +180,7 @@ function evaluateVictory(
     return null;
   }
 
-  const ranking = finalVictoryRanking(def, adjacencyGraph, runtimeTableIndex, state);
+  const ranking = finalVictoryRanking(def, adjacencyGraph, runtimeTableIndex, state, resources);
   const winnerSeat = ranking[0]?.seat ?? finalCheckpoint.seat;
   const player = resolveSeatPlayer(state, winnerSeat);
   if (player === null) {
@@ -201,8 +206,9 @@ function evaluateVictory(
 export const terminalResult = (def: GameDef, state: GameState, runtime?: GameDefRuntime): TerminalResult | null => {
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state);
-  const victory = evaluateVictory(def, adjacencyGraph, runtimeTableIndex, state);
+  const resources = createEvalRuntimeResources();
+  const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources);
+  const victory = evaluateVictory(def, adjacencyGraph, runtimeTableIndex, state, resources);
   if (victory !== null) {
     return victory;
   }
@@ -220,7 +226,7 @@ export const terminalResult = (def: GameDef, state: GameState, runtime?: GameDef
       case 'draw':
         return { type: 'draw' };
       case 'score':
-        return { type: 'score', ranking: scoreRanking(def, adjacencyGraph, runtimeTableIndex, state) };
+        return { type: 'score', ranking: scoreRanking(def, adjacencyGraph, runtimeTableIndex, state, resources) };
       default: {
         const _exhaustive: never = endCondition.result;
         return _exhaustive;

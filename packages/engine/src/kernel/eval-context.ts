@@ -42,6 +42,7 @@ export interface EvalContext {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly resources: EvalRuntimeResources;
   readonly queryRuntimeCache: QueryRuntimeCache;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly freeOperationZoneFilter?: ConditionAST;
@@ -51,16 +52,17 @@ export interface EvalContext {
 }
 
 export type EvalContextInput = Omit<EvalContext, 'collector' | 'queryRuntimeCache'> & {
-  readonly resources?: EvalRuntimeResources;
+  readonly resources: EvalRuntimeResources;
 };
 
 export function createEvalContext(input: EvalContextInput): EvalContext {
   const {
-    resources = createEvalRuntimeResources(),
+    resources,
     ...ctx
   } = input;
   return {
     ...ctx,
+    resources,
     queryRuntimeCache: resources.queryRuntimeCache,
     collector: resources.collector,
   };

@@ -2907,6 +2907,20 @@ phase: [asPhaseId('main')],
         'free-operation branch must consume prebuilt seatResolution instead of rebuilding context',
       );
     });
+
+    it('threads preflight eval resources identity into discovery effect contexts', () => {
+      const source = readKernelSource('src/kernel/legal-choices.ts');
+      assert.match(
+        source,
+        /resources:\s*evalCtx\.resources/u,
+        'discovery effect context should consume canonical preflight resources identity',
+      );
+      assert.doesNotMatch(
+        source,
+        /resources:\s*evalCtx\.resources\s*\?\?/u,
+        'discovery effect context must not fallback to reconstructed resources wrappers',
+      );
+    });
   });
 
   describe('purity invariant', () => {

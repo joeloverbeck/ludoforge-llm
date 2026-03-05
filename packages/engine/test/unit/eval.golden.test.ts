@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   asPlayerId,
   deserializeGameState,
@@ -20,6 +21,10 @@ import { readFixtureJson } from '../helpers/fixture-reader.js';
 const makeCtx = (): EvalContext => {
   const def = readFixtureJson<GameDef>('gamedef/eval-complex-valid.json');
   const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
+  const resources = createEvalRuntimeResources({
+    collector: createCollector(),
+    queryRuntimeCache: createQueryRuntimeCache(),
+  });
 
   return {
     def,
@@ -28,8 +33,9 @@ const makeCtx = (): EvalContext => {
     activePlayer: asPlayerId(1),
     actorPlayer: asPlayerId(0),
     bindings: {},
-    queryRuntimeCache: createQueryRuntimeCache(),
-    collector: createCollector(),
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
   };
 };
 

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   asPlayerId,
   deserializeGameState,
@@ -22,6 +23,10 @@ describe('evaluation integration - complex scenario', () => {
     const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
     const state = deserializeGameState(serializedState);
 
+    const resources = createEvalRuntimeResources({
+      collector: createCollector(),
+      queryRuntimeCache: createQueryRuntimeCache(),
+    });
     const ctx: EvalContext = {
       def,
       adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -29,8 +34,9 @@ describe('evaluation integration - complex scenario', () => {
       activePlayer: asPlayerId(1),
       actorPlayer: asPlayerId(0),
       bindings: {},
-      queryRuntimeCache: createQueryRuntimeCache(),
-      collector: createCollector(),
+      resources,
+      queryRuntimeCache: resources.queryRuntimeCache,
+      collector: resources.collector,
     };
 
     const condition: ConditionAST = {

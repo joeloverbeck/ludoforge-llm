@@ -7,6 +7,7 @@ import {
   asPlayerId,
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   queryConnectedZones,
   type EvalContext,
@@ -31,16 +32,23 @@ const makeState = (zoneIds: readonly string[]): GameState => ({
   markers: {},
 });
 
-const makeCtx = (def: GameDef): EvalContext => ({
-  def,
-  adjacencyGraph: buildAdjacencyGraph(def.zones),
-  state: makeState(def.zones.map((zone) => String(zone.id))),
-  activePlayer: asPlayerId(0),
-  actorPlayer: asPlayerId(0),
-  bindings: {},
-  queryRuntimeCache: createQueryRuntimeCache(),
-  collector: createCollector(),
-});
+const makeCtx = (def: GameDef): EvalContext => {
+  const resources = createEvalRuntimeResources({
+    collector: createCollector(),
+    queryRuntimeCache: createQueryRuntimeCache(),
+  });
+  return {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state: makeState(def.zones.map((zone) => String(zone.id))),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
+  };
+};
 
 const makeDef = (id: string, zones: GameDef['zones']): GameDef => ({
   metadata: { id, players: { min: 1, max: 2 } },

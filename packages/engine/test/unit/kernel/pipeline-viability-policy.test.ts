@@ -8,6 +8,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   decideApplyMovePipelineViability,
   decideLegalChoicesPipelineViability,
@@ -73,16 +74,23 @@ const makeEvalCtx = (
   def: GameDef,
   state: GameState,
   bindings: Readonly<Record<string, unknown>> = {},
-): EvalContext => ({
-  def,
-  adjacencyGraph: buildAdjacencyGraph(def.zones),
-  state,
-  activePlayer: state.activePlayer,
-  actorPlayer: state.activePlayer,
-  bindings,
-  queryRuntimeCache: createQueryRuntimeCache(),
-  collector: createCollector(),
-});
+): EvalContext => {
+  const resources = createEvalRuntimeResources({
+    collector: createCollector(),
+    queryRuntimeCache: createQueryRuntimeCache(),
+  });
+  return {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings,
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
+  };
+};
 
 describe('pipeline viability policy', () => {
   it('projects legality failure consistently for all surfaces', () => {

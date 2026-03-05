@@ -17,7 +17,6 @@ import {
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { createEvalRuntimeResources } from './eval-context.js';
 import {
   classifyDecisionSequenceSatisfiability,
   type DecisionSequenceSatisfiability,
@@ -80,10 +79,7 @@ const buildDiscoveryEffectContextBase = (
   actorPlayer: evalCtx.actorPlayer,
   bindings: evalCtx.bindings,
   moveParams: move.params,
-  resources: createEvalRuntimeResources({
-    collector: evalCtx.collector,
-    queryRuntimeCache: evalCtx.queryRuntimeCache,
-  }),
+  resources: evalCtx.resources,
   traceContext: { eventContext: 'actionEffect', actionId: String(move.actionId), effectPathRoot: 'legalChoices.effects' },
   effectPath: '',
   ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),

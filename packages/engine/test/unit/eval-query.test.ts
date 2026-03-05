@@ -5,6 +5,7 @@ import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
@@ -125,7 +126,10 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
   const def = makeDef();
-  const queryRuntimeCache = overrides?.queryRuntimeCache ?? createQueryRuntimeCache();
+  const resources = overrides?.resources ?? createEvalRuntimeResources({
+    collector: overrides?.collector ?? createCollector(),
+    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
+  });
   return {
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -133,9 +137,10 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     activePlayer: asPlayerId(2),
     actorPlayer: asPlayerId(1),
     bindings: {},
-    collector: createCollector(),
     ...overrides,
-    queryRuntimeCache,
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
   };
 };
 

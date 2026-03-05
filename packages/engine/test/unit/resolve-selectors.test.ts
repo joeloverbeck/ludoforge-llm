@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   createCollector,
+  createEvalRuntimeResources,
   createQueryRuntimeCache,
   asZoneId,
   asPhaseId,
@@ -63,17 +64,24 @@ const makeState = (playerCount: number): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => ({
-  def: makeDef(),
-  adjacencyGraph: buildAdjacencyGraph([]),
-  state: makeState(3),
-  activePlayer: asPlayerId(2),
-  actorPlayer: asPlayerId(1),
-  bindings: { '$picked': asPlayerId(2) },
-  collector: createCollector(),
-  ...overrides,
-  queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-});
+const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
+  const resources = overrides?.resources ?? createEvalRuntimeResources({
+    collector: overrides?.collector ?? createCollector(),
+    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
+  });
+  return {
+    def: makeDef(),
+    adjacencyGraph: buildAdjacencyGraph([]),
+    state: makeState(3),
+    activePlayer: asPlayerId(2),
+    actorPlayer: asPlayerId(1),
+    bindings: { '$picked': asPlayerId(2) },
+    ...overrides,
+    resources,
+    queryRuntimeCache: resources.queryRuntimeCache,
+    collector: resources.collector,
+  };
+};
 
 describe('resolvePlayerSel', () => {
   it('resolves actor, active, all, allOther, id, chosen, and relative selectors', () => {

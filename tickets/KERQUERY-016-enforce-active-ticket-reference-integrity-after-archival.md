@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — ticket-tooling and active-ticket reference integrity
-**Deps**: docs/archival-workflow.md, scripts/archive-ticket.mjs, scripts/check-ticket-deps.mjs, tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md
+**Deps**: docs/archival-workflow.md, scripts/archive-ticket.mjs, scripts/check-ticket-deps.mjs, archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md
 
 ## Problem
 

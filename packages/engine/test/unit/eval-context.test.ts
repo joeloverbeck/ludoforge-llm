@@ -9,6 +9,7 @@ import {
   createEvalContext,
   createEvalRuntimeResources,
   createQueryRuntimeCache,
+  QUERY_RUNTIME_CACHE_INDEX_KEYS,
   asZoneId,
   type GameDef,
   type GameState,
@@ -154,13 +155,13 @@ describe('createQueryRuntimeCache', () => {
     const firstIndex = new Map<string, string>([['a', asZoneId('hand:0')]]);
     const secondIndex = new Map<string, string>([['b', asZoneId('bench:1')]]);
 
-    assert.equal(cache.getIndex(firstState, 'tokenZoneByTokenId'), undefined);
-    assert.equal(cache.getIndex(secondState, 'tokenZoneByTokenId'), undefined);
+    assert.equal(cache.getIndex(firstState, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId), undefined);
+    assert.equal(cache.getIndex(secondState, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId), undefined);
 
-    cache.setIndex(firstState, 'tokenZoneByTokenId', firstIndex);
-    cache.setIndex(secondState, 'tokenZoneByTokenId', secondIndex);
+    cache.setIndex(firstState, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId, firstIndex);
+    cache.setIndex(secondState, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId, secondIndex);
 
-    assert.equal(cache.getIndex(firstState, 'tokenZoneByTokenId'), firstIndex);
-    assert.equal(cache.getIndex(secondState, 'tokenZoneByTokenId'), secondIndex);
+    assert.equal(cache.getIndex(firstState, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId), firstIndex);
+    assert.equal(cache.getIndex(secondState, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId), secondIndex);
   });
 });

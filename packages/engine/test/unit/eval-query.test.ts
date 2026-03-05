@@ -7,6 +7,7 @@ import {
   createCollector,
   createEvalRuntimeResources,
   createQueryRuntimeCache,
+  QUERY_RUNTIME_CACHE_INDEX_KEYS,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -1351,12 +1352,12 @@ describe('evalQuery', () => {
     const queryRuntimeCache: QueryRuntimeCache = {
       getIndex: (state, key) => {
         getCalls += 1;
-        assert.equal(key, 'tokenZoneByTokenId');
+        assert.equal(key, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId);
         return indexByState.get(state);
       },
       setIndex: (state, key, index) => {
         setCalls += 1;
-        assert.equal(key, 'tokenZoneByTokenId');
+        assert.equal(key, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId);
         indexByState.set(state, index);
       },
     };

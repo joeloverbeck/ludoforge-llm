@@ -1,9 +1,12 @@
 import type { GameState } from './types.js';
 
-export type QueryRuntimeCacheIndexKey = 'tokenZoneByTokenId';
+export const QUERY_RUNTIME_CACHE_INDEX_KEYS = {
+  tokenZoneByTokenId: 'tokenZoneByTokenId',
+} as const;
+export type QueryRuntimeCacheIndexKey = (typeof QUERY_RUNTIME_CACHE_INDEX_KEYS)[keyof typeof QUERY_RUNTIME_CACHE_INDEX_KEYS];
 
 interface QueryRuntimeCacheIndexValueByKey {
-  readonly tokenZoneByTokenId: ReadonlyMap<string, string>;
+  readonly [QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId]: ReadonlyMap<string, string>;
 }
 
 type QueryRuntimeCacheIndexValue = QueryRuntimeCacheIndexValueByKey[QueryRuntimeCacheIndexKey];
@@ -12,6 +15,21 @@ type QueryRuntimeIndexesByState = Map<QueryRuntimeCacheIndexKey, QueryRuntimeCac
 export interface QueryRuntimeCache {
   getIndex<K extends QueryRuntimeCacheIndexKey>(state: GameState, key: K): QueryRuntimeCacheIndexValueByKey[K] | undefined;
   setIndex<K extends QueryRuntimeCacheIndexKey>(state: GameState, key: K, value: QueryRuntimeCacheIndexValueByKey[K]): void;
+}
+
+export function getTokenZoneByTokenIdIndex(
+  cache: QueryRuntimeCache,
+  state: GameState,
+): ReadonlyMap<string, string> | undefined {
+  return cache.getIndex(state, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId);
+}
+
+export function setTokenZoneByTokenIdIndex(
+  cache: QueryRuntimeCache,
+  state: GameState,
+  value: ReadonlyMap<string, string>,
+): void {
+  cache.setIndex(state, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId, value);
 }
 
 export function createQueryRuntimeCache(): QueryRuntimeCache {
@@ -39,4 +57,3 @@ export function createQueryRuntimeCache(): QueryRuntimeCache {
     },
   };
 }
-

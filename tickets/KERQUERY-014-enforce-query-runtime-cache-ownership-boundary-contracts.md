@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel import-boundary and ownership contract tests for query runtime cache
-**Deps**: archive/tickets/KERQUERY/KERQUERY-009-encapsulate-query-runtime-cache-and-contract-tests.md, tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md, packages/engine/src/kernel/query-runtime-cache.ts, packages/engine/src/kernel/eval-context.ts, packages/engine/test/unit/contracts/contracts-public-surface-import-policy.test.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-009-encapsulate-query-runtime-cache-and-contract-tests.md, archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md, packages/engine/src/kernel/query-runtime-cache.ts, packages/engine/src/kernel/eval-context.ts, packages/engine/test/unit/contracts/contracts-public-surface-import-policy.test.ts
 
 ## Problem
 

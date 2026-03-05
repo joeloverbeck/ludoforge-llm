@@ -15,6 +15,7 @@ import {
   asZoneId,
   createCollector,
   createEvalRuntimeResources,
+  QUERY_RUNTIME_CACHE_INDEX_KEYS,
   terminalResult,
   type TriggerLogEntry,
   type GameDef,
@@ -127,13 +128,13 @@ describe('phase advancement', () => {
     const queryRuntimeCache: QueryRuntimeCache = {
       getIndex: (cacheState, key) => {
         getCalls += 1;
-        if (key !== 'tokenZoneByTokenId') {
+        if (key !== QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId) {
           return undefined;
         }
         return indexesByState.get(cacheState);
       },
       setIndex: (cacheState, key, value) => {
-        if (key !== 'tokenZoneByTokenId') {
+        if (key !== QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId) {
           return;
         }
         setCalls += 1;

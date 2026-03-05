@@ -199,6 +199,25 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
+  it('profile referencing nonexistent linked window emits CNL_XREF_PROFILE_WINDOW_MISSING', () => {
+    const sections = compileRichSections();
+    const profile = requireValue(sections.actionPipelines?.[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      actionPipelines: [
+        {
+          ...profile,
+          linkedWindows: ['window-z'],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_PROFILE_WINDOW_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.actionPipelines.0.linkedWindows.0');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "window-a"?');
+  });
+
   it('pipelined action with malformed actor binding emits canonical binding-invalid diagnostic', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);

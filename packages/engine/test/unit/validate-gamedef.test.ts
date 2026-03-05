@@ -96,6 +96,52 @@ const withPipelineZonePropCondition = (
   } as unknown as GameDef;
 };
 
+const withPipelineLinkedWindows = (
+  linkedWindows: readonly string[] | undefined,
+  options?: {
+    readonly overrideWindowIds?: readonly string[];
+    readonly turnOrderType?: 'cardDriven' | 'roundRobin';
+  },
+): GameDef => {
+  const base = createValidGameDef();
+  const turnOrderType = options?.turnOrderType ?? 'cardDriven';
+  const overrideWindowIds = options?.overrideWindowIds ?? ['special-window'];
+  return {
+    ...base,
+    turnOrder: turnOrderType === 'cardDriven'
+      ? {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+              eligibility: {
+                seats: ['0', '1'],
+                overrideWindows: overrideWindowIds.map((id) => ({ id, duration: 'nextTurn' })),
+              },
+              actionClassByActionId: { playCard: 'event' },
+              optionMatrix: [],
+              passRewards: [],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        }
+      : { type: 'roundRobin' },
+    actionPipelines: [
+      {
+        id: 'profile-a',
+        actionId: 'playCard',
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ stage: 'resolve', effects: [] }],
+        atomicity: 'atomic',
+        ...(linkedWindows === undefined ? {} : { linkedWindows }),
+      },
+    ],
+  } as unknown as GameDef;
+};
+
 const collectDeclaredEffectBinderPatternsFromContract = (): readonly string[] => {
   const patterns: string[] = [];
   for (const [effectKind, surface] of Object.entries(EFFECT_BINDER_SURFACE_CONTRACT)) {
@@ -3017,6 +3063,40 @@ describe('validateGameDef reference checks', () => {
         (diag) => diag.code === 'ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS' && diag.path === 'actionPipelines',
       ),
     );
+  });
+
+  it('accepts linkedWindows that reference declared turn-flow eligibility override windows', () => {
+    const def = withPipelineLinkedWindows(['special-window']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING'));
+  });
+
+  it('reports linkedWindows entries that reference unknown turn-flow eligibility override windows', () => {
+    const def = withPipelineLinkedWindows(['missing-window']);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING' &&
+          diag.path === 'actionPipelines[0].linkedWindows[0]',
+      ),
+    );
+  });
+
+  it('does not report linkedWindows diagnostics when linkedWindows is absent', () => {
+    const def = withPipelineLinkedWindows(undefined);
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING'));
+  });
+
+  it('skips linkedWindows reference validation when turn order is not card-driven', () => {
+    const def = withPipelineLinkedWindows(['missing-window'], { turnOrderType: 'roundRobin' });
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING'));
   });
 
   it('reports unknown zoneProp in pipeline stage effects', () => {

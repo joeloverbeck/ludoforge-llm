@@ -1,6 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
-import { buildCardDrivenTurnFlowSemanticRequirements, evaluateActionSelectorContracts } from '../contracts/index.js';
+import {
+  buildCardDrivenTurnFlowSemanticRequirements,
+  collectTurnFlowEligibilityOverrideWindowIds,
+  evaluateActionSelectorContracts,
+  findMissingTurnFlowLinkedWindows,
+} from '../contracts/index.js';
 import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { CNL_XREF_DIAGNOSTIC_CODES, type CnlXrefDiagnosticCode } from './cross-validate-diagnostic-codes.js';
@@ -30,8 +35,9 @@ export function crossValidateSpec(
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
   const cardDrivenTurnFlow = sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow : null;
+  const overrideWindowIds = collectTurnFlowEligibilityOverrideWindowIds(cardDrivenTurnFlow);
   const seatTargets = collectIdentifierTargets(seatIdentityContract.referenceSeatIds);
-  const windowTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.overrideWindows.map((window) => window.id));
+  const windowTargets = collectIdentifierTargets(overrideWindowIds);
   const globalVarTargets = collectIdentifierTargets(sections.globalVars?.map((globalVar) => globalVar.name));
   const perPlayerVarTargets = collectIdentifierTargets(sections.perPlayerVars?.map((playerVar) => playerVar.name));
 
@@ -93,14 +99,14 @@ export function crossValidateSpec(
 
   if (sections.actionPipelines !== null && cardDrivenTurnFlow !== null) {
     for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
-      for (const [windowIndex, windowId] of (profile.linkedWindows ?? []).entries()) {
-        pushMissingIdentifierDiagnostic(
+      for (const { index: windowIndex, windowId } of findMissingTurnFlowLinkedWindows(profile.linkedWindows, overrideWindowIds)) {
+        pushMissingReferenceDiagnostic(
           diagnostics,
           CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_PROFILE_WINDOW_MISSING,
           `doc.actionPipelines.${profileIndex}.linkedWindows.${windowIndex}`,
-          windowId,
-          windowTargets,
           `Operation profile "${profile.id}" references unknown eligibility override window "${windowId}".`,
+          windowId,
+          overrideWindowIds,
           'Use one of the declared turnFlow.eligibility.overrideWindows ids.',
         );
       }

@@ -13,6 +13,10 @@ import type { ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateEffectAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
 import { forEachDefined } from './validate-gamedef-utils.js';
+import {
+  collectTurnFlowEligibilityOverrideWindowIds,
+  findMissingTurnFlowLinkedWindows,
+} from '../contracts/index.js';
 
 export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void => {
   const coupPlan = def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan : undefined;
@@ -313,6 +317,11 @@ export const validateActionPipelines = (
   actionCandidates: readonly string[],
   context: ValidationContext,
 ): void => {
+  const hasCardDrivenTurnOrder = def.turnOrder?.type === 'cardDriven';
+  const overrideWindowCandidates = hasCardDrivenTurnOrder
+    ? collectTurnFlowEligibilityOverrideWindowIds(def.turnOrder.config.turnFlow)
+    : [];
+
   const operationActionIdCounts = new Map<string, number>();
   def.actionPipelines?.forEach((actionPipeline, actionPipelineIndex) => {
     const basePath = `actionPipelines[${actionPipelineIndex}]`;
@@ -348,6 +357,20 @@ export const validateActionPipelines = (
         message: `Unsupported action pipeline atomicity "${actionPipeline.atomicity}".`,
         suggestion: 'Use "atomic" or "partial".',
       });
+    }
+
+    if (hasCardDrivenTurnOrder) {
+      const missingWindows = findMissingTurnFlowLinkedWindows(actionPipeline.linkedWindows, overrideWindowCandidates);
+      for (const { index: windowIndex, windowId } of missingWindows) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING',
+          `${basePath}.linkedWindows[${windowIndex}]`,
+          `Unknown turn-flow eligibility override window "${windowId}".`,
+          windowId,
+          overrideWindowCandidates,
+        );
+      }
     }
 
     if (actionPipeline.applicability !== undefined) {

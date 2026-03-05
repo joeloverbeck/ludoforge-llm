@@ -375,6 +375,7 @@ phase: ['main'],
     const invalid = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ID_INVALID');
     assert.ok(invalid !== undefined);
     assert.equal(invalid?.path, 'effectMacros[0].id');
+    assert.equal(invalid?.message, 'Effect macro id must be a non-empty string.');
   });
 
   it('escapes bracket-significant macro IDs in nested expansion diagnostic paths', () => {

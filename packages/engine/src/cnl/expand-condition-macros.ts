@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { ConditionMacroDef, EffectMacroParam, GameSpecDoc } from './game-spec-doc.js';
+import { invalidMacroIdMessage, isValidMacroId } from './macro-id-contract.js';
 
 const MAX_EXPANSION_DEPTH = 12;
 
@@ -52,12 +53,12 @@ function buildIndex(defs: readonly ConditionMacroDef[], diagnostics: Diagnostic[
 
   for (const [index, def] of defs.entries()) {
     const path = `conditionMacros[${index}]`;
-    if (typeof def.id !== 'string' || def.id.trim() === '') {
+    if (!isValidMacroId(def.id)) {
       diagnostics.push({
         code: 'CONDITION_MACRO_ID_INVALID',
         path: `${path}.id`,
         severity: 'error',
-        message: 'Condition macro id must be a non-empty string.',
+        message: invalidMacroIdMessage('condition'),
       });
       continue;
     }

@@ -111,6 +111,50 @@ describe('expandConditionMacros', () => {
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CONDITION_MACRO_MISSING_ARGS'));
   });
 
+  it('rejects empty condition macro IDs', () => {
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      conditionMacros: [
+        {
+          id: '',
+          params: [],
+          condition: true,
+        },
+      ],
+      actionPipelines: [],
+    };
+
+    const result = expandConditionMacros(doc);
+    const invalid = result.diagnostics.find((diagnostic) => diagnostic.code === 'CONDITION_MACRO_ID_INVALID');
+    assert.ok(invalid !== undefined);
+    assert.equal(invalid?.path, 'conditionMacros[0].id');
+    assert.equal(invalid?.message, 'Condition macro id must be a non-empty string.');
+  });
+
+  it('detects duplicate condition macro IDs', () => {
+    const doc: GameSpecDoc = {
+      ...baseDoc(),
+      conditionMacros: [
+        {
+          id: 'dup',
+          params: [],
+          condition: true,
+        },
+        {
+          id: 'dup',
+          params: [],
+          condition: false,
+        },
+      ],
+      actionPipelines: [],
+    };
+
+    const result = expandConditionMacros(doc);
+    const duplicate = result.diagnostics.find((diagnostic) => diagnostic.code === 'CONDITION_MACRO_DUPLICATE_ID');
+    assert.ok(duplicate !== undefined);
+    assert.equal(duplicate?.path, 'conditionMacros[1]');
+  });
+
   it('reports circular condition macro expansion', () => {
     const doc: GameSpecDoc = {
       ...baseDoc(),

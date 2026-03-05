@@ -26,6 +26,7 @@ import type {
   GameSpecDoc,
   GameSpecEffect,
 } from './game-spec-doc.js';
+import { invalidMacroIdMessage, isValidMacroId } from './macro-id-contract.js';
 import { deriveTokenTraitVocabularyFromGameSpecDoc, type TokenTraitVocabulary } from './token-trait-vocabulary.js';
 
 const MAX_EXPANSION_DEPTH = 10;
@@ -1384,12 +1385,12 @@ function buildMacroIndex(
   const byId = new Map<string, IndexedMacroDef>();
   for (const [macroIndex, macro] of macros.entries()) {
     const declarationPath = `effectMacros[${macroIndex}]`;
-    if (typeof macro.id !== 'string' || macro.id.trim() === '') {
+    if (!isValidMacroId(macro.id)) {
       diagnostics.push({
         code: 'EFFECT_MACRO_ID_INVALID',
         path: `${declarationPath}.id`,
         severity: 'error',
-        message: 'Effect macro id must be a non-empty string.',
+        message: invalidMacroIdMessage('effect'),
       });
       continue;
     }

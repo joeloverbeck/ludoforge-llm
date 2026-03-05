@@ -77,6 +77,24 @@ describe('parseGameSpec API shape', () => {
     assert.ok(result.sourceMap.byPath['metadata.players.max'] !== undefined);
   });
 
+  it('anchors path-significant object keys using bracket-quoted keyed segments', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'metadata:',
+      '  id: game',
+      '  players:',
+      '    min: 2',
+      '    max: 4',
+      '  namedSets:',
+      '    "insurgent.group[0]": [US]',
+      '```',
+    ].join('\n'));
+
+    assert.ok(result.sourceMap.byPath['metadata.namedSets["insurgent.group[0]"]'] !== undefined);
+    assert.ok(result.sourceMap.byPath['metadata.namedSets["insurgent.group[0]"][0]'] !== undefined);
+    assert.equal(result.sourceMap.byPath['metadata.namedSets.insurgent.group[0]'], undefined);
+  });
+
   it('surfaces YAML lint diagnostics from fenced YAML blocks', () => {
     const result = parseGameSpec('```yaml\nmetadata:  \n  id: on\n```');
 

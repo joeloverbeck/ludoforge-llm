@@ -5,6 +5,7 @@ import {
   type CanonicalSectionKey,
   resolveSectionsFromBlock,
 } from './section-identifier.js';
+import { toObjectPathSuffix } from './path-utils.js';
 import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 import { lintYamlHardening } from './yaml-linter.js';
 
@@ -509,7 +510,7 @@ function collectAnchoredPaths(
 
   if (typeof value === 'object' && value !== null) {
     for (const [key, entry] of Object.entries(value)) {
-      const childPath = `${path}.${key}`;
+      const childPath = `${path}${toObjectPathSuffix(key)}`;
       paths.add(childPath);
       collectAnchoredPaths(paths, childPath, entry, false);
     }

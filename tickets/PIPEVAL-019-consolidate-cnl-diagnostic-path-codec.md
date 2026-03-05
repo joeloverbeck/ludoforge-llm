@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL diagnostic path encoding/normalization contract consolidation
-**Deps**: `archive/tickets/PIPEVAL/PIPEVAL-016-harden-named-set-collision-diagnostic-path-encoding.md`, `tickets/PIPEVAL-018-align-diagnostic-source-map-with-encoded-keyed-paths.md`
+**Deps**: `archive/tickets/PIPEVAL/PIPEVAL-016-harden-named-set-collision-diagnostic-path-encoding.md`, `archive/tickets/PIPEVAL/PIPEVAL-018-align-diagnostic-source-map-with-encoded-keyed-paths.md`
 
 ## Problem
 

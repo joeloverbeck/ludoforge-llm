@@ -252,6 +252,54 @@ describe('compiler diagnostics helpers', () => {
     assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
   });
 
+  it('resolves source order for encoded keyed diagnostic paths', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'metadata.namedSets["insurgent.group[0]"]': {
+          blockIndex: 0,
+          markdownLineStart: 20,
+          markdownColStart: 1,
+          markdownLineEnd: 20,
+          markdownColEnd: 15,
+        },
+      },
+    };
+
+    const key = getDiagnosticSortKey(
+      diagnostic({
+        path: 'doc.metadata.namedSets["insurgent.group[0]"]',
+        code: 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
+      }),
+      sourceMap,
+    );
+
+    assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
+  });
+
+  it('falls back to encoded keyed parent path when keyed leaf span is missing', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'metadata.namedSets': {
+          blockIndex: 0,
+          markdownLineStart: 21,
+          markdownColStart: 1,
+          markdownLineEnd: 21,
+          markdownColEnd: 15,
+        },
+      },
+    };
+
+    const key = getDiagnosticSortKey(
+      diagnostic({
+        path: 'doc.metadata.namedSets["insurgent.group[0]"]',
+        code: 'CNL_VALIDATOR_METADATA_NAMED_SET_VALUES_INVALID',
+      }),
+      sourceMap,
+    );
+
+    assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
+  });
+
   it('caps diagnostics to maxDiagnosticCount', () => {
     const diagnostics = [
       diagnostic({ code: 'A' }),

@@ -1,3 +1,7 @@
+import {
+  normalizeArrayIndexSegmentsToBrackets,
+  trimLastPathSegment,
+} from './path-utils.js';
 import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 
 export function resolveSpanForDiagnosticPath(path: string, sourceMap?: GameSpecSourceMap): SourceSpan | undefined {
@@ -51,7 +55,7 @@ export function compareSourceSpans(left?: SourceSpan, right?: SourceSpan): numbe
 
 function buildSourceLookupCandidates(path: string): readonly string[] {
   const withoutDocPrefix = path.startsWith('doc.') ? path.slice(4) : path;
-  const bracketPath = withoutDocPrefix.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
+  const bracketPath = normalizeArrayIndexSegmentsToBrackets(withoutDocPrefix);
   const withoutMacroSegments = bracketPath.replace(/\[macro:[^\]]+\](\[[0-9]+\])?/g, '');
   const unique = new Set<string>([path, withoutDocPrefix, bracketPath, withoutMacroSegments]);
   return [...unique];
@@ -69,24 +73,4 @@ function buildPathParents(path: string): readonly string[] {
     cursor = next;
   }
   return parents;
-}
-
-function trimLastPathSegment(path: string): string | undefined {
-  if (path.length === 0) {
-    return undefined;
-  }
-
-  if (path.endsWith(']')) {
-    const openIndex = path.lastIndexOf('[');
-    if (openIndex <= 0) {
-      return undefined;
-    }
-    return path.slice(0, openIndex);
-  }
-
-  const dotIndex = path.lastIndexOf('.');
-  if (dotIndex <= 0) {
-    return undefined;
-  }
-  return path.slice(0, dotIndex);
 }

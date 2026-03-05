@@ -9,6 +9,7 @@ import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/valida
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc, GameSpecZoneDef } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
+import { normalizeArrayIndexSegmentsToDots } from './path-utils.js';
 import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
@@ -742,65 +743,8 @@ function suppressUnavailableSectionDiagnostics(
 }
 
 function normalizeDiagnosticPath(path: string): string {
-  const withDots = normalizeArrayIndexSegments(path);
+  const withDots = normalizeArrayIndexSegmentsToDots(path);
   return withDots.startsWith('doc.') ? withDots : `doc.${withDots}`;
-}
-
-function normalizeArrayIndexSegments(path: string): string {
-  let normalized = '';
-  let index = 0;
-
-  while (index < path.length) {
-    const ch = path[index];
-    if (ch !== '[') {
-      normalized += ch;
-      index += 1;
-      continue;
-    }
-
-    const next = path[index + 1];
-    if (next === '"') {
-      // Preserve bracket-quoted keyed segments exactly (e.g. ["named.set[0]"]).
-      normalized += '[';
-      index += 1;
-      while (index < path.length) {
-        const inner = path[index];
-        normalized += inner;
-        index += 1;
-        if (inner === '"' && path[index - 2] !== '\\') {
-          break;
-        }
-      }
-      while (index < path.length) {
-        const inner = path[index];
-        normalized += inner;
-        index += 1;
-        if (inner === ']') {
-          break;
-        }
-      }
-      continue;
-    }
-
-    let end = index + 1;
-    while (end < path.length) {
-      const digit = path[end];
-      if (digit === undefined || digit < '0' || digit > '9') {
-        break;
-      }
-      end += 1;
-    }
-    if (end > index + 1 && path[end] === ']') {
-      normalized += `.${path.slice(index + 1, end)}`;
-      index = end + 1;
-      continue;
-    }
-
-    normalized += ch;
-    index += 1;
-  }
-
-  return normalized;
 }
 
 function requiredSectionDiagnostic(path: string, section: string): Diagnostic {

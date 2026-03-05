@@ -12,6 +12,7 @@ import {
 import type { ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateEffectAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
+import { forEachDefined } from './validate-gamedef-utils.js';
 
 export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void => {
   const coupPlan = def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan : undefined;
@@ -358,14 +359,14 @@ export const validateActionPipelines = (
     if (actionPipeline.costValidation !== null && actionPipeline.costValidation !== undefined) {
       validateConditionAst(diagnostics, actionPipeline.costValidation, `${basePath}.costValidation`, context);
     }
-    actionPipeline.costEffects.forEach((effect, effectIndex) => {
+    forEachDefined(actionPipeline.costEffects, (effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `${basePath}.costEffects[${effectIndex}]`, context);
     });
     if (actionPipeline.targeting.filter !== undefined) {
       validateConditionAst(diagnostics, actionPipeline.targeting.filter, `${basePath}.targeting.filter`, context);
     }
     actionPipeline.stages.forEach((stage, stageIndex) => {
-      (stage.effects ?? []).forEach((effect, effectIndex) => {
+      forEachDefined(stage.effects, (effect, effectIndex) => {
         validateEffectAst(diagnostics, effect, `${basePath}.stages[${stageIndex}].effects[${effectIndex}]`, context);
       });
     });

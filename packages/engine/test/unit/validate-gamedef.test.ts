@@ -3262,6 +3262,30 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('does not throw when pipeline costEffects is missing', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          targeting: {},
+          stages: [{ stage: 'resolve', effects: [] }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    let diagnostics: ReturnType<typeof validateGameDef> = [];
+    assert.doesNotThrow(() => {
+      diagnostics = validateGameDef(def);
+    });
+    assert.equal(Array.isArray(diagnostics), true);
+  });
+
   it('reports unknown coupPlan final-round omitted phases', () => {
     const base = createValidGameDef();
     const def = {

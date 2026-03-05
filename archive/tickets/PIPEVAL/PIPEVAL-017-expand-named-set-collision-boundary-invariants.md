@@ -1,6 +1,6 @@
 # PIPEVAL-017: Expand named-set collision boundary invariants
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL named-set collision boundary contract hardening + test coverage
@@ -77,3 +77,17 @@ Add focused unit tests for `canonicalizeNamedSetsWithCollisions(...)` and `toNam
 2. `node --test packages/engine/dist/test/unit/named-set-utils.test.js packages/engine/dist/test/unit/compiler-api.test.js packages/engine/dist/test/unit/validate-spec.test.js`
 3. `pnpm turbo test --force`
 4. `pnpm turbo lint`
+
+## Outcome
+
+Implemented as planned with one architecture-tightening refinement:
+
+1. Added direct boundary tests in `packages/engine/test/unit/named-set-utils.test.ts` that lock:
+   - deterministic collision metadata grouping/order
+   - deterministic `N-1` collision diagnostics emission order
+2. Expanded multi-collision parity coverage in:
+   - `packages/engine/test/unit/compiler-api.test.ts`
+   - `packages/engine/test/unit/validate-spec.test.ts`
+3. Tightened `NamedSetCollisionDiagnosticsOptions.code` from free-form `string` to a constrained diagnostic-code contract in `packages/engine/src/cnl/named-set-utils.ts`.
+4. Architecture refinement vs original plan:
+   - avoided introducing inline `CNL_COMPILER_*` literals outside canonical diagnostic registries by deriving the compiler collision code type from the registry type surface, preserving diagnostic registry governance.

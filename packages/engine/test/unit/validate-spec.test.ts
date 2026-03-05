@@ -606,6 +606,30 @@ describe('validateGameSpec structural rules', () => {
     assert.equal(duplicateIdDiagnostics[0]?.path, 'doc.metadata.namedSets["insurgent.group[0]"]');
   });
 
+  it('reports deterministic N-1 metadata.namedSets duplicate-id diagnostics for multi-collision ids', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          ' cafe\u0301 ': ['US'],
+          caf\u00e9: ['ARVN'],
+          cafe\u0301: ['NVA'],
+        },
+      },
+    });
+
+    const duplicateIdDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
+    );
+    assert.equal(duplicateIdDiagnostics.length, 2);
+    assert.deepEqual(
+      duplicateIdDiagnostics.map((diagnostic) => diagnostic.path),
+      ['doc.metadata.namedSets["caf\u00e9"]', 'doc.metadata.namedSets["cafe\u0301"]'],
+    );
+  });
+
   it('encodes metadata.namedSets keyed diagnostics when ids contain path metacharacters', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

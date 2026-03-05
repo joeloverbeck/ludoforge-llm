@@ -132,6 +132,31 @@ describe('compiler API foundation', () => {
     assert.equal(result.gameDef, null);
   });
 
+  it('reports deterministic N-1 diagnostics for compile-only multi-collision namedSets ids', () => {
+    const doc = createCompileReadyDoc();
+    const result = compileGameSpecToGameDef({
+      ...doc,
+      metadata: {
+        ...doc.metadata,
+        namedSets: {
+          ' cafe\u0301 ': ['US'],
+          caf\u00e9: ['ARVN'],
+          cafe\u0301: ['NVA'],
+        },
+      },
+    });
+
+    const collisionDiagnostics = result.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID',
+    );
+    assert.equal(collisionDiagnostics.length, 2);
+    assert.deepEqual(
+      collisionDiagnostics.map((diagnostic) => diagnostic.path),
+      ['doc.metadata.namedSets["caf\u00e9"]', 'doc.metadata.namedSets["cafe\u0301"]'],
+    );
+    assert.equal(result.gameDef, null);
+  });
+
   it('rejects invalid compile limit overrides', () => {
     assert.throws(() => resolveCompileLimits({ maxExpandedEffects: -1 }), /maxExpandedEffects/);
     assert.throws(() => resolveCompileLimits({ maxGeneratedZones: 1.5 }), /maxGeneratedZones/);

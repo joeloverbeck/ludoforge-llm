@@ -1,5 +1,6 @@
 import { normalizeIdentifier } from './identifier-utils.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import type { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 declare const NAMED_SET_ID_BRAND: unique symbol;
 export type NamedSetId = string & { readonly [NAMED_SET_ID_BRAND]: 'NamedSetId' };
@@ -16,9 +17,13 @@ export interface CanonicalNamedSetsResult {
 }
 
 export interface NamedSetCollisionDiagnosticsOptions {
-  readonly code: string;
+  readonly code: NamedSetCollisionDiagnosticCode;
   readonly collisions: readonly NamedSetCanonicalIdCollision[];
 }
+
+export type NamedSetCollisionDiagnosticCode =
+  | typeof CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_METADATA_NAMED_SET_DUPLICATE_ID
+  | 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID';
 
 export function normalizeNamedSetId(value: string): NamedSetId {
   return normalizeIdentifier(value) as NamedSetId;

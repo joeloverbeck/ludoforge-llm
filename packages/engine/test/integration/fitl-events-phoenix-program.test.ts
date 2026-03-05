@@ -121,6 +121,20 @@ describe('FITL card-27 Phoenix Program production spec', () => {
     const unshadedChoose = phoenix?.unshaded?.effects?.[0];
     assert.ok(unshadedChoose !== undefined && 'chooseN' in unshadedChoose);
     assert.equal('chooseN' in unshadedChoose ? unshadedChoose.chooseN.bind : '', '$vcPiecesToRemove');
+    const unshadedChooseN = 'chooseN' in unshadedChoose ? unshadedChoose.chooseN : undefined;
+    assert.equal(unshadedChooseN?.options?.query, 'tokensInMapSpaces');
+    assert.equal(
+      (unshadedChooseN?.options as { sources?: unknown[] } | undefined)?.sources,
+      undefined,
+      'Unshaded Phoenix should not use concat workaround sources',
+    );
+    const unshadedFilter = (unshadedChooseN?.options as { filter?: { op?: string; args?: unknown[] } } | undefined)?.filter;
+    assert.equal(unshadedFilter?.op, 'and');
+    const tokenTypeClause = unshadedFilter?.args?.find(
+      (arg) => typeof arg === 'object' && arg !== null && 'op' in arg && (arg as { op?: string }).op === 'or',
+    ) as { op?: string; args?: unknown[] } | undefined;
+    assert.notEqual(tokenTypeClause, undefined);
+    assert.equal(tokenTypeClause?.op, 'or');
 
     const shadedChoose = phoenix?.shaded?.effects?.[0];
     assert.ok(shadedChoose !== undefined && 'chooseN' in shadedChoose);

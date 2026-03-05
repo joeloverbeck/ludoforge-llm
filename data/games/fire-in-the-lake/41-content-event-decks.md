@@ -2529,156 +2529,48 @@ eventDecks:
             - chooseN:
                 bind: $vcPiecesToRemove
                 options:
-                  query: concat
-                  sources:
-                    - query: tokensInMapSpaces
-                      spaceFilter:
-                        op: and
+                  query: tokensInMapSpaces
+                  spaceFilter:
+                    op: and
+                    args:
+                      - op: or
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      filter:
-                        op: and
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                  filter:
+                    op: and
+                    args:
+                      - { prop: faction, eq: VC }
+                      - op: or
                         args:
-                          - { prop: faction, eq: VC }
                           - { prop: type, eq: guerrilla }
-                    - query: tokensInMapSpaces
-                      spaceFilter:
-                        op: and
-                        args:
-                          - op: or
+                          - op: and
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    op: and
-                                    args:
-                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      filter:
-                        op: and
-                        args:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: base }
-                          - { prop: tunnel, eq: untunneled }
+                              - { prop: type, eq: base }
+                              - { prop: tunnel, eq: untunneled }
                 min: 0
-                max:
-                  op: min
-                  left: 3
-                  right:
-                    aggregate:
-                      op: count
-                      query:
-                        query: concat
-                        sources:
-                          - query: tokensInMapSpaces
-                            spaceFilter:
-                              op: and
-                              args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                                - op: '>'
-                                  left:
-                                    aggregate:
-                                      op: count
-                                      query:
-                                        query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                  right:
-                                    aggregate:
-                                      op: count
-                                      query:
-                                        query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: guerrilla }
-                          - query: tokensInMapSpaces
-                            spaceFilter:
-                              op: and
-                              args:
-                                - op: or
-                                  args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                                - op: '>'
-                                  left:
-                                    aggregate:
-                                      op: count
-                                      query:
-                                        query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                  right:
-                                    aggregate:
-                                      op: count
-                                      query:
-                                        query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          op: and
-                                          args:
-                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                            filter:
-                              op: and
-                              args:
-                                - { prop: faction, eq: VC }
-                                - { prop: type, eq: base }
-                                - { prop: tunnel, eq: untunneled }
+                max: 3
             - forEach:
                 bind: $vcPiece
                 over: { query: binding, name: $vcPiecesToRemove }

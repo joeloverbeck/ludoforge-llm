@@ -1,5 +1,5 @@
-import { resolveActionActor } from './action-actor.js';
-import { resolveActionExecutor } from './action-executor.js';
+import { resolveActionActorCore } from './action-actor.js';
+import { resolveActionExecutorCore } from './action-executor.js';
 import { resolveActionPipelineDispatch, type ActionPipelineDispatch } from './apply-move-pipeline.js';
 import {
   evaluateActionSelectorContracts,
@@ -114,7 +114,7 @@ export const resolveActionApplicabilityPreflight = ({
     return { kind: 'notApplicable', reason: 'phaseMismatch' };
   }
 
-  const actorResolution = resolveActionActor({
+  const actorResolution = resolveActionActorCore({
     def,
     state,
     adjacencyGraph,
@@ -133,7 +133,7 @@ export const resolveActionApplicabilityPreflight = ({
 
   let executionPlayer = executionPlayerOverride;
   if (executionPlayer === undefined && !skipExecutorCheck) {
-    const executorResolution = resolveActionExecutor({
+    const executorResolution = resolveActionExecutorCore({
       def,
       state,
       adjacencyGraph,

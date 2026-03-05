@@ -1,5 +1,5 @@
 import type { PlayerId } from './branded.js';
-import type { RevealGrant, TokenFilterPredicate } from './types.js';
+import type { RevealGrant, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 
 type GrantObservers = 'all' | readonly PlayerId[];
 
@@ -35,6 +35,7 @@ const canonicalizeValue = (value: unknown): unknown => {
 };
 
 const canonicalPredicateKey = (predicate: TokenFilterPredicate): string => JSON.stringify(canonicalizeValue(predicate));
+const canonicalExprKey = (expr: TokenFilterExpr): string => JSON.stringify(canonicalizeTokenFilterExpr(expr));
 
 export const normalizeObservers = (players: readonly PlayerId[]): readonly PlayerId[] => (
   [...new Set(players)].sort((left, right) => left - right)
@@ -63,6 +64,25 @@ export const observersEqual = (left: GrantObservers, right: GrantObservers): boo
   return true;
 };
 
+export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterExpr => {
+  if ('prop' in expr) {
+    return expr;
+  }
+  if (expr.op === 'not') {
+    return { op: 'not', arg: canonicalizeTokenFilterExpr(expr.arg) };
+  }
+  return {
+    op: expr.op,
+    args: expr.args
+      .map((entry) => ({
+        key: canonicalExprKey(entry),
+        expr: canonicalizeTokenFilterExpr(entry),
+      }))
+      .sort((left, right) => compareStrings(left.key, right.key))
+      .map((entry) => entry.expr),
+  };
+};
+
 export const canonicalizeTokenFilterPredicates = (
   predicates?: readonly TokenFilterPredicate[],
 ): readonly TokenFilterPredicate[] | undefined => {
@@ -75,11 +95,11 @@ export const canonicalizeTokenFilterPredicates = (
     .map((entry) => entry.predicate);
 };
 
-export const canonicalTokenFilterKey = (predicates?: readonly TokenFilterPredicate[]): string => {
-  if (predicates === undefined) {
+export const canonicalTokenFilterKey = (expr?: TokenFilterExpr): string => {
+  if (expr === undefined) {
     return 'null';
   }
-  return JSON.stringify(canonicalizeTokenFilterPredicates(predicates));
+  return JSON.stringify(canonicalizeTokenFilterExpr(expr));
 };
 
 export const revealGrantFilterKey = (grant: Pick<RevealGrant, 'filter'>): string => canonicalTokenFilterKey(grant.filter);
@@ -110,4 +130,3 @@ export const removeMatchingRevealGrants = (
     removedCount: grants.length - remaining.length,
   };
 };
-

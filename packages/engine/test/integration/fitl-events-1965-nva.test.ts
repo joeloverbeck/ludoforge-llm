@@ -101,7 +101,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
           left: {
             aggregate: {
               op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
             },
           },
           right: 0,
@@ -117,7 +117,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
           left: {
             aggregate: {
               op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
             },
           },
           right: 0,
@@ -133,7 +133,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
           left: {
             aggregate: {
               op: 'count',
-                      query: { query: 'tokensInZone', zone: '$zone', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+                      query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
             },
           },
           right: 0,

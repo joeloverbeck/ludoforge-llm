@@ -110,14 +110,14 @@ describe('effects reveal', () => {
       reveal: {
         zone: 'hand:0',
         to: { id: asPlayerId(1) },
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
     };
 
     const result = applyEffect(effect, makeCtx());
     assert.deepEqual(result.state.reveals, {
       'hand:0': [
-        { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+        { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       ],
     });
   });
@@ -128,20 +128,20 @@ describe('effects reveal', () => {
         reveal: {
           zone: 'hand:0',
           to: { id: asPlayerId(1) },
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'faction', op: 'eq', value: 'US' },
             { prop: 'rank', op: 'eq', value: 1 },
-          ],
+          ] },
         },
       },
       {
         reveal: {
           zone: 'hand:0',
           to: { id: asPlayerId(1) },
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'rank', op: 'eq', value: 1 },
             { prop: 'faction', op: 'eq', value: 'US' },
-          ],
+          ] },
         },
       },
     ];
@@ -152,10 +152,10 @@ describe('effects reveal', () => {
       'hand:0': [
         {
           observers: [asPlayerId(1)],
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'faction', op: 'eq', value: 'US' },
             { prop: 'rank', op: 'eq', value: 1 },
-          ],
+          ] },
         },
       ],
     });
@@ -167,7 +167,7 @@ describe('effects reveal', () => {
       reveal: {
         zone: 'hand:0',
         to: { id: asPlayerId(1) },
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
     };
 
@@ -178,7 +178,7 @@ describe('effects reveal', () => {
         kind: 'reveal',
         zone: 'hand:0',
         observers: [asPlayerId(1)],
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         provenance: {
           phase: 'main',
           eventContext: 'actionEffect',
@@ -348,8 +348,8 @@ describe('effects conceal', () => {
         ...makeState(),
         reveals: {
           'hand:0': [
-            { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
-            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+            { observers: [asPlayerId(0)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
+            { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] } },
             { observers: [asPlayerId(1)] },
           ],
         },
@@ -359,14 +359,14 @@ describe('effects conceal', () => {
     const effect: EffectAST = {
       conceal: {
         zone: 'hand:0',
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
     };
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
       'hand:0': [
-        { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
+        { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] } },
         { observers: [asPlayerId(1)] },
       ],
     });
@@ -378,9 +378,9 @@ describe('effects conceal', () => {
         ...makeState(),
         reveals: {
           'hand:0': [
-            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
-            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
-            { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+            { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
+            { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] } },
+            { observers: [asPlayerId(0)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
           ],
         },
       },
@@ -390,15 +390,15 @@ describe('effects conceal', () => {
       conceal: {
         zone: 'hand:0',
         from: { id: asPlayerId(1) },
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
     };
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
       'hand:0': [
-        { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
-        { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+        { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] } },
+        { observers: [asPlayerId(0)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       ],
     });
   });
@@ -449,9 +449,9 @@ describe('effects conceal', () => {
         ...makeState(),
         reveals: {
           'hand:0': [
-            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
-            { observers: [asPlayerId(1)], filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] },
-            { observers: [asPlayerId(0)], filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+            { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
+            { observers: [asPlayerId(1)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] } },
+            { observers: [asPlayerId(0)], filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
           ],
         },
       },
@@ -462,7 +462,7 @@ describe('effects conceal', () => {
         conceal: {
           zone: 'hand:0',
           from: { id: asPlayerId(1) },
-          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+          filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         },
       },
       ctx,
@@ -473,7 +473,7 @@ describe('effects conceal', () => {
         kind: 'conceal',
         zone: 'hand:0',
         from: [asPlayerId(1)],
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         grantsRemoved: 1,
         provenance: {
           phase: 'main',
@@ -508,10 +508,10 @@ describe('effects conceal', () => {
           'hand:0': [
             {
               observers: [asPlayerId(1)],
-              filter: [
+              filter: { op: 'and', args: [
                 { prop: 'faction', op: 'eq', value: 'US' },
                 { prop: 'rank', op: 'eq', value: 1 },
-              ],
+              ] },
             },
           ],
         },
@@ -521,10 +521,10 @@ describe('effects conceal', () => {
     const effect: EffectAST = {
       conceal: {
         zone: 'hand:0',
-        filter: [
+        filter: { op: 'and', args: [
           { prop: 'rank', op: 'eq', value: 1 },
           { prop: 'faction', op: 'eq', value: 'US' },
-        ],
+        ] },
       },
     };
     const result = applyEffect(effect, ctx);

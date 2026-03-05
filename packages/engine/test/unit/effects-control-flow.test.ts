@@ -552,13 +552,13 @@ describe('effects control-flow handlers', () => {
         groups: [
           {
             bind: '$tok',
-            over: { query: 'tokensInZone', zone: 'space:none', filter: [{ prop: 'type', op: 'eq', value: 'troops' }] },
+            over: { query: 'tokensInZone', zone: 'space:none', filter: { op: 'and', args: [{ prop: 'type', op: 'eq', value: 'troops' }] } },
             to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
             countBind: '$troopsRemoved',
           },
           {
             bind: '$tok',
-            over: { query: 'tokensInZone', zone: 'space:none', filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }] },
+            over: { query: 'tokensInZone', zone: 'space:none', filter: { op: 'and', args: [{ prop: 'type', op: 'eq', value: 'guerrilla' }] } },
             to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
             countBind: '$guerrillasRemoved',
           },

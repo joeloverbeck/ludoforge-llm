@@ -14,6 +14,7 @@ import {
   updateHashFeatureChange,
   updateHashTokenPlacement,
 } from '../../src/kernel/index.js';
+import { canonicalTokenFilterKey } from '../../src/kernel/hidden-info-grants.js';
 
 const createGameDef = (): GameDef =>
   ({
@@ -243,7 +244,7 @@ describe('zobrist full hash and incremental update helpers', () => {
     };
     const beforeHash = computeFullHash(table, before);
 
-    const revealFilterKey = JSON.stringify([{ prop: 'faction', op: 'eq', value: 'US' }]);
+    const revealFilterKey = canonicalTokenFilterKey({ op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] });
     const incremental = updateHashFeatureChange(
       beforeHash,
       table,
@@ -256,7 +257,7 @@ describe('zobrist full hash and incremental update helpers', () => {
       reveals: {
         'hand:none': [{
           observers: [asPlayerId(1)],
-          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+          filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         }],
       },
     };
@@ -274,10 +275,10 @@ describe('zobrist full hash and incremental update helpers', () => {
       reveals: {
         'hand:none': [{
           observers: [asPlayerId(1)],
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'faction', op: 'eq', value: 'US' },
             { prop: 'rank', op: 'eq', value: 1 },
-          ],
+          ] },
         }],
       },
     };
@@ -286,10 +287,10 @@ describe('zobrist full hash and incremental update helpers', () => {
       reveals: {
         'hand:none': [{
           observers: [asPlayerId(1)],
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'rank', op: 'eq', value: 1 },
             { prop: 'faction', op: 'eq', value: 'US' },
-          ],
+          ] },
         }],
       },
     };

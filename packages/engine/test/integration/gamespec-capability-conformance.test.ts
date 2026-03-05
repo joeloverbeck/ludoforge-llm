@@ -61,10 +61,13 @@ describe('GameSpec capability conformance fixtures', () => {
     assert.deepEqual(revealed.reveals?.['hand:0'], [
       {
         observers: [asPlayerId(1)],
-        filter: [
-          { prop: 'faction', op: 'eq', value: 'US' },
-          { prop: 'rank', op: 'eq', value: 1 },
-        ],
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 1 },
+          ],
+        },
       },
     ]);
 

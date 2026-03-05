@@ -12,6 +12,29 @@ const expectedCards = [
   { id: 'card-124', title: 'Tet Offensive', order: 124, factionTag: 'VC', seatOrder: ['VC', 'NVA', 'US', 'ARVN'] },
 ] as const;
 
+function queryFilterHasPredicate(
+  filter: unknown,
+  predicate: (entry: { prop?: string; op?: string; value?: unknown }) => boolean,
+): boolean {
+  if (Array.isArray(filter)) {
+    return filter.some((entry) => queryFilterHasPredicate(entry, predicate));
+  }
+  if (filter === null || typeof filter !== 'object') {
+    return false;
+  }
+  if ('prop' in filter) {
+    return predicate(filter as { prop?: string; op?: string; value?: unknown });
+  }
+  const expr = filter as { op?: string; args?: unknown[]; arg?: unknown };
+  if (expr.op === 'not' && expr.arg !== undefined) {
+    return queryFilterHasPredicate(expr.arg, predicate);
+  }
+  if (Array.isArray(expr.args)) {
+    return expr.args.some((entry) => queryFilterHasPredicate(entry, predicate));
+  }
+  return false;
+}
+
 describe('FITL pivotal event-card production spec', () => {
   it('compiles cards 121-124 as single-side pivotal cards with play conditions', () => {
     const { parsed, compiled } = compileProductionSpec();
@@ -67,8 +90,9 @@ describe('FITL pivotal event-card production spec', () => {
       findDeep(node?.left, (child) =>
         child?.aggregate?.query?.query === 'tokensInZone' &&
         child?.aggregate?.query?.zone === 'available-US:none' &&
-        child?.aggregate?.query?.filter?.some?.((entry: { prop?: string; op?: string; value?: unknown }) =>
-          entry.prop === 'type' && entry.op === 'in',
+        queryFilterHasPredicate(
+          child?.aggregate?.query?.filter,
+          (entry: { prop?: string; op?: string; value?: unknown }) => entry.prop === 'type' && entry.op === 'in',
         ),
       ).length >= 1,
     );

@@ -1677,7 +1677,7 @@ describe('evalQuery', () => {
               right: 'southVietnam',
             },
           },
-          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+          filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         },
         ctx,
       ).map((token) => (token as Token).id),
@@ -1915,7 +1915,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       ctx,
     );
     assert.deepEqual(
@@ -1928,7 +1928,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'id', op: 'eq', value: 'nva-guerrilla-1' }] },
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'id', op: 'eq', value: 'nva-guerrilla-1' }] } },
       ctx,
     );
     assert.deepEqual(
@@ -1941,7 +1941,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'faction', op: 'neq', value: 'US' }] },
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'US' }] } },
       ctx,
     );
     assert.deepEqual(
@@ -1957,7 +1957,7 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] },
       },
       ctx,
     );
@@ -1974,7 +1974,7 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: [{ prop: 'faction', op: 'notIn', value: ['US', 'ARVN'] }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'notIn', value: ['US', 'ARVN'] }] },
       },
       ctx,
     );
@@ -1991,7 +1991,7 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: [{ prop: 'nonexistent', op: 'eq', value: 'anything' }],
+        filter: { op: 'and', args: [{ prop: 'nonexistent', op: 'eq', value: 'anything' }] },
       },
       ctx,
     );
@@ -2007,10 +2007,10 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: [
+        filter: { op: 'and', args: [
           { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
           { prop: 'faction', op: 'neq', value: 'ARVN' },
-        ],
+        ] },
       },
       ctx,
     );
@@ -2024,7 +2024,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: [] },
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } },
       ctx,
     );
     assert.equal(result.length, 5);
@@ -2036,7 +2036,7 @@ describe('evalQuery', () => {
     assert.throws(
       () =>
         evalQuery(
-          { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'faction', op: 'in', value: 'US' }] },
+          { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: 'US' }] } },
           ctx,
         ),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
@@ -2049,7 +2049,7 @@ describe('evalQuery', () => {
     assert.throws(
       () =>
         evalQuery(
-          { query: 'tokensInZone', zone: 'deck:none', filter: [{ prop: 'cost', op: 'in', value: ['1'] }] },
+          { query: 'tokensInZone', zone: 'deck:none', filter: { op: 'and', args: [{ prop: 'cost', op: 'in', value: ['1'] }] } },
           ctx,
         ),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),

@@ -1716,7 +1716,7 @@ phase: [asPhaseId('main')],
                         options: {
                           query: 'tokensInAdjacentZones',
                           zone: '$dest',
-                          filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+                          filter: { op: 'and', args: [{ prop: 'type', op: 'eq', value: 'guerrilla' }] },
                         },
                         min: 0,
                         max: 99,

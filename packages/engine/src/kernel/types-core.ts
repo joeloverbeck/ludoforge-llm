@@ -16,7 +16,7 @@ import type {
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
-  TokenFilterPredicate,
+  TokenFilterExpr,
 } from './types-ast.js';
 import type { ActiveLastingEffect, EventDeckDef } from './types-events.js';
 import type {
@@ -536,7 +536,7 @@ export interface ActionUsageRecord {
 
 export interface RevealGrant {
   readonly observers: 'all' | readonly PlayerId[];
-  readonly filter?: readonly TokenFilterPredicate[];
+  readonly filter?: TokenFilterExpr;
 }
 
 export interface GameState {
@@ -745,7 +745,7 @@ export interface EffectTraceReveal {
   readonly kind: 'reveal';
   readonly zone: string;
   readonly observers: 'all' | readonly PlayerId[];
-  readonly filter?: readonly TokenFilterPredicate[];
+  readonly filter?: TokenFilterExpr;
   readonly provenance: EffectTraceProvenance;
 }
 
@@ -753,7 +753,7 @@ export interface EffectTraceConceal {
   readonly kind: 'conceal';
   readonly zone: string;
   readonly from?: 'all' | readonly PlayerId[];
-  readonly filter?: readonly TokenFilterPredicate[];
+  readonly filter?: TokenFilterExpr;
   readonly grantsRemoved: number;
   readonly provenance: EffectTraceProvenance;
 }

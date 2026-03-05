@@ -115,7 +115,7 @@ describe('compile-effects lowering', () => {
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
       { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
-      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
+      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: { prop: 'faction', op: 'eq', value: 'US' } } },
       {
         if: {
           when: { op: '>', left: { ref: 'zoneCount', zone: 'deck:none' }, right: 0 },
@@ -182,7 +182,7 @@ describe('compile-effects lowering', () => {
         conceal: {
           zone: 'hand:$actor',
           from: { chosen: '$actor' },
-          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+          filter: { prop: 'faction', op: 'eq', value: 'US' },
         },
       },
       {

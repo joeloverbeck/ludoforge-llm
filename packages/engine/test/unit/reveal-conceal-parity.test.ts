@@ -16,14 +16,14 @@ describe('reveal/conceal parity guardrails', () => {
       reveal: {
         zone: { zoneExpr: 'market:none' },
         to: { chosen: '$targetPlayer' },
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { prop: 'faction', op: 'eq', value: 'US' },
       },
     });
     const conceal = EffectASTSchema.safeParse({
       conceal: {
         zone: { zoneExpr: 'market:none' },
         from: { chosen: '$targetPlayer' },
-        filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        filter: { prop: 'faction', op: 'eq', value: 'US' },
       },
     });
 
@@ -38,12 +38,12 @@ describe('reveal/conceal parity guardrails', () => {
         conceal: { conceal: { zone: 'market:none', from: { playerId: 1 } } },
       },
       {
-        reveal: { reveal: { zone: 'market:none', to: 'all', filter: [{ prop: 'faction', op: 'contains', value: 'US' }] } },
-        conceal: { conceal: { zone: 'market:none', filter: [{ prop: 'faction', op: 'contains', value: 'US' }] } },
+        reveal: { reveal: { zone: 'market:none', to: 'all', filter: { prop: 'faction', op: 'contains', value: 'US' } } },
+        conceal: { conceal: { zone: 'market:none', filter: { prop: 'faction', op: 'contains', value: 'US' } } },
       },
       {
-        reveal: { reveal: { zone: 'market:none', to: 'all', filter: [{ prop: 'faction', op: 'in', value: ['US', { bad: true }] }] } },
-        conceal: { conceal: { zone: 'market:none', filter: [{ prop: 'faction', op: 'in', value: ['US', { bad: true }] }] } },
+        reveal: { reveal: { zone: 'market:none', to: 'all', filter: { prop: 'faction', op: 'in', value: ['US', { bad: true }] } } },
+        conceal: { conceal: { zone: 'market:none', filter: { prop: 'faction', op: 'in', value: ['US', { bad: true }] } } },
       },
       {
         reveal: { reveal: { zone: 'market:none', to: 'all', extra: true } },
@@ -95,7 +95,7 @@ describe('reveal/conceal parity guardrails', () => {
         reveal: {
           zone: 'market:none',
           to: 'all',
-          filter: [{ prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } }],
+          filter: { prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } },
         },
       }),
     );
@@ -103,7 +103,7 @@ describe('reveal/conceal parity guardrails', () => {
       withSingleActionEffect({
         conceal: {
           zone: 'market:none',
-          filter: [{ prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } }],
+          filter: { prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } },
         },
       }),
     );
@@ -111,14 +111,14 @@ describe('reveal/conceal parity guardrails', () => {
     assert.equal(
       revealFilterDiagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'REF_GVAR_MISSING' && diagnostic.path === 'actions[0].effects[0].reveal.filter[0].value.var',
+          diagnostic.code === 'REF_GVAR_MISSING' && diagnostic.path === 'actions[0].effects[0].reveal.filter.value.var',
       ),
       true,
     );
     assert.equal(
       concealFilterDiagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'REF_GVAR_MISSING' && diagnostic.path === 'actions[0].effects[0].conceal.filter[0].value.var',
+          diagnostic.code === 'REF_GVAR_MISSING' && diagnostic.path === 'actions[0].effects[0].conceal.filter.value.var',
       ),
       true,
     );

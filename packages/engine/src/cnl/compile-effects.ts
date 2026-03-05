@@ -20,8 +20,8 @@ import type {
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
+  TokenFilterExpr,
   TransferVarEndpoint,
-  TokenFilterPredicate,
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
@@ -711,7 +711,7 @@ function lowerRevealEffect(
     to = loweredTo.value;
   }
 
-  let filter: readonly TokenFilterPredicate[] | undefined;
+  let filter: TokenFilterExpr | undefined;
   if (source.filter !== undefined) {
     if (!Array.isArray(source.filter)) {
       diagnostics.push(...missingCapability(`${path}.filter`, 'reveal filter', source.filter, ['Array<{ prop, op, value }>']).diagnostics);
@@ -761,7 +761,7 @@ function lowerConcealEffect(
     from = loweredFrom.value;
   }
 
-  let filter: readonly TokenFilterPredicate[] | undefined;
+  let filter: TokenFilterExpr | undefined;
   if (source.filter !== undefined) {
     if (!Array.isArray(source.filter)) {
       diagnostics.push(...missingCapability(`${path}.filter`, 'conceal filter', source.filter, ['Array<{ prop, op, value }>']).diagnostics);

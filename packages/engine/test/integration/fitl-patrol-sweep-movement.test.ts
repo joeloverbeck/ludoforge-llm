@@ -123,10 +123,10 @@ function buildActivateGuerrillaEffects(zone: string, activationLimit: number): r
         over: {
           query: 'tokensInZone' as const,
           zone,
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'type', op: 'eq' as const, value: 'guerrilla' },
             { prop: 'activity', op: 'eq' as const, value: 'underground' },
-          ],
+          ] },
         },
         limit: activationLimit,
         effects: [

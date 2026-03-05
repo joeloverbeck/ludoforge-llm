@@ -312,7 +312,7 @@ describe('json schema artifacts', () => {
               kind: 'reveal',
               zone: 'deck:none',
               observers: [0],
-              filter: [{ prop: 'cost', op: 'eq', value: 2 }],
+              filter: { prop: 'cost', op: 'eq', value: 2 },
               provenance: {
                 phase: 'main',
                 eventContext: 'actionEffect',
@@ -323,7 +323,7 @@ describe('json schema artifacts', () => {
               kind: 'conceal',
               zone: 'deck:none',
               from: [0],
-              filter: [{ prop: 'cost', op: 'eq', value: 2 }],
+              filter: { prop: 'cost', op: 'eq', value: 2 },
               grantsRemoved: 1,
               provenance: {
                 phase: 'main',

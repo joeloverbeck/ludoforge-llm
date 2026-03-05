@@ -73,12 +73,14 @@ let optionsQuerySchemaInternal: z.ZodTypeAny;
 let valueExprSchemaInternal: z.ZodTypeAny;
 let numericValueExprSchemaInternal: z.ZodTypeAny;
 let effectAstSchemaInternal: z.ZodTypeAny;
+let tokenFilterExprSchemaInternal: z.ZodTypeAny;
 
 export const ConditionASTSchema = z.lazy(() => conditionAstSchemaInternal);
 export const OptionsQuerySchema = z.lazy(() => optionsQuerySchemaInternal);
 export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
 export const NumericValueExprSchema = z.lazy(() => numericValueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
+export const TokenFilterExprSchema = z.lazy(() => tokenFilterExprSchemaInternal);
 const IntDomainBoundSchema = z
   .union([IntegerSchema, NumericValueExprSchema])
   .refine((value) => typeof value !== 'number' || Number.isSafeInteger(value), {
@@ -167,7 +169,7 @@ optionsQuerySchemaInternal = z.union([
     .object({
       query: z.literal('tokensInZone'),
       zone: ZoneRefSchema,
-      filter: z.array(TokenFilterPredicateSchema).optional(),
+      filter: TokenFilterExprSchema.optional(),
     })
     .strict(),
   z
@@ -188,7 +190,7 @@ optionsQuerySchemaInternal = z.union([
         })
         .strict()
         .optional(),
-      filter: z.array(TokenFilterPredicateSchema).optional(),
+      filter: TokenFilterExprSchema.optional(),
     })
     .strict(),
   z
@@ -261,7 +263,7 @@ optionsQuerySchemaInternal = z.union([
     .object({
       query: z.literal('tokensInAdjacentZones'),
       zone: ZoneRefSchema,
-      filter: z.array(TokenFilterPredicateSchema).optional(),
+      filter: TokenFilterExprSchema.optional(),
     })
     .strict(),
   z
@@ -425,6 +427,13 @@ conditionAstSchemaInternal = z.union([
     .strict(),
 ]);
 
+tokenFilterExprSchemaInternal = z.union([
+  TokenFilterPredicateSchema,
+  z.object({ op: z.literal('and'), args: z.array(TokenFilterExprSchema) }).strict(),
+  z.object({ op: z.literal('or'), args: z.array(TokenFilterExprSchema) }).strict(),
+  z.object({ op: z.literal('not'), arg: TokenFilterExprSchema }).strict(),
+]);
+
 effectAstSchemaInternal = z.union([
   z
     .object({
@@ -511,7 +520,7 @@ effectAstSchemaInternal = z.union([
         .object({
           zone: ZoneRefSchema,
           to: z.union([z.literal('all'), PlayerSelSchema]),
-          filter: z.array(TokenFilterPredicateSchema).optional(),
+          filter: TokenFilterExprSchema.optional(),
         })
         .strict(),
     })
@@ -522,7 +531,7 @@ effectAstSchemaInternal = z.union([
         .object({
           zone: ZoneRefSchema,
           from: z.union([z.literal('all'), PlayerSelSchema]).optional(),
-          filter: z.array(TokenFilterPredicateSchema).optional(),
+          filter: TokenFilterExprSchema.optional(),
         })
         .strict(),
     })

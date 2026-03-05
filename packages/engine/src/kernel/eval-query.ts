@@ -25,9 +25,9 @@ import {
   runtimeTableRowsUnavailableEvalError,
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
-import { filterTokensByPredicates } from './token-filter.js';
+import { filterTokensByExpr } from './token-filter.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
-import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
+import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
@@ -258,8 +258,18 @@ function resolvePredicateValue(
   return resolved;
 }
 
-function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly Token[] {
-  return filterTokensByPredicates(tokens, filters, (value) => resolvePredicateValue(value, ctx));
+function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: EvalContext): readonly Token[] {
+  return filterTokensByExpr(tokens, filter, (value) => resolvePredicateValue(value, ctx));
+}
+
+function tokenFilterPredicateCount(filter: TokenFilterExpr): number {
+  if ('prop' in filter) {
+    return 1;
+  }
+  if (filter.op === 'not') {
+    return tokenFilterPredicateCount(filter.arg);
+  }
+  return filter.args.reduce((total, entry) => total + tokenFilterPredicateCount(entry), 0);
 }
 
 function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {
@@ -388,7 +398,7 @@ function evalTokensInMapSpacesQuery(
     .sort((left, right) => left.id.localeCompare(right.id));
   const selectedZones = applyZonesFilter(mapSpaceZones, query.spaceFilter, ctx);
   const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);
-  return query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : zoneTokens;
+  return query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter, ctx) : zoneTokens;
 }
 
 function deepEqualUnknown(left: unknown, right: unknown): boolean {
@@ -720,12 +730,13 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
         });
       }
 
-      const filtered = query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : [...zoneTokens];
-      if (filtered.length === 0 && zoneTokens.length > 0 && query.filter !== undefined && query.filter.length > 0) {
+      const filtered = query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter, ctx) : [...zoneTokens];
+      if (filtered.length === 0 && zoneTokens.length > 0 && query.filter !== undefined) {
+        const filterCount = tokenFilterPredicateCount(query.filter);
         emitWarning(ctx.collector, {
           code: 'EMPTY_QUERY_RESULT',
           message: `tokensInZone in ${zoneId} matched 0 of ${zoneTokens.length} tokens after filtering`,
-          context: { zone: zoneId, totalTokens: zoneTokens.length, filterCount: query.filter.length },
+          context: { zone: zoneId, totalTokens: zoneTokens.length, filterCount },
           hint: 'enable trace:true to see filter predicates vs token props',
         });
       }
@@ -835,7 +846,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     case 'tokensInAdjacentZones': {
       const zoneId = resolveZoneRef(query.zone, ctx);
       const tokens = queryTokensInAdjacentZones(ctx.adjacencyGraph, ctx.state, zoneId);
-      const filtered = query.filter !== undefined ? applyTokenFilters(tokens, query.filter, ctx) : tokens;
+      const filtered = query.filter !== undefined ? applyTokenFilter(tokens, query.filter, ctx) : tokens;
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }

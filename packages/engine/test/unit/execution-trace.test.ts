@@ -70,7 +70,7 @@ describe('Effect execution trace', () => {
     const effects: readonly EffectAST[] = [{
       forEach: {
         bind: '$item',
-        over: { query: 'tokensInZone' as const, zone: z1, filter: [] },
+        over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [] } },
         effects: [],
       },
     }];
@@ -121,7 +121,7 @@ describe('Effect execution trace', () => {
       forEach: {
         bind: '$__macro_collect_forced_bets_turnStructure_phases_0__player',
         macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
-        over: { query: 'tokensInZone' as const, zone: z1, filter: [] },
+        over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [] } },
         effects: [],
       },
     }];

@@ -110,14 +110,14 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
         delta: {
           op: '*',
           left: {
-            aggregate: {
-              op: 'count',
-              query: {
-                query: 'tokensInZone',
-                zone: 'casualties-US:none',
-                filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInZone',
+                  zone: 'casualties-US:none',
+                  filter: { prop: 'faction', op: 'eq', value: 'US' },
+                },
               },
-            },
           },
           right: -1,
         },

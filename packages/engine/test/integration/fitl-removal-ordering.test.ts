@@ -391,7 +391,7 @@ describe('FITL removal ordering macros', () => {
       const effects: readonly EffectAST[] = [
         { let: {
           bind: '$usPiecesBefore',
-          value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } } },
+          value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
           in: [
             {
               removeByPriority: {
@@ -399,17 +399,17 @@ describe('FITL removal ordering macros', () => {
                 groups: [
                   {
                     bind: '$target',
-                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'neq', value: 'base' }] },
+                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'neq', value: 'base' }] } },
                     to: { zoneExpr: 'casualties-US:none' },
                   },
                   {
                     bind: '$target',
-                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }, { prop: 'type', op: 'neq', value: 'base' }] },
+                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }, { prop: 'type', op: 'neq', value: 'base' }] } },
                     to: { zoneExpr: 'available-ARVN:none' },
                   },
                   {
                     bind: '$target',
-                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'eq', value: 'base' }] },
+                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'eq', value: 'base' }] } },
                     to: { zoneExpr: 'casualties-US:none' },
                   },
                 ],
@@ -417,7 +417,7 @@ describe('FITL removal ordering macros', () => {
             },
             { let: {
               bind: '$usPiecesAfter',
-              value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } } },
+              value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
               in: [{
                 let: {
                   bind: '$usRemoved',
@@ -425,7 +425,7 @@ describe('FITL removal ordering macros', () => {
                   in: [{
                     forEach: {
                       bind: '$attritionPiece',
-                      over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+                      over: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'NVA' }] } },
                       limit: { ref: 'binding', name: '$usRemoved' },
                       effects: [{ moveToken: { token: '$attritionPiece', from: 'quangTri:none', to: 'available-NVA:none' } }],
                     },

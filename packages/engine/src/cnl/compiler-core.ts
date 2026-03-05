@@ -563,7 +563,16 @@ function compileExpandedDoc(
         seatIds,
       ),
     );
-    const victorySection = compileSection(diagnostics, () => lowerVictory(rawTerminal, diagnostics));
+    const victorySection = compileSection(diagnostics, () =>
+      lowerVictory(rawTerminal, diagnostics, {
+        ownershipByBase,
+        ...(derivedFromAssets.tokenTraitVocabulary == null ? {} : { tokenTraitVocabulary: derivedFromAssets.tokenTraitVocabulary }),
+        ...(tokenFilterProps.length === 0 ? {} : { tokenFilterProps }),
+        ...(namedSets === undefined ? {} : { namedSets }),
+        typeInference,
+        ...(seatIds === undefined ? {} : { seatIds }),
+      }),
+    );
     const scoringSection = compileSection(diagnostics, () => lowerScoring(rawTerminal.scoring ?? null, diagnostics));
 
     terminal = {

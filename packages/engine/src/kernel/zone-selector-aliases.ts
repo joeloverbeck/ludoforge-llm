@@ -1,4 +1,4 @@
-import type { ConditionAST, OptionsQuery, ValueExpr, ZoneRef, ZoneSel } from './types.js';
+import type { ConditionAST, OptionsQuery, TokenFilterExpr, ValueExpr, ZoneRef, ZoneSel } from './types.js';
 
 const isBindingAlias = (zone: ZoneSel): boolean => zone.startsWith('$');
 
@@ -18,13 +18,24 @@ const collectZoneRefAliases = (zone: ZoneRef, aliases: Set<string>): void => {
 
 const collectZoneSelectorAliasesFromQuery = (query: OptionsQuery, aliases: Set<string>): void => {
   const collectTokenFilterAliases = (
-    predicates: readonly { readonly value: ValueExpr | readonly (string | number | boolean)[] }[] | undefined,
+    filter: TokenFilterExpr | undefined,
   ): void => {
-    for (const predicate of predicates ?? []) {
-      if (Array.isArray(predicate.value) || typeof predicate.value === 'string' || typeof predicate.value === 'number' || typeof predicate.value === 'boolean') {
-        continue;
+    if (filter === undefined) {
+      return;
+    }
+    if ('prop' in filter) {
+      if (Array.isArray(filter.value) || typeof filter.value === 'string' || typeof filter.value === 'number' || typeof filter.value === 'boolean') {
+        return;
       }
-      collectZoneSelectorAliasesFromValueExpr(predicate.value as ValueExpr, aliases);
+      collectZoneSelectorAliasesFromValueExpr(filter.value as ValueExpr, aliases);
+      return;
+    }
+    if (filter.op === 'not') {
+      collectTokenFilterAliases(filter.arg);
+      return;
+    }
+    for (const entry of filter.args) {
+      collectTokenFilterAliases(entry);
     }
   };
 

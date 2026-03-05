@@ -157,14 +157,14 @@ describe('AST and selector schemas', () => {
             reveal: {
               zone: { zoneExpr: 'hand:actor' },
               to: { chosen: '$targetPlayer' },
-              filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+              filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
             },
           },
           { conceal: { zone: 'hand:actor' } },
           { conceal: { zone: 'hand:actor', from: 'all' } },
           { conceal: { zone: 'hand:actor', from: { id: asPlayerId(2) } } },
           { conceal: { zone: 'hand:actor', from: { chosen: '$targetPlayer' } } },
-          { conceal: { zone: 'hand:actor', filter: [{ prop: 'faction', op: 'neq', value: 'US' }] } },
+          { conceal: { zone: 'hand:actor', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'US' }] } } },
         ],
       },
       {
@@ -448,7 +448,7 @@ describe('AST and selector schemas', () => {
     const tokensInAdjacent: OptionsQuery = {
       query: 'tokensInAdjacentZones',
       zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
-      filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }],
+      filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
     };
 
     assert.deepEqual(OptionsQuerySchema.parse(adjacent), adjacent);
@@ -459,12 +459,12 @@ describe('AST and selector schemas', () => {
     const queries: OptionsQuery[] = [
       { query: 'tokensInZone', zone: 'board:a' },
       { query: 'tokensInZone', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
-      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
-      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'neq', value: 'NVA' }] },
-      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] },
-      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'cost', op: 'in', value: [1, 2, 3] }] },
-      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'notIn', value: ['NVA', 'VC'] }] },
-      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'isElite', op: 'notIn', value: [true] }] },
+      { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'NVA' }] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'cost', op: 'in', value: [1, 2, 3] }] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'notIn', value: ['NVA', 'VC'] }] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'isElite', op: 'notIn', value: [true] }] } },
     ];
 
     for (const query of queries) {
@@ -519,10 +519,10 @@ describe('AST and selector schemas', () => {
     const query: OptionsQuery = {
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: [
+      filter: { op: 'and', args: [
         { prop: 'faction', op: 'eq', value: 'NVA' },
         { prop: 'type', op: 'eq', value: 'troops' },
-      ],
+      ] },
     };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
@@ -532,7 +532,7 @@ describe('AST and selector schemas', () => {
       { query: 'tokensInMapSpaces' },
       {
         query: 'tokensInMapSpaces',
-        filter: [{ prop: 'faction', op: 'eq', value: 'VC' }],
+        filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'VC' }] },
       },
       {
         query: 'tokensInMapSpaces',
@@ -547,7 +547,7 @@ describe('AST and selector schemas', () => {
       {
         query: 'tokensInMapSpaces',
         spaceFilter: { owner: 'actor' },
-        filter: [{ prop: 'type', op: 'eq', value: 'troops' }],
+        filter: { op: 'and', args: [{ prop: 'type', op: 'eq', value: 'troops' }] },
       },
     ];
 
@@ -713,30 +713,30 @@ describe('AST and selector schemas', () => {
     const badOp = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: [{ prop: 'faction', op: 'contains', value: 'US' }],
+      filter: { op: 'and', args: [{ prop: 'faction', op: 'contains', value: 'US' }] },
     });
     assert.equal(badOp.success, false);
 
     const missingProp = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: [{ op: 'eq', value: 'US' }],
+      filter: { op: 'and', args: [{ op: 'eq', value: 'US' }] },
     });
     assert.equal(missingProp.success, false);
 
     const extraField = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: [{ prop: 'faction', op: 'eq', value: 'US', extra: true }],
+      filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US', extra: true }] },
     });
     assert.equal(extraField.success, false);
 
-    const notArray = OptionsQuerySchema.safeParse({
+    const legacyArray = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: { prop: 'faction', op: 'eq', value: 'US' },
+      filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
     });
-    assert.equal(notArray.success, false);
+    assert.equal(legacyArray.success, false);
 
     const malformedZoneRef = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
@@ -746,7 +746,7 @@ describe('AST and selector schemas', () => {
 
     const badTokensInMapSpacesFilter = OptionsQuerySchema.safeParse({
       query: 'tokensInMapSpaces',
-      filter: { prop: 'faction', op: 'eq', value: 'US' },
+      filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
     });
     assert.equal(badTokensInMapSpacesFilter.success, false);
 
@@ -891,12 +891,12 @@ describe('AST and selector schemas', () => {
     assert.equal(invalidFromShape.success, false);
 
     const invalidFilterOp = EffectASTSchema.safeParse({
-      conceal: { zone: 'hand:actor', filter: [{ prop: 'faction', op: 'contains', value: 'US' }] },
+      conceal: { zone: 'hand:actor', filter: { op: 'and', args: [{ prop: 'faction', op: 'contains', value: 'US' }] } },
     });
     assert.equal(invalidFilterOp.success, false);
 
     const invalidFilterValueShape = EffectASTSchema.safeParse({
-      conceal: { zone: 'hand:actor', filter: [{ prop: 'faction', op: 'in', value: ['US', { bad: true }] }] },
+      conceal: { zone: 'hand:actor', filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: ['US', { bad: true }] }] } },
     });
     assert.equal(invalidFilterValueShape.success, false);
 

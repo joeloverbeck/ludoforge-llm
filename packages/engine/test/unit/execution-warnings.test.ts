@@ -67,7 +67,7 @@ describe('Runtime warnings', () => {
     const effects: readonly EffectAST[] = [{
       forEach: {
         bind: '$item',
-        over: { query: 'tokensInZone' as const, zone: z1, filter: [] },
+        over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [] } },
         effects: [],
       },
     }];
@@ -85,7 +85,7 @@ describe('Runtime warnings', () => {
         over: {
           query: 'tokensInZone' as const,
           zone: z1,
-          filter: [{ prop: 'faction', op: 'eq' as const, value: 'NVA' }],
+          filter: { op: 'and', args: [{ prop: 'faction', op: 'eq' as const, value: 'NVA' }] },
         },
         effects: [],
       },
@@ -104,7 +104,7 @@ describe('Runtime warnings', () => {
         over: {
           query: 'tokensInZone' as const,
           zone: z1,
-          filter: [{ prop: 'faction', op: 'eq' as const, value: 'US' }],
+          filter: { op: 'and', args: [{ prop: 'faction', op: 'eq' as const, value: 'US' }] },
         },
         effects: [],
       },

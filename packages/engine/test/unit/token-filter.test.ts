@@ -3,8 +3,8 @@ import { describe, it } from 'node:test';
 
 import { asTokenId } from '../../src/kernel/branded.js';
 import {
-  filterTokensByPredicates,
-  matchesAllTokenFilterPredicates,
+  filterTokensByExpr,
+  matchesTokenFilterExpr,
   matchesTokenFilterPredicate,
   resolveLiteralTokenFilterValue,
 } from '../../src/kernel/token-filter.js';
@@ -38,7 +38,7 @@ describe('token-filter', () => {
 
     assert.equal(resolveLiteralTokenFilterValue(predicate.value), null);
     assert.equal(matchesTokenFilterPredicate(token, predicate), false);
-    assert.equal(matchesAllTokenFilterPredicates(token, [predicate]), false);
+    assert.equal(matchesTokenFilterExpr(token, { op: 'and', args: [predicate] }), false);
   });
 
   it('supports caller-provided value resolution for dynamic predicates', () => {
@@ -55,14 +55,20 @@ describe('token-filter', () => {
     assert.equal(resolved, true);
   });
 
-  it('filters token lists by predicate arrays', () => {
+  it('filters token lists by expression filters', () => {
     const tokens: readonly Token[] = [
       makeToken('a', { suit: 'hearts' }),
       makeToken('b', { suit: 'clubs' }),
       makeToken('c', { suit: 'hearts' }),
     ];
 
-    const filtered = filterTokensByPredicates(tokens, [{ prop: 'suit', op: 'eq', value: 'hearts' }]);
+    const filtered = filterTokensByExpr(tokens, {
+      op: 'or',
+      args: [
+        { prop: 'suit', op: 'eq', value: 'hearts' },
+        { op: 'not', arg: { prop: 'suit', op: 'eq', value: 'clubs' } },
+      ],
+    });
     assert.deepEqual(filtered.map((token) => token.id), [asTokenId('a'), asTokenId('c')]);
   });
 });

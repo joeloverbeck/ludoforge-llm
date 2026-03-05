@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `cnl/compile-conditions`, diagnostics, production GameSpecDoc migration
-**Deps**: tickets/TOKFILAST-001-token-query-filter-expression-unification.md, specs/29-fitl-event-card-encoding.md
+**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, specs/29-fitl-event-card-encoding.md
 
 ## Problem
 

@@ -114,7 +114,7 @@ describe('FITL pivotal single-use integration', () => {
                   query: {
                     query: 'tokensInZone',
                     zone: 'leader:none',
-                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-121' }],
+                    filter: { prop: 'cardId', op: 'eq', value: 'card-121' },
                   },
                 },
               },
@@ -135,7 +135,7 @@ describe('FITL pivotal single-use integration', () => {
                   query: {
                     query: 'tokensInZone',
                     zone: 'leader:none',
-                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-122' }],
+                    filter: { prop: 'cardId', op: 'eq', value: 'card-122' },
                   },
                 },
               },
@@ -156,7 +156,7 @@ describe('FITL pivotal single-use integration', () => {
                   query: {
                     query: 'tokensInZone',
                     zone: 'leader:none',
-                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-123' }],
+                    filter: { prop: 'cardId', op: 'eq', value: 'card-123' },
                   },
                 },
               },
@@ -177,7 +177,7 @@ describe('FITL pivotal single-use integration', () => {
                   query: {
                     query: 'tokensInZone',
                     zone: 'leader:none',
-                    filter: [{ prop: 'cardId', op: 'eq', value: 'card-124' }],
+                    filter: { prop: 'cardId', op: 'eq', value: 'card-124' },
                   },
                 },
               },
@@ -198,7 +198,7 @@ describe('FITL pivotal single-use integration', () => {
                 over: {
                   query: 'tokensInZone',
                   zone: 'leader:none',
-                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-121' }],
+                  filter: { prop: 'cardId', op: 'eq', value: 'card-121' },
                 },
                 limit: 1,
                 effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
@@ -217,7 +217,7 @@ describe('FITL pivotal single-use integration', () => {
                 over: {
                   query: 'tokensInZone',
                   zone: 'leader:none',
-                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-122' }],
+                  filter: { prop: 'cardId', op: 'eq', value: 'card-122' },
                 },
                 limit: 1,
                 effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
@@ -236,7 +236,7 @@ describe('FITL pivotal single-use integration', () => {
                 over: {
                   query: 'tokensInZone',
                   zone: 'leader:none',
-                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-123' }],
+                  filter: { prop: 'cardId', op: 'eq', value: 'card-123' },
                 },
                 limit: 1,
                 effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],
@@ -255,7 +255,7 @@ describe('FITL pivotal single-use integration', () => {
                 over: {
                   query: 'tokensInZone',
                   zone: 'leader:none',
-                  filter: [{ prop: 'cardId', op: 'eq', value: 'card-124' }],
+                  filter: { prop: 'cardId', op: 'eq', value: 'card-124' },
                 },
                 limit: 1,
                 effects: [{ moveToken: { token: '$pivotalCard', from: 'leader:none', to: 'played:none' } }],

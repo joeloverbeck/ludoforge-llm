@@ -37,6 +37,38 @@ describe('FITL COIN operations integration', () => {
     factions: readonly string[],
   ): number => (state.zones[space] ?? []).filter((token) => factions.includes(String(token.props.faction))).length;
 
+  type FilterLeaf = {
+    readonly prop?: string;
+    readonly op?: string;
+    readonly value?: unknown;
+    readonly eq?: unknown;
+  };
+
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object';
+
+  const flattenFilterEntries = (filter: unknown): FilterLeaf[] => {
+    if (Array.isArray(filter)) {
+      return filter.flatMap((entry) => flattenFilterEntries(entry));
+    }
+    if (!isRecord(filter)) {
+      return [];
+    }
+    if (typeof filter.prop === 'string') {
+      return [filter as FilterLeaf];
+    }
+    if (filter.op === 'not' && filter.arg !== undefined) {
+      return flattenFilterEntries(filter.arg);
+    }
+    if (Array.isArray(filter.args)) {
+      return filter.args.flatMap((entry: unknown) => flattenFilterEntries(entry));
+    }
+    return [];
+  };
+
+  const queryFilterHas = (filter: unknown, predicate: (entry: FilterLeaf) => boolean): boolean =>
+    flattenFilterEntries(filter).some(predicate);
+
   it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
     const { parsed, compiled } = compileProductionSpec();
 
@@ -679,7 +711,7 @@ describe('FITL COIN operations integration', () => {
       // Verify compiled token filter preserves piece type
       const rangerFiltered = findDeep(compiledRps.effects, (node: any) =>
         node?.forEach?.over?.query === 'tokensInZone' &&
-        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'ranger'),
+        queryFilterHas(node?.forEach?.over?.filter, (f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'ranger'),
       );
       assert.ok(rangerFiltered.length >= 1, 'Expected compiled tokensInZone filter for type=ranger');
     });
@@ -720,7 +752,7 @@ describe('FITL COIN operations integration', () => {
       // Verify compiled token filter preserves piece type
       const troopsFiltered = findDeep(compiledRps.effects, (node: any) =>
         node?.forEach?.over?.query === 'tokensInZone' &&
-        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'troops'),
+        queryFilterHas(node?.forEach?.over?.filter, (f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'troops'),
       );
       assert.ok(troopsFiltered.length >= 1, 'Expected compiled tokensInZone filter for type=troops');
     });
@@ -739,12 +771,12 @@ describe('FITL COIN operations integration', () => {
         findDeep(node.args, (n: any) =>
           n?.op === '>' &&
           n?.left?.aggregate?.op === 'count' &&
-          n?.left?.aggregate?.query?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'troops'),
+          queryFilterHas(n?.left?.aggregate?.query?.filter, (f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'troops'),
         ).length > 0 &&
         findDeep(node.args, (n: any) =>
           n?.op === '>' &&
           n?.left?.aggregate?.op === 'count' &&
-          n?.left?.aggregate?.query?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'police'),
+          queryFilterHas(n?.left?.aggregate?.query?.filter, (f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'police'),
         ).length > 0,
       );
       assert.ok(pacifyCondition.length >= 1, 'Expected pacify condition requiring ARVN Troops AND Police');
@@ -1576,8 +1608,8 @@ describe('FITL COIN operations integration', () => {
 
       const guerrillaForEach = findDeep(activateStage.effects, (node: any) =>
         node?.forEach?.over?.query === 'tokensInZone' &&
-        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'guerrilla') &&
-        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'activity' && f.op === 'eq' && f.value === 'underground'),
+        queryFilterHas(node?.forEach?.over?.filter, (f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'guerrilla') &&
+        queryFilterHas(node?.forEach?.over?.filter, (f: any) => f.prop === 'activity' && f.op === 'eq' && f.value === 'underground'),
       );
       assert.ok(guerrillaForEach.length >= 1, 'Expected forEach over underground guerrillas');
 

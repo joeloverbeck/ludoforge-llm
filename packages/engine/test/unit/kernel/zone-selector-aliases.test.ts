@@ -59,7 +59,7 @@ describe('zone selector alias collection', () => {
         query: {
           query: 'tokensInAdjacentZones',
           zone: '$adjacentOrigin',
-          filter: [
+          filter: { op: 'and', args: [
             {
               prop: 'label',
               op: 'eq',
@@ -79,7 +79,7 @@ describe('zone selector alias collection', () => {
                 },
               },
             },
-          ],
+          ] },
         },
       },
     };

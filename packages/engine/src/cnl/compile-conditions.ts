@@ -16,6 +16,7 @@ import type {
   OptionsQuery,
   PlayerSel,
   Reference,
+  TokenFilterExpr,
   TokenFilterPredicate,
   ValueExpr,
   ZoneRef,
@@ -559,7 +560,7 @@ export function lowerTokenFilterArray(
   source: readonly unknown[],
   context: ConditionLoweringContext,
   path: string,
-): ConditionLoweringResult<readonly TokenFilterPredicate[]> {
+): ConditionLoweringResult<TokenFilterExpr | undefined> {
   const diagnostics: Diagnostic[] = [];
   const predicates: TokenFilterPredicate[] = [];
 
@@ -572,7 +573,19 @@ export function lowerTokenFilterArray(
     predicates.push(lowered.value);
   }
 
-  return { value: predicates, diagnostics };
+  if (predicates.length === 0) {
+    return { value: undefined, diagnostics };
+  }
+  if (predicates.length === 1) {
+    return { value: predicates[0]!, diagnostics };
+  }
+  return {
+    value: {
+      op: 'and',
+      args: predicates,
+    },
+    diagnostics,
+  };
 }
 
 export function lowerQueryNode(
@@ -645,7 +658,11 @@ export function lowerQueryNode(
           return { value: null, diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics] };
         }
         return {
-          value: { query: 'tokensInZone', zone: zone.value, filter: loweredFilter.value },
+          value: {
+            query: 'tokensInZone',
+            zone: zone.value,
+            ...(loweredFilter.value === undefined ? {} : { filter: loweredFilter.value }),
+          },
           diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics],
         };
       }
@@ -767,7 +784,7 @@ export function lowerQueryNode(
           value: {
             query: 'tokensInMapSpaces',
             ...(spaceFilter === undefined ? {} : { spaceFilter }),
-            filter: loweredFilter.value,
+            ...(loweredFilter.value === undefined ? {} : { filter: loweredFilter.value }),
           },
           diagnostics,
         };
@@ -1025,8 +1042,21 @@ export function lowerQueryNode(
         };
       }
 
+      // Condition wrapper form: { condition: <ConditionAST> }
+      if (source.filter.condition !== undefined) {
+        const loweredCondition = lowerConditionNode(source.filter.condition, context, `${path}.filter.condition`);
+        if (loweredCondition.value === null) {
+          return { value: null, diagnostics: loweredCondition.diagnostics };
+        }
+        return {
+          value: { query: source.query, filter: { condition: loweredCondition.value } },
+          diagnostics: loweredCondition.diagnostics,
+        };
+      }
+
       // No recognized filter properties
       return missingCapability(`${path}.filter`, 'zones query filter', source.filter, [
+        '{ condition: <ConditionAST> }',
         '{ owner: <PlayerSel> }',
         '{ op: "and"|"or"|..., args: [...] }',
       ]);
@@ -1055,7 +1085,11 @@ export function lowerQueryNode(
           return { value: null, diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics] };
         }
         return {
-          value: { query: 'tokensInAdjacentZones', zone: zone.value, filter: loweredFilter.value },
+          value: {
+            query: 'tokensInAdjacentZones',
+            zone: zone.value,
+            ...(loweredFilter.value === undefined ? {} : { filter: loweredFilter.value }),
+          },
           diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics],
         };
       }

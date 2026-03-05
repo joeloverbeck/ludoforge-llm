@@ -4,6 +4,7 @@ import type { VictoryStandingsDef, VictoryStandingEntry } from '../kernel/types-
 import type { VictoryFormula, MarkerWeightConfig } from '../kernel/derived-values.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
+import { lowerConditionNode, lowerValueNode, type ConditionLoweringContext } from './compile-conditions.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 export function lowerCoupPlan(
@@ -158,6 +159,7 @@ export function lowerCoupPlan(
 export function lowerVictory(
   rawTerminal: GameSpecDoc['terminal'],
   diagnostics: Diagnostic[],
+  context: ConditionLoweringContext,
 ): Pick<TerminalEvaluationDef, 'checkpoints' | 'margins' | 'ranking'> | undefined {
   if (rawTerminal === null) {
     return undefined;
@@ -189,6 +191,7 @@ export function lowerVictory(
   }
 
   const seenCheckpointIds = new Set<string>();
+  const loweredCheckpoints: Array<NonNullable<TerminalEvaluationDef['checkpoints']>[number]> = [];
   for (const [index, checkpoint] of rawVictory.checkpoints.entries()) {
     const checkpointPath = `doc.terminal.checkpoints.${index}`;
     if (!isRecord(checkpoint)) {
@@ -250,9 +253,32 @@ export function lowerVictory(
         message: 'victory checkpoint when must be a condition object.',
         suggestion: 'Set checkpoint.when to a Condition AST object.',
       });
+      continue;
+    }
+
+    const loweredWhen = lowerConditionNode(checkpoint.when, context, `${checkpointPath}.when`);
+    diagnostics.push(...loweredWhen.diagnostics);
+    if (loweredWhen.value === null) {
+      continue;
+    }
+
+    if (
+      typeof checkpoint.id === 'string' &&
+      checkpoint.id.trim() !== '' &&
+      typeof checkpoint.seat === 'string' &&
+      checkpoint.seat.trim() !== '' &&
+      (checkpoint.timing === 'duringCoup' || checkpoint.timing === 'finalCoup')
+    ) {
+      loweredCheckpoints.push({
+        id: checkpoint.id,
+        seat: checkpoint.seat,
+        timing: checkpoint.timing,
+        when: loweredWhen.value,
+      });
     }
   }
 
+  let loweredMargins: Array<NonNullable<TerminalEvaluationDef['margins']>[number]> | undefined;
   if (rawVictory.margins !== undefined) {
     if (!Array.isArray(rawVictory.margins)) {
       diagnostics.push({
@@ -263,6 +289,7 @@ export function lowerVictory(
         suggestion: 'Set margins to an array of seat/value definitions.',
       });
     } else {
+      loweredMargins = [];
       for (const [index, margin] of rawVictory.margins.entries()) {
         const marginPath = `doc.terminal.margins.${index}`;
         if (!isRecord(margin)) {
@@ -298,6 +325,20 @@ export function lowerVictory(
             severity: 'error',
             message: 'victory margin value must be a ValueExpr-compatible literal or object.',
             suggestion: 'Use a literal or ValueExpr object for margin.value.',
+          });
+          continue;
+        }
+
+        const loweredValue = lowerValueNode(margin.value, context, `${marginPath}.value`);
+        diagnostics.push(...loweredValue.diagnostics);
+        if (loweredValue.value === null) {
+          continue;
+        }
+
+        if (typeof margin.seat === 'string' && margin.seat.trim() !== '') {
+          loweredMargins.push({
+            seat: margin.seat,
+            value: loweredValue.value,
           });
         }
       }
@@ -336,7 +377,11 @@ export function lowerVictory(
     }
   }
 
-  return rawVictory as Pick<TerminalEvaluationDef, 'checkpoints' | 'margins' | 'ranking'>;
+  return {
+    checkpoints: loweredCheckpoints,
+    ...(loweredMargins === undefined ? {} : { margins: loweredMargins }),
+    ...(rawVictory.ranking === undefined ? {} : { ranking: rawVictory.ranking }),
+  };
 }
 
 const VALID_FORMULA_TYPES = new Set([

@@ -83,9 +83,9 @@ function buildSweepActivationEffects(zone: string, cubeCount: number, sfCount: n
         over: {
           query: 'tokensInZone',
           zone,
-          filter: [
+          filter: { op: 'and', args: [
             { prop: 'activity', op: 'eq', value: 'underground' },
-          ],
+          ] },
         },
         limit: activationLimit,
         effects: [

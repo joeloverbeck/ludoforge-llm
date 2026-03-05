@@ -13,7 +13,7 @@ import {
   OptionsQuerySchema,
   PlayerSelSchema,
   StringSchema,
-  TokenFilterPredicateSchema,
+  TokenFilterExprSchema,
 } from './schemas-ast.js';
 import {
   OperationFreeTraceEntrySchema,
@@ -125,7 +125,7 @@ export const TokenSchema = z
 export const RevealGrantSchema = z
   .object({
     observers: z.union([z.literal('all'), z.array(IntegerSchema)]),
-    filter: z.array(TokenFilterPredicateSchema).optional(),
+    filter: TokenFilterExprSchema.optional(),
   })
   .strict();
 
@@ -649,7 +649,7 @@ export const EffectTraceEntrySchema = z.union([
       kind: z.literal('reveal'),
       zone: StringSchema,
       observers: z.union([z.literal('all'), z.array(IntegerSchema)]),
-      filter: z.array(TokenFilterPredicateSchema).optional(),
+      filter: TokenFilterExprSchema.optional(),
       provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
@@ -658,7 +658,7 @@ export const EffectTraceEntrySchema = z.union([
       kind: z.literal('conceal'),
       zone: StringSchema,
       from: z.union([z.literal('all'), z.array(IntegerSchema)]).optional(),
-      filter: z.array(TokenFilterPredicateSchema).optional(),
+      filter: TokenFilterExprSchema.optional(),
       grantsRemoved: IntegerSchema.min(0),
       provenance: EffectTraceProvenanceSchema,
     })

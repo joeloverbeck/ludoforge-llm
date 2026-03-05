@@ -136,6 +136,12 @@ export interface TokenFilterPredicate {
   readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
 
+export type TokenFilterExpr =
+  | TokenFilterPredicate
+  | { readonly op: 'and'; readonly args: readonly TokenFilterExpr[] }
+  | { readonly op: 'or'; readonly args: readonly TokenFilterExpr[] }
+  | { readonly op: 'not'; readonly arg: TokenFilterExpr };
+
 export interface AssetRowPredicate {
   readonly field: string;
   readonly op: 'eq' | 'neq' | 'in' | 'notIn';
@@ -151,7 +157,7 @@ export type OptionsQuery =
       readonly source: OptionsQuery;
       readonly dedupe?: boolean;
     }
-  | { readonly query: 'tokensInZone'; readonly zone: ZoneRef; readonly filter?: readonly TokenFilterPredicate[] }
+  | { readonly query: 'tokensInZone'; readonly zone: ZoneRef; readonly filter?: TokenFilterExpr }
   | {
       readonly query: 'assetRows';
       readonly tableId: string;
@@ -161,7 +167,7 @@ export type OptionsQuery =
   | {
       readonly query: 'tokensInMapSpaces';
       readonly spaceFilter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST };
-      readonly filter?: readonly TokenFilterPredicate[];
+      readonly filter?: TokenFilterExpr;
     }
   | {
       readonly query: 'nextInOrderByCondition';
@@ -195,7 +201,7 @@ export type OptionsQuery =
   | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
   | { readonly query: 'mapSpaces'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
   | { readonly query: 'adjacentZones'; readonly zone: ZoneRef }
-  | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneRef; readonly filter?: readonly TokenFilterPredicate[] }
+  | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneRef; readonly filter?: TokenFilterExpr }
   | {
       readonly query: 'connectedZones';
       readonly zone: ZoneRef;
@@ -296,14 +302,14 @@ export type EffectAST =
       readonly reveal: {
         readonly zone: ZoneRef;
         readonly to: 'all' | PlayerSel;
-        readonly filter?: readonly TokenFilterPredicate[];
+        readonly filter?: TokenFilterExpr;
       };
     }
   | {
       readonly conceal: {
         readonly zone: ZoneRef;
         readonly from?: 'all' | PlayerSel;
-        readonly filter?: readonly TokenFilterPredicate[];
+        readonly filter?: TokenFilterExpr;
       };
     }
   | { readonly shuffle: { readonly zone: ZoneRef } }

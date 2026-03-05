@@ -1,5 +1,5 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
-import type { Token, TokenFilterPredicate } from './types.js';
+import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 
 type TokenFilterScalar = string | number | boolean;
 
@@ -52,21 +52,27 @@ export function matchesTokenFilterPredicate(
   );
 }
 
-export function matchesAllTokenFilterPredicates(
+export function matchesTokenFilterExpr(
   token: Token,
-  predicates: readonly TokenFilterPredicate[],
+  expr: TokenFilterExpr,
   resolveValue: TokenFilterValueResolver = resolveLiteralTokenFilterValue,
 ): boolean {
-  return predicates.every((predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue));
+  if ('prop' in expr) {
+    return matchesTokenFilterPredicate(token, expr, resolveValue);
+  }
+  if (expr.op === 'not') {
+    return !matchesTokenFilterExpr(token, expr.arg, resolveValue);
+  }
+  if (expr.op === 'and') {
+    return expr.args.every((entry) => matchesTokenFilterExpr(token, entry, resolveValue));
+  }
+  return expr.args.some((entry) => matchesTokenFilterExpr(token, entry, resolveValue));
 }
 
-export function filterTokensByPredicates(
+export function filterTokensByExpr(
   tokens: readonly Token[],
-  predicates: readonly TokenFilterPredicate[],
+  expr: TokenFilterExpr,
   resolveValue: TokenFilterValueResolver = resolveLiteralTokenFilterValue,
 ): readonly Token[] {
-  if (predicates.length === 0) {
-    return [...tokens];
-  }
-  return tokens.filter((token) => matchesAllTokenFilterPredicates(token, predicates, resolveValue));
+  return tokens.filter((token) => matchesTokenFilterExpr(token, expr, resolveValue));
 }

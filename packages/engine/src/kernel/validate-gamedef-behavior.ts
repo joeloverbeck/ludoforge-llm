@@ -11,6 +11,7 @@ import type {
   NumericValueExpr,
   OptionsQuery,
   Reference,
+  TokenFilterExpr,
   TokenFilterPredicate,
   ValueExpr,
   ZoneRef,
@@ -564,29 +565,80 @@ export const validateConditionAst = (
   }
 };
 
-const validateTokenFilterPredicates = (
+const validateTokenFilterPredicate = (
   diagnostics: Diagnostic[],
-  filters: readonly TokenFilterPredicate[],
+  predicate: TokenFilterPredicate,
   path: string,
   context: ValidationContext,
 ): void => {
-  for (let i = 0; i < filters.length; i += 1) {
-    const predicate = filters[i]!;
-    if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_TOKEN_FILTER_PROP_MISSING',
-        `${path}[${i}].prop`,
-        `Unknown token filter prop "${predicate.prop}".`,
-        predicate.prop,
-        tokenFilterPropAlternatives(context.tokenFilterPropCandidates),
-      );
-    }
+  if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'REF_TOKEN_FILTER_PROP_MISSING',
+      `${path}.prop`,
+      `Unknown token filter prop "${predicate.prop}".`,
+      predicate.prop,
+      tokenFilterPropAlternatives(context.tokenFilterPropCandidates),
+    );
+  }
 
-    const filterValue = predicate.value;
-    if (!Array.isArray(filterValue)) {
-      validateValueExpr(diagnostics, filterValue as ValueExpr, `${path}[${i}].value`, context);
-    }
+  const filterValue = predicate.value;
+  if (!Array.isArray(filterValue)) {
+    validateValueExpr(diagnostics, filterValue as ValueExpr, `${path}.value`, context);
+  }
+};
+
+const validateTokenFilterExpr = (
+  diagnostics: Diagnostic[],
+  filter: TokenFilterExpr,
+  path: string,
+  context: ValidationContext,
+): void => {
+  if ('prop' in filter) {
+    validateTokenFilterPredicate(diagnostics, filter, path, context);
+    return;
+  }
+
+  if (filter.op === 'not') {
+    validateTokenFilterExpr(diagnostics, filter.arg, `${path}.arg`, context);
+    return;
+  }
+
+  if (filter.op !== 'and' && filter.op !== 'or') {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path,
+      severity: 'error',
+      message: `Unsupported token filter operator "${String((filter as { readonly op?: unknown }).op)}".`,
+      suggestion: 'Use token filter leaf predicates or boolean composition with op "and", "or", or "not".',
+    });
+    return;
+  }
+
+  if (!Array.isArray(filter.args)) {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path: `${path}.args`,
+      severity: 'error',
+      message: `Token filter operator "${filter.op}" requires args: TokenFilterExpr[].`,
+      suggestion: 'Provide one or more token filter expression arguments.',
+    });
+    return;
+  }
+
+  filter.args.forEach((entry, index) => {
+    validateTokenFilterExpr(diagnostics, entry, `${path}.args[${index}]`, context);
+  });
+};
+
+const validateTokenFilter = (
+  diagnostics: Diagnostic[],
+  filter: TokenFilterExpr | undefined,
+  path: string,
+  context: ValidationContext,
+): void => {
+  if (filter !== undefined) {
+    validateTokenFilterExpr(diagnostics, filter, path, context);
   }
 };
 
@@ -718,9 +770,7 @@ export const validateOptionsQuery = (
     }
     case 'tokensInZone': {
       validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
-      if (query.filter) {
-        validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
-      }
+      validateTokenFilter(diagnostics, query.filter, `${path}.filter`, context);
       return;
     }
     case 'assetRows': {
@@ -798,9 +848,7 @@ export const validateOptionsQuery = (
     }
     case 'tokensInAdjacentZones': {
       validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
-      if (query.filter) {
-        validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
-      }
+      validateTokenFilter(diagnostics, query.filter, `${path}.filter`, context);
       return;
     }
     case 'tokensInMapSpaces': {
@@ -810,9 +858,7 @@ export const validateOptionsQuery = (
       if (query.spaceFilter?.condition) {
         validateConditionAst(diagnostics, query.spaceFilter.condition, `${path}.spaceFilter.condition`, context);
       }
-      if (query.filter) {
-        validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
-      }
+      validateTokenFilter(diagnostics, query.filter, `${path}.filter`, context);
       return;
     }
     case 'connectedZones': {
@@ -1431,9 +1477,7 @@ export const validateEffectAst = (
     if (effect.reveal.to !== 'all') {
       validatePlayerSelector(diagnostics, effect.reveal.to, `${path}.reveal.to`, context);
     }
-    if (effect.reveal.filter !== undefined) {
-      validateTokenFilterPredicates(diagnostics, effect.reveal.filter, `${path}.reveal.filter`, context);
-    }
+    validateTokenFilter(diagnostics, effect.reveal.filter, `${path}.reveal.filter`, context);
     return;
   }
 
@@ -1442,9 +1486,7 @@ export const validateEffectAst = (
     if (effect.conceal.from !== undefined && effect.conceal.from !== 'all') {
       validatePlayerSelector(diagnostics, effect.conceal.from, `${path}.conceal.from`, context);
     }
-    if (effect.conceal.filter !== undefined) {
-      validateTokenFilterPredicates(diagnostics, effect.conceal.filter, `${path}.conceal.filter`, context);
-    }
+    validateTokenFilter(diagnostics, effect.conceal.filter, `${path}.conceal.filter`, context);
     return;
   }
 

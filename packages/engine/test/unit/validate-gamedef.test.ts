@@ -399,7 +399,7 @@ describe('validateGameDef reference checks', () => {
             {
               conceal: {
                 zone: 'market:none',
-                filter: [{ prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } }],
+                filter: { prop: 'faction', op: 'eq', value: { ref: 'gvar', var: 'missingVar' } },
               },
             },
           ],
@@ -410,7 +410,7 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].effects[0].conceal.filter[0].value.var',
+        (diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].effects[0].conceal.filter.value.var',
       ),
     );
   });
@@ -429,7 +429,7 @@ describe('validateGameDef reference checks', () => {
               domain: {
                 query: 'tokensInZone',
                 zone: 'deck:none',
-                filter: [{ prop: 'factoin', op: 'eq', value: 'US' }],
+                filter: { prop: 'factoin', op: 'eq', value: 'US' },
               },
             },
           ],
@@ -441,7 +441,7 @@ describe('validateGameDef reference checks', () => {
     const diagnostic = diagnostics.find(
       (diag) =>
         diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
-        diag.path === 'actions[0].params[0].domain.filter[0].prop',
+        diag.path === 'actions[0].params[0].domain.filter.prop',
     );
     assert.ok(diagnostic);
     assert.deepEqual(diagnostic.alternatives, ['faction']);
@@ -460,7 +460,7 @@ describe('validateGameDef reference checks', () => {
               domain: {
                 query: 'tokensInZone',
                 zone: 'deck:none',
-                filter: [{ prop: 'id', op: 'eq', value: 'card-1' }],
+                filter: { prop: 'id', op: 'eq', value: 'card-1' },
               },
             },
           ],
@@ -469,7 +469,7 @@ describe('validateGameDef reference checks', () => {
               reveal: {
                 to: 'all',
                 zone: 'deck:none',
-                filter: [{ prop: 'id', op: 'eq', value: 'card-1' }],
+                filter: { prop: 'id', op: 'eq', value: 'card-1' },
               },
             },
           ],
@@ -498,7 +498,7 @@ describe('validateGameDef reference checks', () => {
               domain: {
                 query: 'tokensInZone',
                 zone: 'deck:none',
-                filter: [{ prop: 'rank', op: 'eq', value: 'elite' }],
+                filter: { prop: 'rank', op: 'eq', value: 'elite' },
               },
             },
           ],
@@ -522,7 +522,7 @@ describe('validateGameDef reference checks', () => {
               name: '$token',
               domain: {
                 query: 'tokensInMapSpaces',
-                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+                filter: { prop: 'typeTypo', op: 'eq', value: 'troops' },
               },
             },
           ],
@@ -535,7 +535,7 @@ describe('validateGameDef reference checks', () => {
       diagnostics.some(
         (diag) =>
           diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
-          diag.path === 'actions[0].params[0].domain.filter[0].prop',
+          diag.path === 'actions[0].params[0].domain.filter.prop',
       ),
     );
   });
@@ -553,7 +553,7 @@ describe('validateGameDef reference checks', () => {
               domain: {
                 query: 'tokensInAdjacentZones',
                 zone: 'market:none',
-                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+                filter: { prop: 'typeTypo', op: 'eq', value: 'troops' },
               },
             },
           ],
@@ -566,7 +566,7 @@ describe('validateGameDef reference checks', () => {
       diagnostics.some(
         (diag) =>
           diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
-          diag.path === 'actions[0].params[0].domain.filter[0].prop',
+          diag.path === 'actions[0].params[0].domain.filter.prop',
       ),
     );
   });
@@ -584,7 +584,7 @@ describe('validateGameDef reference checks', () => {
               domain: {
                 query: 'tokensInAdjacentZones',
                 zone: 'market:none',
-                filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+                filter: { prop: 'id', op: 'eq', value: 'token-1' },
               },
             },
           ],
@@ -608,7 +608,7 @@ describe('validateGameDef reference checks', () => {
               reveal: {
                 to: 'all',
                 zone: 'deck:none',
-                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+                filter: { prop: 'typeTypo', op: 'eq', value: 'troops' },
               },
             },
           ],
@@ -621,7 +621,7 @@ describe('validateGameDef reference checks', () => {
       diagnostics.some(
         (diag) =>
           diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
-          diag.path === 'actions[0].effects[0].reveal.filter[0].prop',
+          diag.path === 'actions[0].effects[0].reveal.filter.prop',
       ),
     );
   });
@@ -639,7 +639,7 @@ describe('validateGameDef reference checks', () => {
               reveal: {
                 to: 'all',
                 zone: 'deck:none',
-                filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+                filter: { prop: 'faction', op: 'eq', value: 'US' },
               },
             },
           ],
@@ -662,7 +662,7 @@ describe('validateGameDef reference checks', () => {
             {
               conceal: {
                 zone: 'market:none',
-                filter: [{ prop: 'typeTypo', op: 'eq', value: 'troops' }],
+                filter: { prop: 'typeTypo', op: 'eq', value: 'troops' },
               },
             },
           ],
@@ -675,7 +675,7 @@ describe('validateGameDef reference checks', () => {
       diagnostics.some(
         (diag) =>
           diag.code === 'REF_TOKEN_FILTER_PROP_MISSING' &&
-          diag.path === 'actions[0].effects[0].conceal.filter[0].prop',
+          diag.path === 'actions[0].effects[0].conceal.filter.prop',
       ),
     );
   });
@@ -691,7 +691,7 @@ describe('validateGameDef reference checks', () => {
             {
               conceal: {
                 zone: 'market:none',
-                filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+                filter: { prop: 'id', op: 'eq', value: 'token-1' },
               },
             },
           ],

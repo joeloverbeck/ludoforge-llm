@@ -777,6 +777,35 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers zones query with { condition } wrapper filter', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'zones',
+        filter: {
+          condition: {
+            op: '==',
+            left: { ref: 'zoneProp', zone: 'board', prop: 'category' },
+            right: 'province',
+          },
+        },
+      },
+      context,
+      'doc.terminal.checkpoints.0.when.args.0.left.aggregate.query',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'zones',
+      filter: {
+        condition: {
+          op: '==',
+          left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' },
+          right: 'province',
+        },
+      },
+    });
+  });
+
   it('lowers tokensInMapSpaces query with map-space condition and token filters', () => {
     const result = lowerQueryNode(
       {
@@ -802,7 +831,7 @@ describe('compile-conditions lowering', () => {
           right: 'southVietnam',
         },
       },
-      filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+      filter: { prop: 'type', op: 'eq', value: 'guerrilla' },
     });
   });
 
@@ -870,10 +899,13 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: [
-        { prop: 'type', op: 'eq', value: 'troops' },
-        { prop: 'faction', op: 'eq', value: 'ARVN' },
-      ],
+      filter: {
+        op: 'and',
+        args: [
+          { prop: 'type', op: 'eq', value: 'troops' },
+          { prop: 'faction', op: 'eq', value: 'ARVN' },
+        ],
+      },
     });
   });
 
@@ -981,7 +1013,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+      filter: { prop: 'id', op: 'eq', value: 'token-1' },
     });
   });
 
@@ -1002,7 +1034,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+      filter: { prop: 'id', op: 'eq', value: 'token-1' },
     });
   });
 
@@ -1026,7 +1058,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+      filter: { prop: 'id', op: 'eq', value: 'token-1' },
     });
   });
 
@@ -1064,9 +1096,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: [
-        { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
-      ],
+      filter: { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
     });
   });
 
@@ -1087,9 +1117,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'deck:none',
-      filter: [
-        { prop: 'faction', op: 'in', value: ['NVA', 'VC'] },
-      ],
+      filter: { prop: 'faction', op: 'in', value: ['NVA', 'VC'] },
     });
   });
 
@@ -1116,9 +1144,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'deck:none',
-      filter: [
-        { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
-      ],
+      filter: { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
     });
   });
 
@@ -1144,9 +1170,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'deck:none',
-      filter: [
-        { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
-      ],
+      filter: { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
     });
   });
 
@@ -1195,7 +1219,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInAdjacentZones',
       zone: 'board:none',
-      filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+      filter: { prop: 'type', op: 'eq', value: 'guerrilla' },
     });
   });
 

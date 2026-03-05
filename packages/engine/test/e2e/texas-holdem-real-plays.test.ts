@@ -6,6 +6,7 @@ import {
   asPlayerId,
   assertValidatedGameDef,
   areMovesEquivalent,
+  createEvalRuntimeResources,
   initialState,
   type GameState,
   type Move,
@@ -218,7 +219,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.perPlayerVars['4']?.chipStack ?? -1), 2210);
     assert.equal(Number(state.perPlayerVars['5']?.chipStack ?? -1), 670);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assert.equal(cleanup.perPlayerVars['0']?.eliminated, true);
     assert.equal(Number(cleanup.globalVars.activePlayers ?? -1), 5);
@@ -384,7 +385,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     const villainScore = Number(state.perPlayerVars['7']?.showdownScore ?? 0);
     assert.equal(heroScore > villainScore, true);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
   });
 });

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   advancePhase,
+  createEvalRuntimeResources,
   asPhaseId,
   asTokenId,
   initialState,
@@ -93,7 +94,7 @@ describe('FITL production coup phase structure', () => {
       lookaheadIsCoup: false,
       consecutiveCoupRounds: 0,
     });
-    const afterNonCoupMain = advancePhase(def, nonCoup);
+    const afterNonCoupMain = advancePhase(def, nonCoup, createEvalRuntimeResources());
     assert.equal(afterNonCoupMain.currentPhase, asPhaseId('main'));
     assert.equal(afterNonCoupMain.turnCount, nonCoup.turnCount + 1);
 
@@ -110,7 +111,7 @@ describe('FITL production coup phase structure', () => {
     // advancePhase from main (last effective phase when non-coup) triggers turn
     // rollover. The card boundary advances: the coup card (lookahead) becomes the
     // played card. The new turn should start in coupVictory.
-    const afterRollover = advancePhase(def, preCoup);
+    const afterRollover = advancePhase(def, preCoup, createEvalRuntimeResources());
     assert.equal(afterRollover.currentPhase, asPhaseId('coupVictory'));
     assert.equal(afterRollover.turnCount, preCoup.turnCount + 1);
 
@@ -120,7 +121,7 @@ describe('FITL production coup phase structure', () => {
       lookaheadIsCoup: false,
       consecutiveCoupRounds: 1,
     });
-    const afterSuppressedMain = advancePhase(def, suppressedConsecutive);
+    const afterSuppressedMain = advancePhase(def, suppressedConsecutive, createEvalRuntimeResources());
     assert.equal(afterSuppressedMain.currentPhase, asPhaseId('main'));
     assert.equal(afterSuppressedMain.turnCount, suppressedConsecutive.turnCount + 1);
   });
@@ -133,7 +134,7 @@ describe('FITL production coup phase structure', () => {
       playedIsCoup: true,
       consecutiveCoupRounds: 0,
     });
-    const afterRedeploy = advancePhase(def, finalCoupRedeploy);
+    const afterRedeploy = advancePhase(def, finalCoupRedeploy, createEvalRuntimeResources());
 
     assert.equal(afterRedeploy.currentPhase, asPhaseId('main'));
     assert.equal(afterRedeploy.turnCount, finalCoupRedeploy.turnCount + 1);

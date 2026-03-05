@@ -6,6 +6,7 @@ import {
   asPlayerId,
   assertValidatedGameDef,
   areMovesEquivalent,
+  createEvalRuntimeResources,
   initialState,
   type GameState,
   type Move,
@@ -315,7 +316,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 490);
 
     // Advance to hand-cleanup
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 1 cleanup');
   });
@@ -401,7 +402,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[1]!.chipStack), 470);
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 480);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 2 cleanup');
   });
@@ -506,7 +507,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[1]!.chipStack), 90);
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 890);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 3 cleanup');
   });
@@ -587,7 +588,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[1]!.chipStack), 270);
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 930);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 4 cleanup');
   });
@@ -680,7 +681,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[1]!.chipStack), 265);
     assert.equal(carolStack, 932); // 905 (after antes+SB+call) + 27
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 5 cleanup');
   });
@@ -781,7 +782,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[0]!.chipStack), 238);
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 1262);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 6 cleanup');
 
@@ -885,7 +886,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[0]!.chipStack), 128);
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 1372);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 7 cleanup');
   });
@@ -970,7 +971,7 @@ describe('golden test vector: 3-max NLHE tournament (8 hands)', () => {
     assert.equal(Number(state.perPlayerVars[0]!.chipStack), 0); // Alice busted
     assert.equal(Number(state.perPlayerVars[2]!.chipStack), 1500); // Carol wins all
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assertInvariants(cleanup, 'hand 8 cleanup');
 

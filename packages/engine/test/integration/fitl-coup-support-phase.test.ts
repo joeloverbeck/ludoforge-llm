@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { advancePhase, asPhaseId, initialState, type ConditionAST, type EffectAST, type GameDef, type TriggerLogEntry } from '../../src/kernel/index.js';
+import { advancePhase, asPhaseId, createEvalRuntimeResources, initialState, type ConditionAST, type EffectAST, type GameDef, type TriggerLogEntry } from '../../src/kernel/index.js';
 
 const pacifyCondition = (spaceVar: string, trackerVar: string, actor: 'us' | 'arvn'): ConditionAST => {
   const spendConstraints: readonly ConditionAST[] =
@@ -188,7 +188,7 @@ describe('FITL coup support phase integration', () => {
     const start = initialState(def, 41, 2).state;
     const triggerLog: TriggerLogEntry[] = [];
 
-    const next = advancePhase(def, start, triggerLog);
+    const next = advancePhase(def, start, createEvalRuntimeResources(), triggerLog);
 
     assert.equal(next.currentPhase, asPhaseId('support'));
 
@@ -236,7 +236,7 @@ describe('FITL coup support phase integration', () => {
     const runOnce = () => {
       const start = initialState(def, 41, 2).state;
       const triggerLog: TriggerLogEntry[] = [];
-      const end = advancePhase(def, start, triggerLog);
+      const end = advancePhase(def, start, createEvalRuntimeResources(), triggerLog);
       return { end, triggerLog };
     };
 

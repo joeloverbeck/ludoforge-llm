@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   advancePhase,
+  createEvalRuntimeResources,
   applyMove,
   asActionId,
   asPhaseId,
@@ -74,7 +75,7 @@ const withCoupRound = (
 };
 
 const enterCoupResources = (def: GameDef, state: GameState): GameState => {
-  const atVictory = advancePhase(def, state);
+  const atVictory = advancePhase(def, state, createEvalRuntimeResources());
   assert.equal(atVictory.currentPhase, asPhaseId('coupVictory'));
   const afterVictory = applyMove(def, atVictory, { actionId: asActionId('coupVictoryCheck'), params: {} }).state;
   assert.equal(afterVictory.currentPhase, asPhaseId('coupResources'));

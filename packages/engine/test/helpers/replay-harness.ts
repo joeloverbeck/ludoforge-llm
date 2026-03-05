@@ -3,6 +3,7 @@ import {
   applyMove,
   legalMoves,
   canonicalMoveParamsKey,
+  createEvalRuntimeResources,
   type MoveExecutionPolicy,
   type ExecutionOptions,
   type GameDef,
@@ -184,6 +185,7 @@ export const advancePhaseBounded = (config: BoundedAdvanceConfig): BoundedAdvanc
 
   let state = config.initialState;
   let steps = 0;
+  const operationResources = createEvalRuntimeResources();
 
   while (!config.until(state)) {
     if (steps >= config.maxSteps) {
@@ -191,7 +193,13 @@ export const advancePhaseBounded = (config: BoundedAdvanceConfig): BoundedAdvanc
         `Bounded phase advance exhausted maxSteps=${config.maxSteps} phase=${String(state.currentPhase)} activePlayer=${String(state.activePlayer)} keyVars=${formatKeyVars(state, config.keyVars)}`,
       );
     }
-    state = advancePhase(config.def, state, config.triggerLogCollector, config.executionPolicy);
+    state = advancePhase(
+      config.def,
+      state,
+      operationResources,
+      config.triggerLogCollector,
+      config.executionPolicy,
+    );
     steps += 1;
   }
 

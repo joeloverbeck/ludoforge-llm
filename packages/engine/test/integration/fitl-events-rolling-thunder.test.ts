@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   advancePhase,
+  createEvalRuntimeResources,
   applyMove,
   asActionId,
   asPhaseId,
@@ -178,11 +179,11 @@ describe('FITL card-10 Rolling Thunder', () => {
       },
     };
 
-    const atReset = advancePhase(def, preparedForCoupReset);
+    const atReset = advancePhase(def, preparedForCoupReset, createEvalRuntimeResources());
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.mom_rollingThunder, false, 'Coup reset must clear Rolling Thunder momentum');
 
-    const afterReset = advancePhase(def, atReset);
+    const afterReset = advancePhase(def, atReset, createEvalRuntimeResources());
     assert.equal(afterReset.currentPhase, asPhaseId('main'));
     assert.doesNotThrow(() => runAirStrike(afterReset), 'Air Strike should be legal again after Coup reset');
   });

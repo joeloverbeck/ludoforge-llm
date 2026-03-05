@@ -70,7 +70,7 @@ describe('phase advancement', () => {
     const def = createBaseDef();
     const state = createState({ currentPhase: asPhaseId('p1') });
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.equal(next.currentPhase, asPhaseId('p2'));
     assert.equal(next.turnCount, 0);
@@ -85,7 +85,7 @@ describe('phase advancement', () => {
       activePlayer: asPlayerId(0),
     });
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.equal(next.currentPhase, asPhaseId('p1'));
     assert.equal(next.turnCount, 5);
@@ -145,12 +145,12 @@ describe('phase advancement', () => {
     const next = advancePhase(
       def,
       state,
-      undefined,
-      undefined,
       createEvalRuntimeResources({
         collector: createCollector(),
         queryRuntimeCache,
       }),
+      undefined,
+      undefined,
     );
 
     assert.equal(next.turnCount, 1);
@@ -171,9 +171,9 @@ describe('phase advancement', () => {
       turnOrderState: { type: 'roundRobin' },
     });
 
-    const afterOne = advancePhase(def, state);
-    const afterTwo = advancePhase(def, afterOne);
-    const afterThree = advancePhase(def, afterTwo);
+    const afterOne = advancePhase(def, state, createEvalRuntimeResources());
+    const afterTwo = advancePhase(def, afterOne, createEvalRuntimeResources());
+    const afterThree = advancePhase(def, afterTwo, createEvalRuntimeResources());
 
     assert.equal(afterOne.activePlayer, asPlayerId(1));
     assert.equal(afterTwo.activePlayer, asPlayerId(2));
@@ -193,7 +193,7 @@ describe('phase advancement', () => {
       turnOrderState: { type: 'fixedOrder', currentIndex: 0 },
     });
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.equal(next.currentPhase, asPhaseId('p1'));
     assert.equal(next.turnCount, 5);
@@ -216,10 +216,10 @@ describe('phase advancement', () => {
       turnOrderState: { type: 'fixedOrder', currentIndex: 0 },
     });
 
-    const afterOne = advancePhase(def, state);
-    const afterTwo = advancePhase(def, afterOne);
-    const afterThree = advancePhase(def, afterTwo);
-    const afterFour = advancePhase(def, afterThree);
+    const afterOne = advancePhase(def, state, createEvalRuntimeResources());
+    const afterTwo = advancePhase(def, afterOne, createEvalRuntimeResources());
+    const afterThree = advancePhase(def, afterTwo, createEvalRuntimeResources());
+    const afterFour = advancePhase(def, afterThree, createEvalRuntimeResources());
 
     assert.equal(afterOne.activePlayer, asPlayerId(0));
     assert.equal(afterTwo.activePlayer, asPlayerId(1));
@@ -245,7 +245,7 @@ describe('phase advancement', () => {
       },
     });
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.equal(next.currentPhase, asPhaseId('p1'));
     assert.equal(next.turnCount, 5);
@@ -261,7 +261,7 @@ describe('phase advancement', () => {
     const def = createBaseDef();
     const state = createState({ currentPhase: asPhaseId('p1') });
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.deepEqual(next.actionUsage.pass, { turnCount: 3, phaseCount: 0, gameCount: 9 });
   });
@@ -270,7 +270,7 @@ describe('phase advancement', () => {
     const def = createBaseDef();
     const state = createState({ currentPhase: asPhaseId('p2') });
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.deepEqual(next.actionUsage.pass, { turnCount: 0, phaseCount: 0, gameCount: 9 });
   });
@@ -299,7 +299,11 @@ describe('phase advancement', () => {
       ],
     };
 
-    const next = advancePhase(orderedDef, createState({ currentPhase: asPhaseId('p1') }));
+    const next = advancePhase(
+      orderedDef,
+      createState({ currentPhase: asPhaseId('p1') }),
+      createEvalRuntimeResources(),
+    );
 
     assert.equal(next.globalVars.step, 2);
     assert.equal(next.globalVars.order, 120);
@@ -345,7 +349,11 @@ describe('phase advancement', () => {
       ],
     };
 
-    const next = advancePhase(orderedDef, createState({ currentPhase: asPhaseId('p2') }));
+    const next = advancePhase(
+      orderedDef,
+      createState({ currentPhase: asPhaseId('p2') }),
+      createEvalRuntimeResources(),
+    );
 
     assert.equal(next.globalVars.step, 4);
     assert.equal(next.globalVars.order, 1234);
@@ -471,7 +479,7 @@ phase: [asPhaseId('p2')],
     };
     const logs: TriggerLogEntry[] = [];
 
-    const next = advancePhase(def, state, logs);
+    const next = advancePhase(def, state, createEvalRuntimeResources(), logs);
 
     assert.equal(next.turnCount, 1);
     assert.equal(next.activePlayer, asPlayerId(0));
@@ -554,13 +562,13 @@ phase: [asPhaseId('p2')],
       markers: {},
     };
 
-    const firstPhaseStep = advancePhase(def, state);
+    const firstPhaseStep = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(firstPhaseStep.currentPhase, asPhaseId('victory'));
     const firstLogs: TriggerLogEntry[] = [];
-    const afterFirst = advancePhase(def, firstPhaseStep, firstLogs);
+    const afterFirst = advancePhase(def, firstPhaseStep, createEvalRuntimeResources(), firstLogs);
 
     const secondLogs: TriggerLogEntry[] = [];
-    const afterSecond = advancePhase(def, afterFirst, secondLogs);
+    const afterSecond = advancePhase(def, afterFirst, createEvalRuntimeResources(), secondLogs);
 
     const firstLifecycleSteps = firstLogs
       .filter((entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowLifecycle' }> => entry.kind === 'turnFlowLifecycle')
@@ -637,7 +645,7 @@ phase: [asPhaseId('p2')],
     const def = createCoupSeatValidationDef(['BROKEN', 'ARVN']);
     const state = createCoupSeatValidationState();
 
-    assert.throws(() => advancePhase(def, state), (error: unknown) => {
+    assert.throws(() => advancePhase(def, state, createEvalRuntimeResources()), (error: unknown) => {
       assert.ok(error instanceof Error);
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
@@ -651,7 +659,7 @@ phase: [asPhaseId('p2')],
     const def = createCoupSeatValidationDef(['US', 'BROKEN']);
     const state = createCoupSeatValidationState();
 
-    assert.throws(() => advancePhase(def, state), (error: unknown) => {
+    assert.throws(() => advancePhase(def, state, createEvalRuntimeResources()), (error: unknown) => {
       assert.ok(error instanceof Error);
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
@@ -665,7 +673,7 @@ phase: [asPhaseId('p2')],
     const def = createCoupSeatValidationDef(['US', 'US']);
     const state = createCoupSeatValidationState();
 
-    assert.throws(() => advancePhase(def, state), (error: unknown) => {
+    assert.throws(() => advancePhase(def, state, createEvalRuntimeResources()), (error: unknown) => {
       assert.ok(error instanceof Error);
       const details = error as Error & { code?: unknown; message?: string };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
@@ -748,7 +756,7 @@ phase: [asPhaseId('p2')],
       ],
     };
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(next.globalVars.aid, 0);
     assert.equal(next.activeLastingEffects, undefined);
   });
@@ -788,7 +796,7 @@ phase: [asPhaseId('p2')],
       ],
     };
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(next.globalVars.aid, 0);
     assert.equal(next.activeLastingEffects, undefined);
   });
@@ -837,7 +845,7 @@ phase: [asPhaseId('p2')],
       ],
     };
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.equal(next.globalVars.aid, 4);
     assert.equal(next.activeLastingEffects?.length, 1);
@@ -918,11 +926,11 @@ phase: [asPhaseId('p2')],
       ],
     };
 
-    const afterOne = advancePhase(def, state);
+    const afterOne = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(afterOne.globalVars.aid, 3);
     assert.equal(afterOne.activeLastingEffects?.[0]?.remainingTurnBoundaries, 1);
 
-    const afterTwo = advancePhase(def, afterOne);
+    const afterTwo = advancePhase(def, afterOne, createEvalRuntimeResources());
     assert.equal(afterTwo.globalVars.aid, 0);
     assert.equal(afterTwo.activeLastingEffects, undefined);
   });
@@ -1000,7 +1008,7 @@ phase: [asPhaseId('p2')],
       ],
     };
 
-    const next = advancePhase(def, state);
+    const next = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(next.globalVars.aid, 0);
     assert.equal(next.activeLastingEffects, undefined);
   });
@@ -1096,6 +1104,65 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
       createCallsInCoupFunction.length,
       0,
       'coupPhaseImplicitPass must not allocate seat-resolution context internally',
+    );
+  });
+
+  it('builds one operation-scoped default eval resources object in advanceToDecisionPoint and threads it to advancePhase', () => {
+    const source = readKernelSource('src/kernel/phase-advance.ts');
+    const sourceFile = parseTypeScriptSource(source, 'phase-advance.ts');
+    const advanceToDecisionPointBody = findVariableFunctionBody(sourceFile, 'advanceToDecisionPoint');
+    assert.equal(
+      advanceToDecisionPointBody !== undefined,
+      true,
+      'phase-advance.ts must define advanceToDecisionPoint function body',
+    );
+
+    let hasOperationResourcesNullishDefault = false;
+    for (const statement of advanceToDecisionPointBody?.statements ?? []) {
+      if (!ts.isVariableStatement(statement)) {
+        continue;
+      }
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name) || declaration.name.text !== 'operationResources') {
+          continue;
+        }
+        if (declaration.initializer === undefined) {
+          continue;
+        }
+        const initializer = unwrapTypeScriptExpression(declaration.initializer);
+        if (
+          ts.isBinaryExpression(initializer) &&
+          initializer.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
+          isIdentifierArgument(initializer.left, 'evalRuntimeResources')
+        ) {
+          const right = unwrapTypeScriptExpression(initializer.right);
+          hasOperationResourcesNullishDefault =
+            ts.isCallExpression(right) &&
+            ts.isIdentifier(right.expression) &&
+            right.expression.text === 'createEvalRuntimeResources' &&
+            right.arguments.length === 0;
+        }
+      }
+    }
+    assert.equal(
+      hasOperationResourcesNullishDefault,
+      true,
+      'advanceToDecisionPoint must allocate operationResources = evalRuntimeResources ?? createEvalRuntimeResources() once',
+    );
+
+    const advancePhaseCalls =
+      advanceToDecisionPointBody === undefined
+        ? []
+        : collectCallsByIdentifierWithinNode(advanceToDecisionPointBody, 'advancePhase');
+    assert.equal(
+      advancePhaseCalls.some((call) => call.arguments.length >= 3 && isIdentifierArgument(call.arguments[2]!, 'operationResources')),
+      true,
+      'advanceToDecisionPoint must pass operationResources to advancePhase',
+    );
+    assert.equal(
+      advancePhaseCalls.some((call) => call.arguments.length >= 3 && isIdentifierArgument(call.arguments[2]!, 'evalRuntimeResources')),
+      false,
+      'advanceToDecisionPoint must not pass evalRuntimeResources directly to advancePhase',
     );
   });
 });

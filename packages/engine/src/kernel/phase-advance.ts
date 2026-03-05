@@ -261,12 +261,12 @@ const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'acti
 export const advancePhase = (
   def: GameDef,
   state: GameState,
+  evalRuntimeResources: EvalRuntimeResources,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
-  evalRuntimeResources?: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
-  const lifecycleResources = evalRuntimeResources ?? createEvalRuntimeResources();
+  const lifecycleResources = evalRuntimeResources;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const phases = effectiveTurnPhases(def, state);
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
@@ -408,6 +408,7 @@ export const advanceToDecisionPoint = (
   evalRuntimeResources?: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
+  const operationResources = evalRuntimeResources ?? createEvalRuntimeResources();
   const phaseCount = effectiveTurnPhases(def, state).length;
   if (phaseCount <= 0) {
     throw kernelRuntimeError(
@@ -445,7 +446,7 @@ export const advanceToDecisionPoint = (
       }
     }
 
-    nextState = advancePhase(def, nextState, triggerLogCollector, policy, evalRuntimeResources, cachedRuntime);
+    nextState = advancePhase(def, nextState, operationResources, triggerLogCollector, policy, cachedRuntime);
     advances += 1;
   }
 

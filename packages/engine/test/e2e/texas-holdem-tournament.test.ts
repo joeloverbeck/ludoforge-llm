@@ -7,6 +7,7 @@ import {
   asPhaseId,
   assertValidatedGameDef,
   asPlayerId,
+  createEvalRuntimeResources,
   initialState,
   legalMoves,
   serializeTrace,
@@ -277,7 +278,7 @@ describe('texas hold\'em tournament e2e', () => {
       },
     };
 
-    const afterCleanup = advancePhase(def, engineered);
+    const afterCleanup = advancePhase(def, engineered, createEvalRuntimeResources());
     const eliminatedPlayers = [0, 1];
     assert.equal(Number(afterCleanup.globalVars.activePlayers), 1);
     for (const player of eliminatedPlayers) {
@@ -310,7 +311,7 @@ describe('texas hold\'em tournament e2e', () => {
       },
     };
 
-    const headsUpState = advanceToDecisionPoint(def, advancePhase(def, engineered));
+    const headsUpState = advanceToDecisionPoint(def, advancePhase(def, engineered, createEvalRuntimeResources()));
 
     const alive = nonEliminatedPlayers(headsUpState);
     assert.deepEqual(alive.length, 2);
@@ -375,7 +376,7 @@ describe('texas hold\'em tournament e2e', () => {
       },
     };
 
-    const afterCleanup = advancePhase(def, engineered);
+    const afterCleanup = advancePhase(def, engineered, createEvalRuntimeResources());
 
     assert.equal(Number(afterCleanup.globalVars.activePlayers), 1);
     assert.equal(afterCleanup.perPlayerVars[0]?.eliminated, true);
@@ -399,7 +400,7 @@ describe('texas hold\'em tournament e2e', () => {
       },
     };
 
-    const afterBoundary = advancePhase(def, beforeBoundary);
+    const afterBoundary = advancePhase(def, beforeBoundary, createEvalRuntimeResources());
     assert.equal(Number(afterBoundary.globalVars.handsPlayed), 10);
     assert.equal(Number(beforeBoundary.globalVars.blindLevel), 0);
     assert.equal(Number(beforeBoundary.globalVars.smallBlind), 10);

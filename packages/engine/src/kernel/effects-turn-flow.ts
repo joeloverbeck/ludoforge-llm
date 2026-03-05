@@ -268,12 +268,12 @@ export const applyAdvancePhase = (
   const nextState = advancePhase(
     ctx.def,
     ctx.state,
-    undefined,
-    lifecycleBudgetOptions(ctx),
     createEvalRuntimeResources({
       collector: ctx.collector,
       queryRuntimeCache: ctx.queryRuntimeCache,
     }),
+    undefined,
+    lifecycleBudgetOptions(ctx),
   );
   return {
     state: nextState,

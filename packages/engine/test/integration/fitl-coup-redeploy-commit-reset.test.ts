@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   advancePhase,
+  createEvalRuntimeResources,
   asPhaseId,
   initialState,
   type EffectAST,
@@ -186,7 +187,7 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     const start = initialState(def, 73, 2).state;
     const phaseLog: TriggerLogEntry[] = [];
 
-    const afterRedeploy = advancePhase(def, start, phaseLog);
+    const afterRedeploy = advancePhase(def, start, createEvalRuntimeResources(), phaseLog);
     assert.equal(afterRedeploy.currentPhase, asPhaseId('redeploy'));
     assert.equal(afterRedeploy.globalVars.redeployExecuted, 1);
     assert.equal(afterRedeploy.globalVars.redeployControlCheckpoint, 3);
@@ -194,14 +195,14 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     assert.equal(afterRedeploy.zones['arvn_redeploy:none']?.length, 2);
     assert.equal(afterRedeploy.zones['nva_base:none']?.length, 1);
 
-    const afterCommitment = advancePhase(def, afterRedeploy, phaseLog);
+    const afterCommitment = advancePhase(def, afterRedeploy, createEvalRuntimeResources(), phaseLog);
     assert.equal(afterCommitment.currentPhase, asPhaseId('commitment'));
     assert.equal(afterCommitment.globalVars.commitmentExecuted, 1);
     assert.equal(afterCommitment.globalVars.commitmentControlCheckpoint, 3);
     assert.equal(afterCommitment.zones['us_available:none']?.length, 2);
     assert.equal(afterCommitment.zones['us_out_of_play:none']?.length, 0);
 
-    const afterReset = advancePhase(def, afterCommitment, phaseLog);
+    const afterReset = advancePhase(def, afterCommitment, createEvalRuntimeResources(), phaseLog);
     assert.equal(afterReset.currentPhase, asPhaseId('reset'));
     assert.equal(afterReset.globalVars.resetExecuted, 1);
     assert.equal(afterReset.globalVars.eligibilityBaselineAudit, 1);
@@ -217,7 +218,7 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     assert.deepEqual(phaseTriggerOrder, ['on_redeploy_enter', 'on_commitment_enter', 'on_reset_enter']);
 
     const lifecycleLog: TriggerLogEntry[] = [];
-    const nextTurn = advancePhase(def, afterReset, lifecycleLog);
+    const nextTurn = advancePhase(def, afterReset, createEvalRuntimeResources(), lifecycleLog);
 
     assert.equal(nextTurn.currentPhase, asPhaseId('main'));
     assert.equal(nextTurn.turnCount, 1);
@@ -235,9 +236,9 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     const def = createRedeployCommitResetDef({ isFinalCoup: true, trail: 0 });
     const start = initialState(def, 79, 2).state;
 
-    const afterRedeploy = advancePhase(def, start);
-    const afterCommitment = advancePhase(def, afterRedeploy);
-    const afterReset = advancePhase(def, afterCommitment);
+    const afterRedeploy = advancePhase(def, start, createEvalRuntimeResources());
+    const afterCommitment = advancePhase(def, afterRedeploy, createEvalRuntimeResources());
+    const afterReset = advancePhase(def, afterCommitment, createEvalRuntimeResources());
 
     assert.equal(afterCommitment.globalVars.commitmentExecuted, 0);
     assert.equal(afterReset.globalVars.resetExecuted, 0);
@@ -257,11 +258,11 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
 
     const runOnce = () => {
       const start = initialState(def, 83, 2).state;
-      const redeploy = advancePhase(def, start);
-      const commitment = advancePhase(def, redeploy);
-      const reset = advancePhase(def, commitment);
+      const redeploy = advancePhase(def, start, createEvalRuntimeResources());
+      const commitment = advancePhase(def, redeploy, createEvalRuntimeResources());
+      const reset = advancePhase(def, commitment, createEvalRuntimeResources());
       const lifecycleLog: TriggerLogEntry[] = [];
-      const nextTurn = advancePhase(def, reset, lifecycleLog);
+      const nextTurn = advancePhase(def, reset, createEvalRuntimeResources(), lifecycleLog);
       return { nextTurn, lifecycleLog };
     };
 

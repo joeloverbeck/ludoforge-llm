@@ -257,7 +257,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(Number(state.perPlayerVars['7']?.chipStack ?? -1), 4344);
     assert.equal(Number(state.perPlayerVars['8']?.chipStack ?? -1), 0);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assert.equal(cleanup.perPlayerVars['4']?.eliminated, true);
     assert.equal(cleanup.perPlayerVars['6']?.eliminated, true);
@@ -393,7 +393,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     const seat9Score = Number(state.perPlayerVars['7']?.showdownScore ?? -2);
     assert.equal(seat8Score, seat9Score);
 
-    const cleanup = advancePhase(def, state);
+    const cleanup = advancePhase(def, state, createEvalRuntimeResources());
     assert.equal(cleanup.currentPhase, 'hand-cleanup');
     assert.equal(cleanup.perPlayerVars['0']?.eliminated, true);
     assert.equal(cleanup.perPlayerVars['6']?.eliminated, false);
@@ -527,7 +527,7 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     const lifecycleResources = createEvalRuntimeResources({ collector: { warnings: [], trace: [] } });
     let guard = 0;
     while (state.currentPhase !== 'showdown' && guard < 24) {
-      state = advancePhase(def, state, undefined, undefined, lifecycleResources);
+      state = advancePhase(def, state, lifecycleResources, undefined, undefined);
       guard += 1;
     }
     assert.equal(state.currentPhase, 'showdown');

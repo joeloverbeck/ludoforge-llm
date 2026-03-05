@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   advancePhase,
+  createEvalRuntimeResources,
   applyMove,
   asActionId,
   asPhaseId,
@@ -98,7 +99,7 @@ describe('FITL coup redeploy phase (Rule 6.4)', () => {
       },
     });
 
-    const entered = advancePhase(def, state);
+    const entered = advancePhase(def, state, createEvalRuntimeResources());
 
     assert.equal(entered.currentPhase, asPhaseId('coupRedeploy'));
     assert.equal(countFactionInZone(entered, 'central-laos:none', 'US'), 0);

@@ -1,6 +1,6 @@
 # KERQUERY-017: Make advanceToDecisionPoint a single runtime-resource boundary
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — lifecycle/phase-advance runtime resource ownership and regression coverage
@@ -15,8 +15,8 @@
 1. Lifecycle dispatch and phase advancement were recently moved toward canonical `EvalRuntimeResources` ownership.
 2. `advancePhase` currently creates a default resources object when one is not provided.
 3. `advanceToDecisionPoint` currently forwards `evalRuntimeResources` to `advancePhase` but does not create one local default for the full loop when omitted.
-4. Existing tests validate provided-resource threading and lifecycle behavior, but do not lock the omitted-resource operation-boundary contract for `advanceToDecisionPoint`.
-5. Active tickets `KERQUERY-012` to `KERQUERY-016` do not cover this exact phase-advance default-boundary gap.
+4. Existing tests validate lifecycle behavior and operation-scoped seat-resolution threading, but do not lock the omitted-resource runtime-resource boundary contract for `advanceToDecisionPoint`.
+5. Related tickets `KERQUERY-012` to `KERQUERY-016` are archived and do not cover this exact phase-advance omitted-resource default-boundary gap.
 
 ## Architecture Check
 
@@ -35,7 +35,7 @@
 ### 2. Add regression coverage for omitted-resource boundary behavior
 
 1. Add a unit test where `advanceToDecisionPoint` is called without resources.
-2. Use an instrumented query cache to assert cache index build/write occurs once across multiple internal lifecycle advances in a single call.
+2. Add a source-contract guard that asserts `advanceToDecisionPoint` creates one operation-scoped default resources object (`evalRuntimeResources ?? createEvalRuntimeResources()`) and threads that same identifier through internal `advancePhase` calls.
 3. Preserve existing lifecycle semantics and trigger ordering assertions.
 
 ## Files to Touch
@@ -66,7 +66,7 @@
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/phase-advance.test.ts` — add omitted-resource boundary regression asserting single-operation cache reuse.
+1. `packages/engine/test/unit/phase-advance.test.ts` — add omitted-resource boundary regression asserting operation-scoped default resource allocation/threading within `advanceToDecisionPoint`.
 
 ### Commands
 
@@ -74,3 +74,21 @@
 2. `node --test packages/engine/dist/test/unit/phase-advance.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-05
+- **What Changed**:
+  - `advanceToDecisionPoint` now creates one operation-scoped default runtime-resources object (`operationResources`) when `evalRuntimeResources` is omitted.
+  - `advanceToDecisionPoint` now threads `operationResources` through internal `advancePhase` calls, removing per-iteration default resource allocation.
+  - Added source-contract regression coverage in `phase-advance.test.ts` to lock:
+    - operation-scoped default resource construction via `evalRuntimeResources ?? createEvalRuntimeResources()`
+    - forwarding of `operationResources` (and not raw `evalRuntimeResources`) into `advancePhase`
+  - Updated ticket assumptions to reflect archived status of `KERQUERY-012..016` and align omitted-resource coverage strategy with observable architecture contracts.
+- **Deviations From Original Plan**:
+  - Replaced the proposed runtime-instrumented omitted-resource cache assertion with a source-contract guard. This avoids introducing test-only indirection while still enforcing the intended operation-boundary architecture.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/phase-advance.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (380/380).
+  - `pnpm -F @ludoforge/engine lint` passed.

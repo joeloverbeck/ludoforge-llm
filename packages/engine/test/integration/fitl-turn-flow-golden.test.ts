@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   advancePhase,
+  createEvalRuntimeResources,
   applyMove,
   asActionId,
   asPhaseId,
@@ -215,7 +216,7 @@ describe('FITL turn-flow golden trace', () => {
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
     const first = applyMove(def, start, passMove);
     const firstBoundaryTrace: TriggerLogEntry[] = [];
-    const firstBoundary = advancePhase(def, first.state, firstBoundaryTrace);
+    const firstBoundary = advancePhase(def, first.state, createEvalRuntimeResources(), firstBoundaryTrace);
 
     const eventMove: Move = {
       actionId: asActionId('event'),
@@ -223,7 +224,7 @@ describe('FITL turn-flow golden trace', () => {
     };
     const second = applyMove(def, firstBoundary, eventMove);
     const secondBoundaryTrace: TriggerLogEntry[] = [];
-    const secondBoundary = advancePhase(def, second.state, secondBoundaryTrace);
+    const secondBoundary = advancePhase(def, second.state, createEvalRuntimeResources(), secondBoundaryTrace);
 
     const actual: FitlTurnFlowGolden = {
       seed,

@@ -3031,6 +3031,97 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('accepts accompanyingOps set to any', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          accompanyingOps: 'any',
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path.includes('.accompanyingOps[')));
+  });
+
+  it('accepts accompanyingOps entries that reference declared actions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          accompanyingOps: ['playCard'],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path.includes('.accompanyingOps[')));
+  });
+
+  it('reports accompanyingOps entries that reference unknown actions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          accompanyingOps: ['nonexistent'],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_ACTION_MISSING' && diag.path === 'actionPipelines[0].accompanyingOps[0]',
+      ),
+    );
+  });
+
+  it('accepts operation profiles with accompanyingOps omitted', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path.includes('.accompanyingOps[')));
+  });
+
   it('reports ambiguous operation profile action mappings', () => {
     const base = createValidGameDef();
     const def = {

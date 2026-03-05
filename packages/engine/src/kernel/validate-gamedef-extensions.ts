@@ -336,6 +336,20 @@ export const validateActionPipelines = (
         actionCandidates,
       );
     }
+    if (Array.isArray(actionPipeline.accompanyingOps)) {
+      actionPipeline.accompanyingOps.forEach((opId, opIndex) => {
+        if (!actionCandidates.includes(opId)) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'REF_ACTION_MISSING',
+            `${basePath}.accompanyingOps[${opIndex}]`,
+            `Unknown action "${opId}" in accompanyingOps.`,
+            opId,
+            actionCandidates,
+          );
+        }
+      });
+    }
 
     operationActionIdCounts.set(actionPipeline.actionId, (operationActionIdCounts.get(actionPipeline.actionId) ?? 0) + 1);
 

@@ -57,7 +57,7 @@ Maintain current diagnostics for empty `stages`, invalid `atomicity`, unknown `a
 ## Out of Scope
 
 - `linkedWindows` reference validation (covered by `archive/tickets/PIPEVAL-003-validate-pipeline-linkedwindows-against-overridewindows.md`)
-- `accompanyingOps` reference validation (covered by `tickets/PIPEVAL-004-validate-pipeline-accompanyingops-against-actions.md`)
+- `accompanyingOps` reference validation (covered by `archive/tickets/PIPEVAL/PIPEVAL-004-validate-pipeline-accompanyingops-against-actions.md`)
 - Broad validator-wide refactors outside `validateActionPipelines`
 
 ## Acceptance Criteria

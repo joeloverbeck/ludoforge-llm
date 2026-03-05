@@ -1351,7 +1351,10 @@ describe('compile top-level actions/triggers/end conditions', () => {
       metadata: { id: 'operation-profile-pass-through', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [
+        { id: 'patrol', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'train', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
       actionPipelines: [
         {
           id: 'patrol-profile',

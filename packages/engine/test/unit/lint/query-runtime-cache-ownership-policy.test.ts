@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
+import ts from 'typescript';
+import { isIdentifierExported, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
 import { findEnginePackageRoot, listTypeScriptFiles } from '../../helpers/lint-policy-helpers.js';
 
 const OWNERSHIP_SYMBOLS = [
@@ -13,65 +15,205 @@ const OWNERSHIP_SYMBOLS = [
 const CANONICAL_SPECIFIER = './query-runtime-cache.js';
 const ALLOWED_BARREL_REEXPORTS = new Set(['index.ts', 'runtime.ts']);
 
-type ParsedSpecifier = {
-  readonly localName: string;
-  readonly importedOrExportedName: string;
-};
-
-function parseSpecifierList(specifierList: string): ParsedSpecifier[] {
-  const parsed: ParsedSpecifier[] = [];
-  for (const part of specifierList.split(',')) {
-    const normalized = part.trim().replace(/^type\s+/u, '');
-    if (!normalized) {
-      continue;
+function hasLocalDefinition(sourceFile: ts.SourceFile, symbolName: string): boolean {
+  return sourceFile.statements.some((statement) => {
+    if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)) &&
+      statement.name?.text === symbolName
+    ) {
+      return true;
     }
-    const asMatch = normalized.match(/^(?<local>\w+)\s+as\s+(?<renamed>\w+)$/u);
-    if (asMatch?.groups?.local && asMatch.groups.renamed) {
-      parsed.push({
-        localName: asMatch.groups.local,
-        importedOrExportedName: asMatch.groups.renamed,
-      });
-      continue;
+    if (!ts.isVariableStatement(statement)) {
+      return false;
     }
-    const directMatch = normalized.match(/^(?<name>\w+)$/u);
-    if (directMatch?.groups?.name) {
-      parsed.push({
-        localName: directMatch.groups.name,
-        importedOrExportedName: directMatch.groups.name,
-      });
-    }
-  }
-  return parsed;
+    return statement.declarationList.declarations.some(
+      (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === symbolName,
+    );
+  });
 }
 
-function hasExportedDefinition(source: string, symbolName: string): boolean {
-  const exportedDeclarationPattern = new RegExp(
-    `(?:^|\\n)\\s*export\\s+(?:async\\s+)?(?:function|const|let|var|class|type|interface|enum)\\s+${symbolName}\\b`,
-    'u',
+function isIdentifierTypeReference(typeNode: ts.TypeNode | undefined, name: string): typeNode is ts.TypeReferenceNode {
+  return (
+    typeNode !== undefined &&
+    ts.isTypeReferenceNode(typeNode) &&
+    ts.isIdentifier(typeNode.typeName) &&
+    typeNode.typeName.text === name
   );
-  if (exportedDeclarationPattern.test(source)) {
-    return true;
+}
+
+function isReadonlyMapStringToString(typeNode: ts.TypeNode | undefined): boolean {
+  if (!isIdentifierTypeReference(typeNode, 'ReadonlyMap')) {
+    return false;
   }
-  for (const match of source.matchAll(/export\s*\{([^}]+)\}(?!\s*from)/gmu)) {
-    const specifierList = match[1];
-    if (!specifierList) {
+  const typeArguments = typeNode.typeArguments;
+  if (typeArguments === undefined || typeArguments.length !== 2) {
+    return false;
+  }
+  return (
+    typeArguments[0]!.kind === ts.SyntaxKind.StringKeyword &&
+    typeArguments[1]!.kind === ts.SyntaxKind.StringKeyword
+  );
+}
+
+function isReadonlyMapStringToStringOrUndefined(typeNode: ts.TypeNode | undefined): boolean {
+  if (typeNode === undefined || !ts.isUnionTypeNode(typeNode)) {
+    return false;
+  }
+  const hasReadonlyMap = typeNode.types.some((member) => isReadonlyMapStringToString(member));
+  const hasUndefined = typeNode.types.some((member) => member.kind === ts.SyntaxKind.UndefinedKeyword);
+  return hasReadonlyMap && hasUndefined;
+}
+
+function assertQueryRuntimeCacheMethodSignature(
+  sourceFile: ts.SourceFile,
+  methodName: string,
+  parameterTypeChecks: readonly ((typeNode: ts.TypeNode | undefined) => boolean)[],
+  returnTypeCheck: (typeNode: ts.TypeNode | undefined) => boolean,
+): void {
+  const queryRuntimeCacheInterface = sourceFile.statements.find(
+    (statement): statement is ts.InterfaceDeclaration =>
+      ts.isInterfaceDeclaration(statement) && statement.name.text === 'QueryRuntimeCache',
+  );
+  assert.notEqual(queryRuntimeCacheInterface, undefined, 'query-runtime-cache.ts must declare QueryRuntimeCache interface');
+  if (queryRuntimeCacheInterface === undefined) {
+    return;
+  }
+
+  const methodSignature = queryRuntimeCacheInterface.members.find(
+    (member): member is ts.MethodSignature =>
+      ts.isMethodSignature(member) && ts.isIdentifier(member.name) && member.name.text === methodName,
+  );
+  assert.notEqual(methodSignature, undefined, `QueryRuntimeCache must expose ${methodName} domain accessor`);
+  if (methodSignature === undefined) {
+    return;
+  }
+
+  assert.equal(
+    methodSignature.parameters.length,
+    parameterTypeChecks.length,
+    `QueryRuntimeCache.${methodName} must define ${parameterTypeChecks.length} parameter(s)`,
+  );
+  for (let index = 0; index < parameterTypeChecks.length; index += 1) {
+    const parameter: ts.ParameterDeclaration | undefined = methodSignature.parameters.at(index);
+    assert.notEqual(parameter, undefined, `QueryRuntimeCache.${methodName} must define parameter #${index + 1}`);
+    if (parameter === undefined) {
       continue;
     }
-    for (const parsed of parseSpecifierList(specifierList)) {
-      if (parsed.localName === symbolName || parsed.importedOrExportedName === symbolName) {
-        return true;
+    const parameterTypeCheck = parameterTypeChecks[index];
+    assert.notEqual(parameterTypeCheck, undefined, `Missing type guard for QueryRuntimeCache.${methodName} parameter #${index + 1}`);
+    if (parameterTypeCheck === undefined) {
+      continue;
+    }
+    assert.equal(
+      parameterTypeCheck(parameter.type),
+      true,
+      `QueryRuntimeCache.${methodName} parameter #${index + 1} type must match ownership contract`,
+    );
+  }
+
+  assert.equal(
+    returnTypeCheck(methodSignature.type),
+    true,
+    `QueryRuntimeCache.${methodName} return type must match ownership contract`,
+  );
+}
+
+function collectImportViolations(
+  sourceFile: ts.SourceFile,
+  filePath: string,
+  ownershipSymbols: ReadonlySet<string>,
+): string[] {
+  const violations: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+      continue;
+    }
+    const clause = statement.importClause;
+    if (clause === undefined || clause.namedBindings === undefined || !ts.isNamedImports(clause.namedBindings)) {
+      continue;
+    }
+    const fromModule = statement.moduleSpecifier.text;
+    for (const specifier of clause.namedBindings.elements) {
+      const importedName = specifier.propertyName?.text ?? specifier.name.text;
+      const localName = specifier.name.text;
+      if (!ownershipSymbols.has(importedName) && !ownershipSymbols.has(localName)) {
+        continue;
+      }
+      const hasAlias = importedName !== localName;
+      if (fromModule !== CANONICAL_SPECIFIER || hasAlias) {
+        violations.push(`${filePath}:${fromModule}:${importedName}${hasAlias ? ` as ${localName}` : ''}`);
       }
     }
   }
-  return false;
+  return violations;
 }
 
-function hasLocalDefinition(source: string, symbolName: string): boolean {
-  const localDeclarationPattern = new RegExp(
-    `(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?(?:function|const|let|var|class|type|interface|enum)\\s+${symbolName}\\b`,
-    'u',
+function collectNamedReExportViolations(
+  sourceFile: ts.SourceFile,
+  filePath: string,
+  ownershipSymbols: ReadonlySet<string>,
+): string[] {
+  const violations: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExportDeclaration(statement)) {
+      continue;
+    }
+    const moduleSpecifier = statement.moduleSpecifier;
+    if (moduleSpecifier === undefined || !ts.isStringLiteral(moduleSpecifier)) {
+      continue;
+    }
+    if (statement.exportClause === undefined || !ts.isNamedExports(statement.exportClause)) {
+      continue;
+    }
+    const fromModule = moduleSpecifier.text;
+    for (const specifier of statement.exportClause.elements) {
+      const localName = specifier.propertyName?.text ?? specifier.name.text;
+      const exportedName = specifier.name.text;
+      if (!ownershipSymbols.has(localName) && !ownershipSymbols.has(exportedName)) {
+        continue;
+      }
+      violations.push(
+        `${filePath}:${fromModule}:${localName}${localName !== exportedName ? ` as ${exportedName}` : ''}`,
+      );
+    }
+  }
+  return violations;
+}
+
+function hasCanonicalWildcardReExport(sourceFile: ts.SourceFile): boolean {
+  return sourceFile.statements.some(
+    (statement) =>
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause === undefined &&
+      statement.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === CANONICAL_SPECIFIER,
   );
-  return localDeclarationPattern.test(source);
+}
+
+function hasBannedGenericIndexMethods(sourceFile: ts.SourceFile): string[] {
+  const bannedMethods = new Set(['getIndex', 'setIndex']);
+  const labels: string[] = [];
+  const queryRuntimeCacheInterface = sourceFile.statements.find(
+    (statement): statement is ts.InterfaceDeclaration =>
+      ts.isInterfaceDeclaration(statement) && statement.name.text === 'QueryRuntimeCache',
+  );
+  if (queryRuntimeCacheInterface === undefined) {
+    return labels;
+  }
+  for (const member of queryRuntimeCacheInterface.members) {
+    if (!ts.isMethodSignature(member) || !ts.isIdentifier(member.name)) {
+      continue;
+    }
+    if (bannedMethods.has(member.name.text)) {
+      labels.push(`QueryRuntimeCache.${member.name.text} method`);
+    }
+  }
+  return labels;
 }
 
 describe('query-runtime-cache ownership policy', () => {
@@ -91,37 +233,30 @@ describe('query-runtime-cache ownership policy', () => {
     const bannedCanonicalExports: string[] = [];
 
     const canonicalSource = readFileSync(canonicalFile, 'utf8');
-    const bannedExportPatterns = [
-      /export\s+const\s+QUERY_RUNTIME_CACHE_INDEX_KEYS\b/u,
-      /export\s+type\s+QueryRuntimeCacheIndexKey\b/u,
-      /(?:^|\n)\s*getIndex\s*\(/u,
-      /(?:^|\n)\s*setIndex\s*\(/u,
-    ];
-    const bannedExportLabels = [
-      'QUERY_RUNTIME_CACHE_INDEX_KEYS export',
-      'QueryRuntimeCacheIndexKey export',
-      'QueryRuntimeCache.getIndex method',
-      'QueryRuntimeCache.setIndex method',
-    ];
-    for (let index = 0; index < bannedExportPatterns.length; index += 1) {
-      if (bannedExportPatterns[index]!.test(canonicalSource)) {
-        bannedCanonicalExports.push(bannedExportLabels[index]!);
-      }
+    const canonicalSourceFile = parseTypeScriptSource(canonicalSource, canonicalFile);
+    if (isIdentifierExported(canonicalSourceFile, 'QUERY_RUNTIME_CACHE_INDEX_KEYS')) {
+      bannedCanonicalExports.push('QUERY_RUNTIME_CACHE_INDEX_KEYS export');
     }
+    if (isIdentifierExported(canonicalSourceFile, 'QueryRuntimeCacheIndexKey')) {
+      bannedCanonicalExports.push('QueryRuntimeCacheIndexKey export');
+    }
+    bannedCanonicalExports.push(...hasBannedGenericIndexMethods(canonicalSourceFile));
     for (const symbolName of OWNERSHIP_SYMBOLS) {
-      if (!hasExportedDefinition(canonicalSource, symbolName)) {
+      if (!isIdentifierExported(canonicalSourceFile, symbolName)) {
         missingCanonicalExports.push(symbolName);
       }
     }
-    assert.equal(
-      canonicalSource.includes('getTokenZoneByTokenIdIndex(state: GameState): ReadonlyMap<string, string> | undefined;'),
-      true,
-      'QueryRuntimeCache must expose getTokenZoneByTokenIdIndex domain accessor',
+    assertQueryRuntimeCacheMethodSignature(
+      canonicalSourceFile,
+      'getTokenZoneByTokenIdIndex',
+      [(typeNode) => isIdentifierTypeReference(typeNode, 'GameState')],
+      isReadonlyMapStringToStringOrUndefined,
     );
-    assert.equal(
-      canonicalSource.includes('setTokenZoneByTokenIdIndex(state: GameState, value: ReadonlyMap<string, string>): void;'),
-      true,
-      'QueryRuntimeCache must expose setTokenZoneByTokenIdIndex domain accessor',
+    assertQueryRuntimeCacheMethodSignature(
+      canonicalSourceFile,
+      'setTokenZoneByTokenIdIndex',
+      [(typeNode) => isIdentifierTypeReference(typeNode, 'GameState'), isReadonlyMapStringToString],
+      (typeNode) => typeNode?.kind === ts.SyntaxKind.VoidKeyword,
     );
 
     for (const filePath of files) {
@@ -129,62 +264,26 @@ describe('query-runtime-cache ownership policy', () => {
         continue;
       }
       const source = readFileSync(filePath, 'utf8');
+      const sourceFile = parseTypeScriptSource(source, filePath);
       const fileName = filePath.split('/').at(-1) ?? filePath;
 
       for (const symbolName of OWNERSHIP_SYMBOLS) {
-        if (hasLocalDefinition(source, symbolName)) {
+        if (hasLocalDefinition(sourceFile, symbolName)) {
           invalidLocalDefinitions.push(`${filePath}:${symbolName}`);
         }
       }
 
-      for (const match of source.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/gmu)) {
-        const specifierList = match[1];
-        const fromModule = match[2];
-        if (!specifierList || !fromModule) {
-          continue;
-        }
-        for (const parsed of parseSpecifierList(specifierList)) {
-          if (!ownershipSymbols.has(parsed.localName)) {
-            continue;
-          }
-          const hasAlias = parsed.localName !== parsed.importedOrExportedName;
-          if (fromModule !== CANONICAL_SPECIFIER || hasAlias) {
-            invalidImports.push(
-              `${filePath}:${fromModule}:${parsed.localName}${hasAlias ? ` as ${parsed.importedOrExportedName}` : ''}`,
-            );
-          }
-        }
-      }
-
-      for (const match of source.matchAll(/export\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/gmu)) {
-        const specifierList = match[1];
-        const fromModule = match[2];
-        if (!specifierList || !fromModule) {
-          continue;
-        }
-        for (const parsed of parseSpecifierList(specifierList)) {
-          if (!ownershipSymbols.has(parsed.localName) && !ownershipSymbols.has(parsed.importedOrExportedName)) {
-            continue;
-          }
-          invalidNamedReExports.push(
-            `${filePath}:${fromModule}:${parsed.localName}${parsed.localName !== parsed.importedOrExportedName ? ` as ${parsed.importedOrExportedName}` : ''}`,
-          );
-        }
-      }
-
-      for (const match of source.matchAll(/export\s*\*\s*from\s*['"]([^'"]+)['"]/gmu)) {
-        const fromModule = match[1];
-        if (fromModule !== CANONICAL_SPECIFIER) {
-          continue;
-        }
-        if (!ALLOWED_BARREL_REEXPORTS.has(fileName)) {
-          invalidWildcardReExports.push(`${filePath}:export*:${fromModule}`);
-        }
+      invalidImports.push(...collectImportViolations(sourceFile, filePath, ownershipSymbols));
+      invalidNamedReExports.push(...collectNamedReExportViolations(sourceFile, filePath, ownershipSymbols));
+      if (hasCanonicalWildcardReExport(sourceFile) && !ALLOWED_BARREL_REEXPORTS.has(fileName)) {
+        invalidWildcardReExports.push(`${filePath}:export*:${CANONICAL_SPECIFIER}`);
       }
     }
 
     const indexSource = readFileSync(resolve(kernelDir, 'index.ts'), 'utf8');
+    const indexSourceFile = parseTypeScriptSource(indexSource, resolve(kernelDir, 'index.ts'));
     const runtimeSource = readFileSync(resolve(kernelDir, 'runtime.ts'), 'utf8');
+    const runtimeSourceFile = parseTypeScriptSource(runtimeSource, resolve(kernelDir, 'runtime.ts'));
 
     assert.deepEqual(
       missingCanonicalExports,
@@ -217,12 +316,12 @@ describe('query-runtime-cache ownership policy', () => {
       'only kernel barrels may wildcard re-export ./query-runtime-cache.js',
     );
     assert.equal(
-      indexSource.includes(`export * from '${CANONICAL_SPECIFIER}';`) || indexSource.includes(`export * from "${CANONICAL_SPECIFIER}";`),
+      hasCanonicalWildcardReExport(indexSourceFile),
       true,
       'kernel/index.ts must expose query-runtime-cache.ts through direct canonical re-export',
     );
     assert.equal(
-      runtimeSource.includes(`export * from '${CANONICAL_SPECIFIER}';`) || runtimeSource.includes(`export * from "${CANONICAL_SPECIFIER}";`),
+      hasCanonicalWildcardReExport(runtimeSourceFile),
       true,
       'kernel/runtime.ts must expose query-runtime-cache.ts through direct canonical re-export',
     );

@@ -179,11 +179,12 @@ describe('FITL card-10 Rolling Thunder', () => {
       },
     };
 
-    const atReset = advancePhase({ def, state: preparedForCoupReset, evalRuntimeResources: createEvalRuntimeResources() });
+    const operationResources = createEvalRuntimeResources();
+    const atReset = advancePhase({ def, state: preparedForCoupReset, evalRuntimeResources: operationResources });
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.mom_rollingThunder, false, 'Coup reset must clear Rolling Thunder momentum');
 
-    const afterReset = advancePhase({ def, state: atReset, evalRuntimeResources: createEvalRuntimeResources() });
+    const afterReset = advancePhase({ def, state: atReset, evalRuntimeResources: operationResources });
     assert.equal(afterReset.currentPhase, asPhaseId('main'));
     assert.doesNotThrow(() => runAirStrike(afterReset), 'Air Strike should be legal again after Coup reset');
   });

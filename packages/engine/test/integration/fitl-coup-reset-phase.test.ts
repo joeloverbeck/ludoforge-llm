@@ -123,9 +123,10 @@ describe('FITL coup reset phase (production data)', () => {
   it('runs Rule 6.6 automatically on coupReset phase entry and uses lifecycle for next card', () => {
     const def = compileProductionDef();
     const start = setupResetEntryState(def, 4);
+    const operationResources = createEvalRuntimeResources();
 
     const resetEntryLog: TriggerLogEntry[] = [];
-    const atReset = advancePhase({ def, state: start, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: resetEntryLog });
+    const atReset = advancePhase({ def, state: start, evalRuntimeResources: operationResources, triggerLogCollector: resetEntryLog });
 
     assert.equal(atReset.currentPhase, asPhaseId('coupReset'));
     assert.equal(atReset.globalVars.trail, 3);
@@ -167,7 +168,7 @@ describe('FITL coup reset phase (production data)', () => {
     const beforeBoundaryDeckTop = atReset.zones['deck:none']?.[0]?.id;
 
     const lifecycleLog: TriggerLogEntry[] = [];
-    const nextTurn = advancePhase({ def, state: atReset, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: lifecycleLog });
+    const nextTurn = advancePhase({ def, state: atReset, evalRuntimeResources: operationResources, triggerLogCollector: lifecycleLog });
 
     assert.equal(nextTurn.currentPhase, asPhaseId('main'));
     assert.equal(nextTurn.turnCount, atReset.turnCount + 1);

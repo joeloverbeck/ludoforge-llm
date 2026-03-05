@@ -216,7 +216,8 @@ describe('FITL turn-flow golden trace', () => {
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
     const first = applyMove(def, start, passMove);
     const firstBoundaryTrace: TriggerLogEntry[] = [];
-    const firstBoundary = advancePhase({ def, state: first.state, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: firstBoundaryTrace });
+    const operationResources = createEvalRuntimeResources();
+    const firstBoundary = advancePhase({ def, state: first.state, evalRuntimeResources: operationResources, triggerLogCollector: firstBoundaryTrace });
 
     const eventMove: Move = {
       actionId: asActionId('event'),
@@ -224,7 +225,7 @@ describe('FITL turn-flow golden trace', () => {
     };
     const second = applyMove(def, firstBoundary, eventMove);
     const secondBoundaryTrace: TriggerLogEntry[] = [];
-    const secondBoundary = advancePhase({ def, state: second.state, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: secondBoundaryTrace });
+    const secondBoundary = advancePhase({ def, state: second.state, evalRuntimeResources: operationResources, triggerLogCollector: secondBoundaryTrace });
 
     const actual: FitlTurnFlowGolden = {
       seed,

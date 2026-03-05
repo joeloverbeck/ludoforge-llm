@@ -1,12 +1,12 @@
 import {
   isDotSafePathKey,
+  joinPathSegments,
   normalizeArrayIndexSegmentsToBrackets,
   normalizeArrayIndexSegmentsToDots,
   splitPathSegments,
+  stripMacroPathSegments,
   toObjectPathSuffix,
 } from './path-utils.js';
-
-const MACRO_SEGMENT_PATTERN = /\[macro:[^\]]+\](\[[0-9]+\])?/g;
 
 export function appendDiagnosticKeySegment(basePath: string, key: string): string {
   return `${basePath}${toObjectPathSuffix(key)}`;
@@ -28,7 +28,7 @@ export function buildDiagnosticSourceLookupCandidates(path: string): readonly st
   const canonicalPath = canonicalizeDiagnosticPath(path);
   const withoutDocPrefix = canonicalPath.slice(4);
   const bracketPath = normalizeArrayIndexSegmentsToBrackets(withoutDocPrefix);
-  const withoutMacroSegments = bracketPath.replace(MACRO_SEGMENT_PATTERN, '');
+  const withoutMacroSegments = stripMacroPathSegments(bracketPath);
   const unique = new Set<string>([path, canonicalPath, withoutDocPrefix, bracketPath, withoutMacroSegments]);
   return [...unique];
 }
@@ -50,20 +50,4 @@ function normalizeQuotedKeySegment(segment: string): string {
   } catch {
     return segment;
   }
-}
-
-function joinPathSegments(segments: readonly string[]): string {
-  let path = segments[0] ?? '';
-  for (const segment of segments.slice(1)) {
-    if (segment.startsWith('[')) {
-      path += segment;
-      continue;
-    }
-    if (/^[0-9]+$/.test(segment)) {
-      path += `.${segment}`;
-      continue;
-    }
-    path += toObjectPathSuffix(segment);
-  }
-  return path;
 }

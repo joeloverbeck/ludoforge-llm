@@ -50,4 +50,10 @@ describe('diagnostic-path-codec', () => {
       ],
     );
   });
+
+  it('strips nested macro segments with escaped macro IDs using shared path contract', () => {
+    const candidates = buildDiagnosticSourceLookupCandidates('setup[0][macro:outer\\]x\\\\y][0][macro:inner][1].args.faction');
+    assert.ok(candidates.includes('setup[0].args.faction'));
+    assert.ok(candidates.includes('setup[0][macro:outer\\]x\\\\y][0][macro:inner][1].args.faction'));
+  });
 });

@@ -359,6 +359,42 @@ phase: ['main'],
     assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_UNKNOWN'));
   });
 
+  it('rejects empty effect macro IDs', () => {
+    const macro: EffectMacroDef = {
+      id: '',
+      params: [],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'x', value: 1 } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      setup: [{ macro: '', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const invalid = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ID_INVALID');
+    assert.ok(invalid !== undefined);
+    assert.equal(invalid?.path, 'effectMacros[0].id');
+  });
+
+  it('escapes bracket-significant macro IDs in nested expansion diagnostic paths', () => {
+    const outerMacro: EffectMacroDef = {
+      id: 'outer]x\\y',
+      params: [],
+      exports: [],
+      effects: [{ macro: 'missing-inner', args: {} }],
+    };
+    const doc = makeDoc({
+      effectMacros: [outerMacro],
+      setup: [{ macro: 'outer]x\\y', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const unknown = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_UNKNOWN');
+    assert.ok(unknown !== undefined);
+    assert.equal(unknown?.path, 'setup[0][macro:outer\\]x\\\\y][0]');
+  });
+
   it('detects duplicate macro IDs', () => {
     const macro1: EffectMacroDef = {
       id: 'dup',

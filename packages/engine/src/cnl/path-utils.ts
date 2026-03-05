@@ -2,6 +2,15 @@ export function isDotSafePathKey(key: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
 }
 
+export function renderMacroPathSegment(macroId: string): string {
+  return `[macro:${escapeMacroPathSegmentValue(macroId)}]`;
+}
+
+export function appendMacroPathSegment(basePath: string, macroId: string, expansionIndex?: number): string {
+  const macroSegment = `${basePath}${renderMacroPathSegment(macroId)}`;
+  return expansionIndex === undefined ? macroSegment : `${macroSegment}[${expansionIndex}]`;
+}
+
 export function toObjectPathSuffix(key: string): string {
   return isDotSafePathKey(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
 }
@@ -117,6 +126,49 @@ export function splitPathSegments(path: string): readonly string[] {
   return segments;
 }
 
+export function joinPathSegments(segments: readonly string[]): string {
+  if (segments.length === 0) {
+    return '';
+  }
+
+  let path = segments[0] ?? '';
+  for (const segment of segments.slice(1)) {
+    if (segment.startsWith('[')) {
+      path += segment;
+      continue;
+    }
+    if (/^[0-9]+$/.test(segment)) {
+      path += `.${segment}`;
+      continue;
+    }
+    path += toObjectPathSuffix(segment);
+  }
+  return path;
+}
+
+export function stripMacroPathSegments(path: string): string {
+  const segments = splitPathSegments(path);
+  if (segments.length === 0) {
+    return path;
+  }
+
+  const stripped: string[] = [];
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    if (segment !== undefined && isMacroPathSegment(segment)) {
+      if (/^\[[0-9]+\]$/.test(segments[index + 1] ?? '')) {
+        index += 1;
+      }
+      continue;
+    }
+    if (segment !== undefined) {
+      stripped.push(segment);
+    }
+  }
+
+  return stripped.length === 0 ? '' : joinPathSegments(stripped);
+}
+
 export function trimLastPathSegment(path: string): string | undefined {
   const segments = splitPathSegments(path);
   if (segments.length <= 1) {
@@ -148,7 +200,15 @@ function readBracketSegmentEnd(path: string, start: number): number | undefined 
       index += 1;
     }
   } else {
-    while (index < path.length && path[index] !== ']') {
+    while (index < path.length) {
+      const ch = path[index];
+      if (ch === '\\') {
+        index += 2;
+        continue;
+      }
+      if (ch === ']') {
+        break;
+      }
       index += 1;
     }
   }
@@ -157,4 +217,12 @@ function readBracketSegmentEnd(path: string, start: number): number | undefined 
     return undefined;
   }
   return index + 1;
+}
+
+function escapeMacroPathSegmentValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
+}
+
+function isMacroPathSegment(segment: string): boolean {
+  return segment.startsWith('[macro:') && segment.endsWith(']');
 }

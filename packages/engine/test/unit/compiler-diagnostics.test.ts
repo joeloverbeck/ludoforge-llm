@@ -252,6 +252,30 @@ describe('compiler diagnostics helpers', () => {
     assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
   });
 
+  it('resolves macro-expanded paths with escaped nested macro IDs to source-mapped parent path', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'setup[0]': {
+          blockIndex: 0,
+          markdownLineStart: 18,
+          markdownColStart: 1,
+          markdownLineEnd: 18,
+          markdownColEnd: 10,
+        },
+      },
+    };
+
+    const key = getDiagnosticSortKey(
+      diagnostic({
+        path: 'setup[0][macro:outer\\]x\\\\y][0][macro:inner][1].args.faction',
+        code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+      }),
+      sourceMap,
+    );
+
+    assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
+  });
+
   it('resolves source order for encoded keyed diagnostic paths', () => {
     const sourceMap: GameSpecSourceMap = {
       byPath: {

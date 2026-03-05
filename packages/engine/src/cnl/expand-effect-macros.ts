@@ -19,6 +19,7 @@ import {
   resolveRemoveByPriorityParentMacroOrigin,
   type MacroBindingOrigin,
 } from './macro-origin-policy.js';
+import { appendMacroPathSegment } from './path-utils.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -1303,7 +1304,7 @@ function expandEffect(
   for (let i = 0; i < annotatedSubstituted.length; i++) {
     const sub = annotatedSubstituted[i];
     if (sub === undefined) continue;
-    const results = expandEffect(sub, index, diagnostics, `${path}[macro:${macroId}][${i}]`, nestedVisited, depth + 1);
+    const results = expandEffect(sub, index, diagnostics, appendMacroPathSegment(path, macroId, i), nestedVisited, depth + 1);
     expanded.push(...results);
   }
 
@@ -1318,7 +1319,7 @@ function expandEffect(
     nonExportedLocalBindings,
     macroId,
     indexedMacro.declarationPath,
-    `${path}[macro:${macroId}]`,
+    appendMacroPathSegment(path, macroId),
     diagnostics,
   );
   if (hasIntegrityViolations) {
@@ -1383,6 +1384,15 @@ function buildMacroIndex(
   const byId = new Map<string, IndexedMacroDef>();
   for (const [macroIndex, macro] of macros.entries()) {
     const declarationPath = `effectMacros[${macroIndex}]`;
+    if (typeof macro.id !== 'string' || macro.id.trim() === '') {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_ID_INVALID',
+        path: `${declarationPath}.id`,
+        severity: 'error',
+        message: 'Effect macro id must be a non-empty string.',
+      });
+      continue;
+    }
     if (byId.has(macro.id)) {
       diagnostics.push({
         code: 'EFFECT_MACRO_DUPLICATE_ID',

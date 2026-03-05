@@ -1,6 +1,6 @@
 # PIPEVAL-021: Unify macro-path segment contract between expansion and diagnostic codec
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL macro-path contract unification for diagnostics/source lookup
@@ -12,14 +12,15 @@ Macro-expanded diagnostic paths are authored in expansion code and parsed/stripp
 
 ## Assumption Reassessment (2026-03-05)
 
-1. Macro path segments are emitted in `packages/engine/src/cnl/expand-effect-macros.ts` using `[macro:<id>]` forms.
-2. Macro segment stripping in diagnostic lookup currently relies on regex logic in `packages/engine/src/cnl/diagnostic-path-codec.ts`.
-3. Existing tests cover lookup for representative macro paths, but contract ownership is still split between producer and consumer logic.
-4. Scope correction: unify macro-segment grammar/parsing contract in one shared utility consumed by both macro expansion and diagnostic codec.
+1. Macro path segments are emitted in `packages/engine/src/cnl/expand-effect-macros.ts` via direct string interpolation at multiple call sites (`${path}[macro:${macroId}]` and `${path}[macro:${macroId}][${i}]`), so producer grammar is duplicated.
+2. Macro segment stripping in diagnostic lookup currently relies on a regex (`/\[macro:[^\]]+\](\[[0-9]+\])?/g`) in `packages/engine/src/cnl/diagnostic-path-codec.ts`; this is not a parser-backed contract.
+3. Effect macro IDs are currently typed as unconstrained strings (no schema/type-level `]` exclusion), so regex-based stripping is brittle for escaped/bracket-containing IDs.
+4. Existing tests cover representative macro paths, but they do not lock escaped-bracket macro ID behavior or multi-level nested macro path stripping through one shared contract.
+5. Scope correction: unify macro-segment rendering + stripping grammar in shared `path-utils` helpers, then consume those helpers from both expansion and diagnostic codec.
 
 ## Architecture Check
 
-1. A single macro-path contract module is cleaner and more extensible than duplicated ad-hoc string formatting/parsing.
+1. A single parser-backed macro-path contract module is cleaner and more extensible than duplicated ad-hoc string formatting/parsing and regex stripping.
 2. This is generic CNL diagnostics/macro infrastructure and keeps GameDef/runtime/simulator game-agnostic.
 3. No backwards-compatibility shim paths are introduced; one canonical grammar is enforced.
 
@@ -30,6 +31,7 @@ Macro-expanded diagnostic paths are authored in expansion code and parsed/stripp
 Create a shared utility for:
 - rendering macro path segments
 - detecting/stripping macro segments from diagnostic lookup candidates
+- escaping/parsing macro segment payloads containing bracket-significant characters
 - documenting grammar invariants in code-level contracts
 
 ### 2. Migrate macro expansion and codec to shared helpers
@@ -38,7 +40,9 @@ Replace direct string interpolation in macro expansion and direct regex strippin
 
 ### 3. Add contract tests for escaped and nested macro path scenarios
 
-Add targeted tests that prove producer/consumer agreement for macro segment formatting and stripping, including nested macro expansions.
+Add targeted tests that prove producer/consumer agreement for macro segment formatting and stripping, including:
+- escaped `]`/`\` macro IDs
+- nested macro expansions (`...[macro:a][i][macro:b][j]...`)
 
 ## Files to Touch
 
@@ -82,3 +86,23 @@ Add targeted tests that prove producer/consumer agreement for macro segment form
 2. `node --test packages/engine/dist/test/unit/expand-effect-macros.test.js packages/engine/dist/test/unit/cnl/diagnostic-path-codec.test.js packages/engine/dist/test/unit/path-utils.test.js`
 3. `pnpm turbo test --force`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-03-05
+- What actually changed:
+  - Added shared macro-path helpers in `packages/engine/src/cnl/path-utils.ts` for rendering/appending macro segments and stripping macro segments from lookup paths.
+  - Replaced ad-hoc macro path interpolation in `packages/engine/src/cnl/expand-effect-macros.ts` with the shared helper.
+  - Replaced regex-based macro stripping in `packages/engine/src/cnl/diagnostic-path-codec.ts` with shared parser-backed stripping.
+  - Hardened bracket-segment parsing to support escaped bracket-significant payloads in macro segments.
+  - Added/strengthened tests in:
+    - `packages/engine/test/unit/path-utils.test.ts`
+    - `packages/engine/test/unit/cnl/diagnostic-path-codec.test.ts`
+    - `packages/engine/test/unit/expand-effect-macros.test.ts`
+- Deviations from original plan:
+  - Scope remained aligned with ticket intent; implementation additionally moved `joinPathSegments` into `path-utils.ts` to avoid path-join drift and keep one canonical segment-join contract.
+- Verification results:
+  - `pnpm turbo build` passed.
+  - `node --test packages/engine/dist/test/unit/expand-effect-macros.test.js packages/engine/dist/test/unit/cnl/diagnostic-path-codec.test.js packages/engine/dist/test/unit/path-utils.test.js` passed.
+  - `pnpm turbo test --force` passed.
+  - `pnpm turbo lint` passed.

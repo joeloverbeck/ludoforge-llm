@@ -16,11 +16,26 @@ describe('diagnostic-path-codec', () => {
     );
   });
 
-  it('canonicalizes paths with doc prefix and dot index segments while preserving keyed segments', () => {
+  it('canonicalizes paths with doc prefix and dot index segments while preserving non-dot-safe keyed segments', () => {
     assert.equal(canonicalizeDiagnosticPath('actions[0].effects[2]'), 'doc.actions.0.effects.2');
     assert.equal(
       canonicalizeDiagnosticPath('doc.metadata.namedSets["insurgent.group[0]"]'),
       'doc.metadata.namedSets["insurgent.group[0]"]',
+    );
+  });
+
+  it('normalizes bracket-quoted string key segments to canonical keyed form', () => {
+    assert.equal(
+      canonicalizeDiagnosticPath('doc.metadata["namedSets"]["primary"]'),
+      'doc.metadata.namedSets.primary',
+    );
+    assert.equal(
+      canonicalizeDiagnosticPath('metadata["namedSets"]["insurgent.group[0]"]'),
+      'doc.metadata.namedSets["insurgent.group[0]"]',
+    );
+    assert.equal(
+      canonicalizeDiagnosticPath('doc.metadata["insurgent.group[\\\"0\\\"]"]'),
+      'doc.metadata["insurgent.group[\\"0\\"]"]',
     );
   });
 

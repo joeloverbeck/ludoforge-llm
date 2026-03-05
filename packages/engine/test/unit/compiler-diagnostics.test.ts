@@ -276,6 +276,30 @@ describe('compiler diagnostics helpers', () => {
     assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
   });
 
+  it('resolves source order when diagnostic uses quoted dot-safe keyed segments', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'metadata.namedSets.primary': {
+          blockIndex: 0,
+          markdownLineStart: 22,
+          markdownColStart: 1,
+          markdownLineEnd: 22,
+          markdownColEnd: 24,
+        },
+      },
+    };
+
+    const key = getDiagnosticSortKey(
+      diagnostic({
+        path: 'doc.metadata["namedSets"]["primary"]',
+        code: 'CNL_TEST_KEYED_SEGMENT_CANONICALIZATION',
+      }),
+      sourceMap,
+    );
+
+    assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
+  });
+
   it('resolves source order for non-doc dot-index diagnostic paths via codec canonicalization', () => {
     const sourceMap: GameSpecSourceMap = {
       byPath: {

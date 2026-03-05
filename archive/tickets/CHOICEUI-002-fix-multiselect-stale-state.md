@@ -1,6 +1,6 @@
 # CHOICEUI-002: Fix MultiSelectMode Stale State Bug
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None -- runner-only
@@ -105,3 +105,23 @@ This forces React to unmount/remount the component when the decision changes, cl
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completed**: 2026-03-05
+
+### What actually changed
+- `render-model.ts`: Added `readonly decisionId: string` to `discreteOne` and `discreteMany` variants of `RenderChoiceUi`.
+- `derive-render-model.ts`: Populated `decisionId: pending.decisionId` in both `discreteMany` and `discreteOne` return paths of `deriveChoiceUi`.
+- `ChoicePanel.tsx`: Added `key={choiceUi.decisionId}` to `<MultiSelectMode>`.
+- Updated `decisionId` in test fixtures across 7 test files: `ChoicePanel.test.ts`, `render-model-types.test.ts`, `derive-render-model-state.test.ts`, `bottom-bar-mode.test.ts`, `GameContainer.test.ts`, `useKeyboardShortcuts.test.ts`.
+- Added regression test verifying selection state resets when `decisionId` changes.
+
+### Deviations from original plan
+- `render-model-fixture.ts` did NOT need modification — its default `choiceUi: { kind: 'none' }` has no `decisionId` requirement; overrides in individual tests handle it.
+- The ticket listed 6 files to touch; 9 files were actually modified (3 additional test files the ticket didn't anticipate: `bottom-bar-mode.test.ts`, `GameContainer.test.ts`, `useKeyboardShortcuts.test.ts`).
+- Also created CHOICEUI-009 ticket for the same fix on `NumericMode` (same class of bug, scoped out of this ticket).
+
+### Verification
+- 1386 tests passed (1 new regression test), 6 pre-existing failures (unrelated `matchesAllTokenFilterPredicates`).
+- 9 pre-existing type errors (unrelated `TokenFilterExpr`), zero new type errors.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — query-runtime-cache API contract simplification and encapsulation hardening
-**Deps**: archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md, tickets/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md, packages/engine/src/kernel/query-runtime-cache.ts, packages/engine/src/kernel/eval-query.ts, packages/engine/test/unit/eval-query.test.ts, packages/engine/test/unit/eval-context.test.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md, archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md, packages/engine/src/kernel/query-runtime-cache.ts, packages/engine/src/kernel/eval-query.ts, packages/engine/test/unit/eval-query.test.ts, packages/engine/test/unit/eval-context.test.ts
 
 ## Problem
 

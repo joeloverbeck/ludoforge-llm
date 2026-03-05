@@ -3279,6 +3279,130 @@ describe('validateGameDef reference checks', () => {
     assert.equal(Array.isArray(diagnostics), true);
   });
 
+  it('does not throw when pipeline stages is missing and reports explicit diagnostic', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    let diagnostics: ReturnType<typeof validateGameDef> = [];
+    assert.doesNotThrow(() => {
+      diagnostics = validateGameDef(def);
+    });
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'ACTION_PIPELINE_STAGES_MISSING' && diag.path === 'actionPipelines[0].stages',
+      ),
+      true,
+    );
+  });
+
+  it('does not throw when pipeline targeting is missing and reports explicit diagnostic', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          stages: [{ stage: 'resolve', effects: [] }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    let diagnostics: ReturnType<typeof validateGameDef> = [];
+    assert.doesNotThrow(() => {
+      diagnostics = validateGameDef(def);
+    });
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'ACTION_PIPELINE_TARGETING_MISSING' && diag.path === 'actionPipelines[0].targeting',
+      ),
+      true,
+    );
+  });
+
+  it('reports explicit diagnostics when pipeline stages/targeting have invalid runtime shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          stages: null,
+          targeting: null,
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    let diagnostics: ReturnType<typeof validateGameDef> = [];
+    assert.doesNotThrow(() => {
+      diagnostics = validateGameDef(def);
+    });
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'ACTION_PIPELINE_STAGES_MISSING' && diag.path === 'actionPipelines[0].stages',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'ACTION_PIPELINE_TARGETING_MISSING' && diag.path === 'actionPipelines[0].targeting',
+      ),
+      true,
+    );
+  });
+
+  it('does not throw when a pipeline stage entry has an invalid runtime shape', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [null],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    let diagnostics: ReturnType<typeof validateGameDef> = [];
+    assert.doesNotThrow(() => {
+      diagnostics = validateGameDef(def);
+    });
+    assert.equal(
+      diagnostics.some(
+        (diag) => diag.code === 'ACTION_PIPELINE_STAGE_INVALID' && diag.path === 'actionPipelines[0].stages[0]',
+      ),
+      true,
+    );
+  });
+
   it('reports unknown coupPlan final-round omitted phases', () => {
     const base = createValidGameDef();
     const def = {

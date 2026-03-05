@@ -9,7 +9,7 @@ import {
   CARD_SEAT_ORDER_MIN_DISTINCT_SEATS,
   isCardSeatOrderDistinctSeatCountValid,
 } from './turn-flow-seat-order-policy.js';
-import type { ConditionAST, GameDef, ValueExpr } from './types.js';
+import type { ActionResolutionStageDef, ActionTargetingDef, ConditionAST, GameDef, ValueExpr } from './types.js';
 import { validateConditionAst, validateEffectAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
 import { forEachDefined } from './validate-gamedef-utils.js';
@@ -325,6 +325,15 @@ export const validateActionPipelines = (
   const operationActionIdCounts = new Map<string, number>();
   def.actionPipelines?.forEach((actionPipeline, actionPipelineIndex) => {
     const basePath = `actionPipelines[${actionPipelineIndex}]`;
+    const stagesCandidate = (actionPipeline as { readonly stages?: unknown }).stages;
+    const hasStagesArray = Array.isArray(stagesCandidate);
+    const stages: readonly ActionResolutionStageDef[] = hasStagesArray
+      ? (stagesCandidate as readonly ActionResolutionStageDef[])
+      : [];
+    const targetingCandidate = (actionPipeline as { readonly targeting?: unknown }).targeting;
+    const hasTargetingObject =
+      typeof targetingCandidate === 'object' && targetingCandidate !== null && !Array.isArray(targetingCandidate);
+    const targeting: ActionTargetingDef = hasTargetingObject ? (targetingCandidate as ActionTargetingDef) : {};
 
     if (!actionCandidates.includes(actionPipeline.actionId)) {
       pushMissingReferenceDiagnostic(
@@ -353,7 +362,15 @@ export const validateActionPipelines = (
 
     operationActionIdCounts.set(actionPipeline.actionId, (operationActionIdCounts.get(actionPipeline.actionId) ?? 0) + 1);
 
-    if (actionPipeline.stages.length === 0) {
+    if (!hasStagesArray) {
+      diagnostics.push({
+        code: 'ACTION_PIPELINE_STAGES_MISSING',
+        path: `${basePath}.stages`,
+        severity: 'error',
+        message: 'Action pipeline stages are required and must be an array.',
+        suggestion: 'Declare one or more deterministic stages.',
+      });
+    } else if (stages.length === 0) {
       diagnostics.push({
         code: 'ACTION_PIPELINE_STAGES_EMPTY',
         path: `${basePath}.stages`,
@@ -399,10 +416,29 @@ export const validateActionPipelines = (
     forEachDefined(actionPipeline.costEffects, (effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `${basePath}.costEffects[${effectIndex}]`, context);
     });
-    if (actionPipeline.targeting.filter !== undefined) {
-      validateConditionAst(diagnostics, actionPipeline.targeting.filter, `${basePath}.targeting.filter`, context);
+    if (!hasTargetingObject) {
+      diagnostics.push({
+        code: 'ACTION_PIPELINE_TARGETING_MISSING',
+        path: `${basePath}.targeting`,
+        severity: 'error',
+        message: 'Action pipeline targeting is required and must be an object.',
+        suggestion: 'Declare targeting as an object (use {} when no targeting filter is needed).',
+      });
+    } else if (targeting.filter !== undefined) {
+      validateConditionAst(diagnostics, targeting.filter, `${basePath}.targeting.filter`, context);
     }
-    actionPipeline.stages.forEach((stage, stageIndex) => {
+    stages.forEach((stage, stageIndex) => {
+      const stageCandidate = stage as unknown;
+      if (typeof stageCandidate !== 'object' || stageCandidate === null || Array.isArray(stageCandidate)) {
+        diagnostics.push({
+          code: 'ACTION_PIPELINE_STAGE_INVALID',
+          path: `${basePath}.stages[${stageIndex}]`,
+          severity: 'error',
+          message: 'Action pipeline stage entries must be objects.',
+          suggestion: 'Declare each stage as an object with optional stage id and effects array.',
+        });
+        return;
+      }
       forEachDefined(stage.effects, (effect, effectIndex) => {
         validateEffectAst(diagnostics, effect, `${basePath}.stages[${stageIndex}].effects[${effectIndex}]`, context);
       });

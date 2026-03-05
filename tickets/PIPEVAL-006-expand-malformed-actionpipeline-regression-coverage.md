@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Test-only — validator regression coverage
-**Deps**: `tickets/PIPEVAL-005-harden-actionpipeline-required-field-handling-in-validator.md`
+**Deps**: `archive/tickets/PIPEVAL/PIPEVAL-005-harden-actionpipeline-required-field-handling-in-validator.md`
 
 ## Problem
 

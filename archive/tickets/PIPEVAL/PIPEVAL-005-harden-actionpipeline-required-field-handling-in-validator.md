@@ -1,10 +1,12 @@
 # PIPEVAL-005: Harden ActionPipeline required-field handling in validator
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `packages/engine/src/kernel/validate-gamedef-extensions.ts`, diagnostics registration
-**Deps**: `archive/tickets/PIPEVAL-001-defensive-guard-costeffects-in-pipeline-validation.md`
+**Engine Changes**: Yes — `packages/engine/src/kernel/validate-gamedef-extensions.ts`, `packages/engine/test/unit/validate-gamedef.test.ts`
+**Deps**:
+- `archive/tickets/PIPEVAL-001-defensive-guard-costeffects-in-pipeline-validation.md`
+- `archive/tickets/PIPEVAL/PIPEVAL-004-validate-pipeline-accompanyingops-against-actions.md`
 
 ## Problem
 
@@ -14,7 +16,8 @@
 
 1. `ActionPipelineDef.stages` and `ActionPipelineDef.targeting` are required in types, but malformed `as unknown as GameDef` inputs can omit them.
 2. Current code reads `actionPipeline.stages.length` and `actionPipeline.targeting.filter` without a defensive normalization step.
-3. Existing active tickets (`PIPEVAL-003`, `PIPEVAL-004`) do not cover required-field hardening for `stages`/`targeting`; scope is distinct and additive.
+3. `PIPEVAL-001` already hardened missing `costEffects` and added a regression test; this ticket must stay focused on the remaining required fields (`stages`, `targeting`) to avoid overlap.
+4. This repo currently does not enforce a central non-reference diagnostic-code registry for `ACTION_*` codes, so no registry plumbing should be introduced for this ticket.
 
 ## Architecture Check
 
@@ -41,8 +44,6 @@ Candidate codes:
 - `ACTION_PIPELINE_STAGES_MISSING`
 - `ACTION_PIPELINE_TARGETING_MISSING`
 
-Register any new codes in the project’s diagnostic registries/contract tests if required by existing policy checks.
-
 ### 3. Preserve existing validation semantics for valid payloads
 
 Maintain current diagnostics for empty `stages`, invalid `atomicity`, unknown `actionId`, and AST validations. The change is strictly crash-hardening + explicit malformed-field diagnostics.
@@ -50,13 +51,11 @@ Maintain current diagnostics for empty `stages`, invalid `atomicity`, unknown `a
 ## Files to Touch
 
 - `packages/engine/src/kernel/validate-gamedef-extensions.ts` (modify)
-- `packages/engine/src/kernel/reference-diagnostic-codes.ts` (modify if new codes are contract-tracked)
 - `packages/engine/test/unit/validate-gamedef.test.ts` (modify)
-- `packages/engine/test/unit/kernel/reference-diagnostic-codes.test.ts` (modify if registry parity requires)
 
 ## Out of Scope
 
-- `linkedWindows` reference validation (covered by `archive/tickets/PIPEVAL-003-validate-pipeline-linkedwindows-against-overridewindows.md`)
+- `linkedWindows` reference validation (covered by `archive/tickets/PIPEVAL/PIPEVAL-003-validate-pipeline-linkedwindows-against-overridewindows.md`)
 - `accompanyingOps` reference validation (covered by `archive/tickets/PIPEVAL/PIPEVAL-004-validate-pipeline-accompanyingops-against-actions.md`)
 - Broad validator-wide refactors outside `validateActionPipelines`
 
@@ -79,7 +78,6 @@ Maintain current diagnostics for empty `stages`, invalid `atomicity`, unknown `a
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/validate-gamedef.test.ts` — add malformed pipeline tests for missing `stages` and missing `targeting`, asserting no throw and expected diagnostics.
-2. `packages/engine/test/unit/kernel/reference-diagnostic-codes.test.ts` — update only if new diagnostic code registration is required.
 
 ### Commands
 
@@ -88,3 +86,22 @@ Maintain current diagnostics for empty `stages`, invalid `atomicity`, unknown `a
 3. `pnpm turbo test --force`
 4. `pnpm turbo lint`
 
+## Outcome
+
+- **Completion date**: 2026-03-05
+- **What changed**:
+  - Hardened `validateActionPipelines` to normalize malformed required-field shapes for `stages` and `targeting` before downstream use.
+  - Added explicit diagnostics for missing/invalid required fields:
+    - `ACTION_PIPELINE_STAGES_MISSING`
+    - `ACTION_PIPELINE_TARGETING_MISSING`
+    - `ACTION_PIPELINE_STAGE_INVALID` (for malformed non-object entries inside `stages[]`)
+  - Preserved existing semantics for valid payloads (`ACTION_PIPELINE_STAGES_EMPTY`, atomicity checks, reference checks, and AST validation behavior).
+  - Added regression tests for missing `stages`, missing `targeting`, invalid runtime shapes (`stages: null`, `targeting: null`), and malformed stage entries (`stages: [null]`) to enforce the non-throwing validator invariant.
+- **Deviations from original plan**:
+  - Removed planned diagnostic registry/reference-code test edits after reassessment confirmed no central non-`REF_*` diagnostic registry is required for this ticket.
+  - Expanded coverage and implementation beyond the original missing-field-only plan by adding stage-entry shape hardening and `ACTION_PIPELINE_STAGE_INVALID` to eliminate an additional crash path uncovered during TDD (`stages: [null]`).
+- **Verification results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/validate-gamedef.test.js` ✅
+  - `pnpm turbo test --force` ✅
+  - `pnpm turbo lint` ✅

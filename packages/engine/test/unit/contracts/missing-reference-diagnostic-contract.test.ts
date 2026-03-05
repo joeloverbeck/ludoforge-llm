@@ -11,6 +11,10 @@ describe('missing reference diagnostic contract', () => {
     assert.deepEqual(findReferenceAlternatives('window-z', ['window-a', 'turn-a']), ['window-a']);
   });
 
+  it('returns all lexicographically ordered nearest alternatives when there is a tie', () => {
+    assert.deepEqual(findReferenceAlternatives('cat', ['hat', 'bat', 'dog']), ['bat', 'hat']);
+  });
+
   it('returns empty alternatives when no candidate is close enough', () => {
     assert.deepEqual(findReferenceAlternatives('zzz', ['window-a', 'turn-a']), []);
   });
@@ -27,4 +31,3 @@ describe('missing reference diagnostic contract', () => {
     assert.equal(result.alternatives, undefined);
   });
 });
-

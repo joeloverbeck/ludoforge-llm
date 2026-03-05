@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asZoneId,
   asPhaseId,
   asPlayerId,
@@ -20,6 +17,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'selector-test', players: { min: 1, max: 4 } },
@@ -64,12 +62,8 @@ const makeState = (playerCount: number): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
-  return {
+const makeCtx = (overrides?: Partial<EvalContext>): EvalContext =>
+  makeEvalContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(3),
@@ -77,11 +71,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     actorPlayer: asPlayerId(1),
     bindings: { '$picked': asPlayerId(2) },
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
-};
+  });
 
 describe('resolvePlayerSel', () => {
   it('resolves actor, active, all, allOther, id, chosen, and relative selectors', () => {

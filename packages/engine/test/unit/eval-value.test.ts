@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -18,6 +15,7 @@ import {
   type Token,
   type ValueExpr,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'eval-value-test', players: { min: 1, max: 4 } },
@@ -66,12 +64,8 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
-  return {
+const makeCtx = (overrides?: Partial<EvalContext>): EvalContext =>
+  makeEvalContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(),
@@ -79,11 +73,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     actorPlayer: asPlayerId(1),
     bindings: { '$x': 42 },
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
-};
+  });
 
 describe('evalValue', () => {
   it('passes through literal number/boolean/string values', () => {

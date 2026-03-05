@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -17,6 +14,7 @@ import {
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'resolve-ref-test', players: { min: 1, max: 4 } },
@@ -91,12 +89,8 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
-  return {
+const makeCtx = (overrides?: Partial<EvalContext>): EvalContext =>
+  makeEvalContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(),
@@ -107,11 +101,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
       '$card': makeToken('bound-1', { cost: 9, color: 'blue', faceUp: true }),
     },
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
-};
+  });
 
 describe('resolveRef', () => {
   it('resolves gvar and throws MISSING_VAR when global var is absent', () => {

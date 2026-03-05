@@ -7,9 +7,6 @@ import {
   asTokenId,
   asZoneId,
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   queryAdjacentZones,
   queryConnectedZones,
   queryTokensInAdjacentZones,
@@ -18,6 +15,7 @@ import {
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeToken = (id: string): Token => ({
   id: asTokenId(id),
@@ -70,11 +68,7 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
   const def = makeDef();
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: makeState(),
@@ -82,10 +76,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     actorPlayer: asPlayerId(0),
     bindings: {},
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 describe('spatial query helpers', () => {

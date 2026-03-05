@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asZoneId,
   asPhaseId,
   asPlayerId,
@@ -17,6 +14,7 @@ import {
   type Token,
   type ZoneRef,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'zone-ref-test', players: { min: 1, max: 2 } },
@@ -67,12 +65,8 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
-  return {
+const makeCtx = (overrides?: Partial<EvalContext>): EvalContext =>
+  makeEvalContext({
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
     state: makeState(),
@@ -80,11 +74,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     actorPlayer: asPlayerId(0),
     bindings: {},
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
-};
+  });
 
 describe('resolveZoneRef', () => {
   it('resolves a static string zone selector', () => {

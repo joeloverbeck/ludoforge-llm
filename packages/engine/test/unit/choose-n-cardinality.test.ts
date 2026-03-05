@@ -1,14 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildAdjacencyGraph, createCollector, createEvalRuntimeResources, createQueryRuntimeCache, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
+import { buildAdjacencyGraph, asPlayerId, asPhaseId, resolveChooseNCardinality, type EvalContext } from '../../src/kernel/index.js';
+import { makeEvalContext as makeSharedEvalContext } from '../helpers/eval-context-test-helpers.js';
 
-const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): EvalContext => {
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
-  return {
+const makeChooseNContext = (globalVars: Record<string, number | boolean> = {}): EvalContext => {
+  return makeSharedEvalContext({
     def: {
     metadata: { id: 'choose-n-cardinality-test', players: { min: 1, max: 2 } },
     constants: {},
@@ -42,10 +39,7 @@ const makeEvalContext = (globalVars: Record<string, number | boolean> = {}): Eva
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: {},
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 describe('resolveChooseNCardinality', () => {
@@ -57,7 +51,7 @@ describe('resolveChooseNCardinality', () => {
       n: 2,
     };
 
-    const result = resolveChooseNCardinality(chooseN, makeEvalContext(), (issue) => {
+    const result = resolveChooseNCardinality(chooseN, makeChooseNContext(), (issue) => {
       throw new Error(`unexpected issue: ${issue.code}`);
     });
     assert.deepEqual(result, { minCardinality: 2, maxCardinality: 2 });
@@ -72,7 +66,7 @@ describe('resolveChooseNCardinality', () => {
       max: { ref: 'gvar' as const, var: 'cap' },
     };
 
-    const result = resolveChooseNCardinality(chooseN, makeEvalContext({ cap: 3 }), (issue) => {
+    const result = resolveChooseNCardinality(chooseN, makeChooseNContext({ cap: 3 }), (issue) => {
       throw new Error(`unexpected issue: ${issue.code}`);
     });
     assert.deepEqual(result, { minCardinality: 1, maxCardinality: 3 });
@@ -88,7 +82,7 @@ describe('resolveChooseNCardinality', () => {
 
     assert.throws(
       () =>
-        resolveChooseNCardinality(chooseN, makeEvalContext(), (issue) => {
+        resolveChooseNCardinality(chooseN, makeChooseNContext(), (issue) => {
           if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
             throw new Error(issue.code);
           }

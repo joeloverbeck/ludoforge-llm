@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — test architecture and regression-strengthening for phase-advance resource ownership
-**Deps**: archive/tickets/KERQUERY/KERQUERY-017-make-advance-to-decision-point-a-single-runtime-resource-boundary.md, tickets/KERQUERY-019-centralize-eval-resource-test-fixture-builders.md, packages/engine/test/unit/phase-advance.test.ts, packages/engine/test/helpers/replay-harness.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-017-make-advance-to-decision-point-a-single-runtime-resource-boundary.md, archive/tickets/KERQUERY/KERQUERY-019-centralize-eval-resource-test-fixture-builders.md, packages/engine/test/unit/phase-advance.test.ts, packages/engine/test/helpers/replay-harness.ts
 
 ## Problem
 

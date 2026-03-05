@@ -4,8 +4,6 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
-  createCollector,
-  createEvalRuntimeResources,
   createQueryRuntimeCache,
   QUERY_RUNTIME_CACHE_INDEX_KEYS,
   asPhaseId,
@@ -20,6 +18,7 @@ import {
   type QueryRuntimeCache,
   type Token,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'eval-query-test', players: { min: 1, max: 4 } },
@@ -127,11 +126,7 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
   const def = makeDef();
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: makeState(),
@@ -139,10 +134,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     actorPlayer: asPlayerId(1),
     bindings: {},
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 describe('evalQuery', () => {

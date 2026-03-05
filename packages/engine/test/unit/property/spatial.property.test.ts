@@ -6,14 +6,12 @@ import {
   asPhaseId,
   asPlayerId,
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   queryConnectedZones,
   type EvalContext,
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 
 const makeState = (zoneIds: readonly string[]): GameState => ({
   globalVars: {},
@@ -33,21 +31,14 @@ const makeState = (zoneIds: readonly string[]): GameState => ({
 });
 
 const makeCtx = (def: GameDef): EvalContext => {
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: makeState(def.zones.map((zone) => String(zone.id))),
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: {},
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 const makeDef = (id: string, zones: GameDef['zones']): GameDef => ({

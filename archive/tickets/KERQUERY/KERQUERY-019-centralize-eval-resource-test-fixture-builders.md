@@ -1,6 +1,6 @@
 # KERQUERY-019: Centralize eval-resource test fixture builders
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — engine test fixture architecture for eval/effect contexts
@@ -12,9 +12,9 @@ Many tests now manually construct `EvalRuntimeResources`/`EvalContext` fixtures.
 
 ## Assumption Reassessment (2026-03-05)
 
-1. Multiple unit/integration test files now hand-roll the same resource fixture pattern.
-2. Current helper coverage does not provide a canonical shared builder for eval/effect context resources.
-3. No active ticket currently targets fixture deduplication for this new resources contract.
+1. Multiple unit test files still hand-roll the same `EvalRuntimeResources` + `EvalContext` fixture pattern (`eval-condition`, `eval-query`, `eval-value`, `resolve-selectors`, plus additional suites outside this ticket scope).
+2. `packages/engine/test/helpers/effect-context-test-helpers.ts` centralizes effect-context setup, but there is no canonical eval-only context helper for direct eval unit tests.
+3. Active ticket `KERQUERY-028` depends on this helper surface and explicitly expects `KERQUERY-019` to provide shared fixture builders.
 
 ## Architecture Check
 
@@ -33,6 +33,7 @@ Many tests now manually construct `EvalRuntimeResources`/`EvalContext` fixtures.
 
 1. Replace repeated local fixture code in core eval/query/selector test files.
 2. Keep behavior assertions unchanged; only fixture construction should move.
+3. Scope for this ticket remains the four core eval/selector suites listed below; broader dedup migration can follow in separate tickets.
 
 ## Files to Touch
 
@@ -69,10 +70,17 @@ Many tests now manually construct `EvalRuntimeResources`/`EvalContext` fixtures.
 2. `packages/engine/test/unit/eval-condition.test.ts` — migrate fixture construction to helper.
 3. `packages/engine/test/unit/eval-query.test.ts` — migrate fixture construction to helper.
 4. `packages/engine/test/unit/eval-value.test.ts` — migrate fixture construction to helper.
+5. `packages/engine/test/unit/resolve-selectors.test.ts` — migrate fixture construction to helper.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/eval-condition.test.js packages/engine/dist/test/unit/eval-query.test.js packages/engine/dist/test/unit/eval-value.test.js`
+2. `node --test packages/engine/dist/test/unit/eval-condition.test.js packages/engine/dist/test/unit/eval-query.test.js packages/engine/dist/test/unit/eval-value.test.js packages/engine/dist/test/unit/resolve-selectors.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Added `packages/engine/test/helpers/eval-context-test-helpers.ts` with canonical `makeEvalRuntimeResources()` and `makeEvalContext()` builders that route through kernel constructors.
+- Migrated fixture construction in `eval-condition`, `eval-query`, `eval-value`, and `resolve-selectors` tests to the shared helper; behavior assertions remained unchanged.
+- Corrected ticket assumptions/scope before implementation to acknowledge existing effect-context helper coverage and active dependency from `KERQUERY-028`.

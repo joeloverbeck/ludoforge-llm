@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -18,17 +15,14 @@ import {
   type SerializedGameState,
   type ValueExpr,
 } from '../../../src/kernel/index.js';
+import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 import { readFixtureJson } from '../../helpers/fixture-reader.js';
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
   const def = readFixtureJson<GameDef>('gamedef/eval-complex-valid.json');
   const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
-  const resources = overrides?.resources ?? createEvalRuntimeResources({
-    collector: overrides?.collector ?? createCollector(),
-    queryRuntimeCache: overrides?.queryRuntimeCache ?? createQueryRuntimeCache(),
-  });
 
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: deserializeGameState(serializedState),
@@ -36,10 +30,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     actorPlayer: asPlayerId(0),
     bindings: {},
     ...overrides,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 describe('evaluation property-style checks', () => {

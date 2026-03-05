@@ -8,8 +8,6 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   decideApplyMovePipelineViability,
   decideLegalChoicesPipelineViability,
   decideLegalMovesPipelineViability,
@@ -24,6 +22,7 @@ import {
   decideDiscoveryLegalChoicesPipelineViability,
   evaluateDiscoveryPipelinePredicateStatus,
 } from '../../../src/kernel/pipeline-viability-policy.js';
+import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 
 const makeState = (resources: number): GameState => ({
   globalVars: { resources },
@@ -75,21 +74,15 @@ const makeEvalCtx = (
   state: GameState,
   bindings: Readonly<Record<string, unknown>> = {},
 ): EvalContext => {
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     bindings,
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+    collector: createCollector(),
+  });
 };
 
 describe('pipeline viability policy', () => {

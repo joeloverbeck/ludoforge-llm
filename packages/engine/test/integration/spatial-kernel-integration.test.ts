@@ -9,9 +9,6 @@ import {
   asTriggerId,
   asZoneId,
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   evalCondition,
   evalQuery,
   initialState,
@@ -22,6 +19,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { generateGrid, generateHex } from '../../src/cnl/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeRuntimeDef = (): GameDef => ({
   metadata: { id: 'spatial-kernel-integration', players: { min: 1, max: 2 }, maxTriggerDepth: 8 },
@@ -94,21 +92,14 @@ const makeRuntimeState = (): GameState => ({
 
 const makeEvalCtx = (): EvalContext => {
   const def = makeRuntimeDef();
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: makeRuntimeState(),
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: { $reachable: [asZoneId('b:none')] },
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 const makeMacroBackedDef = (zones: GameDef['zones']): GameDef => ({

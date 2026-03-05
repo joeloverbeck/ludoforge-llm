@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -16,27 +13,21 @@ import {
   type SerializedGameState,
   type ValueExpr,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 import { readFixtureJson } from '../helpers/fixture-reader.js';
 
 const makeCtx = (): EvalContext => {
   const def = readFixtureJson<GameDef>('gamedef/eval-complex-valid.json');
   const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
 
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: deserializeGameState(serializedState),
     activePlayer: asPlayerId(1),
     actorPlayer: asPlayerId(0),
     bindings: {},
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 describe('evaluation golden outputs', () => {

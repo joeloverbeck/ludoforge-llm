@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asPhaseId, asPlayerId, buildAdjacencyGraph, createCollector, createEvalRuntimeResources, createQueryRuntimeCache } from '../../src/kernel/index.js';
+import { asPhaseId, asPlayerId, buildAdjacencyGraph } from '../../src/kernel/index.js';
 import { effectRuntimeError, isEffectErrorCode } from '../../src/kernel/effect-error.js';
 import { isEvalErrorCode, missingBindingError } from '../../src/kernel/eval-error.js';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../src/kernel/selector-resolution-normalization.js';
 import type { EvalContext } from '../../src/kernel/eval-context.js';
 import type { GameDef, GameState } from '../../src/kernel/types.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 
 const makeEvalCtx = (): EvalContext => {
   const def: GameDef = {
@@ -43,21 +44,14 @@ const makeEvalCtx = (): EvalContext => {
     markers: {},
   };
 
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: {},
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+  });
 };
 
 describe('selector-resolution-normalization', () => {

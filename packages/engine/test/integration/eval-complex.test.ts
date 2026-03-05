@@ -3,9 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  createCollector,
-  createEvalRuntimeResources,
-  createQueryRuntimeCache,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -15,6 +12,7 @@ import {
   type GameDef,
   type SerializedGameState,
 } from '../../src/kernel/index.js';
+import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
 import { readFixtureJson } from '../helpers/fixture-reader.js';
 
 describe('evaluation integration - complex scenario', () => {
@@ -23,21 +21,14 @@ describe('evaluation integration - complex scenario', () => {
     const serializedState = readFixtureJson<SerializedGameState>('trace/eval-state-snapshot.json');
     const state = deserializeGameState(serializedState);
 
-    const resources = createEvalRuntimeResources({
-      collector: createCollector(),
-      queryRuntimeCache: createQueryRuntimeCache(),
-    });
-    const ctx: EvalContext = {
+    const ctx: EvalContext = makeEvalContext({
       def,
       adjacencyGraph: buildAdjacencyGraph(def.zones),
       state,
       activePlayer: asPlayerId(1),
       actorPlayer: asPlayerId(0),
       bindings: {},
-      resources,
-      queryRuntimeCache: resources.queryRuntimeCache,
-      collector: resources.collector,
-    };
+    });
 
     const condition: ConditionAST = {
       op: 'and',

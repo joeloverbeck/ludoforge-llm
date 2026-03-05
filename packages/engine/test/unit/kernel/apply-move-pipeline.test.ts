@@ -15,8 +15,7 @@ import {
   type GameState,
 } from '../../../src/kernel/index.js';
 import type { EvalContext } from '../../../src/kernel/eval-context.js';
-import { createQueryRuntimeCache } from '../../../src/kernel/query-runtime-cache.js';
-import { createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
+import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 
 const makeDef = (overrides?: {
   readonly actionPipelines?: readonly ActionPipelineDef[];
@@ -64,21 +63,15 @@ const makeState = (activePlayer: number): GameState => ({
 });
 
 const makeCtx = (def: GameDef, state: GameState): EvalContext => {
-  const resources = createEvalRuntimeResources({
-    collector: createCollector(),
-    queryRuntimeCache: createQueryRuntimeCache(),
-  });
-  return {
+  return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     bindings: {},
-    resources,
-    queryRuntimeCache: resources.queryRuntimeCache,
-    collector: resources.collector,
-  };
+    collector: createCollector(),
+  });
 };
 
 describe('resolveActionPipelineDispatch()', () => {

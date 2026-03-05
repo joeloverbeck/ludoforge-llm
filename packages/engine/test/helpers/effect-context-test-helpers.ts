@@ -7,9 +7,6 @@ import {
   type EffectTraceContext,
   type PhaseTransitionBudget,
 } from '../../src/kernel/effect-context.js';
-import {
-  createEvalRuntimeResources,
-} from '../../src/kernel/eval-context.js';
 import { createCollector } from '../../src/kernel/execution-collector.js';
 import { createRng } from '../../src/kernel/prng.js';
 import { createQueryRuntimeCache, type QueryRuntimeCache } from '../../src/kernel/query-runtime-cache.js';
@@ -25,6 +22,7 @@ import type {
   MoveParamValue,
   Rng,
 } from '../../src/kernel/types.js';
+import { makeEvalRuntimeResources } from './eval-context-test-helpers.js';
 
 type RuntimeEffectContextOptions = Parameters<typeof createExecutionEffectContext>[0];
 
@@ -99,7 +97,7 @@ const makeRuntimeEffectContextOptions = ({
   ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
   ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
-  resources: resources ?? createEvalRuntimeResources({
+  resources: resources ?? makeEvalRuntimeResources({
     collector,
     queryRuntimeCache,
   }),

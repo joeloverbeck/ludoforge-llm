@@ -1,0 +1,92 @@
+# KERQUERY-023: Harden dispatchTriggers request runtime contract validation
+
+**Status**: ✅ COMPLETED
+**Priority**: HIGH
+**Effort**: Small
+**Engine Changes**: Yes — kernel trigger dispatch runtime contract boundary
+**Deps**: archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md, packages/engine/src/kernel/trigger-dispatch.ts, packages/engine/test/unit/trigger-dispatch.test.ts
+
+## Problem
+
+`dispatchTriggers` now uses a canonical request object, but runtime guards currently validate only a subset of fields and run after request destructuring/default derivation. Non-TypeScript or malformed JS callers can fail with opaque JS errors (for example while reading `event.type` or building derived helpers) before hitting explicit contract diagnostics.
+
+## Assumption Reassessment (2026-03-05)
+
+1. `dispatchTriggers` was migrated to a single request-object API in KERQUERY-015.
+2. Runtime checks currently cover `effectPathRoot` and `evalRuntimeResources` only, and the checks execute too late (after request destructuring/default computation).
+3. Required core request fields (`def`, `state`, `rng`, `event`, `depth`, `maxDepth`, `triggerLog`) are not contract-validated at the boundary.
+4. Existing tests cover malformed optional fields but do not lock fail-fast behavior for missing/invalid required request fields or malformed non-object requests.
+
+## Architecture Check
+
+1. Boundary-first validation (before any request field dereference or derived default construction) is cleaner and more robust than allowing downstream failures in internal helpers.
+2. This is runtime contract hardening only and keeps GameDef/simulator/kernel game-agnostic with no game-specific branches.
+3. No backwards-compatibility aliases/shims: enforce canonical request contract directly.
+
+## What to Change
+
+### 1. Add strict required-field request validation
+
+1. Validate request object presence and required field types before any request field dereference.
+2. Validate `depth` and `maxDepth` as safe integers and `triggerLog` as array.
+3. Validate `event.type` is a string and fail with `RUNTIME_CONTRACT_INVALID` on violations.
+
+### 2. Expand request-contract regression tests
+
+1. Add tests for missing/invalid required request fields.
+2. Assert diagnostics are explicit and mention the failing field.
+
+## Files to Touch
+
+- `packages/engine/src/kernel/trigger-dispatch.ts` (modify)
+- `packages/engine/test/unit/trigger-dispatch.test.ts` (modify/add)
+
+## Out of Scope
+
+- Query runtime cache API redesign (`archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
+- Ticket tooling integrity work (`archive/tickets/KERQUERY/KERQUERY-016-enforce-active-ticket-reference-integrity-after-archival.md`, `archive/tickets/KERQUERY/KERQUERY-020-enforce-archived-outcome-fact-integrity.md`)
+- Any game-specific GameSpecDoc or visual-config behavior
+
+## Acceptance Criteria
+
+### Tests That Must Pass
+
+1. Invalid required request fields fail fast with `RUNTIME_CONTRACT_INVALID` and clear diagnostics.
+2. Malformed non-object request payloads fail at the `dispatchTriggers` boundary with explicit diagnostics (not JS `TypeError`).
+3. Valid request flows remain behaviorally unchanged.
+4. Existing suite: `pnpm -F @ludoforge/engine test`.
+
+### Invariants
+
+1. Trigger dispatch request boundary is deterministic and explicit for TS and non-TS callers.
+2. GameDef/runtime/simulator remain game-agnostic.
+
+## Test Plan
+
+### New/Modified Tests
+
+1. `packages/engine/test/unit/trigger-dispatch.test.ts` — add required-field contract-failure coverage.
+
+### Commands
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/unit/trigger-dispatch.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-05
+- **What Changed**:
+  - Moved `dispatchTriggers` request-contract validation to run before any request destructuring/derived defaults.
+  - Added fail-fast `RUNTIME_CONTRACT_INVALID` guards for malformed request payloads and required fields: request object, `def`, `def.zones`, `def.triggers`, `state`, `rng`, `rng.state`, `event`, `event.type`, `depth`, `maxDepth`, and `triggerLog`.
+  - Preserved existing optional-field guards for `effectPathRoot` and `evalRuntimeResources`.
+  - Expanded unit coverage in `trigger-dispatch.test.ts` for malformed required request payloads and explicit field diagnostics.
+- **Deviations from Original Plan**:
+  - Added explicit validation for `def.zones`, `def.triggers`, and `rng.state` in addition to listed required fields because these are immediate runtime dependencies for dispatch boundary defaults and recursion setup.
+  - Introduced malformed non-object request coverage to prevent opaque `TypeError` regressions at API boundary.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/trigger-dispatch.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅

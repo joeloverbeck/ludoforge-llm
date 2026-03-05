@@ -43288,6 +43288,38 @@
       ]
     }
   ],
+  "derivedMetrics": [
+    {
+      "id": "auto:victory:markerTotal",
+      "computation": "markerTotal",
+      "zoneFilter": {
+        "zoneKinds": [
+          "board"
+        ]
+      },
+      "requirements": [
+        {
+          "key": "population",
+          "expectedType": "number"
+        }
+      ]
+    },
+    {
+      "id": "auto:victory:controlledPopulation",
+      "computation": "controlledPopulation",
+      "zoneFilter": {
+        "zoneKinds": [
+          "board"
+        ]
+      },
+      "requirements": [
+        {
+          "key": "population",
+          "expectedType": "number"
+        }
+      ]
+    }
+  ],
   "actions": [
     {
       "id": "pass",

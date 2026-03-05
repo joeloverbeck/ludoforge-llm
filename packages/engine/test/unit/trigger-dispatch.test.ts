@@ -38,6 +38,33 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
   ...overrides,
 });
 
+const createMinimalDef = (): GameDef => ({
+  metadata: { id: 'trigger-contract-minimal', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+  constants: {},
+  globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+  perPlayerVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
+  actions: [],
+  triggers: [],
+  terminal: { conditions: [] },
+});
+
+const createValidRequest = (): Parameters<typeof dispatchTriggers>[0] => {
+  const state = createState({ zones: {} });
+  return {
+    def: createMinimalDef(),
+    state,
+    rng: { state: state.rng },
+    event: { type: 'turnStart' },
+    depth: 0,
+    maxDepth: 8,
+    triggerLog: [],
+  };
+};
+
 describe('dispatchTriggers', () => {
   it('accepts a prebuilt adjacency graph for trigger recursion paths', () => {
     const def: GameDef = {
@@ -185,6 +212,56 @@ describe('dispatchTriggers', () => {
       (error: unknown) => {
         assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
         assert.match((error as Error).message, /collector and queryRuntimeCache ownership fields/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request is not an object', () => {
+    assert.throws(
+      () => dispatchTriggers(undefined as unknown as Parameters<typeof dispatchTriggers>[0]),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /request must be an object/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.event.type is not a string', () => {
+    const invalidRequest = { ...createValidRequest(), event: { type: 7 } };
+
+    assert.throws(
+      () => dispatchTriggers(invalidRequest as unknown as Parameters<typeof dispatchTriggers>[0]),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /request.event.type must be a string/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.depth is not a safe integer', () => {
+    const invalidRequest = { ...createValidRequest(), depth: Number.NaN };
+
+    assert.throws(
+      () => dispatchTriggers(invalidRequest as unknown as Parameters<typeof dispatchTriggers>[0]),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /request.depth must be a safe integer/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.triggerLog is not an array', () => {
+    const invalidRequest = { ...createValidRequest(), triggerLog: {} };
+
+    assert.throws(
+      () => dispatchTriggers(invalidRequest as unknown as Parameters<typeof dispatchTriggers>[0]),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /request.triggerLog must be an array/);
         return true;
       },
     );

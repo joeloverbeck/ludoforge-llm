@@ -31,6 +31,7 @@ export interface DispatchTriggersRequest {
 }
 
 export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTriggersResult => {
+  validateDispatchTriggerRequest(request);
   const {
     def,
     state,
@@ -45,7 +46,6 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
   const runtimeTableIndex = request.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const effectPathRoot = request.effectPathRoot ?? `triggerEvent(${event.type})`;
   const runtimeResources = request.evalRuntimeResources ?? createEvalRuntimeResources();
-  validateDispatchTriggerRequest(request);
 
   if (depth > maxDepth) {
     return {
@@ -161,7 +161,79 @@ const matchesEvent = (trigger: TriggerDef, event: TriggerEvent): boolean => {
   }
 };
 
-const validateDispatchTriggerRequest = (request: DispatchTriggersRequest): void => {
+const validateDispatchTriggerRequest: (request: unknown) => asserts request is DispatchTriggersRequest = (request: unknown) => {
+  if (!isObjectRecord(request)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request must be an object; received ${describeType(request)}`,
+    );
+  }
+  if (!isObjectRecord(request.def)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.def must be an object; received ${describeType(request.def)}`,
+    );
+  }
+  if (!Array.isArray(request.def.zones)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.def.zones must be an array; received ${describeType(request.def.zones)}`,
+    );
+  }
+  if (!Array.isArray(request.def.triggers)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.def.triggers must be an array; received ${describeType(request.def.triggers)}`,
+    );
+  }
+  if (!isObjectRecord(request.state)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.state must be an object; received ${describeType(request.state)}`,
+    );
+  }
+  if (!isObjectRecord(request.rng)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.rng must be an object; received ${describeType(request.rng)}`,
+    );
+  }
+  if (!('state' in request.rng) || !isObjectRecord(request.rng.state)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.rng.state must be an object; received ${describeType('state' in request.rng ? request.rng.state : undefined)}`,
+    );
+  }
+  if (!isObjectRecord(request.event)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.event must be an object; received ${describeType(request.event)}`,
+    );
+  }
+  if (typeof request.event.type !== 'string') {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.event.type must be a string; received ${describeType(request.event.type)}`,
+    );
+  }
+  if (!Number.isSafeInteger(request.depth)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.depth must be a safe integer; received ${String(request.depth)}`,
+    );
+  }
+  if (!Number.isSafeInteger(request.maxDepth)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.maxDepth must be a safe integer; received ${String(request.maxDepth)}`,
+    );
+  }
+  if (!Array.isArray(request.triggerLog)) {
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      `dispatchTriggers request.triggerLog must be an array; received ${describeType(request.triggerLog)}`,
+    );
+  }
   if (request.effectPathRoot !== undefined && typeof request.effectPathRoot !== 'string') {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
@@ -174,6 +246,16 @@ const validateDispatchTriggerRequest = (request: DispatchTriggersRequest): void 
       'dispatchTriggers request.evalRuntimeResources must include collector and queryRuntimeCache ownership fields',
     );
   }
+};
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const describeType = (value: unknown): string => {
+  if (value === null) {
+    return 'null';
+  }
+  return Array.isArray(value) ? 'array' : typeof value;
 };
 
 const isEvalRuntimeResources = (value: unknown): value is EvalRuntimeResources => {

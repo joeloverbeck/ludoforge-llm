@@ -10,7 +10,7 @@ import {
   isCardSeatOrderDistinctSeatCountValid,
 } from './turn-flow-seat-order-policy.js';
 import type { ConditionAST, GameDef, ValueExpr } from './types.js';
-import { validateConditionAst, validateValueExpr } from './validate-gamedef-behavior.js';
+import { validateConditionAst, validateEffectAst, validateValueExpr } from './validate-gamedef-behavior.js';
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
 
 export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void => {
@@ -310,6 +310,7 @@ export const validateActionPipelines = (
   diagnostics: Diagnostic[],
   def: GameDef,
   actionCandidates: readonly string[],
+  context: ValidationContext,
 ): void => {
   const operationActionIdCounts = new Map<string, number>();
   def.actionPipelines?.forEach((actionPipeline, actionPipelineIndex) => {
@@ -347,6 +348,27 @@ export const validateActionPipelines = (
         suggestion: 'Use "atomic" or "partial".',
       });
     }
+
+    if (actionPipeline.applicability !== undefined) {
+      validateConditionAst(diagnostics, actionPipeline.applicability, `${basePath}.applicability`, context);
+    }
+    if (actionPipeline.legality !== null && actionPipeline.legality !== undefined) {
+      validateConditionAst(diagnostics, actionPipeline.legality, `${basePath}.legality`, context);
+    }
+    if (actionPipeline.costValidation !== null && actionPipeline.costValidation !== undefined) {
+      validateConditionAst(diagnostics, actionPipeline.costValidation, `${basePath}.costValidation`, context);
+    }
+    actionPipeline.costEffects.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `${basePath}.costEffects[${effectIndex}]`, context);
+    });
+    if (actionPipeline.targeting.filter !== undefined) {
+      validateConditionAst(diagnostics, actionPipeline.targeting.filter, `${basePath}.targeting.filter`, context);
+    }
+    actionPipeline.stages.forEach((stage, stageIndex) => {
+      (stage.effects ?? []).forEach((effect, effectIndex) => {
+        validateEffectAst(diagnostics, effect, `${basePath}.stages[${stageIndex}].effects[${effectIndex}]`, context);
+      });
+    });
   });
 
   for (const [actionId, count] of operationActionIdCounts) {

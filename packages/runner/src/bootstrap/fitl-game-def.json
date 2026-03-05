@@ -13712,9 +13712,9 @@
                             "left": {
                               "ref": "zoneProp",
                               "zone": "$subSpace",
-                              "prop": "spaceId"
+                              "prop": "id"
                             },
-                            "right": "saigon"
+                            "right": "saigon:none"
                           }
                         ]
                       },

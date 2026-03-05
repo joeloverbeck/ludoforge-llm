@@ -100,7 +100,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     });
   });
 
-  validateActionPipelines(diagnostics, def, actionCandidates);
+  validateActionPipelines(diagnostics, def, actionCandidates, context);
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   diagnostics.push(...validateAdjacency(adjacencyGraph, def.zones));

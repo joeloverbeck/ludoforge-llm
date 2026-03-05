@@ -41,8 +41,8 @@
 
 ## Out of Scope
 
-- Query runtime cache key/accessor refactors (`tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`)
-- Trigger-dispatch API redesign (`tickets/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
+- Query runtime cache key/accessor refactors (`archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`)
+- Trigger-dispatch API redesign (`archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
 - Game-specific GameSpecDoc or visual-config behavior
 
 ## Acceptance Criteria

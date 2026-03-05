@@ -43,7 +43,7 @@ Archived ticket `Outcome` sections can become stale after follow-up implementati
 ## Out of Scope
 
 - Engine runtime behavior changes
-- Query runtime cache and trigger dispatch architecture tickets (`tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`, `tickets/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
+- Query runtime cache and trigger dispatch architecture tickets (`archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`, `archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
 - Game-specific GameSpecDoc or visual-config behavior
 
 ## Acceptance Criteria

@@ -45,7 +45,7 @@ function toPosixPath(path) {
   return path.replaceAll('\\', '/');
 }
 
-function rewriteActiveTicketDeps(rootDir, sourcePath, destinationPath) {
+function rewriteActiveTicketReferences(rootDir, sourcePath, destinationPath) {
   const sourceDep = toPosixPath(relative(rootDir, sourcePath));
   const destinationDep = toPosixPath(relative(rootDir, destinationPath));
   if (sourceDep === destinationDep) {
@@ -63,34 +63,11 @@ function rewriteActiveTicketDeps(rootDir, sourcePath, destinationPath) {
 
     const ticketPath = resolve(activeTicketsDir, entry.name);
     const content = readFileSync(ticketPath, 'utf8');
-    const depsMatch = content.match(/^\*\*Deps\*\*:\s*(.+)$/m);
-    if (!depsMatch) {
+    if (!content.includes(sourceDep)) {
       continue;
     }
 
-    const rawDeps = depsMatch[1].trim();
-    if (rawDeps === 'None') {
-      continue;
-    }
-
-    let updated = false;
-    const deps = rawDeps
-      .split(',')
-      .map((dep) => dep.trim())
-      .map((dep) => {
-        if (dep === sourceDep) {
-          updated = true;
-          return destinationDep;
-        }
-        return dep;
-      });
-
-    if (!updated) {
-      continue;
-    }
-
-    const updatedDepsLine = `**Deps**: ${deps.join(', ')}`;
-    const updatedContent = content.replace(depsMatch[0], updatedDepsLine);
+    const updatedContent = content.replaceAll(sourceDep, destinationDep);
     writeFileSync(ticketPath, updatedContent);
     updatedTicketCount += 1;
   }
@@ -122,10 +99,10 @@ function main() {
   }
 
   renameSync(sourcePath, destinationPath);
-  const rewrittenDeps = rewriteActiveTicketDeps(rootDir, sourcePath, destinationPath);
+  const rewrittenDeps = rewriteActiveTicketReferences(rootDir, sourcePath, destinationPath);
   writeSync(1, `Archived ${sourcePath} -> ${destinationPath}\n`);
   if (rewrittenDeps > 0) {
-    writeSync(1, `Updated dependency references in ${rewrittenDeps} active ticket(s).\n`);
+    writeSync(1, `Updated ticket references in ${rewrittenDeps} active ticket(s).\n`);
   }
 }
 

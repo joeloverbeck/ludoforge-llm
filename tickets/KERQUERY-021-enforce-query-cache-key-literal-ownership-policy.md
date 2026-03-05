@@ -42,7 +42,7 @@ KERQUERY-013 centralized query-runtime-cache keys and typed accessors, but there
 ## Out of Scope
 
 - Query runtime cache behavior changes
-- Trigger dispatch API redesign (`tickets/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
+- Trigger dispatch API redesign (`archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
 - Game-specific GameSpecDoc or visual-config behavior
 
 ## Acceptance Criteria

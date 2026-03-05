@@ -45,8 +45,8 @@ Many tests now manually construct `EvalRuntimeResources`/`EvalContext` fixtures.
 ## Out of Scope
 
 - Runtime behavior changes in kernel/effects paths
-- Trigger-dispatch signature work (`tickets/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
-- Query runtime cache ownership/key policy tickets (`tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`, `tickets/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md`)
+- Trigger-dispatch signature work (`archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
+- Query runtime cache ownership/key policy tickets (`archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`, `archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md`)
 
 ## Acceptance Criteria
 

@@ -45,9 +45,9 @@
 
 ## Out of Scope
 
-- Trigger-dispatch API hardening (`tickets/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
-- Legal-choices discovery resource identity (`tickets/KERQUERY-012-preserve-resource-identity-across-legal-choices-discovery.md`)
-- Query-runtime-cache key/accessor centralization and ownership boundary policy (`tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`, `tickets/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md`)
+- Trigger-dispatch API hardening (`archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
+- Legal-choices discovery resource identity (`archive/tickets/KERQUERY/KERQUERY-012-preserve-resource-identity-across-legal-choices-discovery.md`)
+- Query-runtime-cache key/accessor centralization and ownership boundary policy (`archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`, `archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md`)
 
 ## Acceptance Criteria
 

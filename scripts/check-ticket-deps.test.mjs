@@ -100,3 +100,55 @@ test('passes with mixed active and archived dependency paths', () => {
     assert.equal(result.status, 0, result.stderr);
   });
 });
+
+test('fails when a stale active ticket reference exists outside deps', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets', 'KERQUERY'), { recursive: true });
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'KERQUERY', 'KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md'),
+      '# Archived dep\n',
+      'utf8',
+    );
+    writeFileSync(
+      join(tempRoot, 'tickets', 'KERQUERY-300-reference-drift.md'),
+      [
+        '# Drift sample',
+        '',
+        '**Deps**: archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md',
+        '',
+        'Out of scope: (`tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`).',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = runCheck(tempRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /KERQUERY-300-reference-drift\.md:5: unresolved ticket reference/);
+  });
+});
+
+test('passes when markdown links and inline ticket references resolve', () => {
+  withTempRepo((tempRoot) => {
+    mkdirSync(join(tempRoot, 'archive', 'tickets', 'KERQUERY'), { recursive: true });
+    writeFileSync(
+      join(tempRoot, 'archive', 'tickets', 'KERQUERY', 'KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md'),
+      '# Archived dep\n',
+      'utf8',
+    );
+    writeFileSync(
+      join(tempRoot, 'tickets', 'KERQUERY-301-resolved-references.md'),
+      [
+        '# Resolved refs',
+        '',
+        '**Deps**: None',
+        '',
+        'See [KERQUERY-014](archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md).',
+        'Also referenced as `archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md`.',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = runCheck(tempRoot);
+    assert.equal(result.status, 0, result.stderr);
+  });
+});

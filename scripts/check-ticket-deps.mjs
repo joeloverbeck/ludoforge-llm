@@ -108,7 +108,43 @@ function validateTicket(rootDir, ticketPath, ticketIndex) {
     }
   }
 
+  for (const reference of extractTicketPathReferences(content)) {
+    if (!isExistingFile(rootDir, reference.path)) {
+      errors.push(`${ticketPath}:${reference.line}: unresolved ticket reference "${reference.path}"`);
+    }
+  }
+
   return errors;
+}
+
+function extractTicketPathReferences(content) {
+  const references = [];
+  const lines = content.split('\n');
+  const inlineCodePath = /`((?:archive\/)?tickets\/[\w./-]+\.md)`/g;
+  const markdownLinkPath = /\[[^\]]+\]\(((?:archive\/)?tickets\/[\w./-]+\.md)\)/g;
+  const seen = new Set();
+
+  lines.forEach((line, index) => {
+    if (line.startsWith('**Deps**:')) {
+      return;
+    }
+
+    for (const regex of [inlineCodePath, markdownLinkPath]) {
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const path = match[1];
+        const key = `${index + 1}:${path}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        references.push({ path, line: index + 1 });
+      }
+      regex.lastIndex = 0;
+    }
+  });
+
+  return references;
 }
 
 function main() {

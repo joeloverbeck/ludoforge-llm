@@ -10,9 +10,10 @@ const currentFile = fileURLToPath(import.meta.url);
 const scriptsDir = dirname(currentFile);
 const archiveScript = resolve(scriptsDir, 'archive-ticket.mjs');
 
-function runArchive(sourcePath, destinationPath) {
+function runArchive(sourcePath, destinationPath, cwd = undefined) {
   return spawnSync(process.execPath, [archiveScript, sourcePath, destinationPath], {
     encoding: 'utf8',
+    cwd,
   });
 }
 
@@ -108,5 +109,47 @@ test('fails when destination parent directory does not exist', () => {
     assert.notEqual(result.status, 0);
     assert.equal(result.stderr.includes('Destination parent directory does not exist'), true);
     assert.equal(readFileSync(sourcePath, 'utf8'), 'ticket body');
+  });
+});
+
+test('rewrites moved ticket path across deps and narrative references in active tickets', () => {
+  withTempDir((tempRoot) => {
+    const sourceDir = join(tempRoot, 'tickets');
+    const archiveDir = join(tempRoot, 'archive', 'tickets', 'KERQUERY');
+    mkdirSync(sourceDir, { recursive: true });
+    mkdirSync(archiveDir, { recursive: true });
+
+    const sourcePath = join(sourceDir, 'KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md');
+    writeFileSync(sourcePath, '# Source ticket\n\n**Deps**: None\n', 'utf8');
+
+    const dependentTicketPath = join(tempRoot, 'tickets', 'KERQUERY-300-dependent.md');
+    writeFileSync(
+      dependentTicketPath,
+      [
+        '# Dependent ticket',
+        '',
+        '**Deps**: tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md',
+        '',
+        'Out of scope: (`tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md`).',
+        'See [source](tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md).',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = runArchive(sourcePath, archiveDir, tempRoot);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.includes('Updated ticket references in 1 active ticket(s).'), true);
+
+    const updated = readFileSync(dependentTicketPath, 'utf8');
+    assert.equal(
+      updated.includes('tickets/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md'),
+      false,
+    );
+    assert.equal(
+      updated.includes(
+        'archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md',
+      ),
+      true,
+    );
   });
 });

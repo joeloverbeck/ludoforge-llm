@@ -282,7 +282,7 @@ describe('translateEffectTrace', () => {
         kind: 'reveal',
         zone: 'hand:0',
         observers: [asPlayerId(0)],
-        filter: [{ prop: 'faction', op: 'eq', value: 'us' }],
+        filter: { prop: 'faction', op: 'eq', value: 'us' },
         provenance: provenance(),
       },
       {
@@ -295,7 +295,7 @@ describe('translateEffectTrace', () => {
         kind: 'conceal',
         zone: 'hand:0',
         from: [asPlayerId(0), asPlayerId(1)],
-        filter: [{ prop: 'status', op: 'notIn', value: ['revealed', 'peeked'] }],
+        filter: { prop: 'status', op: 'notIn', value: ['revealed', 'peeked'] },
         grantsRemoved: 2,
         provenance: provenance(),
       },

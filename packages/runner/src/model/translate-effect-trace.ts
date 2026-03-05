@@ -1,4 +1,4 @@
-import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
+import type { EffectTraceEntry, GameDef, TokenFilterExpr, TriggerEvent, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
@@ -390,19 +390,31 @@ function formatConcealScope(
   return ` from ${from.map((playerId) => resolvePlayerName(playerId, visualConfig, lookup)).join(', ')}`;
 }
 
-function formatOptionalFilter(
-  filter:
-    | readonly {
-      readonly prop: string;
-      readonly op: 'eq' | 'neq' | 'in' | 'notIn';
-      readonly value: unknown;
-    }[]
-    | undefined,
-): string {
-  if (filter === undefined || filter.length === 0) {
+function formatOptionalFilter(filter: TokenFilterExpr | undefined): string {
+  if (filter === undefined) {
     return '';
   }
-  return ` (filter: ${filter.map(formatFilterPredicate).join(' and ')})`;
+  return ` (filter: ${formatTokenFilterExpr(filter)})`;
+}
+
+function formatTokenFilterExpr(expr: TokenFilterExpr): string {
+  if ('prop' in expr) {
+    return formatFilterPredicate(expr);
+  }
+  if (expr.op === 'not') {
+    const formattedArg = formatTokenFilterExpr(expr.arg);
+    return `not (${formattedArg})`;
+  }
+
+  const joiner = expr.op === 'and' ? ' and ' : ' or ';
+  const [firstArg] = expr.args;
+  if (expr.args.length === 1 && firstArg !== undefined) {
+    return formatTokenFilterExpr(firstArg);
+  }
+
+  return expr.args
+    .map((arg) => ('prop' in arg ? formatTokenFilterExpr(arg) : `(${formatTokenFilterExpr(arg)})`))
+    .join(joiner);
 }
 
 function formatFilterPredicate(predicate: {

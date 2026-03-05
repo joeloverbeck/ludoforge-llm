@@ -9,6 +9,7 @@ import {
   asZoneId,
   createCollector,
   createEvalRuntimeResources,
+  type EvalRuntimeResources,
   type GameDef,
   type GameState,
   type QueryRuntimeCache,
@@ -127,5 +128,30 @@ describe('dispatchLifecycleEvent runtime resources', () => {
     assert.equal(afterPhaseEnter, state);
     assert.equal(setCalls, 1);
     assert.equal(getCalls, 2);
+  });
+
+  it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {
+    const def = makeDef();
+    const state = makeState();
+    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+
+    assert.throws(
+      () =>
+        dispatchLifecycleEvent(
+          def,
+          state,
+          { type: 'turnStart' },
+          undefined,
+          undefined,
+          malformedResources as unknown as EvalRuntimeResources,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /dispatchLifecycleEvent evalRuntimeResources/i);
+        return true;
+      },
+    );
   });
 });

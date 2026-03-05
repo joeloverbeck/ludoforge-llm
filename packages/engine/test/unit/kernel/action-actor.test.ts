@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { resolveActionActor } from '../../../src/kernel/action-actor.js';
+import type { EvalRuntimeResources } from '../../../src/kernel/eval-context.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
 import {
   asActionId,
@@ -125,5 +126,32 @@ describe('resolveActionActor()', () => {
     });
 
     assert.equal(result.kind, 'invalidSpec');
+  });
+
+  it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {
+    const action = makeAction();
+    const def = makeDef(action);
+    const state = makeState();
+    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+
+    assert.throws(
+      () =>
+        resolveActionActor({
+          def,
+          state,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          action,
+          decisionPlayer: asPlayerId(0),
+          bindings: {},
+          evalRuntimeResources: malformedResources as unknown as EvalRuntimeResources,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /resolveActionActor evalRuntimeResources/i);
+        return true;
+      },
+    );
   });
 });

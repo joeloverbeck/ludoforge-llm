@@ -44,7 +44,7 @@
 ## Out of Scope
 
 - New lifecycle semantics or turn-flow behavior changes
-- Additional runtime-resource policy work already scoped in `tickets/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md` and `tickets/KERQUERY-033-enforce-eval-runtime-resource-boundary-guard-policy.md`
+- Additional runtime-resource policy work already scoped in `archive/tickets/KERQUERY/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md` and `tickets/KERQUERY-033-enforce-eval-runtime-resource-boundary-guard-policy.md`
 - Query-runtime-cache ownership and key-policy tickets (`archive/tickets/KERQUERY/KERQUERY-029-derive-query-cache-key-literal-policy-from-canonical-owner.md`, `archive/tickets/KERQUERY/KERQUERY-030-harden-query-runtime-cache-ownership-policy-with-ast-signature-checks.md`, `archive/tickets/KERQUERY/KERQUERY-031-enforce-query-runtime-cache-index-immutability-at-write-boundary.md`)
 
 ## Acceptance Criteria

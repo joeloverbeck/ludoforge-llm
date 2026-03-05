@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel performance/clarity refinement for resource-contract validation flow
-**Deps**: tickets/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md, packages/engine/src/kernel/action-applicability-preflight.ts, packages/engine/src/kernel/action-actor.ts, packages/engine/src/kernel/action-executor.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-032-add-negative-runtime-resource-contract-tests-across-kernel-boundaries.md, packages/engine/src/kernel/action-applicability-preflight.ts, packages/engine/src/kernel/action-actor.ts, packages/engine/src/kernel/action-executor.ts
 
 ## Problem
 

@@ -6,6 +6,7 @@ import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec } from '@lu
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import { VisualConfigSchema } from '../../src/config/visual-config-types';
 
 function repoRootPath(): string {
@@ -126,6 +127,67 @@ describe('visual-config.yaml files', () => {
         symbol: 'star',
       },
     ]);
+    },
+  );
+
+  it(
+    'FITL actions section contains correct display names and choice prompts for all configured actions',
+    { timeout: 15_000 },
+    () => {
+    const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
+    const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake');
+    const provider = new VisualConfigProvider(parsed);
+
+    // All action IDs in the visual config must exist in the compiled GameDef
+    const gameDefActionIds = new Set([
+      ...fitlGameDef.actions.map((a) => a.id as string),
+      ...(fitlGameDef.actionPipelines ?? []).map((p) => p.actionId as string),
+    ]);
+    const configActionIds = Object.keys(parsed.actions ?? {});
+    expect(configActionIds.length).toBeGreaterThan(0);
+    for (const actionId of configActionIds) {
+      expect(
+        gameDefActionIds.has(actionId),
+        `Action "${actionId}" in visual config not found in GameDef`,
+      ).toBe(true);
+    }
+
+    // Display name fixes for badly-formatting action IDs
+    expect(provider.getActionDisplayName('ambushNva')).toBe('NVA Ambush');
+    expect(provider.getActionDisplayName('ambushVc')).toBe('VC Ambush');
+    expect(provider.getActionDisplayName('airLift')).toBe('Airlift');
+    expect(provider.getActionDisplayName('airStrike')).toBe('Air Strike');
+    expect(provider.getActionDisplayName('coupArvnRedeployMandatory')).toBe('Coup: ARVN Mandatory Redeploy');
+    expect(provider.getActionDisplayName('coupArvnRedeployOptionalTroops')).toBe('Coup: ARVN Troop Redeploy');
+    expect(provider.getActionDisplayName('coupArvnRedeployPolice')).toBe('Coup: ARVN Police Redeploy');
+    expect(provider.getActionDisplayName('coupNvaRedeployTroops')).toBe('Coup: NVA Troop Redeploy');
+
+    // Choice prompts for all 8 core operations
+    const coreOps = ['train', 'patrol', 'sweep', 'assault', 'rally', 'march', 'attack', 'terror'];
+    for (const op of coreOps) {
+      expect(
+        provider.getChoicePrompt(op, 'targetSpaces'),
+        `Missing targetSpaces prompt for "${op}"`,
+      ).toBeTruthy();
+    }
+
+    // Choice prompts for special activities
+    expect(provider.getChoicePrompt('airLift', 'spaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('airStrike', 'spaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('advise', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('govern', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('transport', 'transportOrigin')).toBeTruthy();
+    expect(provider.getChoicePrompt('raid', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('infiltrate', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('bombard', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('tax', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('subvert', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('ambushNva', 'targetSpaces')).toBeTruthy();
+    expect(provider.getChoicePrompt('ambushVc', 'targetSpaces')).toBeTruthy();
+
+    // Actions without configured display names should return null (auto-format handles them)
+    expect(provider.getActionDisplayName('train')).toBeNull();
+    expect(provider.getActionDisplayName('patrol')).toBeNull();
     },
   );
 

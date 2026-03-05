@@ -288,6 +288,103 @@ tokenTypes:
     shape: round-disk
     color: bright-blue
 
+actions:
+  # Core operations -- single-word IDs auto-format fine, but choice prompts add value
+  train:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to train in"
+  patrol:
+    choices:
+      targetSpaces:
+        prompt: "Select LoCs to patrol"
+  sweep:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to sweep"
+  assault:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to assault"
+  rally:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to rally in"
+  march:
+    choices:
+      targetSpaces:
+        prompt: "Select destination spaces"
+  attack:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to attack"
+  terror:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces for terror"
+  # Special activities -- some need display name fixes, all benefit from choice prompts
+  advise:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to advise in"
+  airLift:
+    displayName: "Airlift"
+    choices:
+      spaces:
+        prompt: "Select spaces for airlift"
+  airStrike:
+    displayName: "Air Strike"
+    choices:
+      spaces:
+        prompt: "Select spaces for air strike"
+  govern:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to govern"
+  transport:
+    choices:
+      transportOrigin:
+        prompt: "Select origin space for transport"
+  raid:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to raid"
+  infiltrate:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to infiltrate"
+  bombard:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to bombard"
+  ambushNva:
+    displayName: "NVA Ambush"
+    choices:
+      targetSpaces:
+        prompt: "Select spaces for ambush"
+  tax:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to tax"
+  subvert:
+    choices:
+      targetSpaces:
+        prompt: "Select spaces to subvert"
+  ambushVc:
+    displayName: "VC Ambush"
+    choices:
+      targetSpaces:
+        prompt: "Select spaces for ambush"
+  # Coup-phase actions with bad auto-formatting
+  coupArvnRedeployMandatory:
+    displayName: "Coup: ARVN Mandatory Redeploy"
+  coupArvnRedeployOptionalTroops:
+    displayName: "Coup: ARVN Troop Redeploy"
+  coupArvnRedeployPolice:
+    displayName: "Coup: ARVN Police Redeploy"
+  coupNvaRedeployTroops:
+    displayName: "Coup: NVA Troop Redeploy"
+
 victoryStandings:
   tooltipBreakdowns:
     - seat: us

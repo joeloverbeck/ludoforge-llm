@@ -295,6 +295,22 @@ const VictoryStandingsVisualSchema = z.object({
   tooltipBreakdowns: z.array(VictoryTooltipBreakdownSchema),
 });
 
+const ActionChoiceOptionVisualSchema = z.object({
+  displayName: z.string().optional(),
+});
+
+const ActionChoiceVisualSchema = z.object({
+  prompt: z.string().optional(),
+  description: z.string().optional(),
+  options: z.record(z.string(), ActionChoiceOptionVisualSchema).optional(),
+});
+
+const ActionVisualSchema = z.object({
+  displayName: z.string().optional(),
+  description: z.string().optional(),
+  choices: z.record(z.string(), ActionChoiceVisualSchema).optional(),
+});
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -302,6 +318,7 @@ export const VisualConfigSchema = z.object({
   zones: ZonesConfigSchema.optional(),
   edges: EdgesConfigSchema.optional(),
   tokenTypes: z.record(z.string(), TokenTypeVisualStyleSchema).optional(),
+  actions: z.record(z.string(), ActionVisualSchema).optional(),
   tokenTypeDefaults: z.array(TokenTypeDefaultSchema).optional(),
   cardAnimation: CardAnimationConfigSchema.optional(),
   animations: AnimationsConfigSchema.optional(),
@@ -355,4 +372,7 @@ export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
 export type VictoryTooltipComponent = z.infer<typeof VictoryTooltipComponentSchema>;
 export type VictoryTooltipBreakdown = z.infer<typeof VictoryTooltipBreakdownSchema>;
 export type VictoryStandingsVisualConfig = z.infer<typeof VictoryStandingsVisualSchema>;
+export type ActionChoiceOptionVisual = z.infer<typeof ActionChoiceOptionVisualSchema>;
+export type ActionChoiceVisual = z.infer<typeof ActionChoiceVisualSchema>;
+export type ActionVisual = z.infer<typeof ActionVisualSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

@@ -507,4 +507,64 @@ describe('VisualConfigSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('accepts a valid actions section with nested choices and options', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      actions: {
+        'us-train': {
+          displayName: 'Train',
+          description: 'Place forces in cities or provinces with COIN control.',
+          choices: {
+            targetSpaces: {
+              prompt: 'Select spaces to train in',
+              description: 'Choose one or more spaces with COIN control.',
+              options: {
+                'saigon:none': { displayName: 'Saigon' },
+                'hue:none': { displayName: 'Hue' },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts config with no actions section (backward compatible)', () => {
+    const result = VisualConfigSchema.safeParse({ version: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects actions with invalid field types', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      actions: {
+        'us-train': {
+          displayName: 42,
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts actions with only displayName (no choices)', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      actions: {
+        'us-train': { displayName: 'Train' },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts actions with empty choices record', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      actions: {
+        'us-train': { choices: {} },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
 });

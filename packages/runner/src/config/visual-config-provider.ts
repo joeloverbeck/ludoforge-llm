@@ -307,6 +307,26 @@ export class VisualConfigProvider {
     return breakdowns.find((b) => b.seat === seat) ?? null;
   }
 
+  getActionDisplayName(actionId: string): string | null {
+    return this.config?.actions?.[actionId]?.displayName ?? null;
+  }
+
+  getActionDescription(actionId: string): string | null {
+    return this.config?.actions?.[actionId]?.description ?? null;
+  }
+
+  getChoicePrompt(actionId: string, paramName: string): string | null {
+    return this.config?.actions?.[actionId]?.choices?.[paramName]?.prompt ?? null;
+  }
+
+  getChoiceDescription(actionId: string, paramName: string): string | null {
+    return this.config?.actions?.[actionId]?.choices?.[paramName]?.description ?? null;
+  }
+
+  getChoiceOptionDisplayName(actionId: string, paramName: string, optionValue: string): string | null {
+    return this.config?.actions?.[actionId]?.choices?.[paramName]?.options?.[optionValue]?.displayName ?? null;
+  }
+
   getHiddenZones(): ReadonlySet<string> {
     const hiddenZones = this.config?.zones?.hiddenZones;
     if (hiddenZones === undefined || hiddenZones.length === 0) {

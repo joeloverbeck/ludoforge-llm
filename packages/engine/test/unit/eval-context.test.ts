@@ -147,7 +147,10 @@ describe('createEvalContext', () => {
 });
 
 describe('createQueryRuntimeCache', () => {
-  it('stores and retrieves token-zone indexes per state through domain methods only', () => {
+  it('stores and retrieves token-zone index snapshots per state through domain methods only', () => {
+    const indexEntries = (index: ReadonlyMap<string, string> | undefined): [string, string][] =>
+      index === undefined ? [] : [...index.entries()];
+
     const cache = createQueryRuntimeCache();
     const firstState = makeState();
     const secondState = makeState();
@@ -160,7 +163,20 @@ describe('createQueryRuntimeCache', () => {
     cache.setTokenZoneByTokenIdIndex(firstState, firstIndex);
     cache.setTokenZoneByTokenIdIndex(secondState, secondIndex);
 
-    assert.equal(cache.getTokenZoneByTokenIdIndex(firstState), firstIndex);
-    assert.equal(cache.getTokenZoneByTokenIdIndex(secondState), secondIndex);
+    const cachedFirst = cache.getTokenZoneByTokenIdIndex(firstState);
+    const cachedSecond = cache.getTokenZoneByTokenIdIndex(secondState);
+
+    assert.notEqual(cachedFirst, undefined);
+    assert.notEqual(cachedSecond, undefined);
+    assert.notEqual(cachedFirst, firstIndex);
+    assert.notEqual(cachedSecond, secondIndex);
+    assert.deepEqual(indexEntries(cachedFirst), [...firstIndex.entries()]);
+    assert.deepEqual(indexEntries(cachedSecond), [...secondIndex.entries()]);
+
+    firstIndex.set('c', asZoneId('deck:none'));
+    secondIndex.set('d', asZoneId('tableau:2'));
+
+    assert.deepEqual(indexEntries(cache.getTokenZoneByTokenIdIndex(firstState)), [['a', asZoneId('hand:0')]]);
+    assert.deepEqual(indexEntries(cache.getTokenZoneByTokenIdIndex(secondState)), [['b', asZoneId('bench:1')]]);
   });
 });

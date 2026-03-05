@@ -50,7 +50,7 @@ The codebase now has multiple request-object API shape guards (`dispatchTriggers
 
 - Runtime kernel behavior refactors
 - Runtime-resource guard policy work in `tickets/KERQUERY-033-enforce-eval-runtime-resource-boundary-guard-policy.md`
-- Query-runtime-cache ownership/index policy tickets (`archive/tickets/KERQUERY/KERQUERY-029-derive-query-cache-key-literal-policy-from-canonical-owner.md`, `archive/tickets/KERQUERY/KERQUERY-030-harden-query-runtime-cache-ownership-policy-with-ast-signature-checks.md`, `tickets/KERQUERY-031-enforce-query-runtime-cache-index-immutability-at-write-boundary.md`)
+- Query-runtime-cache ownership/index policy tickets (`archive/tickets/KERQUERY/KERQUERY-029-derive-query-cache-key-literal-policy-from-canonical-owner.md`, `archive/tickets/KERQUERY/KERQUERY-030-harden-query-runtime-cache-ownership-policy-with-ast-signature-checks.md`, `archive/tickets/KERQUERY/KERQUERY-031-enforce-query-runtime-cache-index-immutability-at-write-boundary.md`)
 
 ## Acceptance Criteria
 

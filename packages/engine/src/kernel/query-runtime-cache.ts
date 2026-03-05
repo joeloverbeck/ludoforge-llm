@@ -13,7 +13,7 @@ export function createQueryRuntimeCache(): QueryRuntimeCache {
       return tokenZoneByTokenIdIndexByState.get(state);
     },
     setTokenZoneByTokenIdIndex: (state, value) => {
-      tokenZoneByTokenIdIndexByState.set(state, value);
+      tokenZoneByTokenIdIndexByState.set(state, new Map(value));
     },
   };
 }

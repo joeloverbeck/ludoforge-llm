@@ -556,36 +556,49 @@ function validateCanonicalTokenTraitLiteral(
   ];
 }
 
-export function lowerTokenFilterArray(
-  source: readonly unknown[],
+export function lowerTokenFilterExpr(
+  source: unknown,
   context: ConditionLoweringContext,
   path: string,
-): ConditionLoweringResult<TokenFilterExpr | undefined> {
-  const diagnostics: Diagnostic[] = [];
-  const predicates: TokenFilterPredicate[] = [];
+): ConditionLoweringResult<TokenFilterExpr> {
+  if (!isRecord(source)) {
+    return missingCapability(path, 'token filter expression', source, [
+      '{ prop, op, value }',
+      '{ op: "and"|"or", args: [<TokenFilterExpr>, ...] }',
+      '{ op: "not", arg: <TokenFilterExpr> }',
+    ]);
+  }
 
-  for (let i = 0; i < source.length; i++) {
-    const lowered = lowerTokenFilterEntry(source[i], context, `${path}[${i}]`);
-    diagnostics.push(...lowered.diagnostics);
-    if (lowered.value === null) {
+  if (source.op === 'and' || source.op === 'or') {
+    if (!Array.isArray(source.args) || source.args.length === 0) {
+      return missingCapability(path, `token filter ${source.op}`, source, [
+        `{ op: "${source.op}", args: [<TokenFilterExpr>, ...] }`,
+      ]);
+    }
+    const diagnostics: Diagnostic[] = [];
+    const args: TokenFilterExpr[] = [];
+    source.args.forEach((entry, index) => {
+      const lowered = lowerTokenFilterExpr(entry, context, `${path}.args[${index}]`);
+      diagnostics.push(...lowered.diagnostics);
+      if (lowered.value !== null) {
+        args.push(lowered.value);
+      }
+    });
+    if (args.length !== source.args.length) {
       return { value: null, diagnostics };
     }
-    predicates.push(lowered.value);
+    return { value: { op: source.op, args }, diagnostics };
   }
 
-  if (predicates.length === 0) {
-    return { value: undefined, diagnostics };
+  if (source.op === 'not') {
+    const lowered = lowerTokenFilterExpr(source.arg, context, `${path}.arg`);
+    if (lowered.value === null) {
+      return lowered;
+    }
+    return { value: { op: 'not', arg: lowered.value }, diagnostics: lowered.diagnostics };
   }
-  if (predicates.length === 1) {
-    return { value: predicates[0]!, diagnostics };
-  }
-  return {
-    value: {
-      op: 'and',
-      args: predicates,
-    },
-    diagnostics,
-  };
+
+  return lowerTokenFilterEntry(source, context, path);
 }
 
 export function lowerQueryNode(
@@ -650,10 +663,7 @@ export function lowerQueryNode(
         return { value: null, diagnostics: zone.diagnostics };
       }
       if (source.filter !== undefined) {
-        if (!Array.isArray(source.filter)) {
-          return missingCapability(`${path}.filter`, 'tokensInZone filter', source.filter, ['Array<{ prop, op, value }>']);
-        }
-        const loweredFilter = lowerTokenFilterArray(source.filter as readonly unknown[], context, `${path}.filter`);
+        const loweredFilter = lowerTokenFilterExpr(source.filter, context, `${path}.filter`);
         if (loweredFilter.value === null) {
           return { value: null, diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics] };
         }
@@ -661,7 +671,7 @@ export function lowerQueryNode(
           value: {
             query: 'tokensInZone',
             zone: zone.value,
-            ...(loweredFilter.value === undefined ? {} : { filter: loweredFilter.value }),
+            filter: loweredFilter.value,
           },
           diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics],
         };
@@ -772,10 +782,7 @@ export function lowerQueryNode(
       }
 
       if (source.filter !== undefined) {
-        if (!Array.isArray(source.filter)) {
-          return missingCapability(`${path}.filter`, 'tokensInMapSpaces filter', source.filter, ['Array<{ prop, op, value }>']);
-        }
-        const loweredFilter = lowerTokenFilterArray(source.filter as readonly unknown[], context, `${path}.filter`);
+        const loweredFilter = lowerTokenFilterExpr(source.filter, context, `${path}.filter`);
         diagnostics.push(...loweredFilter.diagnostics);
         if (loweredFilter.value === null) {
           return { value: null, diagnostics };
@@ -784,7 +791,7 @@ export function lowerQueryNode(
           value: {
             query: 'tokensInMapSpaces',
             ...(spaceFilter === undefined ? {} : { spaceFilter }),
-            ...(loweredFilter.value === undefined ? {} : { filter: loweredFilter.value }),
+            filter: loweredFilter.value,
           },
           diagnostics,
         };
@@ -1077,10 +1084,7 @@ export function lowerQueryNode(
         return { value: null, diagnostics: zone.diagnostics };
       }
       if (source.filter !== undefined) {
-        if (!Array.isArray(source.filter)) {
-          return missingCapability(`${path}.filter`, 'tokensInAdjacentZones filter', source.filter, ['Array<{ prop, op, value }>']);
-        }
-        const loweredFilter = lowerTokenFilterArray(source.filter as readonly unknown[], context, `${path}.filter`);
+        const loweredFilter = lowerTokenFilterExpr(source.filter, context, `${path}.filter`);
         if (loweredFilter.value === null) {
           return { value: null, diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics] };
         }
@@ -1088,7 +1092,7 @@ export function lowerQueryNode(
           value: {
             query: 'tokensInAdjacentZones',
             zone: zone.value,
-            ...(loweredFilter.value === undefined ? {} : { filter: loweredFilter.value }),
+            filter: loweredFilter.value,
           },
           diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics],
         };

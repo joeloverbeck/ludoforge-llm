@@ -17,7 +17,9 @@ terminal:
                   query: tokensInZone
                   zone: played:none
                   filter:
-                    - { prop: isCoup, op: eq, value: true }
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
             right: 1
           - op: '>'
             left:
@@ -46,7 +48,9 @@ terminal:
                     query: tokensInZone
                     zone: available-US:none
                     filter:
-                      - { prop: type, op: in, value: [troops, base] }
+                      op: and
+                      args:
+                        - { prop: type, op: in, value: [troops, base] }
             right: 50
     - id: arvn-victory
       seat: 'arvn'
@@ -62,7 +66,9 @@ terminal:
                   query: tokensInZone
                   zone: played:none
                   filter:
-                    - { prop: isCoup, op: eq, value: true }
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
             right: 1
           - op: '>'
             left:
@@ -84,7 +90,9 @@ terminal:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: US }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: US }
                           right:
                             aggregate:
                               op: count
@@ -92,7 +100,9 @@ terminal:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: ARVN }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: ARVN }
                         right:
                           op: '+'
                           left:
@@ -102,7 +112,9 @@ terminal:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: NVA }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: NVA }
                           right:
                             aggregate:
                               op: count
@@ -110,7 +122,9 @@ terminal:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: VC }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: VC }
                   bind: $zone
                   valueExpr: { ref: zoneProp, zone: $zone, prop: population }
               right:
@@ -131,7 +145,9 @@ terminal:
                   query: tokensInZone
                   zone: played:none
                   filter:
-                    - { prop: isCoup, op: eq, value: true }
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
             right: 1
           - op: '>'
             left:
@@ -151,7 +167,9 @@ terminal:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: eq, value: NVA }
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: NVA }
                         right:
                           op: '+'
                           left:
@@ -161,7 +179,9 @@ terminal:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: eq, value: US }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: eq, value: US }
                           right:
                             op: '+'
                             left:
@@ -171,7 +191,9 @@ terminal:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: eq, value: ARVN }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: eq, value: ARVN }
                             right:
                               aggregate:
                                 op: count
@@ -179,7 +201,9 @@ terminal:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: eq, value: VC }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: eq, value: VC }
                   bind: $zone
                   valueExpr: { ref: zoneProp, zone: $zone, prop: population }
               right:
@@ -188,8 +212,10 @@ terminal:
                   query:
                     query: tokensInMapSpaces
                     filter:
-                      - { prop: faction, op: eq, value: NVA }
-                      - { prop: type, op: eq, value: base }
+                      op: and
+                      args:
+                        - { prop: faction, op: eq, value: NVA }
+                        - { prop: type, op: eq, value: base }
             right: 18
     - id: vc-victory
       seat: 'vc'
@@ -205,7 +231,9 @@ terminal:
                   query: tokensInZone
                   zone: played:none
                   filter:
-                    - { prop: isCoup, op: eq, value: true }
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
             right: 1
           - op: '>'
             left:
@@ -233,8 +261,10 @@ terminal:
                   query:
                     query: tokensInMapSpaces
                     filter:
-                      - { prop: faction, op: eq, value: VC }
-                      - { prop: type, op: eq, value: base }
+                      op: and
+                      args:
+                        - { prop: faction, op: eq, value: VC }
+                        - { prop: type, op: eq, value: base }
             right: 35
     - id: final-coup-ranking
       seat: 'nva'
@@ -250,7 +280,9 @@ terminal:
                   query: tokensInZone
                   zone: played:none
                   filter:
-                    - { prop: isCoup, op: eq, value: true }
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
             right: 1
           - { op: '==', left: { ref: zoneCount, zone: deck:none }, right: 0 }
           - { op: '==', left: { ref: zoneCount, zone: lookahead:none }, right: 0 }
@@ -284,7 +316,9 @@ terminal:
                 query: tokensInZone
                 zone: available-US:none
                 filter:
-                  - { prop: type, op: in, value: [troops, base] }
+                  op: and
+                  args:
+                    - { prop: type, op: in, value: [troops, base] }
         right: 50
     - seat: 'arvn'
       value:
@@ -308,7 +342,9 @@ terminal:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: eq, value: US }
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: US }
                       right:
                         aggregate:
                           op: count
@@ -316,7 +352,9 @@ terminal:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: eq, value: ARVN }
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: ARVN }
                     right:
                       op: '+'
                       left:
@@ -326,7 +364,9 @@ terminal:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: eq, value: NVA }
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: NVA }
                       right:
                         aggregate:
                           op: count
@@ -334,7 +374,9 @@ terminal:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: eq, value: VC }
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: VC }
               bind: $zone
               valueExpr: { ref: zoneProp, zone: $zone, prop: population }
           right:
@@ -361,7 +403,9 @@ terminal:
                           query: tokensInZone
                           zone: $zone
                           filter:
-                            - { prop: faction, op: eq, value: NVA }
+                            op: and
+                            args:
+                              - { prop: faction, op: eq, value: NVA }
                     right:
                       op: '+'
                       left:
@@ -371,7 +415,9 @@ terminal:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: eq, value: US }
+                              op: and
+                              args:
+                                - { prop: faction, op: eq, value: US }
                       right:
                         op: '+'
                         left:
@@ -381,7 +427,9 @@ terminal:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: eq, value: ARVN }
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: ARVN }
                         right:
                           aggregate:
                             op: count
@@ -389,7 +437,9 @@ terminal:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: eq, value: VC }
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: VC }
               bind: $zone
               valueExpr: { ref: zoneProp, zone: $zone, prop: population }
           right:
@@ -398,8 +448,10 @@ terminal:
               query:
                 query: tokensInMapSpaces
                 filter:
-                  - { prop: faction, op: eq, value: NVA }
-                  - { prop: type, op: eq, value: base }
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: NVA }
+                    - { prop: type, op: eq, value: base }
         right: 18
     - seat: 'vc'
       value:
@@ -429,8 +481,10 @@ terminal:
               query:
                 query: tokensInMapSpaces
                 filter:
-                  - { prop: faction, op: eq, value: VC }
-                  - { prop: type, op: eq, value: base }
+                  op: and
+                  args:
+                    - { prop: faction, op: eq, value: VC }
+                    - { prop: type, op: eq, value: base }
         right: 35
   ranking:
     order: desc

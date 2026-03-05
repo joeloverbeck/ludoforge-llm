@@ -31,7 +31,7 @@ import {
   lowerConditionNode,
   lowerNumericValueNode,
   lowerQueryNode,
-  lowerTokenFilterArray,
+  lowerTokenFilterExpr,
   lowerValueNode,
   type ConditionLoweringContext,
 } from './compile-conditions.js';
@@ -713,11 +713,7 @@ function lowerRevealEffect(
 
   let filter: TokenFilterExpr | undefined;
   if (source.filter !== undefined) {
-    if (!Array.isArray(source.filter)) {
-      diagnostics.push(...missingCapability(`${path}.filter`, 'reveal filter', source.filter, ['Array<{ prop, op, value }>']).diagnostics);
-      return { value: null, diagnostics };
-    }
-    const loweredFilter = lowerTokenFilterArray(source.filter, makeConditionContext(context, scope), `${path}.filter`);
+    const loweredFilter = lowerTokenFilterExpr(source.filter, makeConditionContext(context, scope), `${path}.filter`);
     diagnostics.push(...loweredFilter.diagnostics);
     if (loweredFilter.value === null) {
       return { value: null, diagnostics };
@@ -763,11 +759,7 @@ function lowerConcealEffect(
 
   let filter: TokenFilterExpr | undefined;
   if (source.filter !== undefined) {
-    if (!Array.isArray(source.filter)) {
-      diagnostics.push(...missingCapability(`${path}.filter`, 'conceal filter', source.filter, ['Array<{ prop, op, value }>']).diagnostics);
-      return { value: null, diagnostics };
-    }
-    const loweredFilter = lowerTokenFilterArray(source.filter, makeConditionContext(context, scope), `${path}.filter`);
+    const loweredFilter = lowerTokenFilterExpr(source.filter, makeConditionContext(context, scope), `${path}.filter`);
     diagnostics.push(...loweredFilter.diagnostics);
     if (loweredFilter.value === null) {
       return { value: null, diagnostics };

@@ -70,8 +70,10 @@ effectMacros:
                       query: tokensInZone
                       zone: $space
                       filter:
-                        - { prop: faction, eq: ARVN }
-                        - { prop: type, op: in, value: [troops, police] }
+                        op: and
+                        args:
+                          - { prop: faction, eq: ARVN }
+                          - { prop: type, op: in, value: [troops, police] }
                 in:
                   - forEach:
                       bind: $desertingCube
@@ -79,8 +81,10 @@ effectMacros:
                         query: tokensInZone
                         zone: $space
                         filter:
-                          - { prop: faction, eq: ARVN }
-                          - { prop: type, op: in, value: [troops, police] }
+                          op: and
+                          args:
+                            - { prop: faction, eq: ARVN }
+                            - { prop: type, op: in, value: [troops, police] }
                       limit: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
                       effects:
                         - moveToken:
@@ -223,15 +227,15 @@ effectMacros:
                             budget: { ref: binding, name: $damage }
                             groups:
                               - bind: $target
-                                over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: troops }, { prop: faction, op: in, value: ['NVA', 'VC'] }] }
+                                over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: troops }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } }
                                 to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                                 countBind: $troopsRemoved
                               - bind: $target
-                                over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: activity, eq: active }] }
+                                over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: activity, eq: active }] } }
                                 to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } }
                                 countBind: $guerrillas1Removed
                               - bind: $target
-                                over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: activity, eq: active }] }
+                                over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: activity, eq: active }] } }
                                 to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] } }
                                 countBind: $guerrillas2Removed
                             remainingBind: $remainingDamage
@@ -262,14 +266,14 @@ effectMacros:
                                   then:
                                     - let:
                                         bind: $guerrillasRemaining
-                                        value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: activity, eq: active }] } } }
+                                        value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: activity, eq: active }] } } } }
                                         in:
                                           - if:
                                               when: { op: '==', left: { ref: binding, name: $guerrillasRemaining }, right: 0 }
                                               then:
                                                 - forEach:
                                                     bind: $baseTarget
-                                                    over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] }
+                                                    over: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } }
                                                     limit: { ref: binding, name: $remainingDamage }
                                                     effects:
                                                       - if:
@@ -306,7 +310,7 @@ effectMacros:
     effects:
       - let:
           bind: $basesBefore
-          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
           in:
             - let:
                 bind: $forcedBaseRemoved
@@ -325,9 +329,11 @@ effectMacros:
                                 query: tokensInZone
                                 zone: { param: space }
                                 filter:
-                                  - { prop: type, eq: base }
-                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                  - { prop: tunnel, eq: untunneled }
+                                  op: and
+                                  args:
+                                    - { prop: type, eq: base }
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    - { prop: tunnel, eq: untunneled }
                           right: 0
                     then: 1
                     else: 0
@@ -344,9 +350,11 @@ effectMacros:
                               query: tokensInZone
                               zone: { param: space }
                               filter:
-                                - { prop: type, eq: base }
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                - { prop: tunnel, eq: untunneled }
+                                op: and
+                                args:
+                                  - { prop: type, eq: base }
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                  - { prop: tunnel, eq: untunneled }
                             limit: 1
                             effects:
                               - moveToken:
@@ -364,7 +372,7 @@ effectMacros:
                       treatTunneledBasesAsUntunneled: { param: treatTunneledBasesAsUntunneled }
             - let:
                 bind: $basesAfter
-                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } } }
                 in:
                   - let:
                       bind: $basesRemoved
@@ -390,7 +398,7 @@ effectMacros:
     effects:
       - let:
           bind: $usPiecesBefore
-          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
+          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: faction, eq: 'US' }] } } } }
           in:
             - removeByPriority:
                 budget: { param: damageExpr }
@@ -401,33 +409,33 @@ effectMacros:
                     over:
                       query: tokensInZone
                       zone: { param: space }
-                      filter: [{ prop: faction, eq: 'US' }, { prop: type, op: neq, value: base }]
+                      filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, op: neq, value: base }] }
                     to:
                       zoneExpr: 'casualties-US:none'
                   - bind: $target
                     over:
                       query: tokensInZone
                       zone: { param: space }
-                      filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: neq, value: base }]
+                      filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: neq, value: base }] }
                     to:
                       zoneExpr: 'available-ARVN:none'
                   - bind: $target
                     over:
                       query: tokensInZone
                       zone: { param: space }
-                      filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }]
+                      filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] }
                     to:
                       zoneExpr: 'casualties-US:none'
                   - bind: $target
                     over:
                       query: tokensInZone
                       zone: { param: space }
-                      filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: base }]
+                      filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: base }] }
                     to:
                       zoneExpr: 'available-ARVN:none'
             - let:
                 bind: $usPiecesAfter
-                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
+                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: faction, eq: 'US' }] } } } }
                 in:
                   - let:
                       bind: $usRemoved
@@ -441,7 +449,7 @@ effectMacros:
                                   over:
                                     query: tokensInZone
                                     zone: { param: space }
-                                    filter: [{ prop: faction, eq: { param: attackerFaction } }]
+                                    filter: { op: and, args: [{ prop: faction, eq: { param: attackerFaction } }] }
                                   limit: { ref: binding, name: $usRemoved }
                                   effects:
                                     - moveToken:
@@ -465,28 +473,28 @@ effectMacros:
               over:
                 query: tokensInZone
                 zone: { param: targetSpace }
-                filter: [{ prop: faction, eq: 'US' }, { prop: type, op: neq, value: base }]
+                filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, op: neq, value: base }] }
               to:
                 zoneExpr: 'casualties-US:none'
             - bind: $target
               over:
                 query: tokensInZone
                 zone: { param: targetSpace }
-                filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: neq, value: base }]
+                filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: neq, value: base }] }
               to:
                 zoneExpr: 'available-ARVN:none'
             - bind: $target
               over:
                 query: tokensInZone
                 zone: { param: targetSpace }
-                filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }]
+                filter: { op: and, args: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] }
               to:
                 zoneExpr: 'casualties-US:none'
             - bind: $target
               over:
                 query: tokensInZone
                 zone: { param: targetSpace }
-                filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: base }]
+                filter: { op: and, args: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: base }] }
               to:
                 zoneExpr: 'available-ARVN:none'
 
@@ -517,9 +525,11 @@ effectMacros:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, eq: { param: faction } }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: underground }
+                          op: and
+                          args:
+                            - { prop: faction, eq: { param: faction } }
+                            - { prop: type, eq: guerrilla }
+                            - { prop: activity, eq: underground }
                   right: 0
                 - op: or
                   args:
@@ -531,7 +541,9 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       right: 0
                     - op: and
                       args:
@@ -544,7 +556,9 @@ effectMacros:
                                 query: tokensInAdjacentZones
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                  op: and
+                                  args:
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                           right: 0
           min: 1
           max: { param: maxSpaces }
@@ -573,9 +587,11 @@ effectMacros:
                   query: tokensInZone
                   zone: $space
                   filter:
-                    - { prop: faction, eq: { param: faction } }
-                    - { prop: type, eq: guerrilla }
-                    - { prop: activity, eq: underground }
+                    op: and
+                    args:
+                      - { prop: faction, eq: { param: faction } }
+                      - { prop: type, eq: guerrilla }
+                      - { prop: activity, eq: underground }
                 limit: 1
                 effects:
                   - setTokenProp: { token: $ambushingGuerrilla, prop: activity, value: active }
@@ -588,7 +604,9 @@ effectMacros:
                       query: tokensInZone
                       zone: $space
                       filter:
-                        - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                 in:
                   - let:
                       bind: $enemyInAdjacent
@@ -599,7 +617,9 @@ effectMacros:
                             query: tokensInAdjacentZones
                             zone: $space
                             filter:
-                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       in:
                         - if:
                             when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: loc }
@@ -657,7 +677,9 @@ effectMacros:
                                                 query: tokensInZone
                                                 zone: $zone
                                                 filter:
-                                                  - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                                  op: and
+                                                  args:
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                           right: 0
                                   n: 1
                               - forEach:
@@ -693,9 +715,11 @@ effectMacros:
                       query: tokensInZone
                       zone: { param: space }
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
-                        - { prop: activity, eq: underground }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: underground }
                 in:
                   - if:
                       when: { op: '>', left: { ref: binding, name: $undergroundEnemyCount }, right: 0 }
@@ -708,17 +732,21 @@ effectMacros:
                                   query: tokensInZone
                                   zone: { param: space }
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                    - { prop: type, eq: troops }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      - { prop: type, eq: troops }
                                 to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                               - bind: $target
                                 over:
                                   query: tokensInZone
                                   zone: { param: space }
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                    - { prop: type, eq: guerrilla }
-                                    - { prop: activity, eq: active }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      - { prop: type, eq: guerrilla }
+                                      - { prop: activity, eq: active }
                                 to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                       else:
                         - removeByPriority:
@@ -729,26 +757,32 @@ effectMacros:
                                   query: tokensInZone
                                   zone: { param: space }
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                    - { prop: type, eq: troops }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      - { prop: type, eq: troops }
                                 to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                               - bind: $target
                                 over:
                                   query: tokensInZone
                                   zone: { param: space }
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                    - { prop: type, eq: guerrilla }
-                                    - { prop: activity, eq: active }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      - { prop: type, eq: guerrilla }
+                                      - { prop: activity, eq: active }
                                 to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                               - bind: $target
                                 over:
                                   query: tokensInZone
                                   zone: { param: space }
                                   filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                    - { prop: type, eq: base }
-                                    - { prop: tunnel, op: neq, value: tunneled }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                      - { prop: type, eq: base }
+                                      - { prop: tunnel, op: neq, value: tunneled }
                                 to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
           else:
             - removeByPriority:
@@ -759,25 +793,31 @@ effectMacros:
                       query: tokensInZone
                       zone: { param: space }
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: troops }
                     to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                   - bind: $target
                     over:
                       query: tokensInZone
                       zone: { param: space }
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: guerrilla }
                     to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                   - bind: $target
                     over:
                       query: tokensInZone
                       zone: { param: space }
                       filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: base }
-                        - { prop: tunnel, op: neq, value: tunneled }
+                        op: and
+                        args:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          - { prop: type, eq: base }
+                          - { prop: tunnel, op: neq, value: tunneled }
                     to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
 
   # ── insurgent-attack-select-spaces ────────────────────────────────────────
@@ -802,10 +842,10 @@ effectMacros:
                     op: and
                     args:
                       - op: '>'
-                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: { param: faction } }] } } }
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: { param: faction } }] } } } }
                         right: 0
                       - op: '>'
-                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } } }
                         right: 0
                 min: 1
                 max: 1
@@ -818,10 +858,10 @@ effectMacros:
                     op: and
                     args:
                       - op: '>'
-                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: { param: faction } }] } } }
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: { param: faction } }] } } } }
                         right: 0
                       - op: '>'
-                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } } }
                         right: 0
                 min:
                   if:
@@ -869,13 +909,13 @@ effectMacros:
                                 query:
                                   query: tokensInZone
                                   zone: $zone
-                                  filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                                  filter: { op: and, args: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }] }
                             right: 0
                           - op: and
                             args:
                               - { op: '==', left: { param: includeTroops }, right: true }
                               - op: '>'
-                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: troops }] } } }
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: troops }] } } } }
                                 right: 0
                       - op: or
                         args:
@@ -909,13 +949,13 @@ effectMacros:
                                 query:
                                   query: tokensInZone
                                   zone: $zone
-                                  filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                                  filter: { op: and, args: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }] }
                             right: 0
                           - op: and
                             args:
                               - { op: '==', left: { param: includeTroops }, right: true }
                               - op: '>'
-                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: troops }] } } }
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: troops }] } } } }
                                 right: 0
                       - op: or
                         args:
@@ -1022,7 +1062,7 @@ effectMacros:
                 over:
                   query: tokensInZone
                   zone: { param: space }
-                  filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                  filter: { op: and, args: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }] }
                 limit: 1
                 effects:
                   - setTokenProp: { token: $g, prop: activity, value: active }
@@ -1104,8 +1144,10 @@ effectMacros:
             query: tokensInAdjacentZones
             zone: { param: destSpace }
             filter:
-              - { prop: faction, eq: { param: faction } }
-              - { prop: type, eq: guerrilla }
+              op: and
+              args:
+                - { prop: faction, eq: { param: faction } }
+                - { prop: type, eq: guerrilla }
           min: 0
           max: 99
       - chooseN:
@@ -1114,8 +1156,10 @@ effectMacros:
             query: tokensInAdjacentZones
             zone: { param: destSpace }
             filter:
-              - { prop: faction, eq: { param: faction } }
-              - { prop: type, eq: troops }
+              op: and
+              args:
+                - { prop: faction, eq: { param: faction } }
+                - { prop: type, eq: troops }
           min: 0
           max: 99
       - let:
@@ -1184,8 +1228,10 @@ effectMacros:
                                   query: tokensInZone
                                   zone: { param: destSpace }
                                   filter:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                    - { prop: type, op: in, value: ['troops', 'police', 'irregular', 'ranger'] }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                      - { prop: type, op: in, value: ['troops', 'police', 'irregular', 'ranger'] }
                             in:
                               - if:
                                   when:
@@ -1271,8 +1317,10 @@ effectMacros:
                               query: tokensInAdjacentZones
                               zone: $zone
                               filter:
-                                - { prop: faction, eq: { param: faction } }
-                                - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                                op: and
+                                args:
+                                  - { prop: faction, eq: { param: faction } }
+                                  - { prop: type, op: in, value: ['guerrilla', 'troops'] }
                         right: 0
                 min: 1
                 max: 1
@@ -1305,8 +1353,10 @@ effectMacros:
                               query: tokensInAdjacentZones
                               zone: $zone
                               filter:
-                                - { prop: faction, eq: { param: faction } }
-                                - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                                op: and
+                                args:
+                                  - { prop: faction, eq: { param: faction } }
+                                  - { prop: type, op: in, value: ['guerrilla', 'troops'] }
                         right: 0
                 min: 1
                 max:
@@ -1344,8 +1394,10 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                - { prop: type, eq: troops }
                       right: 3
                     - op: '>'
                       left:
@@ -1355,8 +1407,10 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
-                              - { prop: type, eq: base }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                - { prop: type, eq: base }
                       right: 0
                 - op: or
                   args:
@@ -1368,8 +1422,10 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: NVA }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: troops }
                       right: 3
                     - op: '>='
                       left:
@@ -1379,8 +1435,10 @@ effectMacros:
                             query: tokensInAdjacentZones
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: NVA }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: troops }
                       right: 3
           min: 1
           max: { param: maxSpaces }
@@ -1437,7 +1495,9 @@ effectMacros:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                          op: and
+                          args:
+                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
                   right:
                     aggregate:
                       op: count
@@ -1445,7 +1505,9 @@ effectMacros:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          op: and
+                          args:
+                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
           min: 1
           max: { param: maxSpaces }
 
@@ -1490,8 +1552,10 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: NVA }
-                              - { prop: type, eq: base }
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
+                                - { prop: type, eq: base }
                       right: 0
                     - op: '>'
                       left:
@@ -1501,7 +1565,9 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: NVA }
+                              op: and
+                              args:
+                                - { prop: faction, eq: NVA }
                       right:
                         aggregate:
                           op: count
@@ -1509,7 +1575,9 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: VC }
+                              op: and
+                              args:
+                                - { prop: faction, eq: VC }
           min: 1
           max: { param: maxSpaces }
 
@@ -1535,9 +1603,11 @@ effectMacros:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: underground }
+                          op: and
+                          args:
+                            - { prop: faction, eq: VC }
+                            - { prop: type, eq: guerrilla }
+                            - { prop: activity, eq: underground }
                   right: 0
                 - op: or
                   args:
@@ -1550,7 +1620,9 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       right:
                         aggregate:
                           op: count
@@ -1558,7 +1630,9 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
           min: 1
           max: { param: maxSpaces }
 
@@ -1584,9 +1658,11 @@ effectMacros:
                         query: tokensInZone
                         zone: $zone
                         filter:
-                          - { prop: faction, eq: VC }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: underground }
+                          op: and
+                          args:
+                            - { prop: faction, eq: VC }
+                            - { prop: type, eq: guerrilla }
+                            - { prop: activity, eq: underground }
                   right: 0
                 - op: or
                   args:
@@ -1598,8 +1674,10 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, op: in, value: [troops, police] }
+                              op: and
+                              args:
+                                - { prop: faction, eq: ARVN }
+                                - { prop: type, op: in, value: [troops, police] }
                       right: 1
                     - op: and
                       args:
@@ -1611,8 +1689,10 @@ effectMacros:
                                 query: tokensInZone
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, eq: ARVN }
-                                  - { prop: type, op: in, value: [troops, police] }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: ARVN }
+                                    - { prop: type, op: in, value: [troops, police] }
                           right: 0
                         - op: '>'
                           left:
@@ -1622,8 +1702,10 @@ effectMacros:
                                 query: tokensInZone
                                 zone: 'available-VC:none'
                                 filter:
-                                  - { prop: faction, eq: VC }
-                                  - { prop: type, eq: guerrilla }
+                                  op: and
+                                  args:
+                                    - { prop: faction, eq: VC }
+                                    - { prop: type, eq: guerrilla }
                           right: 0
           min: 1
           max: { param: maxSpaces }
@@ -1643,7 +1725,7 @@ effectMacros:
           over:
             query: tokensInZone
             zone: { zoneExpr: { concat: ['available-', { param: faction }, ':none'] } }
-            filter: [{ prop: type, eq: { param: pieceType } }]
+            filter: { op: and, args: [{ prop: type, eq: { param: pieceType } }] }
           limit: { param: maxPieces }
           effects:
             - moveToken:
@@ -1672,7 +1754,7 @@ effectMacros:
                               query: mapSpaces
                               filter:
                                 op: '>'
-                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }] } } }
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: { op: and, args: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }] } } } }
                                 right: 0
                             min: 0
                             max: 99
@@ -1685,7 +1767,7 @@ effectMacros:
                                   over:
                                     query: tokensInZone
                                     zone: $srcSpace
-                                    filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }]
+                                    filter: { op: and, args: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }] }
                                   limit: 1
                                   effects:
                                     - moveToken:
@@ -1727,7 +1809,9 @@ effectMacros:
                             query: tokensInZone
                             zone: $hopLoc
                             filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              op: and
+                              args:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
                       right: 0
                 then:
                   - chooseN:
@@ -1736,8 +1820,10 @@ effectMacros:
                         query: tokensInAdjacentZones
                         zone: $hopLoc
                         filter:
-                          - { prop: faction, eq: { param: troopFaction } }
-                          - { prop: type, eq: troops }
+                          op: and
+                          args:
+                            - { prop: faction, eq: { param: troopFaction } }
+                            - { prop: type, eq: troops }
                       min: 0
                       max: 99
                   - forEach:
@@ -1760,11 +1846,11 @@ effectMacros:
     effects:
       - let:
           bind: $cubeCount
-          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, op: in, value: ['troops', 'police'] }] } } } }
           in:
             - let:
                 bind: $sfCount
-                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, eq: { param: sfType } }] } } }
+                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: { op: and, args: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, eq: { param: sfType } }] } } } }
                 in:
                   - let:
                       bind: $totalSweepers
@@ -1786,7 +1872,7 @@ effectMacros:
                                         over:
                                           query: tokensInZone
                                           zone: { param: space }
-                                          filter: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                                          filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }] }
                                         limit: { ref: binding, name: $activationLimit }
                                         effects:
                                           - setTokenProp: { token: $guerrilla, prop: activity, value: active }
@@ -1817,19 +1903,19 @@ effectMacros:
                           over:
                             query: tokensInZone
                             zone: $cobrasSpace
-                            filter: [{ prop: type, eq: troops }, { prop: faction, op: in, value: ['NVA', 'VC'] }]
+                            filter: { op: and, args: [{ prop: type, eq: troops }, { prop: faction, op: in, value: ['NVA', 'VC'] }] }
                           to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                         - bind: $target
                           over:
                             query: tokensInZone
                             zone: $cobrasSpace
-                            filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: activity, eq: active }]
+                            filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: activity, eq: active }] }
                           to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
                         - bind: $target
                           over:
                             query: tokensInZone
                             zone: $cobrasSpace
-                            filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: tunnel, eq: untunneled }]
+                            filter: { op: and, args: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: tunnel, eq: untunneled }] }
                           to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
 
   # ── cap-sweep-booby-traps-shaded-cost ─────────────────────────────────────
@@ -1860,7 +1946,7 @@ effectMacros:
                                   over:
                                     query: tokensInZone
                                     zone: $space
-                                    filter: [{ prop: faction, eq: { param: actorFaction } }, { prop: type, eq: troops }]
+                                    filter: { op: and, args: [{ prop: faction, eq: { param: actorFaction } }, { prop: type, eq: troops }] }
                                   limit: 1
                                   effects:
                                     - if:
@@ -1899,7 +1985,7 @@ effectMacros:
                             over:
                               query: tokensInZone
                               zone: { param: space }
-                              filter: [{ prop: faction, eq: US }, { prop: type, eq: troops }]
+                              filter: { op: and, args: [{ prop: faction, eq: US }, { prop: type, eq: troops }] }
                             limit: 1
                             effects:
                               - moveToken:
@@ -1922,7 +2008,7 @@ effectMacros:
                 over:
                   query: tokensInZone
                   zone: { param: space }
-                  filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: activity, eq: underground }]
+                  filter: { op: and, args: [{ prop: type, eq: guerrilla }, { prop: faction, op: in, value: ['NVA', 'VC'] }, { prop: activity, eq: underground }] }
                 limit: 1
                 effects:
                   - moveToken:
@@ -2005,8 +2091,10 @@ effectMacros:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, eq: US }
-                                - { prop: type, eq: troops }
+                                op: and
+                                args:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
                         right: 0
                 in:
                   - if:
@@ -2021,8 +2109,10 @@ effectMacros:
                                   query: tokensInZone
                                   zone: available-ARVN:none
                                   filter:
-                                    - { prop: faction, eq: ARVN }
-                                    - { prop: type, eq: police }
+                                    op: and
+                                    args:
+                                      - { prop: faction, eq: ARVN }
+                                      - { prop: type, eq: police }
                             in:
                               - if:
                                   when: { op: '>', left: { ref: binding, name: $capCapsAvailablePolice }, right: 0 }
@@ -2040,8 +2130,10 @@ effectMacros:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, eq: US }
-                                                    - { prop: type, eq: troops }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, eq: US }
+                                                      - { prop: type, eq: troops }
                                             right: 0
                                     - forEach:
                                         bind: $capCapsPolice
@@ -2049,8 +2141,10 @@ effectMacros:
                                           query: tokensInZone
                                           zone: available-ARVN:none
                                           filter:
-                                            - { prop: faction, eq: ARVN }
-                                            - { prop: type, eq: police }
+                                            op: and
+                                            args:
+                                              - { prop: faction, eq: ARVN }
+                                              - { prop: type, eq: police }
                                         limit: 1
                                         effects:
                                           - moveToken:
@@ -2066,8 +2160,10 @@ effectMacros:
                                             query:
                                               query: tokensInMapSpaces
                                               filter:
-                                                - { prop: faction, eq: ARVN }
-                                                - { prop: type, eq: police }
+                                                op: and
+                                                args:
+                                                  - { prop: faction, eq: ARVN }
+                                                  - { prop: type, eq: police }
                                         in:
                                           - if:
                                               when: { op: '>', left: { ref: binding, name: $capCapsMapPolice }, right: 0 }
@@ -2085,8 +2181,10 @@ effectMacros:
                                                               query: tokensInZone
                                                               zone: $zone
                                                               filter:
-                                                                - { prop: faction, eq: US }
-                                                                - { prop: type, eq: troops }
+                                                                op: and
+                                                                args:
+                                                                  - { prop: faction, eq: US }
+                                                                  - { prop: type, eq: troops }
                                                         right: 0
                                                 - chooseN:
                                                     bind: $capCapsRelocateSources
@@ -2106,8 +2204,10 @@ effectMacros:
                                                                   query: tokensInZone
                                                                   zone: $zone
                                                                   filter:
-                                                                    - { prop: faction, eq: ARVN }
-                                                                    - { prop: type, eq: police }
+                                                                    op: and
+                                                                    args:
+                                                                      - { prop: faction, eq: ARVN }
+                                                                      - { prop: type, eq: police }
                                                             right: 0
                                                     min: 0
                                                     max: 1
@@ -2121,8 +2221,10 @@ effectMacros:
                                                             query: tokensInZone
                                                             zone: { zoneExpr: { ref: binding, name: $capCapsRelocateSource } }
                                                             filter:
-                                                              - { prop: faction, eq: ARVN }
-                                                              - { prop: type, eq: police }
+                                                              op: and
+                                                              args:
+                                                                - { prop: faction, eq: ARVN }
+                                                                - { prop: type, eq: police }
                                                           limit: 1
                                                           effects:
                                                             - moveToken:
@@ -2152,9 +2254,11 @@ effectMacros:
                     item: { ref: zoneProp, zone: $zone, prop: id }
                     set: { ref: binding, name: { param: targetLoCs } }
                   filter:
-                    - { prop: faction, eq: { param: movedFaction } }
-                    - { prop: type, op: in, value: ['troops', 'police'] }
-                    - { prop: m48PatrolMoved, eq: true }
+                    op: and
+                    args:
+                      - { prop: faction, eq: { param: movedFaction } }
+                      - { prop: type, op: in, value: ['troops', 'police'] }
+                      - { prop: m48PatrolMoved, eq: true }
                 min: 0
                 max: 2
             - forEach:
@@ -2183,9 +2287,11 @@ effectMacros:
                         query: tokensInZone
                         zone: $m48Loc
                         filter:
-                          - { prop: faction, eq: { param: movedFaction } }
-                          - { prop: type, op: in, value: ['troops', 'police'] }
-                          - { prop: m48PatrolMoved, eq: true }
+                          op: and
+                          args:
+                            - { prop: faction, eq: { param: movedFaction } }
+                            - { prop: type, op: in, value: ['troops', 'police'] }
+                            - { prop: m48PatrolMoved, eq: true }
                       effects:
                         - setTokenProp: { token: $m48MovedCube, prop: m48PatrolMoved, value: false }
 
@@ -2207,8 +2313,10 @@ effectMacros:
                       query: tokensInZone
                       zone: casualties-US:none
                       filter:
-                        - { prop: faction, eq: US }
-                        - { prop: type, eq: troops }
+                        op: and
+                        args:
+                          - { prop: faction, eq: US }
+                          - { prop: type, eq: troops }
                 in:
                   - removeByPriority:
                       budget:
@@ -2221,8 +2329,10 @@ effectMacros:
                             query: tokensInZone
                             zone: casualties-US:none
                             filter:
-                              - { prop: faction, eq: US }
-                              - { prop: type, eq: troops }
+                              op: and
+                              args:
+                                - { prop: faction, eq: US }
+                                - { prop: type, eq: troops }
                           to:
                             zoneExpr: out-of-play-US:none
       - moveAll:
@@ -2242,8 +2352,10 @@ effectMacros:
             query: tokensInZone
             zone: available-US:none
             filter:
-              - { prop: faction, eq: US }
-              - { prop: type, eq: troops }
+              op: and
+              args:
+                - { prop: faction, eq: US }
+                - { prop: type, eq: troops }
           min: 0
           max: 10
       - forEach:
@@ -2273,7 +2385,9 @@ effectMacros:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                             right:
                               aggregate:
                                 op: count
@@ -2281,7 +2395,9 @@ effectMacros:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
             - moveToken:
                 token: $movingTroopFromAvailable
                 from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromAvailable } }
@@ -2299,8 +2415,10 @@ effectMacros:
                     left: { ref: zoneProp, zone: $zone, prop: country }
                     right: southVietnam
                   filter:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: troops }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: troops }
                 min: 0
                 max:
                   op: '-'
@@ -2347,7 +2465,9 @@ effectMacros:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                             right:
                                               aggregate:
                                                 op: count
@@ -2355,7 +2475,9 @@ effectMacros:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
                         - moveToken:
                             token: $movingTroopFromMap
                             from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromMap } }
@@ -2366,8 +2488,10 @@ effectMacros:
             query: tokensInZone
             zone: available-US:none
             filter:
-              - { prop: faction, eq: US }
-              - { prop: type, eq: base }
+              op: and
+              args:
+                - { prop: faction, eq: US }
+                - { prop: type, eq: base }
           min: 0
           max: 2
       - forEach:
@@ -2397,7 +2521,9 @@ effectMacros:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                             right:
                               aggregate:
                                 op: count
@@ -2405,7 +2531,9 @@ effectMacros:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                                    op: and
+                                    args:
+                                      - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
             - moveToken:
                 token: $movingBaseFromAvailable
                 from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromAvailable } }
@@ -2423,8 +2551,10 @@ effectMacros:
                     left: { ref: zoneProp, zone: $zone, prop: country }
                     right: southVietnam
                   filter:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: base }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: base }
                 min: 0
                 max:
                   op: '-'
@@ -2471,7 +2601,9 @@ effectMacros:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                             right:
                                               aggregate:
                                                 op: count
@@ -2479,7 +2611,9 @@ effectMacros:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
+                                                    op: and
+                                                    args:
+                                                      - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
                         - moveToken:
                             token: $movingBaseFromMap
                             from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromMap } }
@@ -2561,8 +2695,10 @@ effectMacros:
                                             query: tokensInZone
                                             zone: $zone
                                             filter:
-                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                              - { prop: type, eq: guerrilla }
+                                              op: and
+                                              args:
+                                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                - { prop: type, eq: guerrilla }
                                       right:
                                         aggregate:
                                           op: count
@@ -2570,7 +2706,9 @@ effectMacros:
                                             query: tokensInZone
                                             zone: $zone
                                             filter:
-                                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                              op: and
+                                              args:
+                                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                     - op: '>'
                                       left:
                                         aggregate:
@@ -2591,7 +2729,9 @@ effectMacros:
                                                           query: tokensInZone
                                                           zone: $adj
                                                           filter:
-                                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                            op: and
+                                                            args:
+                                                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                                     right:
                                                       aggregate:
                                                         op: count
@@ -2599,7 +2739,9 @@ effectMacros:
                                                           query: tokensInZone
                                                           zone: $adj
                                                           filter:
-                                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                            op: and
+                                                            args:
+                                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
                                               then: 1
                                               else: 0
                                       right: 0
@@ -2629,8 +2771,10 @@ effectMacros:
                                                     query: tokensInZone
                                                     zone: $zone
                                                     filter:
-                                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                                      - { prop: type, eq: guerrilla }
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                        - { prop: type, eq: guerrilla }
                                               right:
                                                 aggregate:
                                                   op: count
@@ -2638,7 +2782,9 @@ effectMacros:
                                                     query: tokensInZone
                                                     zone: $zone
                                                     filter:
-                                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                             - op: '>'
                                               left:
                                                 aggregate:
@@ -2659,7 +2805,9 @@ effectMacros:
                                                                   query: tokensInZone
                                                                   zone: $adj
                                                                   filter:
-                                                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                                    op: and
+                                                                    args:
+                                                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                                             right:
                                                               aggregate:
                                                                 op: count
@@ -2667,7 +2815,9 @@ effectMacros:
                                                                   query: tokensInZone
                                                                   zone: $adj
                                                                   filter:
-                                                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                                    op: and
+                                                                    args:
+                                                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
                                                       then: 1
                                                       else: 0
                                               right: 0
@@ -2699,8 +2849,10 @@ effectMacros:
                                                           query: tokensInZone
                                                           zone: $zone
                                                           filter:
-                                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                                            - { prop: type, eq: guerrilla }
+                                                            op: and
+                                                            args:
+                                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                              - { prop: type, eq: guerrilla }
                                                     right:
                                                       aggregate:
                                                         op: count
@@ -2708,7 +2860,9 @@ effectMacros:
                                                           query: tokensInZone
                                                           zone: $zone
                                                           filter:
-                                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                            op: and
+                                                            args:
+                                                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                                   - op: '>'
                                                     left:
                                                       aggregate:
@@ -2729,7 +2883,9 @@ effectMacros:
                                                                         query: tokensInZone
                                                                         zone: $adj
                                                                         filter:
-                                                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                                          op: and
+                                                                          args:
+                                                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
                                                                   right:
                                                                     aggregate:
                                                                       op: count
@@ -2737,7 +2893,9 @@ effectMacros:
                                                                         query: tokensInZone
                                                                         zone: $adj
                                                                         filter:
-                                                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                                                          op: and
+                                                                          args:
+                                                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
                                                             then: 1
                                                             else: 0
                                                     right: 0
@@ -2778,7 +2936,9 @@ effectMacros:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
                         right:
                           aggregate:
                             op: count
@@ -2786,7 +2946,9 @@ effectMacros:
                               query: tokensInZone
                               zone: $zone
                               filter:
-                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
             right: 0
           then:
             - addVar: { scope: global, var: trail, delta: -1 }
@@ -2838,8 +3000,10 @@ effectMacros:
               query:
                 query: tokensInMapSpaces
                 filter:
-                  - { prop: faction, eq: VC }
-                  - { prop: type, eq: base }
+                  op: and
+                  args:
+                    - { prop: faction, eq: VC }
+                    - { prop: type, eq: base }
       - addVar:
           scope: global
           var: nvaResources
@@ -2854,8 +3018,10 @@ effectMacros:
                     conditionMacro: fitl-space-in-laos-cambodia
                     args: { spaceExpr: $zone }
                   filter:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: base }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: base }
             right:
               op: '*'
               left: 2
@@ -2960,8 +3126,10 @@ effectMacros:
                   query: tokensInZone
                   zone: $space
                   filter:
-                    - { prop: faction, eq: NVA }
-                    - { prop: type, eq: guerrilla }
+                    op: and
+                    args:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: guerrilla }
                 effects:
                   - setTokenProp: { token: $token, prop: activity, value: underground }
             - forEach:
@@ -2970,8 +3138,10 @@ effectMacros:
                   query: tokensInZone
                   zone: $space
                   filter:
-                    - { prop: faction, eq: VC }
-                    - { prop: type, eq: guerrilla }
+                    op: and
+                    args:
+                      - { prop: faction, eq: VC }
+                      - { prop: type, eq: guerrilla }
                 effects:
                   - setTokenProp: { token: $token, prop: activity, value: underground }
             - forEach:
@@ -2980,8 +3150,10 @@ effectMacros:
                   query: tokensInZone
                   zone: $space
                   filter:
-                    - { prop: faction, eq: US }
-                    - { prop: type, eq: irregular }
+                    op: and
+                    args:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: irregular }
                 effects:
                   - setTokenProp: { token: $token, prop: activity, value: underground }
             - forEach:
@@ -2990,8 +3162,10 @@ effectMacros:
                   query: tokensInZone
                   zone: $space
                   filter:
-                    - { prop: faction, eq: ARVN }
-                    - { prop: type, eq: ranger }
+                    op: and
+                    args:
+                      - { prop: faction, eq: ARVN }
+                      - { prop: type, eq: ranger }
                 effects:
                   - setTokenProp: { token: $token, prop: activity, value: underground }
       - setVar: { scope: global, var: mom_wildWeasels, value: false }

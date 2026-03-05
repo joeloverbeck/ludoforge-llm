@@ -72,7 +72,7 @@ describe('compile-effects lowering', () => {
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
       { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
-      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
+      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: { prop: 'faction', eq: 'US' } } },
       {
         if: {
           when: { op: '>', left: { ref: 'zoneCount', zone: 'deck' }, right: 0 },
@@ -157,7 +157,7 @@ describe('compile-effects lowering', () => {
           conceal: {
             zone: 'hand:$actor',
             from: { chosen: '$actor' },
-            filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+            filter: { prop: 'faction', op: 'eq', value: 'US' },
           },
         },
         {
@@ -197,6 +197,24 @@ describe('compile-effects lowering', () => {
         },
       },
     ]);
+  });
+
+  it('rejects legacy array token filters in reveal/conceal effects', () => {
+    const result = lowerEffectArray(
+      [
+        { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
+        { conceal: { zone: 'hand:$actor', filter: [{ prop: 'faction', eq: 'US' }] } },
+      ],
+      tokenFilterContext,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.map((diagnostic) => diagnostic.path),
+      ['doc.actions.0.effects.0.reveal.filter', 'doc.actions.0.effects.1.conceal.filter'],
+    );
+    assert.ok(result.diagnostics.every((diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'));
   });
 
   it('resolves seat-name selectors in effect-local player and zone selectors when seatIds are provided', () => {

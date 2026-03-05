@@ -1,0 +1,42 @@
+name: Engine Performance
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/engine-performance.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/engine-performance.yml'
+  workflow_dispatch:
+concurrency:
+  group: engine-performance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  engine-performance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm guard:worktree-pointers
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - run: pnpm -F @ludoforge/engine test:performance

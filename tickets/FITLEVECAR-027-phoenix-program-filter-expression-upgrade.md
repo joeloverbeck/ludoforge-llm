@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — GameSpecDoc data + tests only
-**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md, specs/29-fitl-event-card-encoding.md
+**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, archive/tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md, specs/29-fitl-event-card-encoding.md
 
 ## Problem
 

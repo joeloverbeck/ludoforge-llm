@@ -110,7 +110,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.equal(chooseEffect.chooseN.min, 0);
     assert.equal(chooseEffect.chooseN.max, 3);
     assert.equal(chooseEffect.chooseN.options.query, 'tokensInMapSpaces');
-    assert.deepEqual(chooseEffect.chooseN.options.filter, { prop: 'faction', op: 'eq', value: 'ARVN' });
+    assert.deepEqual(chooseEffect.chooseN.options.filter, { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'ARVN' }] });
 
     // Shaded: forEach with countBind + in for patronage
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EffectAST union narrowing

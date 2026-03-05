@@ -16,6 +16,7 @@ import {
 
 import {
   actionDefToDisplayTree,
+  actionPipelineDefToDisplayTree,
   conditionToDisplayNodes,
   effectToDisplayNodes,
   optionsQueryToInlineNodes,
@@ -23,6 +24,8 @@ import {
   valueExprToInlineNodes,
   zoneRefToInlineNodes,
 } from '../../../src/kernel/index.js';
+
+import type { ActionPipelineDef } from '../../../src/kernel/index.js';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -774,5 +777,80 @@ describe('actionDefToDisplayTree', () => {
     const sections = actionDefToDisplayTree(action);
     const cloned = structuredClone(sections);
     assert.deepEqual(cloned, sections);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// actionPipelineDefToDisplayTree tests
+// ---------------------------------------------------------------------------
+
+const minimalPipeline = (overrides: Partial<ActionPipelineDef> = {}): ActionPipelineDef => ({
+  id: 'test-pipeline',
+  actionId: 'test' as ActionPipelineDef['actionId'],
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [],
+  atomicity: 'atomic',
+  ...overrides,
+});
+
+describe('actionPipelineDefToDisplayTree', () => {
+  it('produces a collapsible group labelled Pipeline: <id>', () => {
+    const result = actionPipelineDefToDisplayTree(minimalPipeline({ id: 'train-us' }));
+    assert.equal(result.kind, 'group');
+    assert.equal(result.label, 'Pipeline: train-us');
+    assert.equal(result.collapsible, true);
+  });
+
+  it('includes all sections when pipeline is fully populated', () => {
+    const pipeline = minimalPipeline({
+      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 'US' },
+      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      costValidation: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 3 },
+      costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -3 } }],
+      stages: [
+        { stage: 'placement', effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }] },
+      ],
+    });
+    const result = actionPipelineDefToDisplayTree(pipeline);
+    const labels = result.children.map((c) => (c as DisplayGroupNode).label);
+    assert.deepEqual(labels, ['Applicability', 'Legality', 'Cost Validation', 'Costs', 'Stage: placement']);
+  });
+
+  it('produces group with only legality when only legality is set', () => {
+    const pipeline = minimalPipeline({
+      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+    });
+    const result = actionPipelineDefToDisplayTree(pipeline);
+    assert.equal(result.children.length, 1);
+    assert.equal((result.children[0] as DisplayGroupNode).label, 'Legality');
+  });
+
+  it('produces multiple stage sub-groups', () => {
+    const pipeline = minimalPipeline({
+      stages: [
+        { stage: 'targeting', effects: [{ advancePhase: {} }] },
+        { stage: 'resolution', effects: [{ advancePhase: {} }] },
+      ],
+    });
+    const result = actionPipelineDefToDisplayTree(pipeline);
+    const labels = result.children.map((c) => (c as DisplayGroupNode).label);
+    assert.deepEqual(labels, ['Stage: targeting', 'Stage: resolution']);
+  });
+
+  it('uses Effects label for unnamed stages', () => {
+    const pipeline = minimalPipeline({
+      stages: [{ effects: [{ advancePhase: {} }] }],
+    });
+    const result = actionPipelineDefToDisplayTree(pipeline);
+    assert.equal((result.children[0] as DisplayGroupNode).label, 'Effects');
+  });
+
+  it('produces zero children when pipeline has null legality, empty costs, no stages', () => {
+    const pipeline = minimalPipeline();
+    const result = actionPipelineDefToDisplayTree(pipeline);
+    assert.equal(result.children.length, 0);
   });
 });

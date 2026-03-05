@@ -14,6 +14,7 @@ import type {
   LimitDef,
   ParamDef,
 } from './types.js';
+import type { ActionPipelineDef } from './types-operations.js';
 import type {
   AddVarPayload,
   ConditionAST,
@@ -49,8 +50,10 @@ const line = (indent: number, children: readonly DisplayInlineNode[]): DisplayLi
 
 const bindDisplay = (bind: string, macroOrigin?: EffectMacroOrigin): string => macroOrigin?.stem ?? bind;
 
-const group = (label: string, children: readonly DisplayNode[], icon?: string): DisplayGroupNode =>
+export const displayGroup = (label: string, children: readonly DisplayNode[], icon?: string): DisplayGroupNode =>
   icon === undefined ? { kind: 'group', label, children } : { kind: 'group', label, icon, children };
+
+const group = displayGroup;
 
 // ---------------------------------------------------------------------------
 // Separators
@@ -626,4 +629,53 @@ export const actionDefToDisplayTree = (action: ActionDef): readonly DisplayGroup
   }
 
   return sections;
+};
+
+// ---------------------------------------------------------------------------
+// ActionPipelineDef → display tree
+// ---------------------------------------------------------------------------
+
+export const actionPipelineDefToDisplayTree = (pipeline: ActionPipelineDef): DisplayGroupNode => {
+  const children: DisplayGroupNode[] = [];
+
+  if (pipeline.applicability !== undefined) {
+    children.push(group(
+      'Applicability',
+      conditionToDisplayNodes(pipeline.applicability, 0),
+      'check',
+    ));
+  }
+
+  if (pipeline.legality !== null) {
+    children.push(group(
+      'Legality',
+      conditionToDisplayNodes(pipeline.legality, 0),
+      'check',
+    ));
+  }
+
+  if (pipeline.costValidation !== null) {
+    children.push(group(
+      'Cost Validation',
+      conditionToDisplayNodes(pipeline.costValidation, 0),
+      'check',
+    ));
+  }
+
+  if (pipeline.costEffects.length > 0) {
+    children.push(group(
+      'Costs',
+      pipeline.costEffects.flatMap((e) => effectToDisplayNodes(e, 0)),
+      'cost',
+    ));
+  }
+
+  for (const stage of pipeline.stages) {
+    if (stage.effects.length > 0) {
+      const label = stage.stage !== undefined ? `Stage: ${stage.stage}` : 'Effects';
+      children.push(group(label, stage.effects.flatMap((e) => effectToDisplayNodes(e, 0))));
+    }
+  }
+
+  return { kind: 'group', label: `Pipeline: ${pipeline.id}`, collapsible: true, children };
 };

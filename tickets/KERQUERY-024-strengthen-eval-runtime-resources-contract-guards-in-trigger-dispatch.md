@@ -41,7 +41,7 @@ Current `evalRuntimeResources` validation in trigger dispatch only checks object
 
 ## Out of Scope
 
-- Query cache public-surface narrowing (`tickets/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
+- Query cache public-surface narrowing (`archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
 - Context-constructor guard ticket (`archive/tickets/KERQUERY/KERQUERY-018-enforce-runtime-resource-constructor-contract-guards.md`)
 - Any game-specific GameSpecDoc or visual-config behavior
 

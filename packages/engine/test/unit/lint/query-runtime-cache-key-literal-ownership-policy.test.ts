@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { QUERY_RUNTIME_CACHE_INDEX_KEYS } from '../../../src/kernel/query-runtime-cache.js';
 import { findEnginePackageRoot, listTypeScriptFiles } from '../../helpers/lint-policy-helpers.js';
 
 type LiteralViolation = {
@@ -14,6 +13,7 @@ type LiteralViolation = {
 };
 
 const QUOTES = [`'`, `"`, '`'] as const;
+const QUERY_RUNTIME_CACHE_KEY_LITERALS = ['tokenZoneByTokenId'] as const;
 
 function findLineLiteralViolations(source: string, literal: string): LiteralViolation[] {
   const violations: LiteralViolation[] = [];
@@ -39,14 +39,15 @@ describe('query-runtime-cache key literal ownership policy', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const engineRoot = findEnginePackageRoot(thisDir);
     const canonicalFile = resolve(engineRoot, 'src', 'kernel', 'query-runtime-cache.ts');
+    const policyTestFile = resolve(engineRoot, 'test', 'unit', 'lint', 'query-runtime-cache-key-literal-ownership-policy.test.ts');
 
     const sourceFiles = [
       ...listTypeScriptFiles(resolve(engineRoot, 'src', 'kernel')),
       ...listTypeScriptFiles(resolve(engineRoot, 'test')),
     ];
-    const disallowedCandidates = sourceFiles.filter((file) => file !== canonicalFile);
+    const disallowedCandidates = sourceFiles.filter((file) => file !== canonicalFile && file !== policyTestFile);
 
-    const literals = Object.values(QUERY_RUNTIME_CACHE_INDEX_KEYS);
+    const literals = QUERY_RUNTIME_CACHE_KEY_LITERALS;
     const violations: LiteralViolation[] = [];
 
     for (const file of disallowedCandidates) {
@@ -66,7 +67,7 @@ describe('query-runtime-cache key literal ownership policy', () => {
       [],
       [
         'Raw query runtime cache key literals are only allowed in src/kernel/query-runtime-cache.ts.',
-        'Use QUERY_RUNTIME_CACHE_INDEX_KEYS or typed cache helper accessors instead of inline key strings.',
+        'Use QueryRuntimeCache domain methods instead of inline key strings.',
         'Violations:',
         ...violations.map((violation) => `- ${violation.file}:${violation.line} (${violation.literal}) -> ${violation.excerpt}`),
       ].join('\n'),

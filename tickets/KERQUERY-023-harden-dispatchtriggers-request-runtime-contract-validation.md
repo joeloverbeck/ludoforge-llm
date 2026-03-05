@@ -42,7 +42,7 @@
 
 ## Out of Scope
 
-- Query runtime cache API redesign (`tickets/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
+- Query runtime cache API redesign (`archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
 - Ticket tooling integrity work (`archive/tickets/KERQUERY/KERQUERY-016-enforce-active-ticket-reference-integrity-after-archival.md`, `archive/tickets/KERQUERY/KERQUERY-020-enforce-archived-outcome-fact-integrity.md`)
 - Any game-specific GameSpecDoc or visual-config behavior
 

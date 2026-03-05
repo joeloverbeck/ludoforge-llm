@@ -6,12 +6,8 @@ import { describe, it } from 'node:test';
 import { findEnginePackageRoot, listTypeScriptFiles } from '../../helpers/lint-policy-helpers.js';
 
 const OWNERSHIP_SYMBOLS = [
-  'QUERY_RUNTIME_CACHE_INDEX_KEYS',
-  'QueryRuntimeCacheIndexKey',
   'QueryRuntimeCache',
   'createQueryRuntimeCache',
-  'getTokenZoneByTokenIdIndex',
-  'setTokenZoneByTokenIdIndex',
 ] as const;
 
 const CANONICAL_SPECIFIER = './query-runtime-cache.js';
@@ -92,13 +88,41 @@ describe('query-runtime-cache ownership policy', () => {
     const invalidImports: string[] = [];
     const invalidNamedReExports: string[] = [];
     const invalidWildcardReExports: string[] = [];
+    const bannedCanonicalExports: string[] = [];
 
     const canonicalSource = readFileSync(canonicalFile, 'utf8');
+    const bannedExportPatterns = [
+      /export\s+const\s+QUERY_RUNTIME_CACHE_INDEX_KEYS\b/u,
+      /export\s+type\s+QueryRuntimeCacheIndexKey\b/u,
+      /(?:^|\n)\s*getIndex\s*\(/u,
+      /(?:^|\n)\s*setIndex\s*\(/u,
+    ];
+    const bannedExportLabels = [
+      'QUERY_RUNTIME_CACHE_INDEX_KEYS export',
+      'QueryRuntimeCacheIndexKey export',
+      'QueryRuntimeCache.getIndex method',
+      'QueryRuntimeCache.setIndex method',
+    ];
+    for (let index = 0; index < bannedExportPatterns.length; index += 1) {
+      if (bannedExportPatterns[index]!.test(canonicalSource)) {
+        bannedCanonicalExports.push(bannedExportLabels[index]!);
+      }
+    }
     for (const symbolName of OWNERSHIP_SYMBOLS) {
       if (!hasExportedDefinition(canonicalSource, symbolName)) {
         missingCanonicalExports.push(symbolName);
       }
     }
+    assert.equal(
+      canonicalSource.includes('getTokenZoneByTokenIdIndex(state: GameState): ReadonlyMap<string, string> | undefined;'),
+      true,
+      'QueryRuntimeCache must expose getTokenZoneByTokenIdIndex domain accessor',
+    );
+    assert.equal(
+      canonicalSource.includes('setTokenZoneByTokenIdIndex(state: GameState, value: ReadonlyMap<string, string>): void;'),
+      true,
+      'QueryRuntimeCache must expose setTokenZoneByTokenIdIndex domain accessor',
+    );
 
     for (const filePath of files) {
       if (filePath === canonicalFile) {
@@ -166,6 +190,11 @@ describe('query-runtime-cache ownership policy', () => {
       missingCanonicalExports,
       [],
       'query-runtime-cache.ts must export all canonical query runtime cache ownership symbols',
+    );
+    assert.deepEqual(
+      bannedCanonicalExports,
+      [],
+      'query-runtime-cache.ts must not export generic key-based runtime cache API surface',
     );
     assert.deepEqual(
       invalidLocalDefinitions,

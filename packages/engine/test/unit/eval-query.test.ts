@@ -5,7 +5,6 @@ import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   createQueryRuntimeCache,
-  QUERY_RUNTIME_CACHE_INDEX_KEYS,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -1337,19 +1336,17 @@ describe('evalQuery', () => {
     assert.ok(tokenIdReads <= 40, `Expected <= 40 token id reads, received ${String(tokenIdReads)}`);
   });
 
-  it('uses QueryRuntimeCache API methods for token zone lookup caching', () => {
+  it('uses QueryRuntimeCache domain methods for token zone lookup caching', () => {
     const indexByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
     let getCalls = 0;
     let setCalls = 0;
     const queryRuntimeCache: QueryRuntimeCache = {
-      getIndex: (state, key) => {
+      getTokenZoneByTokenIdIndex: (state) => {
         getCalls += 1;
-        assert.equal(key, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId);
         return indexByState.get(state);
       },
-      setIndex: (state, key, index) => {
+      setTokenZoneByTokenIdIndex: (state, index) => {
         setCalls += 1;
-        assert.equal(key, QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId);
         indexByState.set(state, index);
       },
     };

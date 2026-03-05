@@ -42,7 +42,7 @@
 ## Out of Scope
 
 - Trigger dispatch behavior changes beyond API-shape guard
-- Query cache ownership/public-surface tickets (`tickets/KERQUERY-021-enforce-query-cache-key-literal-ownership-policy.md`, `tickets/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
+- Query cache ownership/public-surface tickets (`archive/tickets/KERQUERY/KERQUERY-021-enforce-query-cache-key-literal-ownership-policy.md`, `archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
 - Any game-specific GameSpecDoc or visual-config behavior
 
 ## Acceptance Criteria

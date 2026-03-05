@@ -49,7 +49,7 @@
 ## Out of Scope
 
 - Trigger-dispatch request hardening (`tickets/KERQUERY-023-harden-dispatchtriggers-request-runtime-contract-validation.md`, `tickets/KERQUERY-025-lock-dispatchtriggers-single-request-api-shape-with-source-guards.md`)
-- Query runtime cache API narrowing (`tickets/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
+- Query runtime cache API narrowing (`archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
 - Any game-specific GameSpecDoc or visual-config behavior
 
 ## Acceptance Criteria

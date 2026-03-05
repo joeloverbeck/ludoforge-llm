@@ -25,7 +25,6 @@ import {
   runtimeTableRowsUnavailableEvalError,
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
-import { getTokenZoneByTokenIdIndex, setTokenZoneByTokenIdIndex } from './query-runtime-cache.js';
 import { filterTokensByPredicates } from './token-filter.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
@@ -509,12 +508,12 @@ function buildTokenZoneIndex(state: EvalContext['state']): ReadonlyMap<string, s
 }
 
 function getTokenZoneIndex(ctx: EvalContext): ReadonlyMap<string, string> {
-  const cached = getTokenZoneByTokenIdIndex(ctx.queryRuntimeCache, ctx.state);
+  const cached = ctx.queryRuntimeCache.getTokenZoneByTokenIdIndex(ctx.state);
   if (cached !== undefined) {
     return cached;
   }
   const built = buildTokenZoneIndex(ctx.state);
-  setTokenZoneByTokenIdIndex(ctx.queryRuntimeCache, ctx.state, built);
+  ctx.queryRuntimeCache.setTokenZoneByTokenIdIndex(ctx.state, built);
   return built;
 }
 

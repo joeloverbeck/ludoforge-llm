@@ -9,7 +9,6 @@ import {
   asZoneId,
   createCollector,
   createEvalRuntimeResources,
-  QUERY_RUNTIME_CACHE_INDEX_KEYS,
   type GameDef,
   type GameState,
   type QueryRuntimeCache,
@@ -108,17 +107,11 @@ describe('dispatchLifecycleEvent runtime resources', () => {
     let setCalls = 0;
     const indexesByState = new WeakMap<GameState, ReadonlyMap<string, string>>();
     const queryRuntimeCache: QueryRuntimeCache = {
-      getIndex: (cacheState, key) => {
+      getTokenZoneByTokenIdIndex: (cacheState) => {
         getCalls += 1;
-        if (key !== QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId) {
-          return undefined;
-        }
         return indexesByState.get(cacheState);
       },
-      setIndex: (cacheState, key, value) => {
-        if (key !== QUERY_RUNTIME_CACHE_INDEX_KEYS.tokenZoneByTokenId) {
-          return;
-        }
+      setTokenZoneByTokenIdIndex: (cacheState, value) => {
         setCalls += 1;
         indexesByState.set(cacheState, value);
       },

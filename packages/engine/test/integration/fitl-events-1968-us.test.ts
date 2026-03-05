@@ -1308,7 +1308,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.equal(hueTokens.find((token) => token.id === asTokenId('nva-g-edge-b'))?.props.activity, 'underground');
   });
 
-  it('keeps card 27 (Phoenix Program) unchanged as a non-regression anchor', () => {
+  it('keeps card 27 (Phoenix Program) rules-accurate as a non-regression anchor', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -1320,10 +1320,15 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1968');
     assert.deepEqual(card?.metadata?.seatOrder, ['US', 'VC', 'ARVN', 'NVA']);
-    assert.deepEqual(card?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }]);
-    assert.deepEqual(card?.shaded?.effects, [
-      { addVar: { scope: 'global', var: 'aid', delta: -2 } },
-      { addVar: { scope: 'global', var: 'arvnResources', delta: -1 } },
-    ]);
+    assert.equal(
+      card?.unshaded?.text,
+      'Remove any 3 VC pieces total from any COIN Control spaces.',
+    );
+    assert.equal(
+      card?.shaded?.text,
+      'Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition.',
+    );
+    assert.equal(card?.unshaded?.targets, undefined);
+    assert.equal(card?.shaded?.targets, undefined);
   });
 });

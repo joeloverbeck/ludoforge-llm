@@ -2360,24 +2360,248 @@ eventDecks:
           seatOrder: ["US", "VC", "ARVN", "NVA"]
           flavorText: "Neutralization campaigns expand."
         unshaded:
-          text: "Intelligence campaign: Aid -1."
-          targets:
-            - id: vc-in-coin-control
-              selector:
-                query: players
-              cardinality: { max: 3 }
+          text: "Remove any 3 VC pieces total from any COIN Control spaces."
           effects:
-            - addVar: { scope: global, var: aid, delta: -1 }
+            - chooseN:
+                bind: $vcPiecesToRemove
+                options:
+                  query: concat
+                  sources:
+                    - query: tokensInMapSpaces
+                      spaceFilter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    - query: tokensInMapSpaces
+                      spaceFilter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: base }
+                        - { prop: tunnel, eq: untunneled }
+                min: 0
+                max:
+                  op: min
+                  left: 3
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: concat
+                        sources:
+                          - query: tokensInMapSpaces
+                            spaceFilter:
+                              op: and
+                              args:
+                                - op: or
+                                  args:
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                - op: '>'
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  right:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: guerrilla }
+                          - query: tokensInMapSpaces
+                            spaceFilter:
+                              op: and
+                              args:
+                                - op: or
+                                  args:
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                                - op: '>'
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  right:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: tokensInZone
+                                        zone: $zone
+                                        filter:
+                                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: base }
+                              - { prop: tunnel, eq: untunneled }
+            - forEach:
+                bind: $vcPiece
+                over: { query: binding, name: $vcPiecesToRemove }
+                effects:
+                  - moveToken:
+                      token: $vcPiece
+                      from: { zoneExpr: { ref: tokenZone, token: $vcPiece } }
+                      to: { zoneExpr: available-VC:none }
         shaded:
-          text: "Repression backlash: Aid -2 and ARVN Resources -1."
-          targets:
-            - id: terror-spaces
-              selector:
-                query: mapSpaces
-              cardinality: { max: 2 }
+          text: "Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition."
           effects:
-            - addVar: { scope: global, var: aid, delta: -2 }
-            - addVar: { scope: global, var: arvnResources, delta: -1 }
+            - chooseN:
+                bind: $targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: or
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                      - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, eq: VC }
+                        right: 0
+                min: 0
+                max:
+                  op: min
+                  left: 2
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: and
+                          args:
+                            - op: or
+                              args:
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                            - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                              right:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInZone
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, eq: VC }
+                              right: 0
+            - forEach:
+                bind: $targetSpace
+                over: { query: binding, name: $targetSpaces }
+                effects:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '==', left: { ref: zoneVar, zone: $targetSpace, var: terrorCount }, right: 0 }
+                          - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                      then:
+                        - addVar: { scope: zoneVar, zone: $targetSpace, var: terrorCount, delta: 1 }
+                        - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                  - setMarker:
+                      space: $targetSpace
+                      marker: supportOpposition
+                      state: activeOpposition
       - id: card-43
         title: Economic Aid
         sideMode: dual

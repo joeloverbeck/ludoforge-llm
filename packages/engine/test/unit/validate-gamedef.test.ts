@@ -59,6 +59,43 @@ const withCardDrivenTurnFlow = (
     ],
   }) as unknown as GameDef;
 
+const withPipelineZonePropCondition = (
+  prop: string,
+  right: unknown,
+  surface: 'stage' | 'cost' = 'stage',
+): GameDef => {
+  const base = createValidGameDef();
+  const when = { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop }, right };
+  return {
+    ...base,
+    zones: [
+      {
+        id: 'market:none',
+        zoneKind: 'board',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'city',
+        attributes: { population: 2, country: 'southVietnam' },
+        adjacentTo: [],
+      },
+      { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+    ],
+    actionPipelines: [
+      {
+        id: 'profile-a',
+        actionId: 'playCard',
+        legality: null,
+        costValidation: null,
+        costEffects: surface === 'cost' ? [{ if: { when, then: [] } }] : [],
+        targeting: {},
+        stages: [{ stage: 'resolve', effects: surface === 'stage' ? [{ if: { when, then: [] } }] : [] }],
+        atomicity: 'atomic',
+      },
+    ],
+  } as unknown as GameDef;
+};
+
 const collectDeclaredEffectBinderPatternsFromContract = (): readonly string[] => {
   const patterns: string[] = [];
   for (const [effectKind, surface] of Object.entries(EFFECT_BINDER_SURFACE_CONTRACT)) {
@@ -2983,51 +3020,7 @@ describe('validateGameDef reference checks', () => {
   });
 
   it('reports unknown zoneProp in pipeline stage effects', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zones: [
-        {
-          id: 'market:none',
-          zoneKind: 'board',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-          category: 'city',
-          attributes: { population: 2, country: 'southVietnam' },
-          adjacentTo: [],
-        },
-        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
-      ],
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [],
-          targeting: {},
-          stages: [
-            {
-              stage: 'resolve',
-              effects: [
-                {
-                  if: {
-                    when: {
-                      op: '==',
-                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'spaceId' },
-                      right: 'market:none',
-                    },
-                    then: [],
-                  },
-                },
-              ],
-            },
-          ],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
+    const def = withPipelineZonePropCondition('spaceId', 'market:none');
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3040,51 +3033,7 @@ describe('validateGameDef reference checks', () => {
   });
 
   it('accepts valid zoneProp id in pipeline stage effects', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zones: [
-        {
-          id: 'market:none',
-          zoneKind: 'board',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-          category: 'city',
-          attributes: { population: 2, country: 'southVietnam' },
-          adjacentTo: [],
-        },
-        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
-      ],
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [],
-          targeting: {},
-          stages: [
-            {
-              stage: 'resolve',
-              effects: [
-                {
-                  if: {
-                    when: {
-                      op: '==',
-                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'id' },
-                      right: 'market:none',
-                    },
-                    then: [],
-                  },
-                },
-              ],
-            },
-          ],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
+    const def = withPipelineZonePropCondition('id', 'market:none');
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3097,51 +3046,7 @@ describe('validateGameDef reference checks', () => {
   });
 
   it('accepts valid zoneProp category in pipeline stage effects', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zones: [
-        {
-          id: 'market:none',
-          zoneKind: 'board',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-          category: 'city',
-          attributes: { population: 2, country: 'southVietnam' },
-          adjacentTo: [],
-        },
-        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
-      ],
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [],
-          targeting: {},
-          stages: [
-            {
-              stage: 'resolve',
-              effects: [
-                {
-                  if: {
-                    when: {
-                      op: '==',
-                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'category' },
-                      right: 'city',
-                    },
-                    then: [],
-                  },
-                },
-              ],
-            },
-          ],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
+    const def = withPipelineZonePropCondition('category', 'city');
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3154,51 +3059,7 @@ describe('validateGameDef reference checks', () => {
   });
 
   it('accepts valid attribute prop in pipeline stage effects', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zones: [
-        {
-          id: 'market:none',
-          zoneKind: 'board',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-          category: 'city',
-          attributes: { population: 2, country: 'southVietnam' },
-          adjacentTo: [],
-        },
-        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
-      ],
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [],
-          targeting: {},
-          stages: [
-            {
-              stage: 'resolve',
-              effects: [
-                {
-                  if: {
-                    when: {
-                      op: '==',
-                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'population' },
-                      right: 2,
-                    },
-                    then: [],
-                  },
-                },
-              ],
-            },
-          ],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
+    const def = withPipelineZonePropCondition('population', 2);
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3211,46 +3072,7 @@ describe('validateGameDef reference checks', () => {
   });
 
   it('reports unknown zoneProp in pipeline costEffects', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      zones: [
-        {
-          id: 'market:none',
-          zoneKind: 'board',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-          category: 'city',
-          attributes: { population: 2, country: 'southVietnam' },
-          adjacentTo: [],
-        },
-        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
-      ],
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [
-            {
-              if: {
-                when: {
-                  op: '==',
-                  left: { ref: 'zoneProp', zone: 'market:none', prop: 'badProp' },
-                  right: 'x',
-                },
-                then: [],
-              },
-            },
-          ],
-          targeting: {},
-          stages: [{ stage: 'resolve', effects: [] }],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
+    const def = withPipelineZonePropCondition('badProp', 'x', 'cost');
 
     const diagnostics = validateGameDef(def);
     assert.ok(

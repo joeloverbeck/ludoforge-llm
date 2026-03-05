@@ -1,6 +1,6 @@
 # KERQUERY-032: Add negative runtime-resource contract tests across kernel boundaries
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel boundary contract regression coverage
@@ -78,3 +78,29 @@ Runtime-resource contract guards were expanded to several kernel entry boundarie
 2. `node --test packages/engine/dist/test/unit/kernel/action-actor.test.js packages/engine/dist/test/unit/kernel/action-executor.test.js packages/engine/dist/test/unit/kernel/action-applicability-preflight.test.js packages/engine/dist/test/unit/phase-lifecycle-resources.test.js packages/engine/dist/test/unit/boundary-expiry.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+**Completion date**: 2026-03-05
+
+### What changed
+
+Added one negative `RUNTIME_CONTRACT_INVALID` boundary-failure test to each of the five target test files:
+
+1. `packages/engine/test/unit/kernel/action-actor.test.ts` — malformed `evalRuntimeResources` → `RUNTIME_CONTRACT_INVALID` with `resolveActionActor` resource path.
+2. `packages/engine/test/unit/kernel/action-executor.test.ts` — malformed `evalRuntimeResources` → `RUNTIME_CONTRACT_INVALID` with `resolveActionExecutor` resource path.
+3. `packages/engine/test/unit/kernel/action-applicability-preflight.test.ts` — malformed `evalRuntimeResources` → `RUNTIME_CONTRACT_INVALID` with `resolveActionApplicabilityPreflight` resource path.
+4. `packages/engine/test/unit/phase-lifecycle-resources.test.ts` — malformed `evalRuntimeResources` → `RUNTIME_CONTRACT_INVALID` with `dispatchLifecycleEvent` resource path.
+5. `packages/engine/test/unit/boundary-expiry.test.ts` — malformed `evalRuntimeResources` → `RUNTIME_CONTRACT_INVALID` with `applyBoundaryExpiry` resource path.
+
+### Deviations from original plan
+
+- **Shared fixture helper file not created**: The ticket proposed `packages/engine/test/helpers/eval-runtime-resources-fixtures.ts`. The inline malformed-object pattern (`{ collector: 'not-an-object', queryRuntimeCache: {} } as unknown as EvalRuntimeResources`) is minimal and consistent with the existing `phase-advance.test.ts` convention. A shared helper would be over-engineering for a one-liner cast.
+- **Import approach**: Used direct `EvalRuntimeResources` type import instead of `Parameters<typeof fn>[0]['...']` to avoid `exactOptionalPropertyTypes` conflicts.
+
+### Verification results
+
+- Engine build: clean (tsc, no errors)
+- Targeted tests: 31/31 passing (5 new + 26 existing across the 5 files)
+- Full engine suite: 3653/3653 passing (up from 3648 baseline)
+- Lint: clean

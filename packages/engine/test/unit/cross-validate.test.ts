@@ -218,6 +218,37 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "window-a"?');
   });
 
+  it('does not emit linked window diagnostics for canonically equivalent ids', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const profile = requireValue(sections.actionPipelines?.[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            eligibility: {
+              ...turnOrder.config.turnFlow.eligibility,
+              overrideWindows: [{ id: 'cafe\u0301', duration: 'nextTurn' }],
+            },
+          },
+        },
+      },
+      actionPipelines: [
+        {
+          ...profile,
+          linkedWindows: ['caf\u00e9'],
+        },
+      ],
+    });
+
+    assert.ok(!diagnostics.some((entry) => entry.code === 'CNL_XREF_PROFILE_WINDOW_MISSING'));
+  });
+
   it('pipelined action with malformed actor binding emits canonical binding-invalid diagnostic', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);

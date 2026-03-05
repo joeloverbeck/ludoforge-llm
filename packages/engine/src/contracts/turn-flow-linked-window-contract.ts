@@ -1,3 +1,5 @@
+import { canonicalizeIdentifier } from './canonical-identifier-contract.js';
+
 export interface TurnFlowEligibilityOverrideWindowLike {
   readonly id: string;
 }
@@ -19,7 +21,7 @@ export const collectTurnFlowEligibilityOverrideWindowIds = (
   if (turnFlow === null || turnFlow === undefined) {
     return [];
   }
-  return turnFlow.eligibility.overrideWindows.map((window) => window.id);
+  return turnFlow.eligibility.overrideWindows.map((window) => canonicalizeIdentifier(window.id));
 };
 
 export const findMissingTurnFlowLinkedWindows = (
@@ -30,13 +32,14 @@ export const findMissingTurnFlowLinkedWindows = (
     return [];
   }
 
-  const known = new Set(knownOverrideWindowIds);
+  const known = new Set(knownOverrideWindowIds.map((windowId) => canonicalizeIdentifier(windowId)));
   const missing: TurnFlowLinkedWindowValidationIssue[] = [];
   for (const [index, windowId] of linkedWindows.entries()) {
-    if (known.has(windowId)) {
+    const normalizedWindowId = canonicalizeIdentifier(windowId);
+    if (known.has(normalizedWindowId)) {
       continue;
     }
-    missing.push({ index, windowId });
+    missing.push({ index, windowId: normalizedWindowId });
   }
   return missing;
 };

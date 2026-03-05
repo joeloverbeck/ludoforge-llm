@@ -1,10 +1,10 @@
 # PIPEVAL-008: Add linkedWindow contract anti-drift guards
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Test-only — architecture guardrails for shared contract usage
-**Deps**: `tickets/PIPEVAL-007-canonicalize-linkedwindow-identifiers-across-kernel-and-cnl.md`
+**Deps**: `archive/tickets/PIPEVAL/PIPEVAL-007-canonicalize-linkedwindow-identifiers-across-kernel-and-cnl.md`
 
 ## Problem
 
@@ -73,3 +73,19 @@ Do not broaden into general import policy duplication; keep this as a targeted a
 2. `node --test packages/engine/dist/test/unit/lint/linked-window-contract-source-guard.test.js`
 3. `pnpm turbo test --force`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-05
+- **What changed**:
+  - Added `packages/engine/test/unit/lint/linked-window-contract-source-guard.test.ts`.
+  - Guard asserts kernel and CNL canonical linked-window consumers import `findMissingTurnFlowLinkedWindows` from `../contracts/index.js`.
+  - Guard asserts canonical linked-window consumers call the shared helper and do not implement local ad-hoc `linkedWindows`/override-window matching loops.
+  - Guard asserts only canonical CNL/kernel consumer modules call `findMissingTurnFlowLinkedWindows`.
+- **Deviations from original plan**:
+  - `packages/engine/test/unit/contracts/contracts-public-surface-import-policy.test.ts` required no changes; existing contract public-surface policy already remained valid.
+- **Verification results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/lint/linked-window-contract-source-guard.test.js` ✅
+  - `pnpm turbo test --force` ✅
+  - `pnpm turbo lint` ✅

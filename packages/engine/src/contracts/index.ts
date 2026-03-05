@@ -7,6 +7,8 @@ export * from './action-capability-contract.js';
 export * from './action-selector-contract-registry.js';
 export * from './binder-surface-contract.js';
 export * from './binding-identifier-contract.js';
+export * from './canonical-identifier-contract.js';
+export * from './missing-reference-diagnostic-contract.js';
 export * from './player-selector-vocabulary.js';
 export * from './token-filter-prop-contract.js';
 export * from './turn-flow-action-class-contract.js';

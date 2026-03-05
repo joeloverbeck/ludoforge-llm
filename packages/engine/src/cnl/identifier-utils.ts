@@ -1,3 +1,5 @@
+import { canonicalizeIdentifier } from '../contracts/index.js';
+
 export function normalizeIdentifier(value: string): string {
-  return value.trim().normalize('NFC');
+  return canonicalizeIdentifier(value);
 }

@@ -3186,6 +3186,16 @@ describe('validateGameDef reference checks', () => {
     assert.ok(!diagnostics.some((diag) => diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING'));
   });
 
+  it('accepts linkedWindows that are canonically equivalent to declared override windows', () => {
+    const def = withPipelineLinkedWindows(
+      [' special-window ', 'caf\u00e9'],
+      { overrideWindowIds: ['special-window', 'cafe\u0301'] },
+    );
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(!diagnostics.some((diag) => diag.code === 'REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING'));
+  });
+
   it('reports linkedWindows entries that reference unknown turn-flow eligibility override windows', () => {
     const def = withPipelineLinkedWindows(['missing-window']);
 

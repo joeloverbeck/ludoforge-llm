@@ -1,6 +1,6 @@
 # PIPEVAL-007: Canonicalize linkedWindow identifiers across kernel and CNL
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — shared contracts + kernel/CNL reference validation
@@ -8,21 +8,24 @@
 
 ## Problem
 
-`linkedWindows` reference matching currently uses raw string equality in the new shared linked-window contract. This can produce false missing-reference diagnostics when identifiers differ only by whitespace or Unicode normalization form, even though compiler/validator identifier handling elsewhere already applies canonicalization semantics.
+`linkedWindows` reference matching currently uses raw string equality in the shared linked-window contract. This can produce false missing-reference diagnostics when identifiers differ only by whitespace or Unicode normalization form, even though identifier handling elsewhere already applies canonicalization semantics (`trim + NFC`).
 
 This is an architecture consistency gap across surfaces (`compile`, `crossValidate`, `validateGameDef`) and risks drift in deterministic diagnostic behavior.
 
 ## Assumption Reassessment (2026-03-05)
 
-1. `linkedWindows` entries are normalized by the CNL compiler (`normalizeIdentifier`) before being written to `GameDef`.
-2. Override-window ids are currently returned by the shared contract helper without canonicalization, and missing-reference detection compares raw strings.
-3. Existing active tickets (`PIPEVAL-004`, `PIPEVAL-005`, `PIPEVAL-006`) do not cover identifier canonicalization parity for linked-window references; scope is net-new.
+1. CNL compilation normalizes `actionPipelines[*].linkedWindows` via `normalizeIdentifier` in `packages/engine/src/cnl/compile-operations.ts` — confirmed.
+2. `turnFlow.eligibility.overrideWindows[*].id` is not canonicalized by CNL turn-flow compilation (`compile-turn-flow.ts` currently returns the shape as-is), so raw ids can survive into `GameDef` — confirmed.
+3. Shared linked-window contract helpers currently compare raw strings (`collectTurnFlowEligibilityOverrideWindowIds` + `findMissingTurnFlowLinkedWindows`) — confirmed.
+4. The prior PIPEVAL tickets (`PIPEVAL-004`, `PIPEVAL-005`, `PIPEVAL-006`) are archived/completed, not active, and none cover linked-window identifier canonicalization parity — confirmed; scope is net-new.
+5. `validateGameDef` must also handle direct/malformed `GameDef` inputs that may bypass CNL compilation and therefore bypass identifier normalization — confirmed architectural requirement.
 
 ## Architecture Check
 
 1. Canonical identifier comparison in one shared contract module is cleaner and more robust than scattered per-surface normalization.
 2. This remains game-agnostic: it changes generic identifier semantics only, with no game-specific branches and no visual-config coupling.
 3. No backwards-compatibility aliasing: enforce one canonical identifier contract and update all consumers directly.
+4. Keep canonicalization helper ownership in shared contracts (or kernel-shared utility), not in CNL-only modules, so kernel validation does not depend on compiler-local utilities.
 
 ## What to Change
 
@@ -32,11 +35,11 @@ In `turn-flow-linked-window-contract.ts`, canonicalize:
 - collected override-window ids
 - incoming `linkedWindows` values before comparison
 
-Use existing canonical identifier semantics (`trim + NFC`) via a shared utility contract import (or a minimal dedicated helper in contracts) instead of ad-hoc logic.
+Use shared canonical identifier semantics (`trim + NFC`) from a contract-level helper (or a minimal local helper in this contract module).
 
 ### 2. Keep kernel and CNL consumers on shared contract only
 
-Ensure `validate-gamedef-extensions.ts` and `cross-validate.ts` continue to rely on the shared helper outputs and do not introduce local normalization branches.
+Ensure `validate-gamedef-extensions.ts` and `cross-validate.ts` continue to rely on the shared helper outputs and do not introduce local normalization branches for linked-window checks.
 
 ### 3. Preserve diagnostic code semantics and paths
 
@@ -88,3 +91,22 @@ Keep current diagnostic codes/paths (`REF_TURN_FLOW_OVERRIDE_WINDOW_MISSING`, `C
 4. `node --test packages/engine/dist/test/unit/cross-validate.test.js`
 5. `pnpm turbo test --force`
 6. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-05
+- **What changed**:
+  - Canonicalized linked-window identifier handling in `turn-flow-linked-window-contract` using `trim + NFC` for both override-window id collection and linked-window comparison.
+  - Kept kernel/CNL consumers on the shared contract helper; no per-surface normalization branches were added.
+  - Added regression coverage for canonical-equivalent identifier handling across:
+    - contract unit tests
+    - kernel `validateGameDef` linked-window reference checks
+    - CNL `crossValidateSpec` linked-window reference checks
+- **Deviations from original plan**:
+  - `packages/engine/src/contracts/index.ts` did not need changes because no new public contract exports were required.
+  - `packages/engine/src/kernel/validate-gamedef-extensions.ts` and `packages/engine/src/cnl/cross-validate.ts` remained implementation no-ops; parity was achieved by hardening the shared contract module.
+- **Verification results**:
+  - `pnpm turbo build` ✅
+  - `node --test packages/engine/dist/test/unit/contracts/turn-flow-linked-window-contract.test.js packages/engine/dist/test/unit/validate-gamedef.test.js packages/engine/dist/test/unit/cross-validate.test.js` ✅
+  - `pnpm turbo test --force` ✅
+  - `pnpm turbo lint` ✅

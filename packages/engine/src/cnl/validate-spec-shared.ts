@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
+  buildMissingReferenceSuggestion,
   TURN_FLOW_DURATION_VALUES,
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_OPTIONAL_KEYS,
@@ -17,8 +18,6 @@ export {
   TURN_FLOW_FIRST_ACTION_VALUES,
   TURN_FLOW_REQUIRED_KEYS,
 };
-
-const MAX_ALTERNATIVE_DISTANCE = 3;
 
 export const METADATA_KEYS = ['id', 'name', 'description', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
@@ -89,11 +88,11 @@ export function validateUnknownKeys(
     .sort((left, right) => left.localeCompare(right));
 
   for (const unknownKey of unknownKeys) {
-    const alternatives = getAlternatives(unknownKey, allowedKeys);
-    const suggestion =
-      alternatives.length > 0
-        ? `Did you mean "${alternatives[0]}"?`
-        : `Use one of the supported ${objectLabel} keys: ${allowedKeys.join(', ')}.`;
+    const { suggestion, alternatives } = buildMissingReferenceSuggestion(
+      unknownKey,
+      allowedKeys,
+      `Use one of the supported ${objectLabel} keys: ${allowedKeys.join(', ')}.`,
+    );
 
     diagnostics.push({
       code: 'CNL_VALIDATOR_UNKNOWN_KEY',
@@ -101,7 +100,7 @@ export function validateUnknownKeys(
       severity: 'warning',
       message: `Unknown key "${unknownKey}" in ${objectLabel}.`,
       suggestion,
-      ...(alternatives.length > 0 ? { alternatives } : {}),
+      ...(alternatives !== undefined ? { alternatives } : {}),
     });
   }
 }
@@ -182,63 +181,15 @@ export function pushMissingReferenceDiagnostic(
   validValues: readonly string[],
   fallbackSuggestion: string,
 ): void {
-  const alternatives = getAlternatives(value, validValues);
-  const suggestion = alternatives.length > 0 ? `Did you mean "${alternatives[0]}"?` : fallbackSuggestion;
+  const { suggestion, alternatives } = buildMissingReferenceSuggestion(value, validValues, fallbackSuggestion);
   diagnostics.push({
     code,
     path,
     severity: 'error',
     message,
     suggestion,
-    ...(alternatives.length > 0 ? { alternatives } : {}),
+    ...(alternatives !== undefined ? { alternatives } : {}),
   });
-}
-
-function getAlternatives(value: string, validValues: readonly string[]): readonly string[] {
-  if (validValues.length === 0) {
-    return [];
-  }
-
-  const scored = validValues
-    .map((candidate) => ({
-      candidate,
-      distance: levenshteinDistance(value, candidate),
-    }))
-    .sort((left, right) => {
-      if (left.distance !== right.distance) {
-        return left.distance - right.distance;
-      }
-      return left.candidate.localeCompare(right.candidate);
-    });
-
-  const bestDistance = scored[0]?.distance;
-  if (bestDistance === undefined || bestDistance > MAX_ALTERNATIVE_DISTANCE) {
-    return [];
-  }
-
-  return scored.filter((entry) => entry.distance === bestDistance).map((entry) => entry.candidate);
-}
-
-function levenshteinDistance(left: string, right: string): number {
-  const cols = right.length + 1;
-  let previousRow: number[] = Array.from({ length: cols }, (_unused, index) => index);
-
-  for (let row = 1; row <= left.length; row += 1) {
-    const currentRow: number[] = new Array<number>(cols).fill(0);
-    currentRow[0] = row;
-
-    for (let col = 1; col <= right.length; col += 1) {
-      const substitutionCost = left[row - 1] === right[col - 1] ? 0 : 1;
-      const insertCost = (currentRow[col - 1] ?? Number.POSITIVE_INFINITY) + 1;
-      const deleteCost = (previousRow[col] ?? Number.POSITIVE_INFINITY) + 1;
-      const replaceCost = (previousRow[col - 1] ?? Number.POSITIVE_INFINITY) + substitutionCost;
-      currentRow[col] = Math.min(insertCost, deleteCost, replaceCost);
-    }
-
-    previousRow = currentRow;
-  }
-
-  return previousRow[right.length] ?? 0;
 }
 
 export function compareDiagnostics(left: Diagnostic, right: Diagnostic, sourceMap?: GameSpecSourceMap): number {

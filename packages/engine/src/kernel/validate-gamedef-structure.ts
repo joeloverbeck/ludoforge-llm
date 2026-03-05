@@ -3,8 +3,8 @@ import { attributeValueEquals } from './attribute-value-equals.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
 import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, VariableDef, ZoneDef } from './types.js';
+import { buildMissingReferenceSuggestion } from '../contracts/index.js';
 
-const MAX_ALTERNATIVE_DISTANCE = 3;
 const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
 const RESERVED_RUNTIME_PARAM_NAMES: ReadonlySet<string> = new Set(RUNTIME_RESERVED_MOVE_BINDING_NAMES);
 
@@ -85,51 +85,6 @@ function encodeRuntimeTableScalar(value: string | number | boolean): string {
 }
 
 
-const levenshteinDistance = (left: string, right: string): number => {
-  const cols = right.length + 1;
-  let previousRow: number[] = Array.from({ length: cols }, (_unused, index) => index);
-
-  for (let row = 1; row <= left.length; row += 1) {
-    const currentRow: number[] = new Array<number>(cols).fill(0);
-    currentRow[0] = row;
-
-    for (let col = 1; col <= right.length; col += 1) {
-      const substitutionCost = left[row - 1] === right[col - 1] ? 0 : 1;
-      const insertCost = (currentRow[col - 1] ?? Number.POSITIVE_INFINITY) + 1;
-      const deleteCost = (previousRow[col] ?? Number.POSITIVE_INFINITY) + 1;
-      const replaceCost = (previousRow[col - 1] ?? Number.POSITIVE_INFINITY) + substitutionCost;
-      currentRow[col] = Math.min(insertCost, deleteCost, replaceCost);
-    }
-
-    previousRow = currentRow;
-  }
-
-  return previousRow[right.length] ?? 0;
-};
-
-const getAlternatives = (value: string, validValues: readonly string[]): readonly string[] => {
-  if (validValues.length === 0) {
-    return [];
-  }
-
-  const scored = validValues
-    .map((candidate) => ({ candidate, distance: levenshteinDistance(value, candidate) }))
-    .sort((left, right) => {
-      if (left.distance !== right.distance) {
-        return left.distance - right.distance;
-      }
-
-      return left.candidate.localeCompare(right.candidate);
-    });
-
-  const bestDistance = scored[0]?.distance;
-  if (bestDistance === undefined || bestDistance > MAX_ALTERNATIVE_DISTANCE) {
-    return [];
-  }
-
-  return scored.filter((item) => item.distance === bestDistance).map((item) => item.candidate);
-};
-
 export const pushMissingReferenceDiagnostic = (
   diagnostics: Diagnostic[],
   code: string,
@@ -138,11 +93,13 @@ export const pushMissingReferenceDiagnostic = (
   value: string,
   validValues: readonly string[],
 ): void => {
-  const alternatives = getAlternatives(value, validValues);
-  const suggestion =
-    alternatives.length > 0 ? `Did you mean "${alternatives[0]}"?` : 'Use one of the declared values.';
+  const { suggestion, alternatives } = buildMissingReferenceSuggestion(
+    value,
+    validValues,
+    'Use one of the declared values.',
+  );
 
-  if (alternatives.length > 0) {
+  if (alternatives !== undefined) {
     diagnostics.push({
       code,
       path,

@@ -1409,7 +1409,7 @@ actionPipelines:
                       op: and
                       args:
                         - { op: '==', left: { ref: binding, name: $subAction }, right: 'saigon-transfer' }
-                        - { op: '==', left: { ref: zoneProp, zone: $subSpace, prop: spaceId }, right: 'saigon' }
+                        - { op: '==', left: { ref: zoneProp, zone: $subSpace, prop: id }, right: 'saigon:none' }
                     then:
                       - chooseOne:
                           bind: $transferAmount

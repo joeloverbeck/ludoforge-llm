@@ -2982,6 +2982,286 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports unknown zoneProp in pipeline stage effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, country: 'southVietnam' },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              stage: 'resolve',
+              effects: [
+                {
+                  if: {
+                    when: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'spaceId' },
+                      right: 'market:none',
+                    },
+                    then: [],
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_MAP_SPACE_PROP_MISSING' &&
+          diag.path === 'actionPipelines[0].stages[0].effects[0].if.when.left.prop',
+      ),
+    );
+  });
+
+  it('accepts valid zoneProp id in pipeline stage effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, country: 'southVietnam' },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              stage: 'resolve',
+              effects: [
+                {
+                  if: {
+                    when: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'id' },
+                      right: 'market:none',
+                    },
+                    then: [],
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      !diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_MAP_SPACE_PROP_MISSING' &&
+          diag.path.startsWith('actionPipelines[0].stages'),
+      ),
+    );
+  });
+
+  it('accepts valid zoneProp category in pipeline stage effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, country: 'southVietnam' },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              stage: 'resolve',
+              effects: [
+                {
+                  if: {
+                    when: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'category' },
+                      right: 'city',
+                    },
+                    then: [],
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      !diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_MAP_SPACE_PROP_MISSING' &&
+          diag.path.startsWith('actionPipelines[0].stages'),
+      ),
+    );
+  });
+
+  it('accepts valid attribute prop in pipeline stage effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, country: 'southVietnam' },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              stage: 'resolve',
+              effects: [
+                {
+                  if: {
+                    when: {
+                      op: '==',
+                      left: { ref: 'zoneProp', zone: 'market:none', prop: 'population' },
+                      right: 2,
+                    },
+                    then: [],
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      !diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_MAP_SPACE_PROP_MISSING' &&
+          diag.path.startsWith('actionPipelines[0].stages'),
+      ),
+    );
+  });
+
+  it('reports unknown zoneProp in pipeline costEffects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, country: 'southVietnam' },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: null,
+          costValidation: null,
+          costEffects: [
+            {
+              if: {
+                when: {
+                  op: '==',
+                  left: { ref: 'zoneProp', zone: 'market:none', prop: 'badProp' },
+                  right: 'x',
+                },
+                then: [],
+              },
+            },
+          ],
+          targeting: {},
+          stages: [{ stage: 'resolve', effects: [] }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_MAP_SPACE_PROP_MISSING' &&
+          diag.path === 'actionPipelines[0].costEffects[0].if.when.left.prop',
+      ),
+    );
+  });
+
   it('reports unknown coupPlan final-round omitted phases', () => {
     const base = createValidGameDef();
     const def = {

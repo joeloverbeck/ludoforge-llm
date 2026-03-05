@@ -3,7 +3,7 @@ import {
   makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
 } from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
-import { advancePhase } from './phase-advance.js';
+import { advancePhase, buildAdvancePhaseRequest } from './phase-advance.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
@@ -266,15 +266,15 @@ export const applyAdvancePhase = (
     return { state: ctx.state, rng: ctx.rng };
   }
   const policy = lifecycleBudgetOptions(ctx);
-  const nextState = advancePhase({
-    def: ctx.def,
-    state: ctx.state,
-    evalRuntimeResources: createEvalRuntimeResources({
+  const nextState = advancePhase(buildAdvancePhaseRequest(
+    ctx.def,
+    ctx.state,
+    createEvalRuntimeResources({
       collector: ctx.collector,
       queryRuntimeCache: ctx.queryRuntimeCache,
     }),
-    ...(policy === undefined ? {} : { policy }),
-  });
+    { policy },
+  ));
   return {
     state: nextState,
     rng: { state: nextState.rng },

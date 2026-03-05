@@ -7,6 +7,7 @@ import { readKernelSource } from '../helpers/kernel-source-guard.js';
 import {
   advancePhase,
   advanceToDecisionPoint,
+  buildAdvancePhaseRequest,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -1120,28 +1121,6 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
       unwrapped.name.text === propertyName
     );
   };
-  const hasIdentifierPropertyInObjectArgument = (
-    argument: ts.Expression,
-    propertyName: string,
-    identifier: string,
-  ): boolean => {
-    const unwrapped = unwrapTypeScriptExpression(argument);
-    if (!ts.isObjectLiteralExpression(unwrapped)) {
-      return false;
-    }
-    return unwrapped.properties.some((property) => {
-      if (!ts.isPropertyAssignment(property)) {
-        return false;
-      }
-      const name = property.name;
-      if (!ts.isIdentifier(name) || name.text !== propertyName) {
-        return false;
-      }
-      const initializer = unwrapTypeScriptExpression(property.initializer);
-      return ts.isIdentifier(initializer) && initializer.text === identifier;
-    });
-  };
-
   const findVariableFunctionBody = (sourceFile: ts.SourceFile, variableName: string): ts.Block | undefined => {
     for (const statement of sourceFile.statements) {
       if (!ts.isVariableStatement(statement)) {
@@ -1262,27 +1241,27 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
       'advanceToDecisionPoint must allocate operationResources = evalRuntimeResources ?? createEvalRuntimeResources() once',
     );
 
-    const advancePhaseCalls =
+    const buildRequestCalls =
       advanceToDecisionPointBody === undefined
         ? []
-        : collectCallsByIdentifierWithinNode(advanceToDecisionPointBody, 'advancePhase');
+        : collectCallsByIdentifierWithinNode(advanceToDecisionPointBody, 'buildAdvancePhaseRequest');
     assert.equal(
-      advancePhaseCalls.some(
+      buildRequestCalls.some(
         (call) =>
-          call.arguments.length === 1
-          && hasIdentifierPropertyInObjectArgument(call.arguments[0]!, 'evalRuntimeResources', 'operationResources'),
+          call.arguments.length >= 3
+          && isIdentifierArgument(call.arguments[2]!, 'operationResources'),
       ),
       true,
-      'advanceToDecisionPoint must pass operationResources to advancePhase',
+      'advanceToDecisionPoint must pass operationResources to buildAdvancePhaseRequest',
     );
     assert.equal(
-      advancePhaseCalls.some(
+      buildRequestCalls.some(
         (call) =>
-          call.arguments.length === 1
-          && hasIdentifierPropertyInObjectArgument(call.arguments[0]!, 'evalRuntimeResources', 'evalRuntimeResources'),
+          call.arguments.length >= 3
+          && isIdentifierArgument(call.arguments[2]!, 'evalRuntimeResources'),
       ),
       false,
-      'advanceToDecisionPoint must not pass evalRuntimeResources directly to advancePhase',
+      'advanceToDecisionPoint must not pass evalRuntimeResources directly to buildAdvancePhaseRequest',
     );
   });
 
@@ -1305,5 +1284,61 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
       0,
       'advancePhase must not allocate default evalRuntimeResources internally',
     );
+  });
+});
+
+describe('buildAdvancePhaseRequest', () => {
+  const stubDef = { metadata: { id: 'stub' } } as unknown as GameDef;
+  const stubState = { currentPhase: 'main' } as unknown as GameState;
+  const stubResources = createEvalRuntimeResources();
+
+  it('includes only defined optional fields and omits undefined ones', () => {
+    const collector: TriggerLogEntry[] = [];
+    const request = buildAdvancePhaseRequest(stubDef, stubState, stubResources, {
+      triggerLogCollector: collector,
+      policy: undefined,
+      cachedRuntime: undefined,
+    });
+    assert.equal(request.def, stubDef);
+    assert.equal(request.state, stubState);
+    assert.equal(request.evalRuntimeResources, stubResources);
+    assert.equal(request.triggerLogCollector, collector);
+    assert.equal('policy' in request, false, 'undefined policy must be omitted from request');
+    assert.equal('cachedRuntime' in request, false, 'undefined cachedRuntime must be omitted from request');
+  });
+
+  it('omits all optional fields when options is undefined', () => {
+    const request = buildAdvancePhaseRequest(stubDef, stubState, stubResources);
+    assert.equal(request.def, stubDef);
+    assert.equal(request.state, stubState);
+    assert.equal(request.evalRuntimeResources, stubResources);
+    assert.equal('triggerLogCollector' in request, false);
+    assert.equal('policy' in request, false);
+    assert.equal('cachedRuntime' in request, false);
+  });
+
+  it('omits all optional fields when all options are undefined', () => {
+    const request = buildAdvancePhaseRequest(stubDef, stubState, stubResources, {
+      triggerLogCollector: undefined,
+      policy: undefined,
+      cachedRuntime: undefined,
+    });
+    assert.equal('triggerLogCollector' in request, false);
+    assert.equal('policy' in request, false);
+    assert.equal('cachedRuntime' in request, false);
+  });
+
+  it('includes all optional fields when all are defined', () => {
+    const collector: TriggerLogEntry[] = [];
+    const policy = { phaseTransitionBudget: { remaining: 2 } } as const;
+    const cachedRuntime = {} as unknown as Parameters<typeof buildAdvancePhaseRequest>[3] extends { cachedRuntime?: infer R } ? NonNullable<R> : never;
+    const request = buildAdvancePhaseRequest(stubDef, stubState, stubResources, {
+      triggerLogCollector: collector,
+      policy,
+      cachedRuntime,
+    });
+    assert.equal(request.triggerLogCollector, collector);
+    assert.equal(request.policy, policy);
+    assert.equal(request.cachedRuntime, cachedRuntime);
   });
 });

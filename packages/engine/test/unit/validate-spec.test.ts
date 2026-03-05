@@ -542,6 +542,43 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('rejects metadata.namedSets canonical-equivalent duplicates after trim + NFC normalization', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          Cafes: [' cafe\u0301 ', 'caf\u00e9'],
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_VALUE'),
+      true,
+    );
+  });
+
+  it('rejects metadata.namedSets canonical-equivalent duplicate ids after trim + NFC normalization', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          ' cafe\u0301 ': ['US'],
+          caf\u00e9: ['ARVN'],
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID'),
+      true,
+    );
+  });
+
   it('validates zone enums', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

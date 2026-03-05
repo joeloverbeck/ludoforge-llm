@@ -15,6 +15,7 @@ describe('cnl identifier normalization single-source policy', () => {
       canonicalModuleBasename: CANONICAL_MODULE_BASENAME,
       canonicalImportSpecifier: CANONICAL_IMPORT_SPECIFIER,
       symbolNames: ['normalizeIdentifier'],
+      prohibitedDuplicateLiterals: ["trim().normalize('NFC')"],
     });
 
     assert.deepEqual(
@@ -45,6 +46,12 @@ describe('cnl identifier normalization single-source policy', () => {
       report.invalidNonCanonicalExports,
       [],
       'non-canonical CNL modules must not export normalizeIdentifier',
+    );
+
+    assert.deepEqual(
+      report.duplicateLiteralLocations,
+      [],
+      'non-canonical CNL modules must not inline trim().normalize(\'NFC\'); use normalizeIdentifier instead',
     );
   });
 });

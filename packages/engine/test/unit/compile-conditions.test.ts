@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerConditionNode, lowerQueryNode, lowerValueNode, type ConditionLoweringContext } from '../../src/cnl/compile-conditions.js';
+import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const context: ConditionLoweringContext = {
@@ -1103,10 +1104,38 @@ describe('compile-conditions lowering', () => {
       },
       {
         ...tokenFilterContext,
-        namedSets: {
+        namedSets: canonicalizeNamedSets({
           COIN: ['US', 'ARVN'],
           Insurgent: ['NVA', 'VC'],
-        },
+        }),
+      },
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'deck:none',
+      filter: [
+        { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
+      ],
+    });
+  });
+
+  it('resolves metadata namedSet references using canonical identifier normalization', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'deck',
+        filter: [
+          { prop: 'faction', op: 'in', value: { ref: 'namedSet', name: ' cafe\u0301  ' } },
+        ],
+      },
+      {
+        ...tokenFilterContext,
+        namedSets: canonicalizeNamedSets({
+          caf\u00e9: ['US', 'ARVN'],
+        }),
       },
       'doc.actions.0.effects.0.forEach.over',
     );
@@ -1132,9 +1161,9 @@ describe('compile-conditions lowering', () => {
       },
       {
         ...tokenFilterContext,
-        namedSets: {
+        namedSets: canonicalizeNamedSets({
           COIN: ['US', 'ARVN'],
-        },
+        }),
       },
       'doc.actions.0.effects.0.forEach.over',
     );

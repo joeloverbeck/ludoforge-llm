@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerTurnStructure, type EffectLoweringSharedContext } from '../../src/cnl/compile-lowering.js';
+import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { PhaseDef } from '../../src/kernel/types-core.js';
 import { asPhaseId } from '../../src/kernel/branded.js';
@@ -10,7 +11,7 @@ const makeContext = (): EffectLoweringSharedContext => ({
   ownershipByBase: { board: 'none' },
   tokenTraitVocabulary: {},
   tokenFilterProps: [],
-  namedSets: {},
+  namedSets: canonicalizeNamedSets({}),
   seatIds: ['0', '1'],
 });
 

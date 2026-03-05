@@ -26,6 +26,7 @@ import { evaluateActionSelectorContracts } from '../contracts/index.js';
 import { buildActionSelectorContractViolationDiagnostic } from './action-selector-contract-diagnostics.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES, buildCompilerMissingCapabilityDiagnostic } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import type { CanonicalNamedSets } from './named-set-utils.js';
 
 export type EffectLoweringSharedContext = Omit<EffectLoweringContext, 'bindingScope'>;
 export type ConditionLoweringSharedContext = Pick<
@@ -676,7 +677,7 @@ function lowerActionParams(
   path: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   tokenFilterProps?: readonly string[],
-  namedSets?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: CanonicalNamedSets,
   typeInference?: TypeInferenceContext,
 ): {
   readonly value: readonly ParamDef[];
@@ -909,7 +910,7 @@ export function lowerEndConditions(
   diagnostics: Diagnostic[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
   tokenFilterProps?: readonly string[],
-  namedSets?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: CanonicalNamedSets,
   typeInference?: TypeInferenceContext,
   seatIds?: readonly string[],
 ): readonly EndCondition[] {
@@ -1052,7 +1053,7 @@ export function buildConditionLoweringContext(
   readonly bindingScope: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly tokenFilterProps?: readonly string[];
-  readonly namedSets?: Readonly<Record<string, readonly string[]>>;
+  readonly namedSets?: CanonicalNamedSets;
   readonly typeInference?: TypeInferenceContext;
   readonly seatIds?: readonly string[];
 } {

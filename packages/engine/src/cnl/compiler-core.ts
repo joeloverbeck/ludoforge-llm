@@ -46,6 +46,7 @@ import { crossValidateSpec } from './cross-validate.js';
 import { lowerEventDecks } from './compile-event-cards.js';
 import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
 import { buildSeatIdentityContract } from './seat-identity-contract.js';
+import { canonicalizeNamedSets } from './named-set-utils.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -312,7 +313,7 @@ function compileExpandedDoc(
   } else {
     sections.metadata = runtimeMetadata;
   }
-  const namedSets = metadata?.namedSets;
+  const namedSets = metadata?.namedSets === undefined ? undefined : canonicalizeNamedSets(metadata.namedSets);
 
   const constants = compileSection(diagnostics, () => lowerConstants(resolvedTableRefDoc.constants, diagnostics));
   sections.constants = constants.failed ? null : constants.value;

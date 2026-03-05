@@ -12,6 +12,7 @@ import {
 } from '../../src/cnl/compile-lowering.js';
 import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
+import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
@@ -37,7 +38,7 @@ describe('compile-effects lowering', () => {
     const sharedContext = {
       ownershipByBase: context.ownershipByBase,
       tokenTraitVocabulary: { faction: ['US', 'NVA'] },
-      namedSets: { safeActions: ['pass'] },
+      namedSets: canonicalizeNamedSets({ safeActions: ['pass'] }),
     };
 
     const loweredViaAdapter = lowerOptionalCondition(source, diagnostics, 'doc.actions.0.pre', sharedContext, ['$actor']);
@@ -54,7 +55,7 @@ describe('compile-effects lowering', () => {
     const sharedContext = {
       ownershipByBase: context.ownershipByBase,
       tokenTraitVocabulary: { faction: ['US', 'NVA'] },
-      namedSets: { safeActions: ['pass'] },
+      namedSets: canonicalizeNamedSets({ safeActions: ['pass'] }),
       freeOperationActionIds: ['limitedOp'],
     };
 

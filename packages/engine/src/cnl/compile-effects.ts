@@ -41,6 +41,7 @@ import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 import { isTrustedMacroOriginCarrier } from './macro-origin-trust.js';
 import { collectReservedCompilerMetadataKeyOccurrencesOnRecord } from './reserved-compiler-metadata.js';
+import type { CanonicalNamedSets } from './named-set-utils.js';
 import type { TypeInferenceContext } from './type-inference.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
@@ -51,7 +52,7 @@ export interface EffectLoweringContext {
   readonly freeOperationActionIds?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly tokenFilterProps?: readonly string[];
-  readonly namedSets?: Readonly<Record<string, readonly string[]>>;
+  readonly namedSets?: CanonicalNamedSets;
   readonly typeInference?: TypeInferenceContext;
   readonly seatIds?: readonly string[];
 }

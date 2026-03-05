@@ -11,6 +11,8 @@ import {
   validateIdentifierField,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { normalizeIdentifier } from './identifier-utils.js';
+import { normalizeNamedSetId } from './named-set-utils.js';
 
 export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
   const metadata = doc.metadata;
@@ -112,6 +114,7 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
       return;
     }
 
+    const seenCanonicalSetIds = new Set<string>();
     for (const [setName, rawValues] of Object.entries(namedSets)) {
       const setPath = `doc.metadata.namedSets.${setName}`;
       if (!isNonEmptyString(setName)) {
@@ -122,6 +125,18 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
           message: 'Named set ids must be non-empty strings.',
           suggestion: 'Use non-empty set ids such as "COIN" or "Insurgent".',
         });
+      }
+      const normalizedSetName = normalizeNamedSetId(setName) as string;
+      if (seenCanonicalSetIds.has(normalizedSetName)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_ID',
+          path: setPath,
+          severity: 'error',
+          message: `metadata.namedSets contains duplicate set ids after normalization: "${normalizedSetName}".`,
+          suggestion: 'Use unique named set ids after trim + NFC normalization.',
+        });
+      } else {
+        seenCanonicalSetIds.add(normalizedSetName);
       }
       if (!Array.isArray(rawValues) || rawValues.some((value) => typeof value !== 'string' || value.trim() === '')) {
         diagnostics.push({
@@ -134,7 +149,7 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
         continue;
       }
 
-      const normalized = rawValues.map((value) => value.trim().normalize('NFC'));
+      const normalized = rawValues.map((value) => normalizeIdentifier(value));
       const duplicates = new Set<string>();
       const seen = new Set<string>();
       for (const value of normalized) {

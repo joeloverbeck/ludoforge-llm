@@ -23,6 +23,12 @@ import type {
 import { bindingShadowWarningsForScope } from './binding-diagnostics.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
+import {
+  listCanonicalNamedSetAlternatives,
+  normalizeNamedSetId,
+  type CanonicalNamedSets,
+  type NamedSetId,
+} from './named-set-utils.js';
 import { areTypesCompatible, inferValueExprType, type TypeInferenceContext } from './type-inference.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
@@ -32,7 +38,7 @@ export interface ConditionLoweringContext {
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
   readonly tokenFilterProps?: readonly string[];
-  readonly namedSets?: Readonly<Record<string, readonly string[]>>;
+  readonly namedSets?: CanonicalNamedSets;
   readonly typeInference?: TypeInferenceContext;
   readonly seatIds?: readonly string[];
 }
@@ -367,7 +373,7 @@ function lowerTokenFilterEntry(
   if (op === 'in' || op === 'notIn') {
     const namedSetReference = lowerNamedSetReference(rawValue);
     if (namedSetReference !== null) {
-      const values = context.namedSets?.[namedSetReference.name];
+      const values = context.namedSets?.get(namedSetReference.name);
       if (values === undefined) {
         return {
           value: null,
@@ -377,7 +383,7 @@ function lowerTokenFilterEntry(
             severity: 'error',
             message: `Unknown metadata.namedSets entry "${namedSetReference.name}".`,
             suggestion: 'Declare the set under metadata.namedSets or use a literal string array.',
-            ...(context.namedSets === undefined ? {} : { alternatives: Object.keys(context.namedSets).sort((left, right) => left.localeCompare(right)) }),
+            ...(context.namedSets === undefined ? {} : { alternatives: listCanonicalNamedSetAlternatives(context.namedSets) }),
           }],
         };
       }
@@ -438,11 +444,11 @@ function validateDeclaredTokenFilterProp(
   ];
 }
 
-function lowerNamedSetReference(source: unknown): { readonly name: string } | null {
+function lowerNamedSetReference(source: unknown): { readonly name: NamedSetId } | null {
   if (!isRecord(source) || source.ref !== 'namedSet' || typeof source.name !== 'string' || source.name.trim() === '') {
     return null;
   }
-  return { name: source.name.trim().normalize('NFC') };
+  return { name: normalizeNamedSetId(source.name) };
 }
 
 function lowerAssetRowFilterEntry(

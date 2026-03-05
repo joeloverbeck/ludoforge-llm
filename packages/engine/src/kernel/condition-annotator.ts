@@ -7,11 +7,18 @@ import type {
   DisplayNode,
   LimitUsageInfo,
 } from './display-node.js';
-import { actionDefToDisplayTree } from './ast-to-display.js';
+import {
+  actionDefToDisplayTree,
+  actionPipelineDefToDisplayTree,
+  conditionToDisplayNodes,
+  displayGroup,
+  effectToDisplayNodes,
+} from './ast-to-display.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalContext } from './eval-context.js';
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
+import type { ActionPipelineDef } from './types-operations.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 
 // ---------------------------------------------------------------------------
@@ -209,6 +216,61 @@ const annotateLimitsGroup = (
 };
 
 // ---------------------------------------------------------------------------
+// Pipeline annotation helpers
+// ---------------------------------------------------------------------------
+
+const buildAnnotatedPipelineSection = (
+  pipeline: ActionPipelineDef,
+  evalCtx: EvalContext,
+): DisplayGroupNode => {
+  const children: DisplayGroupNode[] = [];
+
+  if (pipeline.applicability !== undefined) {
+    const raw = displayGroup('Applicability', conditionToDisplayNodes(pipeline.applicability, 0), 'check');
+    children.push(annotateConditionGroup(raw, pipeline.applicability, evalCtx));
+  }
+
+  if (pipeline.legality !== null) {
+    const raw = displayGroup('Legality', conditionToDisplayNodes(pipeline.legality, 0), 'check');
+    children.push(annotateConditionGroup(raw, pipeline.legality, evalCtx));
+  }
+
+  if (pipeline.costValidation !== null) {
+    const raw = displayGroup('Cost Validation', conditionToDisplayNodes(pipeline.costValidation, 0), 'check');
+    children.push(annotateConditionGroup(raw, pipeline.costValidation, evalCtx));
+  }
+
+  if (pipeline.costEffects.length > 0) {
+    children.push(displayGroup(
+      'Costs',
+      pipeline.costEffects.flatMap((e) => effectToDisplayNodes(e, 0)),
+      'cost',
+    ));
+  }
+
+  for (const stage of pipeline.stages) {
+    if (stage.effects.length > 0) {
+      const label = stage.stage !== undefined ? `Stage: ${stage.stage}` : 'Effects';
+      children.push(displayGroup(label, stage.effects.flatMap((e) => effectToDisplayNodes(e, 0))));
+    }
+  }
+
+  return { kind: 'group', label: `Pipeline: ${pipeline.id}`, collapsible: true, children };
+};
+
+const pipelineApplicabilityPasses = (
+  pipeline: ActionPipelineDef,
+  evalCtx: EvalContext,
+): boolean => {
+  if (pipeline.applicability === undefined) return true;
+  try {
+    return evalCondition(pipeline.applicability, evalCtx);
+  } catch {
+    return false;
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -244,10 +306,17 @@ export function describeAction(
       return section;
     });
 
-    return { sections: annotatedSections, limitUsage };
+    // Append pipeline sections for pipeline-backed actions
+    const pipelines = (context.def.actionPipelines ?? []).filter((p) => p.actionId === action.id);
+    const applicablePipelines = pipelines.filter((p) => pipelineApplicabilityPasses(p, evalCtx));
+    const pipelineSections = applicablePipelines.map((p) => buildAnnotatedPipelineSection(p, evalCtx));
+
+    return { sections: [...annotatedSections, ...pipelineSections], limitUsage };
   } catch {
     // Safety net: never throw from describeAction
     const sections = actionDefToDisplayTree(action);
-    return { sections, limitUsage: [] };
+    const pipelines = (context.def.actionPipelines ?? []).filter((p) => p.actionId === action.id);
+    const pipelineSections = pipelines.map((p) => actionPipelineDefToDisplayTree(p));
+    return { sections: [...sections, ...pipelineSections], limitUsage: [] };
   }
 }

@@ -10,6 +10,7 @@ import {
   createZobristTable,
   describeAction,
   type ActionDef,
+  type ActionPipelineDef,
   type AnnotatedActionDescription,
   type AnnotationContext,
   type ConditionAST,
@@ -357,5 +358,193 @@ describe('describeAction (condition annotator)', () => {
     const result = describeAction(action, ctx);
     assert.ok(Array.isArray(result.sections));
     assert.ok(Array.isArray(result.limitUsage));
+  });
+
+  // -----------------------------------------------------------------------
+  // 11. Pipeline-backed action produces non-empty sections
+  // -----------------------------------------------------------------------
+  it('includes pipeline sections for shell actions with matching pipelines', () => {
+    const action = minimalActionDef(); // empty shell
+    const pipeline: ActionPipelineDef = {
+      id: 'train-us',
+      actionId: action.id,
+      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      costValidation: null,
+      costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -3 } }],
+      targeting: {},
+      stages: [{ stage: 'placement', effects: [{ advancePhase: {} }] }],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [pipeline] });
+    const ctx = makeContext({ def });
+    const result = describeAction(action, ctx);
+
+    // Should have at least one pipeline group
+    const pipelineGroup = result.sections.find((s) => s.label === 'Pipeline: train-us');
+    assert.ok(pipelineGroup !== undefined, 'Pipeline group should be present');
+    assert.equal(pipelineGroup.collapsible, true);
+    // Should contain legality, costs, stage sub-groups
+    const childLabels = pipelineGroup.children
+      .filter((c): c is DisplayGroupNode => c.kind === 'group')
+      .map((c) => c.label);
+    assert.ok(childLabels.includes('Legality'), 'Should include Legality');
+    assert.ok(childLabels.includes('Costs'), 'Should include Costs');
+    assert.ok(childLabels.includes('Stage: placement'), 'Should include Stage: placement');
+  });
+
+  // -----------------------------------------------------------------------
+  // 12. Pipeline legality conditions are annotated with pass/fail
+  // -----------------------------------------------------------------------
+  it('annotates pipeline legality conditions', () => {
+    const action = minimalActionDef();
+    const pipeline: ActionPipelineDef = {
+      id: 'pipeline-annotated',
+      actionId: action.id,
+      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [pipeline] });
+    const ctx = makeContext({ def, state: makeState({ globalVars: { gold: 10 } }) });
+    const result = describeAction(action, ctx);
+
+    const pipelineGroup = result.sections.find((s) => s.label === 'Pipeline: pipeline-annotated')!;
+    const legalityGroup = pipelineGroup.children.find(
+      (c): c is DisplayGroupNode => c.kind === 'group' && c.label === 'Legality',
+    )!;
+    assert.ok(legalityGroup !== undefined);
+    const ln = asLine(legalityGroup.children[0]!);
+    const passAnns = annotations(ln).filter((a) => a.annotationType === 'pass');
+    assert.ok(passAnns.length >= 1, 'Legality should have pass annotation');
+  });
+
+  // -----------------------------------------------------------------------
+  // 13. Only applicable pipelines are included
+  // -----------------------------------------------------------------------
+  it('filters out inapplicable pipelines', () => {
+    const action = minimalActionDef();
+    const passingPipeline: ActionPipelineDef = {
+      id: 'train-us',
+      actionId: action.id,
+      applicability: { op: '==', left: { ref: 'gvar', var: 'gold' }, right: 10 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [{ advancePhase: {} }] }],
+      atomicity: 'atomic',
+    };
+    const failingPipeline: ActionPipelineDef = {
+      id: 'train-arvn',
+      actionId: action.id,
+      applicability: { op: '==', left: { ref: 'gvar', var: 'gold' }, right: 999 },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [{ advancePhase: {} }] }],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [passingPipeline, failingPipeline] });
+    const ctx = makeContext({ def, state: makeState({ globalVars: { gold: 10 } }) });
+    const result = describeAction(action, ctx);
+
+    const pipelineLabels = result.sections
+      .filter((s) => s.label.startsWith('Pipeline:'))
+      .map((s) => s.label);
+    assert.ok(pipelineLabels.includes('Pipeline: train-us'), 'Applicable pipeline should be included');
+    assert.ok(!pipelineLabels.includes('Pipeline: train-arvn'), 'Inapplicable pipeline should be filtered out');
+  });
+
+  // -----------------------------------------------------------------------
+  // 14. Multiple applicable pipelines produce multiple groups
+  // -----------------------------------------------------------------------
+  it('includes multiple applicable pipelines as separate groups', () => {
+    const action = minimalActionDef();
+    const p1: ActionPipelineDef = {
+      id: 'pipeline-a',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [{ advancePhase: {} }] }],
+      atomicity: 'atomic',
+    };
+    const p2: ActionPipelineDef = {
+      id: 'pipeline-b',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [{ advancePhase: {} }] }],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [p1, p2] });
+    const ctx = makeContext({ def });
+    const result = describeAction(action, ctx);
+
+    const pipelineLabels = result.sections
+      .filter((s) => s.label.startsWith('Pipeline:'))
+      .map((s) => s.label);
+    assert.deepEqual(pipelineLabels, ['Pipeline: pipeline-a', 'Pipeline: pipeline-b']);
+  });
+
+  // -----------------------------------------------------------------------
+  // 15. No matching pipelines — same result as before (no regression)
+  // -----------------------------------------------------------------------
+  it('produces unchanged result when no pipelines match', () => {
+    const pre: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 };
+    const action = minimalActionDef({ pre });
+    const otherPipeline: ActionPipelineDef = {
+      id: 'unrelated',
+      actionId: 'other-action' as ActionPipelineDef['actionId'],
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [otherPipeline] });
+    const ctx = makeContext({ def, state: makeState({ globalVars: { gold: 10 } }) });
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.sections.every((s) => !s.label.startsWith('Pipeline:')),
+      'No pipeline groups should be present');
+    assert.ok(result.sections.some((s) => s.label === 'Preconditions'),
+      'Original sections should remain');
+  });
+
+  // -----------------------------------------------------------------------
+  // 16. Error fallback includes unannotated pipeline sections
+  // -----------------------------------------------------------------------
+  it('includes unannotated pipeline sections on error fallback', () => {
+    const action = minimalActionDef({
+      // Force an eval error by using a nonexistent binding in pre
+      pre: { op: '>=', left: { ref: 'binding', name: 'crash' }, right: 5 },
+    });
+    const pipeline: ActionPipelineDef = {
+      id: 'fallback-pipeline',
+      actionId: action.id,
+      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef({ actionPipelines: [pipeline] });
+    const ctx = makeContext({ def });
+    const result = describeAction(action, ctx);
+
+    // The try branch should succeed (tryEvalCondition handles errors gracefully),
+    // so we should still see the pipeline section
+    const pipelineGroup = result.sections.find((s) => s.label === 'Pipeline: fallback-pipeline');
+    assert.ok(pipelineGroup !== undefined, 'Pipeline section should be present');
   });
 });

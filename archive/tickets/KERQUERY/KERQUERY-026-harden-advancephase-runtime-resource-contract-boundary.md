@@ -1,6 +1,6 @@
 # KERQUERY-026: Harden advancePhase runtime-resource contract boundary
 
-**Status**: PENDING
+**Status**: COMPLETED (2026-03-05)
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — phase-advance runtime contract validation and guard coverage
@@ -8,37 +8,38 @@
 
 ## Problem
 
-`advancePhase` now requires `EvalRuntimeResources` at type level, but there is no fail-fast runtime guard for non-TypeScript/malformed callers. If `undefined` or malformed resources are passed at runtime, downstream lifecycle code can still allocate defaults implicitly, weakening the explicit operation-boundary contract.
+`advancePhase` now requires `EvalRuntimeResources` at type level and already performs a fail-fast runtime contract assertion. The remaining risk is regression drift: there is no explicit test coverage that locks this boundary behavior for missing/malformed runtime resources, and no source-contract guard that prevents accidental reintroduction of internal default allocation in `advancePhase`.
 
 ## Assumption Reassessment (2026-03-05)
 
 1. `advancePhase` signature now requires explicit `evalRuntimeResources`.
-2. `advancePhase` currently does not perform boundary validation that resources are present and structurally valid at runtime.
+2. `advancePhase` currently performs boundary validation via `assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advancePhase evalRuntimeResources')` at function entry.
 3. `dispatchLifecycleEvent` still supports an internal fallback default when its own resources input is omitted, so `advancePhase` must enforce explicit ownership before delegating.
-4. Active tickets `KERQUERY-018` through `KERQUERY-025` do not lock `advancePhase` runtime boundary validation specifically.
+4. Active-ticket dependency assumptions from `KERQUERY-018` through `KERQUERY-025` are stale because those items are archived; none currently blocks this hardening work.
 
 ## Architecture Check
 
 1. Fail-fast boundary validation in `advancePhase` is cleaner than relying on downstream behavior because operation ownership becomes explicit and deterministic.
 2. This is runtime infrastructure only and remains game-agnostic; no game-specific GameDef/GameSpecDoc/visual-config coupling is introduced.
 3. No backwards-compatibility aliasing/shims: invalid/missing resources should fail immediately.
+4. Because runtime validation already exists in production code, the highest-value change is to harden test contracts so future refactors cannot silently weaken the boundary.
 
 ## What to Change
 
-### 1. Add explicit runtime contract validation in `advancePhase`
-
-1. Validate `evalRuntimeResources` presence and minimal required shape at function entry.
-2. Throw `RUNTIME_CONTRACT_INVALID` with clear diagnostics when missing/malformed.
-
-### 2. Add source/runtime regression guards
+### 1. Add source/runtime regression guards
 
 1. Add source-contract assertions that `advancePhase` does not call `createEvalRuntimeResources()` internally.
-2. Add runtime tests that malformed/missing resources fail at `advancePhase` boundary.
+2. Add runtime tests that missing/malformed resources fail at `advancePhase` boundary with `RUNTIME_CONTRACT_INVALID`.
+3. Keep `advancePhase` production behavior unchanged unless tests expose a real contract gap.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/phase-advance.ts` (modify)
 - `packages/engine/test/unit/phase-advance.test.ts` (modify/add)
+
+Expected touch after reassessment:
+- `packages/engine/test/unit/phase-advance.test.ts` (modify/add)
+- `packages/engine/src/kernel/phase-advance.ts` only if a genuine contract bug is discovered while adding guards.
 
 ## Out of Scope
 
@@ -71,3 +72,13 @@
 2. `node --test packages/engine/dist/test/unit/phase-advance.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Corrected stale assumptions before implementation: `advancePhase` already had runtime boundary validation; active-ticket dependency assumptions were outdated.
+- Added hardening tests in `phase-advance.test.ts` for:
+  - missing `evalRuntimeResources` at runtime,
+  - malformed collector contract,
+  - malformed query runtime cache contract,
+  - source guard preventing internal `createEvalRuntimeResources()` allocation inside `advancePhase`.
+- No production kernel logic changes were required because the boundary behavior already matched the intended architecture.

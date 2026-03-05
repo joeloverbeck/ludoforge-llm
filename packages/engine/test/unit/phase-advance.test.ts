@@ -151,6 +151,81 @@ describe('phase advancement', () => {
     assert.ok(setCalls > 0);
   });
 
+  it('fails fast when advancePhase evalRuntimeResources are missing at runtime', () => {
+    const def = createBaseDef();
+    const state = createState({ currentPhase: asPhaseId('p1') });
+
+    assert.throws(
+      () => advancePhase(def, state, undefined as unknown as Parameters<typeof advancePhase>[2]),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /advancePhase evalRuntimeResources must be an object/i);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when advancePhase evalRuntimeResources collector shape is malformed', () => {
+    const def = createBaseDef();
+    const state = createState({ currentPhase: asPhaseId('p1') });
+    const malformedResources = {
+      collector: { warnings: 'not-an-array', trace: null },
+      queryRuntimeCache: {
+        getTokenZoneByTokenIdIndex: () => undefined,
+        setTokenZoneByTokenIdIndex: () => undefined,
+      },
+    };
+
+    assert.throws(
+      () =>
+        advancePhase(
+          def,
+          state,
+          malformedResources as unknown as Parameters<typeof advancePhase>[2],
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(String(details.message), /advancePhase evalRuntimeResources\.collector\.warnings must be an array/i);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when advancePhase evalRuntimeResources query cache contract is malformed', () => {
+    const def = createBaseDef();
+    const state = createState({ currentPhase: asPhaseId('p1') });
+    const malformedResources = {
+      collector: { warnings: [], trace: null },
+      queryRuntimeCache: {
+        getTokenZoneByTokenIdIndex: 123,
+        setTokenZoneByTokenIdIndex: () => undefined,
+      },
+    };
+
+    assert.throws(
+      () =>
+        advancePhase(
+          def,
+          state,
+          malformedResources as unknown as Parameters<typeof advancePhase>[2],
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; message?: string };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match(
+          String(details.message),
+          /advancePhase evalRuntimeResources\.queryRuntimeCache\.getTokenZoneByTokenIdIndex must be a function/i,
+        );
+        return true;
+      },
+    );
+  });
+
   it('cycles roundRobin order across players and wraps to player 0', () => {
     const def: GameDef = {
       ...createBaseDef(),
@@ -1156,6 +1231,27 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
       advancePhaseCalls.some((call) => call.arguments.length >= 3 && isIdentifierArgument(call.arguments[2]!, 'evalRuntimeResources')),
       false,
       'advanceToDecisionPoint must not pass evalRuntimeResources directly to advancePhase',
+    );
+  });
+
+  it('does not allocate default eval resources inside advancePhase', () => {
+    const source = readKernelSource('src/kernel/phase-advance.ts');
+    const sourceFile = parseTypeScriptSource(source, 'phase-advance.ts');
+    const advancePhaseBody = findVariableFunctionBody(sourceFile, 'advancePhase');
+    assert.equal(
+      advancePhaseBody !== undefined,
+      true,
+      'phase-advance.ts must define advancePhase function body',
+    );
+
+    const createCalls =
+      advancePhaseBody === undefined
+        ? []
+        : collectCallsByIdentifierWithinNode(advancePhaseBody, 'createEvalRuntimeResources');
+    assert.equal(
+      createCalls.length,
+      0,
+      'advancePhase must not allocate default evalRuntimeResources internally',
     );
   });
 });

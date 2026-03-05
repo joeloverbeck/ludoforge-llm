@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel request-construction ergonomics and call-site consistency
-**Deps**: archive/tickets/KERQUERY/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md, tickets/KERQUERY-028-enforce-operation-scoped-resource-reuse-in-phase-advance-tests.md, packages/engine/src/kernel/phase-advance.ts, packages/engine/src/kernel/effects-turn-flow.ts, packages/engine/test/helpers/replay-harness.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-027-migrate-advancephase-to-single-request-api-and-lock-shape.md, archive/tickets/KERQUERY/KERQUERY-028-enforce-operation-scoped-resource-reuse-in-phase-advance-tests.md, packages/engine/src/kernel/phase-advance.ts, packages/engine/src/kernel/effects-turn-flow.ts, packages/engine/test/helpers/replay-harness.ts
 
 ## Problem
 

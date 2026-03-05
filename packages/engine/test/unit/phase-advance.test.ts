@@ -91,7 +91,7 @@ describe('phase advancement', () => {
     assert.equal(next.activePlayer, asPlayerId(1));
   });
 
-  it('uses provided runtime resources when advancing lifecycle events', () => {
+  it('reuses provided runtime resources across multi-step lifecycle advancement', () => {
     const def: GameDef = {
       ...createBaseDef(),
       zones: [{ id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' }],
@@ -135,18 +135,31 @@ describe('phase advancement', () => {
       },
     };
 
-    const next = advancePhase({
-      def,
-      state,
-      evalRuntimeResources: createEvalRuntimeResources({
-        collector: createCollector(),
-        queryRuntimeCache,
-      }),
+    const operationResources = createEvalRuntimeResources({
+      collector: createCollector(),
+      queryRuntimeCache,
     });
 
-    assert.equal(next.turnCount, 1);
-    assert.ok(getCalls > 0);
-    assert.ok(setCalls > 0);
+    const afterFirst = advancePhase({
+      def,
+      state,
+      evalRuntimeResources: operationResources,
+    });
+    const getCallsAfterFirst = getCalls;
+    const setCallsAfterFirst = setCalls;
+
+    const afterSecond = advancePhase({
+      def,
+      state: afterFirst,
+      evalRuntimeResources: operationResources,
+    });
+
+    assert.equal(afterFirst.turnCount, 1);
+    assert.equal(afterSecond.turnCount, 2);
+    assert.ok(getCallsAfterFirst > 0);
+    assert.ok(setCallsAfterFirst > 0);
+    assert.ok(getCalls > getCallsAfterFirst);
+    assert.ok(setCalls > setCallsAfterFirst);
   });
 
   it('fails fast when advancePhase evalRuntimeResources are missing at runtime', () => {
@@ -244,10 +257,11 @@ describe('phase advancement', () => {
       activePlayer: asPlayerId(0),
       turnOrderState: { type: 'roundRobin' },
     });
+    const operationResources = createEvalRuntimeResources();
 
-    const afterOne = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
-    const afterTwo = advancePhase({ def, state: afterOne, evalRuntimeResources: createEvalRuntimeResources() });
-    const afterThree = advancePhase({ def, state: afterTwo, evalRuntimeResources: createEvalRuntimeResources() });
+    const afterOne = advancePhase({ def, state, evalRuntimeResources: operationResources });
+    const afterTwo = advancePhase({ def, state: afterOne, evalRuntimeResources: operationResources });
+    const afterThree = advancePhase({ def, state: afterTwo, evalRuntimeResources: operationResources });
 
     assert.equal(afterOne.activePlayer, asPlayerId(1));
     assert.equal(afterTwo.activePlayer, asPlayerId(2));
@@ -289,11 +303,12 @@ describe('phase advancement', () => {
       activePlayer: asPlayerId(2),
       turnOrderState: { type: 'fixedOrder', currentIndex: 0 },
     });
+    const operationResources = createEvalRuntimeResources();
 
-    const afterOne = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
-    const afterTwo = advancePhase({ def, state: afterOne, evalRuntimeResources: createEvalRuntimeResources() });
-    const afterThree = advancePhase({ def, state: afterTwo, evalRuntimeResources: createEvalRuntimeResources() });
-    const afterFour = advancePhase({ def, state: afterThree, evalRuntimeResources: createEvalRuntimeResources() });
+    const afterOne = advancePhase({ def, state, evalRuntimeResources: operationResources });
+    const afterTwo = advancePhase({ def, state: afterOne, evalRuntimeResources: operationResources });
+    const afterThree = advancePhase({ def, state: afterTwo, evalRuntimeResources: operationResources });
+    const afterFour = advancePhase({ def, state: afterThree, evalRuntimeResources: operationResources });
 
     assert.equal(afterOne.activePlayer, asPlayerId(0));
     assert.equal(afterTwo.activePlayer, asPlayerId(1));
@@ -636,13 +651,14 @@ phase: [asPhaseId('p2')],
       markers: {},
     };
 
-    const firstPhaseStep = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
+    const operationResources = createEvalRuntimeResources();
+    const firstPhaseStep = advancePhase({ def, state, evalRuntimeResources: operationResources });
     assert.equal(firstPhaseStep.currentPhase, asPhaseId('victory'));
     const firstLogs: TriggerLogEntry[] = [];
-    const afterFirst = advancePhase({ def, state: firstPhaseStep, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: firstLogs });
+    const afterFirst = advancePhase({ def, state: firstPhaseStep, evalRuntimeResources: operationResources, triggerLogCollector: firstLogs });
 
     const secondLogs: TriggerLogEntry[] = [];
-    const afterSecond = advancePhase({ def, state: afterFirst, evalRuntimeResources: createEvalRuntimeResources(), triggerLogCollector: secondLogs });
+    const afterSecond = advancePhase({ def, state: afterFirst, evalRuntimeResources: operationResources, triggerLogCollector: secondLogs });
 
     const firstLifecycleSteps = firstLogs
       .filter((entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowLifecycle' }> => entry.kind === 'turnFlowLifecycle')
@@ -1000,11 +1016,12 @@ phase: [asPhaseId('p2')],
       ],
     };
 
-    const afterOne = advancePhase({ def, state, evalRuntimeResources: createEvalRuntimeResources() });
+    const operationResources = createEvalRuntimeResources();
+    const afterOne = advancePhase({ def, state, evalRuntimeResources: operationResources });
     assert.equal(afterOne.globalVars.aid, 3);
     assert.equal(afterOne.activeLastingEffects?.[0]?.remainingTurnBoundaries, 1);
 
-    const afterTwo = advancePhase({ def, state: afterOne, evalRuntimeResources: createEvalRuntimeResources() });
+    const afterTwo = advancePhase({ def, state: afterOne, evalRuntimeResources: operationResources });
     assert.equal(afterTwo.globalVars.aid, 0);
     assert.equal(afterTwo.activeLastingEffects, undefined);
   });

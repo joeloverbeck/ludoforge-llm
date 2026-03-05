@@ -3,6 +3,13 @@ export interface ScoredStringCandidate {
   readonly distance: number;
 }
 
+const compareByCodeUnitLex = (left: string, right: string): number => {
+  if (left === right) {
+    return 0;
+  }
+  return left < right ? -1 : 1;
+};
+
 export const levenshteinDistance = (left: string, right: string): number => {
   const cols = right.length + 1;
   let previousRow: number[] = Array.from({ length: cols }, (_unused, index) => index);
@@ -29,7 +36,7 @@ export const compareByDistanceThenLex = (left: ScoredStringCandidate, right: Sco
   if (left.distance !== right.distance) {
     return left.distance - right.distance;
   }
-  return left.candidate.localeCompare(right.candidate);
+  return compareByCodeUnitLex(left.candidate, right.candidate);
 };
 
 export const rankByEditDistance = (value: string, candidates: readonly string[]): readonly ScoredStringCandidate[] =>

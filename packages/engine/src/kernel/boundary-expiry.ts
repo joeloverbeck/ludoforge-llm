@@ -1,6 +1,7 @@
 import { expireLastingEffectsAtBoundaries } from './event-execution.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import type {
   GameDef,
   GameState,
@@ -23,6 +24,9 @@ export const applyBoundaryExpiry = (
   evalRuntimeResources?: EvalRuntimeResources,
   effectPathRoot = 'boundaryExpiry',
 ): BoundaryExpiryResult => {
+  if (evalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(evalRuntimeResources, 'applyBoundaryExpiry evalRuntimeResources');
+  }
   const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources();
   if (boundaryDurations === undefined || boundaryDurations.length === 0) {
     return { state, traceEntries: [] };

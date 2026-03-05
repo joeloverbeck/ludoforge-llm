@@ -47,6 +47,7 @@ export * from './effects.js';
 export * from './event-execution.js';
 export * from './eval-condition.js';
 export * from './eval-context.js';
+export * from './eval-runtime-resources-contract.js';
 export * from './eval-error-defer-class.js';
 export * from './eval-error.js';
 export * from './eval-error-classification.js';

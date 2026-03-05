@@ -6,6 +6,7 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { emitTrace } from './execution-collector.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -22,6 +23,9 @@ export const dispatchLifecycleEvent = (
   effectPathRoot = 'lifecycle',
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
+  if (evalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(evalRuntimeResources, 'dispatchLifecycleEvent evalRuntimeResources');
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtimeResources = evalRuntimeResources ?? createEvalRuntimeResources();

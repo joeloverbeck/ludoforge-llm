@@ -211,7 +211,76 @@ describe('dispatchTriggers', () => {
       }),
       (error: unknown) => {
         assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
-        assert.match((error as Error).message, /collector and queryRuntimeCache ownership fields/);
+        assert.match((error as Error).message, /evalRuntimeResources\.queryRuntimeCache must be an object/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.evalRuntimeResources.collector.warnings is not an array', () => {
+    const state = createState({ zones: {} });
+    const invalidResources = {
+      collector: { warnings: {}, trace: [] },
+      queryRuntimeCache: createEvalRuntimeResources().queryRuntimeCache,
+    };
+
+    assert.throws(
+      () => dispatchTriggers({
+        ...createValidRequest(),
+        state,
+        rng: { state: state.rng },
+        evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /collector\.warnings must be an array/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.evalRuntimeResources.collector.trace is neither array nor null', () => {
+    const state = createState({ zones: {} });
+    const invalidResources = {
+      collector: { warnings: [], trace: {} },
+      queryRuntimeCache: createEvalRuntimeResources().queryRuntimeCache,
+    };
+
+    assert.throws(
+      () => dispatchTriggers({
+        ...createValidRequest(),
+        state,
+        rng: { state: state.rng },
+        evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /collector\.trace must be an array or null/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.evalRuntimeResources.queryRuntimeCache accessor methods are malformed', () => {
+    const state = createState({ zones: {} });
+    const invalidResources = {
+      collector: createCollector({ trace: true }),
+      queryRuntimeCache: {
+        getTokenZoneByTokenIdIndex: 'not-a-function',
+        setTokenZoneByTokenIdIndex: () => {},
+      },
+    };
+
+    assert.throws(
+      () => dispatchTriggers({
+        ...createValidRequest(),
+        state,
+        rng: { state: state.rng },
+        evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /getTokenZoneByTokenIdIndex must be a function/);
         return true;
       },
     );

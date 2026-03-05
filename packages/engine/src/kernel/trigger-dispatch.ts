@@ -2,6 +2,7 @@ import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -240,10 +241,10 @@ const validateDispatchTriggerRequest: (request: unknown) => asserts request is D
       `dispatchTriggers request.effectPathRoot must be a string when provided; received ${typeof request.effectPathRoot}`,
     );
   }
-  if (request.evalRuntimeResources !== undefined && !isEvalRuntimeResources(request.evalRuntimeResources)) {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      'dispatchTriggers request.evalRuntimeResources must include collector and queryRuntimeCache ownership fields',
+  if (request.evalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(
+      request.evalRuntimeResources,
+      'dispatchTriggers request.evalRuntimeResources',
     );
   }
 };
@@ -256,17 +257,6 @@ const describeType = (value: unknown): string => {
     return 'null';
   }
   return Array.isArray(value) ? 'array' : typeof value;
-};
-
-const isEvalRuntimeResources = (value: unknown): value is EvalRuntimeResources => {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const candidate = value as { collector?: unknown; queryRuntimeCache?: unknown };
-  return typeof candidate.collector === 'object'
-    && candidate.collector !== null
-    && typeof candidate.queryRuntimeCache === 'object'
-    && candidate.queryRuntimeCache !== null;
 };
 
 const createEventBindings = (event: TriggerEvent): Readonly<Record<string, unknown>> => {

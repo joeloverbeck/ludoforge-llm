@@ -10,6 +10,7 @@ import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import {
   createSeatResolutionContext,
   resolvePlayerIndexForTurnFlowSeat,
@@ -266,6 +267,7 @@ export const advancePhase = (
   policy?: MoveExecutionPolicy,
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
+  assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advancePhase evalRuntimeResources');
   const lifecycleResources = evalRuntimeResources;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const phases = effectiveTurnPhases(def, state);
@@ -408,6 +410,9 @@ export const advanceToDecisionPoint = (
   evalRuntimeResources?: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): GameState => {
+  if (evalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advanceToDecisionPoint evalRuntimeResources');
+  }
   const operationResources = evalRuntimeResources ?? createEvalRuntimeResources();
   const phaseCount = effectiveTurnPhases(def, state).length;
   if (phaseCount <= 0) {

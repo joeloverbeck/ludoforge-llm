@@ -42,7 +42,7 @@
 
 ## Out of Scope
 
-- `dispatchTriggers` contract hardening (`archive/tickets/KERQUERY/KERQUERY-023-harden-dispatchtriggers-request-runtime-contract-validation.md`, `tickets/KERQUERY-024-strengthen-eval-runtime-resources-contract-guards-in-trigger-dispatch.md`)
+- `dispatchTriggers` contract hardening (`archive/tickets/KERQUERY/KERQUERY-023-harden-dispatchtriggers-request-runtime-contract-validation.md`, `archive/tickets/KERQUERY/KERQUERY-024-strengthen-eval-runtime-resources-contract-guards-in-trigger-dispatch.md`)
 - Query runtime cache API/policy work (`archive/tickets/KERQUERY/KERQUERY-021-enforce-query-cache-key-literal-ownership-policy.md`, `archive/tickets/KERQUERY/KERQUERY-022-tighten-query-runtime-cache-public-surface-to-domain-accessors.md`)
 - Any game-specific behavior in GameDef/simulator
 

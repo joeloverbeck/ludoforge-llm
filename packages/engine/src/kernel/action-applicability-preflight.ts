@@ -6,6 +6,7 @@ import {
   type ActionSelectorContractViolation,
 } from '../contracts/index.js';
 import { createEvalContext, createEvalRuntimeResources, type EvalContext, type EvalRuntimeResources } from './eval-context.js';
+import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -83,6 +84,12 @@ export const resolveActionApplicabilityPreflight = ({
   evalRuntimeResources: providedEvalRuntimeResources,
 }: ActionApplicabilityPreflightInput): ActionApplicabilityPreflightResult => {
   const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
+  if (providedEvalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(
+      providedEvalRuntimeResources,
+      'resolveActionApplicabilityPreflight evalRuntimeResources',
+    );
+  }
   const evalRuntimeResources = providedEvalRuntimeResources ?? createEvalRuntimeResources();
   const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
   const selectorContractViolations = evaluateActionSelectorContracts({

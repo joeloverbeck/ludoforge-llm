@@ -1,4 +1,5 @@
 import { createEvalContext, createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import { isEvalErrorCode } from './eval-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
@@ -40,6 +41,9 @@ export const resolveActionActor = ({
   evalRuntimeResources: providedEvalRuntimeResources,
 }: ResolveActionActorInput): ActionActorResolution => {
   const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
+  if (providedEvalRuntimeResources !== undefined) {
+    assertEvalRuntimeResourcesContract(providedEvalRuntimeResources, 'resolveActionActor evalRuntimeResources');
+  }
   const evalRuntimeResources = providedEvalRuntimeResources ?? createEvalRuntimeResources();
   const selectorContext = createEvalContext({
     def,

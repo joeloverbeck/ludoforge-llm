@@ -1,6 +1,6 @@
 # KERQUERY-025: Lock dispatchTriggers single-request API shape with source guards
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — API-shape regression guard for kernel trigger dispatch
@@ -13,7 +13,7 @@
 ## Assumption Reassessment (2026-03-05)
 
 1. Current implementation exposes `dispatchTriggers(request)` as the canonical boundary.
-2. Existing tests validate behavior and callability but do not assert function-parameter shape at source level.
+2. Existing tests validate behavior and callability (including type-level call-shape usage), but do not assert function-parameter shape at source level.
 3. Active tickets do not currently lock this API-shape invariant.
 
 ## Architecture Check
@@ -37,7 +37,6 @@
 ## Files to Touch
 
 - `packages/engine/test/unit/lint/dispatch-triggers-api-shape-policy.test.ts` (new)
-- `packages/engine/test/helpers/kernel-source-guard.ts` (modify if helper extensions are needed)
 
 ## Out of Scope
 
@@ -70,3 +69,19 @@
 2. `node --test packages/engine/dist/test/unit/lint/dispatch-triggers-api-shape-policy.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-05
+- **What Changed**:
+  - Added `packages/engine/test/unit/lint/dispatch-triggers-api-shape-policy.test.ts`.
+  - Locked `dispatchTriggers` to one exported function-valued declaration with exactly one required parameter named `request`, typed as `DispatchTriggersRequest`.
+  - Added explicit source guard against reintroducing `function dispatchTriggers(...)` overload-style declarations/positional variants.
+  - Kept diagnostics actionable with expected canonical API shape and remediation guidance in failure messages.
+- **Deviations from Original Plan**:
+  - No helper changes were needed in `packages/engine/test/helpers/kernel-source-guard.ts`; existing source + AST guard helpers were sufficient.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` ✅
+  - `node --test packages/engine/dist/test/unit/lint/dispatch-triggers-api-shape-policy.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine lint` ✅

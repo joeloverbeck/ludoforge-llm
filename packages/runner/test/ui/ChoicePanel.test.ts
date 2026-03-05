@@ -112,6 +112,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
+              decisionId: 'test-decision',
               options: [makeChoiceOption('zone-c', 'Zone C')],
             },
             choiceBreadcrumb: [
@@ -154,6 +155,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
           choiceBreadcrumb: [],
@@ -175,6 +177,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
           choiceBreadcrumb: [
@@ -199,6 +202,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
@@ -219,6 +223,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
+              decisionId: 'test-decision',
               options: [
                 makeChoiceOption('zone-a', 'Zone A'),
                 makeChoiceOption('zone-b', 'Zone B', 'illegal', 'blocked'),
@@ -244,6 +249,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
@@ -266,6 +272,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [makeChoiceOption('zone-u', 'Zone U', 'unknown', null)],
           },
         }),
@@ -285,6 +292,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
+              decisionId: 'test-decision',
               options: [makeChoiceOption('zone-u', 'Zone U', 'unknown', null)],
             },
           }),
@@ -302,6 +310,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
+              decisionId: 'test-decision',
               options: [
                 makeChoiceOption('a,b', 'A B String'),
                 makeChoiceOption(['a', 'b'] as const, 'A B Array'),
@@ -343,6 +352,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
+            decisionId: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B'),
@@ -368,6 +378,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
+            decisionId: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B'),
@@ -401,6 +412,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
+            decisionId: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B', 'illegal', 'blocked'),
@@ -429,6 +441,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteMany',
+            decisionId: 'test-decision',
             options: [
               makeChoiceOption('zone-a', 'Zone A'),
               makeChoiceOption('zone-b', 'Zone B'),
@@ -529,6 +542,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteMany',
+              decisionId: 'test-decision',
               options: [makeChoiceOption('zone-a', 'Zone A')],
               min: 1,
               max: 1,
@@ -595,6 +609,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
+              decisionId: 'test-decision',
               options: [makeChoiceOption('zone-a', 'Zone A')],
             },
           }),
@@ -635,5 +650,59 @@ describe('ChoicePanel', () => {
       }),
     );
     expect(html).toBe('');
+  });
+
+  it('resets MultiSelectMode selections when decisionId changes (stale state regression)', () => {
+    const chooseN = vi.fn(async () => {});
+
+    const firstDecision = makeRenderModel({
+      choiceUi: {
+        kind: 'discreteMany',
+        decisionId: 'decision-1',
+        options: [
+          makeChoiceOption('zone-a', 'Zone A'),
+          makeChoiceOption('zone-b', 'Zone B'),
+        ],
+        min: 1,
+        max: 2,
+      },
+    });
+
+    const secondDecision = makeRenderModel({
+      choiceUi: {
+        kind: 'discreteMany',
+        decisionId: 'decision-2',
+        options: [
+          makeChoiceOption('zone-a', 'Zone A'),
+          makeChoiceOption('zone-b', 'Zone B'),
+          makeChoiceOption('zone-c', 'Zone C'),
+        ],
+        min: 1,
+        max: 1,
+      },
+    });
+
+    let currentModel = firstDecision;
+    const store = {
+      getState: () => ({
+        renderModel: currentModel,
+        chooseN,
+        cancelChoice: async () => {},
+        cancelMove: () => {},
+      }),
+      subscribe: () => () => {},
+      getInitialState: () => ({ renderModel: currentModel }),
+    } as unknown as StoreApi<GameStore>;
+
+    const { rerender } = render(createElement(ChoicePanel, { store, mode: 'choicePending' }));
+
+    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
+    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 2');
+
+    currentModel = secondDecision;
+    rerender(createElement(ChoicePanel, { store, mode: 'choicePending' }));
+
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0');
   });
 });

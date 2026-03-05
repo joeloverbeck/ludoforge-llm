@@ -1298,6 +1298,7 @@ function deriveChoiceUi(
       const max = min !== null && rawMax !== null && rawMax < min ? min : rawMax;
       return {
         kind: 'discreteMany',
+        decisionId: pending.decisionId,
         options,
         min,
         max,
@@ -1306,6 +1307,7 @@ function deriveChoiceUi(
 
     return {
       kind: 'discreteOne',
+      decisionId: pending.decisionId,
       options,
     };
   }

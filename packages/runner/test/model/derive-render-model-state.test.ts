@@ -782,6 +782,7 @@ describe('deriveRenderModel state metadata', () => {
     ]);
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
+      decisionId: 'pick-target',
       options: [
         expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
         expectedRenderChoiceOption('token-a', 'Token A', 'legal', null),
@@ -826,6 +827,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
+      decisionId: 'target',
       options: [
         expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
           kind: 'zone',
@@ -872,6 +874,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
+      decisionId: 'target',
       options: [
         expectedRenderChoiceOption('token-a', 'Agent (Token A)', 'legal', null, {
           kind: 'token',
@@ -912,6 +915,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
+      decisionId: 'target',
       options: [
         expectedRenderChoiceOption('a,b', 'A,b', 'legal', null),
         expectedRenderChoiceOption(['a', 'b'], '[A, B]', 'legal', null),
@@ -957,6 +961,7 @@ describe('deriveRenderModel state metadata', () => {
 
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
+      decisionId: 'target',
       options: [
         expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
           kind: 'zone',
@@ -993,6 +998,7 @@ describe('deriveRenderModel state metadata', () => {
     );
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
+      decisionId: 'target',
       options: [],
     });
   });
@@ -1022,6 +1028,7 @@ describe('deriveRenderModel state metadata', () => {
     );
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
+      decisionId: 'target',
       options: [expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
         kind: 'zone',
         entityId: 'table:none',

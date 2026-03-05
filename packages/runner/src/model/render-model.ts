@@ -217,10 +217,12 @@ export type RenderChoiceUi =
     }
   | {
       readonly kind: 'discreteOne';
+      readonly decisionId: string;
       readonly options: readonly RenderChoiceOption[];
     }
   | {
       readonly kind: 'discreteMany';
+      readonly decisionId: string;
       readonly options: readonly RenderChoiceOption[];
       readonly min: number | null;
       readonly max: number | null;

@@ -1,10 +1,10 @@
 # KERQUERY-021: Enforce query cache key literal ownership policy
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — source/lint contract hardening for query-runtime-cache key ownership
-**Deps**: archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md, archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md, packages/engine/src/kernel/query-runtime-cache.ts, packages/engine/test/helpers/kernel-source-guard.ts
+**Deps**: archive/tickets/KERQUERY/KERQUERY-013-centralize-query-runtime-cache-index-keys-and-typed-accessors.md, archive/tickets/KERQUERY/KERQUERY-014-enforce-query-runtime-cache-ownership-boundary-contracts.md, packages/engine/src/kernel/query-runtime-cache.ts, packages/engine/test/helpers/lint-policy-helpers.ts
 
 ## Problem
 
@@ -13,8 +13,8 @@ KERQUERY-013 centralized query-runtime-cache keys and typed accessors, but there
 ## Assumption Reassessment (2026-03-05)
 
 1. `query-runtime-cache.ts` now owns the canonical key contract (`QUERY_RUNTIME_CACHE_INDEX_KEYS`) and typed token-zone accessors.
-2. Active ticket KERQUERY-014 enforces ownership/import-boundary contracts, but does not explicitly fail on distributed raw key string literals.
-3. Current runtime/tests pass while still relying on convention for literal ownership; there is no dedicated lint/source-contract test locking this specific rule.
+2. KERQUERY-014 is completed and archived; it enforces ownership/import-boundary contracts, but does not explicitly fail on distributed raw key string literals.
+3. Current runtime/tests currently use canonical key access (no distributed `'tokenZoneByTokenId'` literals), but this is not locked by a dedicated literal-ownership regression test.
 
 ## Architecture Check
 
@@ -28,6 +28,7 @@ KERQUERY-013 centralized query-runtime-cache keys and typed accessors, but there
 
 1. Add a source/lint policy test that scans kernel/test sources for disallowed raw query-cache key literals.
 2. Allow literal definition only in `query-runtime-cache.ts` where canonical key ownership is defined.
+3. Reuse shared lint-policy helpers (`findEnginePackageRoot`, `listTypeScriptFiles`) to keep this policy test aligned with existing lint architecture.
 
 ### 2. Keep policy failure actionable
 
@@ -37,7 +38,7 @@ KERQUERY-013 centralized query-runtime-cache keys and typed accessors, but there
 ## Files to Touch
 
 - `packages/engine/test/unit/lint/query-runtime-cache-key-literal-ownership-policy.test.ts` (new)
-- `packages/engine/test/helpers/kernel-source-guard.ts` (modify if helper extension is needed)
+- `packages/engine/test/helpers/lint-policy-helpers.ts` (modify only if helper extension is needed)
 
 ## Out of Scope
 
@@ -70,3 +71,21 @@ KERQUERY-013 centralized query-runtime-cache keys and typed accessors, but there
 2. `node --test packages/engine/dist/test/unit/lint/query-runtime-cache-key-literal-ownership-policy.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-05
+- **What Changed**:
+  - Added `packages/engine/test/unit/lint/query-runtime-cache-key-literal-ownership-policy.test.ts`.
+  - Enforced literal ownership for query runtime cache keys by scanning `src/kernel` and `test` TypeScript files.
+  - Allowed raw key literals only in `src/kernel/query-runtime-cache.ts`; all other occurrences fail with file/line/excerpt diagnostics and remediation guidance.
+- **Deviations From Original Plan**:
+  - Updated ticket assumptions before implementation:
+    - KERQUERY-014 is archived/completed (not active).
+    - Runtime/tests currently do not contain distributed raw key literals; this ticket adds regression enforcement.
+  - Reused existing lint policy helpers (`lint-policy-helpers.ts`) instead of `kernel-source-guard.ts` to align with current lint architecture.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/lint/query-runtime-cache-key-literal-ownership-policy.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

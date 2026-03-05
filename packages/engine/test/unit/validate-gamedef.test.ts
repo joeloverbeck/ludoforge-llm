@@ -142,6 +142,29 @@ const withPipelineLinkedWindows = (
   } as unknown as GameDef;
 };
 
+const withMalformedPipelineOmissions = (
+  omittedFields: readonly ('costEffects' | 'stages' | 'targeting')[],
+): GameDef => {
+  const base = createValidGameDef();
+  const pipeline: Record<string, unknown> = {
+    id: 'profile-a',
+    actionId: 'playCard',
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [{ stage: 'resolve', effects: [] }],
+    atomicity: 'atomic',
+  };
+  for (const field of omittedFields) {
+    delete pipeline[field];
+  }
+  return {
+    ...base,
+    actionPipelines: [pipeline],
+  } as unknown as GameDef;
+};
+
 const collectDeclaredEffectBinderPatternsFromContract = (): readonly string[] => {
   const patterns: string[] = [];
   for (const [effectKind, surface] of Object.entries(EFFECT_BINDER_SURFACE_CONTRACT)) {
@@ -3255,86 +3278,53 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('does not throw when pipeline costEffects is missing', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          targeting: {},
-          stages: [{ stage: 'resolve', effects: [] }],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
+  it('does not throw for malformed pipeline omission matrix and reports expected required-field diagnostics', () => {
+    const requiredFieldDiagnostics = {
+      stages: { code: 'ACTION_PIPELINE_STAGES_MISSING', path: 'actionPipelines[0].stages' },
+      targeting: { code: 'ACTION_PIPELINE_TARGETING_MISSING', path: 'actionPipelines[0].targeting' },
+    } as const;
+    const cases: Array<{
+      readonly name: string;
+      readonly omittedFields: readonly ('costEffects' | 'stages' | 'targeting')[];
+      readonly expectedPresent: readonly (keyof typeof requiredFieldDiagnostics)[];
+      readonly expectedAbsent: readonly (keyof typeof requiredFieldDiagnostics)[];
+    }> = [
+      { name: 'missing costEffects', omittedFields: ['costEffects'], expectedPresent: [], expectedAbsent: ['stages', 'targeting'] },
+      { name: 'missing stages', omittedFields: ['stages'], expectedPresent: ['stages'], expectedAbsent: ['targeting'] },
+      { name: 'missing targeting', omittedFields: ['targeting'], expectedPresent: ['targeting'], expectedAbsent: ['stages'] },
+      { name: 'missing stages and targeting', omittedFields: ['stages', 'targeting'], expectedPresent: ['stages', 'targeting'], expectedAbsent: [] },
+      {
+        name: 'missing costEffects, stages, and targeting',
+        omittedFields: ['costEffects', 'stages', 'targeting'],
+        expectedPresent: ['stages', 'targeting'],
+        expectedAbsent: [],
+      },
+    ];
 
-    let diagnostics: ReturnType<typeof validateGameDef> = [];
-    assert.doesNotThrow(() => {
-      diagnostics = validateGameDef(def);
-    });
-    assert.equal(Array.isArray(diagnostics), true);
-  });
-
-  it('does not throw when pipeline stages is missing and reports explicit diagnostic', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [],
-          targeting: {},
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
-
-    let diagnostics: ReturnType<typeof validateGameDef> = [];
-    assert.doesNotThrow(() => {
-      diagnostics = validateGameDef(def);
-    });
-    assert.equal(
-      diagnostics.some(
-        (diag) => diag.code === 'ACTION_PIPELINE_STAGES_MISSING' && diag.path === 'actionPipelines[0].stages',
-      ),
-      true,
-    );
-  });
-
-  it('does not throw when pipeline targeting is missing and reports explicit diagnostic', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actionPipelines: [
-        {
-          id: 'profile-a',
-          actionId: 'playCard',
-          legality: null,
-          costValidation: null,
-          costEffects: [],
-          stages: [{ stage: 'resolve', effects: [] }],
-          atomicity: 'atomic',
-        },
-      ],
-    } as unknown as GameDef;
-
-    let diagnostics: ReturnType<typeof validateGameDef> = [];
-    assert.doesNotThrow(() => {
-      diagnostics = validateGameDef(def);
-    });
-    assert.equal(
-      diagnostics.some(
-        (diag) => diag.code === 'ACTION_PIPELINE_TARGETING_MISSING' && diag.path === 'actionPipelines[0].targeting',
-      ),
-      true,
-    );
+    for (const testCase of cases) {
+      const diagnostics: ReturnType<typeof validateGameDef> = [];
+      const def = withMalformedPipelineOmissions(testCase.omittedFields);
+      let actualDiagnostics = diagnostics;
+      assert.doesNotThrow(() => {
+        actualDiagnostics = validateGameDef(def);
+      }, testCase.name);
+      for (const expectedKey of testCase.expectedPresent) {
+        const expected = requiredFieldDiagnostics[expectedKey];
+        assert.equal(
+          actualDiagnostics.some((diag) => diag.code === expected.code && diag.path === expected.path),
+          true,
+          `${testCase.name}: expected ${expected.code} at ${expected.path}`,
+        );
+      }
+      for (const expectedKey of testCase.expectedAbsent) {
+        const expected = requiredFieldDiagnostics[expectedKey];
+        assert.equal(
+          actualDiagnostics.some((diag) => diag.code === expected.code && diag.path === expected.path),
+          false,
+          `${testCase.name}: did not expect ${expected.code} at ${expected.path}`,
+        );
+      }
+    }
   });
 
   it('reports explicit diagnostics when pipeline stages/targeting have invalid runtime shapes', () => {

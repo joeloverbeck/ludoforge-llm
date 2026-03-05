@@ -32,6 +32,7 @@ import {
 import { lowerTurnOrder } from './compile-turn-flow.js';
 import { lowerActionPipelines } from './compile-operations.js';
 import { lowerVictory, lowerVictoryStandings } from './compile-victory.js';
+import { synthesizeDerivedMetricsFromStandings } from './synthesize-derived-metrics.js';
 import {
   deriveSectionsFromDataAssets,
   type DataAssetDerivationFailureReason,
@@ -609,6 +610,14 @@ function compileExpandedDoc(
     actions = withEventAction;
     sections.actions = sections.actions === null ? null : withEventAction;
   }
+  const synthesized = synthesizeDerivedMetricsFromStandings(
+    sections.victoryStandings ?? null,
+    sections.derivedMetrics ?? null,
+    diagnostics,
+  );
+  const mergedDerivedMetrics = [...(sections.derivedMetrics ?? []), ...synthesized];
+  sections.derivedMetrics = mergedDerivedMetrics.length > 0 ? mergedDerivedMetrics : null;
+
   // Policy contract: partial-compile is dependency-aware best-effort.
   // Cross-validation always executes, but each rule gates on prerequisite
   // section availability (null sections suppress dependent xref diagnostics).

@@ -321,21 +321,6 @@ const FITL_ARVN_FORMULA: VictoryFormula = {
   varName: 'patronage',
 };
 
-const DERIVED_METRICS_CONTEXT = {
-  derivedMetrics: [
-    {
-      id: 'playbook-marker-total',
-      computation: 'markerTotal',
-      requirements: [{ key: 'population', expectedType: 'number' }],
-    },
-    {
-      id: 'playbook-controlled-pop',
-      computation: 'controlledPopulation',
-      requirements: [{ key: 'population', expectedType: 'number' }],
-    },
-  ],
-} as const;
-
 const mapSpaces = (def: GameDef): readonly ZoneDef[] =>
   def.zones.filter((zone) =>
     zone.zoneKind === 'board' || zone.category === 'city' || zone.category === 'province'
@@ -354,7 +339,7 @@ const supportOppositionBySpace = (
 
 const computeVcVictory = (def: GameDef, state: GameState): number =>
   computeVictoryMarker(
-    DERIVED_METRICS_CONTEXT,
+    def,
     state,
     mapSpaces(def),
     supportOppositionBySpace(def, state),
@@ -364,7 +349,7 @@ const computeVcVictory = (def: GameDef, state: GameState): number =>
 
 const computeNvaVictory = (def: GameDef, state: GameState): number =>
   computeVictoryMarker(
-    DERIVED_METRICS_CONTEXT,
+    def,
     state,
     mapSpaces(def),
     supportOppositionBySpace(def, state),
@@ -374,7 +359,7 @@ const computeNvaVictory = (def: GameDef, state: GameState): number =>
 
 const computeArvnVictory = (def: GameDef, state: GameState): number =>
   computeVictoryMarker(
-    DERIVED_METRICS_CONTEXT,
+    def,
     state,
     mapSpaces(def),
     supportOppositionBySpace(def, state),
@@ -396,7 +381,7 @@ const FITL_US_FORMULA: VictoryFormula = {
 
 const computeUsVictory = (def: GameDef, state: GameState): number =>
   computeVictoryMarker(
-    DERIVED_METRICS_CONTEXT,
+    def,
     state,
     mapSpaces(def),
     supportOppositionBySpace(def, state),

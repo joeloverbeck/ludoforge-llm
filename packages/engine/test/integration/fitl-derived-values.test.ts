@@ -2,7 +2,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
-import { readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { compileProductionSpec, readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { computeAllVictoryStandings } from '../../src/kernel/derived-values.js';
 import {
   asPhaseId,
   asPlayerId,
@@ -408,4 +409,48 @@ describe('FITL derived values — integration', () => {
       });
     });
   }
+});
+
+// ─── Compiler-Synthesized derivedMetrics ──────────────────────────────────────
+
+describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
+  it('compiled GameDef has derivedMetrics covering markerTotal and controlledPopulation', () => {
+    const { compiled } = compileProductionSpec();
+    const gameDef = compiled.gameDef;
+    assert.ok(gameDef, 'FITL production spec should compile to a GameDef');
+    assert.ok(gameDef.derivedMetrics, 'GameDef should have derivedMetrics');
+    assert.ok(gameDef.derivedMetrics.length >= 2, `Expected at least 2 derivedMetrics, got ${gameDef.derivedMetrics.length}`);
+
+    const computations = new Set(gameDef.derivedMetrics.map((m) => m.computation));
+    assert.ok(computations.has('markerTotal'), 'derivedMetrics should include markerTotal');
+    assert.ok(computations.has('controlledPopulation'), 'derivedMetrics should include controlledPopulation');
+  });
+
+  it('computeAllVictoryStandings succeeds with compiled GameDef (no crash)', () => {
+    const { compiled } = compileProductionSpec();
+    const gameDef = compiled.gameDef;
+    assert.ok(gameDef, 'FITL production spec should compile');
+    assert.ok(gameDef.victoryStandings, 'GameDef should have victoryStandings');
+
+    const state: GameState = {
+      globalVars: { patronage: 15, aid: 20, trail: 0 },
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 4,
+      zones: {},
+      nextTokenOrdinal: 0,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+
+    const results = computeAllVictoryStandings(gameDef, state, gameDef.victoryStandings);
+    assert.ok(Array.isArray(results), 'Should return an array of standings');
+    assert.equal(results.length, gameDef.victoryStandings.entries.length);
+  });
 });

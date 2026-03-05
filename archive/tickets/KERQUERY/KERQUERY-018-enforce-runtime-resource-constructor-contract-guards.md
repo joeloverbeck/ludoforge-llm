@@ -1,6 +1,6 @@
 # KERQUERY-018: Enforce runtime-resource constructor contract guards
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — eval/effect context contract guard coverage
@@ -14,11 +14,14 @@
 
 1. `createEvalContext` now requires `resources` and no longer defaults internally.
 2. Effect-context constructors also require explicit `resources`.
-3. No active ticket currently locks this rule with source-contract tests against fallback/default reintroduction.
+3. Existing tests already cover adjacent behavior:
+   - `legal-choices.test.ts` guards canonical discovery threading (`resources: evalCtx.resources`) and forbids `??` fallback reconstruction.
+   - `effect-context-construction-contract.test.ts` covers runtime construction behavior and explicit discovery constructor surfaces.
+4. The remaining uncovered risk is constructor-level fallback/default reintroduction inside `eval-context.ts` and `effect-context.ts` (for example optional `resources`, parameter defaults, or `??` fallback wrapping).
 
 ## Architecture Check
 
-1. Source-contract guards are cleaner than relying on convention and prevent architectural regression at constructor boundaries.
+1. A constructor-focused source-contract guard complements existing behavior tests without duplicating `legal-choices` coverage.
 2. This is infrastructure-only and keeps GameDef/simulation kernel game-agnostic.
 3. No backwards-compatibility aliases/shims: fail fast if implicit defaults return.
 
@@ -26,18 +29,18 @@
 
 ### 1. Add eval/effect context constructor guard tests
 
-1. Assert `createEvalContext` does not default `resources`.
-2. Assert `createExecutionEffectContext`, `createDiscoveryStrictEffectContext`, and `createDiscoveryProbeEffectContext` do not default `resources`.
+1. Assert `createEvalContext` does not use parameter/default fallback semantics for `resources`.
+2. Assert `createExecutionEffectContext`, `createDiscoveryStrictEffectContext`, and `createDiscoveryProbeEffectContext` do not use parameter/default fallback semantics for `resources`.
 
 ### 2. Lock canonical resources threading language
 
 1. Add explicit test messages clarifying that runtime resources must be passed by operation owners.
-2. Keep checks narrow to constructor contracts.
+2. Keep checks narrow to constructor contracts and avoid re-testing discovery wiring already covered in `legal-choices.test.ts`.
 
 ## Files to Touch
 
 - `packages/engine/test/unit/kernel/eval-effect-resource-constructor-guard.test.ts` (new)
-- `packages/engine/test/helpers/kernel-source-guard.ts` (modify if needed)
+- `packages/engine/test/helpers/kernel-source-guard.ts` (modify only if required for guard-path access; otherwise unchanged)
 
 ## Out of Scope
 
@@ -70,3 +73,20 @@
 2. `node --test packages/engine/dist/test/unit/kernel/eval-effect-resource-constructor-guard.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-05
+- **What actually changed**:
+  - Added `packages/engine/test/unit/kernel/eval-effect-resource-constructor-guard.test.ts` to enforce constructor-level source contracts for runtime resource threading.
+  - Guard asserts `createEvalContext`, `createExecutionEffectContext`, `createDiscoveryStrictEffectContext`, and `createDiscoveryProbeEffectContext` do not introduce implicit `resources` defaults (`=`) or nullish fallback reconstruction (`??`).
+  - Guard also asserts canonical derivation of `queryRuntimeCache` and `collector` from `resources` in all guarded constructors.
+  - Updated ticket assumptions/scope to account for existing adjacent coverage in `legal-choices.test.ts` and `effect-context-construction-contract.test.ts`.
+- **Deviations from original plan**:
+  - `packages/engine/test/helpers/kernel-source-guard.ts` did not require modification.
+  - Scope was narrowed to the remaining architectural gap (constructor contracts) to avoid redundant overlap with existing legal-choices/effect-mode guards.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/kernel/eval-effect-resource-constructor-guard.test.js` passed.
+  - `pnpm -F @ludoforge/engine test` passed (381/381).
+  - `pnpm -F @ludoforge/engine lint` passed.

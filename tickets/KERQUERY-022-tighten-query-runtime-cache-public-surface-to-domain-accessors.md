@@ -52,7 +52,7 @@
 ## Out of Scope
 
 - Trigger dispatch signature redesign (`archive/tickets/KERQUERY/KERQUERY-015-harden-trigger-dispatch-signature-and-runtime-contracts.md`)
-- Runtime resource constructor guard work (`tickets/KERQUERY-018-enforce-runtime-resource-constructor-contract-guards.md`)
+- Runtime resource constructor guard work (`archive/tickets/KERQUERY/KERQUERY-018-enforce-runtime-resource-constructor-contract-guards.md`)
 - Any game-specific GameSpecDoc or visual-config behavior
 
 ## Acceptance Criteria

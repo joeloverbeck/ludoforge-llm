@@ -1,6 +1,6 @@
 # CHOICEUI-003: Visual Config Action Schema and Provider Methods
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None -- runner-only
@@ -113,3 +113,7 @@ Four new public methods:
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Implemented as planned plus one improvement. Added 3 Zod schemas (`ActionChoiceOptionVisualSchema`, `ActionChoiceVisualSchema`, `ActionVisualSchema`), the `actions` field on `VisualConfigSchema`, 3 exported types, and 5 provider methods (`getActionDisplayName`, `getActionDescription`, `getChoicePrompt`, `getChoiceDescription`, `getChoiceOptionDisplayName`). `getChoiceDescription` was added beyond the original ticket scope to complete the accessor surface — the schema defined `description` on `ActionChoiceVisualSchema` but had no provider method for it. Added 14 new tests (5 schema + 9 provider) covering happy paths, null config, missing nested levels, invalid types, and backward compatibility. All new tests pass.

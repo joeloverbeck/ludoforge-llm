@@ -771,6 +771,106 @@ describe('VisualConfigProvider', () => {
     expect(phases.has('showdown')).toBe(false);
   });
 
+  it('getActionDisplayName returns configured string or null', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      actions: {
+        'us-train': { displayName: 'Train' },
+      },
+    });
+
+    expect(provider.getActionDisplayName('us-train')).toBe('Train');
+    expect(provider.getActionDisplayName('nva-march')).toBeNull();
+  });
+
+  it('getActionDisplayName returns null for null config', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getActionDisplayName('us-train')).toBeNull();
+  });
+
+  it('getActionDescription returns configured string or null', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      actions: {
+        'us-train': { description: 'Place forces in COIN-controlled spaces.' },
+      },
+    });
+
+    expect(provider.getActionDescription('us-train')).toBe('Place forces in COIN-controlled spaces.');
+    expect(provider.getActionDescription('nva-march')).toBeNull();
+  });
+
+  it('getChoicePrompt returns configured string or null for each missing level', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      actions: {
+        'us-train': {
+          choices: {
+            targetSpaces: { prompt: 'Select spaces to train in' },
+          },
+        },
+      },
+    });
+
+    expect(provider.getChoicePrompt('us-train', 'targetSpaces')).toBe('Select spaces to train in');
+    expect(provider.getChoicePrompt('us-train', 'unknownParam')).toBeNull();
+    expect(provider.getChoicePrompt('nva-march', 'targetSpaces')).toBeNull();
+  });
+
+  it('getChoicePrompt returns null for null config', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getChoicePrompt('us-train', 'targetSpaces')).toBeNull();
+  });
+
+  it('getChoiceDescription returns configured string or null for each missing level', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      actions: {
+        'us-train': {
+          choices: {
+            targetSpaces: { description: 'Choose one or more spaces with COIN control.' },
+          },
+        },
+      },
+    });
+
+    expect(provider.getChoiceDescription('us-train', 'targetSpaces')).toBe('Choose one or more spaces with COIN control.');
+    expect(provider.getChoiceDescription('us-train', 'unknownParam')).toBeNull();
+    expect(provider.getChoiceDescription('nva-march', 'targetSpaces')).toBeNull();
+  });
+
+  it('getChoiceDescription returns null for null config', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getChoiceDescription('us-train', 'targetSpaces')).toBeNull();
+  });
+
+  it('getChoiceOptionDisplayName returns configured string or null at each nesting level', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      actions: {
+        'us-train': {
+          choices: {
+            targetSpaces: {
+              options: {
+                'saigon:none': { displayName: 'Saigon' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(provider.getChoiceOptionDisplayName('us-train', 'targetSpaces', 'saigon:none')).toBe('Saigon');
+    expect(provider.getChoiceOptionDisplayName('us-train', 'targetSpaces', 'hue:none')).toBeNull();
+    expect(provider.getChoiceOptionDisplayName('us-train', 'unknownParam', 'saigon:none')).toBeNull();
+    expect(provider.getChoiceOptionDisplayName('nva-march', 'targetSpaces', 'saigon:none')).toBeNull();
+  });
+
+  it('getChoiceOptionDisplayName returns null for null config', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getChoiceOptionDisplayName('us-train', 'targetSpaces', 'saigon:none')).toBeNull();
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

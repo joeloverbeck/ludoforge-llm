@@ -54,6 +54,7 @@ describe('useKeyboardShortcuts', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [{
               choiceValueId: 's:1:zone-a',
               value: 'zone-a',
@@ -79,6 +80,7 @@ describe('useKeyboardShortcuts', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
+            decisionId: 'test-decision',
             options: [{
               choiceValueId: 's:1:zone-a',
               value: 'zone-a',

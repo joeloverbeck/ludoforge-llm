@@ -132,6 +132,7 @@ describe('render-model types', () => {
       ],
       choiceUi: {
         kind: 'discreteMany',
+        decisionId: 'pick-tokens',
         options: [
           {
             choiceValueId: serializeChoiceValueIdentity(['table', asPlayerId(1)] as MoveParamValue),
@@ -259,6 +260,7 @@ describe('render-model types', () => {
       { kind: 'confirmReady' },
       {
         kind: 'discreteOne',
+        decisionId: 'pick-zone',
         options: [{
           choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
           value: 'zone:a' as MoveParamValue,
@@ -270,6 +272,7 @@ describe('render-model types', () => {
       },
       {
         kind: 'discreteMany',
+        decisionId: 'pick-zones',
         options: [{
           choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
           value: 'zone:a' as MoveParamValue,

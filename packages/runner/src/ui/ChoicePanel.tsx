@@ -365,6 +365,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
         {choiceUi.kind === 'discreteMany' ? (
           <MultiSelectMode
+            key={choiceUi.decisionId}
             choiceUi={choiceUi}
             chooseN={async (selectedValues) => {
               await store.getState().chooseN(selectedValues);

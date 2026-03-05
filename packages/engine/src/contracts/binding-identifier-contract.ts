@@ -21,6 +21,6 @@ export const rankBindingIdentifierAlternatives = (
   inScope: readonly string[],
   limit = DEFAULT_ALTERNATIVE_LIMIT,
 ): readonly string[] =>
-  rankByEditDistance(name, [...new Set(inScope)])
+  rankByEditDistance(name, inScope)
     .map((entry) => entry.candidate)
     .slice(0, limit);

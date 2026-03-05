@@ -40,7 +40,7 @@ export const compareByDistanceThenLex = (left: ScoredStringCandidate, right: Sco
 };
 
 export const rankByEditDistance = (value: string, candidates: readonly string[]): readonly ScoredStringCandidate[] =>
-  candidates
+  [...new Set(candidates)]
     .map((candidate) => ({
       candidate,
       distance: levenshteinDistance(value, candidate),

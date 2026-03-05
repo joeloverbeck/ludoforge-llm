@@ -55,4 +55,13 @@ describe('edit distance contract', () => {
 
     assert.deepEqual(candidates, original);
   });
+
+  it('deduplicates candidate inputs before scoring while preserving deterministic order', () => {
+    const ranked = rankByEditDistance('cat', ['hat', 'bat', 'hat', 'bat', 'dog']);
+    assert.deepEqual(ranked, [
+      { candidate: 'bat', distance: 1 },
+      { candidate: 'hat', distance: 1 },
+      { candidate: 'dog', distance: 3 },
+    ]);
+  });
 });

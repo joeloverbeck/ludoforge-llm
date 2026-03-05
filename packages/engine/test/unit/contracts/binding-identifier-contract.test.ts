@@ -17,4 +17,11 @@ describe('binding identifier contract alternatives', () => {
       ['$seat', '$seats'],
     );
   });
+
+  it('returns duplicate-free alternatives for duplicate inputs under canonical shared policy', () => {
+    assert.deepEqual(
+      rankBindingIdentifierAlternatives('$cat', ['$hat', '$bat', '$hat', '$bat', '$dog']),
+      ['$bat', '$hat', '$dog'],
+    );
+  });
 });

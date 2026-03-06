@@ -109,6 +109,12 @@ const SUPPORTED_REFERENCE_KINDS = [
   'zoneVar',
   'activePlayer',
 ];
+const PREDICATE_ALIAS_KEYS = Object.freeze({
+  eq: true,
+  neq: true,
+  in: true,
+  notIn: true,
+} as const);
 
 export function lowerConditionNode(
   source: unknown,
@@ -363,6 +369,15 @@ function lowerTokenFilterEntry(
   if (!isRecord(source) || typeof source.prop !== 'string') {
     return missingCapability(path, 'token filter entry', source, ['{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
   }
+  const aliasRejection = rejectPredicateAliasKeysWhenCanonicalShapePresent(
+    source,
+    path,
+    'token filter entry',
+    '{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+  );
+  if (aliasRejection !== null) {
+    return aliasRejection;
+  }
   const prop = source.prop;
   const propDiagnostics = validateDeclaredTokenFilterProp(context, prop, `${path}.prop`);
   if (propDiagnostics.length > 0) {
@@ -468,6 +483,15 @@ function lowerAssetRowFilterEntry(
 ): ConditionLoweringResult<AssetRowPredicate> {
   if (!isRecord(source) || typeof source.field !== 'string') {
     return missingCapability(path, 'assetRows where entry', source, ['{ field: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
+  }
+  const aliasRejection = rejectPredicateAliasKeysWhenCanonicalShapePresent(
+    source,
+    path,
+    'assetRows where entry',
+    '{ field: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }',
+  );
+  if (aliasRejection !== null) {
+    return aliasRejection;
   }
   const field = source.field;
   if (!isPredicateOp(source.op)) {
@@ -1587,6 +1611,21 @@ function lowerZoneSelector(
     value: zone.value,
     diagnostics: zone.diagnostics,
   };
+}
+
+function rejectPredicateAliasKeysWhenCanonicalShapePresent(
+  source: Record<string, unknown>,
+  path: string,
+  construct: string,
+  canonicalAlternative: string,
+): ConditionLoweringResult<never> | null {
+  if (!Object.prototype.hasOwnProperty.call(source, 'op') || !Object.prototype.hasOwnProperty.call(source, 'value')) {
+    return null;
+  }
+  if (!Object.keys(PREDICATE_ALIAS_KEYS).some((key) => Object.prototype.hasOwnProperty.call(source, key))) {
+    return null;
+  }
+  return missingCapability(path, construct, source, [canonicalAlternative]);
 }
 
 function missingCapability<TValue>(

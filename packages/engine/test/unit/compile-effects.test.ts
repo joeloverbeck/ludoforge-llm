@@ -217,6 +217,24 @@ describe('compile-effects lowering', () => {
     assert.ok(result.diagnostics.every((diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'));
   });
 
+  it('rejects mixed canonical+alias token filter keys in reveal/conceal effects', () => {
+    const result = lowerEffectArray(
+      [
+        { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: { prop: 'faction', op: 'eq', value: 'US', eq: 'US' } } },
+        { conceal: { zone: 'hand:$actor', filter: { prop: 'type', op: 'eq', value: 'troops', eq: 'troops' } } },
+      ],
+      tokenFilterContext,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(
+      result.diagnostics.map((diagnostic) => diagnostic.path),
+      ['doc.actions.0.effects.0.reveal.filter', 'doc.actions.0.effects.1.conceal.filter'],
+    );
+    assert.ok(result.diagnostics.every((diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'));
+  });
+
   it('canonicalizes boolean token-filter wrappers on reveal/conceal effects', () => {
     const result = lowerEffectArray(
       [

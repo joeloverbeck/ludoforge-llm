@@ -1,6 +1,6 @@
 # TOKFILAST-039: CNL Predicate Canonical Shape — Strict Alias-Key Rejection
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL predicate object shape validation
@@ -10,11 +10,12 @@
 
 CNL lowering no longer uses alias keys as fallbacks, but mixed payloads that include canonical keys plus alias keys (for example `{ op: "eq", value: 1, eq: 1 }`) are still accepted silently. This leaves a non-fail-closed alias path and weakens no-alias contract enforcement.
 
-## Assumption Reassessment (2026-03-06)
+## Assumption Reassessment (2026-03-07)
 
 1. `lowerTokenFilterEntry` and `lowerAssetRowFilterEntry` now require canonical `op` + `value` for lowering.
 2. Current implementation does not reject extra alias keys (`eq`/`neq`/`in`/`notIn`) when canonical fields are present.
-3. Existing tests cover alias-only rejection, but not mixed canonical+alias payload rejection.
+3. Existing `compile-conditions` tests cover alias-only rejection, but do not cover mixed canonical+alias payload rejection.
+4. `compile-effects` relies on shared query/filter lowering from `compile-conditions`; it does not currently include an effect-local mixed canonical+alias rejection assertion.
 
 ## Architecture Check
 
@@ -36,7 +37,7 @@ Ensure diagnostics continue pointing to stable predicate paths and list canonica
 
 - `packages/engine/src/cnl/compile-conditions.ts` (modify)
 - `packages/engine/test/unit/compile-conditions.test.ts` (modify)
-- `packages/engine/test/unit/compile-effects.test.ts` (modify, if effect-local filter shapes need rejection assertions)
+- `packages/engine/test/unit/compile-effects.test.ts` (modify to add one effect-local mixed-shape rejection assertion through shared lowering)
 
 ## Out of Scope
 
@@ -68,3 +69,17 @@ Ensure diagnostics continue pointing to stable predicate paths and list canonica
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-03-07
+- What actually changed:
+  - Added strict mixed-shape rejection in `compile-conditions` for predicate objects that include canonical `op` + `value` together with alias keys (`eq`/`neq`/`in`/`notIn`) across both token filters and `assetRows.where`.
+  - Added regression coverage in `compile-conditions` for mixed canonical+alias rejection on token filters and `assetRows.where`.
+  - Added effect-local regression coverage in `compile-effects` (reveal/conceal filters) to confirm shared lowering rejects mixed canonical+alias payloads on effect paths.
+- Deviations from original plan:
+  - No `compile-effects` source changes were required; shared `compile-conditions` lowering already owns the relevant behavior. Only tests were added in `compile-effects`.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

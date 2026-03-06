@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — lint/policy guardrail coverage
-**Deps**: tickets/TOKFILAST-039-cnl-predicate-canonical-shape-strict-alias-key-rejection.md
+**Deps**: archive/tickets/TOKFILAST-039-cnl-predicate-canonical-shape-strict-alias-key-rejection.md
 
 ## Problem
 

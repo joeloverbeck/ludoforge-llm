@@ -1003,6 +1003,22 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.where[0]');
   });
 
+  it('rejects mixed canonical+alias keys in assetRows where predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', op: 'eq', value: 2, eq: 2 }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.where[0]');
+  });
+
   it('lowers tokensInZone query with string literal token filters', () => {
     const result = lowerQueryNode(
       {
@@ -1405,6 +1421,22 @@ describe('compile-conditions lowering', () => {
         query: 'tokensInZone',
         zone: 'board',
         filter: { prop: 'type', eq: 'troops' },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter');
+  });
+
+  it('rejects mixed canonical+alias keys in token filter predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: { prop: 'type', op: 'eq', value: 'troops', eq: 'troops' },
       },
       tokenFilterContext,
       'doc.actionPipelines.0.stages.0.effects.0.forEach.over',

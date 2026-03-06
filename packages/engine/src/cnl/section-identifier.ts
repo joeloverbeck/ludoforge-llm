@@ -22,6 +22,7 @@ export const CANONICAL_SECTION_KEYS = [
   'conditionMacros',
   'phaseTemplates',
   'victoryStandings',
+  'verbalization',
 ] as const;
 
 export type CanonicalSectionKey = (typeof CANONICAL_SECTION_KEYS)[number];
@@ -187,6 +188,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isVictoryStandingsShape(value)) {
     matches.push('victoryStandings');
   }
+  if (isVerbalizationShape(value)) {
+    matches.push('verbalization');
+  }
 
   return matches;
 }
@@ -300,6 +304,13 @@ function isVictoryStandingsShape(value: Record<string, unknown>): boolean {
     Array.isArray(value.entries) &&
     typeof value.markerName === 'string'
   );
+}
+
+const VERBALIZATION_FINGERPRINT_KEYS = new Set(['labels', 'stages', 'macros', 'sentencePlans', 'suppressPatterns']);
+
+function isVerbalizationShape(value: Record<string, unknown>): boolean {
+  const keys = Object.keys(value);
+  return keys.length > 0 && keys.some((key) => VERBALIZATION_FINGERPRINT_KEYS.has(key));
 }
 
 function stripSectionKey(value: Record<string, unknown>): Record<string, unknown> {

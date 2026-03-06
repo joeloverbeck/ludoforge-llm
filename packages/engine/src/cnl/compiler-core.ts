@@ -51,6 +51,7 @@ import {
   canonicalizeNamedSetsWithCollisions,
   toNamedSetCanonicalIdCollisionDiagnostics,
 } from './named-set-utils.js';
+import { compileVerbalization } from './compile-verbalization.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -604,6 +605,10 @@ function compileExpandedDoc(
       lowerVictoryStandings(rawVictoryStandings, diagnostics),
     );
     sections.victoryStandings = victoryStandingsSection.failed ? null : (victoryStandingsSection.value ?? null);
+  }
+
+  if (resolvedTableRefDoc.verbalization !== null) {
+    sections.verbalization = compileVerbalization(resolvedTableRefDoc.verbalization);
   }
 
   const scenarioDeckSetup = compileSection(diagnostics, () =>

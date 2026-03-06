@@ -41,7 +41,7 @@ Add/extend tests to catch reintroduction of local boolean-arity message patterns
 
 ## Out of Scope
 
-- Token-filter traversal boundary mapper centralization (`tickets/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
+- Token-filter traversal boundary mapper centralization (`archive/tickets/TOKFILAST/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
 - Reveal/conceal effect-surface context contract deepening (`tickets/TOKFILAST-021-effects-reveal-token-filter-error-context-contract-coverage.md`).
 - Broad validator condition-surface policy work (`tickets/TOKFILAST-022`, `023`, `024`).
 

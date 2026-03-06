@@ -1,13 +1,12 @@
 import type { PlayerId } from './branded.js';
 import { effectRuntimeError } from './effect-error.js';
-import { typeMismatchError } from './eval-error.js';
 import {
   canonicalTokenFilterKey,
   canonicalizeObserverSelection,
   removeMatchingRevealGrants,
   revealGrantEquals,
 } from './hidden-info-grants.js';
-import { isTokenFilterTraversalError } from './token-filter-expr-utils.js';
+import { mapTokenFilterTraversalToTypeMismatch } from './token-filter-runtime-boundary.js';
 import {
   resolvePlayersWithNormalization,
   resolveZoneWithNormalization,
@@ -29,10 +28,7 @@ const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
   try {
     return canonicalTokenFilterKey(filter);
   } catch (error: unknown) {
-    if (!isTokenFilterTraversalError(error)) {
-      throw error;
-    }
-    throw typeMismatchError(error.message, { ...error.context });
+    return mapTokenFilterTraversalToTypeMismatch(error);
   }
 };
 

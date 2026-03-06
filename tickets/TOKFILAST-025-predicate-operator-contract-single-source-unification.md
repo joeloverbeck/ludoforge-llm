@@ -55,7 +55,7 @@ Add/extend tests to ensure all predicate-operator surfaces remain aligned to the
 ## Out of Scope
 
 - Token-filter traversal predicate-node shape/path hardening (`archive/tickets/TOKFILAST/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
-- Traversal boundary mapper centralization (`tickets/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
+- Traversal boundary mapper centralization (`archive/tickets/TOKFILAST/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
 
 ## Acceptance Criteria
 

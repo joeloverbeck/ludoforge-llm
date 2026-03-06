@@ -48,7 +48,7 @@ Ensure existing boundary translation (`TOKEN_FILTER_TRAVERSAL_ERROR` -> runtime 
 
 ## Out of Scope
 
-- Traversal boundary mapper centralization between runtime/effects (`tickets/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
+- Traversal boundary mapper centralization between runtime/effects (`archive/tickets/TOKFILAST/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
 - Effect-surface reveal/conceal context coverage (`tickets/TOKFILAST-021-effects-reveal-token-filter-error-context-contract-coverage.md`).
 - Predicate operator allow-list policy changes (`archive/tickets/TOKFILAST/TOKFILAST-018-token-filter-predicate-operator-fail-closed-hardening.md`).
 

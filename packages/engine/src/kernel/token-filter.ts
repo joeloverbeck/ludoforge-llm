@@ -1,8 +1,8 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
 import { isNonEmptyArray } from './boolean-arity-policy.js';
-import { typeMismatchError } from './eval-error.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
-import { foldTokenFilterExpr, isTokenFilterTraversalError, tokenFilterBooleanArityError } from './token-filter-expr-utils.js';
+import { foldTokenFilterExpr, tokenFilterBooleanArityError } from './token-filter-expr-utils.js';
+import { mapTokenFilterTraversalToTypeMismatch } from './token-filter-runtime-boundary.js';
 
 type TokenFilterScalar = string | number | boolean;
 
@@ -78,10 +78,7 @@ export function matchesTokenFilterExpr(
       },
     });
   } catch (error: unknown) {
-    if (!isTokenFilterTraversalError(error)) {
-      throw error;
-    }
-    throw typeMismatchError(error.message, { ...error.context });
+    return mapTokenFilterTraversalToTypeMismatch(error);
   }
 }
 

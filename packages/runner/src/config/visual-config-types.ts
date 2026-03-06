@@ -88,12 +88,25 @@ const AttributeRuleSchema = z.object({
   style: ZoneVisualStyleSchema,
 });
 
+const MarkerBadgeColorEntrySchema = z.object({
+  color: z.string(),
+  abbreviation: z.string(),
+});
+
+const MarkerBadgeConfigSchema = z.object({
+  markerId: z.string(),
+  colorMap: z.record(z.string(), MarkerBadgeColorEntrySchema),
+  width: z.number().optional(),
+  height: z.number().optional(),
+});
+
 const ZonesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), ZoneVisualStyleSchema).optional(),
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
   hiddenZones: z.array(z.string()).optional(),
+  markerBadge: MarkerBadgeConfigSchema.optional(),
 });
 
 const EdgeVisualStyleSchema = z.object({
@@ -343,6 +356,8 @@ export type ZoneVisualStyle = z.infer<typeof ZoneVisualStyleSchema>;
 export type ZoneVisualOverride = z.infer<typeof ZoneVisualOverrideSchema>;
 export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
+export type MarkerBadgeColorEntry = z.infer<typeof MarkerBadgeColorEntrySchema>;
+export type MarkerBadgeConfig = z.infer<typeof MarkerBadgeConfigSchema>;
 export type ZonesConfig = z.infer<typeof ZonesConfigSchema>;
 export type EdgeVisualStyle = z.infer<typeof EdgeVisualStyleSchema>;
 export type EdgesConfig = z.infer<typeof EdgesConfigSchema>;

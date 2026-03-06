@@ -61,6 +61,7 @@
   font-size: 0.75rem;
   color: #e0e0e0;
   pointer-events: none;
+  min-width: 220px;
   max-width: 280px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }

@@ -871,6 +871,32 @@ describe('VisualConfigProvider', () => {
     expect(provider.getChoiceOptionDisplayName('us-train', 'targetSpaces', 'saigon:none')).toBeNull();
   });
 
+  it('getMarkerBadgeConfig returns configured badge or null', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        markerBadge: {
+          markerId: 'support',
+          colorMap: {
+            activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
+            neutral: { color: '#6b7280', abbreviation: 'N' },
+          },
+        },
+      },
+    });
+
+    const badge = provider.getMarkerBadgeConfig();
+    expect(badge).not.toBeNull();
+    expect(badge!.markerId).toBe('support');
+    expect(badge!.colorMap['activeOpposition']).toEqual({ color: '#dc2626', abbreviation: 'AO' });
+    expect(badge!.colorMap['neutral']).toEqual({ color: '#6b7280', abbreviation: 'N' });
+  });
+
+  it('getMarkerBadgeConfig returns null when not configured', () => {
+    expect(new VisualConfigProvider(null).getMarkerBadgeConfig()).toBeNull();
+    expect(new VisualConfigProvider({ version: 1 }).getMarkerBadgeConfig()).toBeNull();
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

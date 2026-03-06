@@ -1,6 +1,7 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 
 import type { RenderZone } from '../../model/render-model';
+import type { MarkerBadgeConfig } from '../../config/visual-config-types.js';
 import type { Position } from '../geometry';
 import type { ZoneRenderer } from './renderer-types';
 import { ContainerPool } from './container-pool';
@@ -21,12 +22,17 @@ import {
 
 const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
+const LABEL_GAP = 8;
+const LABEL_LINE_HEIGHT = 18;
+const LABEL_AREA_HEIGHT = 40;
 
 interface ZoneVisualElements {
   readonly base: Graphics;
   readonly hiddenStack: HiddenZoneStackVisual;
   readonly nameLabel: Text;
   readonly markersLabel: Text;
+  readonly badgeGraphics: Graphics;
+  readonly badgeLabel: Text;
 }
 
 interface ZoneRendererOptions {
@@ -35,6 +41,7 @@ interface ZoneRendererOptions {
     zoneId: string,
     isSelectable: () => boolean,
   ) => () => void;
+  readonly markerBadgeConfig?: MarkerBadgeConfig | null;
 }
 
 export function createZoneRenderer(
@@ -84,6 +91,8 @@ export function createZoneRenderer(
             visuals.hiddenStack.root,
             visuals.nameLabel,
             visuals.markersLabel,
+            visuals.badgeGraphics,
+            visuals.badgeLabel,
           );
 
           visualsByContainer.set(zoneContainer, visuals);
@@ -114,7 +123,7 @@ export function createZoneRenderer(
           zoneContainer.position.set(position.x, position.y);
         }
 
-        updateZoneVisuals(visuals, zone, highlightedZoneIDs.has(zone.id));
+        updateZoneVisuals(visuals, zone, highlightedZoneIDs.has(zone.id), options.markerBadgeConfig ?? null);
         const dimensions = resolveVisualDimensions(zone.visual, {
           width: ZONE_WIDTH,
           height: ZONE_HEIGHT,
@@ -123,7 +132,7 @@ export function createZoneRenderer(
           -dimensions.width / 2,
           -dimensions.height / 2,
           dimensions.width,
-          dimensions.height,
+          dimensions.height + LABEL_AREA_HEIGHT,
         );
       }
     },
@@ -154,29 +163,63 @@ function createZoneVisualElements(): ZoneVisualElements {
   const base = new Graphics();
   const hiddenStack = createHiddenZoneStackVisual();
 
-  const nameLabel = createText('', -ZONE_WIDTH * 0.44, -10, 14);
-  const markersLabel = createText('', -ZONE_WIDTH * 0.44, 18, 11);
+  const nameLabel = createText('', 0, 0, 14, {
+    fill: '#ffffff',
+    stroke: { color: '#000000', width: 3 },
+    anchor: { x: 0.5, y: 0 },
+  });
+  const markersLabel = createText('', 0, 0, 11, {
+    fill: '#f5f7fa',
+    stroke: { color: '#000000', width: 2 },
+    anchor: { x: 0.5, y: 0 },
+  });
 
   markersLabel.visible = false;
+
+  const badgeGraphics = new Graphics();
+  badgeGraphics.eventMode = 'none';
+  badgeGraphics.interactiveChildren = false;
+  badgeGraphics.visible = false;
+
+  const badgeLabel = createText('', 0, 0, 10, {
+    fill: '#ffffff',
+    anchor: { x: 0.5, y: 0.5 },
+    fontWeight: 'bold',
+  });
+  badgeLabel.visible = false;
 
   return {
     base,
     hiddenStack,
     nameLabel,
     markersLabel,
+    badgeGraphics,
+    badgeLabel,
   };
 }
 
-function createText(text: string, x: number, y: number, fontSize: number): Text {
+interface TextOptions {
+  readonly fill?: string;
+  readonly stroke?: { readonly color: string; readonly width: number };
+  readonly anchor?: { readonly x: number; readonly y: number };
+  readonly fontWeight?: string;
+}
+
+function createText(text: string, x: number, y: number, fontSize: number, opts: TextOptions = {}): Text {
   const label = new Text({
     text,
     style: {
-      fill: '#f5f7fa',
+      fill: opts.fill ?? '#f5f7fa',
       fontSize,
       fontFamily: 'monospace',
+      ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight as 'bold' | 'normal' } : {}),
+      ...(opts.stroke !== undefined ? { stroke: opts.stroke } : {}),
     },
   });
 
+  if (opts.anchor !== undefined) {
+    label.anchor.set(opts.anchor.x, opts.anchor.y);
+  }
   label.position.set(x, y);
   label.eventMode = 'none';
   label.interactiveChildren = false;
@@ -187,6 +230,7 @@ function updateZoneVisuals(
   visuals: ZoneVisualElements,
   zone: RenderZone,
   isInteractionHighlighted: boolean,
+  badgeConfig: MarkerBadgeConfig | null,
 ): void {
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
@@ -199,11 +243,16 @@ function updateZoneVisuals(
     dimensions.width,
     dimensions.height,
   );
-  layoutZoneLabels(visuals, dimensions.width, dimensions.height);
+  layoutZoneLabels(visuals, dimensions.width, dimensions.height, zone.visual.shape);
 
   visuals.nameLabel.text = zone.displayName;
 
-  const markerText = zone.markers.map((marker) => `${marker.displayName}:${marker.state}`).join('  ');
+  updateMarkerBadge(visuals, zone, dimensions, badgeConfig);
+
+  const filteredMarkers = badgeConfig === null
+    ? zone.markers
+    : zone.markers.filter((m) => m.id !== badgeConfig.markerId);
+  const markerText = filteredMarkers.map((marker) => `${marker.displayName}:${marker.state}`).join('  ');
   visuals.markersLabel.text = markerText;
   visuals.markersLabel.visible = markerText.length > 0;
 }
@@ -246,9 +295,56 @@ function resolveFillColor(zone: RenderZone): number {
   return 0x4d5c6d;
 }
 
-function layoutZoneLabels(visuals: ZoneVisualElements, width: number, height: number): void {
-  visuals.nameLabel.position.set(-width * 0.44, -height * 0.09);
-  visuals.markersLabel.position.set(-width * 0.44, height * 0.16);
+function layoutZoneLabels(visuals: ZoneVisualElements, width: number, height: number, shape: string): void {
+  const bottomEdge = shape === 'circle'
+    ? Math.min(width, height) / 2
+    : height / 2;
+  visuals.nameLabel.position.set(0, bottomEdge + LABEL_GAP);
+  visuals.markersLabel.position.set(0, bottomEdge + LABEL_GAP + LABEL_LINE_HEIGHT);
+}
+
+function hideBadge(visuals: ZoneVisualElements): void {
+  visuals.badgeGraphics.visible = false;
+  visuals.badgeLabel.visible = false;
+}
+
+function updateMarkerBadge(
+  visuals: ZoneVisualElements,
+  zone: RenderZone,
+  dimensions: { readonly width: number; readonly height: number },
+  badgeConfig: MarkerBadgeConfig | null,
+): void {
+  if (badgeConfig === null) {
+    hideBadge(visuals);
+    return;
+  }
+
+  const marker = zone.markers.find((m) => m.id === badgeConfig.markerId);
+  if (marker === undefined) {
+    hideBadge(visuals);
+    return;
+  }
+
+  const entry = badgeConfig.colorMap[marker.state];
+  if (entry === undefined) {
+    hideBadge(visuals);
+    return;
+  }
+
+  const bw = badgeConfig.width ?? 30;
+  const bh = badgeConfig.height ?? 20;
+  const bx = dimensions.width / 2 - bw - 4;
+  const by = dimensions.height / 2 - bh - 4;
+
+  const fillColor = parseHexColor(entry.color);
+  visuals.badgeGraphics.clear();
+  visuals.badgeGraphics.roundRect(bx, by, bw, bh, 4);
+  visuals.badgeGraphics.fill({ color: fillColor ?? 0x6b7280 });
+  visuals.badgeGraphics.visible = true;
+
+  visuals.badgeLabel.text = entry.abbreviation;
+  visuals.badgeLabel.position.set(bx + bw / 2, by + bh / 2);
+  visuals.badgeLabel.visible = true;
 }
 
 function resolveStroke(zone: RenderZone, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {

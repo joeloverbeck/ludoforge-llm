@@ -134,10 +134,23 @@ const {
     }
   }
 
+  class MockAnchor {
+    x = 0;
+
+    y = 0;
+
+    set(x: number, y: number): void {
+      this.x = x;
+      this.y = y;
+    }
+  }
+
   class HoistedMockText extends HoistedMockContainer {
     text: string;
 
     style: unknown;
+
+    anchor = new MockAnchor();
 
     constructor(options: { text: string; style?: unknown }) {
       super();
@@ -254,7 +267,7 @@ describe('createZoneRenderer', () => {
       hitArea?: { width: number; height: number };
     };
     expect(zoneA.hitArea?.width).toBe(160);
-    expect(zoneA.hitArea?.height).toBe(100);
+    expect(zoneA.hitArea?.height).toBe(140);
 
     renderer.update(
       [makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:d' })],
@@ -366,7 +379,7 @@ describe('createZoneRenderer', () => {
     const container = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const markers = container.children[3] as InstanceType<typeof MockText>;
 
-    expect(container.children).toHaveLength(4);
+    expect(container.children).toHaveLength(6);
     expect(markers.text).toContain('Control:red');
     expect(markers.text).toContain('Supply:on');
     expect(markers.visible).toBe(true);
@@ -488,10 +501,10 @@ describe('createZoneRenderer', () => {
     const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
 
     expect(nameLabel.text).toBe('Saigon');
-    expect(nameLabel.position.x).toBe(-44);
-    expect(nameLabel.position.y).toBeCloseTo(-7.2);
-    expect(markersLabel.position.x).toBe(-44);
-    expect(markersLabel.position.y).toBeCloseTo(12.8);
+    expect(nameLabel.position.x).toBe(0);
+    expect(nameLabel.position.y).toBe(48);
+    expect(markersLabel.position.x).toBe(0);
+    expect(markersLabel.position.y).toBe(66);
   });
 
   it('uses visual color when valid and falls back to default color when invalid', () => {
@@ -510,6 +523,103 @@ describe('createZoneRenderer', () => {
       new Map(),
     );
     expect(base.fillStyle).toEqual({ color: 0x2a2f38 });
+  });
+
+  it('positions labels below zone for circle shape using radius', () => {
+    const { renderer } = createRendererHarness();
+    renderer.update(
+      [
+        makeZone({
+          displayName: 'Da Nang',
+          visual: { shape: 'circle', width: 160, height: 160, color: null },
+        }),
+      ],
+      new Map(),
+    );
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+
+    expect(nameLabel.position.x).toBe(0);
+    expect(nameLabel.position.y).toBe(88);
+  });
+
+  it('name label has white fill and black stroke', () => {
+    const { renderer } = createRendererHarness();
+    renderer.update([makeZone()], new Map());
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+
+    const style = nameLabel.style as { fill?: string; stroke?: { color: string; width: number } };
+    expect(style.fill).toBe('#ffffff');
+    expect(style.stroke).toEqual({ color: '#000000', width: 3 });
+  });
+
+  it('renders badge when zone has matching marker and hides when absent', () => {
+    const parent = new MockContainer();
+    const pool = new ContainerPool();
+    const renderer = createZoneRenderer(parent as unknown as Container, pool, {
+      markerBadgeConfig: {
+        markerId: 'support',
+        colorMap: {
+          activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
+        },
+      },
+    });
+
+    renderer.update(
+      [
+        makeZone({
+          markers: [{ id: 'support', displayName: 'Support', state: 'activeOpposition', possibleStates: [] }],
+        }),
+      ],
+      new Map(),
+    );
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const badgeGraphics = zoneContainer.children[4] as InstanceType<typeof MockGraphics>;
+    const badgeLabel = zoneContainer.children[5] as InstanceType<typeof MockText>;
+
+    expect(badgeGraphics.visible).toBe(true);
+    expect(badgeLabel.visible).toBe(true);
+    expect(badgeLabel.text).toBe('AO');
+
+    renderer.update([makeZone({ markers: [] })], new Map());
+
+    expect(badgeGraphics.visible).toBe(false);
+    expect(badgeLabel.visible).toBe(false);
+  });
+
+  it('filters badge marker from markers text', () => {
+    const parent = new MockContainer();
+    const pool = new ContainerPool();
+    const renderer = createZoneRenderer(parent as unknown as Container, pool, {
+      markerBadgeConfig: {
+        markerId: 'support',
+        colorMap: {
+          activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
+        },
+      },
+    });
+
+    renderer.update(
+      [
+        makeZone({
+          markers: [
+            { id: 'support', displayName: 'Support', state: 'activeOpposition', possibleStates: [] },
+            { id: 'control', displayName: 'Control', state: 'COIN', possibleStates: [] },
+          ],
+        }),
+      ],
+      new Map(),
+    );
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+
+    expect(markersLabel.text).toBe('Control:COIN');
+    expect(markersLabel.text).not.toContain('Support');
   });
 
   it('dispatches all supported zone shapes from visual hints', () => {

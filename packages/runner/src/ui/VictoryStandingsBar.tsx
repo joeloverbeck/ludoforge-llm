@@ -1,4 +1,5 @@
 import { useContext, useRef, useState, type ReactElement } from 'react';
+import { createPortal } from 'react-dom';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
@@ -35,8 +36,9 @@ export function VictoryStandingsBar({ store }: { readonly store: StoreApi<GameSt
           onHover={setTooltip}
         />
       ))}
-      {tooltip !== null && (
-        <VictoryTooltip entry={tooltip.entry} anchorRect={tooltip.rect} />
+      {tooltip !== null && createPortal(
+        <VictoryTooltip entry={tooltip.entry} anchorRect={tooltip.rect} />,
+        document.body,
       )}
     </div>
   );

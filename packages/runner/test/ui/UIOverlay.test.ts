@@ -81,7 +81,9 @@ describe('UIOverlay', () => {
   it('exports expected CSS module classes', () => {
     expect(styles).toMatchObject({
       overlay: expect.any(String),
+      topRegion: expect.any(String),
       topBar: expect.any(String),
+      scoringBar: expect.any(String),
       leftPanel: expect.any(String),
       sidePanels: expect.any(String),
       bottomBar: expect.any(String),

@@ -65,17 +65,36 @@ zones:
   categoryStyles:
     city:
       shape: circle
-      width: 90
-      height: 90
+      width: 160
+      height: 160
       color: "#5b7fa5"
     province:
       shape: rectangle
-      width: 160
-      height: 100
+      width: 360
+      height: 220
     loc:
       shape: line
-      width: 120
-      height: 36
+      width: 270
+      height: 50
+
+  markerBadge:
+    markerId: support
+    colorMap:
+      activeOpposition:
+        color: "#dc2626"
+        abbreviation: AO
+      passiveOpposition:
+        color: "#f97316"
+        abbreviation: PO
+      neutral:
+        color: "#6b7280"
+        abbreviation: "N"
+      passiveSupport:
+        color: "#93c5fd"
+        abbreviation: PS
+      activeSupport:
+        color: "#3b82f6"
+        abbreviation: AS
 
   attributeRules:
     - match:

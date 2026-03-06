@@ -842,8 +842,8 @@ describe('createTokenRenderer', () => {
 
     expect(tokenContainer.visible).toBe(true);
     expect(tokenContainer.alpha).toBe(1);
-    expect(tokenContainer.position.x).toBe(255);
-    expect(tokenContainer.position.y).toBe(385);
+    expect(tokenContainer.position.x).toBe(210);
+    expect(tokenContainer.position.y).toBe(382);
   });
 
   it('keeps container references stable for unchanged token IDs across updates', () => {
@@ -892,12 +892,12 @@ describe('createTokenRenderer', () => {
     const tokenTwo = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
     const tokenThree = renderer.getContainerMap().get('token:3') as InstanceType<typeof MockContainer>;
 
-    expect(tokenOne.position.x).toBe(455);
-    expect(tokenOne.position.y).toBe(235);
-    expect(tokenTwo.position.x).toBe(485);
-    expect(tokenTwo.position.y).toBe(235);
-    expect(tokenThree.position.x).toBe(515);
-    expect(tokenThree.position.y).toBe(235);
+    expect(tokenOne.position.x).toBe(410);
+    expect(tokenOne.position.y).toBe(232);
+    expect(tokenTwo.position.x).toBe(446);
+    expect(tokenTwo.position.y).toBe(232);
+    expect(tokenThree.position.x).toBe(482);
+    expect(tokenThree.position.y).toBe(232);
   });
 
   it('getContainerMap returns a live map and destroy clears all containers', () => {
@@ -1189,11 +1189,11 @@ describe('createTokenRenderer', () => {
     const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
 
-    // Grid layout: column-based offset (same as original tokenOffset)
-    expect(t1.position.x).toBe(455);
-    expect(t1.position.y).toBe(235);
-    expect(t2.position.x).toBe(485);
-    expect(t2.position.y).toBe(235);
+    // Grid layout: column-based offset (TOKENS_PER_ROW=6, TOKEN_SPACING=36)
+    expect(t1.position.x).toBe(410);
+    expect(t1.position.y).toBe(232);
+    expect(t2.position.x).toBe(446);
+    expect(t2.position.y).toBe(232);
   });
 
   it('completes update cycle even when container.destroy() throws', () => {

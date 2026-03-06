@@ -21,14 +21,16 @@ export function UIOverlay({
 }: UIOverlayProps): ReactElement {
   return (
     <div className={styles.overlay} data-testid="ui-overlay">
-      <div className={styles.topBar} data-testid="ui-overlay-top">
-        {topBarContent}
-      </div>
-      {scoringBarContent != null && (
-        <div className={styles.scoringBar} data-testid="ui-overlay-scoring">
-          {scoringBarContent}
+      <div className={styles.topRegion}>
+        <div className={styles.topBar} data-testid="ui-overlay-top">
+          {topBarContent}
         </div>
-      )}
+        {scoringBarContent != null && (
+          <div className={styles.scoringBar} data-testid="ui-overlay-scoring">
+            {scoringBarContent}
+          </div>
+        )}
+      </div>
       <div className={styles.leftPanel} data-testid="ui-overlay-left">
         {leftPanelContent}
       </div>

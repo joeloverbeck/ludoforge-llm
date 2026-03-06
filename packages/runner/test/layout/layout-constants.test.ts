@@ -18,8 +18,8 @@ describe('layout-constants', () => {
     expect(ZONE_HALF_HEIGHT).toBe(ZONE_RENDER_HEIGHT / 2);
   });
 
-  it('zone width is 180 and height is 110', () => {
-    expect(ZONE_RENDER_WIDTH).toBe(180);
-    expect(ZONE_RENDER_HEIGHT).toBe(110);
+  it('zone width is 360 and height is 220', () => {
+    expect(ZONE_RENDER_WIDTH).toBe(360);
+    expect(ZONE_RENDER_HEIGHT).toBe(220);
   });
 });

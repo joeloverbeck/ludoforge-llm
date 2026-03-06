@@ -17,8 +17,8 @@ import { computeFanOffset } from '../../layout/fan-offset.js';
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
-const TOKENS_PER_ROW = 4;
-const TOKEN_SPACING = 30;
+const TOKENS_PER_ROW = 6;
+const TOKEN_SPACING = 36;
 const NEUTRAL_TOKEN_COLOR = 0x6b7280;
 const CARD_BACK_COLOR = 0x1f2937;
 

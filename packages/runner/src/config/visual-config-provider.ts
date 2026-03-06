@@ -20,6 +20,7 @@ import type {
   AttributeRule,
   CardAnimationConfig,
   CardTemplate,
+  MarkerBadgeConfig,
   TableBackgroundConfig,
   TableOverlaysConfig,
   TokenTypeDefault,
@@ -325,6 +326,10 @@ export class VisualConfigProvider {
 
   getChoiceOptionDisplayName(actionId: string, paramName: string, optionValue: string): string | null {
     return this.config?.actions?.[actionId]?.choices?.[paramName]?.options?.[optionValue]?.displayName ?? null;
+  }
+
+  getMarkerBadgeConfig(): MarkerBadgeConfig | null {
+    return this.config?.zones?.markerBadge ?? null;
   }
 
   getHiddenZones(): ReadonlySet<string> {

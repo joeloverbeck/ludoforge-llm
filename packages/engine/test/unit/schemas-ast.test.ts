@@ -11,6 +11,7 @@ import {
   ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
+import { PREDICATE_OPERATORS } from '../../src/kernel/predicate-op-contract.js';
 import { AST_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
@@ -707,6 +708,24 @@ describe('AST and selector schemas', () => {
       },
     };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
+  it('accepts exactly the canonical predicate operators for token filters', () => {
+    for (const op of PREDICATE_OPERATORS) {
+      const parsed = OptionsQuerySchema.safeParse({
+        query: 'tokensInZone',
+        zone: 'board:a',
+        filter: { op: 'and', args: [{ prop: 'faction', op, value: 'US' }] },
+      });
+      assert.equal(parsed.success, true, `operator ${op} should be accepted`);
+    }
+
+    const invalid = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { op: 'and', args: [{ prop: 'faction', op: 'xor', value: 'US' }] },
+    });
+    assert.equal(invalid.success, false);
   });
 
   it('rejects malformed tokensInZone filter payloads', () => {

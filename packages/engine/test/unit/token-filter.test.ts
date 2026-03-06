@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asTokenId } from '../../src/kernel/branded.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import { tokenFilterPathSuffix } from '../../src/kernel/token-filter-expr-utils.js';
 import {
   filterTokensByExpr,
   matchesTokenFilterExpr,
@@ -106,11 +107,54 @@ describe('token-filter', () => {
 
     assert.throws(
       () => matchesTokenFilterExpr(token, { op: 'and', args: [] } as unknown as TokenFilterExpr),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'empty_args'
+          && error.context?.op === 'and'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
     );
     assert.throws(
       () => matchesTokenFilterExpr(token, { op: 'or', args: [] } as unknown as TokenFilterExpr),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'empty_args'
+          && error.context?.op === 'or'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
+    );
+  });
+
+  it('preserves nested traversal paths for zero-arity token filter expressions', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const nested = {
+      op: 'not',
+      arg: {
+        op: 'or',
+        args: [
+          { prop: 'suit', op: 'eq', value: 'hearts' },
+          { op: 'and', args: [] },
+        ],
+      },
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, nested),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'empty_args'
+          && error.context?.op === 'and'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
     );
   });
 
@@ -123,7 +167,50 @@ describe('token-filter', () => {
 
     assert.throws(
       () => matchesTokenFilterExpr(token, malformed),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
+    );
+  });
+
+  it('fails closed for unsupported token filter predicate operators', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const malformed = {
+      op: 'and',
+      args: [{ prop: 'suit', op: 'xor', value: ['hearts'] }],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, malformed),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('reports nested paths for malformed predicate-like token filter nodes', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const malformed = {
+      op: 'and',
+      args: [
+        { prop: 'suit', op: 'eq', value: 'hearts' },
+        { prop: 'rank' },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, malformed),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
     );
   });
 });

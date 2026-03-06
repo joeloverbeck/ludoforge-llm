@@ -1,4 +1,5 @@
 import type { PlayerId, TokenId, ZoneId } from './branded.js';
+import type { PredicateOp } from './predicate-op-contract.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { TurnFlowActionClass } from '../contracts/index.js';
 
@@ -134,7 +135,7 @@ export type ConditionAST =
 
 export interface TokenFilterPredicate {
   readonly prop: string;
-  readonly op: 'eq' | 'neq' | 'in' | 'notIn';
+  readonly op: PredicateOp;
   readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
 
@@ -146,7 +147,7 @@ export type TokenFilterExpr =
 
 export interface AssetRowPredicate {
   readonly field: string;
-  readonly op: 'eq' | 'neq' | 'in' | 'notIn';
+  readonly op: PredicateOp;
   readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
 

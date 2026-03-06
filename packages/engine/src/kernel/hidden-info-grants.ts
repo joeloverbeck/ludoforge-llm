@@ -1,5 +1,4 @@
 import type { PlayerId } from './branded.js';
-import { typeMismatchError } from './eval-error.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import type { RevealGrant, TokenFilterExpr } from './types.js';
 
@@ -67,10 +66,7 @@ export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterE
   return foldTokenFilterExpr<TokenFilterExpr>(expr, {
     predicate: (predicate) => predicate,
     not: (_entry, arg) => ({ op: 'not', arg }),
-    and: (entry, args) => {
-      if (entry.args.length === 0) {
-        throw typeMismatchError('Token filter operator "and" requires at least one expression argument.', { expr });
-      }
+    and: (_entry, args) => {
       const sortedArgs = [...args]
         .map((arg) => ({ key: JSON.stringify(canonicalizeValue(arg)), expr: arg }))
         .sort((left, right) => compareStrings(left.key, right.key))
@@ -81,10 +77,7 @@ export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterE
         args: [first!, ...rest],
       };
     },
-    or: (entry, args) => {
-      if (entry.args.length === 0) {
-        throw typeMismatchError('Token filter operator "or" requires at least one expression argument.', { expr });
-      }
+    or: (_entry, args) => {
       const sortedArgs = [...args]
         .map((arg) => ({ key: JSON.stringify(canonicalizeValue(arg)), expr: arg }))
         .sort((left, right) => compareStrings(left.key, right.key))

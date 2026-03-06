@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type {
+  AssetRowPredicate,
   ConditionAST,
   EffectAST,
   MoveLog,
@@ -10,7 +11,9 @@ import type {
   ScenarioDeckComposition,
   ScenarioPayload,
   ScenarioPiecePlacement,
+  TokenFilterPredicate,
 } from '../../src/kernel/index.js';
+import type { PredicateOp } from '../../src/kernel/predicate-op-contract.js';
 import { LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP, OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
 import type {
   LeafOptionsQueryKindFromContractMap,
@@ -237,6 +240,23 @@ describe('exhaustive kernel unions', () => {
     assert.equal(recursiveCoverage, true);
     assert.equal(recursiveDispatchCoverage, true);
     assert.equal(overlapVariants, 0);
+  });
+
+  it('keeps predicate operator contracts aligned across AST surfaces', () => {
+    type TokenFilterOpCoverage = [Exclude<TokenFilterPredicate['op'], PredicateOp>, Exclude<PredicateOp, TokenFilterPredicate['op']>] extends
+      [never, never]
+      ? true
+      : false;
+    type AssetRowOpCoverage = [Exclude<AssetRowPredicate['op'], PredicateOp>, Exclude<PredicateOp, AssetRowPredicate['op']>] extends
+      [never, never]
+      ? true
+      : false;
+
+    const tokenFilterOpCoverage: TokenFilterOpCoverage = true;
+    const assetRowOpCoverage: AssetRowOpCoverage = true;
+
+    assert.equal(tokenFilterOpCoverage, true);
+    assert.equal(assetRowOpCoverage, true);
   });
 
   it('ensures MoveLog includes legalMoveCount', () => {

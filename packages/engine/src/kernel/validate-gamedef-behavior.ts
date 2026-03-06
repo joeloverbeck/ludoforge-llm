@@ -18,8 +18,16 @@ import type {
 } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
+import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
 import {
+  appendEffectConditionSurfacePath,
+  appendQueryConditionSurfacePath,
+  appendValueExprConditionSurfacePath,
   collectDeclaredBinderCandidatesFromEffectNode,
+  CONDITION_SURFACE_SUFFIX,
+  conditionSurfacePathForTerminalConditionWhen,
+  conditionSurfacePathForTriggerMatch,
+  conditionSurfacePathForTriggerWhen,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
   tokenFilterPropAlternatives,
@@ -42,10 +50,11 @@ import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-cont
 import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
 import {
   isTokenFilterPredicateExpr,
-  isUnsupportedTokenFilterExprError,
+  isTokenFilterTraversalError,
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from './token-filter-expr-utils.js';
+import { isPredicateOp, PREDICATE_OPERATORS } from './predicate-op-contract.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -436,7 +445,12 @@ export const validateValueExpr = (
   }
 
   if ('if' in valueExpr) {
-    validateConditionAst(diagnostics, valueExpr.if.when, `${path}.if.when`, context);
+    validateConditionAst(
+      diagnostics,
+      valueExpr.if.when,
+      appendValueExprConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen),
+      context,
+    );
     validateValueExpr(diagnostics, valueExpr.if.then, `${path}.if.then`, context);
     validateValueExpr(diagnostics, valueExpr.if.else, `${path}.if.else`, context);
     return;
@@ -491,13 +505,13 @@ export const validateConditionAst = (
   switch (condition.op) {
     case 'and':
     case 'or': {
-      if (condition.args.length === 0) {
+      if (!isNonEmptyArray(condition.args)) {
         diagnostics.push({
           code: 'CONDITION_BOOLEAN_ARITY_INVALID',
           path: `${path}.args`,
           severity: 'error',
-          message: `Condition operator "${condition.op}" requires at least one argument.`,
-          suggestion: 'Provide at least one condition in args.',
+          message: booleanArityMessage('condition', condition.op),
+          suggestion: booleanAritySuggestion('condition'),
         });
       }
       condition.args.forEach((entry, index) => {
@@ -586,6 +600,16 @@ const validateTokenFilterPredicate = (
   path: string,
   context: ValidationContext,
 ): void => {
+  if (!isPredicateOp(predicate.op)) {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path: `${path}.op`,
+      severity: 'error',
+      message: `Unsupported token filter predicate operator "${String(predicate.op)}".`,
+      suggestion: `Use one of: ${PREDICATE_OPERATORS.join(', ')}.`,
+    });
+  }
+
   if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
     pushMissingReferenceDiagnostic(
       diagnostics,
@@ -619,30 +643,27 @@ const validateTokenFilterExpr = (
       if (entry.op === 'not') {
         return;
       }
-      if (entry.args.length === 0) {
-        diagnostics.push({
-          code: 'DOMAIN_QUERY_INVALID',
-          path: `${entryPath}.args`,
-          severity: 'error',
-          message: `Token filter operator "${entry.op}" requires at least one expression argument.`,
-          suggestion: 'Provide one or more token filter expression arguments.',
-        });
-      }
     });
   } catch (error: unknown) {
-    if (!isUnsupportedTokenFilterExprError(error)) {
+    if (!isTokenFilterTraversalError(error)) {
       throw error;
     }
     const entryPath = `${path}${tokenFilterPathSuffix(error.context.path)}`;
+    const isBooleanOp = error.context.op === 'and' || error.context.op === 'or';
     const suggestion = error.context.reason === 'unsupported_operator'
       ? 'Use one of: and, or, not.'
-      : 'Use a predicate leaf or a well-formed and/or/not expression node.';
+      : error.context.reason === 'empty_args'
+        ? booleanAritySuggestion('tokenFilter')
+        : 'Use a predicate leaf or a well-formed and/or/not expression node.';
     const message = error.context.reason === 'unsupported_operator'
       ? `Unsupported token filter operator "${String(error.context.op)}".`
-      : `Malformed token filter expression node for operator "${String(error.context.op)}".`;
+      : error.context.reason === 'empty_args'
+        ? booleanArityMessage('tokenFilter', isBooleanOp ? error.context.op : 'and')
+        : `Malformed token filter expression node for operator "${String(error.context.op)}".`;
+    const errorPath = error.context.reason === 'empty_args' ? `${entryPath}.args` : `${entryPath}.op`;
     diagnostics.push({
       code: 'DOMAIN_QUERY_INVALID',
-      path: `${entryPath}.op`,
+      path: errorPath,
       severity: 'error',
       message,
       suggestion,
@@ -875,7 +896,12 @@ export const validateOptionsQuery = (
         validatePlayerSelector(diagnostics, query.spaceFilter.owner, `${path}.spaceFilter.owner`, context);
       }
       if (query.spaceFilter?.condition) {
-        validateConditionAst(diagnostics, query.spaceFilter.condition, `${path}.spaceFilter.condition`, context);
+        validateConditionAst(
+          diagnostics,
+          query.spaceFilter.condition,
+          appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.spaceFilterCondition),
+          context,
+        );
       }
       validateTokenFilter(diagnostics, query.filter, `${path}.filter`, context);
       return;
@@ -883,7 +909,12 @@ export const validateOptionsQuery = (
     case 'connectedZones': {
       validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       if (query.via) {
-        validateConditionAst(diagnostics, query.via, `${path}.via`, context);
+        validateConditionAst(
+          diagnostics,
+          query.via,
+          appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.via),
+          context,
+        );
       }
       return;
     }
@@ -1043,7 +1074,12 @@ export const validateOptionsQuery = (
         'DOMAIN_NEXT_IN_ORDER_BIND_INVALID',
         'nextInOrderByCondition.bind',
       );
-      validateConditionAst(diagnostics, query.where, `${path}.where`, context);
+      validateConditionAst(
+        diagnostics,
+        query.where,
+        appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.where),
+        context,
+      );
       return;
     }
     case 'intsInVarRange': {
@@ -1210,7 +1246,12 @@ export const validateOptionsQuery = (
         validatePlayerSelector(diagnostics, query.filter.owner, `${path}.filter.owner`, context);
       }
       if (query.filter?.condition) {
-        validateConditionAst(diagnostics, query.filter.condition, `${path}.filter.condition`, context);
+        validateConditionAst(
+          diagnostics,
+          query.filter.condition,
+          appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.filterCondition),
+          context,
+        );
       }
       return;
     }
@@ -1475,7 +1516,12 @@ export const validateEffectAst = (
     validateZoneRef(diagnostics, effect.moveAll.to, `${path}.moveAll.to`, context);
 
     if (effect.moveAll.filter) {
-      validateConditionAst(diagnostics, effect.moveAll.filter, `${path}.moveAll.filter`, context);
+      validateConditionAst(
+        diagnostics,
+        effect.moveAll.filter,
+        appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.moveAllFilter),
+        context,
+      );
     }
     return;
   }
@@ -1540,7 +1586,12 @@ export const validateEffectAst = (
   }
 
   if ('if' in effect) {
-    validateConditionAst(diagnostics, effect.if.when, `${path}.if.when`, context);
+    validateConditionAst(
+      diagnostics,
+      effect.if.when,
+      appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.ifWhen),
+      context,
+    );
     effect.if.then.forEach((entry, index) => {
       validateEffectAst(diagnostics, entry, `${path}.if.then[${index}]`, context);
     });
@@ -1814,7 +1865,12 @@ export const validateEffectAst = (
       });
     }
     if (grant.zoneFilter !== undefined) {
-      validateConditionAst(diagnostics, grant.zoneFilter, `${path}.grantFreeOperation.zoneFilter`, context);
+      validateConditionAst(
+        diagnostics,
+        grant.zoneFilter,
+        appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.grantFreeOperationZoneFilter),
+        context,
+      );
     }
     return;
   }
@@ -2013,11 +2069,11 @@ export const validatePostAdjacencyBehavior = (
     }
 
     if (trigger.match) {
-      validateConditionAst(diagnostics, trigger.match, `triggers[${triggerIndex}].match`, context);
+      validateConditionAst(diagnostics, trigger.match, conditionSurfacePathForTriggerMatch(triggerIndex), context);
     }
 
     if (trigger.when) {
-      validateConditionAst(diagnostics, trigger.when, `triggers[${triggerIndex}].when`, context);
+      validateConditionAst(diagnostics, trigger.when, conditionSurfacePathForTriggerWhen(triggerIndex), context);
     }
 
     trigger.effects.forEach((effect, effectIndex) => {
@@ -2044,7 +2100,12 @@ export const validatePostAdjacencyBehavior = (
       });
     }
 
-    validateConditionAst(diagnostics, endCondition.when, `terminal.conditions[${endConditionIndex}].when`, context);
+    validateConditionAst(
+      diagnostics,
+      endCondition.when,
+      conditionSurfacePathForTerminalConditionWhen(endConditionIndex),
+      context,
+    );
   });
 
   if (terminal.scoring) {

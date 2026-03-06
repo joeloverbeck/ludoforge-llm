@@ -16,6 +16,8 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import { tokenFilterPathSuffix } from '../../src/kernel/token-filter-expr-utils.js';
+import type { TokenFilterExpr } from '../../src/kernel/types.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 
@@ -204,16 +206,59 @@ describe('effects reveal', () => {
     assert.deepEqual(ctx.collector.trace, []);
   });
 
-  it('rejects reveal.filter with empty boolean token-filter args', () => {
+  it('rejects reveal.filter with deterministic TYPE_MISMATCH context for malformed token-filter nodes', () => {
     const ctx = makeCtx();
+    const malformedFilter = {
+      op: 'and',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'US' },
+        { prop: 'rank' },
+      ],
+    } as unknown as TokenFilterExpr;
 
     assert.throws(
       () =>
         applyEffect(
-          { reveal: { zone: 'hand:0', to: 'all', filter: { op: 'and', args: [] } } } as unknown as EffectAST,
+          { reveal: { zone: 'hand:0', to: 'all', filter: malformedFilter } } as unknown as EffectAST,
           ctx,
         ),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && error.context.op === undefined
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
+    );
+  });
+
+  it('rejects reveal.filter with deterministic TYPE_MISMATCH context for unsupported token-filter operators', () => {
+    const ctx = makeCtx();
+    const unsupportedOperatorFilter = {
+      op: 'xor',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'US' },
+        { prop: 'rank', op: 'eq', value: 1 },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { reveal: { zone: 'hand:0', to: 'all', filter: unsupportedOperatorFilter } } as unknown as EffectAST,
+          ctx,
+        ),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && error.context.op === 'xor'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
     );
   });
 
@@ -455,7 +500,7 @@ describe('effects conceal', () => {
     assert.equal(result.state, state);
   });
 
-  it('rejects conceal.filter with empty boolean token-filter args', () => {
+  it('rejects conceal.filter with deterministic TYPE_MISMATCH context for malformed token-filter nodes', () => {
     const ctx = makeCtx({
       state: {
         ...makeState(),
@@ -464,14 +509,64 @@ describe('effects conceal', () => {
         },
       },
     });
+    const malformedFilter = {
+      op: 'and',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'US' },
+        { prop: 'rank' },
+      ],
+    } as unknown as TokenFilterExpr;
 
     assert.throws(
       () =>
         applyEffect(
-          { conceal: { zone: 'hand:0', filter: { op: 'and', args: [] } } } as unknown as EffectAST,
+          { conceal: { zone: 'hand:0', filter: malformedFilter } } as unknown as EffectAST,
           ctx,
         ),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && error.context.op === undefined
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
+    );
+  });
+
+  it('rejects conceal.filter with deterministic TYPE_MISMATCH context for unsupported token-filter operators', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: 'all' }],
+        },
+      },
+    });
+    const unsupportedOperatorFilter = {
+      op: 'xor',
+      args: [
+        { prop: 'faction', op: 'eq', value: 'US' },
+        { prop: 'rank', op: 'eq', value: 1 },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { conceal: { zone: 'hand:0', filter: unsupportedOperatorFilter } } as unknown as EffectAST,
+          ctx,
+        ),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && error.context.op === 'xor'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
     );
   });
 

@@ -1,7 +1,7 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
-import { typeMismatchError } from './eval-error.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
+import { mapTokenFilterTraversalToTypeMismatch } from './token-filter-runtime-boundary.js';
 
 type TokenFilterScalar = string | number | boolean;
 
@@ -59,22 +59,16 @@ export function matchesTokenFilterExpr(
   expr: TokenFilterExpr,
   resolveValue: TokenFilterValueResolver = resolveLiteralTokenFilterValue,
 ): boolean {
-  return foldTokenFilterExpr(expr, {
-    predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue),
-    not: (_entry, arg) => !arg,
-    and: (entry, args) => {
-      if (entry.args.length === 0) {
-        throw typeMismatchError('Token filter operator "and" requires at least one expression argument.', { expr });
-      }
-      return args.every(Boolean);
-    },
-    or: (entry, args) => {
-      if (entry.args.length === 0) {
-        throw typeMismatchError('Token filter operator "or" requires at least one expression argument.', { expr });
-      }
-      return args.some(Boolean);
-    },
-  });
+  try {
+    return foldTokenFilterExpr(expr, {
+      predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue),
+      not: (_entry, arg) => !arg,
+      and: (_entry, args) => args.every(Boolean),
+      or: (_entry, args) => args.some(Boolean),
+    });
+  } catch (error: unknown) {
+    return mapTokenFilterTraversalToTypeMismatch(error);
+  }
 }
 
 export function filterTokensByExpr(

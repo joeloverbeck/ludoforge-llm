@@ -4,6 +4,7 @@ import {
   CANONICAL_BINDING_IDENTIFIER_PATTERN,
   TURN_FLOW_ACTION_CLASS_VALUES,
 } from '../contracts/index.js';
+import { PREDICATE_OPERATORS } from './predicate-op-contract.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
@@ -16,6 +17,7 @@ const CanonicalBindingIdentifierSchema = StringSchema.regex(CANONICAL_BINDING_ID
   message: CANONICAL_BINDING_IDENTIFIER_MESSAGE,
 });
 const PredicateScalarLiteralSchema = z.union([StringSchema, NumberSchema, BooleanSchema]);
+const PredicateOperatorSchema = z.enum(PREDICATE_OPERATORS);
 
 const PlayerIdSchema = IntegerSchema;
 
@@ -90,7 +92,7 @@ const IntDomainBoundSchema = z
 export const TokenFilterPredicateSchema = z
   .object({
     prop: StringSchema,
-    op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
+    op: PredicateOperatorSchema,
     value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
   })
   .strict();
@@ -98,7 +100,7 @@ export const TokenFilterPredicateSchema = z
 export const AssetRowPredicateSchema = z
   .object({
     field: StringSchema,
-    op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
+    op: PredicateOperatorSchema,
     value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
   })
   .strict();

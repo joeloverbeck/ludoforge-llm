@@ -1,16 +1,30 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isEvalErrorCode } from '../../../src/kernel/eval-error.js';
 import {
   foldTokenFilterExpr,
-  isUnsupportedTokenFilterExprError,
+  isTokenFilterTraversalError,
+  tokenFilterBooleanArityError,
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from '../../../src/kernel/token-filter-expr-utils.js';
+import { PREDICATE_OPERATORS } from '../../../src/kernel/predicate-op-contract.js';
 import type { TokenFilterExpr } from '../../../src/kernel/types.js';
 
 describe('token-filter-expr-utils', () => {
+  it('accepts canonical predicate operators from the shared contract', () => {
+    for (const op of PREDICATE_OPERATORS) {
+      const expr: TokenFilterExpr = { prop: 'id', op, value: 'a' };
+      const visited: string[] = [];
+      walkTokenFilterExpr(expr, (entry) => {
+        if ('prop' in entry) {
+          visited.push(entry.op);
+        }
+      });
+      assert.deepEqual(visited, [op]);
+    }
+  });
+
   it('builds deterministic token-filter path suffixes', () => {
     assert.equal(
       tokenFilterPathSuffix([
@@ -97,10 +111,7 @@ describe('token-filter-expr-utils', () => {
         or: () => true,
       }),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'unsupported_operator' && tokenFilterPathSuffix(error.context.path) === '';
@@ -113,14 +124,48 @@ describe('token-filter-expr-utils', () => {
         args: [{ op: 'xor', args: [{ prop: 'id', op: 'eq', value: 'a' }] } as unknown as TokenFilterExpr],
       } as TokenFilterExpr, () => {}),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'unsupported_operator'
           && tokenFilterPathSuffix(error.context.path) === '.args[0]';
+      },
+    );
+  });
+
+  it('fails closed for malformed predicate-like nodes in fold and walk', () => {
+    const malformed = {
+      op: 'and',
+      args: [
+        { prop: 'id', op: 'eq', value: 'a' },
+        { prop: 'faction' },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'unsupported_operator'
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
+    );
+
+    assert.throws(
+      () => walkTokenFilterExpr(malformed, () => {}),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'unsupported_operator'
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
       },
     );
   });
@@ -136,10 +181,7 @@ describe('token-filter-expr-utils', () => {
         or: () => true,
       }),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'non_conforming_node';
@@ -149,14 +191,93 @@ describe('token-filter-expr-utils', () => {
     assert.throws(
       () => walkTokenFilterExpr(malformedAnd, () => {}),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'non_conforming_node' && tokenFilterPathSuffix(error.context.path) === '';
       },
     );
+  });
+
+  it('reports nested paths for malformed fold nodes', () => {
+    const malformed = {
+      op: 'not',
+      arg: {
+        op: 'or',
+        args: [
+          { prop: 'id', op: 'eq', value: 'a' },
+          { op: 'and' },
+        ],
+      },
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'non_conforming_node'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+  });
+
+  it('reports nested paths for empty-args boolean nodes in fold and walk', () => {
+    const malformed = {
+      op: 'not',
+      arg: {
+        op: 'or',
+        args: [
+          { prop: 'id', op: 'eq', value: 'a' },
+          { op: 'and', args: [] },
+        ],
+      },
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'empty_args'
+          && error.context.op === 'and'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+
+    assert.throws(
+      () => walkTokenFilterExpr(malformed, () => {}),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'empty_args'
+          && error.context.op === 'and'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+  });
+
+  it('exposes deterministic empty-args traversal errors', () => {
+    const expr = { op: 'and', args: [] } as unknown as TokenFilterExpr;
+    const error = tokenFilterBooleanArityError(expr, 'and');
+
+    assert.equal(isTokenFilterTraversalError(error), true);
+    assert.equal(error.context.reason, 'empty_args');
+    assert.equal(String(error.context.op), 'and');
+    assert.equal(tokenFilterPathSuffix(error.context.path), '');
+    assert.match(error.message, /requires at least one expression argument/);
   });
 });

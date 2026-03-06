@@ -1,5 +1,6 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
-import { typeMismatchError } from './eval-error.js';
+import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
+import { isPredicateOp } from './predicate-op-contract.js';
 
 export interface TokenFilterPathSegmentNot {
   readonly kind: 'not';
@@ -14,18 +15,19 @@ export type TokenFilterPathSegment = TokenFilterPathSegmentNot | TokenFilterPath
 
 type TokenFilterBooleanExpr = Extract<TokenFilterExpr, { readonly op: 'and' | 'or' }>;
 type TokenFilterNotExpr = Extract<TokenFilterExpr, { readonly op: 'not' }>;
-type UnsupportedTokenFilterExprReason = 'unsupported_operator' | 'non_conforming_node';
+type TokenFilterTraversalErrorReason = 'unsupported_operator' | 'non_conforming_node' | 'empty_args';
 
-export interface UnsupportedTokenFilterExprErrorContext {
+export interface TokenFilterTraversalErrorContext {
   readonly expr: unknown;
   readonly op: unknown;
   readonly path: readonly TokenFilterPathSegment[];
-  readonly reason: UnsupportedTokenFilterExprReason;
+  readonly reason: TokenFilterTraversalErrorReason;
 }
 
-interface UnsupportedTokenFilterExprError {
-  readonly code: 'TYPE_MISMATCH';
-  readonly context?: UnsupportedTokenFilterExprErrorContext;
+interface TokenFilterTraversalError {
+  readonly code: 'TOKEN_FILTER_TRAVERSAL_ERROR';
+  readonly context: TokenFilterTraversalErrorContext;
+  readonly message: string;
 }
 
 export interface TokenFilterExprFoldHandlers<TResult> {
@@ -40,45 +42,70 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const readNodeOp = (node: unknown): unknown => (isRecord(node) ? Reflect.get(node, 'op') : undefined);
 
 const isTokenFilterBooleanOperator = (op: unknown): op is 'and' | 'or' => op === 'and' || op === 'or';
+const isTokenFilterPredicateOperator = (op: unknown): op is TokenFilterPredicate['op'] => isPredicateOp(op);
 
 const malformedTokenFilterExprError = (
   expr: unknown,
   path: readonly TokenFilterPathSegment[],
-  reason: UnsupportedTokenFilterExprReason,
-) => {
+  reason: TokenFilterTraversalErrorReason,
+): TokenFilterTraversalError => {
   const op = readNodeOp(expr);
-  const message = reason === 'unsupported_operator'
+  return {
+    code: 'TOKEN_FILTER_TRAVERSAL_ERROR',
+    message: reason === 'unsupported_operator'
     ? `Unsupported token filter operator "${String(op)}".`
-    : `Malformed token filter expression node for operator "${String(op)}".`;
-  return typeMismatchError(message, {
-    expr,
-    op,
-    path,
-    reason,
-  } satisfies UnsupportedTokenFilterExprErrorContext);
+    : `Malformed token filter expression node for operator "${String(op)}".`,
+    context: {
+      expr,
+      op,
+      path,
+      reason,
+    },
+  };
 };
 
-export const isUnsupportedTokenFilterExprError = (
+export const isTokenFilterTraversalError = (
   error: unknown,
-): error is UnsupportedTokenFilterExprError & { readonly context: UnsupportedTokenFilterExprErrorContext } => {
+): error is TokenFilterTraversalError => {
   if (!isRecord(error)) {
     return false;
   }
-  if (error.code !== 'TYPE_MISMATCH') {
+  if (error.code !== 'TOKEN_FILTER_TRAVERSAL_ERROR') {
     return false;
   }
-  if (!('context' in error) || !isRecord(error.context)) {
+  if (typeof error.message !== 'string') {
+    return false;
+  }
+  if (!isRecord(error.context)) {
     return false;
   }
   const context = error.context;
   return (
     Array.isArray(context.path)
-    && (context.reason === 'unsupported_operator' || context.reason === 'non_conforming_node')
+    && (context.reason === 'unsupported_operator' || context.reason === 'non_conforming_node' || context.reason === 'empty_args')
   );
 };
 
+export const tokenFilterBooleanArityError = (
+  expr: TokenFilterExpr,
+  op: 'and' | 'or',
+  path: readonly TokenFilterPathSegment[] = [],
+): TokenFilterTraversalError => ({
+  code: 'TOKEN_FILTER_TRAVERSAL_ERROR',
+  message: booleanArityMessage('tokenFilter', op),
+  context: {
+    expr,
+    op,
+    path,
+    reason: 'empty_args',
+  },
+});
+
 export const isTokenFilterPredicateExpr = (expr: unknown): expr is TokenFilterPredicate =>
-  isRecord(expr) && 'prop' in expr;
+  isRecord(expr)
+  && typeof expr.prop === 'string'
+  && isTokenFilterPredicateOperator(expr.op)
+  && 'value' in expr;
 
 const isTokenFilterNotExpr = (expr: unknown): expr is TokenFilterNotExpr =>
   isRecord(expr) && !isTokenFilterPredicateExpr(expr as TokenFilterExpr) && expr.op === 'not' && 'arg' in expr;
@@ -98,22 +125,28 @@ export const foldTokenFilterExpr = <TResult>(
   expr: TokenFilterExpr,
   handlers: TokenFilterExprFoldHandlers<TResult>,
 ): TResult => {
-  if (isTokenFilterPredicateExpr(expr)) {
-    return handlers.predicate(expr);
-  }
-  if (isTokenFilterNotExpr(expr)) {
-    return handlers.not(expr, foldTokenFilterExpr(expr.arg, handlers));
-  }
-  if (isTokenFilterBooleanExpr(expr)) {
-    const foldedArgs = expr.args.map((entry) => foldTokenFilterExpr(entry, handlers));
-    return expr.op === 'and'
-      ? handlers.and(expr, foldedArgs)
-      : handlers.or(expr, foldedArgs);
-  }
-  if (isRecord(expr) && isTokenFilterBooleanOperator(readNodeOp(expr))) {
-    throw malformedTokenFilterExprError(expr, [], 'non_conforming_node');
-  }
-  throw malformedTokenFilterExprError(expr, [], 'unsupported_operator');
+  const fold = (entry: unknown, path: readonly TokenFilterPathSegment[]): TResult => {
+    if (isTokenFilterPredicateExpr(entry)) {
+      return handlers.predicate(entry);
+    }
+    if (isTokenFilterNotExpr(entry)) {
+      return handlers.not(entry, fold(entry.arg, [...path, { kind: 'not' }]));
+    }
+    if (isTokenFilterBooleanExpr(entry)) {
+      if (!isNonEmptyArray(entry.args)) {
+        throw tokenFilterBooleanArityError(entry, entry.op, path);
+      }
+      const foldedArgs = entry.args.map((arg, index) => fold(arg, [...path, { kind: 'arg', index }]));
+      return entry.op === 'and'
+        ? handlers.and(entry, foldedArgs)
+        : handlers.or(entry, foldedArgs);
+    }
+    if (isRecord(entry) && isTokenFilterBooleanOperator(readNodeOp(entry))) {
+      throw malformedTokenFilterExprError(entry, path, 'non_conforming_node');
+    }
+    throw malformedTokenFilterExprError(entry, path, 'unsupported_operator');
+  };
+  return fold(expr, []);
 };
 
 export const walkTokenFilterExpr = (
@@ -131,6 +164,9 @@ export const walkTokenFilterExpr = (
       return;
     }
     if (isTokenFilterBooleanExpr(entry)) {
+      if (!isNonEmptyArray(entry.args)) {
+        throw tokenFilterBooleanArityError(entry, entry.op, path);
+      }
       visit(entry, path);
       entry.args.forEach((arg, index) => {
         walk(arg, [...path, { kind: 'arg', index }]);

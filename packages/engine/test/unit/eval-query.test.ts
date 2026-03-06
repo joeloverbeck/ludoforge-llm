@@ -2107,6 +2107,106 @@ describe('evalQuery', () => {
     }
   });
 
+  it('rejects empty boolean ConditionAST args across condition-bearing query runtime surfaces', () => {
+    const mapSpaceZone = {
+      id: asZoneId('city:none'),
+      zoneKind: 'board',
+      owner: 'none',
+      visibility: 'public',
+      ordering: 'set',
+    } as const;
+    const mapSpaceDef = makeDef();
+    const mapSpaceCtx = makeCtx({
+      def: {
+        ...mapSpaceDef,
+        zones: [...mapSpaceDef.zones, mapSpaceZone],
+      },
+      adjacencyGraph: buildAdjacencyGraph([...mapSpaceDef.zones, mapSpaceZone]),
+      state: {
+        ...makeState(),
+        zones: {
+          ...makeState().zones,
+          'city:none': [makeFactionToken('city-us-1', 'US')],
+        },
+      },
+    });
+
+    const cases: readonly {
+      readonly name: string;
+      readonly query: Parameters<typeof evalQuery>[0];
+      readonly ctx: EvalContext;
+    }[] = [
+      {
+        name: 'zones.filter.condition',
+        query: { query: 'zones', filter: { condition: { op: 'and', args: [] } } } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: makeCtx(),
+      },
+      {
+        name: 'mapSpaces.filter.condition',
+        query: { query: 'mapSpaces', filter: { condition: { op: 'and', args: [] } } } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: mapSpaceCtx,
+      },
+      {
+        name: 'tokensInMapSpaces.spaceFilter.condition',
+        query: {
+          query: 'tokensInMapSpaces',
+          spaceFilter: { condition: { op: 'and', args: [] } },
+        } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: mapSpaceCtx,
+      },
+      {
+        name: 'connectedZones.via',
+        query: {
+          query: 'connectedZones',
+          zone: 'deck:none',
+          via: { op: 'and', args: [] },
+        } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: makeCtx(),
+      },
+      {
+        name: 'nextInOrderByCondition.where',
+        query: {
+          query: 'nextInOrderByCondition',
+          source: { query: 'players' },
+          from: 0,
+          bind: '$candidate',
+          where: { op: 'or', args: [] },
+        } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: makeCtx(),
+      },
+    ];
+
+    for (const testCase of cases) {
+      assert.throws(
+        () => evalQuery(testCase.query, testCase.ctx),
+        (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+        `Expected TYPE_MISMATCH for ${testCase.name}`,
+      );
+    }
+  });
+
+  it('maps malformed token-filter traversal failures to TYPE_MISMATCH on eval-query surfaces', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokensInZone',
+            zone: 'battlefield:none',
+            filter: { op: 'xor', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+          } as unknown as Parameters<typeof evalQuery>[0],
+          ctx,
+        ),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator' && Array.isArray(error.context.path);
+      },
+    );
+  });
+
   it('rejects token membership filters with scalar set values for in/notIn', () => {
     const ctx = makeCtx();
 
@@ -2114,6 +2214,23 @@ describe('evalQuery', () => {
       () =>
         evalQuery(
           { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: 'US' }] } },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects token filters with unsupported predicate operators', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokensInZone',
+            zone: 'battlefield:none',
+            filter: { op: 'and', args: [{ prop: 'faction', op: 'xor', value: ['US'] }] },
+          } as unknown as Parameters<typeof evalQuery>[0],
           ctx,
         ),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),

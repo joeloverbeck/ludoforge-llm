@@ -1,7 +1,7 @@
 import { typeMismatchError } from './eval-error.js';
+import { isPredicateOp, type PredicateOp, PREDICATE_OPERATORS } from './predicate-op-contract.js';
 import { matchesScalarMembership } from './value-membership.js';
 
-export type PredicateOp = 'eq' | 'neq' | 'in' | 'notIn';
 export type PredicateScalar = string | number | boolean;
 export type PredicateSet = readonly PredicateScalar[];
 export type PredicateValue = PredicateScalar | PredicateSet;
@@ -30,6 +30,14 @@ export function matchesResolvedPredicate(
   }
 
   const { op, value } = predicate;
+  if (!isPredicateOp(op)) {
+    throw typeMismatchError(`Unsupported predicate operator "${String(op)}".`, {
+      ...context,
+      predicate,
+      actualType: typeof op,
+      expected: PREDICATE_OPERATORS.join('|'),
+    });
+  }
 
   if (op === 'eq' || op === 'neq') {
     if (Array.isArray(value)) {

@@ -12,7 +12,6 @@ import type {
   AssetRowsCardinality,
   AssetRowPredicate,
   ConditionAST,
-  NonEmptyReadonlyArray,
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
@@ -50,6 +49,30 @@ export interface ConditionLoweringResult<TValue> {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+function lowerBooleanArityTuple<TValue>(
+  source: { readonly op: 'and' | 'or'; readonly args?: unknown },
+  path: string,
+  kind: string,
+  alternatives: readonly string[],
+  lowerArgs: (args: readonly unknown[]) => ConditionLoweringResult<readonly TValue[]>,
+): ConditionLoweringResult<readonly [TValue, ...TValue[]]> {
+  if (!Array.isArray(source.args) || source.args.length === 0) {
+    return missingCapability(path, kind, source, alternatives);
+  }
+  const loweredArgs = lowerArgs(source.args);
+  if (loweredArgs.value === null) {
+    return { value: null, diagnostics: loweredArgs.diagnostics };
+  }
+  if (loweredArgs.value.length === 0) {
+    return missingCapability(path, kind, source, alternatives);
+  }
+  const [first, ...rest] = loweredArgs.value;
+  return {
+    value: [first!, ...rest],
+    diagnostics: loweredArgs.diagnostics,
+  };
+}
+
 const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
@@ -85,13 +108,6 @@ const SUPPORTED_REFERENCE_KINDS = [
   'activePlayer',
 ];
 
-const toNonEmpty = <T>(values: readonly T[]): NonEmptyReadonlyArray<T> => {
-  if (values.length === 0) {
-    throw new Error('Expected non-empty values.');
-  }
-  return [values[0]!, ...values.slice(1)];
-};
-
 export function lowerConditionNode(
   source: unknown,
   context: ConditionLoweringContext,
@@ -107,15 +123,18 @@ export function lowerConditionNode(
   switch (source.op) {
     case 'and':
     case 'or': {
-      if (!Array.isArray(source.args) || source.args.length === 0) {
-        return missingCapability(path, `${source.op} condition`, source, ['{ op, args: [...] }']);
-      }
-      const loweredArgs = lowerConditionArray(source.args, context, `${path}.args`);
+      const loweredArgs = lowerBooleanArityTuple<ConditionAST>(
+        { op: source.op, args: source.args },
+        path,
+        `${source.op} condition`,
+        ['{ op, args: [...] }'],
+        (args) => lowerConditionArray(args, context, `${path}.args`),
+      );
       if (loweredArgs.value === null) {
         return { value: null, diagnostics: loweredArgs.diagnostics };
       }
       return {
-        value: { op: source.op, args: toNonEmpty(loweredArgs.value) },
+        value: { op: source.op, args: loweredArgs.value },
         diagnostics: loweredArgs.diagnostics,
       };
     }
@@ -564,19 +583,41 @@ function validateCanonicalTokenTraitLiteral(
   ];
 }
 
-function normalizeTokenFilterExprShape(expr: TokenFilterExpr): TokenFilterExpr {
+function normalizeTokenFilterExprShape(
+  expr: TokenFilterExpr,
+  path: string,
+): ConditionLoweringResult<TokenFilterExpr> {
   if ('prop' in expr) {
-    return expr;
+    return { value: expr, diagnostics: [] };
   }
 
   if (expr.op === 'not') {
+    const normalizedArg = normalizeTokenFilterExprShape(expr.arg, `${path}.arg`);
+    if (normalizedArg.value === null) {
+      return normalizedArg;
+    }
     return {
-      op: 'not',
-      arg: normalizeTokenFilterExprShape(expr.arg),
+      value: {
+        op: 'not',
+        arg: normalizedArg.value,
+      },
+      diagnostics: normalizedArg.diagnostics,
     };
   }
 
-  const normalizedArgs = expr.args.map(normalizeTokenFilterExprShape);
+  const diagnostics: Diagnostic[] = [];
+  const normalizedArgs: TokenFilterExpr[] = [];
+  expr.args.forEach((arg, index) => {
+    const normalized = normalizeTokenFilterExprShape(arg, `${path}.args.${index}`);
+    diagnostics.push(...normalized.diagnostics);
+    if (normalized.value !== null) {
+      normalizedArgs.push(normalized.value);
+    }
+  });
+  if (normalizedArgs.length !== expr.args.length) {
+    return { value: null, diagnostics };
+  }
+
   const flattenedArgs: TokenFilterExpr[] = [];
 
   for (const arg of normalizedArgs) {
@@ -594,13 +635,23 @@ function normalizeTokenFilterExprShape(expr: TokenFilterExpr): TokenFilterExpr {
   if (flattenedArgs.length === 1) {
     const single = flattenedArgs[0];
     if (single !== undefined) {
-      return single;
+      return { value: single, diagnostics };
     }
   }
 
+  if (flattenedArgs.length === 0) {
+    return missingCapability(path, `token filter ${expr.op}`, expr, [
+      `{ op: "${expr.op}", args: [<TokenFilterExpr>, ...] }`,
+    ]);
+  }
+
+  const [first, ...rest] = flattenedArgs;
   return {
-    op: expr.op,
-    args: toNonEmpty(flattenedArgs),
+    value: {
+      op: expr.op,
+      args: [first!, ...rest],
+    },
+    diagnostics,
   };
 }
 
@@ -618,24 +669,23 @@ export function lowerTokenFilterExpr(
   }
 
   if (source.op === 'and' || source.op === 'or') {
-    if (!Array.isArray(source.args) || source.args.length === 0) {
-      return missingCapability(path, `token filter ${source.op}`, source, [
+    const loweredArgs = lowerBooleanArityTuple<TokenFilterExpr>(
+      { op: source.op, args: source.args },
+      path,
+      `token filter ${source.op}`,
+      [
         `{ op: "${source.op}", args: [<TokenFilterExpr>, ...] }`,
-      ]);
+      ],
+      (args) => lowerTokenFilterArray(args, context, `${path}.args`),
+    );
+    if (loweredArgs.value === null) {
+      return { value: null, diagnostics: loweredArgs.diagnostics };
     }
-    const diagnostics: Diagnostic[] = [];
-    const args: TokenFilterExpr[] = [];
-    source.args.forEach((entry, index) => {
-      const lowered = lowerTokenFilterExpr(entry, context, `${path}.args.${index}`);
-      diagnostics.push(...lowered.diagnostics);
-      if (lowered.value !== null) {
-        args.push(lowered.value);
-      }
-    });
-    if (args.length !== source.args.length) {
-      return { value: null, diagnostics };
-    }
-    return { value: normalizeTokenFilterExprShape({ op: source.op, args: toNonEmpty(args) }), diagnostics };
+    const normalized = normalizeTokenFilterExprShape({ op: source.op, args: loweredArgs.value }, path);
+    return {
+      value: normalized.value,
+      diagnostics: [...loweredArgs.diagnostics, ...normalized.diagnostics],
+    };
   }
 
   if (source.op === 'not') {
@@ -643,9 +693,10 @@ export function lowerTokenFilterExpr(
     if (lowered.value === null) {
       return lowered;
     }
+    const normalized = normalizeTokenFilterExprShape({ op: 'not', arg: lowered.value }, path);
     return {
-      value: normalizeTokenFilterExprShape({ op: 'not', arg: lowered.value }),
-      diagnostics: lowered.diagnostics,
+      value: normalized.value,
+      diagnostics: [...lowered.diagnostics, ...normalized.diagnostics],
     };
   }
 
@@ -1294,6 +1345,29 @@ function lowerConditionArray(
 
   source.forEach((entry, index) => {
     const lowered = lowerConditionNode(entry, context, `${path}.${index}`);
+    diagnostics.push(...lowered.diagnostics);
+    if (lowered.value !== null) {
+      values.push(lowered.value);
+    }
+  });
+
+  if (diagnostics.length > 0 && values.length !== source.length) {
+    return { value: null, diagnostics };
+  }
+
+  return { value: values, diagnostics };
+}
+
+function lowerTokenFilterArray(
+  source: readonly unknown[],
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<readonly TokenFilterExpr[]> {
+  const diagnostics: Diagnostic[] = [];
+  const values: TokenFilterExpr[] = [];
+
+  source.forEach((entry, index) => {
+    const lowered = lowerTokenFilterExpr(entry, context, `${path}.${index}`);
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value !== null) {
       values.push(lowered.value);

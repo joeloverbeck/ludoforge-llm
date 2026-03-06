@@ -14,7 +14,10 @@ import { validateConditionAst, validateEffectAst, validateValueExpr } from './va
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
 import { forEachDefined } from './validate-gamedef-utils.js';
 import {
+  appendConditionSurfacePath,
   collectTurnFlowEligibilityOverrideWindowIds,
+  CONDITION_SURFACE_SUFFIX,
+  conditionSurfacePathForTerminalCheckpointWhen,
   findMissingTurnFlowLinkedWindows,
 } from '../contracts/index.js';
 
@@ -290,7 +293,12 @@ export const validateTerminal = (diagnostics: Diagnostic[], def: GameDef, contex
       });
       return;
     }
-    validateConditionAst(diagnostics, checkpoint.when as ConditionAST, `terminal.checkpoints[${index}].when`, context);
+    validateConditionAst(
+      diagnostics,
+      checkpoint.when as ConditionAST,
+      conditionSurfacePathForTerminalCheckpointWhen(index),
+      context,
+    );
   });
 
   def.terminal.margins?.forEach((margin, index) => {
@@ -405,13 +413,28 @@ export const validateActionPipelines = (
     }
 
     if (actionPipeline.applicability !== undefined) {
-      validateConditionAst(diagnostics, actionPipeline.applicability, `${basePath}.applicability`, context);
+      validateConditionAst(
+        diagnostics,
+        actionPipeline.applicability,
+        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineApplicability),
+        context,
+      );
     }
     if (actionPipeline.legality !== null && actionPipeline.legality !== undefined) {
-      validateConditionAst(diagnostics, actionPipeline.legality, `${basePath}.legality`, context);
+      validateConditionAst(
+        diagnostics,
+        actionPipeline.legality,
+        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineLegality),
+        context,
+      );
     }
     if (actionPipeline.costValidation !== null && actionPipeline.costValidation !== undefined) {
-      validateConditionAst(diagnostics, actionPipeline.costValidation, `${basePath}.costValidation`, context);
+      validateConditionAst(
+        diagnostics,
+        actionPipeline.costValidation,
+        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineCostValidation),
+        context,
+      );
     }
     forEachDefined(actionPipeline.costEffects, (effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `${basePath}.costEffects[${effectIndex}]`, context);
@@ -425,7 +448,12 @@ export const validateActionPipelines = (
         suggestion: 'Declare targeting as an object (use {} when no targeting filter is needed).',
       });
     } else if (targeting.filter !== undefined) {
-      validateConditionAst(diagnostics, targeting.filter, `${basePath}.targeting.filter`, context);
+      validateConditionAst(
+        diagnostics,
+        targeting.filter,
+        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineTargetingFilter),
+        context,
+      );
     }
     stages.forEach((stage, stageIndex) => {
       const stageCandidate = stage as unknown;

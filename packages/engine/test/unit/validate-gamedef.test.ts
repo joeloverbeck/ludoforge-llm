@@ -13,7 +13,16 @@ import {
   validateGameDefBoundary,
   validateInitialPlacementsAgainstStackingConstraints,
 } from '../../src/kernel/index.js';
-import { EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/contracts/index.js';
+import {
+  appendConditionSurfacePath,
+  CONDITION_SURFACE_SUFFIX,
+  conditionSurfacePathForActionPre,
+  conditionSurfacePathForTerminalCheckpointWhen,
+  conditionSurfacePathForTerminalConditionWhen,
+  conditionSurfacePathForTriggerMatch,
+  conditionSurfacePathForTriggerWhen,
+  EFFECT_BINDER_SURFACE_CONTRACT,
+} from '../../src/contracts/index.js';
 import { collectEffectDeclaredBinderPolicyPatternsForTest } from '../../src/kernel/validate-gamedef-behavior.js';
 import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
@@ -611,14 +620,211 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('rejects empty boolean ConditionAST args in action preconditions', () => {
+  it('rejects empty boolean ConditionAST args across condition-bearing validator surfaces', () => {
+    const cases: readonly {
+      readonly name: string;
+      readonly expectedPath: string;
+      readonly buildDef: (seed: GameDef) => GameDef;
+    }[] = [
+      {
+        name: 'actions.pre',
+        expectedPath: `${conditionSurfacePathForActionPre(0)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actions: [{ ...seed.actions[0], pre: { op: 'and', args: [] } }],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'triggers.match',
+        expectedPath: `${conditionSurfacePathForTriggerMatch(0)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          triggers: [{ ...seed.triggers[0], match: { op: 'and', args: [] } }],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'triggers.when',
+        expectedPath: `${conditionSurfacePathForTriggerWhen(0)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          triggers: [{ ...seed.triggers[0], when: { op: 'or', args: [] } }],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'terminal.conditions.when',
+        expectedPath: `${conditionSurfacePathForTerminalConditionWhen(0)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          terminal: {
+            ...seed.terminal,
+            conditions: [{ ...seed.terminal.conditions[0], when: { op: 'and', args: [] } }],
+          },
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actions.params.domain.zones.filter.condition',
+        expectedPath: `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryFilterCondition)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actions: [
+            {
+              ...seed.actions[0],
+              params: [
+                {
+                  name: '$zone',
+                  domain: { query: 'zones', filter: { condition: { op: 'and', args: [] } } },
+                },
+              ],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actions.params.domain.connectedZones.via',
+        expectedPath: `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryVia)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actions: [
+            {
+              ...seed.actions[0],
+              params: [
+                {
+                  name: '$zone',
+                  domain: { query: 'connectedZones', zone: 'deck:none', via: { op: 'and', args: [] } },
+                },
+              ],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actions.params.domain.nextInOrderByCondition.where',
+        expectedPath: `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryWhere)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actions: [
+            {
+              ...seed.actions[0],
+              params: [
+                {
+                  name: '$seat',
+                  domain: {
+                    query: 'nextInOrderByCondition',
+                    source: { query: 'players' },
+                    from: 0,
+                    bind: '$candidate',
+                    where: { op: 'and', args: [] },
+                  },
+                },
+              ],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actions.effects.moveAll.filter',
+        expectedPath: `${appendConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.effectMoveAllFilter)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actions: [
+            {
+              ...seed.actions[0],
+              effects: [{ moveAll: { from: 'deck:none', to: 'market:none', filter: { op: 'or', args: [] } } }],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actionPipelines.applicability',
+        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineApplicability)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actionPipelines: [
+            {
+              id: 'profile-a',
+              actionId: 'playCard',
+              applicability: { op: 'and', args: [] },
+              legality: null,
+              costValidation: null,
+              costEffects: [],
+              targeting: {},
+              stages: [{ stage: 'resolve', effects: [] }],
+              atomicity: 'atomic',
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actionPipelines.targeting.filter',
+        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineTargetingFilter)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actionPipelines: [
+            {
+              id: 'profile-a',
+              actionId: 'playCard',
+              legality: null,
+              costValidation: null,
+              costEffects: [],
+              targeting: { filter: { op: 'and', args: [] } },
+              stages: [{ stage: 'resolve', effects: [] }],
+              atomicity: 'atomic',
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'terminal.checkpoints.when',
+        expectedPath: `${conditionSurfacePathForTerminalCheckpointWhen(0)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          terminal: {
+            ...seed.terminal,
+            checkpoints: [
+              { id: 'cp-1', seat: '0', timing: 'duringCoup', when: { op: 'and', args: [] } },
+            ],
+          },
+        }) as unknown as GameDef,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const diagnostics = validateGameDef(testCase.buildDef(createValidGameDef()));
+      assert.ok(
+        diagnostics.some(
+          (diag) => diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID' && diag.path === testCase.expectedPath,
+        ),
+        `Expected CONDITION_BOOLEAN_ARITY_INVALID at ${testCase.expectedPath} for ${testCase.name}`,
+      );
+    }
+  });
+
+  it('rejects nested empty boolean ConditionAST args with full nested path', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
       actions: [
         {
           ...base.actions[0],
-          pre: { op: 'and', args: [] },
+          params: [
+            {
+              name: '$zone',
+              domain: {
+                query: 'connectedZones',
+                zone: 'deck:none',
+                via: {
+                  op: 'not',
+                  arg: {
+                    op: 'or',
+                    args: [
+                      { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'hand:0' },
+                      { op: 'and', args: [] },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
         },
       ],
     } as unknown as GameDef;
@@ -626,7 +832,9 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID' && diag.path === 'actions[0].pre.args',
+        (diag) =>
+          diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID'
+          && diag.path === `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryVia)}.arg.args[1].args`,
       ),
     );
   });

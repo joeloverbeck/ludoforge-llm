@@ -19,7 +19,12 @@ import type {
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import {
+  appendConditionSurfacePath,
   collectDeclaredBinderCandidatesFromEffectNode,
+  CONDITION_SURFACE_SUFFIX,
+  conditionSurfacePathForTerminalConditionWhen,
+  conditionSurfacePathForTriggerMatch,
+  conditionSurfacePathForTriggerWhen,
   isAllowedTokenFilterProp,
   isCanonicalBindingIdentifier,
   tokenFilterPropAlternatives,
@@ -436,7 +441,12 @@ export const validateValueExpr = (
   }
 
   if ('if' in valueExpr) {
-    validateConditionAst(diagnostics, valueExpr.if.when, `${path}.if.when`, context);
+    validateConditionAst(
+      diagnostics,
+      valueExpr.if.when,
+      appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.valueExprIfWhen),
+      context,
+    );
     validateValueExpr(diagnostics, valueExpr.if.then, `${path}.if.then`, context);
     validateValueExpr(diagnostics, valueExpr.if.else, `${path}.if.else`, context);
     return;
@@ -875,7 +885,12 @@ export const validateOptionsQuery = (
         validatePlayerSelector(diagnostics, query.spaceFilter.owner, `${path}.spaceFilter.owner`, context);
       }
       if (query.spaceFilter?.condition) {
-        validateConditionAst(diagnostics, query.spaceFilter.condition, `${path}.spaceFilter.condition`, context);
+        validateConditionAst(
+          diagnostics,
+          query.spaceFilter.condition,
+          appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.querySpaceFilterCondition),
+          context,
+        );
       }
       validateTokenFilter(diagnostics, query.filter, `${path}.filter`, context);
       return;
@@ -883,7 +898,12 @@ export const validateOptionsQuery = (
     case 'connectedZones': {
       validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       if (query.via) {
-        validateConditionAst(diagnostics, query.via, `${path}.via`, context);
+        validateConditionAst(
+          diagnostics,
+          query.via,
+          appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.queryVia),
+          context,
+        );
       }
       return;
     }
@@ -1043,7 +1063,12 @@ export const validateOptionsQuery = (
         'DOMAIN_NEXT_IN_ORDER_BIND_INVALID',
         'nextInOrderByCondition.bind',
       );
-      validateConditionAst(diagnostics, query.where, `${path}.where`, context);
+      validateConditionAst(
+        diagnostics,
+        query.where,
+        appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.queryWhere),
+        context,
+      );
       return;
     }
     case 'intsInVarRange': {
@@ -1210,7 +1235,12 @@ export const validateOptionsQuery = (
         validatePlayerSelector(diagnostics, query.filter.owner, `${path}.filter.owner`, context);
       }
       if (query.filter?.condition) {
-        validateConditionAst(diagnostics, query.filter.condition, `${path}.filter.condition`, context);
+        validateConditionAst(
+          diagnostics,
+          query.filter.condition,
+          appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.queryFilterCondition),
+          context,
+        );
       }
       return;
     }
@@ -1475,7 +1505,12 @@ export const validateEffectAst = (
     validateZoneRef(diagnostics, effect.moveAll.to, `${path}.moveAll.to`, context);
 
     if (effect.moveAll.filter) {
-      validateConditionAst(diagnostics, effect.moveAll.filter, `${path}.moveAll.filter`, context);
+      validateConditionAst(
+        diagnostics,
+        effect.moveAll.filter,
+        appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effectMoveAllFilter),
+        context,
+      );
     }
     return;
   }
@@ -1540,7 +1575,12 @@ export const validateEffectAst = (
   }
 
   if ('if' in effect) {
-    validateConditionAst(diagnostics, effect.if.when, `${path}.if.when`, context);
+    validateConditionAst(
+      diagnostics,
+      effect.if.when,
+      appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effectIfWhen),
+      context,
+    );
     effect.if.then.forEach((entry, index) => {
       validateEffectAst(diagnostics, entry, `${path}.if.then[${index}]`, context);
     });
@@ -1814,7 +1854,12 @@ export const validateEffectAst = (
       });
     }
     if (grant.zoneFilter !== undefined) {
-      validateConditionAst(diagnostics, grant.zoneFilter, `${path}.grantFreeOperation.zoneFilter`, context);
+      validateConditionAst(
+        diagnostics,
+        grant.zoneFilter,
+        appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effectGrantFreeOperationZoneFilter),
+        context,
+      );
     }
     return;
   }
@@ -2013,11 +2058,11 @@ export const validatePostAdjacencyBehavior = (
     }
 
     if (trigger.match) {
-      validateConditionAst(diagnostics, trigger.match, `triggers[${triggerIndex}].match`, context);
+      validateConditionAst(diagnostics, trigger.match, conditionSurfacePathForTriggerMatch(triggerIndex), context);
     }
 
     if (trigger.when) {
-      validateConditionAst(diagnostics, trigger.when, `triggers[${triggerIndex}].when`, context);
+      validateConditionAst(diagnostics, trigger.when, conditionSurfacePathForTriggerWhen(triggerIndex), context);
     }
 
     trigger.effects.forEach((effect, effectIndex) => {
@@ -2044,7 +2089,12 @@ export const validatePostAdjacencyBehavior = (
       });
     }
 
-    validateConditionAst(diagnostics, endCondition.when, `terminal.conditions[${endConditionIndex}].when`, context);
+    validateConditionAst(
+      diagnostics,
+      endCondition.when,
+      conditionSurfacePathForTerminalConditionWhen(endConditionIndex),
+      context,
+    );
   });
 
   if (terminal.scoring) {

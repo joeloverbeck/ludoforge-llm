@@ -82,4 +82,5 @@ export * from './verbalization-types.js';
 export * from './tooltip-humanizer.js';
 export * from './tooltip-suppression.js';
 export * from './tooltip-normalizer.js';
+export * from './tooltip-content-planner.js';
 export { extractResolvedBindFromDecisionId } from './decision-id.js';

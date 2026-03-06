@@ -717,7 +717,7 @@ describe('tooltip-normalizer', () => {
       }
     });
 
-    it('rule 29b: chooseN generic → SelectMessage(spaces) fallback', () => {
+    it('rule 29b: chooseN over enums → SelectMessage(items)', () => {
       const effect: EffectAST = {
         chooseN: {
           internalDecisionId: 'd4',
@@ -730,7 +730,25 @@ describe('tooltip-normalizer', () => {
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1b]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
-        assert.equal(msg.target, 'spaces');
+        assert.equal(msg.target, 'items');
+        assert.deepStrictEqual(msg.bounds, { min: 1, max: 2 });
+      }
+    });
+
+    it('rule 29b: chooseN over intsInRange → SelectMessage(items)', () => {
+      const effect: EffectAST = {
+        chooseN: {
+          internalDecisionId: 'd4b',
+          bind: 'amounts',
+          options: { query: 'intsInRange', min: 1, max: 10 },
+          min: 1,
+          max: 3,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1c]'));
+      assert.equal(msg.kind, 'select');
+      if (msg.kind === 'select') {
+        assert.equal(msg.target, 'items');
       }
     });
 
@@ -889,23 +907,88 @@ describe('tooltip-normalizer', () => {
       assert.equal(messages[1]!.kind, 'gain');
     });
 
-    it('rule 35: removeByPriority → RemoveMessage + budget', () => {
+    it('rule 35: removeByPriority single group → budget + one RemoveMessage', () => {
       const effect: EffectAST = {
         removeByPriority: {
           budget: 3,
           groups: [{
-            bind: 'token',
+            bind: 'guerrilla',
             over: { query: 'tokensInZone', zone: 'saigon' },
             to: 'casualties-nva',
           }],
         },
       };
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7]');
-      assert.ok(messages.length >= 2, 'Should include budget set + remove');
+      assert.equal(messages.length, 2, 'Should include budget set + 1 remove');
+      assert.equal(messages[0]!.kind, 'set');
+      if (messages[0]!.kind === 'set') {
+        assert.equal(messages[0]!.target, 'budget');
+        assert.equal(messages[0]!.value, '3');
+      }
+      assert.equal(messages[1]!.kind, 'remove');
+      if (messages[1]!.kind === 'remove') {
+        assert.equal(messages[1]!.tokenFilter, 'guerrilla');
+        assert.equal(messages[1]!.destination, 'casualties-nva');
+        assert.equal(messages[1]!.astPath, 'c[7].groups[0]');
+      }
+    });
+
+    it('rule 35: removeByPriority with multiple groups → per-group RemoveMessages preserving priority order', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 4,
+          groups: [
+            {
+              bind: 'guerrilla',
+              over: { query: 'tokensInZone', zone: 'saigon' },
+              to: 'casualties-nva',
+            },
+            {
+              bind: 'base',
+              over: { query: 'tokensInZone', zone: 'saigon' },
+              to: 'available-nva',
+            },
+          ],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7b]');
+      assert.equal(messages.length, 3, 'Should include budget set + 2 removes');
+      // Budget
+      assert.equal(messages[0]!.kind, 'set');
+      // Priority 0: guerrillas to casualties
+      assert.equal(messages[1]!.kind, 'remove');
+      if (messages[1]!.kind === 'remove') {
+        assert.equal(messages[1]!.tokenFilter, 'guerrilla');
+        assert.equal(messages[1]!.destination, 'casualties-nva');
+        assert.equal(messages[1]!.astPath, 'c[7b].groups[0]');
+      }
+      // Priority 1: bases to available
+      assert.equal(messages[2]!.kind, 'remove');
+      if (messages[2]!.kind === 'remove') {
+        assert.equal(messages[2]!.tokenFilter, 'base');
+        assert.equal(messages[2]!.destination, 'available-nva');
+        assert.equal(messages[2]!.astPath, 'c[7b].groups[1]');
+      }
+    });
+
+    it('rule 35: removeByPriority with from zone → RemoveMessage includes fromZone', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 2,
+          groups: [{
+            bind: 'troop',
+            over: { query: 'tokensInZone', zone: 'hue' },
+            from: 'hue',
+            to: 'available-us',
+          }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7c]');
       const removeMsg = messages.find(m => m.kind === 'remove');
-      assert.ok(removeMsg !== undefined, 'Should produce a RemoveMessage');
+      assert.ok(removeMsg !== undefined);
       if (removeMsg?.kind === 'remove') {
-        assert.equal(removeMsg.destination, 'casualties-nva');
+        assert.equal(removeMsg.fromZone, 'hue');
+        assert.equal(removeMsg.destination, 'available-us');
       }
     });
 

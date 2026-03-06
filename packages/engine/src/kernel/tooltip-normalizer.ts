@@ -404,8 +404,8 @@ const normalizeChooseN = (
     return [{ kind: 'select', target: 'zones', bounds, astPath }];
   }
 
-  // Rule 29b: chooseN generic
-  return [{ kind: 'select', target: 'spaces', bounds, astPath }];
+  // Rule 29b: chooseN generic (enums, ints, players, etc.)
+  return [{ kind: 'select', target: 'items', bounds, astPath }];
 };
 
 const normalizeChooseOne = (
@@ -479,19 +479,19 @@ const normalizeRemoveByPriority = (
 ): readonly TooltipMessage[] => {
   const { budget, groups } = payload.removeByPriority;
   const budgetStr = stringifyNumericExpr(budget);
-  const removeMsg: TooltipMessage = {
+  const groupMessages: readonly TooltipMessage[] = groups.map((group, i): TooltipMessage => ({
     kind: 'remove',
-    tokenFilter: '*',
-    fromZone: '<priority>',
-    destination: groups[0]?.to !== undefined ? stringifyZoneRef(groups[0].to) : '<target>',
-    astPath,
-  };
+    tokenFilter: group.bind,
+    fromZone: group.from !== undefined ? stringifyZoneRef(group.from) : '<priority>',
+    destination: stringifyZoneRef(group.to),
+    astPath: `${astPath}.groups[${i}]`,
+  }));
   const inChildren = payload.removeByPriority.in !== undefined
     ? normalizeEffectList(payload.removeByPriority.in, ctx, `${astPath}.in`)
     : [];
   return [
     { kind: 'set', target: 'budget', value: budgetStr, astPath: `${astPath}.budget` },
-    removeMsg,
+    ...groupMessages,
     ...inChildren,
   ];
 };

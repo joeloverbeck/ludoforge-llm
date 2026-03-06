@@ -1,6 +1,6 @@
 # LEGACTTOO-018: Normalizer Compound Semantic Accuracy — removeByPriority Groups and chooseN Fallback
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-normalizer.ts`
@@ -17,7 +17,7 @@ Two compound normalizer rules emit semantically inaccurate tooltip messages:
 ## Assumption Reassessment (2026-03-06)
 
 1. `removeByPriority` AST shape confirmed: `{ budget, groups: Array<{ filter, to }>, in? }` — `groups` is an ordered array where index = priority rank.
-2. `OptionsQuery` confirmed to have multiple `query` variants beyond spaces/tokens: `enums`, `mapSpaces`, `zones`, `adjacentZones`, `tokensInZone`, `tokensInMapSpaces`, `tokensInAdjacentZones`.
+2. `OptionsQuery` confirmed to have 17 `query` variants: `concat`, `tokenZones`, `tokensInZone`, `assetRows`, `tokensInMapSpaces`, `nextInOrderByCondition`, `intsInRange`, `intsInVarRange`, `enums`, `globalMarkers`, `players`, `zones`, `mapSpaces`, `adjacentZones`, `tokensInAdjacentZones`, `connectedZones`, `binding`. Of these, `mapSpaces`/`zones`/`adjacentZones` are space queries; `tokensInZone`/`tokensInMapSpaces`/`tokensInAdjacentZones` are token queries; the rest fall to the generic fallback.
 3. `SelectMessage.target` is typed `'spaces' | 'zones'` — needs extension to support a generic `'items'` target or query-specific targets.
 
 ## Architecture Check
@@ -77,3 +77,20 @@ Emit one `RemoveMessage` per priority group (preserving order) instead of collap
 
 1. `node --test dist/test/unit/kernel/tooltip-normalizer.test.js`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**All changes implemented as planned.** No deviations from ticket scope.
+
+### What Changed
+1. **`tooltip-ir.ts`**: Extended `SelectMessage.target` from `'spaces' | 'zones'` to `'spaces' | 'zones' | 'items'`.
+2. **`tooltip-normalizer.ts`**: `normalizeChooseN` fallback now emits `target: 'items'` instead of `'spaces'` for non-spatial, non-token queries (enums, ints, players, etc.).
+3. **`tooltip-normalizer.ts`**: `normalizeRemoveByPriority` now emits one `RemoveMessage` per priority group (preserving order via `astPath` suffix `.groups[N]`), using `group.bind` as `tokenFilter` and `group.from`/`group.to` for `fromZone`/`destination`. Previously collapsed all groups to a single message from `groups[0].to`.
+
+### Tests
+- Updated `rule 29b` test: expects `'items'` instead of `'spaces'`.
+- Added `chooseN over intsInRange` test: validates `'items'` target for numeric queries.
+- Updated `rule 35 single group` test: asserts tokenFilter, destination, and astPath per-group.
+- Added `rule 35 multiple groups` test: validates per-group emission with correct priority ordering.
+- Added `rule 35 with from zone` test: validates `fromZone` populated from group's `from` field.
+- All 3945 engine tests pass. Typecheck clean.

@@ -741,6 +741,40 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects non-conforming boolean token-filter nodes when malformed objects bypass typing', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: {
+                  op: 'and',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].params[0].domain.filter.op'
+          && diag.message === 'Malformed token filter expression node for operator "and".',
+      ),
+    );
+  });
+
   it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
     const base = createValidGameDef();
     const def = {

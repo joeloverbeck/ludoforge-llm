@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel token-filter utility/error-boundary cleanup
-**Deps**: tickets/TOKFILAST-013-token-filter-traversal-utility-fail-closed-hardening.md
+**Deps**: archive/tickets/TOKFILAST-013-token-filter-traversal-utility-fail-closed-hardening.md
 
 ## Problem
 

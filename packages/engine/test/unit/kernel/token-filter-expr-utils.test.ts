@@ -1,0 +1,162 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import { isEvalErrorCode } from '../../../src/kernel/eval-error.js';
+import {
+  foldTokenFilterExpr,
+  isUnsupportedTokenFilterExprError,
+  tokenFilterPathSuffix,
+  walkTokenFilterExpr,
+} from '../../../src/kernel/token-filter-expr-utils.js';
+import type { TokenFilterExpr } from '../../../src/kernel/types.js';
+
+describe('token-filter-expr-utils', () => {
+  it('builds deterministic token-filter path suffixes', () => {
+    assert.equal(
+      tokenFilterPathSuffix([
+        { kind: 'not' },
+        { kind: 'arg', index: 1 },
+        { kind: 'not' },
+      ]),
+      '.arg.args[1].arg',
+    );
+  });
+
+  it('folds valid token-filter trees in post-order', () => {
+    const expr: TokenFilterExpr = {
+      op: 'not',
+      arg: {
+        op: 'and',
+        args: [
+          { prop: 'id', op: 'eq', value: 'a' },
+          { op: 'or', args: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 1 },
+          ] },
+        ],
+      },
+    };
+
+    const visited: string[] = [];
+    foldTokenFilterExpr(expr, {
+      predicate: (predicate) => {
+        visited.push(`predicate:${predicate.prop}`);
+        return predicate.prop;
+      },
+      not: () => {
+        visited.push('not');
+        return 'not';
+      },
+      and: () => {
+        visited.push('and');
+        return 'and';
+      },
+      or: () => {
+        visited.push('or');
+        return 'or';
+      },
+    });
+
+    assert.deepEqual(visited, ['predicate:id', 'predicate:faction', 'predicate:rank', 'or', 'and', 'not']);
+  });
+
+  it('walks valid token-filter trees in pre-order with deterministic paths', () => {
+    const expr: TokenFilterExpr = {
+      op: 'or',
+      args: [
+        { prop: 'id', op: 'eq', value: 'a' },
+        { op: 'not', arg: { prop: 'faction', op: 'eq', value: 'US' } },
+      ],
+    };
+
+    const visited: string[] = [];
+    walkTokenFilterExpr(expr, (entry, path) => {
+      const node = 'prop' in entry ? `predicate:${entry.prop}` : `op:${entry.op}`;
+      visited.push(`${tokenFilterPathSuffix(path)}=${node}`);
+    });
+
+    assert.deepEqual(visited, [
+      '=op:or',
+      '.args[0]=predicate:id',
+      '.args[1]=op:not',
+      '.args[1].arg=predicate:faction',
+    ]);
+  });
+
+  it('fails closed for unsupported operators in fold and walk', () => {
+    const malformed = {
+      op: 'xor',
+      args: [{ prop: 'id', op: 'eq', value: 'a' }],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        if (!isUnsupportedTokenFilterExprError(error)) {
+          return false;
+        }
+        return error.context.reason === 'unsupported_operator' && tokenFilterPathSuffix(error.context.path) === '';
+      },
+    );
+
+    assert.throws(
+      () => walkTokenFilterExpr({
+        op: 'and',
+        args: [{ op: 'xor', args: [{ prop: 'id', op: 'eq', value: 'a' }] } as unknown as TokenFilterExpr],
+      } as TokenFilterExpr, () => {}),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        if (!isUnsupportedTokenFilterExprError(error)) {
+          return false;
+        }
+        return error.context.reason === 'unsupported_operator'
+          && tokenFilterPathSuffix(error.context.path) === '.args[0]';
+      },
+    );
+  });
+
+  it('fails closed for non-conforming boolean nodes in fold and walk', () => {
+    const malformedAnd = { op: 'and' } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformedAnd, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        if (!isUnsupportedTokenFilterExprError(error)) {
+          return false;
+        }
+        return error.context.reason === 'non_conforming_node';
+      },
+    );
+
+    assert.throws(
+      () => walkTokenFilterExpr(malformedAnd, () => {}),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        if (!isUnsupportedTokenFilterExprError(error)) {
+          return false;
+        }
+        return error.context.reason === 'non_conforming_node' && tokenFilterPathSuffix(error.context.path) === '';
+      },
+    );
+  });
+});

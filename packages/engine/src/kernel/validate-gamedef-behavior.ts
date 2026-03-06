@@ -40,7 +40,12 @@ import {
 } from './query-shape-inference.js';
 import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-contract.js';
 import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
-import { isTokenFilterPredicateExpr, tokenFilterPathSuffix, walkTokenFilterExpr } from './token-filter-expr-utils.js';
+import {
+  isTokenFilterPredicateExpr,
+  isUnsupportedTokenFilterExprError,
+  tokenFilterPathSuffix,
+  walkTokenFilterExpr,
+} from './token-filter-expr-utils.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -604,36 +609,45 @@ const validateTokenFilterExpr = (
   path: string,
   context: ValidationContext,
 ): void => {
-  walkTokenFilterExpr(filter, (entry, entryPathSegments) => {
-    const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
-    if (isTokenFilterPredicateExpr(entry)) {
-      validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
-      return;
+  try {
+    walkTokenFilterExpr(filter, (entry, entryPathSegments) => {
+      const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
+      if (isTokenFilterPredicateExpr(entry)) {
+        validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
+        return;
+      }
+      if (entry.op === 'not') {
+        return;
+      }
+      if (entry.args.length === 0) {
+        diagnostics.push({
+          code: 'DOMAIN_QUERY_INVALID',
+          path: `${entryPath}.args`,
+          severity: 'error',
+          message: `Token filter operator "${entry.op}" requires at least one expression argument.`,
+          suggestion: 'Provide one or more token filter expression arguments.',
+        });
+      }
+    });
+  } catch (error: unknown) {
+    if (!isUnsupportedTokenFilterExprError(error)) {
+      throw error;
     }
-    if (entry.op === 'not') {
-      return;
-    }
-    const op = Reflect.get(entry as object, 'op');
-    if (op !== 'and' && op !== 'or' && op !== 'not') {
-      diagnostics.push({
-        code: 'DOMAIN_QUERY_INVALID',
-        path: `${entryPath}.op`,
-        severity: 'error',
-        message: `Unsupported token filter operator "${String(op)}".`,
-        suggestion: 'Use one of: and, or, not.',
-      });
-      return;
-    }
-    if (entry.args.length === 0) {
-      diagnostics.push({
-        code: 'DOMAIN_QUERY_INVALID',
-        path: `${entryPath}.args`,
-        severity: 'error',
-        message: `Token filter operator "${entry.op}" requires at least one expression argument.`,
-        suggestion: 'Provide one or more token filter expression arguments.',
-      });
-    }
-  });
+    const entryPath = `${path}${tokenFilterPathSuffix(error.context.path)}`;
+    const suggestion = error.context.reason === 'unsupported_operator'
+      ? 'Use one of: and, or, not.'
+      : 'Use a predicate leaf or a well-formed and/or/not expression node.';
+    const message = error.context.reason === 'unsupported_operator'
+      ? `Unsupported token filter operator "${String(error.context.op)}".`
+      : `Malformed token filter expression node for operator "${String(error.context.op)}".`;
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path: `${entryPath}.op`,
+      severity: 'error',
+      message,
+      suggestion,
+    });
+  }
 };
 
 const validateTokenFilter = (

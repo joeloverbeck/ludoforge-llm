@@ -79,4 +79,6 @@ export * from './condition-annotator.js';
 export * from './tooltip-ir.js';
 export * from './tooltip-rule-card.js';
 export * from './verbalization-types.js';
+export * from './tooltip-humanizer.js';
+export * from './tooltip-suppression.js';
 export { extractResolvedBindFromDecisionId } from './decision-id.js';

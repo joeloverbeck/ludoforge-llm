@@ -19,7 +19,7 @@ import {
 import type {
   RenderAdjacency,
   RenderChoiceContext,
-  RenderChoiceOption,
+
   RenderChoiceTarget,
   RenderChoiceUi,
   RenderChoiceUiInvalidReason,
@@ -1217,23 +1217,6 @@ function deriveChoiceBreadcrumb(
   });
 }
 
-function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoiceOption[] {
-  if (context.choicePending === null) {
-    return [];
-  }
-  return context.choicePending.options.map((option) => ({
-    choiceValueId: serializeChoiceValueIdentity(option.value),
-    value: option.value,
-    displayName: formatChoiceValueFallback(option.value),
-    target: {
-      kind: 'scalar',
-      entityId: null,
-      displaySource: 'fallback',
-    },
-    legality: option.legality,
-    illegalReason: option.illegalReason,
-  }));
-}
 
 interface ChoiceOptionResolution {
   readonly displayName: string;
@@ -1349,7 +1332,7 @@ function deriveChoiceUi(
 
     const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
     const playersById = new Map(players.map((player) => [player.id, player] as const));
-    const options = deriveRenderChoiceOptions(context).map((option) => {
+    const options = pending.options.map((option) => {
       const resolved = resolveChoiceOption(
         option.value,
         pending.targetKinds,
@@ -1358,9 +1341,12 @@ function deriveChoiceUi(
         playersById,
       );
       return {
-        ...option,
+        choiceValueId: serializeChoiceValueIdentity(option.value),
+        value: option.value,
         displayName: resolved.displayName,
         target: resolved.target,
+        legality: option.legality,
+        illegalReason: option.illegalReason,
       };
     });
     if (pending.type === 'chooseN') {

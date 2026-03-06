@@ -1,6 +1,6 @@
 # CHOICEUI-011: Eliminate Throwaway Choice Option Formatting
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -8,16 +8,16 @@
 
 ## Problem
 
-`deriveRenderChoiceOptions()` computes `formatChoiceValueFallback(option.value)` for every choice option's `displayName` (line 1208). Immediately after, `deriveChoiceUi` at lines 1334-1346 overwrites every option's `displayName` with the result from `resolveChoiceOption()`. The initial formatting work is discarded on every render cycle.
+`deriveRenderChoiceOptions()` computes `formatChoiceValueFallback(option.value)` for every choice option's `displayName` (line 1227). Immediately after, `deriveChoiceUi` at lines 1352-1365 overwrites every option's `displayName` with the result from `resolveChoiceOption()`. The initial formatting work is discarded on every render cycle.
 
 This two-pass pattern exists because `deriveRenderChoiceOptions` was the original options builder and `resolveChoiceOption` was added later to handle zone/token resolution. The intermediate step is now pure waste.
 
 ## Assumption Reassessment (2026-03-06)
 
-1. `deriveRenderChoiceOptions` (line 1201): maps each `context.choicePending.options` entry into a `RenderChoiceOption`, calling `formatChoiceValueFallback` for `displayName` and hardcoding `target: { kind: 'scalar', entityId: null, displaySource: 'fallback' }`.
-2. `deriveChoiceUi` (line 1334): calls `deriveRenderChoiceOptions(context).map(option => { const resolved = resolveChoiceOption(...); return { ...option, displayName: resolved.displayName, target: resolved.target }; })` — overwriting both `displayName` and `target`.
-3. `deriveRenderChoiceOptions` is called only from `deriveChoiceUi` (line 1334). No other callers exist.
-4. `resolveChoiceOption` already handles the fallback case internally (line 1232) — it calls `formatChoiceValueFallback` when resolution fails. So the initial formatting is truly redundant.
+1. `deriveRenderChoiceOptions` (line 1220): maps each `context.choicePending.options` entry into a `RenderChoiceOption`, calling `formatChoiceValueFallback` for `displayName` and hardcoding `target: { kind: 'scalar', entityId: null, displaySource: 'fallback' }`.
+2. `deriveChoiceUi` (line 1352): calls `deriveRenderChoiceOptions(context).map(option => { const resolved = resolveChoiceOption(...); return { ...option, displayName: resolved.displayName, target: resolved.target }; })` — overwriting both `displayName` and `target`.
+3. `deriveRenderChoiceOptions` is called only from `deriveChoiceUi` (line 1352). No other callers exist.
+4. `resolveChoiceOption` already handles the fallback case internally (line 1250) — it calls `formatChoiceValueFallback` when resolution fails. So the initial formatting is truly redundant.
 
 ## Architecture Check
 
@@ -93,3 +93,7 @@ Delete the now-unused function.
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+Implemented exactly as planned. The two-pass pattern in `deriveChoiceUi` was replaced with single-pass construction directly from `pending.options`, and the `deriveRenderChoiceOptions` helper was deleted along with its now-unused `RenderChoiceOption` import. No behavioral change — all 1444 runner tests pass, typecheck clean. Ticket line numbers were corrected (off by ~18-20 lines from the original estimates).

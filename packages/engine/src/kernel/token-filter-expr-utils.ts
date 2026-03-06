@@ -1,5 +1,5 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
-import { booleanArityMessage } from './boolean-arity-policy.js';
+import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { isPredicateOp } from './predicate-op-contract.js';
 
 export interface TokenFilterPathSegmentNot {
@@ -133,7 +133,7 @@ export const foldTokenFilterExpr = <TResult>(
       return handlers.not(entry, fold(entry.arg, [...path, { kind: 'not' }]));
     }
     if (isTokenFilterBooleanExpr(entry)) {
-      if (entry.args.length === 0) {
+      if (!isNonEmptyArray(entry.args)) {
         throw tokenFilterBooleanArityError(entry, entry.op, path);
       }
       const foldedArgs = entry.args.map((arg, index) => fold(arg, [...path, { kind: 'arg', index }]));
@@ -164,7 +164,7 @@ export const walkTokenFilterExpr = (
       return;
     }
     if (isTokenFilterBooleanExpr(entry)) {
-      if (entry.args.length === 0) {
+      if (!isNonEmptyArray(entry.args)) {
         throw tokenFilterBooleanArityError(entry, entry.op, path);
       }
       visit(entry, path);

@@ -6,6 +6,7 @@ import {
   booleanAritySuggestion,
   isNonEmptyArray,
 } from '../../../src/kernel/boolean-arity-policy.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 describe('boolean-arity-policy', () => {
   it('builds deterministic operator arity messages by domain', () => {
@@ -30,5 +31,15 @@ describe('boolean-arity-policy', () => {
 
     assert.equal(isNonEmptyArray(empty), false);
     assert.equal(isNonEmptyArray(single), true);
+  });
+
+  it('keeps remaining callsites on shared non-empty-array guards', () => {
+    const tokenFilterExprUtils = readKernelSource('src/kernel/token-filter-expr-utils.ts');
+    const validateGameDefBehavior = readKernelSource('src/kernel/validate-gamedef-behavior.ts');
+
+    assert.match(tokenFilterExprUtils, /\bisNonEmptyArray\s*\(/);
+    assert.match(validateGameDefBehavior, /\bisNonEmptyArray\s*\(/);
+    assert.doesNotMatch(tokenFilterExprUtils, /args\.length\s*===\s*0/);
+    assert.doesNotMatch(validateGameDefBehavior, /condition\.args\.length\s*===\s*0/);
   });
 });

@@ -25,6 +25,7 @@ import {
   conditionSurfacePathForTriggerWhen,
   EFFECT_BINDER_SURFACE_CONTRACT,
 } from '../../src/contracts/index.js';
+import { booleanArityMessage } from '../../src/kernel/boolean-arity-policy.js';
 import { collectEffectDeclaredBinderPolicyPatternsForTest } from '../../src/kernel/validate-gamedef-behavior.js';
 import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
@@ -889,6 +890,27 @@ describe('validateGameDef reference checks', () => {
           && diag.path === `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.via)}.arg.args[1].args`,
       ),
     );
+  });
+
+  it('uses shared condition boolean-arity message for empty or args', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      terminal: {
+        ...base.terminal,
+        conditions: [{ when: { op: 'or', args: [] }, result: { type: 'draw' } }],
+      },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const diagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID'
+        && diag.path === `${conditionSurfacePathForTerminalConditionWhen(0)}.args`,
+    );
+
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.message, booleanArityMessage('condition', 'or'));
   });
 
   it('rejects unsupported token-filter operators when malformed objects bypass typing', () => {

@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — contract API shape cleanup (no behavior change)
-**Deps**: tickets/TOKFILAST-023-condition-surface-contract-guardrail-policy.md
+**Deps**: archive/tickets/TOKFILAST-023-condition-surface-contract-guardrail-policy.md
 
 ## Problem
 

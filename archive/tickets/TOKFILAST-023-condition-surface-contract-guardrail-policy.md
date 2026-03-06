@@ -1,6 +1,6 @@
 # TOKFILAST-023: Add Guardrail Policy for Condition-Surface Contract Parity
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — lint/policy test coverage for validator contract usage
@@ -15,6 +15,7 @@ The condition-surface contract is now present, but there is no guardrail that pr
 1. Validator condition-path centralization depends on developers consistently using helper APIs, not on an enforced policy.
 2. Existing lint/policy test suites already enforce architectural contracts in this repository, so this area can follow the same pattern.
 3. No active ticket currently enforces condition-surface helper usage across validator callsites.
+4. Scope refinement: enforcement should target top-level `validateConditionAst` callsites in canonical validator modules (`validate-gamedef-core.ts`, `validate-gamedef-behavior.ts`, `validate-gamedef-extensions.ts`) and should not flag recursive nested path composition inside `validateConditionAst` itself (for example `${path}.args[...]`).
 
 ## Architecture Check
 
@@ -26,13 +27,17 @@ The condition-surface contract is now present, but there is no guardrail that pr
 
 ### 1. Add a policy test for validator condition-surface callsites
 
-Create a focused unit lint/policy test that scans validator files and fails when top-level `validateConditionAst` callsites use raw inline path templates where contract helpers are required.
+Create a focused unit lint/policy test that parses the canonical validator modules and fails when top-level `validateConditionAst` callsites use raw inline path templates where contract helpers are required.
+
+Implementation requirement:
+- Use AST-based callsite inspection (not line-based string matching) for robustness against formatting drift.
 
 ### 2. Document allowed vs disallowed path-construction patterns
 
 In the policy test and/or associated contract comments, codify:
 - allowed: `conditionSurfacePathFor*` and `appendConditionSurfacePath(...)`
-- disallowed: top-level raw literal templates for those same surfaces
+- allowed (nested recursion): path extension under existing context, for example `${path}.args[${index}]`, `${path}.arg`, `${path}.via`
+- disallowed: top-level raw literal/templates for the canonical condition surfaces
 
 ## Files to Touch
 
@@ -49,7 +54,10 @@ In the policy test and/or associated contract comments, codify:
 ### Tests That Must Pass
 
 1. Policy test fails when a validator top-level condition surface uses raw path literals instead of contract helpers.
-2. Policy test passes for current contract-compliant validator code.
+2. Policy test passes for current contract-compliant validator code in:
+   - `validate-gamedef-core.ts`
+   - `validate-gamedef-behavior.ts`
+   - `validate-gamedef-extensions.ts`
 3. Existing suite: `pnpm -F @ludoforge/engine test:unit`.
 
 ### Invariants
@@ -61,7 +69,7 @@ In the policy test and/or associated contract comments, codify:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/lint/<new-condition-surface-policy>.test.ts` — enforce contract usage in validator callsites to prevent path drift regressions.
+1. `packages/engine/test/unit/lint/<new-condition-surface-policy>.test.ts` — AST-based enforcement of top-level validator condition-surface helper usage to prevent path drift regressions.
 
 ### Commands
 
@@ -69,3 +77,16 @@ In the policy test and/or associated contract comments, codify:
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
 
+## Outcome
+
+- Completion date: 2026-03-06
+- What changed:
+  - Added `packages/engine/test/unit/lint/condition-surface-validator-callsites-policy.test.ts` with AST-based guardrail coverage that enforces top-level `validateConditionAst` callsites in canonical validator modules use `conditionSurfacePathFor*` or `appendConditionSurfacePath(...)`.
+  - Updated `packages/engine/src/contracts/condition-surface-contract.ts` comments to document contract-owned top-level condition path composition.
+  - Reassessed and corrected ticket scope to explicitly require AST-based enforcement on canonical validator modules and to permit nested recursive `${path}.…` extensions inside `validateConditionAst`.
+- Deviations from original plan:
+  - Implementation used strict AST callsite analysis (instead of any line-based scan) to make the guardrail resilient to formatting drift and reduce false positives.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

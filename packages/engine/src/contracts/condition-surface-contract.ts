@@ -15,6 +15,8 @@ export const CONDITION_SURFACE_SUFFIX = {
 
 export type ConditionSurfaceSuffix = (typeof CONDITION_SURFACE_SUFFIX)[keyof typeof CONDITION_SURFACE_SUFFIX];
 
+// Validator top-level condition surfaces must compose paths only through this contract API.
+// Guardrail coverage in unit lint tests enforces this and forbids ad-hoc string/template paths.
 export const appendConditionSurfacePath = (basePath: string, suffix: ConditionSurfaceSuffix): string =>
   `${basePath}.${suffix}`;
 

@@ -7,7 +7,7 @@
 
 import type { EffectAST, ValueExpr, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
 import type { VerbalizationDef } from './verbalization-types.js';
-import type { TooltipMessage } from './tooltip-ir.js';
+import type { TooltipMessage, VarScope } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
 
 export interface NormalizerContext {
@@ -48,7 +48,7 @@ const stringifyNumericExpr = (expr: NumericValueExpr): string => {
 };
 
 type ScopeFields = {
-  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scope?: VarScope;
   readonly scopeOwner?: string;
 };
 

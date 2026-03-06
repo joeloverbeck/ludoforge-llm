@@ -1,9 +1,9 @@
 # CHOICEUI-005: Iteration Context Extraction Utility
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
-**Engine Changes**: Yes -- barrel export only (`packages/engine/src/kernel/index.ts`)
+**Engine Changes**: Yes -- barrel export only (`packages/engine/src/kernel/runtime.ts` + `index.ts`)
 **Deps**: None
 
 ## Problem
@@ -29,14 +29,14 @@ This context is needed by CHOICEUI-006 (choice context header) and CHOICEUI-007/
 
 ## What to Change
 
-### 1. Export `extractResolvedBindFromDecisionId` from engine barrel
+### 1. Export `extractResolvedBindFromDecisionId` from engine runtime barrel
 
-In `packages/engine/src/kernel/index.ts`, add:
+The runner exclusively imports from `@ludoforge/engine/runtime` (mapped to `runtime.ts`), not from `kernel/index.ts`. The export must go into `packages/engine/src/kernel/runtime.ts`:
 ```typescript
 export { extractResolvedBindFromDecisionId } from './decision-id.js';
 ```
 
-Verify this is re-exported from the engine's top-level runtime barrel so the runner can import it as `@ludoforge/engine/runtime`.
+Also add to `packages/engine/src/kernel/index.ts` for completeness (engine-internal consumers).
 
 ### 2. Create `packages/runner/src/model/iteration-context.ts`
 
@@ -70,7 +70,8 @@ export function parseIterationContext(
 
 ## Files to Touch
 
-- `packages/engine/src/kernel/index.ts` (modify -- add barrel export)
+- `packages/engine/src/kernel/runtime.ts` (modify -- add barrel export for runner)
+- `packages/engine/src/kernel/index.ts` (modify -- add barrel export for engine internals)
 - `packages/runner/src/model/iteration-context.ts` (new)
 - `packages/runner/test/model/iteration-context.test.ts` (new)
 
@@ -112,3 +113,21 @@ export function parseIterationContext(
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm -F @ludoforge/runner test`
 4. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completed 2026-03-06.**
+
+### Deviation from original plan
+- The ticket originally specified exporting from `kernel/index.ts` only. The runner exclusively imports from `@ludoforge/engine/runtime` (mapped to `runtime.ts`), so the export was added to `runtime.ts` as the primary barrel. Also added to `index.ts` for engine-internal consumers. The ticket was corrected before implementation.
+
+### What was changed
+- `packages/engine/src/kernel/runtime.ts` — added named export of `extractResolvedBindFromDecisionId` from `decision-id.js`
+- `packages/engine/src/kernel/index.ts` — same named export added for completeness
+- `packages/runner/src/model/iteration-context.ts` — new file: `IterationContext` interface + `parseIterationContext()` pure function
+- `packages/runner/test/model/iteration-context.test.ts` — new file: 9 unit tests covering all acceptance criteria
+
+### Verification
+- Engine: 3739 tests pass, 0 failures
+- Runner: 1416 tests pass (147 test files), 0 failures
+- Typecheck: clean across both packages

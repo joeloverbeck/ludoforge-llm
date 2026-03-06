@@ -76,3 +76,4 @@ export * from './zobrist.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
 export * from './condition-annotator.js';
+export { extractResolvedBindFromDecisionId } from './decision-id.js';

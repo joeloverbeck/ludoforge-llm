@@ -25,6 +25,23 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/engine/src/kernel/effects-*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["./eval-error.js", "./eval-error.ts"],
+              message:
+                "Import eval constructor helpers through dedicated runtime boundaries instead of directly from eval-error.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.ts"],
     languageOptions: {
       globals: {

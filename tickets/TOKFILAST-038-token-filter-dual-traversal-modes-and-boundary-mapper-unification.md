@@ -50,7 +50,7 @@ Ensure tests lock strict runtime fail-fast semantics and tolerant validator mult
 ## Out of Scope
 
 - CNL predicate operator single-source/alias-removal work (`tickets/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md`).
-- Effect import-boundary lint policy (`tickets/TOKFILAST-029-effects-eval-constructor-import-boundary-guard.md`).
+- Effect import-boundary lint policy (`archive/tickets/TOKFILAST/TOKFILAST-029-effects-eval-constructor-import-boundary-guard.md`).
 - Game-specific content/model changes in `GameSpecDoc` or visual presentation data.
 
 ## Acceptance Criteria

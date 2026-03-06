@@ -124,8 +124,8 @@ describe('ChoicePanel', () => {
       }),
     );
 
-    expect(html).toContain('Zone A');
-    expect(html).toContain('Zone B');
+    expect(html).toContain('first: Zone A');
+    expect(html).toContain('second: Zone B');
     expect(html).toContain('data-testid="choice-breadcrumb-current"');
   });
 

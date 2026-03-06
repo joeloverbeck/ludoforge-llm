@@ -337,7 +337,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
                 void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, index);
               }}
             >
-              {step.chosenDisplayName}
+              {step.displayName}: {step.chosenDisplayName}
             </button>
           ))}
           {isPendingChoice ? (

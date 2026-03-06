@@ -927,7 +927,7 @@ describe('deriveRenderModel state metadata', () => {
         'previousChoice',
         'Previous Choice',
         ['table:none', 'token-a'],
-        '[Table None, Token A]',
+        'Table None, Token A',
       ),
     ]);
   });

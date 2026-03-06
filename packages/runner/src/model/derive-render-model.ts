@@ -39,7 +39,7 @@ import type {
 } from './render-model.js';
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
-import { formatChoiceValueFallback, serializeChoiceValueIdentity } from './choice-value-utils.js';
+import { formatChoiceValueFallback, formatChoiceValueResolved, serializeChoiceValueIdentity } from './choice-value-utils.js';
 import { deriveVictoryStandings } from './derive-victory-standings.js';
 import { parseIterationContext } from './iteration-context.js';
 
@@ -134,7 +134,7 @@ export function deriveRenderModel(
     phaseDisplayName: formatIdAsDisplayName(String(state.currentPhase)),
     eventDecks,
     actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
-    choiceBreadcrumb: deriveChoiceBreadcrumb(context),
+    choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
     choiceContext,
     choiceUi,
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
@@ -1184,14 +1184,17 @@ function deriveChoiceContext(
   };
 }
 
-function deriveChoiceBreadcrumb(context: RenderContext): RenderModel['choiceBreadcrumb'] {
+function deriveChoiceBreadcrumb(
+  context: RenderContext,
+  zonesById: ReadonlyMap<string, RenderZone>,
+): RenderModel['choiceBreadcrumb'] {
   return context.choiceStack.map((step) => ({
     decisionId: step.decisionId,
     name: step.name,
     displayName: formatIdAsDisplayName(step.name),
     chosenValueId: serializeChoiceValueIdentity(step.value),
     chosenValue: step.value,
-    chosenDisplayName: formatChoiceValueFallback(step.value),
+    chosenDisplayName: formatChoiceValueResolved(step.value, zonesById),
   }));
 }
 

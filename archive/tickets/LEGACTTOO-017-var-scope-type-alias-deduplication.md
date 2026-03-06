@@ -1,6 +1,6 @@
 # LEGACTTOO-017: VarScope Type Alias — Deduplicate Scope Literal Union
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `tooltip-ir.ts` (new type alias, update 6 field declarations), `tooltip-normalizer.ts` (import and use alias in `ScopeFields`)
@@ -93,3 +93,10 @@ type ScopeFields = {
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-06
+- **What changed**: Added `export type VarScope = 'global' | 'player' | 'zone'` in `tooltip-ir.ts:16`. Replaced all 5 inline scope unions in message interfaces (`PayMessage`, `GainMessage`, `SetMessage`, `TransferMessage.fromScope`, `TransferMessage.toScope`) with `VarScope`. Updated `ScopeFields` in `tooltip-normalizer.ts` to import and use `VarScope`.
+- **Deviations**: None. Implemented exactly as specified.
+- **Verification**: No inline `'global' | 'player' | 'zone'` unions remain outside the type alias definition.

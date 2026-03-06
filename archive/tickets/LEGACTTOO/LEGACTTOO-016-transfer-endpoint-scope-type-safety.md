@@ -1,6 +1,6 @@
 # LEGACTTOO-016: Transfer Endpoint Scope — Type-Safe Field Mapping
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `tooltip-normalizer.ts` (refactor `extractEndpointScopeFields`)
@@ -80,3 +80,7 @@ return [{
 
 1. `node --test packages/engine/dist/test/unit/kernel/tooltip-normalizer.test.js`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Implemented exactly as planned. Removed `extractEndpointScopeFields` (12 lines) and updated `normalizeTransferVar` to call `extractScopeFields` on each endpoint with explicit typed field mapping. No behavioral change — all 58 existing normalizer tests pass. Zero `Record<string, string>` return types remain in the normalizer. Typecheck passes across both packages.

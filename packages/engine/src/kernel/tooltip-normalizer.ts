@@ -124,19 +124,6 @@ const normalizeSetVar = (
   return [{ kind: 'set', target: varName, value: stringifyValueExpr(value), ...scopeFields, astPath }];
 };
 
-const extractEndpointScopeFields = (
-  endpoint: { readonly scope: string; readonly player?: PlayerSel; readonly zone?: ZoneRef },
-  prefix: 'from' | 'to',
-): Record<string, string> => {
-  if (endpoint.scope === 'pvar' && endpoint.player !== undefined) {
-    return { [`${prefix}Scope`]: 'player', [`${prefix}ScopeOwner`]: stringifyPlayerSel(endpoint.player) };
-  }
-  if (endpoint.scope === 'zoneVar' && endpoint.zone !== undefined) {
-    return { [`${prefix}Scope`]: 'zone', [`${prefix}ScopeOwner`]: stringifyZoneRef(endpoint.zone) };
-  }
-  return {};
-};
-
 const normalizeTransferVar = (
   payload: EffectOf<'transferVar'>,
   astPath: string,
@@ -144,8 +131,8 @@ const normalizeTransferVar = (
   const { from, to, amount } = payload.transferVar;
   const numAmount = typeof amount === 'number' ? amount : 0;
   const amountExpr = typeof amount === 'number' ? undefined : stringifyNumericExpr(amount);
-  const fromScopeFields = extractEndpointScopeFields(from, 'from');
-  const toScopeFields = extractEndpointScopeFields(to, 'to');
+  const fromScope = extractScopeFields(from);
+  const toScope = extractScopeFields(to);
   return [{
     kind: 'transfer',
     resource: from.var,
@@ -153,8 +140,8 @@ const normalizeTransferVar = (
     from: from.var,
     to: to.var,
     ...(amountExpr !== undefined ? { amountExpr } : {}),
-    ...fromScopeFields,
-    ...toScopeFields,
+    ...(fromScope.scope !== undefined ? { fromScope: fromScope.scope, fromScopeOwner: fromScope.scopeOwner } : {}),
+    ...(toScope.scope !== undefined ? { toScope: toScope.scope, toScopeOwner: toScope.scopeOwner } : {}),
     astPath,
   }];
 };

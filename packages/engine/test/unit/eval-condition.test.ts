@@ -76,7 +76,7 @@ describe('evalCondition', () => {
     assert.equal(evalCondition({ op: '>=', left: 3, right: 3 }, ctx), true);
   });
 
-  it('evaluates boolean logic including vacuous and/or', () => {
+  it('evaluates boolean logic and rejects zero-arity and/or', () => {
     const ctx = makeCtx();
 
     assert.equal(evalCondition({ op: 'and', args: [{ op: '==', left: 1, right: 1 }] }, ctx), true);
@@ -84,8 +84,6 @@ describe('evalCondition', () => {
       evalCondition({ op: 'and', args: [{ op: '==', left: 1, right: 1 }, { op: '==', left: 1, right: 2 }] }, ctx),
       false,
     );
-    assert.equal(evalCondition({ op: 'and', args: [] }, ctx), true);
-
     assert.equal(
       evalCondition({ op: 'or', args: [{ op: '==', left: 1, right: 2 }, { op: '==', left: 2, right: 2 }] }, ctx),
       true,
@@ -94,10 +92,17 @@ describe('evalCondition', () => {
       evalCondition({ op: 'or', args: [{ op: '==', left: 1, right: 2 }, { op: '==', left: 2, right: 3 }] }, ctx),
       false,
     );
-    assert.equal(evalCondition({ op: 'or', args: [] }, ctx), false);
-
     assert.equal(evalCondition({ op: 'not', arg: { op: '==', left: 1, right: 1 } }, ctx), false);
     assert.equal(evalCondition({ op: 'not', arg: { op: '==', left: 1, right: 2 } }, ctx), true);
+
+    assert.throws(
+      () => evalCondition({ op: 'and', args: [] } as unknown as (Parameters<typeof evalCondition>[0]), ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+    assert.throws(
+      () => evalCondition({ op: 'or', args: [] } as unknown as (Parameters<typeof evalCondition>[0]), ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
   });
 
   it('evaluates nested expressions', () => {

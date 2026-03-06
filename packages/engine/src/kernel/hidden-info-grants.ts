@@ -35,6 +35,14 @@ const canonicalizeValue = (value: unknown): unknown => {
   return value;
 };
 
+const toNonEmpty = <T>(values: readonly T[]): readonly [T, ...T[]] => {
+  if (values.length === 0) {
+    throw new Error('Expected non-empty values.');
+  }
+  const [first, ...rest] = values;
+  return [first!, ...rest];
+};
+
 export const normalizeObservers = (players: readonly PlayerId[]): readonly PlayerId[] => (
   [...new Set(players)].sort((left, right) => left - right)
 );
@@ -68,17 +76,17 @@ export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterE
     not: (_entry, arg) => ({ op: 'not', arg }),
     and: (_entry, args) => ({
       op: 'and',
-      args: [...args]
+      args: toNonEmpty([...args]
         .map((entry) => ({ key: JSON.stringify(canonicalizeValue(entry)), expr: entry }))
         .sort((left, right) => compareStrings(left.key, right.key))
-        .map((entry) => entry.expr),
+        .map((entry) => entry.expr)),
     }),
     or: (_entry, args) => ({
       op: 'or',
-      args: [...args]
+      args: toNonEmpty([...args]
         .map((entry) => ({ key: JSON.stringify(canonicalizeValue(entry)), expr: entry }))
         .sort((left, right) => compareStrings(left.key, right.key))
-        .map((entry) => entry.expr),
+        .map((entry) => entry.expr)),
     }),
   });
 };

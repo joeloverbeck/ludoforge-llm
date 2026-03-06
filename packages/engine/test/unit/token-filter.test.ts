@@ -96,7 +96,7 @@ describe('token-filter', () => {
           },
         },
       ],
-    };
+    } as TokenFilterExpr;
 
     assert.equal(matchesTokenFilterExpr(token, expression), true);
   });
@@ -105,11 +105,11 @@ describe('token-filter', () => {
     const token = makeToken('a', { suit: 'hearts' });
 
     assert.throws(
-      () => matchesTokenFilterExpr(token, { op: 'and', args: [] }),
+      () => matchesTokenFilterExpr(token, { op: 'and', args: [] } as unknown as TokenFilterExpr),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
     assert.throws(
-      () => matchesTokenFilterExpr(token, { op: 'or', args: [] }),
+      () => matchesTokenFilterExpr(token, { op: 'or', args: [] } as unknown as TokenFilterExpr),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });

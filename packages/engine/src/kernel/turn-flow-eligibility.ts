@@ -944,11 +944,12 @@ export const resolveFreeOperationDiscoveryAnalysis = (
 
   const zoneFilters: ConditionAST[] = applicable
     .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
+  const [firstZoneFilter, ...remainingZoneFilters] = zoneFilters;
   const zoneFilter: ConditionAST | undefined = zoneFilters.length === 0
     ? undefined
     : zoneFilters.length === 1
-      ? zoneFilters[0]
-      : { op: 'or', args: zoneFilters };
+      ? firstZoneFilter
+      : { op: 'or', args: [firstZoneFilter!, ...remainingZoneFilters] };
 
   return {
     denial: explainFreeOperationBlockFromAnalysis(analysis),

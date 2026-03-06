@@ -486,6 +486,15 @@ export const validateConditionAst = (
   switch (condition.op) {
     case 'and':
     case 'or': {
+      if (condition.args.length === 0) {
+        diagnostics.push({
+          code: 'CONDITION_BOOLEAN_ARITY_INVALID',
+          path: `${path}.args`,
+          severity: 'error',
+          message: `Condition operator "${condition.op}" requires at least one argument.`,
+          suggestion: 'Provide at least one condition in args.',
+        });
+      }
       condition.args.forEach((entry, index) => {
         validateConditionAst(diagnostics, entry, `${path}.args[${index}]`, context);
       });

@@ -12,6 +12,7 @@ import type {
   AssetRowsCardinality,
   AssetRowPredicate,
   ConditionAST,
+  NonEmptyReadonlyArray,
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
@@ -84,6 +85,13 @@ const SUPPORTED_REFERENCE_KINDS = [
   'activePlayer',
 ];
 
+const toNonEmpty = <T>(values: readonly T[]): NonEmptyReadonlyArray<T> => {
+  if (values.length === 0) {
+    throw new Error('Expected non-empty values.');
+  }
+  return [values[0]!, ...values.slice(1)];
+};
+
 export function lowerConditionNode(
   source: unknown,
   context: ConditionLoweringContext,
@@ -99,7 +107,7 @@ export function lowerConditionNode(
   switch (source.op) {
     case 'and':
     case 'or': {
-      if (!Array.isArray(source.args)) {
+      if (!Array.isArray(source.args) || source.args.length === 0) {
         return missingCapability(path, `${source.op} condition`, source, ['{ op, args: [...] }']);
       }
       const loweredArgs = lowerConditionArray(source.args, context, `${path}.args`);
@@ -107,7 +115,7 @@ export function lowerConditionNode(
         return { value: null, diagnostics: loweredArgs.diagnostics };
       }
       return {
-        value: { op: source.op, args: loweredArgs.value },
+        value: { op: source.op, args: toNonEmpty(loweredArgs.value) },
         diagnostics: loweredArgs.diagnostics,
       };
     }
@@ -592,7 +600,7 @@ function normalizeTokenFilterExprShape(expr: TokenFilterExpr): TokenFilterExpr {
 
   return {
     op: expr.op,
-    args: flattenedArgs,
+    args: toNonEmpty(flattenedArgs),
   };
 }
 
@@ -627,7 +635,7 @@ export function lowerTokenFilterExpr(
     if (args.length !== source.args.length) {
       return { value: null, diagnostics };
     }
-    return { value: normalizeTokenFilterExprShape({ op: source.op, args }), diagnostics };
+    return { value: normalizeTokenFilterExprShape({ op: source.op, args: toNonEmpty(args) }), diagnostics };
   }
 
   if (source.op === 'not') {

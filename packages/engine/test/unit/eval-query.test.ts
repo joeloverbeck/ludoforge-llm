@@ -2056,7 +2056,11 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => evalQuery({ query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } }, ctx),
+      () =>
+        evalQuery(
+          { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } } as unknown as Parameters<typeof evalQuery>[0],
+          ctx,
+        ),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });

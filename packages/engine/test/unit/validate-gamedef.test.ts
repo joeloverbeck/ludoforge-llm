@@ -543,6 +543,26 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects empty boolean ConditionAST args in action preconditions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          pre: { op: 'and', args: [] },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID' && diag.path === 'actions[0].pre.args',
+      ),
+    );
+  });
+
   it('rejects unsupported token-filter operators when malformed objects bypass typing', () => {
     const base = createValidGameDef();
     const def = {

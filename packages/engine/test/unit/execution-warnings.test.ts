@@ -12,6 +12,7 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
+  type OptionsQuery,
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
@@ -67,7 +68,7 @@ describe('Runtime warnings', () => {
     const effects: readonly EffectAST[] = [{
       forEach: {
         bind: '$item',
-        over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [] } },
+        over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [] } } as unknown as OptionsQuery,
         effects: [],
       },
     }];

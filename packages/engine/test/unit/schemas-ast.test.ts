@@ -928,6 +928,14 @@ describe('AST and selector schemas', () => {
     assert.equal(badConnected.success, false);
   });
 
+  it('rejects zero-arity ConditionAST boolean operators', () => {
+    const emptyAnd = ConditionASTSchema.safeParse({ op: 'and', args: [] });
+    assert.equal(emptyAnd.success, false);
+
+    const emptyOr = ConditionASTSchema.safeParse({ op: 'or', args: [] });
+    assert.equal(emptyOr.success, false);
+  });
+
   it('rejects malformed connectedZones traversal option payloads', () => {
     const wrongType = OptionsQuerySchema.safeParse({
       query: 'connectedZones',

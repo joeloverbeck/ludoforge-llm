@@ -2,6 +2,8 @@ import type { PlayerId, TokenId, ZoneId } from './branded.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { TurnFlowActionClass } from '../contracts/index.js';
 
+export type NonEmptyReadonlyArray<T> = readonly [T, ...T[]];
+
 export type PlayerSel =
   | 'actor'
   | 'active'
@@ -106,8 +108,8 @@ export type NumericValueExpr =
 
 export type ConditionAST =
   | boolean
-  | { readonly op: 'and'; readonly args: readonly ConditionAST[] }
-  | { readonly op: 'or'; readonly args: readonly ConditionAST[] }
+  | { readonly op: 'and'; readonly args: NonEmptyReadonlyArray<ConditionAST> }
+  | { readonly op: 'or'; readonly args: NonEmptyReadonlyArray<ConditionAST> }
   | { readonly op: 'not'; readonly arg: ConditionAST }
   | {
       readonly op: '==' | '!=' | '<' | '<=' | '>' | '>=';
@@ -138,8 +140,8 @@ export interface TokenFilterPredicate {
 
 export type TokenFilterExpr =
   | TokenFilterPredicate
-  | { readonly op: 'and'; readonly args: readonly TokenFilterExpr[] }
-  | { readonly op: 'or'; readonly args: readonly TokenFilterExpr[] }
+  | { readonly op: 'and'; readonly args: NonEmptyReadonlyArray<TokenFilterExpr> }
+  | { readonly op: 'or'; readonly args: NonEmptyReadonlyArray<TokenFilterExpr> }
   | { readonly op: 'not'; readonly arg: TokenFilterExpr };
 
 export interface AssetRowPredicate {

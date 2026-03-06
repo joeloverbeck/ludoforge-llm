@@ -38,6 +38,9 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
   if (typeof cond === 'boolean') return cond;
   switch (cond.op) {
     case 'and':
+      if (cond.args.length === 0) {
+        throw typeMismatchError('Condition operator "and" requires at least one condition argument.', { cond });
+      }
       for (const arg of cond.args) {
         if (!evalCondition(arg, ctx)) {
           return false;
@@ -46,6 +49,9 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
       return true;
 
     case 'or':
+      if (cond.args.length === 0) {
+        throw typeMismatchError('Condition operator "or" requires at least one condition argument.', { cond });
+      }
       for (const arg of cond.args) {
         if (evalCondition(arg, ctx)) {
           return true;

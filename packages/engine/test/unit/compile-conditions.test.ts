@@ -727,10 +727,38 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('rejects empty boolean condition or-args with deterministic diagnostics (no throw)', () => {
+    assert.doesNotThrow(() => {
+      const result = lowerConditionNode(
+        { op: 'or', args: [] },
+        context,
+        'doc.actions.0.pre',
+      );
+
+      assert.equal(result.value, null);
+      assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+      assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.pre');
+    });
+  });
+
   it('rejects empty token-filter boolean args with deterministic diagnostics (no throw)', () => {
     assert.doesNotThrow(() => {
       const result = lowerTokenFilterExpr(
         { op: 'and', args: [] },
+        context,
+        'doc.actions.0.params.0.domain.filter',
+      );
+
+      assert.equal(result.value, null);
+      assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+      assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.filter');
+    });
+  });
+
+  it('rejects empty token-filter boolean or-args with deterministic diagnostics (no throw)', () => {
+    assert.doesNotThrow(() => {
+      const result = lowerTokenFilterExpr(
+        { op: 'or', args: [] },
         context,
         'doc.actions.0.params.0.domain.filter',
       );
@@ -1014,6 +1042,30 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('canonicalizes single-argument token-filter or-wrappers to predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'or',
+          args: [
+            { prop: 'faction', eq: 'ARVN' },
+          ],
+        },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: { prop: 'faction', op: 'eq', value: 'ARVN' },
+    });
+  });
+
   it('canonicalizes nested same-op token-filter trees and preserves not semantics', () => {
     const result = lowerQueryNode(
       {
@@ -1056,6 +1108,57 @@ describe('compile-conditions lowering', () => {
       zone: 'board:none',
       filter: {
         op: 'and',
+        args: [
+          { prop: 'type', op: 'eq', value: 'troops' },
+          { op: 'not', arg: { prop: 'faction', op: 'eq', value: 'NVA' } },
+          { prop: 'faction', op: 'eq', value: 'ARVN' },
+        ],
+      },
+    });
+  });
+
+  it('canonicalizes nested same-op token-filter or-trees and preserves not semantics', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'or',
+          args: [
+            {
+              op: 'or',
+              args: [
+                { prop: 'type', eq: 'troops' },
+              ],
+            },
+            {
+              op: 'not',
+              arg: {
+                op: 'or',
+                args: [
+                  { prop: 'faction', eq: 'NVA' },
+                ],
+              },
+            },
+            {
+              op: 'or',
+              args: [
+                { prop: 'faction', eq: 'ARVN' },
+              ],
+            },
+          ],
+        },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: {
+        op: 'or',
         args: [
           { prop: 'type', op: 'eq', value: 'troops' },
           { op: 'not', arg: { prop: 'faction', op: 'eq', value: 'NVA' } },

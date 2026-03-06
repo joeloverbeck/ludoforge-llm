@@ -49,6 +49,30 @@ export interface ConditionLoweringResult<TValue> {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+function lowerBooleanArityTuple<TValue>(
+  source: { readonly op: 'and' | 'or'; readonly args?: unknown },
+  path: string,
+  kind: string,
+  alternatives: readonly string[],
+  lowerArgs: (args: readonly unknown[]) => ConditionLoweringResult<readonly TValue[]>,
+): ConditionLoweringResult<readonly [TValue, ...TValue[]]> {
+  if (!Array.isArray(source.args) || source.args.length === 0) {
+    return missingCapability(path, kind, source, alternatives);
+  }
+  const loweredArgs = lowerArgs(source.args);
+  if (loweredArgs.value === null) {
+    return { value: null, diagnostics: loweredArgs.diagnostics };
+  }
+  if (loweredArgs.value.length === 0) {
+    return missingCapability(path, kind, source, alternatives);
+  }
+  const [first, ...rest] = loweredArgs.value;
+  return {
+    value: [first!, ...rest],
+    diagnostics: loweredArgs.diagnostics,
+  };
+}
+
 const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
   'concat',
@@ -99,19 +123,18 @@ export function lowerConditionNode(
   switch (source.op) {
     case 'and':
     case 'or': {
-      if (!Array.isArray(source.args) || source.args.length === 0) {
-        return missingCapability(path, `${source.op} condition`, source, ['{ op, args: [...] }']);
-      }
-      const loweredArgs = lowerConditionArray(source.args, context, `${path}.args`);
+      const loweredArgs = lowerBooleanArityTuple<ConditionAST>(
+        { op: source.op, args: source.args },
+        path,
+        `${source.op} condition`,
+        ['{ op, args: [...] }'],
+        (args) => lowerConditionArray(args, context, `${path}.args`),
+      );
       if (loweredArgs.value === null) {
         return { value: null, diagnostics: loweredArgs.diagnostics };
       }
-      if (loweredArgs.value.length === 0) {
-        return missingCapability(path, `${source.op} condition`, source, ['{ op, args: [...] }']);
-      }
-      const [first, ...rest] = loweredArgs.value;
       return {
-        value: { op: source.op, args: [first!, ...rest] },
+        value: { op: source.op, args: loweredArgs.value },
         diagnostics: loweredArgs.diagnostics,
       };
     }
@@ -646,33 +669,22 @@ export function lowerTokenFilterExpr(
   }
 
   if (source.op === 'and' || source.op === 'or') {
-    if (!Array.isArray(source.args) || source.args.length === 0) {
-      return missingCapability(path, `token filter ${source.op}`, source, [
+    const loweredArgs = lowerBooleanArityTuple<TokenFilterExpr>(
+      { op: source.op, args: source.args },
+      path,
+      `token filter ${source.op}`,
+      [
         `{ op: "${source.op}", args: [<TokenFilterExpr>, ...] }`,
-      ]);
+      ],
+      (args) => lowerTokenFilterArray(args, context, `${path}.args`),
+    );
+    if (loweredArgs.value === null) {
+      return { value: null, diagnostics: loweredArgs.diagnostics };
     }
-    const diagnostics: Diagnostic[] = [];
-    const args: TokenFilterExpr[] = [];
-    source.args.forEach((entry, index) => {
-      const lowered = lowerTokenFilterExpr(entry, context, `${path}.args.${index}`);
-      diagnostics.push(...lowered.diagnostics);
-      if (lowered.value !== null) {
-        args.push(lowered.value);
-      }
-    });
-    if (args.length !== source.args.length) {
-      return { value: null, diagnostics };
-    }
-    if (args.length === 0) {
-      return missingCapability(path, `token filter ${source.op}`, source, [
-        `{ op: "${source.op}", args: [<TokenFilterExpr>, ...] }`,
-      ]);
-    }
-    const [first, ...rest] = args;
-    const normalized = normalizeTokenFilterExprShape({ op: source.op, args: [first!, ...rest] }, path);
+    const normalized = normalizeTokenFilterExprShape({ op: source.op, args: loweredArgs.value }, path);
     return {
       value: normalized.value,
-      diagnostics: [...diagnostics, ...normalized.diagnostics],
+      diagnostics: [...loweredArgs.diagnostics, ...normalized.diagnostics],
     };
   }
 
@@ -1333,6 +1345,29 @@ function lowerConditionArray(
 
   source.forEach((entry, index) => {
     const lowered = lowerConditionNode(entry, context, `${path}.${index}`);
+    diagnostics.push(...lowered.diagnostics);
+    if (lowered.value !== null) {
+      values.push(lowered.value);
+    }
+  });
+
+  if (diagnostics.length > 0 && values.length !== source.length) {
+    return { value: null, diagnostics };
+  }
+
+  return { value: values, diagnostics };
+}
+
+function lowerTokenFilterArray(
+  source: readonly unknown[],
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<readonly TokenFilterExpr[]> {
+  const diagnostics: Diagnostic[] = [];
+  const values: TokenFilterExpr[] = [];
+
+  source.forEach((entry, index) => {
+    const lowered = lowerTokenFilterExpr(entry, context, `${path}.${index}`);
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value !== null) {
       values.push(lowered.value);

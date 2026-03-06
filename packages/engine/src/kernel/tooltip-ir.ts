@@ -40,12 +40,16 @@ export interface PayMessage extends MessageBase {
   readonly kind: 'pay';
   readonly resource: string;
   readonly amount: number;
+  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scopeOwner?: string;
 }
 
 export interface GainMessage extends MessageBase {
   readonly kind: 'gain';
   readonly resource: string;
   readonly amount: number;
+  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scopeOwner?: string;
 }
 
 export interface TransferMessage extends MessageBase {
@@ -55,6 +59,10 @@ export interface TransferMessage extends MessageBase {
   readonly from: string;
   readonly to: string;
   readonly amountExpr?: string;
+  readonly fromScope?: 'global' | 'player' | 'zone';
+  readonly fromScopeOwner?: string;
+  readonly toScope?: 'global' | 'player' | 'zone';
+  readonly toScopeOwner?: string;
 }
 
 export interface ShiftMessage extends MessageBase {
@@ -117,6 +125,8 @@ export interface SetMessage extends MessageBase {
   readonly target: string;
   readonly value: string;
   readonly toggle?: boolean;
+  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scopeOwner?: string;
 }
 
 export interface ChooseMessage extends MessageBase {

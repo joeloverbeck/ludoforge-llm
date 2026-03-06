@@ -152,6 +152,121 @@ describe('tooltip-normalizer', () => {
         assert.equal(msg.target, 'influence');
       }
     });
+
+    // --- Scope context preservation tests (LEGACTTOO-013) ---
+
+    it('addVar global scope → PayMessage with no scope/scopeOwner', () => {
+      const effect: EffectAST = { addVar: { scope: 'global', var: 'aid', delta: -3 } };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[0]'));
+      assert.equal(msg.kind, 'pay');
+      if (msg.kind === 'pay') {
+        assert.equal(msg.scope, undefined);
+        assert.equal(msg.scopeOwner, undefined);
+      }
+    });
+
+    it('addVar pvar scope → GainMessage with scope: player, scopeOwner', () => {
+      const effect: EffectAST = {
+        addVar: { scope: 'pvar', var: 'resources', player: 'actor', delta: 3 },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[1]'));
+      assert.equal(msg.kind, 'gain');
+      if (msg.kind === 'gain') {
+        assert.equal(msg.scope, 'player');
+        assert.equal(msg.scopeOwner, 'actor');
+        assert.equal(msg.resource, 'resources');
+        assert.equal(msg.amount, 3);
+      }
+    });
+
+    it('addVar zoneVar scope → GainMessage with scope: zone, scopeOwner', () => {
+      const effect: EffectAST = {
+        addVar: { scope: 'zoneVar', var: 'econ', zone: 'saigon', delta: 2 },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[2]'));
+      assert.equal(msg.kind, 'gain');
+      if (msg.kind === 'gain') {
+        assert.equal(msg.scope, 'zone');
+        assert.equal(msg.scopeOwner, 'saigon');
+      }
+    });
+
+    it('setVar pvar scope → SetMessage with scope: player', () => {
+      const effect: EffectAST = {
+        setVar: { scope: 'pvar', var: 'patronage', player: 'active', value: 5 },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[3]'));
+      assert.equal(msg.kind, 'set');
+      if (msg.kind === 'set') {
+        assert.equal(msg.scope, 'player');
+        assert.equal(msg.scopeOwner, 'active');
+      }
+    });
+
+    it('transferVar with pvar endpoints → TransferMessage with per-endpoint scope', () => {
+      const effect: EffectAST = {
+        transferVar: {
+          from: { scope: 'pvar', var: 'resources', player: 'actor' },
+          to: { scope: 'pvar', var: 'resources', player: 'active' },
+          amount: 3,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[4]'));
+      assert.equal(msg.kind, 'transfer');
+      if (msg.kind === 'transfer') {
+        assert.equal(msg.fromScope, 'player');
+        assert.equal(msg.fromScopeOwner, 'actor');
+        assert.equal(msg.toScope, 'player');
+        assert.equal(msg.toScopeOwner, 'active');
+      }
+    });
+
+    it('transferVar with global endpoints → TransferMessage with no scope fields', () => {
+      const effect: EffectAST = {
+        transferVar: {
+          from: { scope: 'global', var: 'aid' },
+          to: { scope: 'global', var: 'patronage' },
+          amount: 2,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[5]'));
+      assert.equal(msg.kind, 'transfer');
+      if (msg.kind === 'transfer') {
+        assert.equal(msg.fromScope, undefined);
+        assert.equal(msg.fromScopeOwner, undefined);
+        assert.equal(msg.toScope, undefined);
+        assert.equal(msg.toScopeOwner, undefined);
+      }
+    });
+
+    it('addVar pvar with PlayerId object → scopeOwner stringified', () => {
+      const effect: EffectAST = {
+        addVar: { scope: 'pvar', var: 'resources', player: { id: 2 as never }, delta: 1 },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[6]'));
+      assert.equal(msg.kind, 'gain');
+      if (msg.kind === 'gain') {
+        assert.equal(msg.scope, 'player');
+        assert.equal(msg.scopeOwner, '2');
+      }
+    });
+
+    it('addVar zoneVar with ZoneRef expression → scopeOwner is <expr>', () => {
+      const effect: EffectAST = {
+        addVar: {
+          scope: 'zoneVar',
+          var: 'econ',
+          zone: { zoneExpr: { ref: 'binding', name: 'targetZone' } },
+          delta: 1,
+        },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[7]'));
+      assert.equal(msg.kind, 'gain');
+      if (msg.kind === 'gain') {
+        assert.equal(msg.scope, 'zone');
+        assert.equal(msg.scopeOwner, '<expr>');
+      }
+    });
   });
 
   // --- Token rules (9-23b) ---

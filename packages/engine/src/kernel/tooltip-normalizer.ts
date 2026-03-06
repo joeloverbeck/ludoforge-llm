@@ -5,7 +5,7 @@
  * handled by LEGACTTOO-005.
  */
 
-import type { EffectAST, ValueExpr, ZoneRef, NumericValueExpr } from './types-ast.js';
+import type { EffectAST, ValueExpr, ZoneRef, NumericValueExpr, PlayerSel } from './types-ast.js';
 import type { VerbalizationDef } from './verbalization-types.js';
 import type { TooltipMessage } from './tooltip-ir.js';
 import { isSuppressed, isScaffoldingEffect } from './tooltip-suppression.js';
@@ -20,6 +20,14 @@ type EffectOf<K extends string> = Extract<EffectAST, Record<K, unknown>>;
 
 const stringifyZoneRef = (ref: ZoneRef): string =>
   typeof ref === 'string' ? ref : '<expr>';
+
+const stringifyPlayerSel = (sel: PlayerSel): string => {
+  if (typeof sel === 'string') return sel;
+  if ('id' in sel) return String(sel.id);
+  if ('chosen' in sel) return sel.chosen;
+  if ('relative' in sel) return sel.relative;
+  return '<player>';
+};
 
 const stringifyValueExpr = (expr: ValueExpr): string => {
   if (typeof expr === 'number' || typeof expr === 'boolean') return String(expr);
@@ -37,6 +45,21 @@ const stringifyValueExpr = (expr: ValueExpr): string => {
 const stringifyNumericExpr = (expr: NumericValueExpr): string => {
   if (typeof expr === 'number') return String(expr);
   return stringifyValueExpr(expr as ValueExpr);
+};
+
+type ScopeFields = {
+  readonly scope?: 'global' | 'player' | 'zone';
+  readonly scopeOwner?: string;
+};
+
+const extractScopeFields = (payload: { readonly scope: string; readonly player?: PlayerSel; readonly zone?: ZoneRef }): ScopeFields => {
+  if (payload.scope === 'pvar' && payload.player !== undefined) {
+    return { scope: 'player', scopeOwner: stringifyPlayerSel(payload.player) };
+  }
+  if (payload.scope === 'zoneVar' && payload.zone !== undefined) {
+    return { scope: 'zone', scopeOwner: stringifyZoneRef(payload.zone) };
+  }
+  return {};
 };
 
 const isNegativeLiteral = (delta: NumericValueExpr): delta is number =>
@@ -67,18 +90,20 @@ const normalizeAddVar = (
     return [{ kind: 'suppressed', reason: `suppressed var: ${varName}`, astPath }];
   }
 
+  const scopeFields = extractScopeFields(payload.addVar);
+
   // Rule 1: negative literal → pay
   if (isNegativeLiteral(delta)) {
-    return [{ kind: 'pay', resource: varName, amount: Math.abs(delta), astPath }];
+    return [{ kind: 'pay', resource: varName, amount: Math.abs(delta), ...scopeFields, astPath }];
   }
 
   // Rule 2: positive literal → gain
   if (isPositiveLiteral(delta)) {
-    return [{ kind: 'gain', resource: varName, amount: delta, astPath }];
+    return [{ kind: 'gain', resource: varName, amount: delta, ...scopeFields, astPath }];
   }
 
   // Rule 8: non-literal expression → generic set
-  return [{ kind: 'set', target: varName, value: stringifyNumericExpr(delta), astPath }];
+  return [{ kind: 'set', target: varName, value: stringifyNumericExpr(delta), ...scopeFields, astPath }];
 };
 
 const normalizeSetVar = (
@@ -93,8 +118,23 @@ const normalizeSetVar = (
     return [{ kind: 'suppressed', reason: `suppressed var: ${varName}`, astPath }];
   }
 
+  const scopeFields = extractScopeFields(payload.setVar);
+
   // Rule 7: generic set
-  return [{ kind: 'set', target: varName, value: stringifyValueExpr(value), astPath }];
+  return [{ kind: 'set', target: varName, value: stringifyValueExpr(value), ...scopeFields, astPath }];
+};
+
+const extractEndpointScopeFields = (
+  endpoint: { readonly scope: string; readonly player?: PlayerSel; readonly zone?: ZoneRef },
+  prefix: 'from' | 'to',
+): Record<string, string> => {
+  if (endpoint.scope === 'pvar' && endpoint.player !== undefined) {
+    return { [`${prefix}Scope`]: 'player', [`${prefix}ScopeOwner`]: stringifyPlayerSel(endpoint.player) };
+  }
+  if (endpoint.scope === 'zoneVar' && endpoint.zone !== undefined) {
+    return { [`${prefix}Scope`]: 'zone', [`${prefix}ScopeOwner`]: stringifyZoneRef(endpoint.zone) };
+  }
+  return {};
 };
 
 const normalizeTransferVar = (
@@ -104,6 +144,8 @@ const normalizeTransferVar = (
   const { from, to, amount } = payload.transferVar;
   const numAmount = typeof amount === 'number' ? amount : 0;
   const amountExpr = typeof amount === 'number' ? undefined : stringifyNumericExpr(amount);
+  const fromScopeFields = extractEndpointScopeFields(from, 'from');
+  const toScopeFields = extractEndpointScopeFields(to, 'to');
   return [{
     kind: 'transfer',
     resource: from.var,
@@ -111,6 +153,8 @@ const normalizeTransferVar = (
     from: from.var,
     to: to.var,
     ...(amountExpr !== undefined ? { amountExpr } : {}),
+    ...fromScopeFields,
+    ...toScopeFields,
     astPath,
   }];
 };

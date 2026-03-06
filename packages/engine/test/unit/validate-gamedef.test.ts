@@ -755,6 +755,44 @@ describe('validateGameDef reference checks', () => {
         }) as unknown as GameDef,
       },
       {
+        name: 'actionPipelines.legality',
+        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineLegality)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actionPipelines: [
+            {
+              id: 'profile-a',
+              actionId: 'playCard',
+              legality: { op: 'and', args: [] },
+              costValidation: null,
+              costEffects: [],
+              targeting: {},
+              stages: [{ stage: 'resolve', effects: [] }],
+              atomicity: 'atomic',
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'actionPipelines.costValidation',
+        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineCostValidation)}.args`,
+        buildDef: (seed) => ({
+          ...seed,
+          actionPipelines: [
+            {
+              id: 'profile-a',
+              actionId: 'playCard',
+              legality: null,
+              costValidation: { op: 'and', args: [] },
+              costEffects: [],
+              targeting: {},
+              stages: [{ stage: 'resolve', effects: [] }],
+              atomicity: 'atomic',
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
         name: 'actionPipelines.targeting.filter',
         expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineTargetingFilter)}.args`,
         buildDef: (seed) => ({

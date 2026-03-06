@@ -16,6 +16,7 @@ import {
   validateInitialPlacementsAgainstStackingConstraints,
   validateStructureSections,
 } from './validate-gamedef-structure.js';
+import { conditionSurfacePathForActionPre } from '../contracts/index.js';
 
 export const validateGameDef = (def: GameDef): Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
@@ -89,7 +90,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     });
 
     if (action.pre) {
-      validateConditionAst(diagnostics, action.pre, `actions[${actionIndex}].pre`, context);
+      validateConditionAst(diagnostics, action.pre, conditionSurfacePathForActionPre(actionIndex), context);
     }
 
     action.cost.forEach((effect, effectIndex) => {

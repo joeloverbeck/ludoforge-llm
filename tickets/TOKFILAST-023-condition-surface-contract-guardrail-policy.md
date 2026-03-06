@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — lint/policy test coverage for validator contract usage
-**Deps**: tickets/TOKFILAST-022-condition-surface-contract-adoption-completion.md
+**Deps**: archive/tickets/TOKFILAST-022-condition-surface-contract-adoption-completion.md
 
 ## Problem
 

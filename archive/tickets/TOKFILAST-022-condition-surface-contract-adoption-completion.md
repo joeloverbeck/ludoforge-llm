@@ -1,6 +1,6 @@
 # TOKFILAST-022: Complete Condition-Surface Contract Adoption and Coverage Parity
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — validator condition-path construction + unit coverage
@@ -14,7 +14,8 @@ Condition-surface path centralization is partially implemented, but one validato
 
 1. A shared condition-surface contract now exists and is used by most validator surfaces.
 2. `validate-gamedef-core.ts` still calls `validateConditionAst` for `actions[].pre` with a raw string path, bypassing the contract helper.
-3. Current cross-surface empty-args ConditionAST validator test covers action-pipeline `applicability` and `targeting.filter`, but not `legality` or `costValidation`; scope must include both.
+3. Current cross-surface empty-args ConditionAST validator test covers action-pipeline `applicability`, `targeting.filter`, and terminal checkpoint surfaces, but not `legality` or `costValidation`; scope must include both.
+4. `CONDITION_SURFACE_SUFFIX` already exposes `actionPipelineLegality` and `actionPipelineCostValidation`, so parity can be added by extending the existing table-driven test (no new contract API needed).
 
 ## Architecture Check
 
@@ -33,6 +34,7 @@ Replace the inline `actions[${actionIndex}].pre` string callsite in validator co
 Extend the table-driven cross-surface test to assert empty-args diagnostics on:
 - `actionPipelines[].legality`
 - `actionPipelines[].costValidation`
+using existing `CONDITION_SURFACE_SUFFIX` entries.
 
 ## Files to Touch
 
@@ -69,3 +71,16 @@ Extend the table-driven cross-surface test to assert empty-args diagnostics on:
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
 
+## Outcome
+
+- Completion date: 2026-03-06
+- What changed:
+  - `packages/engine/src/kernel/validate-gamedef-core.ts`: replaced inline `actions[${actionIndex}].pre` condition path literal with `conditionSurfacePathForActionPre(actionIndex)`.
+  - `packages/engine/test/unit/validate-gamedef.test.ts`: extended the condition-surface empty-args parity table with `actionPipelines.legality` and `actionPipelines.costValidation` cases.
+- Deviations from original plan:
+  - No deviations in implementation scope.
+  - Ticket assumptions were refined before implementation to reflect current test coverage and existing contract suffix support.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

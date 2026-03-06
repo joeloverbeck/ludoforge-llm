@@ -664,6 +664,83 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects unsupported token-filter operators in query filter surfaces', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: {
+                  op: 'xor',
+                  args: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].params[0].domain.filter.op',
+      ),
+    );
+  });
+
+  it('rejects unsupported nested token-filter operators with full nested path', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: {
+                  op: 'not',
+                  arg: {
+                    op: 'or',
+                    args: [
+                      { prop: 'id', op: 'eq', value: 'token-1' },
+                      {
+                        op: 'xor',
+                        args: [{ prop: 'id', op: 'eq', value: 'token-2' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].params[0].domain.filter.arg.args[1].op',
+      ),
+    );
+  });
+
   it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
     const base = createValidGameDef();
     const def = {

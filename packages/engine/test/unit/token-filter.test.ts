@@ -131,6 +131,33 @@ describe('token-filter', () => {
     );
   });
 
+  it('preserves nested traversal paths for zero-arity token filter expressions', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const nested = {
+      op: 'not',
+      arg: {
+        op: 'or',
+        args: [
+          { prop: 'suit', op: 'eq', value: 'hearts' },
+          { op: 'and', args: [] },
+        ],
+      },
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, nested),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'empty_args'
+          && error.context?.op === 'and'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+  });
+
   it('fails closed for unsupported token filter operators', () => {
     const token = makeToken('a', { suit: 'hearts' });
     const malformed = {

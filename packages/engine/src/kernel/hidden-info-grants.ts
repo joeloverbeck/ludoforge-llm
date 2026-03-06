@@ -1,5 +1,5 @@
 import type { PlayerId } from './branded.js';
-import { foldTokenFilterExpr, tokenFilterBooleanArityError } from './token-filter-expr-utils.js';
+import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import type { RevealGrant, TokenFilterExpr } from './types.js';
 
 type GrantObservers = 'all' | readonly PlayerId[];
@@ -66,10 +66,7 @@ export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterE
   return foldTokenFilterExpr<TokenFilterExpr>(expr, {
     predicate: (predicate) => predicate,
     not: (_entry, arg) => ({ op: 'not', arg }),
-    and: (entry, args) => {
-      if (entry.args.length === 0) {
-        throw tokenFilterBooleanArityError(expr, 'and');
-      }
+    and: (_entry, args) => {
       const sortedArgs = [...args]
         .map((arg) => ({ key: JSON.stringify(canonicalizeValue(arg)), expr: arg }))
         .sort((left, right) => compareStrings(left.key, right.key))
@@ -80,10 +77,7 @@ export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterE
         args: [first!, ...rest],
       };
     },
-    or: (entry, args) => {
-      if (entry.args.length === 0) {
-        throw tokenFilterBooleanArityError(expr, 'or');
-      }
+    or: (_entry, args) => {
       const sortedArgs = [...args]
         .map((arg) => ({ key: JSON.stringify(canonicalizeValue(arg)), expr: arg }))
         .sort((left, right) => compareStrings(left.key, right.key))

@@ -1,6 +1,6 @@
 # TOKFILAST-027: Centralize Empty-Args Arity Enforcement in Token-Filter Traversal with Path-Fidelity
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — token-filter traversal contracts + runtime/canonicalization callsite simplification
@@ -15,7 +15,7 @@ Token-filter empty-args arity checks are still duplicated in runtime/canonicaliz
 1. `foldTokenFilterExpr` already tracks nested traversal path context and is the canonical recursion boundary (`packages/engine/src/kernel/token-filter-expr-utils.ts`).
 2. `matchesTokenFilterExpr` and `canonicalizeTokenFilterExpr` still perform local `entry.args.length === 0` checks and call `tokenFilterBooleanArityError(expr, ...)` with root context (`packages/engine/src/kernel/token-filter.ts`, `packages/engine/src/kernel/hidden-info-grants.ts`).
 3. Mismatch: nested malformed payloads (for example `not(and([]))`) currently surface `empty_args` with root path instead of nested path context in those callsites.
-4. Existing active tickets (`TOKFILAST-020`, `TOKFILAST-021`) focus on boundary mapping and effect-surface assertions, not traversal-owned empty-args path fidelity for runtime + canonicalization callers.
+4. Archived/completed tickets (`TOKFILAST-020`, `TOKFILAST-021`) covered boundary mapping and effect-surface assertions, but did not move empty-args arity ownership into traversal for runtime + canonicalization callers.
 
 ## Architecture Check
 
@@ -78,3 +78,18 @@ Ensure existing boundary translation (`TOKEN_FILTER_TRAVERSAL_ERROR` -> runtime 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-06
+- **What changed**:
+  - Centralized token-filter empty-args arity enforcement in traversal by throwing `empty_args` from `foldTokenFilterExpr`/`walkTokenFilterExpr` with traversal-local path context.
+  - Removed duplicated `entry.args.length === 0` checks from runtime (`matchesTokenFilterExpr`) and hidden-info canonicalization (`canonicalizeTokenFilterExpr`) callsites.
+  - Updated validator traversal-boundary mapping so `TOKEN_FILTER_TRAVERSAL_ERROR` with `reason: empty_args` maps deterministically to `DOMAIN_QUERY_INVALID` on `.args` paths (instead of falling through malformed `.op` diagnostics).
+  - Added/updated unit coverage for nested empty-args path fidelity across traversal/runtime/canonicalization surfaces.
+- **Deviations from original plan**:
+  - Added a focused validator-boundary fix in `validate-gamedef-behavior.ts` because traversal ownership changes surfaced a contract regression in validator diagnostics.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

@@ -139,4 +139,28 @@ describe('hidden-info grant helpers', () => {
       },
     );
   });
+
+  it('preserves nested traversal path context for zero-arity token filters', () => {
+    assert.throws(
+      () =>
+        canonicalTokenFilterKey({
+          op: 'not',
+          arg: {
+            op: 'or',
+            args: [
+              { prop: 'id', op: 'eq', value: 'a' },
+              { op: 'and', args: [] },
+            ],
+          },
+        } as unknown as Parameters<typeof canonicalTokenFilterKey>[0]),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'empty_args'
+          && error.context.op === 'and'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+  });
 });

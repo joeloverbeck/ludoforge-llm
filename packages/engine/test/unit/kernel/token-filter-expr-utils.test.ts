@@ -228,6 +228,48 @@ describe('token-filter-expr-utils', () => {
     );
   });
 
+  it('reports nested paths for empty-args boolean nodes in fold and walk', () => {
+    const malformed = {
+      op: 'not',
+      arg: {
+        op: 'or',
+        args: [
+          { prop: 'id', op: 'eq', value: 'a' },
+          { op: 'and', args: [] },
+        ],
+      },
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'empty_args'
+          && error.context.op === 'and'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+
+    assert.throws(
+      () => walkTokenFilterExpr(malformed, () => {}),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'empty_args'
+          && error.context.op === 'and'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
+      },
+    );
+  });
+
   it('exposes deterministic empty-args traversal errors', () => {
     const expr = { op: 'and', args: [] } as unknown as TokenFilterExpr;
     const error = tokenFilterBooleanArityError(expr, 'and');

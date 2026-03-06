@@ -1,7 +1,6 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
-import { isNonEmptyArray } from './boolean-arity-policy.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
-import { foldTokenFilterExpr, tokenFilterBooleanArityError } from './token-filter-expr-utils.js';
+import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { mapTokenFilterTraversalToTypeMismatch } from './token-filter-runtime-boundary.js';
 
 type TokenFilterScalar = string | number | boolean;
@@ -64,18 +63,8 @@ export function matchesTokenFilterExpr(
     return foldTokenFilterExpr(expr, {
       predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue),
       not: (_entry, arg) => !arg,
-      and: (entry, args) => {
-        if (!isNonEmptyArray(entry.args)) {
-          throw tokenFilterBooleanArityError(expr, 'and');
-        }
-        return args.every(Boolean);
-      },
-      or: (entry, args) => {
-        if (!isNonEmptyArray(entry.args)) {
-          throw tokenFilterBooleanArityError(expr, 'or');
-        }
-        return args.some(Boolean);
-      },
+      and: (_entry, args) => args.every(Boolean),
+      or: (_entry, args) => args.some(Boolean),
     });
   } catch (error: unknown) {
     return mapTokenFilterTraversalToTypeMismatch(error);

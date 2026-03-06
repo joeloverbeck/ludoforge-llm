@@ -133,6 +133,9 @@ export const foldTokenFilterExpr = <TResult>(
       return handlers.not(entry, fold(entry.arg, [...path, { kind: 'not' }]));
     }
     if (isTokenFilterBooleanExpr(entry)) {
+      if (entry.args.length === 0) {
+        throw tokenFilterBooleanArityError(entry, entry.op, path);
+      }
       const foldedArgs = entry.args.map((arg, index) => fold(arg, [...path, { kind: 'arg', index }]));
       return entry.op === 'and'
         ? handlers.and(entry, foldedArgs)
@@ -161,6 +164,9 @@ export const walkTokenFilterExpr = (
       return;
     }
     if (isTokenFilterBooleanExpr(entry)) {
+      if (entry.args.length === 0) {
+        throw tokenFilterBooleanArityError(entry, entry.op, path);
+      }
       visit(entry, path);
       entry.args.forEach((arg, index) => {
         walk(arg, [...path, { kind: 'arg', index }]);

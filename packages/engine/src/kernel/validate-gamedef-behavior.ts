@@ -643,30 +643,27 @@ const validateTokenFilterExpr = (
       if (entry.op === 'not') {
         return;
       }
-      if (entry.args.length === 0) {
-        diagnostics.push({
-          code: 'DOMAIN_QUERY_INVALID',
-          path: `${entryPath}.args`,
-          severity: 'error',
-          message: booleanArityMessage('tokenFilter', entry.op),
-          suggestion: booleanAritySuggestion('tokenFilter'),
-        });
-      }
     });
   } catch (error: unknown) {
     if (!isTokenFilterTraversalError(error)) {
       throw error;
     }
     const entryPath = `${path}${tokenFilterPathSuffix(error.context.path)}`;
+    const isBooleanOp = error.context.op === 'and' || error.context.op === 'or';
     const suggestion = error.context.reason === 'unsupported_operator'
       ? 'Use one of: and, or, not.'
-      : 'Use a predicate leaf or a well-formed and/or/not expression node.';
+      : error.context.reason === 'empty_args'
+        ? booleanAritySuggestion('tokenFilter')
+        : 'Use a predicate leaf or a well-formed and/or/not expression node.';
     const message = error.context.reason === 'unsupported_operator'
       ? `Unsupported token filter operator "${String(error.context.op)}".`
-      : `Malformed token filter expression node for operator "${String(error.context.op)}".`;
+      : error.context.reason === 'empty_args'
+        ? booleanArityMessage('tokenFilter', isBooleanOp ? error.context.op : 'and')
+        : `Malformed token filter expression node for operator "${String(error.context.op)}".`;
+    const errorPath = error.context.reason === 'empty_args' ? `${entryPath}.args` : `${entryPath}.op`;
     diagnostics.push({
       code: 'DOMAIN_QUERY_INVALID',
-      path: `${entryPath}.op`,
+      path: errorPath,
       severity: 'error',
       message,
       suggestion,

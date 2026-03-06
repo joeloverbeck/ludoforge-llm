@@ -45,7 +45,7 @@ Ensure missing/invalid operator diagnostics continue to be deterministic after a
 
 ## Out of Scope
 
-- Token-filter traversal boundary/path behavior (`tickets/TOKFILAST-027-token-filter-empty-args-path-fidelity-centralization.md`).
+- Token-filter traversal boundary/path behavior (`archive/tickets/TOKFILAST/TOKFILAST-027-token-filter-empty-args-path-fidelity-centralization.md`).
 - Condition-surface helper policy work (`tickets/TOKFILAST-030-condition-surface-policy-import-origin-enforcement.md` and follow-ups).
 
 ## Acceptance Criteria

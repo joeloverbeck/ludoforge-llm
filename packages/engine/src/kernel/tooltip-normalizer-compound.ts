@@ -177,13 +177,13 @@ export const normalizeRemoveByPriority = (
     tokenFilter: group.bind,
     fromZone: group.from !== undefined ? stringifyZoneRef(group.from) : '<priority>',
     destination: stringifyZoneRef(group.to),
+    budget: budgetStr,
     astPath: `${astPath}.groups[${i}]`,
   }));
   const inChildren = payload.removeByPriority.in !== undefined
     ? recurse(payload.removeByPriority.in, ctx, `${astPath}.in`)
     : [];
   return [
-    { kind: 'set', target: 'budget', value: budgetStr, astPath: `${astPath}.budget` },
     ...groupMessages,
     ...inChildren,
   ];

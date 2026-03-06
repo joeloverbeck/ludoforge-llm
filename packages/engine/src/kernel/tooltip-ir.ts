@@ -93,6 +93,8 @@ export interface RemoveMessage extends MessageBase {
   readonly fromZone: string;
   readonly destination: string;
   readonly filter?: string;
+  /** Budget constraint from removeByPriority (only present for budget-constrained removals) */
+  readonly budget?: string;
 }
 
 export interface CreateMessage extends MessageBase {

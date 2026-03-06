@@ -1,9 +1,9 @@
 # LEGACTTOO-020: Replace Synthetic Budget SetMessage with Removal Metadata
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
-**Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-normalizer.ts`, `packages/engine/src/kernel/tooltip-ir.ts`
+**Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-normalizer-compound.ts`, `packages/engine/src/kernel/tooltip-ir.ts`
 **Deps**: `archive/tickets/LEGACTTOO/LEGACTTOO-005-compound-normalizer-control-flow-macros-stages.md`
 
 ## Problem
@@ -71,3 +71,13 @@ Instead of emitting a separate `SetMessage` for budget, include `budget: budgetS
 
 1. `node --test dist/test/unit/kernel/tooltip-normalizer.test.js`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Changed vs originally planned**: Implemented exactly as specified.
+
+- `tooltip-ir.ts`: Added `readonly budget?: string` to `RemoveMessage` interface.
+- `tooltip-normalizer-compound.ts`: `normalizeRemoveByPriority` now folds `budget: budgetStr` into each group's `RemoveMessage` and no longer emits a synthetic `SetMessage` with `target: 'budget'`.
+- `tooltip-normalizer.test.ts`: Updated 3 existing `removeByPriority` tests to assert `budget` on `RemoveMessage` instead of a leading `SetMessage`. Added 1 new negative test confirming no `SetMessage` with `target: 'budget'` is emitted.
+- Ticket header corrected: actual file is `tooltip-normalizer-compound.ts`, not `tooltip-normalizer.ts`.
+- All 3946 engine tests pass, lint clean.

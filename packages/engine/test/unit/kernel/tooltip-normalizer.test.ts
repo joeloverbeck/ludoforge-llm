@@ -907,7 +907,7 @@ describe('tooltip-normalizer', () => {
       assert.equal(messages[1]!.kind, 'gain');
     });
 
-    it('rule 35: removeByPriority single group → budget + one RemoveMessage', () => {
+    it('rule 35: removeByPriority single group → RemoveMessage with budget metadata', () => {
       const effect: EffectAST = {
         removeByPriority: {
           budget: 3,
@@ -919,21 +919,17 @@ describe('tooltip-normalizer', () => {
         },
       };
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7]');
-      assert.equal(messages.length, 2, 'Should include budget set + 1 remove');
-      assert.equal(messages[0]!.kind, 'set');
-      if (messages[0]!.kind === 'set') {
-        assert.equal(messages[0]!.target, 'budget');
-        assert.equal(messages[0]!.value, '3');
-      }
-      assert.equal(messages[1]!.kind, 'remove');
-      if (messages[1]!.kind === 'remove') {
-        assert.equal(messages[1]!.tokenFilter, 'guerrilla');
-        assert.equal(messages[1]!.destination, 'casualties-nva');
-        assert.equal(messages[1]!.astPath, 'c[7].groups[0]');
+      assert.equal(messages.length, 1, 'Should emit 1 remove (budget folded in)');
+      assert.equal(messages[0]!.kind, 'remove');
+      if (messages[0]!.kind === 'remove') {
+        assert.equal(messages[0]!.tokenFilter, 'guerrilla');
+        assert.equal(messages[0]!.destination, 'casualties-nva');
+        assert.equal(messages[0]!.budget, '3');
+        assert.equal(messages[0]!.astPath, 'c[7].groups[0]');
       }
     });
 
-    it('rule 35: removeByPriority with multiple groups → per-group RemoveMessages preserving priority order', () => {
+    it('rule 35: removeByPriority with multiple groups → per-group RemoveMessages with budget, preserving priority order', () => {
       const effect: EffectAST = {
         removeByPriority: {
           budget: 4,
@@ -952,26 +948,26 @@ describe('tooltip-normalizer', () => {
         },
       };
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7b]');
-      assert.equal(messages.length, 3, 'Should include budget set + 2 removes');
-      // Budget
-      assert.equal(messages[0]!.kind, 'set');
+      assert.equal(messages.length, 2, 'Should emit 2 removes (budget folded in)');
       // Priority 0: guerrillas to casualties
-      assert.equal(messages[1]!.kind, 'remove');
-      if (messages[1]!.kind === 'remove') {
-        assert.equal(messages[1]!.tokenFilter, 'guerrilla');
-        assert.equal(messages[1]!.destination, 'casualties-nva');
-        assert.equal(messages[1]!.astPath, 'c[7b].groups[0]');
+      assert.equal(messages[0]!.kind, 'remove');
+      if (messages[0]!.kind === 'remove') {
+        assert.equal(messages[0]!.tokenFilter, 'guerrilla');
+        assert.equal(messages[0]!.destination, 'casualties-nva');
+        assert.equal(messages[0]!.budget, '4');
+        assert.equal(messages[0]!.astPath, 'c[7b].groups[0]');
       }
       // Priority 1: bases to available
-      assert.equal(messages[2]!.kind, 'remove');
-      if (messages[2]!.kind === 'remove') {
-        assert.equal(messages[2]!.tokenFilter, 'base');
-        assert.equal(messages[2]!.destination, 'available-nva');
-        assert.equal(messages[2]!.astPath, 'c[7b].groups[1]');
+      assert.equal(messages[1]!.kind, 'remove');
+      if (messages[1]!.kind === 'remove') {
+        assert.equal(messages[1]!.tokenFilter, 'base');
+        assert.equal(messages[1]!.destination, 'available-nva');
+        assert.equal(messages[1]!.budget, '4');
+        assert.equal(messages[1]!.astPath, 'c[7b].groups[1]');
       }
     });
 
-    it('rule 35: removeByPriority with from zone → RemoveMessage includes fromZone', () => {
+    it('rule 35: removeByPriority with from zone → RemoveMessage includes fromZone and budget', () => {
       const effect: EffectAST = {
         removeByPriority: {
           budget: 2,
@@ -989,7 +985,26 @@ describe('tooltip-normalizer', () => {
       if (removeMsg?.kind === 'remove') {
         assert.equal(removeMsg.fromZone, 'hue');
         assert.equal(removeMsg.destination, 'available-us');
+        assert.equal(removeMsg.budget, '2');
       }
+    });
+
+    it('rule 35: removeByPriority never emits SetMessage with target "budget"', () => {
+      const effect: EffectAST = {
+        removeByPriority: {
+          budget: 5,
+          groups: [{
+            bind: 'guerrilla',
+            over: { query: 'tokensInZone', zone: 'saigon' },
+            to: 'casualties-nva',
+          }],
+        },
+      };
+      const messages = normalizeEffect(effect, EMPTY_CTX, 'c[neg]');
+      const budgetSet = messages.find(
+        m => m.kind === 'set' && (m as { target: string }).target === 'budget'
+      );
+      assert.equal(budgetSet, undefined, 'No SetMessage with target "budget" should exist');
     });
 
     it('rule 41: grantFreeOperation → GrantMessage', () => {

@@ -191,6 +191,8 @@ export interface RenderChoiceStep {
   readonly chosenValueId: string;
   readonly chosenValue: MoveParamValue;
   readonly chosenDisplayName: string;
+  readonly iterationGroupId: string | null;
+  readonly iterationLabel: string | null;
 }
 
 export interface RenderChoiceOption {

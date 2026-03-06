@@ -55,6 +55,35 @@
   cursor: pointer;
 }
 
+.breadcrumbGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.breadcrumbGroupChildren {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding-left: var(--space-md);
+}
+
+.breadcrumbStepIndented {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.breadcrumbStepIndented:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .breadcrumbCurrent {
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--accent);

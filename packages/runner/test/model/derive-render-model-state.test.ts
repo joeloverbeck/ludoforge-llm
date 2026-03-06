@@ -174,6 +174,8 @@ function expectedRenderChoiceStep(
   displayName: string,
   chosenValue: MoveParamValue,
   chosenDisplayName: string,
+  iterationGroupId: string | null = null,
+  iterationLabel: string | null = null,
 ) {
   return {
     decisionId,
@@ -182,6 +184,8 @@ function expectedRenderChoiceStep(
     chosenValueId: serializeChoiceValueIdentity(chosenValue),
     chosenValue,
     chosenDisplayName,
+    iterationGroupId,
+    iterationLabel,
   } as const;
 }
 
@@ -1672,5 +1676,101 @@ describe('deriveRenderModel choiceContext', () => {
     });
     const model = deriveRenderModel(state, def, ctx);
     expect(model.choiceContext!.decisionParamName).toBe('targetProvince');
+  });
+
+  it('breadcrumb steps from non-iteration decisions have null iteration fields', () => {
+    const def = compileFixture();
+    const state = initialState(def, 42, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
+      targetKinds: ['zone'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [{ decisionId: 'pick-action', name: 'pickAction', value: 'train-us' }],
+      }),
+    );
+
+    const step = model.choiceBreadcrumb[0]!;
+    expect(step.iterationGroupId).toBeNull();
+    expect(step.iterationLabel).toBeNull();
+  });
+
+  it('breadcrumb steps from forEach iterations have shared iterationGroupId and resolved iterationLabel', () => {
+    const def = compileFixture();
+    const state = initialState(def, 42, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'decision:placeType::token-a',
+      name: 'placeType',
+      type: 'chooseOne',
+      options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [
+          { decisionId: 'pick-spaces', name: 'pickSpaces', value: ['table:none', 'token-a'] },
+          { decisionId: 'decision:placeType::table:none', name: 'placeType', value: 'irregulars' },
+        ],
+      }),
+    );
+
+    const step = model.choiceBreadcrumb[1]!;
+    expect(step.iterationGroupId).toBe('decision:placeType');
+    expect(step.iterationLabel).toBe('Table None');
+  });
+
+  it('breadcrumb steps from index-based forEach iterations have shared iterationGroupId', () => {
+    const def = compileFixture();
+    const state = initialState(def, 42, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'placeType[1]',
+      name: 'placeType',
+      type: 'chooseOne',
+      options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [
+          { decisionId: 'pick-spaces', name: 'pickSpaces', value: ['table:none', 'token-a'] },
+          { decisionId: 'placeType[0]', name: 'placeType', value: 'irregulars' },
+        ],
+      }),
+    );
+
+    const step = model.choiceBreadcrumb[1]!;
+    expect(step.iterationGroupId).toBe('placeType');
+    expect(step.iterationLabel).toBe('Table None');
   });
 });

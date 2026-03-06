@@ -128,6 +128,8 @@ describe('render-model types', () => {
           chosenValueId: serializeChoiceValueIdentity('table' as MoveParamValue),
           chosenValue: 'table' as MoveParamValue,
           chosenDisplayName: 'Table',
+          iterationGroupId: null,
+          iterationLabel: null,
         },
       ],
       choiceContext: null,

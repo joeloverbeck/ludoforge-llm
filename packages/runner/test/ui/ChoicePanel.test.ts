@@ -89,6 +89,8 @@ describe('ChoicePanel', () => {
     name: string,
     chosenValue: string | number | boolean | readonly (string | number | boolean)[],
     chosenDisplayName: string,
+    iterationGroupId: string | null = null,
+    iterationLabel: string | null = null,
   ) {
     return {
       decisionId,
@@ -97,6 +99,8 @@ describe('ChoicePanel', () => {
       chosenValueId: serializeChoiceValueIdentity(chosenValue),
       chosenValue,
       chosenDisplayName,
+      iterationGroupId,
+      iterationLabel,
     } as const;
   }
 
@@ -785,5 +789,86 @@ describe('ChoicePanel', () => {
     rerender(createElement(ChoicePanel, { store, mode: 'choicePending' }));
 
     expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0');
+  });
+
+  it('renders grouped breadcrumb steps inside a group container with iteration labels', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionId: 'decision:placeType::zone-c',
+              options: [makeChoiceOption('irregulars', 'Irregulars')],
+            },
+            choiceBreadcrumb: [
+              makeBreadcrumbStep('pick-spaces', 'pickSpaces', ['zone-a', 'zone-b', 'zone-c'], 'Zone A, Zone B, Zone C'),
+              makeBreadcrumbStep('decision:placeType::zone-a', 'placeType', 'irregulars', 'Irregulars', 'decision:placeType', 'Zone A'),
+              makeBreadcrumbStep('decision:placeType::zone-b', 'placeType', 'base', 'At Base', 'decision:placeType', 'Zone B'),
+            ],
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-breadcrumb-group-decision:placeType"');
+    expect(html).toContain('Zone A: Irregulars');
+    expect(html).toContain('Zone B: At Base');
+  });
+
+  it('renders non-grouped breadcrumb steps as flat pills without group container', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionId: 'target',
+              options: [makeChoiceOption('zone-c', 'Zone C')],
+            },
+            choiceBreadcrumb: [
+              makeBreadcrumbStep('step-1', 'first', 'zone-a', 'Zone A'),
+              makeBreadcrumbStep('step-2', 'second', 'zone-b', 'Zone B'),
+            ],
+          }),
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('breadcrumbGroup');
+    expect(html).toContain('first: Zone A');
+    expect(html).toContain('second: Zone B');
+  });
+
+  it('grouped breadcrumb step click handlers trigger rewind with correct original index', () => {
+    const cancelChoice = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteOne',
+            decisionId: 'decision:placeType::zone-c',
+            options: [makeChoiceOption('irregulars', 'Irregulars')],
+          },
+          choiceBreadcrumb: [
+            makeBreadcrumbStep('pick-spaces', 'pickSpaces', ['zone-a', 'zone-b'], 'Zone A, Zone B'),
+            makeBreadcrumbStep('decision:placeType::zone-a', 'placeType', 'irregulars', 'Irregulars', 'decision:placeType', 'Zone A'),
+            makeBreadcrumbStep('decision:placeType::zone-b', 'placeType', 'base', 'At Base', 'decision:placeType', 'Zone B'),
+          ],
+        }),
+        cancelChoice,
+      }),
+    });
+
+    // Click on the second grouped step (original index 2), should rewind 0 times (it's the last step)
+    fireEvent.click(getByTestId('choice-breadcrumb-step-2'));
+    expect(cancelChoice).toHaveBeenCalledTimes(0);
+
+    // Click on the first grouped step (original index 1), should rewind 1 time
+    fireEvent.click(getByTestId('choice-breadcrumb-step-1'));
+    expect(cancelChoice).toHaveBeenCalledTimes(1);
   });
 });

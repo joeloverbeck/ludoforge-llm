@@ -1184,18 +1184,37 @@ function deriveChoiceContext(
   };
 }
 
+const ITERATION_SUFFIX_PATTERN = /(?:::.*|\[\d+\])$/;
+
+function extractIterationGroupId(decisionId: string): string | null {
+  const match = ITERATION_SUFFIX_PATTERN.exec(decisionId);
+  if (match === null) {
+    return null;
+  }
+  return decisionId.slice(0, match.index);
+}
+
 function deriveChoiceBreadcrumb(
   context: RenderContext,
   zonesById: ReadonlyMap<string, RenderZone>,
 ): RenderModel['choiceBreadcrumb'] {
-  return context.choiceStack.map((step) => ({
-    decisionId: step.decisionId,
-    name: step.name,
-    displayName: formatIdAsDisplayName(step.name),
-    chosenValueId: serializeChoiceValueIdentity(step.value),
-    chosenValue: step.value,
-    chosenDisplayName: formatChoiceValueResolved(step.value, zonesById),
-  }));
+  return context.choiceStack.map((step, index) => {
+    const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
+    const iterCtx = parseIterationContext(step.decisionId, choiceStackUpToHere, zonesById);
+    const iterationGroupId = iterCtx !== null ? extractIterationGroupId(step.decisionId) : null;
+    const iterationLabel = iterCtx?.currentEntityDisplayName ?? null;
+
+    return {
+      decisionId: step.decisionId,
+      name: step.name,
+      displayName: formatIdAsDisplayName(step.name),
+      chosenValueId: serializeChoiceValueIdentity(step.value),
+      chosenValue: step.value,
+      chosenDisplayName: formatChoiceValueResolved(step.value, zonesById),
+      iterationGroupId,
+      iterationLabel,
+    };
+  });
 }
 
 function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoiceOption[] {

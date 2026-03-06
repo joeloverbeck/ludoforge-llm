@@ -20,7 +20,9 @@ import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
 import { booleanArityMessage, booleanAritySuggestion } from './boolean-arity-policy.js';
 import {
-  appendConditionSurfacePath,
+  appendEffectConditionSurfacePath,
+  appendQueryConditionSurfacePath,
+  appendValueExprConditionSurfacePath,
   collectDeclaredBinderCandidatesFromEffectNode,
   CONDITION_SURFACE_SUFFIX,
   conditionSurfacePathForTerminalConditionWhen,
@@ -446,7 +448,7 @@ export const validateValueExpr = (
     validateConditionAst(
       diagnostics,
       valueExpr.if.when,
-      appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.valueExprIfWhen),
+      appendValueExprConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen),
       context,
     );
     validateValueExpr(diagnostics, valueExpr.if.then, `${path}.if.then`, context);
@@ -900,7 +902,7 @@ export const validateOptionsQuery = (
         validateConditionAst(
           diagnostics,
           query.spaceFilter.condition,
-          appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.querySpaceFilterCondition),
+          appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.spaceFilterCondition),
           context,
         );
       }
@@ -913,7 +915,7 @@ export const validateOptionsQuery = (
         validateConditionAst(
           diagnostics,
           query.via,
-          appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.queryVia),
+          appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.via),
           context,
         );
       }
@@ -1078,7 +1080,7 @@ export const validateOptionsQuery = (
       validateConditionAst(
         diagnostics,
         query.where,
-        appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.queryWhere),
+        appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.where),
         context,
       );
       return;
@@ -1250,7 +1252,7 @@ export const validateOptionsQuery = (
         validateConditionAst(
           diagnostics,
           query.filter.condition,
-          appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.queryFilterCondition),
+          appendQueryConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.query.filterCondition),
           context,
         );
       }
@@ -1520,7 +1522,7 @@ export const validateEffectAst = (
       validateConditionAst(
         diagnostics,
         effect.moveAll.filter,
-        appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effectMoveAllFilter),
+        appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.moveAllFilter),
         context,
       );
     }
@@ -1590,7 +1592,7 @@ export const validateEffectAst = (
     validateConditionAst(
       diagnostics,
       effect.if.when,
-      appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effectIfWhen),
+      appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.ifWhen),
       context,
     );
     effect.if.then.forEach((entry, index) => {
@@ -1869,7 +1871,7 @@ export const validateEffectAst = (
       validateConditionAst(
         diagnostics,
         grant.zoneFilter,
-        appendConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effectGrantFreeOperationZoneFilter),
+        appendEffectConditionSurfacePath(path, CONDITION_SURFACE_SUFFIX.effect.grantFreeOperationZoneFilter),
         context,
       );
     }

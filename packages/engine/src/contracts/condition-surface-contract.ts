@@ -1,24 +1,52 @@
 export const CONDITION_SURFACE_SUFFIX = {
-  valueExprIfWhen: 'if.when',
-  querySpaceFilterCondition: 'spaceFilter.condition',
-  queryVia: 'via',
-  queryWhere: 'where',
-  queryFilterCondition: 'filter.condition',
-  effectMoveAllFilter: 'moveAll.filter',
-  effectIfWhen: 'if.when',
-  effectGrantFreeOperationZoneFilter: 'grantFreeOperation.zoneFilter',
-  actionPipelineApplicability: 'applicability',
-  actionPipelineLegality: 'legality',
-  actionPipelineCostValidation: 'costValidation',
-  actionPipelineTargetingFilter: 'targeting.filter',
+  valueExpr: {
+    ifWhen: 'if.when',
+  },
+  query: {
+    spaceFilterCondition: 'spaceFilter.condition',
+    via: 'via',
+    where: 'where',
+    filterCondition: 'filter.condition',
+  },
+  effect: {
+    ifWhen: 'if.when',
+    moveAllFilter: 'moveAll.filter',
+    grantFreeOperationZoneFilter: 'grantFreeOperation.zoneFilter',
+  },
+  actionPipeline: {
+    applicability: 'applicability',
+    legality: 'legality',
+    costValidation: 'costValidation',
+    targetingFilter: 'targeting.filter',
+  },
 } as const;
 
-export type ConditionSurfaceSuffix = (typeof CONDITION_SURFACE_SUFFIX)[keyof typeof CONDITION_SURFACE_SUFFIX];
+export type ValueExprConditionSurfaceSuffix =
+  (typeof CONDITION_SURFACE_SUFFIX.valueExpr)[keyof typeof CONDITION_SURFACE_SUFFIX.valueExpr];
+export type QueryConditionSurfaceSuffix = (typeof CONDITION_SURFACE_SUFFIX.query)[keyof typeof CONDITION_SURFACE_SUFFIX.query];
+export type EffectConditionSurfaceSuffix =
+  (typeof CONDITION_SURFACE_SUFFIX.effect)[keyof typeof CONDITION_SURFACE_SUFFIX.effect];
+export type ActionPipelineConditionSurfaceSuffix =
+  (typeof CONDITION_SURFACE_SUFFIX.actionPipeline)[keyof typeof CONDITION_SURFACE_SUFFIX.actionPipeline];
 
 // Validator top-level condition surfaces must compose paths only through this contract API.
 // Guardrail coverage in unit lint tests enforces this and forbids ad-hoc string/template paths.
-export const appendConditionSurfacePath = (basePath: string, suffix: ConditionSurfaceSuffix): string =>
+const appendConditionSurfacePath = (basePath: string, suffix: string): string =>
   `${basePath}.${suffix}`;
+
+export const appendValueExprConditionSurfacePath = (basePath: string, suffix: ValueExprConditionSurfaceSuffix): string =>
+  appendConditionSurfacePath(basePath, suffix);
+
+export const appendQueryConditionSurfacePath = (basePath: string, suffix: QueryConditionSurfaceSuffix): string =>
+  appendConditionSurfacePath(basePath, suffix);
+
+export const appendEffectConditionSurfacePath = (basePath: string, suffix: EffectConditionSurfaceSuffix): string =>
+  appendConditionSurfacePath(basePath, suffix);
+
+export const appendActionPipelineConditionSurfacePath = (
+  basePath: string,
+  suffix: ActionPipelineConditionSurfaceSuffix,
+): string => appendConditionSurfacePath(basePath, suffix);
 
 export const conditionSurfacePathForActionPre = (actionIndex: number): string =>
   `actions[${actionIndex}].pre`;

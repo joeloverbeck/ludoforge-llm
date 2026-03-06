@@ -25,7 +25,13 @@ function isConditionSurfaceHelperCall(expression: ts.Expression): boolean {
     return false;
   }
   const callee = expression.expression.text;
-  return callee === 'appendConditionSurfacePath' || callee.startsWith('conditionSurfacePathFor');
+  return (
+    callee === 'appendValueExprConditionSurfacePath'
+    || callee === 'appendQueryConditionSurfacePath'
+    || callee === 'appendEffectConditionSurfacePath'
+    || callee === 'appendActionPipelineConditionSurfacePath'
+    || callee.startsWith('conditionSurfacePathFor')
+  );
 }
 
 function findEnclosingFunctionName(node: ts.Node): string | undefined {
@@ -97,7 +103,7 @@ describe('condition-surface validator callsite policy', () => {
         'Top-level validator validateConditionAst callsites must pass path values via condition-surface contract helpers.',
         'Allowed path construction patterns:',
         '- conditionSurfacePathFor* helper calls',
-        '- appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.*)',
+        '- append*ConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.<family>.*)',
         'Disallowed at top-level validator callsites:',
         '- raw string literals (for example "triggers[0].when")',
         '- raw template literals (for example `actions[${index}].pre`)',

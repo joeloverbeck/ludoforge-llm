@@ -14,7 +14,9 @@ import {
   validateInitialPlacementsAgainstStackingConstraints,
 } from '../../src/kernel/index.js';
 import {
-  appendConditionSurfacePath,
+  appendActionPipelineConditionSurfacePath,
+  appendEffectConditionSurfacePath,
+  appendQueryConditionSurfacePath,
   CONDITION_SURFACE_SUFFIX,
   conditionSurfacePathForActionPre,
   conditionSurfacePathForTerminalCheckpointWhen,
@@ -620,6 +622,18 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('keeps condition-surface suffix taxonomy canonicalized by family', () => {
+    const querySuffixes = Object.values(CONDITION_SURFACE_SUFFIX.query);
+    const effectSuffixes = Object.values(CONDITION_SURFACE_SUFFIX.effect);
+    const actionPipelineSuffixes = Object.values(CONDITION_SURFACE_SUFFIX.actionPipeline);
+
+    assert.equal(CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen, 'if.when');
+    assert.equal(CONDITION_SURFACE_SUFFIX.effect.ifWhen, 'if.when');
+    assert.equal(new Set(querySuffixes).size, querySuffixes.length);
+    assert.equal(new Set(effectSuffixes).size, effectSuffixes.length);
+    assert.equal(new Set(actionPipelineSuffixes).size, actionPipelineSuffixes.length);
+  });
+
   it('rejects empty boolean ConditionAST args across condition-bearing validator surfaces', () => {
     const cases: readonly {
       readonly name: string;
@@ -663,7 +677,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actions.params.domain.zones.filter.condition',
-        expectedPath: `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryFilterCondition)}.args`,
+        expectedPath: `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.filterCondition)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actions: [
@@ -681,7 +695,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actions.params.domain.connectedZones.via',
-        expectedPath: `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryVia)}.args`,
+        expectedPath: `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.via)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actions: [
@@ -699,7 +713,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actions.params.domain.nextInOrderByCondition.where',
-        expectedPath: `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryWhere)}.args`,
+        expectedPath: `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.where)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actions: [
@@ -723,7 +737,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actions.effects.moveAll.filter',
-        expectedPath: `${appendConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.effectMoveAllFilter)}.args`,
+        expectedPath: `${appendEffectConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.effect.moveAllFilter)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actions: [
@@ -736,7 +750,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actionPipelines.applicability',
-        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineApplicability)}.args`,
+        expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.applicability)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actionPipelines: [
@@ -756,7 +770,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actionPipelines.legality',
-        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineLegality)}.args`,
+        expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.legality)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actionPipelines: [
@@ -775,7 +789,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actionPipelines.costValidation',
-        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineCostValidation)}.args`,
+        expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.costValidation)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actionPipelines: [
@@ -794,7 +808,7 @@ describe('validateGameDef reference checks', () => {
       },
       {
         name: 'actionPipelines.targeting.filter',
-        expectedPath: `${appendConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipelineTargetingFilter)}.args`,
+        expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.targetingFilter)}.args`,
         buildDef: (seed) => ({
           ...seed,
           actionPipelines: [
@@ -872,7 +886,7 @@ describe('validateGameDef reference checks', () => {
       diagnostics.some(
         (diag) =>
           diag.code === 'CONDITION_BOOLEAN_ARITY_INVALID'
-          && diag.path === `${appendConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.queryVia)}.arg.args[1].args`,
+          && diag.path === `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.via)}.arg.args[1].args`,
       ),
     );
   });

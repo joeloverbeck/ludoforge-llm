@@ -14,7 +14,7 @@ import { validateConditionAst, validateEffectAst, validateValueExpr } from './va
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
 import { forEachDefined } from './validate-gamedef-utils.js';
 import {
-  appendConditionSurfacePath,
+  appendActionPipelineConditionSurfacePath,
   collectTurnFlowEligibilityOverrideWindowIds,
   CONDITION_SURFACE_SUFFIX,
   conditionSurfacePathForTerminalCheckpointWhen,
@@ -416,7 +416,7 @@ export const validateActionPipelines = (
       validateConditionAst(
         diagnostics,
         actionPipeline.applicability,
-        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineApplicability),
+        appendActionPipelineConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipeline.applicability),
         context,
       );
     }
@@ -424,7 +424,7 @@ export const validateActionPipelines = (
       validateConditionAst(
         diagnostics,
         actionPipeline.legality,
-        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineLegality),
+        appendActionPipelineConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipeline.legality),
         context,
       );
     }
@@ -432,7 +432,7 @@ export const validateActionPipelines = (
       validateConditionAst(
         diagnostics,
         actionPipeline.costValidation,
-        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineCostValidation),
+        appendActionPipelineConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipeline.costValidation),
         context,
       );
     }
@@ -451,7 +451,7 @@ export const validateActionPipelines = (
       validateConditionAst(
         diagnostics,
         targeting.filter,
-        appendConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipelineTargetingFilter),
+        appendActionPipelineConditionSurfacePath(basePath, CONDITION_SURFACE_SUFFIX.actionPipeline.targetingFilter),
         context,
       );
     }

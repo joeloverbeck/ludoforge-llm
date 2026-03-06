@@ -16,9 +16,20 @@
   pointer-events: none;
 }
 
+.scoringBar {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: var(--z-overlay);
+}
+
 .leftPanel {
   position: absolute;
-  inset: 72px auto 96px 0;
+  inset: 100px auto 96px 0;
   width: auto;
   display: flex;
   flex-direction: column;
@@ -29,7 +40,7 @@
 
 .sidePanels {
   position: absolute;
-  inset: 72px 0 96px auto;
+  inset: 100px 0 96px auto;
   width: 320px;
   max-width: 34vw;
   display: flex;

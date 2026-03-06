@@ -63,10 +63,9 @@ type OverlayRegion = 'top' | 'left' | 'side' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayPanelComponent[]>> = {
   top: [
-    VictoryStandingsBar,
-    InterruptBanner,
     PhaseIndicator,
     TurnOrderDisplay,
+    InterruptBanner,
     EventDeckPanel,
     AnimationControls,
   ],
@@ -283,6 +282,7 @@ export function GameContainer({
         </div>
         <UIOverlay
           leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
+          scoringBarContent={<VictoryStandingsBar store={store} />}
           topBarContent={(
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, overlayPanelProps)}

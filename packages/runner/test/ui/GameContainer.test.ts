@@ -374,9 +374,9 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="tooltip-layer"');
     expect(html).toContain('data-testid="event-log-toggle-button"');
     expectAppearsInOrder(html, [
-      'interrupt-banner',
       'phase-indicator',
       'turn-order-display',
+      'interrupt-banner',
       'event-deck-panel',
       'animation-controls',
     ]);
@@ -430,9 +430,9 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
     expectAppearsInOrder(html, [
-      'interrupt-banner',
       'phase-indicator',
       'turn-order-display',
+      'interrupt-banner',
       'event-deck-panel',
       'animation-controls',
     ]);

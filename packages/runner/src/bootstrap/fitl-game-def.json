@@ -58451,414 +58451,121 @@
                   "internalDecisionId": "decision:doc.eventDecks.0.cards.41.unshaded.effects.0.chooseN",
                   "bind": "$vcPiecesToRemove",
                   "options": {
-                    "query": "concat",
-                    "sources": [
-                      {
-                        "query": "tokensInMapSpaces",
-                        "spaceFilter": {
-                          "condition": {
-                            "op": "and",
+                    "query": "tokensInMapSpaces",
+                    "spaceFilter": {
+                      "condition": {
+                        "op": "and",
+                        "args": [
+                          {
+                            "op": "or",
                             "args": [
                               {
-                                "op": "or",
-                                "args": [
-                                  {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "zoneProp",
-                                      "zone": "$zone",
-                                      "prop": "category"
-                                    },
-                                    "right": "province"
-                                  },
-                                  {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "zoneProp",
-                                      "zone": "$zone",
-                                      "prop": "category"
-                                    },
-                                    "right": "city"
-                                  }
-                                ]
+                                "op": "==",
+                                "left": {
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "category"
+                                },
+                                "right": "province"
                               },
                               {
-                                "op": ">",
+                                "op": "==",
                                 "left": {
-                                  "aggregate": {
-                                    "op": "count",
-                                    "query": {
-                                      "query": "tokensInZone",
-                                      "zone": "$zone",
-                                      "filter": {
-                                        "op": "and",
-                                        "args": [
-                                          {
-                                            "prop": "faction",
-                                            "op": "in",
-                                            "value": [
-                                              "US",
-                                              "ARVN"
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  }
+                                  "ref": "zoneProp",
+                                  "zone": "$zone",
+                                  "prop": "category"
                                 },
-                                "right": {
-                                  "aggregate": {
-                                    "op": "count",
-                                    "query": {
-                                      "query": "tokensInZone",
-                                      "zone": "$zone",
-                                      "filter": {
-                                        "op": "and",
-                                        "args": [
-                                          {
-                                            "prop": "faction",
-                                            "op": "in",
-                                            "value": [
-                                              "NVA",
-                                              "VC"
-                                            ]
-                                          }
+                                "right": "city"
+                              }
+                            ]
+                          },
+                          {
+                            "op": ">",
+                            "left": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "in",
+                                        "value": [
+                                          "US",
+                                          "ARVN"
                                         ]
                                       }
-                                    }
+                                    ]
                                   }
                                 }
                               }
-                            ]
-                          }
-                        },
-                        "filter": {
-                          "op": "and",
-                          "args": [
-                            {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "VC"
                             },
+                            "right": {
+                              "aggregate": {
+                                "op": "count",
+                                "query": {
+                                  "query": "tokensInZone",
+                                  "zone": "$zone",
+                                  "filter": {
+                                    "op": "and",
+                                    "args": [
+                                      {
+                                        "prop": "faction",
+                                        "op": "in",
+                                        "value": [
+                                          "NVA",
+                                          "VC"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "filter": {
+                      "op": "and",
+                      "args": [
+                        {
+                          "prop": "faction",
+                          "op": "eq",
+                          "value": "VC"
+                        },
+                        {
+                          "op": "or",
+                          "args": [
                             {
                               "prop": "type",
                               "op": "eq",
                               "value": "guerrilla"
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "query": "tokensInMapSpaces",
-                        "spaceFilter": {
-                          "condition": {
-                            "op": "and",
-                            "args": [
-                              {
-                                "op": "or",
-                                "args": [
-                                  {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "zoneProp",
-                                      "zone": "$zone",
-                                      "prop": "category"
-                                    },
-                                    "right": "province"
-                                  },
-                                  {
-                                    "op": "==",
-                                    "left": {
-                                      "ref": "zoneProp",
-                                      "zone": "$zone",
-                                      "prop": "category"
-                                    },
-                                    "right": "city"
-                                  }
-                                ]
-                              },
-                              {
-                                "op": ">",
-                                "left": {
-                                  "aggregate": {
-                                    "op": "count",
-                                    "query": {
-                                      "query": "tokensInZone",
-                                      "zone": "$zone",
-                                      "filter": {
-                                        "op": "and",
-                                        "args": [
-                                          {
-                                            "prop": "faction",
-                                            "op": "in",
-                                            "value": [
-                                              "US",
-                                              "ARVN"
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  }
+                            },
+                            {
+                              "op": "and",
+                              "args": [
+                                {
+                                  "prop": "type",
+                                  "op": "eq",
+                                  "value": "base"
                                 },
-                                "right": {
-                                  "aggregate": {
-                                    "op": "count",
-                                    "query": {
-                                      "query": "tokensInZone",
-                                      "zone": "$zone",
-                                      "filter": {
-                                        "op": "and",
-                                        "args": [
-                                          {
-                                            "prop": "faction",
-                                            "op": "in",
-                                            "value": [
-                                              "NVA",
-                                              "VC"
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  }
+                                {
+                                  "prop": "tunnel",
+                                  "op": "eq",
+                                  "value": "untunneled"
                                 }
-                              }
-                            ]
-                          }
-                        },
-                        "filter": {
-                          "op": "and",
-                          "args": [
-                            {
-                              "prop": "faction",
-                              "op": "eq",
-                              "value": "VC"
-                            },
-                            {
-                              "prop": "type",
-                              "op": "eq",
-                              "value": "base"
-                            },
-                            {
-                              "prop": "tunnel",
-                              "op": "eq",
-                              "value": "untunneled"
+                              ]
                             }
                           ]
                         }
-                      }
-                    ]
-                  },
-                  "max": {
-                    "op": "min",
-                    "left": 3,
-                    "right": {
-                      "aggregate": {
-                        "op": "count",
-                        "query": {
-                          "query": "concat",
-                          "sources": [
-                            {
-                              "query": "tokensInMapSpaces",
-                              "spaceFilter": {
-                                "condition": {
-                                  "op": "and",
-                                  "args": [
-                                    {
-                                      "op": "or",
-                                      "args": [
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "province"
-                                        },
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "city"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "op": ">",
-                                      "left": {
-                                        "aggregate": {
-                                          "op": "count",
-                                          "query": {
-                                            "query": "tokensInZone",
-                                            "zone": "$zone",
-                                            "filter": {
-                                              "op": "and",
-                                              "args": [
-                                                {
-                                                  "prop": "faction",
-                                                  "op": "in",
-                                                  "value": [
-                                                    "US",
-                                                    "ARVN"
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "right": {
-                                        "aggregate": {
-                                          "op": "count",
-                                          "query": {
-                                            "query": "tokensInZone",
-                                            "zone": "$zone",
-                                            "filter": {
-                                              "op": "and",
-                                              "args": [
-                                                {
-                                                  "prop": "faction",
-                                                  "op": "in",
-                                                  "value": [
-                                                    "NVA",
-                                                    "VC"
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              "filter": {
-                                "op": "and",
-                                "args": [
-                                  {
-                                    "prop": "faction",
-                                    "op": "eq",
-                                    "value": "VC"
-                                  },
-                                  {
-                                    "prop": "type",
-                                    "op": "eq",
-                                    "value": "guerrilla"
-                                  }
-                                ]
-                              }
-                            },
-                            {
-                              "query": "tokensInMapSpaces",
-                              "spaceFilter": {
-                                "condition": {
-                                  "op": "and",
-                                  "args": [
-                                    {
-                                      "op": "or",
-                                      "args": [
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "province"
-                                        },
-                                        {
-                                          "op": "==",
-                                          "left": {
-                                            "ref": "zoneProp",
-                                            "zone": "$zone",
-                                            "prop": "category"
-                                          },
-                                          "right": "city"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "op": ">",
-                                      "left": {
-                                        "aggregate": {
-                                          "op": "count",
-                                          "query": {
-                                            "query": "tokensInZone",
-                                            "zone": "$zone",
-                                            "filter": {
-                                              "op": "and",
-                                              "args": [
-                                                {
-                                                  "prop": "faction",
-                                                  "op": "in",
-                                                  "value": [
-                                                    "US",
-                                                    "ARVN"
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "right": {
-                                        "aggregate": {
-                                          "op": "count",
-                                          "query": {
-                                            "query": "tokensInZone",
-                                            "zone": "$zone",
-                                            "filter": {
-                                              "op": "and",
-                                              "args": [
-                                                {
-                                                  "prop": "faction",
-                                                  "op": "in",
-                                                  "value": [
-                                                    "NVA",
-                                                    "VC"
-                                                  ]
-                                                }
-                                              ]
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              "filter": {
-                                "op": "and",
-                                "args": [
-                                  {
-                                    "prop": "faction",
-                                    "op": "eq",
-                                    "value": "VC"
-                                  },
-                                  {
-                                    "prop": "type",
-                                    "op": "eq",
-                                    "value": "base"
-                                  },
-                                  {
-                                    "prop": "tunnel",
-                                    "op": "eq",
-                                    "value": "untunneled"
-                                  }
-                                ]
-                              }
-                            }
-                          ]
-                        }
-                      }
+                      ]
                     }
                   },
+                  "max": 3,
                   "min": 0
                 }
               },

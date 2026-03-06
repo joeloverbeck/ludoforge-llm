@@ -20,6 +20,15 @@ export interface RenderRuntimeEligibleFaction {
   readonly seatIndex: number;
 }
 
+export interface RenderChoiceContext {
+  readonly actionDisplayName: string;
+  readonly decisionPrompt: string;
+  readonly decisionParamName: string;
+  readonly boundsText: string | null;
+  readonly iterationLabel: string | null;
+  readonly iterationProgress: string | null;
+}
+
 export interface RenderModel {
   readonly zones: readonly RenderZone[];
   readonly adjacencies: readonly RenderAdjacency[];
@@ -41,6 +50,7 @@ export interface RenderModel {
   readonly eventDecks: readonly RenderEventDeck[];
   readonly actionGroups: readonly RenderActionGroup[];
   readonly choiceBreadcrumb: readonly RenderChoiceStep[];
+  readonly choiceContext: RenderChoiceContext | null;
   readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];
   readonly runtimeEligible: readonly RenderRuntimeEligibleFaction[];

@@ -1457,3 +1457,220 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.runtimeEligible).toEqual([]);
   });
 });
+
+describe('deriveRenderModel choiceContext', () => {
+  function compileAndInit(): { def: GameDef; state: GameState } {
+    const def = compileFixture();
+    const { state } = initialState(def, 5, 2);
+    return { def, state };
+  }
+
+  it('returns null choiceContext when selectedAction is null', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: null,
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).toBeNull();
+  });
+
+  it('returns null choiceContext when choicePending is null', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: null,
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).toBeNull();
+  });
+
+  it('returns actionDisplayName from visual config when available', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        actions: { train: { displayName: 'Train Troops' } },
+      }),
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).not.toBeNull();
+    expect(model.choiceContext!.actionDisplayName).toBe('Train Troops');
+  });
+
+  it('falls back to formatIdAsDisplayName when visual config has no action entry', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).not.toBeNull();
+    expect(model.choiceContext!.actionDisplayName).toBe('Train');
+  });
+
+  it('returns decisionPrompt from visual config when available', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'targetSpace',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        actions: { train: { choices: { targetSpace: { prompt: 'Select a space to train in' } } } },
+      }),
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.decisionPrompt).toBe('Select a space to train in');
+  });
+
+  it('returns boundsText for chooseN decisions with min/max', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('deploy'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'spaces',
+        type: 'chooseN',
+        options: [],
+        targetKinds: [],
+        min: 1,
+        max: 6,
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.boundsText).toBe('1-6');
+  });
+
+  it('returns single-value boundsText when min equals max', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('deploy'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'spaces',
+        type: 'chooseN',
+        options: [],
+        targetKinds: [],
+        min: 3,
+        max: 3,
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.boundsText).toBe('3');
+  });
+
+  it('returns null boundsText for chooseOne decisions without min/max', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.boundsText).toBeNull();
+  });
+
+  it('populates iterationLabel and iterationProgress when inside a forEach iteration', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'decision:troopCount[0]',
+        name: 'troopCount',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+      choiceStack: [
+        { decisionId: 'spaces', name: 'spaces', value: ['table', 'hand'] as unknown as MoveParamValue },
+      ],
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.iterationLabel).toBe('Table');
+    expect(model.choiceContext!.iterationProgress).toBe('1 of 2');
+  });
+
+  it('returns null iteration fields when not inside a forEach', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'simple-decision',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.iterationLabel).toBeNull();
+    expect(model.choiceContext!.iterationProgress).toBeNull();
+  });
+
+  it('stores decisionParamName from choicePending.name', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'targetProvince',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.decisionParamName).toBe('targetProvince');
+  });
+});

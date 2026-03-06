@@ -130,6 +130,7 @@ describe('render-model types', () => {
           chosenDisplayName: 'Table',
         },
       ],
+      choiceContext: null,
       choiceUi: {
         kind: 'discreteMany',
         decisionId: 'pick-tokens',

@@ -652,6 +652,87 @@ describe('ChoicePanel', () => {
     expect(html).toBe('');
   });
 
+  it('renders ChoiceContextHeader when choiceContext is non-null', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceContext: {
+              actionDisplayName: 'Train Troops',
+              decisionPrompt: 'Select a space',
+              decisionParamName: 'targetSpace',
+              boundsText: '1-3',
+              iterationLabel: 'Da Nang',
+              iterationProgress: '1 of 3',
+            },
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionId: 'test-decision',
+              options: [makeChoiceOption('zone-a', 'Zone A')],
+            },
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-context-header"');
+    expect(html).toContain('data-testid="choice-context-action"');
+    expect(html).toContain('Train Troops');
+    expect(html).toContain('data-testid="choice-context-prompt"');
+    expect(html).toContain('Da Nang: Select a space (1-3) - 1 of 3');
+  });
+
+  it('does not render ChoiceContextHeader when choiceContext is null', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceContext: null,
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionId: 'test-decision',
+              options: [makeChoiceOption('zone-a', 'Zone A')],
+            },
+          }),
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="choice-context-header"');
+  });
+
+  it('renders ChoiceContextHeader without optional fields', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceContext: {
+              actionDisplayName: 'Pass',
+              decisionPrompt: 'Confirm action',
+              decisionParamName: 'confirm',
+              boundsText: null,
+              iterationLabel: null,
+              iterationProgress: null,
+            },
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionId: 'test-decision',
+              options: [makeChoiceOption('yes', 'Yes')],
+            },
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-context-header"');
+    expect(html).toContain('Pass');
+    expect(html).toContain('Confirm action');
+    expect(html).not.toContain('of');
+  });
+
   it('resets MultiSelectMode selections when decisionId changes (stale state regression)', () => {
     const chooseN = vi.fn(async () => {});
 

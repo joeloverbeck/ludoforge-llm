@@ -12,6 +12,29 @@
   pointer-events: auto;
 }
 
+.choiceContextHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.actionBadge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  font-weight: bold;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  align-self: flex-start;
+}
+
+.decisionPrompt {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .breadcrumb {
   display: flex;
   flex-wrap: wrap;

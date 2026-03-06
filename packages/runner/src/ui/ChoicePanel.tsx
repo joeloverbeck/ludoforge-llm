@@ -4,6 +4,7 @@ import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { GameStore } from '../store/game-store.js';
+import type { RenderChoiceContext } from '../model/render-model.js';
 import type { ChoicePanelMode } from './bottom-bar-mode.js';
 import { IllegalityFeedback } from './IllegalityFeedback.js';
 import styles from './ChoicePanel.module.css';
@@ -274,6 +275,22 @@ function NumericMode({ choiceUi, chooseOne }: NumericModeProps): ReactElement {
   );
 }
 
+function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContext }): ReactElement {
+  return (
+    <div className={styles.choiceContextHeader} data-testid="choice-context-header">
+      <span className={styles.actionBadge} data-testid="choice-context-action">
+        {context.actionDisplayName}
+      </span>
+      <span className={styles.decisionPrompt} data-testid="choice-context-prompt">
+        {context.iterationLabel != null ? `${context.iterationLabel}: ` : ''}
+        {context.decisionPrompt}
+        {context.boundsText != null ? ` (${context.boundsText})` : ''}
+        {context.iterationProgress != null ? ` - ${context.iterationProgress}` : ''}
+      </span>
+    </div>
+  );
+}
+
 export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
 
@@ -305,6 +322,9 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
   return (
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
+      {choiceModel.choiceContext != null ? (
+        <ChoiceContextHeader context={choiceModel.choiceContext} />
+      ) : null}
       {mode !== 'choiceInvalid' ? (
         <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
           {choiceModel.choiceBreadcrumb.map((step, index) => (

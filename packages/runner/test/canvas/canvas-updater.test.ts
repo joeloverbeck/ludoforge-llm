@@ -81,6 +81,7 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     eventDecks: [],
     actionGroups: [],
     choiceBreadcrumb: [],
+    choiceContext: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel validation guard + unit coverage
-**Deps**: tickets/TOKFILAST-009-token-filter-runtime-operator-fail-closed.md, tickets/TOKFILAST-011-token-filter-empty-args-surface-coverage-hardening.md
+**Deps**: archive/tickets/TOKFILAST/TOKFILAST-009-token-filter-runtime-operator-fail-closed.md, tickets/TOKFILAST-011-token-filter-empty-args-surface-coverage-hardening.md
 
 ## Problem
 

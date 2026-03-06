@@ -604,6 +604,17 @@ const validateTokenFilterExpr = (
     if (entry.op === 'not') {
       return;
     }
+    const op = Reflect.get(entry as object, 'op');
+    if (op !== 'and' && op !== 'or' && op !== 'not') {
+      diagnostics.push({
+        code: 'DOMAIN_QUERY_INVALID',
+        path: `${entryPath}.op`,
+        severity: 'error',
+        message: `Unsupported token filter operator "${String(op)}".`,
+        suggestion: 'Use one of: and, or, not.',
+      });
+      return;
+    }
     if (entry.args.length === 0) {
       diagnostics.push({
         code: 'DOMAIN_QUERY_INVALID',

@@ -1,4 +1,5 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
+import { typeMismatchError } from './eval-error.js';
 
 export interface TokenFilterPathSegmentNot {
   readonly kind: 'not';
@@ -23,6 +24,12 @@ export interface TokenFilterExprFoldHandlers<TResult> {
 
 export const isTokenFilterPredicateExpr = (expr: TokenFilterExpr): expr is TokenFilterPredicate => 'prop' in expr;
 
+const isTokenFilterNotExpr = (expr: TokenFilterExpr): expr is TokenFilterNotExpr =>
+  !isTokenFilterPredicateExpr(expr) && expr.op === 'not';
+
+const isTokenFilterBooleanExpr = (expr: TokenFilterExpr): expr is TokenFilterBooleanExpr =>
+  !isTokenFilterPredicateExpr(expr) && (expr.op === 'and' || expr.op === 'or');
+
 export const tokenFilterPathSuffix = (path: readonly TokenFilterPathSegment[]): string =>
   path
     .map((segment) => (segment.kind === 'not' ? '.arg' : `.args[${segment.index}]`))
@@ -35,13 +42,17 @@ export const foldTokenFilterExpr = <TResult>(
   if (isTokenFilterPredicateExpr(expr)) {
     return handlers.predicate(expr);
   }
-  if (expr.op === 'not') {
+  if (isTokenFilterNotExpr(expr)) {
     return handlers.not(expr, foldTokenFilterExpr(expr.arg, handlers));
   }
-  const foldedArgs = expr.args.map((entry) => foldTokenFilterExpr(entry, handlers));
-  return expr.op === 'and'
-    ? handlers.and(expr, foldedArgs)
-    : handlers.or(expr, foldedArgs);
+  if (isTokenFilterBooleanExpr(expr)) {
+    const foldedArgs = expr.args.map((entry) => foldTokenFilterExpr(entry, handlers));
+    return expr.op === 'and'
+      ? handlers.and(expr, foldedArgs)
+      : handlers.or(expr, foldedArgs);
+  }
+  const op = Reflect.get(expr as object, 'op');
+  throw typeMismatchError(`Unsupported token filter operator "${String(op)}".`, { expr });
 };
 
 export const walkTokenFilterExpr = (
@@ -53,13 +64,15 @@ export const walkTokenFilterExpr = (
     if (isTokenFilterPredicateExpr(entry)) {
       return;
     }
-    if (entry.op === 'not') {
+    if (isTokenFilterNotExpr(entry)) {
       walk(entry.arg, [...path, { kind: 'not' }]);
       return;
     }
-    entry.args.forEach((arg, index) => {
-      walk(arg, [...path, { kind: 'arg', index }]);
-    });
+    if (isTokenFilterBooleanExpr(entry)) {
+      entry.args.forEach((arg, index) => {
+        walk(arg, [...path, { kind: 'arg', index }]);
+      });
+    }
   };
   walk(expr, []);
 };

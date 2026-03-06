@@ -543,6 +543,39 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects unsupported token-filter operators when malformed objects bypass typing', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: {
+                  op: 'xor',
+                  args: [{ prop: 'id', op: 'eq', value: 'token-1' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].effects[0].reveal.filter.op',
+      ),
+    );
+  });
+
   it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
     const base = createValidGameDef();
     const def = {

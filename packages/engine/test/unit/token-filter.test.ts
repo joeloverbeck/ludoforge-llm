@@ -9,7 +9,7 @@ import {
   matchesTokenFilterPredicate,
   resolveLiteralTokenFilterValue,
 } from '../../src/kernel/token-filter.js';
-import type { Token, TokenFilterPredicate } from '../../src/kernel/types.js';
+import type { Token, TokenFilterExpr, TokenFilterPredicate } from '../../src/kernel/types.js';
 
 function makeToken(id: string, props: Token['props']): Token {
   return {
@@ -110,6 +110,19 @@ describe('token-filter', () => {
     );
     assert.throws(
       () => matchesTokenFilterExpr(token, { op: 'or', args: [] }),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('fails closed for unsupported token filter operators', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const malformed = {
+      op: 'xor',
+      args: [{ prop: 'suit', op: 'eq', value: 'hearts' }],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, malformed),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });

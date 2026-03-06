@@ -3,7 +3,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { isIdentifierExported, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';
+import ts from 'typescript';
+import {
+  collectNamedImportsByLocalName,
+  isIdentifierExported,
+  parseTypeScriptSource,
+} from '../../helpers/kernel-source-ast-guard.js';
 import { findEnginePackageRoot } from '../../helpers/lint-policy-helpers.js';
 
 const VALIDATOR_BEHAVIOR_FILE = ['src', 'kernel', 'validate-gamedef-behavior.ts'] as const;
@@ -15,17 +20,30 @@ describe('validator/runtime predicate-op boundary policy', () => {
     const engineRoot = findEnginePackageRoot(thisDir);
     const validatorPath = resolve(engineRoot, ...VALIDATOR_BEHAVIOR_FILE);
     const validatorSource = readFileSync(validatorPath, 'utf8');
+    const validatorSourceFile = parseTypeScriptSource(validatorSource, validatorPath);
 
-    assert.match(
-      validatorSource,
-      /import\s*\{[^}]*\bisPredicateOp\b[^}]*\bPREDICATE_OPERATORS\b[^}]*\}\s*from\s*['"]\.\.\/contracts\/index\.js['"]/u,
-      'validate-gamedef-behavior.ts must import predicate-op contracts from ../contracts/index.js',
+    const contractImports = collectNamedImportsByLocalName(validatorSourceFile, '../contracts/index.js');
+    assert.equal(
+      contractImports.get('isPredicateOp'),
+      'isPredicateOp',
+      'validate-gamedef-behavior.ts must import isPredicateOp from ../contracts/index.js without aliasing',
     );
-    assert.doesNotMatch(
-      validatorSource,
-      /from\s*['"]\.\/query-predicate\.js['"]/u,
-      'validate-gamedef-behavior.ts must not import runtime query-predicate module',
+    assert.equal(
+      contractImports.get('PREDICATE_OPERATORS'),
+      'PREDICATE_OPERATORS',
+      'validate-gamedef-behavior.ts must import PREDICATE_OPERATORS from ../contracts/index.js without aliasing',
     );
+
+    for (const statement of validatorSourceFile.statements) {
+      if (!ts.isImportDeclaration(statement)) {
+        continue;
+      }
+      const moduleSpecifier = statement.moduleSpecifier;
+      if (!ts.isStringLiteral(moduleSpecifier) || moduleSpecifier.text !== './query-predicate.js') {
+        continue;
+      }
+      assert.fail('validate-gamedef-behavior.ts must not import runtime query-predicate module');
+    }
   });
 
   it('query-predicate runtime module does not re-export predicate-op contract symbols', () => {

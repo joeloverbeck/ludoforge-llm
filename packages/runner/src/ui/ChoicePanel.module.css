@@ -80,6 +80,7 @@
   cursor: pointer;
 }
 
+.breadcrumbStep:hover,
 .breadcrumbStepIndented:hover {
   background: rgba(255, 255, 255, 0.15);
 }

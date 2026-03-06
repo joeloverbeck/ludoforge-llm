@@ -31,6 +31,7 @@ describe('game-spec-doc', () => {
       effectMacros: null,
       conditionMacros: null,
       victoryStandings: null,
+      verbalization: null,
     };
 
     assert.deepEqual(doc, expected);

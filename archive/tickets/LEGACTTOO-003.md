@@ -1,6 +1,6 @@
 # LEGACTTOO-003: Auto-Humanizer + Suppression Rules
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — two new kernel utility modules
@@ -14,7 +14,9 @@ The normalizer and template realizer both need two utility modules: (a) an auto-
 
 1. No auto-humanize or suppression utility exists in the codebase. `packages/runner/src/utils/` has `format-display-name.ts` but that's runner-side display name formatting, not engine-side identifier humanization.
 2. Suppression patterns from the spec: `*Count`, `*Tracker`, `__*`, `temp*`, plus explicit `suppressPatterns` from VerbalizationDef.
-3. The auto-humanizer needs to handle camelCase, kebab-case, `$`-prefix stripping, title case, and a known acronym table.
+3. The auto-humanizer needs to handle camelCase, kebab-case, `$`-prefix stripping, title case, and an acronym table derived from VerbalizationDef labels.
+4. **Corrected**: No default acronym set — acronyms come exclusively from `buildAcronymSet` parsing VerbalizationDef labels. Hardcoding game-specific acronyms (US, ARVN, NVA, etc.) violates the Agnostic Engine Rule.
+5. **Corrected**: `isScaffoldingEffect` must use actual EffectAST property keys. The EffectAST is a discriminated union by property keys (`{ let: ... }`, `{ bindValue: ... }`), not by a `kind` string field. The effect keys `setNextPlayer` and `advanceTurn` do not exist in the AST. `concat` is a ValueExpr, not an EffectAST. Actual turn machinery effects: `setActivePlayer`, `gotoPhaseExact`, `advancePhase`, `pushInterruptPhase`.
 
 ## Architecture Check
 
@@ -32,7 +34,7 @@ Export `humanizeIdentifier(id: string, acronyms?: ReadonlySet<string>): string`:
 - Strip leading `$`: `$player` → `player`
 - Title-case each word
 - Apply acronym table: if a word (lowercased) matches a known acronym, use the uppercase form (`us` → `US`, `nva` → `NVA`)
-- Default acronym set: `US`, `ARVN`, `NVA`, `VC`, `NLF`, `AI`
+- No default acronym set — acronyms come from VerbalizationDef only.
 
 Export `buildAcronymSet(verbalization: VerbalizationDef | undefined): ReadonlySet<string>`:
 - Extract all-caps tokens from verbalization labels to auto-populate the acronym set.
@@ -43,9 +45,10 @@ Export `isSuppressed(name: string, patterns: readonly string[]): boolean`:
 - Check against built-in conventions: `*Count`, `*Tracker`, `__*` prefix
 - Check against explicit `suppressPatterns` from VerbalizationDef using glob-style matching (`*` = wildcard prefix/suffix)
 
-Export `isScaffoldingEffect(effectKind: string, bindingName?: string): boolean`:
-- Returns true for `let`, `bindValue`, `concat` effects used for zone construction scaffolding
-- Returns true for `setNextPlayer`, `advanceTurn` turn machinery effects
+Export `isScaffoldingEffect(effectKey: string): boolean`:
+- Returns true for `let`, `bindValue` effects used for zone construction scaffolding
+- Returns true for `setActivePlayer`, `gotoPhaseExact`, `advancePhase`, `pushInterruptPhase` turn machinery effects
+- Parameter is the EffectAST property key (string), not a `kind` field
 
 ### 3. Export from `packages/engine/src/kernel/index.ts`
 
@@ -80,7 +83,7 @@ Add barrel exports for both new modules.
 8. `isSuppressed('aid', ['temp*'])` → `false`
 9. `isSuppressed('tempBuffer', ['temp*'])` → `true`
 10. `isScaffoldingEffect('let')` → `true`
-11. `isScaffoldingEffect('advanceTurn')` → `true`
+11. `isScaffoldingEffect('advancePhase')` → `true`
 12. `isScaffoldingEffect('moveToken')` → `false`
 13. Existing suite: `pnpm -F @ludoforge/engine test:unit`
 
@@ -94,11 +97,33 @@ Add barrel exports for both new modules.
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/tooltip-humanizer.test.ts` — camelCase, kebab, `$` strip, title case, acronym table, edge cases (empty, single char, all-caps).
-2. `packages/engine/test/unit/kernel/tooltip-suppression.test.ts` — built-in conventions, explicit patterns, glob matching, scaffolding effects.
+1. `packages/engine/test/unit/kernel/tooltip-humanizer.test.ts` — camelCase, kebab, `$` strip, title case, acronym table, edge cases (empty, single char, all-caps), `buildAcronymSet` extracts all-caps tokens from labels.
+2. `packages/engine/test/unit/kernel/tooltip-suppression.test.ts` — built-in conventions, explicit patterns, glob matching, scaffolding effects with corrected effect keys.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+### What Changed vs Originally Planned
+
+1. **Removed default acronym set** — Original ticket hardcoded `US`, `ARVN`, `NVA`, `VC`, `NLF`, `AI` as defaults. This violated the Agnostic Engine Rule. Acronyms now come exclusively from `buildAcronymSet` parsing VerbalizationDef labels.
+2. **Corrected `isScaffoldingEffect` effect keys** — Original ticket referenced non-existent EffectAST keys (`setNextPlayer`, `advanceTurn`, `concat`). Replaced with actual EffectAST property keys: `setActivePlayer`, `gotoPhaseExact`, `advancePhase`, `pushInterruptPhase`. Removed `concat` (it's a ValueExpr, not an EffectAST).
+3. **Simplified `isScaffoldingEffect` signature** — Removed unused `bindingName?: string` parameter since scaffolding detection is purely by effect key.
+
+### Files Created/Modified
+
+- `packages/engine/src/kernel/tooltip-humanizer.ts` (new, ~80 lines)
+- `packages/engine/src/kernel/tooltip-suppression.ts` (new, ~95 lines)
+- `packages/engine/src/kernel/index.ts` (added 2 barrel exports)
+- `packages/engine/test/unit/kernel/tooltip-humanizer.test.ts` (new, 22 tests)
+- `packages/engine/test/unit/kernel/tooltip-suppression.test.ts` (new, 18 tests)
+
+### Verification
+
+- Build: `pnpm -F @ludoforge/engine build` ✅
+- Tests: 2981 pass, 1 pre-existing fail (unrelated `gamespec-legacy-token-filter-array-policy`)
+- Typecheck: `pnpm turbo typecheck` ✅ (3/3 tasks)

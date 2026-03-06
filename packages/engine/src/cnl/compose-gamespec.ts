@@ -5,7 +5,7 @@ import { parseGameSpec, type ParseGameSpecOptions, type ParseGameSpecResult } fr
 import { sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 
-const SINGLETON_SECTIONS = ['metadata', 'constants', 'turnStructure', 'turnOrder', 'terminal'] as const;
+const SINGLETON_SECTIONS = ['metadata', 'constants', 'turnStructure', 'turnOrder', 'terminal', 'verbalization'] as const;
 const LIST_SECTIONS = [
   'dataAssets',
   'globalMarkerLattices',
@@ -251,6 +251,9 @@ function assignSingletonSection(
       break;
     case 'terminal':
       mutable.terminal = value as MutableGameSpecDoc['terminal'];
+      break;
+    case 'verbalization':
+      mutable.verbalization = value as MutableGameSpecDoc['verbalization'];
       break;
   }
 }

@@ -89,7 +89,8 @@
     "triggers": null,
     "effectMacros": null,
     "conditionMacros": null,
-    "victoryStandings": null
+    "victoryStandings": null,
+    "verbalization": null
   },
   "requiredSourceMapAnchors": [
     "metadata.id",

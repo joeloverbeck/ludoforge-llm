@@ -397,6 +397,31 @@ export const VictoryStandingsDefSchema = z
   })
   .strict();
 
+const VerbalizationLabelEntrySchema = z
+  .object({
+    singular: StringSchema,
+    plural: StringSchema,
+  })
+  .strict();
+
+const VerbalizationMacroEntrySchema = z
+  .object({
+    class: StringSchema,
+    summary: StringSchema,
+    slots: z.record(StringSchema, StringSchema).optional(),
+  })
+  .strict();
+
+const VerbalizationDefSchema = z
+  .object({
+    labels: z.record(StringSchema, z.union([StringSchema, VerbalizationLabelEntrySchema])),
+    stages: z.record(StringSchema, StringSchema),
+    macros: z.record(StringSchema, VerbalizationMacroEntrySchema),
+    sentencePlans: z.record(StringSchema, z.record(StringSchema, z.record(StringSchema, StringSchema))),
+    suppressPatterns: z.array(StringSchema),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -432,6 +457,7 @@ export const GameDefSchema = z
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
     victoryStandings: VictoryStandingsDefSchema.optional(),
+    verbalization: VerbalizationDefSchema.optional(),
   })
   .strict();
 

@@ -4057,6 +4057,115 @@
         "tieBreakOrder"
       ],
       "additionalProperties": false
+    },
+    "verbalization": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "singular": {
+                    "type": "string"
+                  },
+                  "plural": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "singular",
+                  "plural"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "stages": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "macros": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "class": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "slots": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "class",
+              "summary"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "sentencePlans": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "suppressPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "labels",
+        "stages",
+        "macros",
+        "sentencePlans",
+        "suppressPatterns"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

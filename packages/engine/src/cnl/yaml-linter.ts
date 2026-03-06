@@ -137,7 +137,10 @@ function detectAnchorAliasMisuse(lines: readonly string[], findings: LintFinding
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? '';
-    const anchorMatches = line.matchAll(/&([A-Za-z_][\w-]*)/g);
+    // Strip quoted regions so anchors/aliases inside strings are not detected.
+    // Spaces preserve character positions for accurate column reporting.
+    const unquoted = line.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (m) => ' '.repeat(m.length));
+    const anchorMatches = unquoted.matchAll(/&([A-Za-z_][\w-]*)/g);
     for (const match of anchorMatches) {
       const name = match[1];
       if (name !== undefined) {
@@ -145,7 +148,7 @@ function detectAnchorAliasMisuse(lines: readonly string[], findings: LintFinding
       }
     }
 
-    const aliasMatches = line.matchAll(/\*([A-Za-z_][\w-]*)/g);
+    const aliasMatches = unquoted.matchAll(/\*([A-Za-z_][\w-]*)/g);
     for (const match of aliasMatches) {
       const name = match[1];
       if (name === undefined) {

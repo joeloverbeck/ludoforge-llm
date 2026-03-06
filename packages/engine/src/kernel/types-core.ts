@@ -25,6 +25,7 @@ import type {
   OperationPartialTraceEntry,
   ActionPipelineDef,
 } from './types-operations.js';
+import type { VerbalizationDef } from './verbalization-types.js';
 import type {
   TurnFlowDeferredEventLifecycleTraceEntry,
   SimultaneousCommitTraceEntry,
@@ -281,6 +282,7 @@ export interface GameDef {
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
   readonly tableContracts?: readonly RuntimeTableContract[];
   readonly victoryStandings?: VictoryStandingsDef;
+  readonly verbalization?: VerbalizationDef;
 }
 
 export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog'] as const;

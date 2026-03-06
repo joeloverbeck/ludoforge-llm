@@ -218,6 +218,8 @@ function mergeSection(
       return mergeSingletonTerminal(doc, section, value, diagnostics);
     case 'victoryStandings':
       return mergeSingletonVictoryStandings(doc, section, value, diagnostics);
+    case 'verbalization':
+      return mergeSingletonVerbalization(doc, section, value, diagnostics);
     case 'dataAssets':
     case 'globalMarkerLattices':
     case 'imports':
@@ -326,6 +328,21 @@ function mergeSingletonVictoryStandings(
   }
 
   (doc as MutableGameSpecDoc).victoryStandings = asObjectOrNull(value) as MutableGameSpecDoc['victoryStandings'];
+  return buildAnchoredPaths(section, value);
+}
+
+function mergeSingletonVerbalization(
+  doc: GameSpecDoc,
+  section: 'verbalization',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
+  if (doc.verbalization !== null) {
+    diagnostics.push(duplicateSingletonSectionDiagnostic('verbalization', 'doc.verbalization'));
+    return [];
+  }
+
+  (doc as MutableGameSpecDoc).verbalization = asObjectOrNull(value) as MutableGameSpecDoc['verbalization'];
   return buildAnchoredPaths(section, value);
 }
 

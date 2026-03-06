@@ -447,6 +447,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
         {choiceUi.kind === 'numeric' ? (
           <NumericMode
+            key={choiceUi.decisionId}
             choiceUi={choiceUi}
             chooseOne={async (value) => {
               await store.getState().chooseOne(value);

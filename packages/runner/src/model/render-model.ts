@@ -241,6 +241,7 @@ export type RenderChoiceUi =
     }
   | {
       readonly kind: 'numeric';
+      readonly decisionId: string;
       readonly domain: RenderChoiceDomain;
     }
   | {

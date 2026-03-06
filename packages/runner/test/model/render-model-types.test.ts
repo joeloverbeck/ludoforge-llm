@@ -289,6 +289,7 @@ describe('render-model types', () => {
       },
       {
         kind: 'numeric',
+        decisionId: 'pick-amount',
         domain: { min: 0, max: 5, step: 1 },
       },
       {

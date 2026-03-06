@@ -471,6 +471,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'numeric',
+            decisionId: 'test-numeric',
             domain: { min: 0, max: 10, step: 2 },
           },
         }),
@@ -498,6 +499,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'numeric',
+            decisionId: 'test-numeric-quick',
             domain: { min: 1, max: 11, step: 2 },
           },
         }),
@@ -525,6 +527,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'numeric',
+            decisionId: 'test-numeric-confirm',
             domain: { min: 0, max: 10, step: 1 },
           },
         }),
@@ -536,6 +539,48 @@ describe('ChoicePanel', () => {
     fireEvent.click(getByTestId('choice-numeric-confirm'));
     expect(chooseOne).toHaveBeenCalledTimes(1);
     expect(chooseOne).toHaveBeenCalledWith(8);
+  });
+
+  it('resets NumericMode value when decisionId changes (stale state regression)', () => {
+    const chooseOne = vi.fn(async () => {});
+
+    const firstDecision = makeRenderModel({
+      choiceUi: {
+        kind: 'numeric',
+        decisionId: 'numeric-decision-1',
+        domain: { min: 0, max: 10, step: 1 },
+      },
+    });
+
+    const secondDecision = makeRenderModel({
+      choiceUi: {
+        kind: 'numeric',
+        decisionId: 'numeric-decision-2',
+        domain: { min: 0, max: 10, step: 1 },
+      },
+    });
+
+    let currentModel = firstDecision;
+    const store = {
+      getState: () => ({
+        renderModel: currentModel,
+        chooseOne,
+        cancelChoice: async () => {},
+        cancelMove: () => {},
+      }),
+      subscribe: () => () => {},
+      getInitialState: () => ({ renderModel: currentModel }),
+    } as unknown as StoreApi<GameStore>;
+
+    const { rerender } = render(createElement(ChoicePanel, { store, mode: 'choicePending' }));
+
+    fireEvent.change(getByTestId('choice-numeric-slider'), { target: { value: '7' } });
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('7');
+
+    currentModel = secondDecision;
+    rerender(createElement(ChoicePanel, { store, mode: 'choicePending' }));
+
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('0');
   });
 
   it('does not render Mode B/Mode C placeholder copy', () => {

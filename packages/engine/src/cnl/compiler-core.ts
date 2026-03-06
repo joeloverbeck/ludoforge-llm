@@ -82,6 +82,7 @@ export interface CompileSectionResults {
   readonly triggers: GameDef['triggers'] | null;
   readonly eventDecks: Exclude<GameDef['eventDecks'], undefined> | null;
   readonly victoryStandings: Exclude<GameDef['victoryStandings'], undefined> | null;
+  readonly verbalization: Exclude<GameDef['verbalization'], undefined> | null;
 }
 
 export interface CompileResult {
@@ -299,6 +300,7 @@ function compileExpandedDoc(
     triggers: null,
     eventDecks: null,
     victoryStandings: null,
+    verbalization: null,
   };
 
   const metadata = resolvedTableRefDoc.metadata;
@@ -681,6 +683,7 @@ function compileExpandedDoc(
     terminal,
     ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),
     ...(sections.victoryStandings === null ? {} : { victoryStandings: sections.victoryStandings }),
+    ...(sections.verbalization === null ? {} : { verbalization: sections.verbalization }),
   };
 
   return { gameDef, sections };

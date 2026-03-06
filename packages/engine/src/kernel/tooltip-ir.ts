@@ -1,0 +1,189 @@
+/**
+ * Semantic intermediate representation for action tooltips.
+ * Each TooltipMessage represents one normalized effect from an EffectAST tree.
+ */
+
+export interface MessageBase {
+  readonly kind: string;
+  /** Pointer back to source AST node for trace preservation */
+  readonly astPath: string;
+  /** If this message was generated from a macro, the macro's id */
+  readonly macroOrigin?: string;
+  /** Pipeline stage name, if the action uses staged execution */
+  readonly stage?: string;
+}
+
+export interface SelectMessage extends MessageBase {
+  readonly kind: 'select';
+  readonly target: 'spaces' | 'zones';
+  readonly filter?: string;
+  readonly bounds?: { readonly min: number; readonly max: number };
+}
+
+export interface PlaceMessage extends MessageBase {
+  readonly kind: 'place';
+  readonly tokenFilter: string;
+  readonly targetZone: string;
+}
+
+export interface MoveMessage extends MessageBase {
+  readonly kind: 'move';
+  readonly tokenFilter: string;
+  readonly fromZone: string;
+  readonly toZone: string;
+  readonly variant?: 'adjacent';
+}
+
+export interface PayMessage extends MessageBase {
+  readonly kind: 'pay';
+  readonly resource: string;
+  readonly amount: number;
+}
+
+export interface GainMessage extends MessageBase {
+  readonly kind: 'gain';
+  readonly resource: string;
+  readonly amount: number;
+}
+
+export interface TransferMessage extends MessageBase {
+  readonly kind: 'transfer';
+  readonly resource: string;
+  readonly amount: number;
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface ShiftMessage extends MessageBase {
+  readonly kind: 'shift';
+  readonly marker: string;
+  readonly direction: string;
+  readonly amount: number;
+}
+
+export interface ActivateMessage extends MessageBase {
+  readonly kind: 'activate';
+  readonly tokenFilter: string;
+  readonly zone: string;
+}
+
+export interface DeactivateMessage extends MessageBase {
+  readonly kind: 'deactivate';
+  readonly tokenFilter: string;
+  readonly zone: string;
+}
+
+export interface RemoveMessage extends MessageBase {
+  readonly kind: 'remove';
+  readonly tokenFilter: string;
+  readonly fromZone: string;
+  readonly destination: string;
+}
+
+export interface CreateMessage extends MessageBase {
+  readonly kind: 'create';
+  readonly tokenFilter: string;
+  readonly targetZone: string;
+}
+
+export interface DestroyMessage extends MessageBase {
+  readonly kind: 'destroy';
+  readonly tokenFilter: string;
+  readonly fromZone: string;
+}
+
+export interface RevealMessage extends MessageBase {
+  readonly kind: 'reveal';
+  readonly target: string;
+}
+
+export interface DrawMessage extends MessageBase {
+  readonly kind: 'draw';
+  readonly source: string;
+  readonly count: number;
+}
+
+export interface ShuffleMessage extends MessageBase {
+  readonly kind: 'shuffle';
+  readonly target: string;
+}
+
+export interface SetMessage extends MessageBase {
+  readonly kind: 'set';
+  readonly target: string;
+  readonly value: string;
+}
+
+export interface ChooseMessage extends MessageBase {
+  readonly kind: 'choose';
+  readonly options: readonly string[];
+  readonly paramName: string;
+}
+
+export interface RollMessage extends MessageBase {
+  readonly kind: 'roll';
+  readonly range: { readonly min: number; readonly max: number };
+  readonly bindTo: string;
+}
+
+export interface ModifierMessage extends MessageBase {
+  readonly kind: 'modifier';
+  readonly condition: string;
+  readonly description: string;
+}
+
+export interface BlockerMessage extends MessageBase {
+  readonly kind: 'blocker';
+  readonly reason: string;
+}
+
+export interface PhaseMessage extends MessageBase {
+  readonly kind: 'phase';
+  readonly fromPhase: string;
+  readonly toPhase: string;
+}
+
+export interface GrantMessage extends MessageBase {
+  readonly kind: 'grant';
+  readonly operation: string;
+  readonly targetPlayer: string;
+}
+
+export interface SuppressedMessage extends MessageBase {
+  readonly kind: 'suppressed';
+  readonly reason: string;
+}
+
+export type TooltipMessage =
+  | SelectMessage
+  | PlaceMessage
+  | MoveMessage
+  | PayMessage
+  | GainMessage
+  | TransferMessage
+  | ShiftMessage
+  | ActivateMessage
+  | DeactivateMessage
+  | RemoveMessage
+  | CreateMessage
+  | DestroyMessage
+  | RevealMessage
+  | DrawMessage
+  | ShuffleMessage
+  | SetMessage
+  | ChooseMessage
+  | RollMessage
+  | ModifierMessage
+  | BlockerMessage
+  | PhaseMessage
+  | GrantMessage
+  | SuppressedMessage;
+
+export const TOOLTIP_MESSAGE_KINDS = [
+  'select', 'place', 'move', 'pay', 'gain', 'transfer', 'shift',
+  'activate', 'deactivate', 'remove', 'create', 'destroy', 'reveal',
+  'draw', 'shuffle', 'set', 'choose', 'roll', 'modifier', 'blocker',
+  'phase', 'grant', 'suppressed',
+] as const;
+
+export type TooltipMessageKind = (typeof TOOLTIP_MESSAGE_KINDS)[number];

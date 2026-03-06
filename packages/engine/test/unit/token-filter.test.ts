@@ -163,4 +163,27 @@ describe('token-filter', () => {
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
+
+  it('reports nested paths for malformed predicate-like token filter nodes', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const malformed = {
+      op: 'and',
+      args: [
+        { prop: 'suit', op: 'eq', value: 'hearts' },
+        { prop: 'rank' },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, malformed),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
+    );
+  });
 });

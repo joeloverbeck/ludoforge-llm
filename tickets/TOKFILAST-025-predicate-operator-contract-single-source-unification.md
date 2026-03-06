@@ -14,7 +14,8 @@ Predicate operator literals (`eq|neq|in|notIn`) are still duplicated across runt
 
 1. Runtime/validator allow-list now exists in `packages/engine/src/kernel/query-predicate.ts` (`PREDICATE_OPERATORS` + `isPredicateOp`).
 2. AST and schema layers still declare operator literals independently (`types-ast.ts` and `schemas-ast.ts` unions), rather than consuming a shared contract source.
-3. Existing active TOKFILAST tickets (`019`-`024`) do not cover cross-layer operator literal deduplication across runtime/types/schema contracts.
+3. Token-filter traversal utilities also duplicate predicate-operator literals (`packages/engine/src/kernel/token-filter-expr-utils.ts`) and must consume the same shared contract to avoid drift.
+4. Existing active TOKFILAST tickets (`019`-`024`) do not cover cross-layer operator literal deduplication across runtime/types/schema/traversal contracts.
 
 ## Architecture Check
 
@@ -33,7 +34,7 @@ Create a small kernel contract module that owns:
 
 ### 2. Adopt shared contract in runtime, AST types, and schemas
 
-Replace duplicated literal unions in runtime/types/schema code with imports from the shared contract module.
+Replace duplicated literal unions/allow-lists in runtime/types/schema/traversal code with imports from the shared contract module.
 
 ### 3. Add guardrail tests for contract single-sourcing
 
@@ -43,15 +44,17 @@ Add/extend tests to ensure all predicate-operator surfaces remain aligned to the
 
 - `packages/engine/src/kernel/<predicate-op-contract>.ts` (new)
 - `packages/engine/src/kernel/query-predicate.ts` (modify)
+- `packages/engine/src/kernel/token-filter-expr-utils.ts` (modify)
 - `packages/engine/src/kernel/types-ast.ts` (modify)
 - `packages/engine/src/kernel/schemas-ast.ts` (modify)
 - `packages/engine/test/unit/query-predicate.test.ts` (modify)
+- `packages/engine/test/unit/kernel/token-filter-expr-utils.test.ts` (modify)
 - `packages/engine/test/unit/schemas-ast.test.ts` (modify, if needed for parity assertions)
 - `packages/engine/test/unit/types-exhaustive.test.ts` (modify, if needed for compile-time contract parity checks)
 
 ## Out of Scope
 
-- Token-filter traversal predicate-node shape/path hardening (`tickets/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
+- Token-filter traversal predicate-node shape/path hardening (`archive/tickets/TOKFILAST/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
 - Traversal boundary mapper centralization (`tickets/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
 
 ## Acceptance Criteria
@@ -59,7 +62,7 @@ Add/extend tests to ensure all predicate-operator surfaces remain aligned to the
 ### Tests That Must Pass
 
 1. Runtime, AST type, and schema predicate-operator sets are sourced from one contract definition.
-2. No duplicated inline literal unions for predicate operators remain on token-filter/query-predicate surfaces.
+2. No duplicated inline literal unions/allow-lists for predicate operators remain on token-filter/query-predicate/traversal surfaces.
 3. Existing suite: `pnpm -F @ludoforge/engine test:unit`.
 
 ### Invariants
@@ -72,8 +75,9 @@ Add/extend tests to ensure all predicate-operator surfaces remain aligned to the
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/query-predicate.test.ts` — assert runtime guard behavior stays aligned with shared operator contract.
-2. `packages/engine/test/unit/schemas-ast.test.ts` — assert schema accepts exactly canonical predicate operators.
-3. `packages/engine/test/unit/types-exhaustive.test.ts` — ensure compile-time operator unions map to shared contract type.
+2. `packages/engine/test/unit/kernel/token-filter-expr-utils.test.ts` — assert traversal predicate guards use the shared operator contract.
+3. `packages/engine/test/unit/schemas-ast.test.ts` — assert schema accepts exactly canonical predicate operators.
+4. `packages/engine/test/unit/types-exhaustive.test.ts` — ensure compile-time operator unions map to shared contract type.
 
 ### Commands
 

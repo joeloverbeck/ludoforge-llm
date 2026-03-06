@@ -44,7 +44,7 @@ Add a malformed unsupported-operator case (for example `xor`) and assert determi
 ## Out of Scope
 
 - Runtime predicate operator fail-closed behavior (`archive/tickets/TOKFILAST/TOKFILAST-018-token-filter-predicate-operator-fail-closed-hardening.md`).
-- Traversal utility predicate-shape strictness (`tickets/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
+- Traversal utility predicate-shape strictness (`archive/tickets/TOKFILAST/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
 
 ## Acceptance Criteria
 

@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asPlayerId } from '../../src/kernel/branded.js';
 import { canonicalTokenFilterKey, revealGrantEquals, removeMatchingRevealGrants } from '../../src/kernel/hidden-info-grants.js';
-import { isTokenFilterTraversalError } from '../../src/kernel/token-filter-expr-utils.js';
+import { isTokenFilterTraversalError, tokenFilterPathSuffix } from '../../src/kernel/token-filter-expr-utils.js';
 import type { RevealGrant } from '../../src/kernel/types.js';
 
 describe('hidden-info grant helpers', () => {
@@ -112,6 +112,30 @@ describe('hidden-info grant helpers', () => {
           return false;
         }
         return error.context.reason === 'empty_args' && error.context.op === 'and';
+      },
+    );
+  });
+
+  it('preserves nested traversal path context for malformed token filters', () => {
+    assert.throws(
+      () =>
+        canonicalTokenFilterKey({
+          op: 'not',
+          arg: {
+            op: 'or',
+            args: [
+              { prop: 'id', op: 'eq', value: 'a' },
+              { op: 'and' },
+            ],
+          },
+        } as unknown as Parameters<typeof canonicalTokenFilterKey>[0]),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'non_conforming_node'
+          && error.context.op === 'and'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
       },
     );
   });

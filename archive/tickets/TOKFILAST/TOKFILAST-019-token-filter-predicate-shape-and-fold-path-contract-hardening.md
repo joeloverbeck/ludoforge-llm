@@ -1,6 +1,6 @@
 # TOKFILAST-019: Harden Token-Filter Predicate Node Shape and Fold Error Path Contracts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — shared token-filter traversal utility contract + focused tests
@@ -14,7 +14,7 @@ Current traversal predicate detection accepts any object containing `prop`, whic
 
 1. `isTokenFilterPredicateExpr` in `packages/engine/src/kernel/token-filter-expr-utils.ts` currently checks only for `'prop' in expr`, without requiring valid predicate shape (`op` + `value`).
 2. `foldTokenFilterExpr` currently throws malformed-node errors with `path: []`, so nested malformed-node location is not preserved in error context.
-3. Utility tests currently cover malformed boolean operators/shapes but do not assert malformed predicate-node detection or nested-path context for fold errors.
+3. `validateGameDef` already has extensive token-filter traversal diagnostics via `walkTokenFilterExpr`; fold-path hardening primarily affects runtime error contexts (`matchesTokenFilterExpr`, `canonicalTokenFilterKey`) and traversal utility tests.
 
 ## Architecture Check
 
@@ -34,13 +34,14 @@ Thread path context through `foldTokenFilterExpr` recursion so malformed nested 
 
 ### 3. Extend utility contract tests for malformed predicate nodes and fold paths
 
-Add focused utility tests that assert malformed predicate-like nodes fail closed and nested fold failures carry deterministic path context.
+Add focused utility and runtime tests that assert malformed predicate-like nodes fail closed and nested fold failures carry deterministic path context.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/token-filter-expr-utils.ts` (modify)
 - `packages/engine/test/unit/kernel/token-filter-expr-utils.test.ts` (modify)
-- `packages/engine/test/unit/validate-gamedef.test.ts` (modify, only if diagnostics path mapping is affected)
+- `packages/engine/test/unit/token-filter.test.ts` (modify)
+- `packages/engine/test/unit/hidden-info-grants.test.ts` (modify, if canonicalization traversal error context coverage is added)
 
 ## Out of Scope
 
@@ -65,10 +66,26 @@ Add focused utility tests that assert malformed predicate-like nodes fail closed
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/token-filter-expr-utils.test.ts` — malformed predicate-node fail-closed and fold nested-path context assertions.
-2. `packages/engine/test/unit/validate-gamedef.test.ts` — adjust path assertions only if traversal-context propagation changes validator mapping.
+2. `packages/engine/test/unit/token-filter.test.ts` — nested malformed token-filter expression/type-mismatch path assertions through runtime fold callers.
+3. `packages/engine/test/unit/hidden-info-grants.test.ts` — traversal error path assertions for canonical token-filter key folding.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- **Completion Date**: 2026-03-06
+- **What Changed**:
+  - Hardened `isTokenFilterPredicateExpr` to require full predicate shape (`prop` string + supported predicate `op` + `value`) rather than accepting any object with `prop`.
+  - Refactored `foldTokenFilterExpr` to preserve traversal path context through recursion so malformed nested nodes surface deterministic `.arg/.args[n]` path metadata.
+  - Added coverage for malformed predicate-like nodes and nested fold-path propagation in utility and runtime tests.
+- **Deviations From Original Plan**:
+  - Reassessed scope before implementation: `validateGameDef` path mapping changes were unnecessary because validator traversal already uses `walkTokenFilterExpr`.
+  - Added/strengthened runtime caller tests (`token-filter`, `hidden-info-grants`) instead of touching `validate-gamedef` tests.
+- **Verification Results**:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

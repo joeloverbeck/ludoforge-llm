@@ -119,6 +119,43 @@ describe('token-filter-expr-utils', () => {
     );
   });
 
+  it('fails closed for malformed predicate-like nodes in fold and walk', () => {
+    const malformed = {
+      op: 'and',
+      args: [
+        { prop: 'id', op: 'eq', value: 'a' },
+        { prop: 'faction' },
+      ],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'unsupported_operator'
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
+    );
+
+    assert.throws(
+      () => walkTokenFilterExpr(malformed, () => {}),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'unsupported_operator'
+          && tokenFilterPathSuffix(error.context.path) === '.args[1]';
+      },
+    );
+  });
+
   it('fails closed for non-conforming boolean nodes in fold and walk', () => {
     const malformedAnd = { op: 'and' } as unknown as TokenFilterExpr;
 
@@ -144,6 +181,35 @@ describe('token-filter-expr-utils', () => {
           return false;
         }
         return error.context.reason === 'non_conforming_node' && tokenFilterPathSuffix(error.context.path) === '';
+      },
+    );
+  });
+
+  it('reports nested paths for malformed fold nodes', () => {
+    const malformed = {
+      op: 'not',
+      arg: {
+        op: 'or',
+        args: [
+          { prop: 'id', op: 'eq', value: 'a' },
+          { op: 'and' },
+        ],
+      },
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => foldTokenFilterExpr(malformed, {
+        predicate: () => true,
+        not: () => true,
+        and: () => true,
+        or: () => true,
+      }),
+      (error: unknown) => {
+        if (!isTokenFilterTraversalError(error)) {
+          return false;
+        }
+        return error.context.reason === 'non_conforming_node'
+          && tokenFilterPathSuffix(error.context.path) === '.arg.args[1]';
       },
     );
   });

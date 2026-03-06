@@ -44,7 +44,7 @@ Add a lint/contract test ensuring validator modules do not import runtime query 
 
 ## Out of Scope
 
-- Predicate-node shape/path traversal hardening (`tickets/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
+- Predicate-node shape/path traversal hardening (`archive/tickets/TOKFILAST/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
 - Effect-surface token-filter error-context test deepening (`tickets/TOKFILAST-021-effects-reveal-token-filter-error-context-contract-coverage.md`).
 
 ## Acceptance Criteria

@@ -40,6 +40,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const readNodeOp = (node: unknown): unknown => (isRecord(node) ? Reflect.get(node, 'op') : undefined);
 
 const isTokenFilterBooleanOperator = (op: unknown): op is 'and' | 'or' => op === 'and' || op === 'or';
+const isTokenFilterPredicateOperator = (op: unknown): op is TokenFilterPredicate['op'] =>
+  op === 'eq' || op === 'neq' || op === 'in' || op === 'notIn';
 
 const malformedTokenFilterExprError = (
   expr: unknown,
@@ -99,7 +101,10 @@ export const tokenFilterBooleanArityError = (
 });
 
 export const isTokenFilterPredicateExpr = (expr: unknown): expr is TokenFilterPredicate =>
-  isRecord(expr) && 'prop' in expr;
+  isRecord(expr)
+  && typeof expr.prop === 'string'
+  && isTokenFilterPredicateOperator(expr.op)
+  && 'value' in expr;
 
 const isTokenFilterNotExpr = (expr: unknown): expr is TokenFilterNotExpr =>
   isRecord(expr) && !isTokenFilterPredicateExpr(expr as TokenFilterExpr) && expr.op === 'not' && 'arg' in expr;
@@ -119,22 +124,25 @@ export const foldTokenFilterExpr = <TResult>(
   expr: TokenFilterExpr,
   handlers: TokenFilterExprFoldHandlers<TResult>,
 ): TResult => {
-  if (isTokenFilterPredicateExpr(expr)) {
-    return handlers.predicate(expr);
-  }
-  if (isTokenFilterNotExpr(expr)) {
-    return handlers.not(expr, foldTokenFilterExpr(expr.arg, handlers));
-  }
-  if (isTokenFilterBooleanExpr(expr)) {
-    const foldedArgs = expr.args.map((entry) => foldTokenFilterExpr(entry, handlers));
-    return expr.op === 'and'
-      ? handlers.and(expr, foldedArgs)
-      : handlers.or(expr, foldedArgs);
-  }
-  if (isRecord(expr) && isTokenFilterBooleanOperator(readNodeOp(expr))) {
-    throw malformedTokenFilterExprError(expr, [], 'non_conforming_node');
-  }
-  throw malformedTokenFilterExprError(expr, [], 'unsupported_operator');
+  const fold = (entry: unknown, path: readonly TokenFilterPathSegment[]): TResult => {
+    if (isTokenFilterPredicateExpr(entry)) {
+      return handlers.predicate(entry);
+    }
+    if (isTokenFilterNotExpr(entry)) {
+      return handlers.not(entry, fold(entry.arg, [...path, { kind: 'not' }]));
+    }
+    if (isTokenFilterBooleanExpr(entry)) {
+      const foldedArgs = entry.args.map((arg, index) => fold(arg, [...path, { kind: 'arg', index }]));
+      return entry.op === 'and'
+        ? handlers.and(entry, foldedArgs)
+        : handlers.or(entry, foldedArgs);
+    }
+    if (isRecord(entry) && isTokenFilterBooleanOperator(readNodeOp(entry))) {
+      throw malformedTokenFilterExprError(entry, path, 'non_conforming_node');
+    }
+    throw malformedTokenFilterExprError(entry, path, 'unsupported_operator');
+  };
+  return fold(expr, []);
 };
 
 export const walkTokenFilterExpr = (

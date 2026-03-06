@@ -1,6 +1,6 @@
 # TOKFILAST-030: Enforce Condition-Surface Helper Import-Origin in Validator Policy Test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — validator architecture lint/policy hardening
@@ -12,9 +12,9 @@ The condition-surface policy test currently validates helper usage by callee nam
 
 ## Assumption Reassessment (2026-03-06)
 
-1. `packages/engine/test/unit/lint/condition-surface-validator-callsites-policy.test.ts` currently accepts helper calls based on identifier text (`append*ConditionSurfacePath` / `conditionSurfacePathFor*`) without proving symbol origin.
-2. Current policy message explicitly disallows ad-hoc helper aliases/wrappers, but the implementation can be bypassed by same-name local wrappers.
-3. Existing active tickets (`TOKFILAST-025..029`) do not explicitly enforce import-origin validation for condition-surface helper callsites.
+1. `packages/engine/test/unit/lint/condition-surface-validator-callsites-policy.test.ts` currently accepts helper calls by callee identifier text (`append*ConditionSurfacePath` / `conditionSurfacePathFor*`) without validating that those symbols are imported from `../contracts/index.js`.
+2. Current policy message already states that ad-hoc aliases/wrappers are disallowed, but the implementation can still be bypassed by same-name local wrappers.
+3. Existing policy/lint tests in this area do not yet enforce helper import-origin provenance for condition-surface callsites.
 
 ## Architecture Check
 
@@ -26,7 +26,7 @@ The condition-surface policy test currently validates helper usage by callee nam
 
 ### 1. Extend AST policy to verify helper symbol provenance
 
-Augment the lint policy test to assert that accepted helper calls resolve to imports from `../contracts/index.js` (or equivalent contracts public-surface import) rather than local declarations/wrappers.
+Augment the lint policy test to assert that accepted helper calls resolve to named imports from `../contracts/index.js`, and fail when helper-like identifiers come from local declarations/wrappers.
 
 ### 2. Add a negative policy fixture/assertion
 
@@ -35,7 +35,6 @@ Add coverage that demonstrates same-name local wrappers are rejected by policy.
 ## Files to Touch
 
 - `packages/engine/test/unit/lint/condition-surface-validator-callsites-policy.test.ts` (modify)
-- `packages/engine/test/helpers/kernel-source-ast-guard.ts` (modify, if helper utilities are needed for import-origin checks)
 
 ## Out of Scope
 
@@ -64,6 +63,21 @@ Add coverage that demonstrates same-name local wrappers are rejected by policy.
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `pnpm -F @ludoforge/engine test:unit`
-3. `pnpm -F @ludoforge/engine lint`
+2. `node --test packages/engine/dist/test/unit/lint/condition-surface-validator-callsites-policy.test.js`
+3. `pnpm -F @ludoforge/engine test:unit`
+4. `pnpm -F @ludoforge/engine lint`
 
+## Outcome
+
+- Completion date: 2026-03-06
+- What changed:
+  - Hardened `condition-surface-validator-callsites-policy.test.ts` to require that helper-shaped condition-path calls are direct named imports from `../contracts/index.js`.
+  - Added a focused negative fixture assertion proving same-name local wrappers are rejected even when callee text matches contract helper naming.
+  - Kept scope test-only; runtime/kernel validator behavior was not changed.
+- Deviations from original plan:
+  - `packages/engine/test/helpers/kernel-source-ast-guard.ts` was not modified because existing helpers were sufficient.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `node --test packages/engine/dist/test/unit/lint/condition-surface-validator-callsites-policy.test.js` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

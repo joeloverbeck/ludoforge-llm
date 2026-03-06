@@ -612,11 +612,14 @@ describe('ChoicePanel', () => {
     const breadcrumbStepBlock = css.match(/\.breadcrumbStep\s*\{[^}]*\}/u)?.[0] ?? '';
     const optionButtonBlock = css.match(/\.optionButton\s*\{[^}]*\}/u)?.[0] ?? '';
     const navButtonBlock = css.match(/\.navButton\s*\{[^}]*\}/u)?.[0] ?? '';
+    const breadcrumbStepIndentedBlock =
+      css.match(/\.breadcrumbStepIndented\s*\{[^}]*\}/u)?.[0] ?? '';
 
     expect(panelBlock).toContain('pointer-events: auto;');
     expect(breadcrumbStepBlock).toContain('pointer-events: auto;');
     expect(optionButtonBlock).toContain('pointer-events: auto;');
     expect(navButtonBlock).toContain('pointer-events: auto;');
+    expect(breadcrumbStepIndentedBlock).toContain('pointer-events: auto;');
   });
 
   it('does not render confirm button when in choicePending mode', () => {

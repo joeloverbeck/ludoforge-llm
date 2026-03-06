@@ -217,6 +217,67 @@ describe('compile-effects lowering', () => {
     assert.ok(result.diagnostics.every((diagnostic) => diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY'));
   });
 
+  it('canonicalizes boolean token-filter wrappers on reveal/conceal effects', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          reveal: {
+            zone: 'hand:$actor',
+            to: { chosen: '$actor' },
+            filter: {
+              op: 'and',
+              args: [
+                { prop: 'faction', eq: 'US' },
+              ],
+            },
+          },
+        },
+        {
+          conceal: {
+            zone: 'hand:$actor',
+            filter: {
+              op: 'and',
+              args: [
+                { prop: 'faction', eq: 'US' },
+                {
+                  op: 'and',
+                  args: [
+                    { prop: 'type', eq: 'troops' },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+      tokenFilterContext,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        reveal: {
+          zone: 'hand:$actor',
+          to: { chosen: '$actor' },
+          filter: { prop: 'faction', op: 'eq', value: 'US' },
+        },
+      },
+      {
+        conceal: {
+          zone: 'hand:$actor',
+          filter: {
+            op: 'and',
+            args: [
+              { prop: 'faction', op: 'eq', value: 'US' },
+              { prop: 'type', op: 'eq', value: 'troops' },
+            ],
+          },
+        },
+      },
+    ]);
+  });
+
   it('resolves seat-name selectors in effect-local player and zone selectors when seatIds are provided', () => {
     const result = lowerEffectArray(
       [

@@ -556,6 +556,46 @@ function validateCanonicalTokenTraitLiteral(
   ];
 }
 
+function normalizeTokenFilterExprShape(expr: TokenFilterExpr): TokenFilterExpr {
+  if ('prop' in expr) {
+    return expr;
+  }
+
+  if (expr.op === 'not') {
+    return {
+      op: 'not',
+      arg: normalizeTokenFilterExprShape(expr.arg),
+    };
+  }
+
+  const normalizedArgs = expr.args.map(normalizeTokenFilterExprShape);
+  const flattenedArgs: TokenFilterExpr[] = [];
+
+  for (const arg of normalizedArgs) {
+    if ('prop' in arg || arg.op === 'not') {
+      flattenedArgs.push(arg);
+      continue;
+    }
+    if (arg.op === expr.op) {
+      flattenedArgs.push(...arg.args);
+      continue;
+    }
+    flattenedArgs.push(arg);
+  }
+
+  if (flattenedArgs.length === 1) {
+    const single = flattenedArgs[0];
+    if (single !== undefined) {
+      return single;
+    }
+  }
+
+  return {
+    op: expr.op,
+    args: flattenedArgs,
+  };
+}
+
 export function lowerTokenFilterExpr(
   source: unknown,
   context: ConditionLoweringContext,
@@ -587,7 +627,7 @@ export function lowerTokenFilterExpr(
     if (args.length !== source.args.length) {
       return { value: null, diagnostics };
     }
-    return { value: { op: source.op, args }, diagnostics };
+    return { value: normalizeTokenFilterExprShape({ op: source.op, args }), diagnostics };
   }
 
   if (source.op === 'not') {
@@ -595,7 +635,10 @@ export function lowerTokenFilterExpr(
     if (lowered.value === null) {
       return lowered;
     }
-    return { value: { op: 'not', arg: lowered.value }, diagnostics: lowered.diagnostics };
+    return {
+      value: normalizeTokenFilterExprShape({ op: 'not', arg: lowered.value }),
+      diagnostics: lowered.diagnostics,
+    };
   }
 
   return lowerTokenFilterEntry(source, context, path);

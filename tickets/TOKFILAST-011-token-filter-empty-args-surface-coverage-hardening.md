@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — test and diagnostics coverage hardening
-**Deps**: archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md, tickets/TOKFILAST-006-diagnostic-path-assertion-hardening.md
+**Deps**: archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md, archive/tickets/TOKFILAST/TOKFILAST-006-diagnostic-path-assertion-hardening.md
 
 ## Problem
 

@@ -956,6 +956,81 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('canonicalizes single-argument boolean token-filter wrappers to predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'faction', eq: 'ARVN' },
+          ],
+        },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: { prop: 'faction', op: 'eq', value: 'ARVN' },
+    });
+  });
+
+  it('canonicalizes nested same-op token-filter trees and preserves not semantics', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            {
+              op: 'and',
+              args: [
+                { prop: 'type', eq: 'troops' },
+              ],
+            },
+            {
+              op: 'not',
+              arg: {
+                op: 'and',
+                args: [
+                  { prop: 'faction', eq: 'NVA' },
+                ],
+              },
+            },
+            {
+              op: 'and',
+              args: [
+                { prop: 'faction', eq: 'ARVN' },
+              ],
+            },
+          ],
+        },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: {
+        op: 'and',
+        args: [
+          { prop: 'type', op: 'eq', value: 'troops' },
+          { op: 'not', arg: { prop: 'faction', op: 'eq', value: 'NVA' } },
+          { prop: 'faction', op: 'eq', value: 'ARVN' },
+        ],
+      },
+    });
+  });
+
   it('emits diagnostic for non-canonical token filter literal path when trait vocabulary is available', () => {
     const result = lowerQueryNode(
       {
@@ -980,10 +1055,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: {
-        op: 'and',
-        args: [{ prop: 'type', op: 'eq', value: 'troop' }],
-      },
+      filter: { prop: 'type', op: 'eq', value: 'troop' },
     });
     assert.deepEqual(result.diagnostics, [
       {

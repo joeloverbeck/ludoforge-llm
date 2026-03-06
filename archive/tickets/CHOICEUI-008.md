@@ -1,6 +1,6 @@
 # CHOICEUI-008: Breadcrumb Iteration Grouping
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: None -- runner-only
@@ -141,3 +141,14 @@ New classes:
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Implemented as planned with no deviations:
+
+1. **`render-model.ts`**: Added `iterationGroupId: string | null` and `iterationLabel: string | null` to `RenderChoiceStep`.
+2. **`derive-render-model.ts`**: Added `extractIterationGroupId()` helper (strips `::resolvedBind` or `[N]` suffix) and enriched `deriveChoiceBreadcrumb()` to call `parseIterationContext()` per step and populate the new fields.
+3. **`ChoicePanel.tsx`**: Added `segmentBreadcrumb()` grouping function and `BreadcrumbSegment` type. Breadcrumb rendering now segments steps into flat pills vs grouped containers with iteration label prefixes.
+4. **`ChoicePanel.module.css`**: Added `.breadcrumbGroup`, `.breadcrumbGroupChildren`, `.breadcrumbStepIndented` classes.
+5. **Test helpers updated**: `expectedRenderChoiceStep`, `makeBreadcrumbStep`, and type test fixture all extended with the two new fields (defaulting to `null`).
+6. **6 new tests**: 3 in derive-render-model-state (null fields for non-iteration, `::` suffix grouping, `[N]` suffix grouping) + 3 in ChoicePanel (grouped rendering with labels, flat rendering without groups, click handler rewind with correct original index).

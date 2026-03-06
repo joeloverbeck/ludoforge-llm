@@ -4,6 +4,7 @@ import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { GameStore } from '../store/game-store.js';
+import type { RenderChoiceContext, RenderChoiceStep } from '../model/render-model.js';
 import type { ChoicePanelMode } from './bottom-bar-mode.js';
 import { IllegalityFeedback } from './IllegalityFeedback.js';
 import styles from './ChoicePanel.module.css';
@@ -274,6 +275,51 @@ function NumericMode({ choiceUi, chooseOne }: NumericModeProps): ReactElement {
   );
 }
 
+type BreadcrumbSegment =
+  | { readonly kind: 'flat'; readonly step: RenderChoiceStep; readonly originalIndex: number }
+  | { readonly kind: 'group'; readonly groupId: string; readonly steps: readonly { readonly step: RenderChoiceStep; readonly originalIndex: number }[] };
+
+function segmentBreadcrumb(steps: readonly RenderChoiceStep[]): readonly BreadcrumbSegment[] {
+  const segments: BreadcrumbSegment[] = [];
+  let i = 0;
+  while (i < steps.length) {
+    const step = steps[i] as RenderChoiceStep;
+    if (step.iterationGroupId === null) {
+      segments.push({ kind: 'flat', step, originalIndex: i });
+      i += 1;
+    } else {
+      const groupId = step.iterationGroupId;
+      const groupSteps: { readonly step: RenderChoiceStep; readonly originalIndex: number }[] = [];
+      while (i < steps.length) {
+        const current = steps[i] as RenderChoiceStep;
+        if (current.iterationGroupId !== groupId) {
+          break;
+        }
+        groupSteps.push({ step: current, originalIndex: i });
+        i += 1;
+      }
+      segments.push({ kind: 'group', groupId, steps: groupSteps });
+    }
+  }
+  return segments;
+}
+
+function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContext }): ReactElement {
+  return (
+    <div className={styles.choiceContextHeader} data-testid="choice-context-header">
+      <span className={styles.actionBadge} data-testid="choice-context-action">
+        {context.actionDisplayName}
+      </span>
+      <span className={styles.decisionPrompt} data-testid="choice-context-prompt">
+        {context.iterationLabel != null ? `${context.iterationLabel}: ` : ''}
+        {context.decisionPrompt}
+        {context.boundsText != null ? ` (${context.boundsText})` : ''}
+        {context.iterationProgress != null ? ` - ${context.iterationProgress}` : ''}
+      </span>
+    </div>
+  );
+}
+
 export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
 
@@ -305,21 +351,47 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
   return (
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
+      {choiceModel.choiceContext != null ? (
+        <ChoiceContextHeader context={choiceModel.choiceContext} />
+      ) : null}
       {mode !== 'choiceInvalid' ? (
         <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
-          {choiceModel.choiceBreadcrumb.map((step, index) => (
-            <button
-              key={`${step.decisionId}:${step.chosenValueId}`}
-              type="button"
-              className={styles.breadcrumbStep}
-              data-testid={`choice-breadcrumb-step-${index}`}
-              onClick={() => {
-                void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, index);
-              }}
-            >
-              {step.chosenDisplayName}
-            </button>
-          ))}
+          {segmentBreadcrumb(choiceModel.choiceBreadcrumb).map((segment) => {
+            if (segment.kind === 'flat') {
+              return (
+                <button
+                  key={`${segment.step.decisionId}:${segment.step.chosenValueId}`}
+                  type="button"
+                  className={styles.breadcrumbStep}
+                  data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
+                  onClick={() => {
+                    void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, segment.originalIndex);
+                  }}
+                >
+                  {segment.step.displayName}: {segment.step.chosenDisplayName}
+                </button>
+              );
+            }
+            return (
+              <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
+                <div className={styles.breadcrumbGroupChildren}>
+                  {segment.steps.map(({ step, originalIndex }) => (
+                    <button
+                      key={`${step.decisionId}:${step.chosenValueId}`}
+                      type="button"
+                      className={styles.breadcrumbStepIndented}
+                      data-testid={`choice-breadcrumb-step-${originalIndex}`}
+                      onClick={() => {
+                        void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, originalIndex);
+                      }}
+                    >
+                      {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
           {isPendingChoice ? (
             <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
               Current

@@ -46,3 +46,23 @@ export function formatChoiceValueFallback(value: MoveParamValue): string {
   }
   return formatChoiceScalar(value);
 }
+
+function resolveScalarDisplayName(
+  value: MoveParamScalar,
+  displayNameById: ReadonlyMap<string, { readonly displayName: string }>,
+): string {
+  if (typeof value === 'string') {
+    return displayNameById.get(value)?.displayName ?? formatIdAsDisplayName(value);
+  }
+  return formatChoiceScalar(value);
+}
+
+export function formatChoiceValueResolved(
+  value: MoveParamValue,
+  displayNameById: ReadonlyMap<string, { readonly displayName: string }>,
+): string {
+  if (isChoiceVector(value)) {
+    return value.map((entry) => resolveScalarDisplayName(entry, displayNameById)).join(', ');
+  }
+  return resolveScalarDisplayName(value, displayNameById);
+}

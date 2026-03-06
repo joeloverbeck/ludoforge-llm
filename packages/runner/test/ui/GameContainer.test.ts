@@ -242,6 +242,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     eventDecks: [],
     actionGroups: [{ groupName: 'Core', actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }] }],
     choiceBreadcrumb: [],
+    choiceContext: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],

@@ -44,6 +44,7 @@ export function makeRenderModelFixture(
     eventDecks: [],
     actionGroups: [],
     choiceBreadcrumb: [],
+    choiceContext: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],

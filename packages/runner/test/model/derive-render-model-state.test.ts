@@ -174,6 +174,8 @@ function expectedRenderChoiceStep(
   displayName: string,
   chosenValue: MoveParamValue,
   chosenDisplayName: string,
+  iterationGroupId: string | null = null,
+  iterationLabel: string | null = null,
 ) {
   return {
     decisionId,
@@ -182,6 +184,8 @@ function expectedRenderChoiceStep(
     chosenValueId: serializeChoiceValueIdentity(chosenValue),
     chosenValue,
     chosenDisplayName,
+    iterationGroupId,
+    iterationLabel,
   } as const;
 }
 
@@ -927,7 +931,7 @@ describe('deriveRenderModel state metadata', () => {
         'previousChoice',
         'Previous Choice',
         ['table:none', 'token-a'],
-        '[Table None, Token A]',
+        'Table None, Token A',
       ),
     ]);
   });
@@ -1455,5 +1459,318 @@ describe('deriveRenderModel state metadata', () => {
     const model = deriveRenderModel(fixtureState, fixtureDef, makeRenderContext(fixtureState.playerCount));
 
     expect(model.runtimeEligible).toEqual([]);
+  });
+});
+
+describe('deriveRenderModel choiceContext', () => {
+  function compileAndInit(): { def: GameDef; state: GameState } {
+    const def = compileFixture();
+    const { state } = initialState(def, 5, 2);
+    return { def, state };
+  }
+
+  it('returns null choiceContext when selectedAction is null', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: null,
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).toBeNull();
+  });
+
+  it('returns null choiceContext when choicePending is null', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: null,
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).toBeNull();
+  });
+
+  it('returns actionDisplayName from visual config when available', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        actions: { train: { displayName: 'Train Troops' } },
+      }),
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).not.toBeNull();
+    expect(model.choiceContext!.actionDisplayName).toBe('Train Troops');
+  });
+
+  it('falls back to formatIdAsDisplayName when visual config has no action entry', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext).not.toBeNull();
+    expect(model.choiceContext!.actionDisplayName).toBe('Train');
+  });
+
+  it('returns decisionPrompt from visual config when available', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'targetSpace',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        actions: { train: { choices: { targetSpace: { prompt: 'Select a space to train in' } } } },
+      }),
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.decisionPrompt).toBe('Select a space to train in');
+  });
+
+  it('returns boundsText for chooseN decisions with min/max', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('deploy'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'spaces',
+        type: 'chooseN',
+        options: [],
+        targetKinds: [],
+        min: 1,
+        max: 6,
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.boundsText).toBe('1-6');
+  });
+
+  it('returns single-value boundsText when min equals max', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('deploy'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'spaces',
+        type: 'chooseN',
+        options: [],
+        targetKinds: [],
+        min: 3,
+        max: 3,
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.boundsText).toBe('3');
+  });
+
+  it('returns null boundsText for chooseOne decisions without min/max', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.boundsText).toBeNull();
+  });
+
+  it('populates iterationLabel and iterationProgress when inside a forEach iteration', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'decision:troopCount[0]',
+        name: 'troopCount',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+      choiceStack: [
+        { decisionId: 'spaces', name: 'spaces', value: ['table', 'hand'] as unknown as MoveParamValue },
+      ],
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.iterationLabel).toBe('Table');
+    expect(model.choiceContext!.iterationProgress).toBe('1 of 2');
+  });
+
+  it('returns null iteration fields when not inside a forEach', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'simple-decision',
+        name: 'target',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.iterationLabel).toBeNull();
+    expect(model.choiceContext!.iterationProgress).toBeNull();
+  });
+
+  it('stores decisionParamName from choicePending.name', () => {
+    const { def, state } = compileAndInit();
+    const ctx = makeRenderContext(state.playerCount, asPlayerId(0), {
+      selectedAction: asActionId('train'),
+      choicePending: {
+        kind: 'pending',
+        complete: false,
+        decisionId: 'd1',
+        name: 'targetProvince',
+        type: 'chooseOne',
+        options: [],
+        targetKinds: [],
+      },
+    });
+    const model = deriveRenderModel(state, def, ctx);
+    expect(model.choiceContext!.decisionParamName).toBe('targetProvince');
+  });
+
+  it('breadcrumb steps from non-iteration decisions have null iteration fields', () => {
+    const def = compileFixture();
+    const state = initialState(def, 42, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
+      targetKinds: ['zone'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [{ decisionId: 'pick-action', name: 'pickAction', value: 'train-us' }],
+      }),
+    );
+
+    const step = model.choiceBreadcrumb[0]!;
+    expect(step.iterationGroupId).toBeNull();
+    expect(step.iterationLabel).toBeNull();
+  });
+
+  it('breadcrumb steps from forEach iterations have shared iterationGroupId and resolved iterationLabel', () => {
+    const def = compileFixture();
+    const state = initialState(def, 42, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'decision:placeType::token-a',
+      name: 'placeType',
+      type: 'chooseOne',
+      options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [
+          { decisionId: 'pick-spaces', name: 'pickSpaces', value: ['table:none', 'token-a'] },
+          { decisionId: 'decision:placeType::table:none', name: 'placeType', value: 'irregulars' },
+        ],
+      }),
+    );
+
+    const step = model.choiceBreadcrumb[1]!;
+    expect(step.iterationGroupId).toBe('decision:placeType');
+    expect(step.iterationLabel).toBe('Table None');
+  });
+
+  it('breadcrumb steps from index-based forEach iterations have shared iterationGroupId', () => {
+    const def = compileFixture();
+    const state = initialState(def, 42, 2).state;
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'placeType[1]',
+      name: 'placeType',
+      type: 'chooseOne',
+      options: [{ value: 'regular', legality: 'legal', illegalReason: null }],
+      targetKinds: [],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [
+          { decisionId: 'pick-spaces', name: 'pickSpaces', value: ['table:none', 'token-a'] },
+          { decisionId: 'placeType[0]', name: 'placeType', value: 'irregulars' },
+        ],
+      }),
+    );
+
+    const step = model.choiceBreadcrumb[1]!;
+    expect(step.iterationGroupId).toBe('placeType');
+    expect(step.iterationLabel).toBe('Table None');
   });
 });

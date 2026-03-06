@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatChoiceValueFallback, serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
+import { formatChoiceValueFallback, formatChoiceValueResolved, serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
 
 describe('choice-value-utils', () => {
   describe('serializeChoiceValueIdentity', () => {
@@ -16,6 +16,43 @@ describe('choice-value-utils', () => {
 
     it('avoids collisions between scalar and array coercion-equivalent values', () => {
       expect(serializeChoiceValueIdentity('a,b')).not.toBe(serializeChoiceValueIdentity(['a', 'b']));
+    });
+  });
+
+  describe('formatChoiceValueResolved', () => {
+    const zonesById = new Map([
+      ['da-nang:none', { displayName: 'Da Nang' }],
+      ['kontum:none', { displayName: 'Kontum' }],
+    ]);
+
+    it('resolves a zone ID to its display name when present in the map', () => {
+      expect(formatChoiceValueResolved('da-nang:none', zonesById)).toBe('Da Nang');
+    });
+
+    it('falls back to formatIdAsDisplayName for unknown zone IDs', () => {
+      expect(formatChoiceValueResolved('unknown-zone:none', zonesById)).toBe('Unknown Zone None');
+    });
+
+    it('resolves an array of zone IDs to comma-separated display names', () => {
+      expect(formatChoiceValueResolved(['da-nang:none', 'kontum:none'], zonesById)).toBe('Da Nang, Kontum');
+    });
+
+    it('mixes resolved and fallback names in arrays', () => {
+      expect(formatChoiceValueResolved(['da-nang:none', 'unknown:none'], zonesById)).toBe('Da Nang, Unknown None');
+    });
+
+    it('passes through numeric values unchanged', () => {
+      expect(formatChoiceValueResolved(42, zonesById)).toBe('42');
+    });
+
+    it('passes through boolean values with capitalized formatting', () => {
+      expect(formatChoiceValueResolved(true, zonesById)).toBe('True');
+      expect(formatChoiceValueResolved(false, zonesById)).toBe('False');
+    });
+
+    it('returns the same result as fallback when map is empty', () => {
+      const emptyMap = new Map<string, { displayName: string }>();
+      expect(formatChoiceValueResolved('da-nang:none', emptyMap)).toBe('Da Nang None');
     });
   });
 

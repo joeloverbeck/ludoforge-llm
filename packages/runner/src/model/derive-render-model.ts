@@ -18,6 +18,7 @@ import {
 
 import type {
   RenderAdjacency,
+  RenderChoiceContext,
   RenderChoiceOption,
   RenderChoiceTarget,
   RenderChoiceUi,
@@ -38,8 +39,9 @@ import type {
 } from './render-model.js';
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
-import { formatChoiceValueFallback, serializeChoiceValueIdentity } from './choice-value-utils.js';
+import { formatChoiceValueFallback, formatChoiceValueResolved, serializeChoiceValueIdentity } from './choice-value-utils.js';
 import { deriveVictoryStandings } from './derive-victory-standings.js';
+import { parseIterationContext } from './iteration-context.js';
 
 const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 
@@ -106,6 +108,8 @@ export function deriveRenderModel(
   const players = derivePlayers(state, context, factionByPlayer);
   const turnOrder = deriveTurnOrder(state, seatResolution);
   const choiceUi = deriveChoiceUi(context, zones, tokens, players);
+  const zonesById = new Map(zones.map((zone) => [zone.id, zone]));
+  const choiceContext = deriveChoiceContext(context, zonesById);
 
   const nextModel: RenderModel = {
     zones: zones.map((zone) => ({
@@ -130,7 +134,8 @@ export function deriveRenderModel(
     phaseDisplayName: formatIdAsDisplayName(String(state.currentPhase)),
     eventDecks,
     actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
-    choiceBreadcrumb: deriveChoiceBreadcrumb(context),
+    choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
+    choiceContext,
     choiceUi,
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
       code: warning.code,
@@ -1134,15 +1139,82 @@ function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups']
   }));
 }
 
-function deriveChoiceBreadcrumb(context: RenderContext): RenderModel['choiceBreadcrumb'] {
-  return context.choiceStack.map((step) => ({
-    decisionId: step.decisionId,
-    name: step.name,
-    displayName: formatIdAsDisplayName(step.name),
-    chosenValueId: serializeChoiceValueIdentity(step.value),
-    chosenValue: step.value,
-    chosenDisplayName: formatChoiceValueFallback(step.value),
-  }));
+function deriveChoiceContext(
+  context: RenderContext,
+  zonesById: ReadonlyMap<string, RenderZone>,
+): RenderChoiceContext | null {
+  if (context.selectedAction === null || context.choicePending === null) {
+    return null;
+  }
+
+  const { selectedAction, choicePending, visualConfigProvider } = context;
+
+  const actionDisplayName =
+    visualConfigProvider.getActionDisplayName(selectedAction) ??
+    formatIdAsDisplayName(selectedAction);
+
+  const decisionPrompt =
+    visualConfigProvider.getChoicePrompt(selectedAction, choicePending.name) ??
+    formatIdAsDisplayName(choicePending.name);
+
+  const min = choicePending.min;
+  const max = choicePending.max;
+  let boundsText: string | null = null;
+  if (min !== undefined || max !== undefined) {
+    const effectiveMin = min ?? 0;
+    const effectiveMax = max ?? effectiveMin;
+    boundsText = effectiveMin === effectiveMax ? String(effectiveMin) : `${effectiveMin}-${effectiveMax}`;
+  }
+
+  let iterationLabel: string | null = null;
+  let iterationProgress: string | null = null;
+  const iterCtx = parseIterationContext(choicePending.decisionId, context.choiceStack, zonesById);
+  if (iterCtx !== null) {
+    iterationLabel = iterCtx.currentEntityDisplayName;
+    iterationProgress = `${iterCtx.iterationIndex + 1} of ${iterCtx.iterationTotal}`;
+  }
+
+  return {
+    actionDisplayName,
+    decisionPrompt,
+    decisionParamName: choicePending.name,
+    boundsText,
+    iterationLabel,
+    iterationProgress,
+  };
+}
+
+const ITERATION_SUFFIX_PATTERN = /(?:::.*|\[\d+\])$/;
+
+function extractIterationGroupId(decisionId: string): string | null {
+  const match = ITERATION_SUFFIX_PATTERN.exec(decisionId);
+  if (match === null) {
+    return null;
+  }
+  return decisionId.slice(0, match.index);
+}
+
+function deriveChoiceBreadcrumb(
+  context: RenderContext,
+  zonesById: ReadonlyMap<string, RenderZone>,
+): RenderModel['choiceBreadcrumb'] {
+  return context.choiceStack.map((step, index) => {
+    const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
+    const iterCtx = parseIterationContext(step.decisionId, choiceStackUpToHere, zonesById);
+    const iterationGroupId = iterCtx !== null ? extractIterationGroupId(step.decisionId) : null;
+    const iterationLabel = iterCtx?.currentEntityDisplayName ?? null;
+
+    return {
+      decisionId: step.decisionId,
+      name: step.name,
+      displayName: formatIdAsDisplayName(step.name),
+      chosenValueId: serializeChoiceValueIdentity(step.value),
+      chosenValue: step.value,
+      chosenDisplayName: formatChoiceValueResolved(step.value, zonesById),
+      iterationGroupId,
+      iterationLabel,
+    };
+  });
 }
 
 function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoiceOption[] {

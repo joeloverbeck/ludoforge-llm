@@ -578,7 +578,7 @@ export function lowerTokenFilterExpr(
     const diagnostics: Diagnostic[] = [];
     const args: TokenFilterExpr[] = [];
     source.args.forEach((entry, index) => {
-      const lowered = lowerTokenFilterExpr(entry, context, `${path}.args[${index}]`);
+      const lowered = lowerTokenFilterExpr(entry, context, `${path}.args.${index}`);
       diagnostics.push(...lowered.diagnostics);
       if (lowered.value !== null) {
         args.push(lowered.value);

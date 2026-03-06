@@ -956,6 +956,47 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('emits diagnostic for non-canonical token filter literal path when trait vocabulary is available', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: {
+          op: 'and',
+          args: [
+            { prop: 'type', eq: 'troop' },
+          ],
+        },
+      },
+      {
+        ...tokenFilterContext,
+        tokenTraitVocabulary: {
+          type: ['troops'],
+        },
+      },
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: {
+        op: 'and',
+        args: [{ prop: 'type', op: 'eq', value: 'troop' }],
+      },
+    });
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL',
+        path: 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter.args.0.value',
+        severity: 'error',
+        message: 'Token filter uses non-canonical value "troop" for prop "type".',
+        suggestion: 'Use a canonical value declared by piece runtime props.',
+        alternatives: ['troops'],
+      },
+    ]);
+  });
+
   it('emits diagnostic for undeclared token filter prop when token prop vocabulary is available', () => {
     const result = lowerQueryNode(
       {

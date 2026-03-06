@@ -2444,7 +2444,9 @@ actor: 'active',
     assert.equal(compiled.gameDef, null);
     assert.equal(
       compiled.diagnostics.some(
-        (diagnostic) => diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL',
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL'
+          && diagnostic.path === 'doc.actions.0.effects.0.forEach.over.filter.args.0.value',
       ),
       true,
     );
@@ -2615,7 +2617,9 @@ actor: 'active',
     assert.equal(compiled.gameDef, null);
     assert.equal(
       compiled.diagnostics.some(
-        (diagnostic) => diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN',
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_PROP_UNKNOWN'
+          && diagnostic.path === 'doc.actions.0.effects.0.forEach.over.filter.args.0.prop',
       ),
       true,
     );

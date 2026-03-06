@@ -5,11 +5,16 @@ export type PredicateOp = 'eq' | 'neq' | 'in' | 'notIn';
 export type PredicateScalar = string | number | boolean;
 export type PredicateSet = readonly PredicateScalar[];
 export type PredicateValue = PredicateScalar | PredicateSet;
+export const PREDICATE_OPERATORS: readonly PredicateOp[] = ['eq', 'neq', 'in', 'notIn'];
 
 export interface ResolvedRowPredicate<FieldKey extends string = string> {
   readonly field: FieldKey;
   readonly op: PredicateOp;
   readonly value: PredicateValue;
+}
+
+export function isPredicateOp(op: unknown): op is PredicateOp {
+  return typeof op === 'string' && PREDICATE_OPERATORS.includes(op as PredicateOp);
 }
 
 export function matchesMembership(
@@ -30,6 +35,14 @@ export function matchesResolvedPredicate(
   }
 
   const { op, value } = predicate;
+  if (!isPredicateOp(op)) {
+    throw typeMismatchError(`Unsupported predicate operator "${String(op)}".`, {
+      ...context,
+      predicate,
+      actualType: typeof op,
+      expected: PREDICATE_OPERATORS.join('|'),
+    });
+  }
 
   if (op === 'eq' || op === 'neq') {
     if (Array.isArray(value)) {

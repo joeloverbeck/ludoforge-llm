@@ -949,6 +949,104 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects unsupported token-filter predicate operators on effect surfaces', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: { prop: 'id', op: 'xor', value: 'token-1' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].effects[0].reveal.filter.op',
+      ),
+    );
+  });
+
+  it('rejects unsupported token-filter predicate operators on query surfaces', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: { prop: 'id', op: 'xor', value: 'token-1' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].params[0].domain.filter.op',
+      ),
+    );
+  });
+
+  it('rejects unsupported nested token-filter predicate operators with full nested path', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: {
+                  op: 'and',
+                  args: [
+                    { prop: 'id', op: 'eq', value: 'token-1' },
+                    { prop: 'id', op: 'xor', value: 'token-2' },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].params[0].domain.filter.args[1].op',
+      ),
+    );
+  });
+
   it('rejects non-conforming boolean token-filter nodes when malformed objects bypass typing', () => {
     const base = createValidGameDef();
     const def = {

@@ -37,6 +37,13 @@ describe('query-predicate', () => {
     );
   });
 
+  it('fails closed for unsupported predicate operators', () => {
+    assert.throws(
+      () => matchesResolvedPredicate('US', { field: 'faction', op: 'xor', value: ['US'] } as unknown as ResolvedRowPredicate),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('filters rows via domain adapter accessors', () => {
     const rows = [
       { id: 'a', score: 1, faction: 'US' },

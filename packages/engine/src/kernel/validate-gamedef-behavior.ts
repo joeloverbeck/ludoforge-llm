@@ -51,6 +51,7 @@ import {
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from './token-filter-expr-utils.js';
+import { isPredicateOp, PREDICATE_OPERATORS } from './query-predicate.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -596,6 +597,16 @@ const validateTokenFilterPredicate = (
   path: string,
   context: ValidationContext,
 ): void => {
+  if (!isPredicateOp(predicate.op)) {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path: `${path}.op`,
+      severity: 'error',
+      message: `Unsupported token filter predicate operator "${String(predicate.op)}".`,
+      suggestion: `Use one of: ${PREDICATE_OPERATORS.join(', ')}.`,
+    });
+  }
+
   if (!isAllowedTokenFilterProp(predicate.prop, context.tokenFilterPropCandidates)) {
     pushMissingReferenceDiagnostic(
       diagnostics,

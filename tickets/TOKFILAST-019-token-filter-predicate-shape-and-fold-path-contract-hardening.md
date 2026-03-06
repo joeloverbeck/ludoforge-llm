@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — shared token-filter traversal utility contract + focused tests
-**Deps**: archive/tickets/TOKFILAST-013-token-filter-traversal-utility-fail-closed-hardening.md, tickets/TOKFILAST-014-token-filter-traversal-error-boundary-decoupling.md
+**Deps**: archive/tickets/TOKFILAST-013-token-filter-traversal-utility-fail-closed-hardening.md, archive/tickets/TOKFILAST/TOKFILAST-014-token-filter-traversal-error-boundary-decoupling.md
 
 ## Problem
 
@@ -44,8 +44,8 @@ Add focused utility tests that assert malformed predicate-like nodes fail closed
 
 ## Out of Scope
 
-- Predicate-op runtime/validator allow-list enforcement (`tickets/TOKFILAST-018-token-filter-predicate-operator-fail-closed-hardening.md`).
-- Broader eval error boundary decoupling beyond token-filter traversal (`tickets/TOKFILAST-014-token-filter-traversal-error-boundary-decoupling.md`).
+- Predicate-op runtime/validator allow-list enforcement (`archive/tickets/TOKFILAST/TOKFILAST-018-token-filter-predicate-operator-fail-closed-hardening.md`).
+- Broader eval error boundary decoupling beyond token-filter traversal (`archive/tickets/TOKFILAST/TOKFILAST-014-token-filter-traversal-error-boundary-decoupling.md`).
 
 ## Acceptance Criteria
 

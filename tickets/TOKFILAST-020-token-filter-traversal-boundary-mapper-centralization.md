@@ -47,7 +47,7 @@ Ensure `effects-reveal.ts` no longer imports `typeMismatchError` directly; it sh
 
 ## Out of Scope
 
-- Predicate operator allow-list hardening (`tickets/TOKFILAST-018-token-filter-predicate-operator-fail-closed-hardening.md`).
+- Predicate operator allow-list hardening (`archive/tickets/TOKFILAST/TOKFILAST-018-token-filter-predicate-operator-fail-closed-hardening.md`).
 - Predicate node-shape and fold path strictness (`tickets/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
 - Broad error-system redesign outside token-filter traversal boundaries.
 

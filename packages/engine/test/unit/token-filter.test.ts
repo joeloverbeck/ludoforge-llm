@@ -150,4 +150,17 @@ describe('token-filter', () => {
       },
     );
   });
+
+  it('fails closed for unsupported token filter predicate operators', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+    const malformed = {
+      op: 'and',
+      args: [{ prop: 'suit', op: 'xor', value: ['hearts'] }],
+    } as unknown as TokenFilterExpr;
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, malformed),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
 });

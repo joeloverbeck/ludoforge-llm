@@ -107,8 +107,8 @@ export function deriveRenderModel(
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId, staticDerivation.lookaheadCardZoneId);
   const players = derivePlayers(state, context, factionByPlayer);
   const turnOrder = deriveTurnOrder(state, seatResolution);
-  const choiceUi = deriveChoiceUi(context, zones, tokens, players);
   const zonesById = new Map(zones.map((zone) => [zone.id, zone]));
+  const choiceUi = deriveChoiceUi(context, zonesById, tokens, players);
   const choiceContext = deriveChoiceContext(context, zonesById);
 
   const nextModel: RenderModel = {
@@ -1324,7 +1324,7 @@ function toInvalidChoiceUi(reason: RenderChoiceUiInvalidReason): RenderChoiceUi 
 
 function deriveChoiceUi(
   context: RenderContext,
-  zones: readonly RenderZone[],
+  zonesById: ReadonlyMap<string, RenderZone>,
   tokens: readonly RenderToken[],
   players: readonly RenderModel['players'][number][],
 ): RenderChoiceUi {
@@ -1347,7 +1347,6 @@ function deriveChoiceUi(
       return toInvalidChoiceUi('PENDING_CHOICE_MISSING_PARTIAL_MOVE');
     }
 
-    const zonesById = new Map(zones.map((zone) => [zone.id, zone] as const));
     const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
     const playersById = new Map(players.map((player) => [player.id, player] as const));
     const options = deriveRenderChoiceOptions(context).map((option) => {

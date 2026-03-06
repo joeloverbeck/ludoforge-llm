@@ -41,7 +41,7 @@ Ensure diagnostics continue pointing to stable predicate paths and list canonica
 ## Out of Scope
 
 - Runtime predicate evaluation semantics.
-- Predicate-op literal ownership policy tests (`tickets/TOKFILAST-035-predicate-operator-literal-ownership-policy-guard.md`).
+- Predicate-op literal ownership policy tests (`archive/tickets/TOKFILAST/TOKFILAST-035-predicate-operator-literal-ownership-policy-guard.md`).
 
 ## Acceptance Criteria
 

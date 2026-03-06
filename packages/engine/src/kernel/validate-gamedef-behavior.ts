@@ -42,7 +42,7 @@ import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-cont
 import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
 import {
   isTokenFilterPredicateExpr,
-  isUnsupportedTokenFilterExprError,
+  isTokenFilterTraversalError,
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from './token-filter-expr-utils.js';
@@ -630,7 +630,7 @@ const validateTokenFilterExpr = (
       }
     });
   } catch (error: unknown) {
-    if (!isUnsupportedTokenFilterExprError(error)) {
+    if (!isTokenFilterTraversalError(error)) {
       throw error;
     }
     const entryPath = `${path}${tokenFilterPathSuffix(error.context.path)}`;

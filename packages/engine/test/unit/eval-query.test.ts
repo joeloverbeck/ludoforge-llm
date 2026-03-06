@@ -2107,6 +2107,28 @@ describe('evalQuery', () => {
     }
   });
 
+  it('maps malformed token-filter traversal failures to TYPE_MISMATCH on eval-query surfaces', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'tokensInZone',
+            zone: 'battlefield:none',
+            filter: { op: 'xor', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+          } as unknown as Parameters<typeof evalQuery>[0],
+          ctx,
+        ),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator' && Array.isArray(error.context.path);
+      },
+    );
+  });
+
   it('rejects token membership filters with scalar set values for in/notIn', () => {
     const ctx = makeCtx();
 

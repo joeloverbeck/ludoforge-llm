@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asTokenId } from '../../src/kernel/branded.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import { tokenFilterPathSuffix } from '../../src/kernel/token-filter-expr-utils.js';
 import {
   filterTokensByExpr,
   matchesTokenFilterExpr,
@@ -106,11 +107,27 @@ describe('token-filter', () => {
 
     assert.throws(
       () => matchesTokenFilterExpr(token, { op: 'and', args: [] } as unknown as TokenFilterExpr),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'empty_args'
+          && error.context?.op === 'and'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
     );
     assert.throws(
       () => matchesTokenFilterExpr(token, { op: 'or', args: [] } as unknown as TokenFilterExpr),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'empty_args'
+          && error.context?.op === 'or'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
     );
   });
 
@@ -123,7 +140,14 @@ describe('token-filter', () => {
 
     assert.throws(
       () => matchesTokenFilterExpr(token, malformed),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) => {
+        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
+          return false;
+        }
+        return error.context?.reason === 'unsupported_operator'
+          && Array.isArray(error.context.path)
+          && tokenFilterPathSuffix(error.context.path) === '';
+      },
     );
   });
 });

@@ -1,11 +1,13 @@
 import type { PlayerId } from './branded.js';
 import { effectRuntimeError } from './effect-error.js';
+import { typeMismatchError } from './eval-error.js';
 import {
   canonicalTokenFilterKey,
   canonicalizeObserverSelection,
   removeMatchingRevealGrants,
   revealGrantEquals,
 } from './hidden-info-grants.js';
+import { isTokenFilterTraversalError } from './token-filter-expr-utils.js';
 import {
   resolvePlayersWithNormalization,
   resolveZoneWithNormalization,
@@ -16,12 +18,23 @@ import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, RevealGrant } from './types.js';
+import type { EffectAST, RevealGrant, TokenFilterExpr } from './types.js';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
   ...ctx.moveParams,
   ...ctx.bindings,
 });
+
+const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
+  try {
+    return canonicalTokenFilterKey(filter);
+  } catch (error: unknown) {
+    if (!isTokenFilterTraversalError(error)) {
+      throw error;
+    }
+    throw typeMismatchError(error.message, { ...error.context });
+  }
+};
 
 export const applyConceal = (
   effect: Extract<EffectAST, { readonly conceal: unknown }>,
@@ -48,7 +61,7 @@ export const applyConceal = (
     });
   }
 
-  const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKey(effect.conceal.filter);
+  const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKeyForRuntime(effect.conceal.filter);
   const existingReveals = ctx.state.reveals ?? {};
   if (existingReveals[zoneId] === undefined || existingReveals[zoneId].length === 0) {
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
@@ -145,7 +158,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
 
   if (effect.reveal.filter !== undefined) {
     // Validate filter shape eagerly so runtime behavior does not depend on dedupe-state branches.
-    canonicalTokenFilterKey(effect.reveal.filter);
+    canonicalTokenFilterKeyForRuntime(effect.reveal.filter);
   }
 
   const grant: RevealGrant = {

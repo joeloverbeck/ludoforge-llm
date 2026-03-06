@@ -1,10 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isEvalErrorCode } from '../../../src/kernel/eval-error.js';
 import {
   foldTokenFilterExpr,
-  isUnsupportedTokenFilterExprError,
+  isTokenFilterTraversalError,
+  tokenFilterBooleanArityError,
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from '../../../src/kernel/token-filter-expr-utils.js';
@@ -97,10 +97,7 @@ describe('token-filter-expr-utils', () => {
         or: () => true,
       }),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'unsupported_operator' && tokenFilterPathSuffix(error.context.path) === '';
@@ -113,10 +110,7 @@ describe('token-filter-expr-utils', () => {
         args: [{ op: 'xor', args: [{ prop: 'id', op: 'eq', value: 'a' }] } as unknown as TokenFilterExpr],
       } as TokenFilterExpr, () => {}),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'unsupported_operator'
@@ -136,10 +130,7 @@ describe('token-filter-expr-utils', () => {
         or: () => true,
       }),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'non_conforming_node';
@@ -149,14 +140,22 @@ describe('token-filter-expr-utils', () => {
     assert.throws(
       () => walkTokenFilterExpr(malformedAnd, () => {}),
       (error: unknown) => {
-        if (!isEvalErrorCode(error, 'TYPE_MISMATCH')) {
-          return false;
-        }
-        if (!isUnsupportedTokenFilterExprError(error)) {
+        if (!isTokenFilterTraversalError(error)) {
           return false;
         }
         return error.context.reason === 'non_conforming_node' && tokenFilterPathSuffix(error.context.path) === '';
       },
     );
+  });
+
+  it('exposes deterministic empty-args traversal errors', () => {
+    const expr = { op: 'and', args: [] } as unknown as TokenFilterExpr;
+    const error = tokenFilterBooleanArityError(expr, 'and');
+
+    assert.equal(isTokenFilterTraversalError(error), true);
+    assert.equal(error.context.reason, 'empty_args');
+    assert.equal(String(error.context.op), 'and');
+    assert.equal(tokenFilterPathSuffix(error.context.path), '');
+    assert.match(error.message, /requires at least one expression argument/);
   });
 });

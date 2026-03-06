@@ -1,5 +1,6 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
 import { booleanArityMessage } from './boolean-arity-policy.js';
+import { isPredicateOp } from './predicate-op-contract.js';
 
 export interface TokenFilterPathSegmentNot {
   readonly kind: 'not';
@@ -41,8 +42,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const readNodeOp = (node: unknown): unknown => (isRecord(node) ? Reflect.get(node, 'op') : undefined);
 
 const isTokenFilterBooleanOperator = (op: unknown): op is 'and' | 'or' => op === 'and' || op === 'or';
-const isTokenFilterPredicateOperator = (op: unknown): op is TokenFilterPredicate['op'] =>
-  op === 'eq' || op === 'neq' || op === 'in' || op === 'notIn';
+const isTokenFilterPredicateOperator = (op: unknown): op is TokenFilterPredicate['op'] => isPredicateOp(op);
 
 const malformedTokenFilterExprError = (
   expr: unknown,

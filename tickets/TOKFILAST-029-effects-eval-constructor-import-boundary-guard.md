@@ -40,7 +40,7 @@ Allow effect modules to depend on shared boundary adapters (for example `token-f
 ## Out of Scope
 
 - Token-filter traversal arity/path fidelity centralization (`tickets/TOKFILAST-027-token-filter-empty-args-path-fidelity-centralization.md`).
-- Predicate-op contract single-source work (`tickets/TOKFILAST-025-predicate-operator-contract-single-source-unification.md`).
+- Predicate-op contract single-source work (`archive/tickets/TOKFILAST-025-predicate-operator-contract-single-source-unification.md`).
 - Runtime behavior changes in effect execution.
 
 ## Acceptance Criteria

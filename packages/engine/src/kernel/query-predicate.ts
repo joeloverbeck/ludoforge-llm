@@ -1,20 +1,15 @@
 import { typeMismatchError } from './eval-error.js';
+import { isPredicateOp, type PredicateOp, PREDICATE_OPERATORS } from './predicate-op-contract.js';
 import { matchesScalarMembership } from './value-membership.js';
 
-export type PredicateOp = 'eq' | 'neq' | 'in' | 'notIn';
 export type PredicateScalar = string | number | boolean;
 export type PredicateSet = readonly PredicateScalar[];
 export type PredicateValue = PredicateScalar | PredicateSet;
-export const PREDICATE_OPERATORS: readonly PredicateOp[] = ['eq', 'neq', 'in', 'notIn'];
 
 export interface ResolvedRowPredicate<FieldKey extends string = string> {
   readonly field: FieldKey;
   readonly op: PredicateOp;
   readonly value: PredicateValue;
-}
-
-export function isPredicateOp(op: unknown): op is PredicateOp {
-  return typeof op === 'string' && PREDICATE_OPERATORS.includes(op as PredicateOp);
 }
 
 export function matchesMembership(

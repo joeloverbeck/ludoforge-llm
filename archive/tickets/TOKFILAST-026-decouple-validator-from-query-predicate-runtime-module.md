@@ -1,10 +1,10 @@
 # TOKFILAST-026: Decouple Validator Predicate-Op Checks from Query Runtime Module
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel validation/runtime module boundary cleanup
-**Deps**: tickets/TOKFILAST-025-predicate-operator-contract-single-source-unification.md
+**Deps**: archive/tickets/TOKFILAST-025-predicate-operator-contract-single-source-unification.md
 
 ## Problem
 
@@ -14,7 +14,7 @@
 
 1. Validator predicate-op diagnostics currently rely on `isPredicateOp`/`PREDICATE_OPERATORS` imported from `query-predicate.ts`.
 2. `query-predicate.ts` also owns runtime evaluation logic and eval error construction, so importing from it is broader than validator needs.
-3. Existing active TOKFILAST tickets (`019`-`025`) do not explicitly complete this layer-boundary decoupling for validator imports.
+3. TOKFILAST `019`/`020`/`021`/`024` are archived; `025` completed predicate-op contract extraction and left this validator/runtime boundary decoupling as a follow-up.
 
 ## Architecture Check
 
@@ -45,7 +45,7 @@ Add a lint/contract test ensuring validator modules do not import runtime query 
 ## Out of Scope
 
 - Predicate-node shape/path traversal hardening (`archive/tickets/TOKFILAST/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
-- Effect-surface token-filter error-context test deepening (`tickets/TOKFILAST-021-effects-reveal-token-filter-error-context-contract-coverage.md`).
+- Effect-surface token-filter error-context test deepening (`archive/tickets/TOKFILAST/TOKFILAST-021-effects-reveal-token-filter-error-context-contract-coverage.md`).
 
 ## Acceptance Criteria
 
@@ -72,3 +72,17 @@ Add a lint/contract test ensuring validator modules do not import runtime query 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-03-06
+- What changed:
+  - `validate-gamedef-behavior.ts` now imports `isPredicateOp`/`PREDICATE_OPERATORS` from `predicate-op-contract.ts`, not `query-predicate.ts`.
+  - Removed predicate-op re-exports from `query-predicate.ts`, keeping runtime evaluator boundaries explicit.
+  - Added boundary guard test `validator-runtime-import-boundary-policy.test.ts` to prevent validator imports from runtime evaluator modules and prevent re-export alias drift.
+- Deviations from original plan:
+  - No additional changes in `validate-gamedef.test.ts` were required because existing behavior remained identical and already covered.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

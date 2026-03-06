@@ -8,9 +8,23 @@ import {
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from '../../../src/kernel/token-filter-expr-utils.js';
+import { PREDICATE_OPERATORS } from '../../../src/kernel/predicate-op-contract.js';
 import type { TokenFilterExpr } from '../../../src/kernel/types.js';
 
 describe('token-filter-expr-utils', () => {
+  it('accepts canonical predicate operators from the shared contract', () => {
+    for (const op of PREDICATE_OPERATORS) {
+      const expr: TokenFilterExpr = { prop: 'id', op, value: 'a' };
+      const visited: string[] = [];
+      walkTokenFilterExpr(expr, (entry) => {
+        if ('prop' in entry) {
+          visited.push(entry.op);
+        }
+      });
+      assert.deepEqual(visited, [op]);
+    }
+  });
+
   it('builds deterministic token-filter path suffixes', () => {
     assert.equal(
       tokenFilterPathSuffix([

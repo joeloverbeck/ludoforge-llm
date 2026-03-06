@@ -1,6 +1,6 @@
 # TOKFILAST-025: Unify Predicate Operator Contracts Into a Single Kernel Source of Truth
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel predicate contracts used by runtime, AST types, and schemas
@@ -15,13 +15,15 @@ Predicate operator literals (`eq|neq|in|notIn`) are still duplicated across runt
 1. Runtime/validator allow-list now exists in `packages/engine/src/kernel/query-predicate.ts` (`PREDICATE_OPERATORS` + `isPredicateOp`).
 2. AST and schema layers still declare operator literals independently (`types-ast.ts` and `schemas-ast.ts` unions), rather than consuming a shared contract source.
 3. Token-filter traversal utilities also duplicate predicate-operator literals (`packages/engine/src/kernel/token-filter-expr-utils.ts`) and must consume the same shared contract to avoid drift.
-4. Existing active TOKFILAST tickets (`019`-`024`) do not cover cross-layer operator literal deduplication across runtime/types/schema/traversal contracts.
+4. TOKFILAST `019`/`020`/`021`/`024` are archived (not active) and do not complete cross-layer predicate-operator literal deduplication.
+5. Active follow-up ticket `TOKFILAST-026` covers validator/runtime-module boundary decoupling after contract extraction; this ticket should establish the neutral contract source first.
 
 ## Architecture Check
 
 1. A single exported predicate-operator contract module is cleaner than repeated string unions and independently maintained literals.
 2. Shared kernel contracts keep `GameDef` and simulation/game runtime game-agnostic; no game-specific branching is introduced.
 3. No backwards-compatibility aliases/shims are introduced; only contract ownership is normalized.
+4. Keeping validator import-boundary cleanup in `TOKFILAST-026` avoids mixing two architectural concerns in one medium ticket while still enabling the cleaner end-state.
 
 ## What to Change
 
@@ -56,6 +58,7 @@ Add/extend tests to ensure all predicate-operator surfaces remain aligned to the
 
 - Token-filter traversal predicate-node shape/path hardening (`archive/tickets/TOKFILAST/TOKFILAST-019-token-filter-predicate-shape-and-fold-path-contract-hardening.md`).
 - Traversal boundary mapper centralization (`archive/tickets/TOKFILAST/TOKFILAST-020-token-filter-traversal-boundary-mapper-centralization.md`).
+- Validator/runtime import-boundary decoupling (`tickets/TOKFILAST-026-decouple-validator-from-query-predicate-runtime-module.md`).
 
 ## Acceptance Criteria
 
@@ -84,3 +87,18 @@ Add/extend tests to ensure all predicate-operator surfaces remain aligned to the
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
+
+## Outcome
+
+- Completion date: 2026-03-06
+- What changed:
+  - Added shared predicate-operator contract module: `packages/engine/src/kernel/predicate-op-contract.ts`.
+  - Updated runtime, AST types, schema AST, and token-filter traversal utilities to consume the shared contract.
+  - Added/updated guardrail tests to assert operator-contract alignment across runtime, traversal, schema, and type surfaces.
+  - Regenerated schema artifacts after schema contract updates.
+- Deviations from original plan:
+  - Kept `query-predicate.ts` re-exporting predicate-op helpers so existing validator imports remain stable until `TOKFILAST-026` completes validator/runtime boundary decoupling.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:unit` passed.
+  - `pnpm -F @ludoforge/engine lint` passed.

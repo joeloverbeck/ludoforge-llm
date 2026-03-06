@@ -2,9 +2,18 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { isEvalErrorCode } from '../../src/kernel/index.js';
+import { PREDICATE_OPERATORS, isPredicateOp } from '../../src/kernel/predicate-op-contract.js';
 import { filterRowsByPredicates, matchesResolvedPredicate, type ResolvedRowPredicate } from '../../src/kernel/query-predicate.js';
 
 describe('query-predicate', () => {
+  it('keeps predicate operators canonical via the shared contract', () => {
+    assert.deepEqual(PREDICATE_OPERATORS, ['eq', 'neq', 'in', 'notIn']);
+    for (const op of PREDICATE_OPERATORS) {
+      assert.equal(isPredicateOp(op), true);
+    }
+    assert.equal(isPredicateOp('xor'), false);
+  });
+
   it('evaluates eq/neq predicates with strict equality semantics', () => {
     assert.equal(matchesResolvedPredicate('US', { field: 'faction', op: 'eq', value: 'US' }), true);
     assert.equal(matchesResolvedPredicate('US', { field: 'faction', op: 'neq', value: 'NVA' }), true);

@@ -1,9 +1,10 @@
 import { typeMismatchError } from './eval-error.js';
-import { isTokenFilterTraversalError } from './token-filter-expr-utils.js';
+import { isTokenFilterTraversalError, normalizeTokenFilterTraversalError } from './token-filter-expr-utils.js';
 
 export const mapTokenFilterTraversalToTypeMismatch = (error: unknown): never => {
   if (!isTokenFilterTraversalError(error)) {
     throw error;
   }
-  throw typeMismatchError(error.message, { ...error.context });
+  const normalizedError = normalizeTokenFilterTraversalError(error);
+  throw typeMismatchError(normalizedError.message, { ...error.context });
 };

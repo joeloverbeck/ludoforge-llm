@@ -39,7 +39,7 @@ Assert CNL predicate lowering consumes shared contract symbols (`isPredicateOp`,
 
 ## Out of Scope
 
-- Runtime validator traversal-mode work (`tickets/TOKFILAST-038-token-filter-dual-traversal-modes-and-boundary-mapper-unification.md`).
+- Runtime validator traversal-mode work (`archive/tickets/TOKFILAST-038-token-filter-dual-traversal-modes-and-boundary-mapper-unification.md`).
 - Predicate runtime semantics or diagnostic code taxonomy changes.
 
 ## Acceptance Criteria

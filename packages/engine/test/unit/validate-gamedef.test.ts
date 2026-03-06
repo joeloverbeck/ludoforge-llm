@@ -721,6 +721,65 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('maps token-filter traversal reasons to deterministic validator suggestions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: {
+                  op: 'and',
+                  args: [
+                    { op: 'or', args: [] },
+                    { op: 'xor', args: [{ prop: 'id', op: 'eq', value: 'token-1' }] },
+                    { op: 'and' },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const emptyArgsDiagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'DOMAIN_QUERY_INVALID'
+        && diag.path === 'actions[0].params[0].domain.filter.args[0].args',
+    );
+    const unsupportedOperatorDiagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'DOMAIN_QUERY_INVALID'
+        && diag.path === 'actions[0].params[0].domain.filter.args[1].op',
+    );
+    const nonConformingNodeDiagnostic = diagnostics.find(
+      (diag) =>
+        diag.code === 'DOMAIN_QUERY_INVALID'
+        && diag.path === 'actions[0].params[0].domain.filter.args[2].op',
+    );
+
+    assert.ok(emptyArgsDiagnostic);
+    assert.equal(emptyArgsDiagnostic.suggestion, 'Provide one or more token filter expression arguments.');
+    assert.equal(emptyArgsDiagnostic.message, 'Token filter operator "or" requires at least one expression argument.');
+    assert.ok(unsupportedOperatorDiagnostic);
+    assert.equal(unsupportedOperatorDiagnostic.suggestion, 'Use one of: and, or, not.');
+    assert.equal(unsupportedOperatorDiagnostic.message, 'Unsupported token filter operator "xor".');
+    assert.ok(nonConformingNodeDiagnostic);
+    assert.equal(
+      nonConformingNodeDiagnostic.suggestion,
+      'Use a predicate leaf or a well-formed and/or/not expression node.',
+    );
+    assert.equal(nonConformingNodeDiagnostic.message, 'Malformed token filter expression node for operator "and".');
+  });
+
   it('keeps condition-surface suffix taxonomy canonicalized by family', () => {
     const querySuffixes = Object.values(CONDITION_SURFACE_SUFFIX.query);
     const effectSuffixes = Object.values(CONDITION_SURFACE_SUFFIX.effect);

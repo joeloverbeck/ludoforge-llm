@@ -1,5 +1,5 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
-import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
+import { booleanArityMessage, booleanAritySuggestion, isNonEmptyArray } from './boolean-arity-policy.js';
 import { isPredicateOp } from '../contracts/index.js';
 
 export interface TokenFilterPathSegmentNot {
@@ -15,7 +15,7 @@ export type TokenFilterPathSegment = TokenFilterPathSegmentNot | TokenFilterPath
 
 type TokenFilterBooleanExpr = Extract<TokenFilterExpr, { readonly op: 'and' | 'or' }>;
 type TokenFilterNotExpr = Extract<TokenFilterExpr, { readonly op: 'not' }>;
-type TokenFilterTraversalErrorReason = 'unsupported_operator' | 'non_conforming_node' | 'empty_args';
+export type TokenFilterTraversalErrorReason = 'unsupported_operator' | 'non_conforming_node' | 'empty_args';
 
 export interface TokenFilterTraversalErrorContext {
   readonly expr: unknown;
@@ -28,6 +28,15 @@ export interface TokenFilterTraversalError {
   readonly code: 'TOKEN_FILTER_TRAVERSAL_ERROR';
   readonly context: TokenFilterTraversalErrorContext;
   readonly message: string;
+}
+
+export interface NormalizedTokenFilterTraversalError {
+  readonly reason: TokenFilterTraversalErrorReason;
+  readonly op: unknown;
+  readonly entryPathSuffix: string;
+  readonly errorFieldSuffix: '.op' | '.args';
+  readonly message: string;
+  readonly suggestion: string;
 }
 
 export interface TokenFilterExprFoldHandlers<TResult> {
@@ -44,6 +53,26 @@ const readNodeOp = (node: unknown): unknown => (isRecord(node) ? Reflect.get(nod
 const isTokenFilterBooleanOperator = (op: unknown): op is 'and' | 'or' => op === 'and' || op === 'or';
 const isTokenFilterPredicateOperator = (op: unknown): op is TokenFilterPredicate['op'] => isPredicateOp(op);
 
+const tokenFilterTraversalErrorMessage = (reason: TokenFilterTraversalErrorReason, op: unknown): string => {
+  if (reason === 'unsupported_operator') {
+    return `Unsupported token filter operator "${String(op)}".`;
+  }
+  if (reason === 'empty_args') {
+    return booleanArityMessage('tokenFilter', isTokenFilterBooleanOperator(op) ? op : 'and');
+  }
+  return `Malformed token filter expression node for operator "${String(op)}".`;
+};
+
+const tokenFilterTraversalErrorSuggestion = (reason: TokenFilterTraversalErrorReason): string => {
+  if (reason === 'unsupported_operator') {
+    return 'Use one of: and, or, not.';
+  }
+  if (reason === 'empty_args') {
+    return booleanAritySuggestion('tokenFilter');
+  }
+  return 'Use a predicate leaf or a well-formed and/or/not expression node.';
+};
+
 const malformedTokenFilterExprError = (
   expr: unknown,
   path: readonly TokenFilterPathSegment[],
@@ -52,9 +81,7 @@ const malformedTokenFilterExprError = (
   const op = readNodeOp(expr);
   return {
     code: 'TOKEN_FILTER_TRAVERSAL_ERROR',
-    message: reason === 'unsupported_operator'
-    ? `Unsupported token filter operator "${String(op)}".`
-    : `Malformed token filter expression node for operator "${String(op)}".`,
+    message: tokenFilterTraversalErrorMessage(reason, op),
     context: {
       expr,
       op,
@@ -92,7 +119,7 @@ export const tokenFilterBooleanArityError = (
   path: readonly TokenFilterPathSegment[] = [],
 ): TokenFilterTraversalError => ({
   code: 'TOKEN_FILTER_TRAVERSAL_ERROR',
-  message: booleanArityMessage('tokenFilter', op),
+  message: tokenFilterTraversalErrorMessage('empty_args', op),
   context: {
     expr,
     op,
@@ -100,6 +127,21 @@ export const tokenFilterBooleanArityError = (
     reason: 'empty_args',
   },
 });
+
+export const normalizeTokenFilterTraversalError = (
+  error: TokenFilterTraversalError,
+): NormalizedTokenFilterTraversalError => {
+  const reason = error.context.reason;
+  const op = error.context.op;
+  return {
+    reason,
+    op,
+    entryPathSuffix: tokenFilterPathSuffix(error.context.path),
+    errorFieldSuffix: reason === 'empty_args' ? '.args' : '.op',
+    message: tokenFilterTraversalErrorMessage(reason, op),
+    suggestion: tokenFilterTraversalErrorSuggestion(reason),
+  };
+};
 
 export const isTokenFilterPredicateExpr = (expr: unknown): expr is TokenFilterPredicate =>
   isRecord(expr)

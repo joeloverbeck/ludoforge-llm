@@ -48,6 +48,7 @@ export const applyConceal = (
     });
   }
 
+  const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKey(effect.conceal.filter);
   const existingReveals = ctx.state.reveals ?? {};
   if (existingReveals[zoneId] === undefined || existingReveals[zoneId].length === 0) {
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
@@ -70,7 +71,6 @@ export const applyConceal = (
       );
     }
   }
-  const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKey(effect.conceal.filter);
   const existingZoneGrants = existingReveals[zoneId] ?? [];
   const removal = removeMatchingRevealGrants(existingZoneGrants, {
     ...(from === undefined ? {} : { from }),
@@ -141,6 +141,11 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
       }),
       ctx.state.playerCount,
     );
+  }
+
+  if (effect.reveal.filter !== undefined) {
+    // Validate filter shape eagerly so runtime behavior does not depend on dedupe-state branches.
+    canonicalTokenFilterKey(effect.reveal.filter);
   }
 
   const grant: RevealGrant = {

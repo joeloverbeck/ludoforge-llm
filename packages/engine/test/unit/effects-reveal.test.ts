@@ -204,6 +204,19 @@ describe('effects reveal', () => {
     assert.deepEqual(ctx.collector.trace, []);
   });
 
+  it('rejects reveal.filter with empty boolean token-filter args', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { reveal: { zone: 'hand:0', to: 'all', filter: { op: 'and', args: [] } } } as unknown as EffectAST,
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('throws runtime error when state is missing resolved zone entry', () => {
     const ctx = makeCtx({
       state: {
@@ -440,6 +453,26 @@ describe('effects conceal', () => {
     const result = applyEffect(effect, ctx);
 
     assert.equal(result.state, state);
+  });
+
+  it('rejects conceal.filter with empty boolean token-filter args', () => {
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: 'all' }],
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { conceal: { zone: 'hand:0', filter: { op: 'and', args: [] } } } as unknown as EffectAST,
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
   });
 
   it('emits conceal trace entry with removal metadata', () => {

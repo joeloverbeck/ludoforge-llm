@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import { typeMismatchError } from './eval-error.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import type { RevealGrant, TokenFilterExpr } from './types.js';
 
@@ -35,14 +36,6 @@ const canonicalizeValue = (value: unknown): unknown => {
   return value;
 };
 
-const toNonEmpty = <T>(values: readonly T[]): readonly [T, ...T[]] => {
-  if (values.length === 0) {
-    throw new Error('Expected non-empty values.');
-  }
-  const [first, ...rest] = values;
-  return [first!, ...rest];
-};
-
 export const normalizeObservers = (players: readonly PlayerId[]): readonly PlayerId[] => (
   [...new Set(players)].sort((left, right) => left - right)
 );
@@ -74,20 +67,34 @@ export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterE
   return foldTokenFilterExpr<TokenFilterExpr>(expr, {
     predicate: (predicate) => predicate,
     not: (_entry, arg) => ({ op: 'not', arg }),
-    and: (_entry, args) => ({
-      op: 'and',
-      args: toNonEmpty([...args]
-        .map((entry) => ({ key: JSON.stringify(canonicalizeValue(entry)), expr: entry }))
+    and: (entry, args) => {
+      if (entry.args.length === 0) {
+        throw typeMismatchError('Token filter operator "and" requires at least one expression argument.', { expr });
+      }
+      const sortedArgs = [...args]
+        .map((arg) => ({ key: JSON.stringify(canonicalizeValue(arg)), expr: arg }))
         .sort((left, right) => compareStrings(left.key, right.key))
-        .map((entry) => entry.expr)),
-    }),
-    or: (_entry, args) => ({
-      op: 'or',
-      args: toNonEmpty([...args]
-        .map((entry) => ({ key: JSON.stringify(canonicalizeValue(entry)), expr: entry }))
+        .map((arg) => arg.expr);
+      const [first, ...rest] = sortedArgs;
+      return {
+        op: 'and',
+        args: [first!, ...rest],
+      };
+    },
+    or: (entry, args) => {
+      if (entry.args.length === 0) {
+        throw typeMismatchError('Token filter operator "or" requires at least one expression argument.', { expr });
+      }
+      const sortedArgs = [...args]
+        .map((arg) => ({ key: JSON.stringify(canonicalizeValue(arg)), expr: arg }))
         .sort((left, right) => compareStrings(left.key, right.key))
-        .map((entry) => entry.expr)),
-    }),
+        .map((arg) => arg.expr);
+      const [first, ...rest] = sortedArgs;
+      return {
+        op: 'or',
+        args: [first!, ...rest],
+      };
+    },
   });
 };
 

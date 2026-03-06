@@ -447,61 +447,129 @@ describe('validateGameDef reference checks', () => {
     assert.deepEqual(diagnostic.alternatives, ['faction']);
   });
 
-  it('rejects empty boolean token-filter args in tokensInZone domains', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actions: [
-        {
-          ...base.actions[0],
-          params: [
+  it('rejects empty boolean token-filter args across all query/effect filter surfaces', () => {
+    const cases: readonly {
+      readonly name: string;
+      readonly expectedPath: string;
+      readonly buildDef: (base: GameDef) => GameDef;
+    }[] = [
+      {
+        name: 'tokensInZone domain filter',
+        expectedPath: 'actions[0].params[0].domain.filter.args',
+        buildDef: (base) => ({
+          ...base,
+          actions: [
             {
-              name: '$token',
-              domain: {
-                query: 'tokensInZone',
-                zone: 'deck:none',
-                filter: { op: 'and', args: [] },
-              },
+              ...base.actions[0],
+              params: [
+                {
+                  name: '$token',
+                  domain: {
+                    query: 'tokensInZone',
+                    zone: 'deck:none',
+                    filter: { op: 'and', args: [] },
+                  },
+                },
+              ],
             },
           ],
-        },
-      ],
-    } as unknown as GameDef;
-
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === 'actions[0].params[0].domain.filter.args',
-      ),
-    );
-  });
-
-  it('rejects empty boolean token-filter args in reveal effects', () => {
-    const base = createValidGameDef();
-    const def = {
-      ...base,
-      actions: [
-        {
-          ...base.actions[0],
-          effects: [
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'tokensInMapSpaces domain filter',
+        expectedPath: 'actions[0].params[0].domain.filter.args',
+        buildDef: (base) => ({
+          ...base,
+          actions: [
             {
-              reveal: {
-                to: 'all',
-                zone: 'deck:none',
-                filter: { op: 'or', args: [] },
-              },
+              ...base.actions[0],
+              params: [
+                {
+                  name: '$token',
+                  domain: {
+                    query: 'tokensInMapSpaces',
+                    filter: { op: 'and', args: [] },
+                  },
+                },
+              ],
             },
           ],
-        },
-      ],
-    } as unknown as GameDef;
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'tokensInAdjacentZones domain filter',
+        expectedPath: 'actions[0].params[0].domain.filter.args',
+        buildDef: (base) => ({
+          ...base,
+          actions: [
+            {
+              ...base.actions[0],
+              params: [
+                {
+                  name: '$token',
+                  domain: {
+                    query: 'tokensInAdjacentZones',
+                    zone: 'market:none',
+                    filter: { op: 'and', args: [] },
+                  },
+                },
+              ],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'reveal.filter effect',
+        expectedPath: 'actions[0].effects[0].reveal.filter.args',
+        buildDef: (base) => ({
+          ...base,
+          actions: [
+            {
+              ...base.actions[0],
+              effects: [
+                {
+                  reveal: {
+                    to: 'all',
+                    zone: 'deck:none',
+                    filter: { op: 'or', args: [] },
+                  },
+                },
+              ],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+      {
+        name: 'conceal.filter effect',
+        expectedPath: 'actions[0].effects[0].conceal.filter.args',
+        buildDef: (base) => ({
+          ...base,
+          actions: [
+            {
+              ...base.actions[0],
+              effects: [
+                {
+                  conceal: {
+                    zone: 'deck:none',
+                    filter: { op: 'and', args: [] },
+                  },
+                },
+              ],
+            },
+          ],
+        }) as unknown as GameDef,
+      },
+    ];
 
-    const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === 'actions[0].effects[0].reveal.filter.args',
-      ),
-    );
+    for (const testCase of cases) {
+      const diagnostics = validateGameDef(testCase.buildDef(createValidGameDef()));
+      assert.ok(
+        diagnostics.some(
+          (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === testCase.expectedPath,
+        ),
+        `Expected DOMAIN_QUERY_INVALID at ${testCase.expectedPath} for ${testCase.name}`,
+      );
+    }
   });
 
   it('rejects nested empty boolean token-filter args with full nested path', () => {

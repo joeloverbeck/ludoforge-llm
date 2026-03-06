@@ -2052,17 +2052,59 @@ describe('evalQuery', () => {
     );
   });
 
-  it('rejects tokensInZone with empty boolean token-filter args', () => {
-    const ctx = makeCtx();
+  it('rejects empty boolean token-filter args across token query runtime surfaces', () => {
+    const mapSpaceZone = {
+      id: asZoneId('city:none'),
+      zoneKind: 'board',
+      owner: 'none',
+      visibility: 'public',
+      ordering: 'set',
+    } as const;
+    const mapSpaceDef = makeDef();
+    const mapSpaceCtx = makeCtx({
+      def: {
+        ...mapSpaceDef,
+        zones: [...mapSpaceDef.zones, mapSpaceZone],
+      },
+      adjacencyGraph: buildAdjacencyGraph([...mapSpaceDef.zones, mapSpaceZone]),
+      state: {
+        ...makeState(),
+        zones: {
+          ...makeState().zones,
+          'city:none': [makeFactionToken('city-us-1', 'US')],
+        },
+      },
+    });
 
-    assert.throws(
-      () =>
-        evalQuery(
-          { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } } as unknown as Parameters<typeof evalQuery>[0],
-          ctx,
-        ),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
-    );
+    const cases: readonly {
+      readonly name: string;
+      readonly query: Parameters<typeof evalQuery>[0];
+      readonly ctx: EvalContext;
+    }[] = [
+      {
+        name: 'tokensInZone',
+        query: { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: makeCtx(),
+      },
+      {
+        name: 'tokensInAdjacentZones',
+        query: { query: 'tokensInAdjacentZones', zone: 'deck:none', filter: { op: 'and', args: [] } } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: makeCtx(),
+      },
+      {
+        name: 'tokensInMapSpaces',
+        query: { query: 'tokensInMapSpaces', filter: { op: 'and', args: [] } } as unknown as Parameters<typeof evalQuery>[0],
+        ctx: mapSpaceCtx,
+      },
+    ];
+
+    for (const testCase of cases) {
+      assert.throws(
+        () => evalQuery(testCase.query, testCase.ctx),
+        (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+        `Expected TYPE_MISMATCH for ${testCase.name}`,
+      );
+    }
   });
 
   it('rejects token membership filters with scalar set values for in/notIn', () => {

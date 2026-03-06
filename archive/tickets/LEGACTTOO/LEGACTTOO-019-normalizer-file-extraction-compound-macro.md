@@ -1,6 +1,6 @@
 # LEGACTTOO-019: Extract Compound Normalizers and Macro Override to Dedicated Files
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/tooltip-normalizer*.ts`
@@ -64,7 +64,7 @@ Import compound and macro functions. Keep the main `normalizeEffect` dispatch an
 
 ### Tests That Must Pass
 
-1. All existing 77 tooltip-normalizer tests pass unchanged
+1. All existing 80 tooltip-normalizer tests pass unchanged
 2. No new public API surface — `normalizeEffect` and `NormalizerContext` remain the sole exports from `tooltip-normalizer.ts`
 3. Existing suite: `node --test dist/test/unit/kernel/tooltip-normalizer.test.js`
 
@@ -84,3 +84,15 @@ Import compound and macro functions. Keep the main `normalizeEffect` dispatch an
 
 1. `node --test dist/test/unit/kernel/tooltip-normalizer.test.js`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Planned**: Extract compound normalizers and macro override into 1-2 new files, update main dispatch.
+
+**Actual**: Extracted to one new file (`tooltip-normalizer-compound.ts`, 230 lines). Merged macro override into compound file (too small for standalone). Used DI pattern — compound normalizers that recurse accept a `recurse: EffectRecurse` callback instead of importing `normalizeEffect` directly, breaking the potential circular import cleanly.
+
+- `tooltip-normalizer.ts`: 597 → 415 lines (leaf normalizers + dispatch + shared utilities)
+- `tooltip-normalizer-compound.ts`: 230 lines (compound normalizers + helpers + macro override)
+- Stringifier utilities (`stringifyValueExpr`, `stringifyZoneRef`, `stringifyNumericExpr`) duplicated in both files (~20 lines each) to avoid circular imports. Trivial one-liners; acceptable trade-off vs adding a third shared file.
+- Main file 15 lines over the aspirational 400-line target due to keeping stringifiers local. Well under the 800 hard max.
+- All 80 tooltip-normalizer tests pass unchanged. All 3945 engine tests pass. Lint + typecheck clean.

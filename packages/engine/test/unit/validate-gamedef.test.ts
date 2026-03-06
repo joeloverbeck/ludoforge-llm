@@ -630,6 +630,7 @@ describe('validateGameDef reference checks', () => {
 
     assert.equal(CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen, 'if.when');
     assert.equal(CONDITION_SURFACE_SUFFIX.effect.ifWhen, 'if.when');
+    assert.equal(CONDITION_SURFACE_SUFFIX.valueExpr.ifWhen, CONDITION_SURFACE_SUFFIX.effect.ifWhen);
     assert.equal(new Set(querySuffixes).size, querySuffixes.length);
     assert.equal(new Set(effectSuffixes).size, effectSuffixes.length);
     assert.equal(new Set(actionPipelineSuffixes).size, actionPipelineSuffixes.length);

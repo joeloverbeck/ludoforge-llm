@@ -1,6 +1,8 @@
+const IF_WHEN_SUFFIX = 'if.when' as const;
+
 export const CONDITION_SURFACE_SUFFIX = {
   valueExpr: {
-    ifWhen: 'if.when',
+    ifWhen: IF_WHEN_SUFFIX,
   },
   query: {
     spaceFilterCondition: 'spaceFilter.condition',
@@ -9,7 +11,7 @@ export const CONDITION_SURFACE_SUFFIX = {
     filterCondition: 'filter.condition',
   },
   effect: {
-    ifWhen: 'if.when',
+    ifWhen: IF_WHEN_SUFFIX,
     moveAllFilter: 'moveAll.filter',
     grantFreeOperationZoneFilter: 'grantFreeOperation.zoneFilter',
   },

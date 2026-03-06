@@ -429,8 +429,8 @@ conditionAstSchemaInternal = z.union([
 
 tokenFilterExprSchemaInternal = z.union([
   TokenFilterPredicateSchema,
-  z.object({ op: z.literal('and'), args: z.array(TokenFilterExprSchema) }).strict(),
-  z.object({ op: z.literal('or'), args: z.array(TokenFilterExprSchema) }).strict(),
+  z.object({ op: z.literal('and'), args: z.array(TokenFilterExprSchema).min(1) }).strict(),
+  z.object({ op: z.literal('or'), args: z.array(TokenFilterExprSchema).min(1) }).strict(),
   z.object({ op: z.literal('not'), arg: TokenFilterExprSchema }).strict(),
 ]);
 

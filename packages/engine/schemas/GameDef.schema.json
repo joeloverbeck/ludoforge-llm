@@ -5844,7 +5844,7 @@
                 "filter": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_43a3a5df"
+                      "$ref": "#/definitions/anon_5b84c94f"
                     }
                   ]
                 }
@@ -5964,7 +5964,7 @@
                 "filter": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_43a3a5df"
+                      "$ref": "#/definitions/anon_5b84c94f"
                     }
                   ]
                 }
@@ -7335,7 +7335,7 @@
         }
       ]
     },
-    "anon_43a3a5df": {
+    "anon_5b84c94f": {
       "anyOf": [
         {
           "type": "object",
@@ -7402,9 +7402,10 @@
               "const": "and"
             },
             "args": {
+              "minItems": 1,
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_43a3a5df"
+                "$ref": "#/definitions/anon_5b84c94f"
               }
             }
           },
@@ -7422,9 +7423,10 @@
               "const": "or"
             },
             "args": {
+              "minItems": 1,
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_43a3a5df"
+                "$ref": "#/definitions/anon_5b84c94f"
               }
             }
           },
@@ -7442,7 +7444,7 @@
               "const": "not"
             },
             "arg": {
-              "$ref": "#/definitions/anon_43a3a5df"
+              "$ref": "#/definitions/anon_5b84c94f"
             }
           },
           "required": [
@@ -8002,7 +8004,7 @@
             "filter": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/anon_43a3a5df"
+                  "$ref": "#/definitions/anon_5b84c94f"
                 }
               ]
             }
@@ -8196,7 +8198,7 @@
             "filter": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/anon_43a3a5df"
+                  "$ref": "#/definitions/anon_5b84c94f"
                 }
               ]
             }
@@ -8715,7 +8717,7 @@
             "filter": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/anon_43a3a5df"
+                  "$ref": "#/definitions/anon_5b84c94f"
                 }
               ]
             }

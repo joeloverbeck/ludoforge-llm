@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
+  createCollector,
   createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
@@ -1998,6 +1999,37 @@ describe('evalQuery', () => {
     assert.deepEqual(result, []);
   });
 
+  it('records nested token-filter predicate count in EMPTY_QUERY_RESULT warning context', () => {
+    const collector = createCollector();
+    const ctx = makeCtx({ collector });
+
+    const result = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: {
+          op: 'or',
+          args: [
+            { prop: 'faction', op: 'eq', value: 'NONE' },
+            {
+              op: 'and',
+              args: [
+                { prop: 'faction', op: 'eq', value: 'US' },
+                { prop: 'faction', op: 'eq', value: 'ARVN' },
+              ],
+            },
+          ],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, []);
+    const warning = collector.warnings.find((entry) => entry.code === 'EMPTY_QUERY_RESULT');
+    assert.ok(warning);
+    assert.equal((warning.context as { filterCount?: number }).filterCount, 3);
+  });
+
   it('tokensInZone with compound filter (AND) returns only tokens matching all predicates', () => {
     const ctx = makeCtx();
 
@@ -2020,14 +2052,13 @@ describe('evalQuery', () => {
     );
   });
 
-  it('tokensInZone with empty filter array returns all tokens', () => {
+  it('rejects tokensInZone with empty boolean token-filter args', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } },
-      ctx,
+    assert.throws(
+      () => evalQuery({ query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
-    assert.equal(result.length, 5);
   });
 
   it('rejects token membership filters with scalar set values for in/notIn', () => {

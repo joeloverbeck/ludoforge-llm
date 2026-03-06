@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — static authoring guard in lint/validation pipeline
-**Deps**: archive/tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md, tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md
+**Deps**: archive/tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md, archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md
 
 ## Problem
 

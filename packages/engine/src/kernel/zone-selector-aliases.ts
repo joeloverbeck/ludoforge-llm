@@ -1,4 +1,5 @@
 import type { ConditionAST, OptionsQuery, TokenFilterExpr, ValueExpr, ZoneRef, ZoneSel } from './types.js';
+import { isTokenFilterPredicateExpr, walkTokenFilterExpr } from './token-filter-expr-utils.js';
 
 const isBindingAlias = (zone: ZoneSel): boolean => zone.startsWith('$');
 
@@ -23,20 +24,15 @@ const collectZoneSelectorAliasesFromQuery = (query: OptionsQuery, aliases: Set<s
     if (filter === undefined) {
       return;
     }
-    if ('prop' in filter) {
-      if (Array.isArray(filter.value) || typeof filter.value === 'string' || typeof filter.value === 'number' || typeof filter.value === 'boolean') {
+    walkTokenFilterExpr(filter, (entry) => {
+      if (!isTokenFilterPredicateExpr(entry)) {
         return;
       }
-      collectZoneSelectorAliasesFromValueExpr(filter.value as ValueExpr, aliases);
-      return;
-    }
-    if (filter.op === 'not') {
-      collectTokenFilterAliases(filter.arg);
-      return;
-    }
-    for (const entry of filter.args) {
-      collectTokenFilterAliases(entry);
-    }
+      if (Array.isArray(entry.value) || typeof entry.value === 'string' || typeof entry.value === 'number' || typeof entry.value === 'boolean') {
+        return;
+      }
+      collectZoneSelectorAliasesFromValueExpr(entry.value as ValueExpr, aliases);
+    });
   };
 
   switch (query.query) {

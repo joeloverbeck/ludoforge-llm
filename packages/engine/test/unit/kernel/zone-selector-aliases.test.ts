@@ -88,6 +88,35 @@ describe('zone selector alias collection', () => {
     assert.deepEqual(aliases, ['$adjacentNeighbor', '$adjacentOrigin']);
   });
 
+  it('collects zone aliases from token-filter value expressions nested under not/or', () => {
+    const valueExpr: ValueExpr = {
+      aggregate: {
+        op: 'count',
+        query: {
+          query: 'tokensInZone',
+          zone: '$source',
+          filter: {
+            op: 'not',
+            arg: {
+              op: 'or',
+              args: [
+                {
+                  prop: 'label',
+                  op: 'eq',
+                  value: { ref: 'zoneProp', zone: '$candidate', prop: 'country' },
+                },
+                { prop: 'faction', op: 'eq', value: 'US' },
+              ],
+            },
+          },
+        },
+      },
+    };
+
+    const aliases = [...collectZoneSelectorAliasesFromValueExpr(valueExpr)].sort();
+    assert.deepEqual(aliases, ['$candidate', '$source']);
+  });
+
   it('deduplicates aliases and strips canonical $zone from free-operation rebindable set', () => {
     const condition: ConditionAST = {
       op: 'and',

@@ -1,6 +1,6 @@
 # CHOICEUI-006: Choice Context Header
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None -- runner-only
@@ -146,3 +146,21 @@ New classes:
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Implemented exactly as planned. All ticket assumptions verified correct against the codebase.
+
+**Changes vs plan:**
+- No discrepancies found — all assumptions about `RenderContext`, `ChoicePendingRequest`, `VisualConfigProvider`, and `parseIterationContext` were accurate.
+- The iteration test required using the correct `decision:troopCount[0]` decisionId format (matching `parseIterationContext`'s `ITERATION_INDEX_PATTERN`), which was a test authoring detail, not a code change.
+
+**Files modified:**
+- `packages/runner/src/model/render-model.ts` — added `RenderChoiceContext` interface and `choiceContext` field on `RenderModel`
+- `packages/runner/src/model/derive-render-model.ts` — added `deriveChoiceContext()` function, wired into `deriveRenderModel()` return object
+- `packages/runner/src/ui/ChoicePanel.tsx` — added `ChoiceContextHeader` sub-component, rendered above breadcrumb
+- `packages/runner/src/ui/ChoicePanel.module.css` — added `.choiceContextHeader`, `.actionBadge`, `.decisionPrompt` styles
+- `packages/runner/test/model/derive-render-model-state.test.ts` — 9 new unit tests for `deriveChoiceContext`
+- `packages/runner/test/ui/ChoicePanel.test.ts` — 3 new component tests for `ChoiceContextHeader`
+- `packages/runner/test/ui/helpers/render-model-fixture.ts` — added `choiceContext: null` default
+- 4 other test files updated to include `choiceContext: null` in inline `RenderModel` objects

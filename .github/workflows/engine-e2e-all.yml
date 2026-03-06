@@ -10,6 +10,8 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'turbo.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
       - '.github/workflows/engine-e2e-all.yml'
   pull_request:
     branches: [main]
@@ -21,6 +23,8 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'turbo.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
       - '.github/workflows/engine-e2e-all.yml'
   workflow_dispatch:
 concurrency:

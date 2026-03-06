@@ -364,18 +364,6 @@ const stringifyCondition = (cond: ConditionAST): string => {
   return '<condition>';
 };
 
-/** Check if a ConditionAST references globalMarkerState at its top level. */
-const isGlobalMarkerCondition = (cond: ConditionAST): boolean => {
-  if (typeof cond === 'boolean') return false;
-  if ('op' in cond && ('left' in cond || 'right' in cond)) {
-    const comp = cond as { readonly left: ValueExpr; readonly right: ValueExpr };
-    return isGlobalMarkerRef(comp.left) || isGlobalMarkerRef(comp.right);
-  }
-  return false;
-};
-
-const isGlobalMarkerRef = (expr: ValueExpr): boolean =>
-  typeof expr === 'object' && expr !== null && 'ref' in expr && expr.ref === 'globalMarkerState';
 
 const normalizeEffectList = (
   effects: readonly EffectAST[],
@@ -401,7 +389,6 @@ const isTokenQuery = (q: OptionsQuery): boolean =>
 
 const normalizeChooseN = (
   payload: EffectOf<'chooseN'>,
-  ctx: NormalizerContext,
   astPath: string,
 ): readonly TooltipMessage[] => {
   const p = payload.chooseN;
@@ -463,9 +450,7 @@ const normalizeIf = (
   // Rule 32/33: if → modifier message + recurse children
   const thenMessages = normalizeEffectList(thenEffects, ctx, `${astPath}.then`);
 
-  const modifier: TooltipMessage = isGlobalMarkerCondition(when)
-    ? { kind: 'modifier', condition: condStr, description: `If ${condStr}`, astPath }
-    : { kind: 'modifier', condition: condStr, description: `If ${condStr}`, astPath };
+  const modifier: TooltipMessage = { kind: 'modifier', condition: condStr, description: `If ${condStr}`, astPath };
 
   const elseMessages = elseEffects !== undefined
     ? normalizeEffectList(elseEffects, ctx, `${astPath}.else`)
@@ -594,7 +579,7 @@ export const normalizeEffect = (
   if ('shiftGlobalMarker' in effect) return normalizeShiftGlobalMarker(effect, astPath);
 
   // Compound / control-flow rules (28-35)
-  if ('chooseN' in effect) return normalizeChooseN(effect, ctx, astPath);
+  if ('chooseN' in effect) return normalizeChooseN(effect, astPath);
   if ('chooseOne' in effect) return normalizeChooseOne(effect, astPath);
   if ('forEach' in effect) return normalizeForEach(effect, ctx, astPath);
   if ('if' in effect) return normalizeIf(effect, ctx, astPath);

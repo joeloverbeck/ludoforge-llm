@@ -112,6 +112,7 @@ export interface SetMessage extends MessageBase {
   readonly kind: 'set';
   readonly target: string;
   readonly value: string;
+  readonly toggle?: boolean;
 }
 
 export interface ChooseMessage extends MessageBase {
@@ -149,6 +150,11 @@ export interface GrantMessage extends MessageBase {
   readonly targetPlayer: string;
 }
 
+export interface ConcealMessage extends MessageBase {
+  readonly kind: 'conceal';
+  readonly target: string;
+}
+
 export interface SuppressedMessage extends MessageBase {
   readonly kind: 'suppressed';
   readonly reason: string;
@@ -177,13 +183,14 @@ export type TooltipMessage =
   | BlockerMessage
   | PhaseMessage
   | GrantMessage
+  | ConcealMessage
   | SuppressedMessage;
 
 export const TOOLTIP_MESSAGE_KINDS = [
   'select', 'place', 'move', 'pay', 'gain', 'transfer', 'shift',
   'activate', 'deactivate', 'remove', 'create', 'destroy', 'reveal',
   'draw', 'shuffle', 'set', 'choose', 'roll', 'modifier', 'blocker',
-  'phase', 'grant', 'suppressed',
+  'phase', 'grant', 'conceal', 'suppressed',
 ] as const;
 
 export type TooltipMessageKind = (typeof TOOLTIP_MESSAGE_KINDS)[number];

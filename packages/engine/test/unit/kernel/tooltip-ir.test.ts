@@ -31,8 +31,8 @@ import type {
 import { TOOLTIP_MESSAGE_KINDS } from '../../../src/kernel/index.js';
 
 describe('TooltipIR types', () => {
-  it('TOOLTIP_MESSAGE_KINDS contains all 23 kinds', () => {
-    assert.equal(TOOLTIP_MESSAGE_KINDS.length, 23);
+  it('TOOLTIP_MESSAGE_KINDS contains all 24 kinds', () => {
+    assert.equal(TOOLTIP_MESSAGE_KINDS.length, 24);
   });
 
   it('constructs SelectMessage', () => {

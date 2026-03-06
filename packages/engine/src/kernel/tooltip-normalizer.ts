@@ -103,12 +103,14 @@ const normalizeTransferVar = (
 ): readonly TooltipMessage[] => {
   const { from, to, amount } = payload.transferVar;
   const numAmount = typeof amount === 'number' ? amount : 0;
+  const amountExpr = typeof amount === 'number' ? undefined : stringifyNumericExpr(amount);
   return [{
     kind: 'transfer',
     resource: from.var,
     amount: numAmount,
     from: from.var,
     to: to.var,
+    ...(amountExpr !== undefined ? { amountExpr } : {}),
     astPath,
   }];
 };
@@ -156,22 +158,23 @@ const normalizeMoveAll = (
   payload: EffectOf<'moveAll'>,
   astPath: string,
 ): readonly TooltipMessage[] => {
-  const { from, to } = payload.moveAll;
+  const { from, to, filter } = payload.moveAll;
   const fromStr = stringifyZoneRef(from);
   const toStr = stringifyZoneRef(to);
+  const filterStr = filter !== undefined ? '<condition>' : undefined;
 
   // Rule 21: from supply → place
   if (isSupplyZone(fromStr)) {
-    return [{ kind: 'place', tokenFilter: '*', targetZone: toStr, astPath }];
+    return [{ kind: 'place', tokenFilter: '*', targetZone: toStr, ...(filterStr !== undefined ? { filter: filterStr } : {}), astPath }];
   }
 
   // Rule 22: to supply/casualties → remove
   if (isRemovalZone(toStr)) {
-    return [{ kind: 'remove', tokenFilter: '*', fromZone: fromStr, destination: toStr, astPath }];
+    return [{ kind: 'remove', tokenFilter: '*', fromZone: fromStr, destination: toStr, ...(filterStr !== undefined ? { filter: filterStr } : {}), astPath }];
   }
 
   // Rule 23: generic move
-  return [{ kind: 'move', tokenFilter: '*', fromZone: fromStr, toZone: toStr, astPath }];
+  return [{ kind: 'move', tokenFilter: '*', fromZone: fromStr, toZone: toStr, ...(filterStr !== undefined ? { filter: filterStr } : {}), astPath }];
 };
 
 const normalizeSetTokenProp = (

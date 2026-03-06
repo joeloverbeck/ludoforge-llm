@@ -1,6 +1,6 @@
 # LEGACTTOO-012: Normalizer — Transfer Amount Expression & moveAll Filter Preservation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `tooltip-ir.ts` (minor type extension), `tooltip-normalizer.ts` (two function updates)
@@ -84,3 +84,13 @@ When `payload.moveAll.filter` is defined, stringify it and include `filter` in t
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completion date**: 2026-03-06
+
+- **What actually changed**:
+  - `packages/engine/src/kernel/tooltip-ir.ts` — added `amountExpr?: string` to `TransferMessage`, `filter?: string` to `PlaceMessage`, `MoveMessage`, `RemoveMessage`
+  - `packages/engine/src/kernel/tooltip-normalizer.ts` — updated `normalizeTransferVar` to capture non-literal amount expressions via `stringifyNumericExpr`; updated `normalizeMoveAll` to propagate `filter: '<condition>'` when the AST node has a `filter` field
+  - `packages/engine/test/unit/kernel/tooltip-normalizer.test.ts` — added 4 new tests (2 transfer expression, 2 moveAll filter)
+- **Deviation from plan**: None. All changes matched the ticket scope exactly.

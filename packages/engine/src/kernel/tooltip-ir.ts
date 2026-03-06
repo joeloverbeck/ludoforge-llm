@@ -24,6 +24,7 @@ export interface PlaceMessage extends MessageBase {
   readonly kind: 'place';
   readonly tokenFilter: string;
   readonly targetZone: string;
+  readonly filter?: string;
 }
 
 export interface MoveMessage extends MessageBase {
@@ -32,6 +33,7 @@ export interface MoveMessage extends MessageBase {
   readonly fromZone: string;
   readonly toZone: string;
   readonly variant?: 'adjacent';
+  readonly filter?: string;
 }
 
 export interface PayMessage extends MessageBase {
@@ -52,6 +54,7 @@ export interface TransferMessage extends MessageBase {
   readonly amount: number;
   readonly from: string;
   readonly to: string;
+  readonly amountExpr?: string;
 }
 
 export interface ShiftMessage extends MessageBase {
@@ -78,6 +81,7 @@ export interface RemoveMessage extends MessageBase {
   readonly tokenFilter: string;
   readonly fromZone: string;
   readonly destination: string;
+  readonly filter?: string;
 }
 
 export interface CreateMessage extends MessageBase {

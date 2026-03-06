@@ -26,7 +26,7 @@ import type {
   ScenarioPiecePlacement,
   TokenFilterPredicate,
 } from '../../src/kernel/index.js';
-import type { PredicateOp } from '../../src/kernel/predicate-op-contract.js';
+import type { PredicateOp } from '../../src/contracts/index.js';
 import { LEAF_OPTIONS_QUERY_TRANSFORM_CONTRACT_MAP, OPTIONS_QUERY_KIND_CONTRACT_MAP } from '../../src/kernel/query-kind-map.js';
 import type {
   LeafOptionsQueryKindFromContractMap,

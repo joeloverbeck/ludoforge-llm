@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — lint/policy guardrail coverage
-**Deps**: tickets/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md
+**Deps**: archive/tickets/TOKFILAST/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md
 
 ## Problem
 
@@ -12,9 +12,9 @@ Even after centralizing predicate-op contracts, there is no explicit policy test
 
 ## Assumption Reassessment (2026-03-06)
 
-1. Canonical predicate-op ownership now exists in `packages/engine/src/kernel/predicate-op-contract.ts`.
+1. Canonical predicate-op ownership now exists in `packages/engine/src/contracts/predicate-op-contract.ts` and is exported via `packages/engine/src/contracts/index.ts`.
 2. Current tests cover behavior/parity, but there is no dedicated ownership-lint test that fails on duplicated operator tuple declarations in implementation modules.
-3. Existing active TOKFILAST tickets (`027`-`034`) do not define a global guardrail for duplicate predicate-op literal ownership.
+3. Existing active TOKFILAST tickets (`035`-`038`) do not define a global guardrail for duplicate predicate-op literal ownership.
 
 ## Architecture Check
 

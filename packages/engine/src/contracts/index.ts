@@ -12,6 +12,7 @@ export * from './condition-surface-contract.js';
 export * from './edit-distance-contract.js';
 export * from './missing-reference-diagnostic-contract.js';
 export * from './player-selector-vocabulary.js';
+export * from './predicate-op-contract.js';
 export * from './token-filter-prop-contract.js';
 export * from './turn-flow-action-class-contract.js';
 export * from './turn-flow-contract.js';

@@ -877,7 +877,7 @@ describe('compile-conditions lowering', () => {
           left: { ref: 'zoneProp', zone: 'board', prop: 'country' },
           right: 'southVietnam',
         },
-        filter: { prop: 'type', eq: 'guerrilla' },
+        filter: { prop: 'type', op: 'eq', value: 'guerrilla' },
       },
       tokenFilterContext,
       'doc.actions.0.effects.0.forEach.over',
@@ -902,7 +902,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: [{ prop: 'type', eq: 'troops' }],
+        filter: [{ prop: 'type', op: 'eq', value: 'troops' }],
       },
       tokenFilterContext,
       'doc.actions.0.params.0.domain',
@@ -910,7 +910,7 @@ describe('compile-conditions lowering', () => {
     const tokensInMapSpaces = lowerQueryNode(
       {
         query: 'tokensInMapSpaces',
-        filter: [{ prop: 'type', eq: 'troops' }],
+        filter: [{ prop: 'type', op: 'eq', value: 'troops' }],
       },
       tokenFilterContext,
       'doc.actions.1.params.0.domain',
@@ -919,7 +919,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInAdjacentZones',
         zone: 'board',
-        filter: [{ prop: 'type', eq: 'troops' }],
+        filter: [{ prop: 'type', op: 'eq', value: 'troops' }],
       },
       tokenFilterContext,
       'doc.actions.2.params.0.domain',
@@ -987,6 +987,22 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('rejects shorthand alias operators in assetRows where predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', eq: 2 }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.where[0]');
+  });
+
   it('lowers tokensInZone query with string literal token filters', () => {
     const result = lowerQueryNode(
       {
@@ -995,8 +1011,8 @@ describe('compile-conditions lowering', () => {
         filter: {
           op: 'and',
           args: [
-            { prop: 'type', eq: 'troops' },
-            { prop: 'faction', eq: 'ARVN' },
+            { prop: 'type', op: 'eq', value: 'troops' },
+            { prop: 'faction', op: 'eq', value: 'ARVN' },
           ],
         },
       },
@@ -1026,7 +1042,7 @@ describe('compile-conditions lowering', () => {
         filter: {
           op: 'and',
           args: [
-            { prop: 'faction', eq: 'ARVN' },
+            { prop: 'faction', op: 'eq', value: 'ARVN' },
           ],
         },
       },
@@ -1050,7 +1066,7 @@ describe('compile-conditions lowering', () => {
         filter: {
           op: 'or',
           args: [
-            { prop: 'faction', eq: 'ARVN' },
+            { prop: 'faction', op: 'eq', value: 'ARVN' },
           ],
         },
       },
@@ -1077,7 +1093,7 @@ describe('compile-conditions lowering', () => {
             {
               op: 'and',
               args: [
-                { prop: 'type', eq: 'troops' },
+                { prop: 'type', op: 'eq', value: 'troops' },
               ],
             },
             {
@@ -1085,14 +1101,14 @@ describe('compile-conditions lowering', () => {
               arg: {
                 op: 'and',
                 args: [
-                  { prop: 'faction', eq: 'NVA' },
+                  { prop: 'faction', op: 'eq', value: 'NVA' },
                 ],
               },
             },
             {
               op: 'and',
               args: [
-                { prop: 'faction', eq: 'ARVN' },
+                { prop: 'faction', op: 'eq', value: 'ARVN' },
               ],
             },
           ],
@@ -1128,7 +1144,7 @@ describe('compile-conditions lowering', () => {
             {
               op: 'or',
               args: [
-                { prop: 'type', eq: 'troops' },
+                { prop: 'type', op: 'eq', value: 'troops' },
               ],
             },
             {
@@ -1136,14 +1152,14 @@ describe('compile-conditions lowering', () => {
               arg: {
                 op: 'or',
                 args: [
-                  { prop: 'faction', eq: 'NVA' },
+                  { prop: 'faction', op: 'eq', value: 'NVA' },
                 ],
               },
             },
             {
               op: 'or',
               args: [
-                { prop: 'faction', eq: 'ARVN' },
+                { prop: 'faction', op: 'eq', value: 'ARVN' },
               ],
             },
           ],
@@ -1176,7 +1192,7 @@ describe('compile-conditions lowering', () => {
         filter: {
           op: 'and',
           args: [
-            { prop: 'type', eq: 'troop' },
+            { prop: 'type', op: 'eq', value: 'troop' },
           ],
         },
       },
@@ -1211,7 +1227,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { prop: 'typoType', eq: 'troops' },
+        filter: { prop: 'typoType', op: 'eq', value: 'troops' },
       },
       {
         ...context,
@@ -1238,7 +1254,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { prop: 'typoType', eq: 'troops' },
+        filter: { prop: 'typoType', op: 'eq', value: 'troops' },
       },
       context,
       'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
@@ -1262,7 +1278,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { prop: 'typoType', eq: 'troops' },
+        filter: { prop: 'typoType', op: 'eq', value: 'troops' },
       },
       {
         ...context,
@@ -1289,7 +1305,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { prop: 'id', eq: 'token-1' },
+        filter: { prop: 'id', op: 'eq', value: 'token-1' },
       },
       {
         ...context,
@@ -1311,7 +1327,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { prop: 'id', eq: 'token-1' },
+        filter: { prop: 'id', op: 'eq', value: 'token-1' },
       },
       context,
       'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
@@ -1330,7 +1346,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { prop: 'id', eq: 'token-1' },
+        filter: { prop: 'id', op: 'eq', value: 'token-1' },
       },
       {
         ...context,
@@ -1381,6 +1397,22 @@ describe('compile-conditions lowering', () => {
       zone: 'board:none',
       filter: { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
     });
+  });
+
+  it('rejects shorthand alias operators in token filter predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: { prop: 'type', eq: 'troops' },
+      },
+      tokenFilterContext,
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actionPipelines.0.stages.0.effects.0.forEach.over.filter');
   });
 
   it('lowers tokensInZone filter with in operator and string array value', () => {
@@ -1484,7 +1516,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInAdjacentZones',
         zone: 'board',
-        filter: { prop: 'type', eq: 'guerrilla' },
+        filter: { prop: 'type', op: 'eq', value: 'guerrilla' },
       },
       tokenFilterContext,
       'doc.effects.0.forEach.over',
@@ -1550,7 +1582,7 @@ describe('compile-conditions lowering', () => {
       {
         query: 'tokensInZone',
         zone: 'board',
-        filter: { eq: 'troops' },
+        filter: { op: 'eq', value: 'troops' },
       },
       context,
       'doc.actions.0.effects.0.forEach.over',

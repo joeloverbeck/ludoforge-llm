@@ -49,7 +49,7 @@ Ensure tests lock strict runtime fail-fast semantics and tolerant validator mult
 
 ## Out of Scope
 
-- CNL predicate operator single-source/alias-removal work (`tickets/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md`).
+- CNL predicate operator single-source/alias-removal work (`archive/tickets/TOKFILAST/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md`).
 - Effect import-boundary lint policy (`archive/tickets/TOKFILAST/TOKFILAST-029-effects-eval-constructor-import-boundary-guard.md`).
 - Game-specific content/model changes in `GameSpecDoc` or visual presentation data.
 
@@ -80,4 +80,3 @@ Ensure tests lock strict runtime fail-fast semantics and tolerant validator mult
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
-

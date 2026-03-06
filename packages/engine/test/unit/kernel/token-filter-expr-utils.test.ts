@@ -8,7 +8,7 @@ import {
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from '../../../src/kernel/token-filter-expr-utils.js';
-import { PREDICATE_OPERATORS } from '../../../src/kernel/predicate-op-contract.js';
+import { PREDICATE_OPERATORS } from '../../../src/contracts/index.js';
 import type { TokenFilterExpr } from '../../../src/kernel/types.js';
 
 describe('token-filter-expr-utils', () => {

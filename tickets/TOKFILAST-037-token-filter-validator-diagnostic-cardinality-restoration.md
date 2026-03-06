@@ -42,7 +42,7 @@ Add tests that combine empty-args nodes with invalid predicate properties/operat
 
 - Runtime token-filter evaluation semantics (`TYPE_MISMATCH` behavior in `token-filter.ts`).
 - Effect/runtime import-boundary policy work (`archive/tickets/TOKFILAST/TOKFILAST-029-effects-eval-constructor-import-boundary-guard.md`).
-- CNL predicate operator contract cleanup (`tickets/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md`).
+- CNL predicate operator contract cleanup (`archive/tickets/TOKFILAST/TOKFILAST-034-cnl-predicate-operator-single-source-and-no-alias-shorthand.md`).
 
 ## Acceptance Criteria
 
@@ -68,4 +68,3 @@ Add tests that combine empty-args nodes with invalid predicate properties/operat
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm -F @ludoforge/engine lint`
-

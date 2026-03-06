@@ -14,7 +14,8 @@ The current validator/runtime predicate boundary guard uses regex on raw source 
 
 1. `packages/engine/test/unit/lint/validator-runtime-import-boundary-policy.test.ts` currently validates import shape via regex string matching.
 2. The test intent is architectural (provenance and boundary), but implementation checks syntax formatting details (specifier order/shape).
-3. Existing active tickets (`027`-`035`) do not cover hardening this specific test to AST-level provenance analysis.
+3. Current canonical import path for validator predicate-op contracts is `../contracts/index.js` (not `./predicate-op-contract.js`) after predicate-op contract ownership moved into shared contracts.
+4. Existing active tickets (`035`-`038`) do not cover hardening this specific test to AST-level provenance analysis.
 
 ## Architecture Check
 
@@ -26,7 +27,7 @@ The current validator/runtime predicate boundary guard uses regex on raw source 
 
 ### 1. Replace regex import assertions with AST provenance checks
 
-Parse `validate-gamedef-behavior.ts` and assert `isPredicateOp`/`PREDICATE_OPERATORS` are imported from `./predicate-op-contract.js` and not from `./query-predicate.js`.
+Parse `validate-gamedef-behavior.ts` and assert `isPredicateOp`/`PREDICATE_OPERATORS` are imported from `../contracts/index.js` and not from `./query-predicate.js`.
 
 ### 2. Keep re-export guard checks AST-based
 

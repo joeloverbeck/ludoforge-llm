@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { isEvalErrorCode } from '../../src/kernel/index.js';
-import { PREDICATE_OPERATORS, isPredicateOp } from '../../src/kernel/predicate-op-contract.js';
+import { PREDICATE_OPERATORS, isPredicateOp } from '../../src/contracts/index.js';
 import { filterRowsByPredicates, matchesResolvedPredicate, type ResolvedRowPredicate } from '../../src/kernel/query-predicate.js';
 
 describe('query-predicate', () => {

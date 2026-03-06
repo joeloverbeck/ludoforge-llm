@@ -1,6 +1,6 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
-import { isPredicateOp } from './predicate-op-contract.js';
+import { isPredicateOp } from '../contracts/index.js';
 
 export interface TokenFilterPathSegmentNot {
   readonly kind: 'not';

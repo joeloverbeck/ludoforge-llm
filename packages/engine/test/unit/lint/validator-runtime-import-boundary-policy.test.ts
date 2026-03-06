@@ -18,8 +18,8 @@ describe('validator/runtime predicate-op boundary policy', () => {
 
     assert.match(
       validatorSource,
-      /import\s*\{[^}]*\bisPredicateOp\b[^}]*\bPREDICATE_OPERATORS\b[^}]*\}\s*from\s*['"]\.\/predicate-op-contract\.js['"]/u,
-      'validate-gamedef-behavior.ts must import predicate-op contracts from ./predicate-op-contract.js',
+      /import\s*\{[^}]*\bisPredicateOp\b[^}]*\bPREDICATE_OPERATORS\b[^}]*\}\s*from\s*['"]\.\.\/contracts\/index\.js['"]/u,
+      'validate-gamedef-behavior.ts must import predicate-op contracts from ../contracts/index.js',
     );
     assert.doesNotMatch(
       validatorSource,

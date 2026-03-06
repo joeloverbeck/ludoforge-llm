@@ -72,7 +72,7 @@ describe('compile-effects lowering', () => {
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
       { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
-      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: { prop: 'faction', eq: 'US' } } },
+      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: { prop: 'faction', op: 'eq', value: 'US' } } },
       {
         if: {
           when: { op: '>', left: { ref: 'zoneCount', zone: 'deck' }, right: 0 },
@@ -202,8 +202,8 @@ describe('compile-effects lowering', () => {
   it('rejects legacy array token filters in reveal/conceal effects', () => {
     const result = lowerEffectArray(
       [
-        { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
-        { conceal: { zone: 'hand:$actor', filter: [{ prop: 'faction', eq: 'US' }] } },
+        { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
+        { conceal: { zone: 'hand:$actor', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       ],
       tokenFilterContext,
       'doc.actions.0.effects',
@@ -227,7 +227,7 @@ describe('compile-effects lowering', () => {
             filter: {
               op: 'and',
               args: [
-                { prop: 'faction', eq: 'US' },
+                { prop: 'faction', op: 'eq', value: 'US' },
               ],
             },
           },
@@ -238,11 +238,11 @@ describe('compile-effects lowering', () => {
             filter: {
               op: 'and',
               args: [
-                { prop: 'faction', eq: 'US' },
+                { prop: 'faction', op: 'eq', value: 'US' },
                 {
                   op: 'and',
                   args: [
-                    { prop: 'type', eq: 'troops' },
+                    { prop: 'type', op: 'eq', value: 'troops' },
                   ],
                 },
               ],

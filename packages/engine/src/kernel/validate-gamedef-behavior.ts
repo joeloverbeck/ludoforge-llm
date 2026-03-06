@@ -54,7 +54,7 @@ import {
   tokenFilterPathSuffix,
   walkTokenFilterExpr,
 } from './token-filter-expr-utils.js';
-import { isPredicateOp, PREDICATE_OPERATORS } from './predicate-op-contract.js';
+import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],

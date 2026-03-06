@@ -4,7 +4,7 @@ import {
   CANONICAL_BINDING_IDENTIFIER_PATTERN,
   TURN_FLOW_ACTION_CLASS_VALUES,
 } from '../contracts/index.js';
-import { PREDICATE_OPERATORS } from './predicate-op-contract.js';
+import { PREDICATE_OPERATORS } from '../contracts/index.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;

@@ -304,11 +304,13 @@ const normalizeShiftMarker = (
 ): readonly TooltipMessage[] => {
   const { marker, delta } = payload.shiftMarker;
   const numDelta = typeof delta === 'number' ? delta : 0;
+  const deltaExpr = typeof delta === 'number' ? undefined : stringifyNumericExpr(delta);
   return [{
     kind: 'shift',
     marker,
     direction: numDelta >= 0 ? '+' : '-',
     amount: Math.abs(numDelta),
+    ...(deltaExpr !== undefined ? { deltaExpr } : {}),
     astPath,
   }];
 };
@@ -349,11 +351,13 @@ const normalizeShiftGlobalMarker = (
 ): readonly TooltipMessage[] => {
   const { marker, delta } = payload.shiftGlobalMarker;
   const numDelta = typeof delta === 'number' ? delta : 0;
+  const deltaExpr = typeof delta === 'number' ? undefined : stringifyNumericExpr(delta);
   return [{
     kind: 'shift',
     marker,
     direction: numDelta >= 0 ? '+' : '-',
     amount: Math.abs(numDelta),
+    ...(deltaExpr !== undefined ? { deltaExpr } : {}),
     astPath,
   }];
 };

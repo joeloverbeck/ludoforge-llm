@@ -520,6 +520,20 @@ describe('tooltip-normalizer', () => {
         assert.equal(msg.marker, 'support');
         assert.equal(msg.direction, '+');
         assert.equal(msg.amount, 1);
+        assert.equal(msg.deltaExpr, undefined);
+      }
+    });
+
+    it('rule 24: shiftMarker with binding expression → ShiftMessage with deltaExpr', () => {
+      const effect: EffectAST = {
+        shiftMarker: { space: 'saigon', marker: 'support', delta: { ref: 'binding', name: 'shiftAmount' } },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[0b]'));
+      assert.equal(msg.kind, 'shift');
+      if (msg.kind === 'shift') {
+        assert.equal(msg.amount, 0);
+        assert.equal(msg.direction, '+');
+        assert.equal(msg.deltaExpr, 'shiftAmount');
       }
     });
 
@@ -582,6 +596,20 @@ describe('tooltip-normalizer', () => {
         assert.equal(msg.marker, 'trail');
         assert.equal(msg.direction, '+');
         assert.equal(msg.amount, 2);
+        assert.equal(msg.deltaExpr, undefined);
+      }
+    });
+
+    it('rule 28: shiftGlobalMarker with binding expression → ShiftMessage with deltaExpr', () => {
+      const effect: EffectAST = {
+        shiftGlobalMarker: { marker: 'trail', delta: { ref: 'binding', name: 'trailDelta' } },
+      };
+      const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[5b]'));
+      assert.equal(msg.kind, 'shift');
+      if (msg.kind === 'shift') {
+        assert.equal(msg.amount, 0);
+        assert.equal(msg.direction, '+');
+        assert.equal(msg.deltaExpr, 'trailDelta');
       }
     });
   });

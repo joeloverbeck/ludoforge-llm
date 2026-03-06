@@ -1,6 +1,6 @@
 # LEGACTTOO-015: Normalizer — Shift Marker Delta Expression Preservation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `tooltip-ir.ts` (minor type extension), `tooltip-normalizer.ts` (two function updates)
@@ -78,3 +78,14 @@ Same change as `normalizeShiftMarker`.
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+Implemented exactly as planned — no deviations from the ticket scope.
+
+**Changed files**:
+- `packages/engine/src/kernel/tooltip-ir.ts` — added `readonly deltaExpr?: string` to `ShiftMessage`
+- `packages/engine/src/kernel/tooltip-normalizer.ts` — updated `normalizeShiftMarker` and `normalizeShiftGlobalMarker` to compute and attach `deltaExpr` when `delta` is a non-literal expression (using same `stringifyNumericExpr` + conditional spread pattern as LEGACTTOO-012)
+- `packages/engine/test/unit/kernel/tooltip-normalizer.test.ts` — updated 2 existing literal tests to assert `deltaExpr === undefined`, added 2 new tests for binding expression deltas
+
+**Verification**: 3042/3042 unit tests pass, typecheck clean across all packages.

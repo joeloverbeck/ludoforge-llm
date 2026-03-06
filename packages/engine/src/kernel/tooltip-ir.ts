@@ -70,6 +70,7 @@ export interface ShiftMessage extends MessageBase {
   readonly marker: string;
   readonly direction: string;
   readonly amount: number;
+  readonly deltaExpr?: string;
 }
 
 export interface ActivateMessage extends MessageBase {

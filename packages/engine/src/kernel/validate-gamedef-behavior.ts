@@ -49,10 +49,10 @@ import {
 import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-contract.js';
 import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
 import {
+  type TokenFilterTraversalError,
   isTokenFilterPredicateExpr,
-  isTokenFilterTraversalError,
   tokenFilterPathSuffix,
-  walkTokenFilterExpr,
+  walkTokenFilterExprRecovering,
 } from './token-filter-expr-utils.js';
 import { isPredicateOp, PREDICATE_OPERATORS } from '../contracts/index.js';
 
@@ -633,21 +633,7 @@ const validateTokenFilterExpr = (
   path: string,
   context: ValidationContext,
 ): void => {
-  try {
-    walkTokenFilterExpr(filter, (entry, entryPathSegments) => {
-      const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
-      if (isTokenFilterPredicateExpr(entry)) {
-        validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
-        return;
-      }
-      if (entry.op === 'not') {
-        return;
-      }
-    });
-  } catch (error: unknown) {
-    if (!isTokenFilterTraversalError(error)) {
-      throw error;
-    }
+  const pushTraversalDiagnostic = (error: TokenFilterTraversalError): void => {
     const entryPath = `${path}${tokenFilterPathSuffix(error.context.path)}`;
     const isBooleanOp = error.context.op === 'and' || error.context.op === 'or';
     const suggestion = error.context.reason === 'unsupported_operator'
@@ -668,7 +654,18 @@ const validateTokenFilterExpr = (
       message,
       suggestion,
     });
-  }
+  };
+
+  walkTokenFilterExprRecovering(
+    filter,
+    (entry, entryPathSegments) => {
+      const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
+      if (isTokenFilterPredicateExpr(entry)) {
+        validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
+      }
+    },
+    pushTraversalDiagnostic,
+  );
 };
 
 const validateTokenFilter = (

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — token-filter traversal utility surface + validator/runtime boundary mapping contracts
-**Deps**: archive/tickets/TOKFILAST/TOKFILAST-027-token-filter-empty-args-path-fidelity-centralization.md, tickets/TOKFILAST-037-token-filter-validator-diagnostic-cardinality-restoration.md
+**Deps**: archive/tickets/TOKFILAST/TOKFILAST-027-token-filter-empty-args-path-fidelity-centralization.md, archive/tickets/TOKFILAST/TOKFILAST-037-token-filter-validator-diagnostic-cardinality-restoration.md
 
 ## Problem
 

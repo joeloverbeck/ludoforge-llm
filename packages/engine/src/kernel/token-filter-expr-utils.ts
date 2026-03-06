@@ -24,7 +24,7 @@ export interface TokenFilterTraversalErrorContext {
   readonly reason: TokenFilterTraversalErrorReason;
 }
 
-interface TokenFilterTraversalError {
+export interface TokenFilterTraversalError {
   readonly code: 'TOKEN_FILTER_TRAVERSAL_ERROR';
   readonly context: TokenFilterTraversalErrorContext;
   readonly message: string;
@@ -153,6 +153,16 @@ export const walkTokenFilterExpr = (
   expr: TokenFilterExpr,
   visit: (entry: TokenFilterExpr, path: readonly TokenFilterPathSegment[]) => void,
 ): void => {
+  walkTokenFilterExprRecovering(expr, visit, (error) => {
+    throw error;
+  });
+};
+
+export const walkTokenFilterExprRecovering = (
+  expr: TokenFilterExpr,
+  visit: (entry: TokenFilterExpr, path: readonly TokenFilterPathSegment[]) => void,
+  onTraversalError: (error: TokenFilterTraversalError) => void,
+): void => {
   const walk = (entry: unknown, path: readonly TokenFilterPathSegment[]): void => {
     if (isTokenFilterPredicateExpr(entry)) {
       visit(entry, path);
@@ -165,7 +175,8 @@ export const walkTokenFilterExpr = (
     }
     if (isTokenFilterBooleanExpr(entry)) {
       if (!isNonEmptyArray(entry.args)) {
-        throw tokenFilterBooleanArityError(entry, entry.op, path);
+        onTraversalError(tokenFilterBooleanArityError(entry, entry.op, path));
+        return;
       }
       visit(entry, path);
       entry.args.forEach((arg, index) => {
@@ -174,9 +185,10 @@ export const walkTokenFilterExpr = (
       return;
     }
     if (isRecord(entry) && isTokenFilterBooleanOperator(readNodeOp(entry))) {
-      throw malformedTokenFilterExprError(entry, path, 'non_conforming_node');
+      onTraversalError(malformedTokenFilterExprError(entry, path, 'non_conforming_node'));
+      return;
     }
-    throw malformedTokenFilterExprError(entry, path, 'unsupported_operator');
+    onTraversalError(malformedTokenFilterExprError(entry, path, 'unsupported_operator'));
   };
   walk(expr, []);
 };

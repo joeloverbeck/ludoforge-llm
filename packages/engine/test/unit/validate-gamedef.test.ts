@@ -623,6 +623,104 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('co-reports empty-args and unknown-prop diagnostics for sibling token-filter branches', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: {
+                  op: 'and',
+                  args: [
+                    { op: 'or', args: [] },
+                    { prop: 'factoin', op: 'eq', value: 'US' },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].params[0].domain.filter.args[0].args',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'
+          && diag.path === 'actions[0].params[0].domain.filter.args[1].prop',
+      ),
+    );
+  });
+
+  it('preserves nested deterministic paths when mixed token-filter traversal and prop diagnostics coexist', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: {
+                  op: 'not',
+                  arg: {
+                    op: 'or',
+                    args: [
+                      {
+                        op: 'and',
+                        args: [
+                          { prop: 'id', op: 'eq', value: 'token-1' },
+                          { op: 'and', args: [] },
+                        ],
+                      },
+                      { prop: 'factoin', op: 'eq', value: 'US' },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].effects[0].reveal.filter.arg.args[0].args[1].args',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'
+          && diag.path === 'actions[0].effects[0].reveal.filter.arg.args[1].prop',
+      ),
+    );
+  });
+
   it('keeps condition-surface suffix taxonomy canonicalized by family', () => {
     const querySuffixes = Object.values(CONDITION_SURFACE_SUFFIX.query);
     const effectSuffixes = Object.values(CONDITION_SURFACE_SUFFIX.effect);

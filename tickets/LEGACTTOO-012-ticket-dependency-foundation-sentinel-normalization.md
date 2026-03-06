@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — ticket metadata and dependency-check workflow contract
-**Deps**: tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md
+**Deps**: archive/tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md
 
 ## Problem
 
@@ -12,7 +12,7 @@
 
 ## Assumption Reassessment (2026-03-06)
 
-1. `tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md` currently uses a non-path dependency literal.
+1. `archive/tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md` currently uses a non-path dependency literal.
 2. `scripts/check-ticket-deps.mjs` expects dependency entries to resolve to existing repository paths.
 3. Mismatch: foundation-ticket intent is valid, but its dependency encoding violates the enforced dependency-path contract.
 
@@ -38,14 +38,14 @@ Run dependency integrity validation after metadata normalization to ensure root 
 
 ## Files to Touch
 
-- `tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md` (modify)
+- `archive/tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md` (modify)
 - `tickets/README.md` (modify)
 - `scripts/check-ticket-deps.mjs` (modify, only if README-contract-aligned zero-dependency form is not currently supported)
 - `packages/engine/test/unit/ticket-deps-check.test.ts` (new, if script behavior is changed)
 
 ## Out of Scope
 
-- Tooltip IR or verbalization feature implementation work (`tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md` scope).
+- Tooltip IR or verbalization feature implementation work (`archive/tickets/LEGACTTOO-001-tooltip-ir-types-verbalization-def-schema.md` scope).
 - Engine/runtime behavior changes.
 - Ticket archival policy changes outside dependency semantics.
 
@@ -72,4 +72,3 @@ Run dependency integrity validation after metadata normalization to ensure root 
 
 1. `pnpm run check:ticket-deps`
 2. `pnpm -F @ludoforge/engine test:unit` (if checker test coverage is added/changed)
-

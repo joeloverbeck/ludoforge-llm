@@ -46,6 +46,10 @@ export interface TokenFilterExprFoldHandlers<TResult> {
   readonly or: (expr: TokenFilterBooleanExpr, args: readonly TResult[]) => TResult;
 }
 
+const assertNever = (value: never): never => {
+  throw new Error(`Unhandled token filter traversal error reason: ${String(value)}`);
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 const readNodeOp = (node: unknown): unknown => (isRecord(node) ? Reflect.get(node, 'op') : undefined);
@@ -54,23 +58,29 @@ const isTokenFilterBooleanOperator = (op: unknown): op is 'and' | 'or' => op ===
 const isTokenFilterPredicateOperator = (op: unknown): op is TokenFilterPredicate['op'] => isPredicateOp(op);
 
 const tokenFilterTraversalErrorMessage = (reason: TokenFilterTraversalErrorReason, op: unknown): string => {
-  if (reason === 'unsupported_operator') {
-    return `Unsupported token filter operator "${String(op)}".`;
+  switch (reason) {
+    case 'unsupported_operator':
+      return `Unsupported token filter operator "${String(op)}".`;
+    case 'non_conforming_node':
+      return `Malformed token filter expression node for operator "${String(op)}".`;
+    case 'empty_args':
+      return booleanArityMessage('tokenFilter', isTokenFilterBooleanOperator(op) ? op : 'and');
+    default:
+      return assertNever(reason);
   }
-  if (reason === 'empty_args') {
-    return booleanArityMessage('tokenFilter', isTokenFilterBooleanOperator(op) ? op : 'and');
-  }
-  return `Malformed token filter expression node for operator "${String(op)}".`;
 };
 
 const tokenFilterTraversalErrorSuggestion = (reason: TokenFilterTraversalErrorReason): string => {
-  if (reason === 'unsupported_operator') {
-    return 'Use one of: and, or, not.';
+  switch (reason) {
+    case 'unsupported_operator':
+      return 'Use one of: and, or, not.';
+    case 'non_conforming_node':
+      return 'Use a predicate leaf or a well-formed and/or/not expression node.';
+    case 'empty_args':
+      return booleanAritySuggestion('tokenFilter');
+    default:
+      return assertNever(reason);
   }
-  if (reason === 'empty_args') {
-    return booleanAritySuggestion('tokenFilter');
-  }
-  return 'Use a predicate leaf or a well-formed and/or/not expression node.';
 };
 
 const malformedTokenFilterExprError = (
@@ -133,11 +143,22 @@ export const normalizeTokenFilterTraversalError = (
 ): NormalizedTokenFilterTraversalError => {
   const reason = error.context.reason;
   const op = error.context.op;
+  const errorFieldSuffix = (() => {
+    switch (reason) {
+      case 'empty_args':
+        return '.args' as const;
+      case 'unsupported_operator':
+      case 'non_conforming_node':
+        return '.op' as const;
+      default:
+        return assertNever(reason);
+    }
+  })();
   return {
     reason,
     op,
     entryPathSuffix: tokenFilterPathSuffix(error.context.path),
-    errorFieldSuffix: reason === 'empty_args' ? '.args' : '.op',
+    errorFieldSuffix,
     message: tokenFilterTraversalErrorMessage(reason, op),
     suggestion: tokenFilterTraversalErrorSuggestion(reason),
   };

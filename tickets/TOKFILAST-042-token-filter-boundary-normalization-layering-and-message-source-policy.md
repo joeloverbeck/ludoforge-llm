@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — runtime/validator token-filter boundary mapping policy
-**Deps**: archive/tickets/TOKFILAST-038-token-filter-dual-traversal-modes-and-boundary-mapper-unification.md, tickets/TOKFILAST-041-token-filter-traversal-reason-exhaustiveness-guard.md
+**Deps**: archive/tickets/TOKFILAST-038-token-filter-dual-traversal-modes-and-boundary-mapper-unification.md, archive/tickets/TOKFILAST-041-token-filter-traversal-reason-exhaustiveness-guard.md
 
 ## Problem
 

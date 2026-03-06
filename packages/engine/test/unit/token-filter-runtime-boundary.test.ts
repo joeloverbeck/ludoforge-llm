@@ -6,6 +6,7 @@ import {
   isTokenFilterTraversalError,
   normalizeTokenFilterTraversalError,
   tokenFilterBooleanArityError,
+  type TokenFilterTraversalErrorReason,
   walkTokenFilterExpr,
 } from '../../src/kernel/token-filter-expr-utils.js';
 import { mapTokenFilterTraversalToTypeMismatch } from '../../src/kernel/token-filter-runtime-boundary.js';
@@ -32,7 +33,13 @@ describe('token-filter-runtime-boundary', () => {
     const unsupportedOperatorError = collectTraversalError({ op: 'xor' } as unknown as TokenFilterExpr);
     const nonConformingNodeError = collectTraversalError({ op: 'and' } as unknown as TokenFilterExpr);
 
-    assert.deepEqual(normalizeTokenFilterTraversalError(emptyArgsError), {
+    const normalizedByReason: Record<TokenFilterTraversalErrorReason, ReturnType<typeof normalizeTokenFilterTraversalError>> = {
+      empty_args: normalizeTokenFilterTraversalError(emptyArgsError),
+      unsupported_operator: normalizeTokenFilterTraversalError(unsupportedOperatorError),
+      non_conforming_node: normalizeTokenFilterTraversalError(nonConformingNodeError),
+    };
+
+    assert.deepEqual(normalizedByReason.empty_args, {
       reason: 'empty_args',
       op: 'or',
       entryPathSuffix: '.args[2]',
@@ -40,20 +47,22 @@ describe('token-filter-runtime-boundary', () => {
       message: 'Token filter operator "or" requires at least one expression argument.',
       suggestion: 'Provide one or more token filter expression arguments.',
     });
-    assert.equal(normalizeTokenFilterTraversalError(unsupportedOperatorError).reason, 'unsupported_operator');
-    assert.equal(normalizeTokenFilterTraversalError(unsupportedOperatorError).errorFieldSuffix, '.op');
-    assert.equal(normalizeTokenFilterTraversalError(unsupportedOperatorError).message, 'Unsupported token filter operator "xor".');
-    assert.equal(normalizeTokenFilterTraversalError(unsupportedOperatorError).suggestion, 'Use one of: and, or, not.');
-    assert.equal(normalizeTokenFilterTraversalError(nonConformingNodeError).reason, 'non_conforming_node');
-    assert.equal(normalizeTokenFilterTraversalError(nonConformingNodeError).errorFieldSuffix, '.op');
-    assert.equal(
-      normalizeTokenFilterTraversalError(nonConformingNodeError).message,
-      'Malformed token filter expression node for operator "and".',
-    );
-    assert.equal(
-      normalizeTokenFilterTraversalError(nonConformingNodeError).suggestion,
-      'Use a predicate leaf or a well-formed and/or/not expression node.',
-    );
+    assert.deepEqual(normalizedByReason.unsupported_operator, {
+      reason: 'unsupported_operator',
+      op: 'xor',
+      entryPathSuffix: '',
+      errorFieldSuffix: '.op',
+      message: 'Unsupported token filter operator "xor".',
+      suggestion: 'Use one of: and, or, not.',
+    });
+    assert.deepEqual(normalizedByReason.non_conforming_node, {
+      reason: 'non_conforming_node',
+      op: 'and',
+      entryPathSuffix: '',
+      errorFieldSuffix: '.op',
+      message: 'Malformed token filter expression node for operator "and".',
+      suggestion: 'Use a predicate leaf or a well-formed and/or/not expression node.',
+    });
   });
 
   it('maps token-filter traversal errors to TYPE_MISMATCH with preserved context', () => {

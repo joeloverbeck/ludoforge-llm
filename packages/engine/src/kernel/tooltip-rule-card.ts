@@ -13,7 +13,6 @@ export interface ContentStep {
 export interface ContentModifier {
   readonly condition: string;
   readonly description: string;
-  readonly active: boolean;
 }
 
 export interface RuleCard {

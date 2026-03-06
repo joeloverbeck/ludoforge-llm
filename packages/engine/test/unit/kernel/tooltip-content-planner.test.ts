@@ -267,6 +267,53 @@ describe('tooltip-content-planner', () => {
       assert.ok(totalAfterBudget <= 30, `Expected <= 30 messages, got ${totalAfterBudget}`);
     });
 
+    it('applies simple budget (15) for actions with fewer than 3 stages', () => {
+      // 20 messages in 2 stages → simple budget of 15 should kick in
+      const msgs: TooltipMessage[] = [];
+      for (let i = 0; i < 20; i++) {
+        msgs.push(makePlace({
+          astPath: `effects[${i}]`,
+          stage: i < 10 ? 'stageA' : 'stageB',
+        }));
+      }
+      const plan = planContent(msgs, 'SimpleAction');
+
+      const totalAfterBudget = countAllMessages(plan.steps);
+      assert.ok(totalAfterBudget <= 15, `Expected <= 15 messages for simple action, got ${totalAfterBudget}`);
+    });
+
+    it('applies complex budget (30) for actions with 3+ stages', () => {
+      // 25 messages in 3 stages → complex budget of 30 should NOT collapse
+      const msgs: TooltipMessage[] = [];
+      for (let i = 0; i < 25; i++) {
+        msgs.push(makePlace({
+          astPath: `effects[${i}]`,
+          stage: `stage${Math.floor(i / 9)}`,
+        }));
+      }
+      const plan = planContent(msgs, 'ComplexAction');
+
+      const totalAfterBudget = countAllMessages(plan.steps);
+      assert.equal(totalAfterBudget, 25, 'Should keep all 25 messages under complex budget of 30');
+    });
+
+    it('detects sub-steps from removeByPriority groups paths', () => {
+      const messages: readonly TooltipMessage[] = [
+        makeSelect({ astPath: 'effects[0]' }),
+        { kind: 'remove', tokenFilter: 'nva', fromZone: 'saigon', destination: 'casualties',
+          astPath: 'effects[1].groups[0]' } as TooltipMessage,
+        { kind: 'remove', tokenFilter: 'vc', fromZone: 'saigon', destination: 'casualties',
+          astPath: 'effects[1].groups[1]' } as TooltipMessage,
+      ];
+      const plan = planContent(messages, 'Remove');
+
+      const step = plan.steps[0]!;
+      assert.equal(step.messages.length, 1); // select at depth 0
+      assert.ok(step.subSteps !== undefined);
+      assert.equal(step.subSteps!.length, 1); // one sub-step group
+      assert.equal(step.subSteps![0]!.messages.length, 2); // both removes
+    });
+
     // --- Empty input ---
 
     it('handles empty input gracefully', () => {

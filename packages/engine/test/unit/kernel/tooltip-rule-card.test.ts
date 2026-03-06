@@ -37,9 +37,8 @@ describe('tooltip-rule-card types', () => {
     const modifier: ContentModifier = {
       condition: 'Shaded event active',
       description: '+1 Troop per space',
-      active: true,
     };
-    assert.equal(modifier.active, true);
+    assert.equal(modifier.condition, 'Shaded event active');
   });
 
   it('constructs RuleCard', () => {
@@ -50,7 +49,7 @@ describe('tooltip-rule-card types', () => {
         { stepNumber: 2, header: 'Place forces from Available', lines: ['Place US Troops (max 6 total)'] },
       ],
       modifiers: [
-        { condition: 'Shaded', description: '+1 Troop per space', active: true },
+        { condition: 'Shaded', description: '+1 Troop per space' },
       ],
     };
     assert.equal(card.synopsis, 'Train — Select 1-6 target spaces');

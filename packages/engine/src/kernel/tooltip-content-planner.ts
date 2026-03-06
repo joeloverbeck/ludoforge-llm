@@ -33,8 +33,10 @@ export interface ContentPlan {
 // ---------------------------------------------------------------------------
 
 const MAX_SUB_STEPS = 3;
+const BUDGET_SIMPLE = 15;
 const BUDGET_COMPLEX = 30;
 const COMPLEX_STAGE_THRESHOLD = 3;
+const DEFAULT_STAGE = '__default__';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,7 +74,7 @@ function findSynopsisSource(
  * recursion into child effects (`.effects[`, `.in[`, `.then[`, `.else[`).
  */
 function pathDepth(astPath: string): number {
-  const matches = astPath.match(/\.(effects|in|then|else)\[/g);
+  const matches = astPath.match(/\.(effects|in|then|else|groups)\[/g);
   return matches !== null ? matches.length : 0;
 }
 
@@ -83,7 +85,7 @@ function pathDepth(astPath: string): number {
  */
 function parentPathAtDepth(astPath: string, targetDepth: number): string {
   let depth = 0;
-  const re = /\.(effects|in|then|else)\[/g;
+  const re = /\.(effects|in|then|else|groups)\[/g;
   let lastEnd = 0;
   let match: RegExpExecArray | null = re.exec(astPath);
   while (match !== null) {
@@ -105,7 +107,6 @@ function groupByStage(
   messages: readonly TooltipMessage[],
 ): ReadonlyMap<string, readonly TooltipMessage[]> {
   const groups = new Map<string, TooltipMessage[]>();
-  const DEFAULT_STAGE = '__default__';
 
   for (const m of messages) {
     const stage = m.stage ?? DEFAULT_STAGE;
@@ -178,7 +179,6 @@ function buildSubSteps(
 function buildSteps(
   stageGroups: ReadonlyMap<string, readonly TooltipMessage[]>,
 ): readonly ContentPlanStep[] {
-  const DEFAULT_STAGE = '__default__';
   const steps: ContentPlanStep[] = [];
   let stepNum = 1;
 
@@ -280,7 +280,7 @@ export function planContent(
   const rawSteps = buildSteps(stageGroups);
 
   const stageCount = stageGroups.size;
-  const budget = stageCount >= COMPLEX_STAGE_THRESHOLD ? BUDGET_COMPLEX : BUDGET_COMPLEX;
+  const budget = stageCount >= COMPLEX_STAGE_THRESHOLD ? BUDGET_COMPLEX : BUDGET_SIMPLE;
   const steps = enforceBudget(rawSteps, budget);
 
   return {

@@ -1,6 +1,6 @@
 # CHOICEUI-010: Deduplicate zonesById Map Construction in Render Model Derivation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -13,9 +13,10 @@
 ## Assumption Reassessment (2026-03-06)
 
 1. `deriveRenderModel` (line 111): `const zonesById = new Map(zones.map((zone) => [zone.id, zone]));` — used by `deriveChoiceContext` and `deriveChoiceBreadcrumb`.
-2. `deriveChoiceUi` (line 1306): accepts `zones: readonly RenderZone[]` parameter, then rebuilds `const zonesById = new Map(zones.map(...))` at line 1331 inside the `pending !== null` branch.
+2. `deriveChoiceUi` (line 1325): accepts `zones: readonly RenderZone[]` parameter, then rebuilds `const zonesById = new Map(zones.map(...))` at line 1350 inside the `pending !== null` branch.
 3. `deriveChoiceUi` also builds `tokensById` and `playersById` from array params — these maps are not built at the top level of `deriveRenderModel`, so only `zonesById` is duplicated today.
 4. No other caller of `deriveChoiceUi` exists — it is called only from `deriveRenderModel`.
+5. **Ordering correction**: `deriveChoiceUi` is called at line 110, *before* `zonesById` is constructed at line 111. The fix must move `zonesById` construction above the `deriveChoiceUi` call.
 
 ## Architecture Check
 
@@ -40,7 +41,10 @@ Remove the `const zonesById = new Map(zones.map(...))` line inside the function 
 
 ### 2. Update the call site in `deriveRenderModel`
 
+Move `zonesById` construction above `deriveChoiceUi` call (currently line 111 is after line 110), then pass the map:
+
 ```typescript
+const zonesById = new Map(zones.map((zone) => [zone.id, zone]));
 const choiceUi = deriveChoiceUi(context, zonesById, tokens, players);
 ```
 
@@ -75,3 +79,13 @@ const choiceUi = deriveChoiceUi(context, zonesById, tokens, players);
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+**Changed vs originally planned**: Implementation matched the ticket exactly, with one ordering correction discovered during reassessment: `deriveChoiceUi` was called *before* `zonesById` was constructed (line 110 vs 111), so the fix also reordered the statements. Three edits in `derive-render-model.ts`:
+
+1. Moved `zonesById` construction above `deriveChoiceUi` call
+2. Changed `deriveChoiceUi` signature: `zones: readonly RenderZone[]` → `zonesById: ReadonlyMap<string, RenderZone>`
+3. Removed duplicate `const zonesById = new Map(zones.map(...))` inside the function body
+
+All 147 test files (1444 tests) pass. Typecheck clean. No new tests needed — pure refactor.

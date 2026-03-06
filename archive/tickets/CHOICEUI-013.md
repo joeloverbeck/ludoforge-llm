@@ -1,6 +1,6 @@
 # CHOICEUI-013: Breadcrumb Step Hover Consistency
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -61,3 +61,7 @@ Add `.breadcrumbStep:hover` with `background: rgba(255, 255, 255, 0.15)` to matc
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+**Changed vs planned**: Implemented exactly as planned. Consolidated the standalone `.breadcrumbStepIndented:hover` rule into a comma-separated selector `.breadcrumbStep:hover, .breadcrumbStepIndented:hover` — one line added, zero lines removed from the effective ruleset. All 147 runner test files (1444 tests) pass. Typecheck clean.

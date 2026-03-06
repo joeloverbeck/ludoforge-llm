@@ -19,7 +19,7 @@ import {
 import type {
   RenderAdjacency,
   RenderChoiceContext,
-  RenderChoiceOption,
+
   RenderChoiceTarget,
   RenderChoiceUi,
   RenderChoiceUiInvalidReason,
@@ -107,8 +107,8 @@ export function deriveRenderModel(
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId, staticDerivation.lookaheadCardZoneId);
   const players = derivePlayers(state, context, factionByPlayer);
   const turnOrder = deriveTurnOrder(state, seatResolution);
-  const choiceUi = deriveChoiceUi(context, zones, tokens, players);
   const zonesById = new Map(zones.map((zone) => [zone.id, zone]));
+  const choiceUi = deriveChoiceUi(context, zonesById, tokens, players);
   const choiceContext = deriveChoiceContext(context, zonesById);
 
   const nextModel: RenderModel = {
@@ -1217,23 +1217,6 @@ function deriveChoiceBreadcrumb(
   });
 }
 
-function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoiceOption[] {
-  if (context.choicePending === null) {
-    return [];
-  }
-  return context.choicePending.options.map((option) => ({
-    choiceValueId: serializeChoiceValueIdentity(option.value),
-    value: option.value,
-    displayName: formatChoiceValueFallback(option.value),
-    target: {
-      kind: 'scalar',
-      entityId: null,
-      displaySource: 'fallback',
-    },
-    legality: option.legality,
-    illegalReason: option.illegalReason,
-  }));
-}
 
 interface ChoiceOptionResolution {
   readonly displayName: string;
@@ -1324,7 +1307,7 @@ function toInvalidChoiceUi(reason: RenderChoiceUiInvalidReason): RenderChoiceUi 
 
 function deriveChoiceUi(
   context: RenderContext,
-  zones: readonly RenderZone[],
+  zonesById: ReadonlyMap<string, RenderZone>,
   tokens: readonly RenderToken[],
   players: readonly RenderModel['players'][number][],
 ): RenderChoiceUi {
@@ -1347,10 +1330,9 @@ function deriveChoiceUi(
       return toInvalidChoiceUi('PENDING_CHOICE_MISSING_PARTIAL_MOVE');
     }
 
-    const zonesById = new Map(zones.map((zone) => [zone.id, zone] as const));
     const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
     const playersById = new Map(players.map((player) => [player.id, player] as const));
-    const options = deriveRenderChoiceOptions(context).map((option) => {
+    const options = pending.options.map((option) => {
       const resolved = resolveChoiceOption(
         option.value,
         pending.targetKinds,
@@ -1359,9 +1341,12 @@ function deriveChoiceUi(
         playersById,
       );
       return {
-        ...option,
+        choiceValueId: serializeChoiceValueIdentity(option.value),
+        value: option.value,
         displayName: resolved.displayName,
         target: resolved.target,
+        legality: option.legality,
+        illegalReason: option.illegalReason,
       };
     });
     if (pending.type === 'chooseN') {

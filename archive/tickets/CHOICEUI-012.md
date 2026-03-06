@@ -1,6 +1,6 @@
 # CHOICEUI-012: Breadcrumb Pointer-Events Contract Gap
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -60,3 +60,7 @@ In the test that reads `ChoicePanel.module.css` and checks `pointer-events: auto
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+**Changed exactly as planned.** Added `.breadcrumbStepIndented` regex match and `pointer-events: auto` assertion to the existing CSS contract test in `ChoicePanel.test.ts` (lines 615-616, 621). No deviations from the ticket scope. All 147 runner test files (1444 tests) pass. Typecheck clean.

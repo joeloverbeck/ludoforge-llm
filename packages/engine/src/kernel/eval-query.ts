@@ -26,6 +26,7 @@ import {
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
 import { filterTokensByExpr } from './token-filter.js';
+import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, TokenFilterPredicate, ValueExpr } from './types.js';
 
@@ -263,13 +264,12 @@ function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx
 }
 
 function tokenFilterPredicateCount(filter: TokenFilterExpr): number {
-  if ('prop' in filter) {
-    return 1;
-  }
-  if (filter.op === 'not') {
-    return tokenFilterPredicateCount(filter.arg);
-  }
-  return filter.args.reduce((total, entry) => total + tokenFilterPredicateCount(entry), 0);
+  return foldTokenFilterExpr(filter, {
+    predicate: () => 1,
+    not: (_entry, arg) => arg,
+    and: (_entry, args) => args.reduce((total, count) => total + count, 0),
+    or: (_entry, args) => args.reduce((total, count) => total + count, 0),
+  });
 }
 
 function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {

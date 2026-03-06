@@ -504,6 +504,45 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('rejects nested empty boolean token-filter args with full nested path', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: {
+                  op: 'not',
+                  arg: {
+                    op: 'or',
+                    args: [
+                      { prop: 'id', op: 'eq', value: 'token-1' },
+                      { op: 'and', args: [] },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_QUERY_INVALID'
+          && diag.path === 'actions[0].effects[0].reveal.filter.arg.args[1].args',
+      ),
+    );
+  });
+
   it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
     const base = createValidGameDef();
     const def = {

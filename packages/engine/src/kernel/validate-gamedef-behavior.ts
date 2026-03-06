@@ -40,6 +40,7 @@ import {
 } from './query-shape-inference.js';
 import { inferTransformSourceIncompatibleRuntimeShapes } from './query-kind-contract.js';
 import { getLeafOptionsQueryTransformContract, type LeafOptionsQueryTransformKind } from './query-kind-map.js';
+import { isTokenFilterPredicateExpr, tokenFilterPathSuffix, walkTokenFilterExpr } from './token-filter-expr-utils.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -594,50 +595,24 @@ const validateTokenFilterExpr = (
   path: string,
   context: ValidationContext,
 ): void => {
-  if ('prop' in filter) {
-    validateTokenFilterPredicate(diagnostics, filter, path, context);
-    return;
-  }
-
-  if (filter.op === 'not') {
-    validateTokenFilterExpr(diagnostics, filter.arg, `${path}.arg`, context);
-    return;
-  }
-
-  if (filter.op !== 'and' && filter.op !== 'or') {
-    diagnostics.push({
-      code: 'DOMAIN_QUERY_INVALID',
-      path,
-      severity: 'error',
-      message: `Unsupported token filter operator "${String((filter as { readonly op?: unknown }).op)}".`,
-      suggestion: 'Use token filter leaf predicates or boolean composition with op "and", "or", or "not".',
-    });
-    return;
-  }
-
-  if (!Array.isArray(filter.args)) {
-    diagnostics.push({
-      code: 'DOMAIN_QUERY_INVALID',
-      path: `${path}.args`,
-      severity: 'error',
-      message: `Token filter operator "${filter.op}" requires args: TokenFilterExpr[].`,
-      suggestion: 'Provide one or more token filter expression arguments.',
-    });
-    return;
-  }
-  if (filter.args.length === 0) {
-    diagnostics.push({
-      code: 'DOMAIN_QUERY_INVALID',
-      path: `${path}.args`,
-      severity: 'error',
-      message: `Token filter operator "${filter.op}" requires at least one expression argument.`,
-      suggestion: 'Provide one or more token filter expression arguments.',
-    });
-    return;
-  }
-
-  filter.args.forEach((entry, index) => {
-    validateTokenFilterExpr(diagnostics, entry, `${path}.args[${index}]`, context);
+  walkTokenFilterExpr(filter, (entry, entryPathSegments) => {
+    const entryPath = `${path}${tokenFilterPathSuffix(entryPathSegments)}`;
+    if (isTokenFilterPredicateExpr(entry)) {
+      validateTokenFilterPredicate(diagnostics, entry, entryPath, context);
+      return;
+    }
+    if (entry.op === 'not') {
+      return;
+    }
+    if (entry.args.length === 0) {
+      diagnostics.push({
+        code: 'DOMAIN_QUERY_INVALID',
+        path: `${entryPath}.args`,
+        severity: 'error',
+        message: `Token filter operator "${entry.op}" requires at least one expression argument.`,
+        suggestion: 'Provide one or more token filter expression arguments.',
+      });
+    }
   });
 };
 

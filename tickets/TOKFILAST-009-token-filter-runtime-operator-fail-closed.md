@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel token-filter runtime guardrails
-**Deps**: archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md, tickets/TOKFILAST-004-token-filter-expression-traversal-unification.md
+**Deps**: archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md, archive/tickets/TOKFILAST/TOKFILAST-004-token-filter-expression-traversal-unification.md
 
 ## Problem
 

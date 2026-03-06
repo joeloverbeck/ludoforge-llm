@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
+  createCollector,
   createQueryRuntimeCache,
   asPhaseId,
   asPlayerId,
@@ -1996,6 +1997,37 @@ describe('evalQuery', () => {
       ctx,
     );
     assert.deepEqual(result, []);
+  });
+
+  it('records nested token-filter predicate count in EMPTY_QUERY_RESULT warning context', () => {
+    const collector = createCollector();
+    const ctx = makeCtx({ collector });
+
+    const result = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: {
+          op: 'or',
+          args: [
+            { prop: 'faction', op: 'eq', value: 'NONE' },
+            {
+              op: 'and',
+              args: [
+                { prop: 'faction', op: 'eq', value: 'US' },
+                { prop: 'faction', op: 'eq', value: 'ARVN' },
+              ],
+            },
+          ],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, []);
+    const warning = collector.warnings.find((entry) => entry.code === 'EMPTY_QUERY_RESULT');
+    assert.ok(warning);
+    assert.equal((warning.context as { filterCount?: number }).filterCount, 3);
   });
 
   it('tokensInZone with compound filter (AND) returns only tokens matching all predicates', () => {

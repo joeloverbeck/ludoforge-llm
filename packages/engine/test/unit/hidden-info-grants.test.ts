@@ -44,6 +44,37 @@ describe('hidden-info grant helpers', () => {
     assert.equal(revealGrantEquals(left, right), true);
   });
 
+  it('canonicalTokenFilterKey is order-insensitive for nested boolean expression args', () => {
+    const first = canonicalTokenFilterKey({
+      op: 'or',
+      args: [
+        {
+          op: 'and',
+          args: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 1 },
+          ],
+        },
+        { op: 'not', arg: { prop: 'hidden', op: 'eq', value: true } },
+      ],
+    });
+    const second = canonicalTokenFilterKey({
+      op: 'or',
+      args: [
+        { op: 'not', arg: { prop: 'hidden', op: 'eq', value: true } },
+        {
+          op: 'and',
+          args: [
+            { prop: 'rank', op: 'eq', value: 1 },
+            { prop: 'faction', op: 'eq', value: 'US' },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(first, second);
+  });
+
   it('removeMatchingRevealGrants removes grants when filter order differs', () => {
     const grants: readonly RevealGrant[] = [
       {

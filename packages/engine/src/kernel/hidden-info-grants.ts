@@ -1,5 +1,6 @@
 import type { PlayerId } from './branded.js';
-import type { RevealGrant, TokenFilterExpr, TokenFilterPredicate } from './types.js';
+import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
+import type { RevealGrant, TokenFilterExpr } from './types.js';
 
 type GrantObservers = 'all' | readonly PlayerId[];
 
@@ -34,9 +35,6 @@ const canonicalizeValue = (value: unknown): unknown => {
   return value;
 };
 
-const canonicalPredicateKey = (predicate: TokenFilterPredicate): string => JSON.stringify(canonicalizeValue(predicate));
-const canonicalExprKey = (expr: TokenFilterExpr): string => JSON.stringify(canonicalizeTokenFilterExpr(expr));
-
 export const normalizeObservers = (players: readonly PlayerId[]): readonly PlayerId[] => (
   [...new Set(players)].sort((left, right) => left - right)
 );
@@ -65,34 +63,24 @@ export const observersEqual = (left: GrantObservers, right: GrantObservers): boo
 };
 
 export const canonicalizeTokenFilterExpr = (expr: TokenFilterExpr): TokenFilterExpr => {
-  if ('prop' in expr) {
-    return expr;
-  }
-  if (expr.op === 'not') {
-    return { op: 'not', arg: canonicalizeTokenFilterExpr(expr.arg) };
-  }
-  return {
-    op: expr.op,
-    args: expr.args
-      .map((entry) => ({
-        key: canonicalExprKey(entry),
-        expr: canonicalizeTokenFilterExpr(entry),
-      }))
-      .sort((left, right) => compareStrings(left.key, right.key))
-      .map((entry) => entry.expr),
-  };
-};
-
-export const canonicalizeTokenFilterPredicates = (
-  predicates?: readonly TokenFilterPredicate[],
-): readonly TokenFilterPredicate[] | undefined => {
-  if (predicates === undefined) {
-    return undefined;
-  }
-  return [...predicates]
-    .map((predicate) => ({ key: canonicalPredicateKey(predicate), predicate }))
-    .sort((left, right) => compareStrings(left.key, right.key))
-    .map((entry) => entry.predicate);
+  return foldTokenFilterExpr<TokenFilterExpr>(expr, {
+    predicate: (predicate) => predicate,
+    not: (_entry, arg) => ({ op: 'not', arg }),
+    and: (_entry, args) => ({
+      op: 'and',
+      args: [...args]
+        .map((entry) => ({ key: JSON.stringify(canonicalizeValue(entry)), expr: entry }))
+        .sort((left, right) => compareStrings(left.key, right.key))
+        .map((entry) => entry.expr),
+    }),
+    or: (_entry, args) => ({
+      op: 'or',
+      args: [...args]
+        .map((entry) => ({ key: JSON.stringify(canonicalizeValue(entry)), expr: entry }))
+        .sort((left, right) => compareStrings(left.key, right.key))
+        .map((entry) => entry.expr),
+    }),
+  });
 };
 
 export const canonicalTokenFilterKey = (expr?: TokenFilterExpr): string => {

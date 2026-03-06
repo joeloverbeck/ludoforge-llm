@@ -73,6 +73,34 @@ describe('token-filter', () => {
     assert.deepEqual(filtered.map((token) => token.id), [asTokenId('a'), asTokenId('c')]);
   });
 
+  it('evaluates nested and/or/not token-filter trees', () => {
+    const token = makeToken('a', { suit: 'hearts', rank: 10, elite: false });
+    const expression = {
+      op: 'or' as const,
+      args: [
+        {
+          op: 'and' as const,
+          args: [
+            { prop: 'suit', op: 'eq' as const, value: 'clubs' },
+            { prop: 'rank', op: 'eq' as const, value: 10 },
+          ],
+        },
+        {
+          op: 'not' as const,
+          arg: {
+            op: 'and' as const,
+            args: [
+              { prop: 'elite', op: 'eq' as const, value: true },
+              { prop: 'rank', op: 'eq' as const, value: 10 },
+            ],
+          },
+        },
+      ],
+    };
+
+    assert.equal(matchesTokenFilterExpr(token, expression), true);
+  });
+
   it('rejects zero-arity boolean token filter expressions', () => {
     const token = makeToken('a', { suit: 'hearts' });
 

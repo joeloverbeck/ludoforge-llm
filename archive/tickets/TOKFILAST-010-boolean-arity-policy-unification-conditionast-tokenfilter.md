@@ -8,14 +8,15 @@
 
 ## Problem
 
-Boolean arity policy is currently inconsistent: token filters reject zero-arity `and`/`or`, while `ConditionAST` still allows vacuous `and[]` and `or[]` semantics. This creates cognitive and contract drift across expression systems.
+At ticket creation time, boolean arity policy was inconsistent: token filters rejected zero-arity `and`/`or`, while `ConditionAST` allowed vacuous `and[]` and `or[]` semantics. This created cognitive and contract drift across expression systems.
 
-## Assumption Reassessment (Verified 2026-03-06)
+## Assumption Reassessment (Re-verified 2026-03-06)
 
 1. `TokenFilterExpr` schema and runtime reject zero-arity `and`/`or` (`packages/engine/src/kernel/schemas-ast.ts`, `packages/engine/src/kernel/token-filter.ts`).
-2. `ConditionAST` schema currently permits empty `and`/`or` arrays (`packages/engine/src/kernel/schemas-ast.ts`), and runtime currently evaluates vacuous truth/falsehood (`packages/engine/src/kernel/eval-condition.ts`).
-3. `validateConditionAst` currently traverses `and/or` args but does not enforce non-empty boolean arity (`packages/engine/src/kernel/validate-gamedef-behavior.ts`).
-4. Existing unit tests lock vacuous runtime behavior (`packages/engine/test/unit/eval-condition.test.ts`) and do not yet assert explicit `ConditionAST` schema rejection for empty boolean args (`packages/engine/test/unit/schemas-ast.test.ts`).
+2. `ConditionAST` schema rejects zero-arity `and`/`or` (`packages/engine/src/kernel/schemas-ast.ts`).
+3. `evalCondition` rejects malformed zero-arity boolean nodes deterministically (`TYPE_MISMATCH`) if malformed payloads bypass schema typing (`packages/engine/src/kernel/eval-condition.ts`).
+4. `validateConditionAst` emits deterministic `CONDITION_BOOLEAN_ARITY_INVALID` diagnostics for zero-arity `and`/`or` (`packages/engine/src/kernel/validate-gamedef-behavior.ts`).
+5. Unit tests cover schema/runtime/validator enforcement (`packages/engine/test/unit/schemas-ast.test.ts`, `packages/engine/test/unit/eval-condition.test.ts`, `packages/engine/test/unit/validate-gamedef.test.ts`).
 
 ## Architecture Decision
 
@@ -58,6 +59,7 @@ Replace vacuous truth/falsehood expectations with explicit rejection behavior an
 
 - Token-filter traversal utility refactor (`TOKFILAST-004`).
 - CNL token-filter normalization pass (`TOKFILAST-007`).
+- Additional condition-surface hardening completed in follow-up ticket `TOKFILAST-017`; this ticket remains scoped to cross-AST boolean-arity policy unification.
 
 ## Acceptance Criteria
 
@@ -96,3 +98,4 @@ Replace vacuous truth/falsehood expectations with explicit rejection behavior an
 - Strengthened tests beyond the original draft by adding explicit validator coverage (`validate-gamedef.test.ts`) in addition to runtime/schema tests.
 - Enforced non-empty boolean `args` at type level in AST contracts (`ConditionAST` and `TokenFilterExpr`) and patched lowering/canonicalization call sites to preserve that invariant.
 - Regenerated JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`) and validated with build + unit + lint.
+- Reassessment update (2026-03-06): corrected stale assumption/scope text to match current code and test reality; no additional engine implementation changes were required.

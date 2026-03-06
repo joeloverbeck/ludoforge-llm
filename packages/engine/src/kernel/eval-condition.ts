@@ -1,6 +1,7 @@
 import type { EvalContext } from './eval-context.js';
 import { typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { evalValue } from './eval-value.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
@@ -38,8 +39,8 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
   if (typeof cond === 'boolean') return cond;
   switch (cond.op) {
     case 'and':
-      if (cond.args.length === 0) {
-        throw typeMismatchError('Condition operator "and" requires at least one condition argument.', { cond });
+      if (!isNonEmptyArray(cond.args)) {
+        throw typeMismatchError(booleanArityMessage('condition', 'and'), { cond });
       }
       for (const arg of cond.args) {
         if (!evalCondition(arg, ctx)) {
@@ -49,8 +50,8 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
       return true;
 
     case 'or':
-      if (cond.args.length === 0) {
-        throw typeMismatchError('Condition operator "or" requires at least one condition argument.', { cond });
+      if (!isNonEmptyArray(cond.args)) {
+        throw typeMismatchError(booleanArityMessage('condition', 'or'), { cond });
       }
       for (const arg of cond.args) {
         if (evalCondition(arg, ctx)) {

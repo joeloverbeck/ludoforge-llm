@@ -1,4 +1,5 @@
 import type { TokenFilterExpr, TokenFilterPredicate } from './types.js';
+import { booleanArityMessage } from './boolean-arity-policy.js';
 
 export interface TokenFilterPathSegmentNot {
   readonly kind: 'not';
@@ -91,7 +92,7 @@ export const tokenFilterBooleanArityError = (
   path: readonly TokenFilterPathSegment[] = [],
 ): TokenFilterTraversalError => ({
   code: 'TOKEN_FILTER_TRAVERSAL_ERROR',
-  message: `Token filter operator "${op}" requires at least one expression argument.`,
+  message: booleanArityMessage('tokenFilter', op),
   context: {
     expr,
     op,

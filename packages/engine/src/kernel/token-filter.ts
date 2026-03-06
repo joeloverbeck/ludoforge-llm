@@ -1,4 +1,5 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
+import { isNonEmptyArray } from './boolean-arity-policy.js';
 import { typeMismatchError } from './eval-error.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 import { foldTokenFilterExpr, isTokenFilterTraversalError, tokenFilterBooleanArityError } from './token-filter-expr-utils.js';
@@ -64,13 +65,13 @@ export function matchesTokenFilterExpr(
       predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue),
       not: (_entry, arg) => !arg,
       and: (entry, args) => {
-        if (entry.args.length === 0) {
+        if (!isNonEmptyArray(entry.args)) {
           throw tokenFilterBooleanArityError(expr, 'and');
         }
         return args.every(Boolean);
       },
       or: (entry, args) => {
-        if (entry.args.length === 0) {
+        if (!isNonEmptyArray(entry.args)) {
           throw tokenFilterBooleanArityError(expr, 'or');
         }
         return args.some(Boolean);

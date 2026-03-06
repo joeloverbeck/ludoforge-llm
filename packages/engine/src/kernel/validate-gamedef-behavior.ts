@@ -18,6 +18,7 @@ import type {
 } from './types.js';
 import type { AstScopedVarScope } from './scoped-var-contract.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
+import { booleanArityMessage, booleanAritySuggestion } from './boolean-arity-policy.js';
 import {
   appendConditionSurfacePath,
   collectDeclaredBinderCandidatesFromEffectNode,
@@ -507,8 +508,8 @@ export const validateConditionAst = (
           code: 'CONDITION_BOOLEAN_ARITY_INVALID',
           path: `${path}.args`,
           severity: 'error',
-          message: `Condition operator "${condition.op}" requires at least one argument.`,
-          suggestion: 'Provide at least one condition in args.',
+          message: booleanArityMessage('condition', condition.op),
+          suggestion: booleanAritySuggestion('condition'),
         });
       }
       condition.args.forEach((entry, index) => {
@@ -645,8 +646,8 @@ const validateTokenFilterExpr = (
           code: 'DOMAIN_QUERY_INVALID',
           path: `${entryPath}.args`,
           severity: 'error',
-          message: `Token filter operator "${entry.op}" requires at least one expression argument.`,
-          suggestion: 'Provide one or more token filter expression arguments.',
+          message: booleanArityMessage('tokenFilter', entry.op),
+          suggestion: booleanAritySuggestion('tokenFilter'),
         });
       }
     });

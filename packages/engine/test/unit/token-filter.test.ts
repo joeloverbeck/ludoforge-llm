@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { asTokenId } from '../../src/kernel/branded.js';
+import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
 import {
   filterTokensByExpr,
   matchesTokenFilterExpr,
@@ -70,5 +71,18 @@ describe('token-filter', () => {
       ],
     });
     assert.deepEqual(filtered.map((token) => token.id), [asTokenId('a'), asTokenId('c')]);
+  });
+
+  it('rejects zero-arity boolean token filter expressions', () => {
+    const token = makeToken('a', { suit: 'hearts' });
+
+    assert.throws(
+      () => matchesTokenFilterExpr(token, { op: 'and', args: [] }),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+    assert.throws(
+      () => matchesTokenFilterExpr(token, { op: 'or', args: [] }),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
   });
 });

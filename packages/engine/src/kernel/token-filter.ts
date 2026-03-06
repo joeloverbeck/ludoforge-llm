@@ -1,4 +1,5 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
+import { typeMismatchError } from './eval-error.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 
 type TokenFilterScalar = string | number | boolean;
@@ -64,7 +65,13 @@ export function matchesTokenFilterExpr(
     return !matchesTokenFilterExpr(token, expr.arg, resolveValue);
   }
   if (expr.op === 'and') {
+    if (expr.args.length === 0) {
+      throw typeMismatchError('Token filter operator "and" requires at least one expression argument.', { expr });
+    }
     return expr.args.every((entry) => matchesTokenFilterExpr(token, entry, resolveValue));
+  }
+  if (expr.args.length === 0) {
+    throw typeMismatchError('Token filter operator "or" requires at least one expression argument.', { expr });
   }
   return expr.args.some((entry) => matchesTokenFilterExpr(token, entry, resolveValue));
 }

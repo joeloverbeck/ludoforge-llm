@@ -625,6 +625,16 @@ const validateTokenFilterExpr = (
     });
     return;
   }
+  if (filter.args.length === 0) {
+    diagnostics.push({
+      code: 'DOMAIN_QUERY_INVALID',
+      path: `${path}.args`,
+      severity: 'error',
+      message: `Token filter operator "${filter.op}" requires at least one expression argument.`,
+      suggestion: 'Provide one or more token filter expression arguments.',
+    });
+    return;
+  }
 
   filter.args.forEach((entry, index) => {
     validateTokenFilterExpr(diagnostics, entry, `${path}.args[${index}]`, context);

@@ -738,6 +738,20 @@ describe('AST and selector schemas', () => {
     });
     assert.equal(legacyArray.success, false);
 
+    const emptyAnd = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { op: 'and', args: [] },
+    });
+    assert.equal(emptyAnd.success, false);
+
+    const emptyOr = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { op: 'or', args: [] },
+    });
+    assert.equal(emptyOr.success, false);
+
     const malformedZoneRef = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: { zoneExpr: 'board:a', extra: true },

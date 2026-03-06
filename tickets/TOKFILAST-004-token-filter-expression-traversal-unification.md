@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — shared kernel traversal utility + call-site refactors
-**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md
+**Deps**: archive/tickets/TOKFILAST-001-token-query-filter-expression-unification.md, archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md
 
 ## Problem
 

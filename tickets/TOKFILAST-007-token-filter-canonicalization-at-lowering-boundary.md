@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — CNL lowering normalization for token filter expressions
-**Deps**: tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md, tickets/TOKFILAST-004-token-filter-expression-traversal-unification.md, archive/tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md
+**Deps**: archive/tickets/TOKFILAST-003-token-filter-boolean-arity-guards.md, tickets/TOKFILAST-004-token-filter-expression-traversal-unification.md, archive/tickets/TOKFILAST-002-cnl-lowering-and-no-shim-migration.md
 
 ## Problem
 

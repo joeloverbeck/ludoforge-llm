@@ -2020,14 +2020,13 @@ describe('evalQuery', () => {
     );
   });
 
-  it('tokensInZone with empty filter array returns all tokens', () => {
+  it('rejects tokensInZone with empty boolean token-filter args', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } },
-      ctx,
+    assert.throws(
+      () => evalQuery({ query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [] } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
-    assert.equal(result.length, 5);
   });
 
   it('rejects token membership filters with scalar set values for in/notIn', () => {

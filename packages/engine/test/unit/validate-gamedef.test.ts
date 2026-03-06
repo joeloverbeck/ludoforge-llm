@@ -447,6 +447,63 @@ describe('validateGameDef reference checks', () => {
     assert.deepEqual(diagnostic.alternatives, ['faction']);
   });
 
+  it('rejects empty boolean token-filter args in tokensInZone domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$token',
+              domain: {
+                query: 'tokensInZone',
+                zone: 'deck:none',
+                filter: { op: 'and', args: [] },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === 'actions[0].params[0].domain.filter.args',
+      ),
+    );
+  });
+
+  it('rejects empty boolean token-filter args in reveal effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              reveal: {
+                to: 'all',
+                zone: 'deck:none',
+                filter: { op: 'or', args: [] },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === 'actions[0].effects[0].reveal.filter.args',
+      ),
+    );
+  });
+
   it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
     const base = createValidGameDef();
     const def = {

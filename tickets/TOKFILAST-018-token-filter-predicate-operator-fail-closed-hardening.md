@@ -47,7 +47,7 @@ Add runtime and validator tests for unsupported predicate operators on both quer
 ## Out of Scope
 
 - Traversal error-layer decoupling from eval contracts (`tickets/TOKFILAST-014-token-filter-traversal-error-boundary-decoupling.md`).
-- Non-empty invariant contract work (`tickets/TOKFILAST-015-non-empty-invariant-error-contract-alignment.md`).
+- Non-empty invariant contract work (`archive/tickets/TOKFILAST/TOKFILAST-015-non-empty-invariant-error-contract-alignment.md`).
 
 ## Acceptance Criteria
 

@@ -1,7 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lowerConditionNode, lowerQueryNode, lowerValueNode, type ConditionLoweringContext } from '../../src/cnl/compile-conditions.js';
+import {
+  lowerConditionNode,
+  lowerQueryNode,
+  lowerTokenFilterExpr,
+  lowerValueNode,
+  type ConditionLoweringContext,
+} from '../../src/cnl/compile-conditions.js';
 import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
@@ -705,6 +711,34 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain');
+  });
+
+  it('rejects empty boolean condition args with deterministic diagnostics (no throw)', () => {
+    assert.doesNotThrow(() => {
+      const result = lowerConditionNode(
+        { op: 'and', args: [] },
+        context,
+        'doc.actions.0.pre',
+      );
+
+      assert.equal(result.value, null);
+      assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+      assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.pre');
+    });
+  });
+
+  it('rejects empty token-filter boolean args with deterministic diagnostics (no throw)', () => {
+    assert.doesNotThrow(() => {
+      const result = lowerTokenFilterExpr(
+        { op: 'and', args: [] },
+        context,
+        'doc.actions.0.params.0.domain.filter',
+      );
+
+      assert.equal(result.value, null);
+      assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+      assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.filter');
+    });
   });
 
   it('lowers boolean literal true as ConditionAST passthrough', () => {

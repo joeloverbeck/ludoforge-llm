@@ -282,6 +282,120 @@ describe('tooltip pipeline integration', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Texas Hold'em golden tests — verbalization produces readable English
+  // -----------------------------------------------------------------------
+
+  it('Texas Hold\'em Fold synopsis uses verbalized action label', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 99);
+    const fold = def.actions.find((a) => a.id === 'fold');
+    assert.ok(fold !== undefined, 'fold action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(fold, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Fold'), `Fold synopsis "${synopsis}" must include "Fold"`);
+  });
+
+  it('Texas Hold\'em Check synopsis uses verbalized action label', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 99);
+    const check = def.actions.find((a) => a.id === 'check');
+    assert.ok(check !== undefined, 'check action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(check, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Check'), `Check synopsis "${synopsis}" must include "Check"`);
+  });
+
+  it('Texas Hold\'em Call synopsis uses verbalized action label', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 99);
+    const call = def.actions.find((a) => a.id === 'call');
+    assert.ok(call !== undefined, 'call action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(call, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Call'), `Call synopsis "${synopsis}" must include "Call"`);
+  });
+
+  it('Texas Hold\'em Raise synopsis uses verbalized action label', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 99);
+    const raise = def.actions.find((a) => a.id === 'raise');
+    assert.ok(raise !== undefined, 'raise action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(raise, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const { synopsis } = result.tooltipPayload.ruleCard;
+    assert.ok(synopsis.includes('Raise'), `Raise synopsis "${synopsis}" must include "Raise"`);
+  });
+
+  it('Texas Hold\'em verbalization labels cover all action IDs', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = compiled.gameDef!;
+    assert.ok(def.verbalization !== undefined, 'Texas must have verbalization');
+
+    const labels = def.verbalization!.labels;
+    const expectedActions = ['fold', 'check', 'call', 'raise', 'allIn'];
+
+    for (const id of expectedActions) {
+      assert.ok(
+        labels[id] !== undefined,
+        `verbalization labels must include action "${id}"`,
+      );
+    }
+  });
+
+  it('Texas Hold\'em suppress patterns exclude telemetry variables', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = compiled.gameDef!;
+    assert.ok(def.verbalization !== undefined);
+
+    const patterns = def.verbalization!.suppressPatterns;
+    assert.ok(patterns.includes('*Count'), 'must suppress *Count');
+    assert.ok(patterns.includes('*Tracker'), 'must suppress *Tracker');
+    assert.ok(patterns.includes('__*'), 'must suppress __*');
+    assert.ok(patterns.includes('actingPosition'), 'must suppress actingPosition');
+    assert.ok(patterns.includes('bettingClosed'), 'must suppress bettingClosed');
+    assert.ok(patterns.includes('seatIndex'), 'must suppress seatIndex');
+  });
+
+  // -----------------------------------------------------------------------
   // Cross-game: structuredClone safety
   // -----------------------------------------------------------------------
 

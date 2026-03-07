@@ -27,6 +27,7 @@ import { buildActionSelectorContractViolationDiagnostic } from './action-selecto
 import { CNL_COMPILER_DIAGNOSTIC_CODES, buildCompilerMissingCapabilityDiagnostic } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { CanonicalNamedSets } from './named-set-utils.js';
+import { buildCanonicalLimitId } from '../kernel/limit-identity.js';
 
 export type EffectLoweringSharedContext = Omit<EffectLoweringContext, 'bindingScope'>;
 export type ConditionLoweringSharedContext = Pick<
@@ -731,12 +732,6 @@ function lowerActionParams(
   };
 }
 
-const buildCanonicalLimitId = (
-  actionId: string,
-  limitIndex: number,
-  scope: LimitDef['scope'],
-): string => `${actionId}::${scope}::${limitIndex}`;
-
 function lowerActionLimits(
   actionId: string,
   limitsSource: unknown,
@@ -759,7 +754,7 @@ function lowerActionLimits(
       !Number.isInteger(maxValue) ||
       maxValue < 0
     ) {
-      diagnostics.push(missingCapabilityDiagnostic(limitPath, 'action limit', limit, ['{ scope: turn|phase|game, max: int>=0 }']));
+      diagnostics.push(missingCapabilityDiagnostic(limitPath, 'action limit', limit, ['{ id: "<actionId>::<scope>::<index>", scope: turn|phase|game, max: int>=0 }']));
       continue;
     }
     limits.push({

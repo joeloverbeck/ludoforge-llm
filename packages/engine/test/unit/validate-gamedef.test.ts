@@ -5248,4 +5248,70 @@ describe('validated GameDef boundary', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), true);
     assert.equal(isValidatedGameDef(invalid), false);
   });
+
+  it('rejects duplicate limit IDs within an action', () => {
+    const base = createValidGameDef();
+    const invalid = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          limits: [
+            { id: 'playCard::turn::0', scope: 'turn', max: 1 },
+            { id: 'playCard::turn::0', scope: 'turn', max: 2 },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(invalid);
+    const duplicateDiag = diagnostics.find((d) => d.code === 'DUPLICATE_LIMIT_ID');
+    assert.ok(duplicateDiag, 'expected DUPLICATE_LIMIT_ID diagnostic');
+    assert.equal(duplicateDiag.severity, 'error');
+    assert.match(duplicateDiag.path, /actions\[0\]\.limits\[1\]\.id/);
+  });
+
+  it('rejects non-canonical limit IDs', () => {
+    const base = createValidGameDef();
+    const invalid = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          limits: [
+            { id: 'wrong-format', scope: 'turn', max: 1 },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(invalid);
+    const nonCanonicalDiag = diagnostics.find((d) => d.code === 'NON_CANONICAL_LIMIT_ID');
+    assert.ok(nonCanonicalDiag, 'expected NON_CANONICAL_LIMIT_ID diagnostic');
+    assert.equal(nonCanonicalDiag.severity, 'error');
+    assert.match(nonCanonicalDiag.path, /actions\[0\]\.limits\[0\]\.id/);
+    assert.match(nonCanonicalDiag.message, /playCard::turn::0/);
+  });
+
+  it('accepts valid canonical limit IDs', () => {
+    const base = createValidGameDef();
+    const valid = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          limits: [
+            { id: 'playCard::turn::0', scope: 'turn', max: 1 },
+            { id: 'playCard::phase::1', scope: 'phase', max: 2 },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(valid);
+    const limitDiags = diagnostics.filter(
+      (d) => d.code === 'DUPLICATE_LIMIT_ID' || d.code === 'NON_CANONICAL_LIMIT_ID',
+    );
+    assert.equal(limitDiags.length, 0, `unexpected limit diagnostics: ${JSON.stringify(limitDiags)}`);
+  });
 });

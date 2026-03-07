@@ -39,7 +39,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
-        limits: [{ scope: 'turn', max: 1 }],
+        limits: [{ id: 'claim::turn::0', scope: 'turn', max: 1 }],
       },
     ],
     triggers: [

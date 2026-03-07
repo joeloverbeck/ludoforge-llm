@@ -466,7 +466,7 @@ describe('resolveActionApplicabilityPreflight()', () => {
     const def = makeDef();
     const state = makeState();
     const action = def.actions[0]!;
-    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+    const malformedResources = { collector: 'not-an-object' };
 
     assert.throws(
       () =>

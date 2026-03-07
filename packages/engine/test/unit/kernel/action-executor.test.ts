@@ -132,7 +132,7 @@ describe('resolveActionExecutor()', () => {
     const action = makeAction();
     const def = makeDef(action);
     const state = makeState();
-    const malformedResources = { collector: 'not-an-object', queryRuntimeCache: {} };
+    const malformedResources = { collector: 'not-an-object' };
 
     assert.throws(
       () =>

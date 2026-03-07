@@ -259,7 +259,28 @@ describe('dispatchTriggers', () => {
     );
   });
 
-  it('allows extra evalRuntimeResources fields as long as collector contract is valid', () => {
+  it('fails fast when request.evalRuntimeResources.collector contains unknown keys', () => {
+    const state = createState({ zones: {} });
+    const invalidResources = {
+      collector: { warnings: [], trace: null, legacyTraceSink: [] },
+    };
+
+    assert.throws(
+      () => dispatchTriggers({
+        ...createValidRequest(),
+        state,
+        rng: { state: state.rng },
+        evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /collector contains unknown key\(s\): legacyTraceSink/);
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when request.evalRuntimeResources contains unknown top-level keys', () => {
     const state = createState({ zones: {} });
     const invalidResources = {
       collector: createCollector({ trace: true }),
@@ -268,13 +289,19 @@ describe('dispatchTriggers', () => {
       } as const,
     };
 
-    assert.doesNotThrow(
-      () => dispatchTriggers({
+    assert.throws(
+      () =>
+        dispatchTriggers({
         ...createValidRequest(),
         state,
         rng: { state: state.rng },
         evalRuntimeResources: invalidResources as unknown as ReturnType<typeof createEvalRuntimeResources>,
       }),
+      (error: unknown) => {
+        assert.equal((error as { code?: string }).code, 'RUNTIME_CONTRACT_INVALID');
+        assert.match((error as Error).message, /unknown resource key\(s\): queryRuntimeCache/);
+        return true;
+      },
     );
   });
 
